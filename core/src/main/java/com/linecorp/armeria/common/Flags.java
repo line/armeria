@@ -63,10 +63,12 @@ import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.common.util.StringUtil;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerErrorHandler;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceWithRoutes;
 import com.linecorp.armeria.server.TransientService;
 import com.linecorp.armeria.server.TransientServiceOption;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
@@ -418,8 +420,9 @@ public final class Flags {
 
     private static final boolean USE_JDK_DNS_RESOLVER = getBoolean("useJdkDnsResolver", false);
 
-    private static final boolean REPORT_BLOCKED_EVENT_LOOP =
-            getBoolean("reportBlockedEventLoop", true);
+    private static final boolean REPORT_BLOCKED_EVENT_LOOP = getBoolean("reportBlockedEventLoop", true);
+
+    private static final boolean REPORT_MASKED_ROUTES = getBoolean("reportMaskedRoutes", true);
 
     private static final boolean VALIDATE_HEADERS = getBoolean("validateHeaders", true);
 
@@ -1270,6 +1273,31 @@ public final class Flags {
      */
     public static boolean reportBlockedEventLoop() {
         return REPORT_BLOCKED_EVENT_LOOP;
+    }
+
+    /**
+     * Returns whether to log a warning if a {@link ServiceWithRoutes} is added to a {@link ServerBuilder}
+     * using the methods that requires a path pattern, such as
+     * {@link ServerBuilder#service(String, HttpService)}. For example, the following code will mask the
+     * returned route ({@code "/foo"}) in favor of the specified route ({@code "/bar"}):
+     * <pre>{@code
+     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+     * >
+     * >     @Override
+     * >     public Set<Route> routes() {
+     * >         return Set.of(Route.builder().path("/foo").build());
+     * >     }
+     * > };
+     * >
+     * > Server.builder()
+     * >       .service("/bar", serviceWithRoutes)
+     * >       .build();
+     * }</pre>
+     */
+    public static boolean reportMaskedRoutes() {
+        return REPORT_MASKED_ROUTES;
     }
 
     /**

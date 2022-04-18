@@ -56,7 +56,6 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
-import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHost;
@@ -179,7 +178,7 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
+     * However, if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
      * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, ServerServiceDefinition service) {
@@ -202,8 +201,8 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
-     * {@code "/foo"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
+     * However, if you set {@code "/fooHello"} to {@code path}, the {@code Hello} method will be served at
+     * {@code "/fooHello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, ServerServiceDefinition service,
                                          MethodDescriptor<?, ?> methodDescriptor) {
@@ -247,7 +246,7 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
+     * However, if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
      * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, BindableService bindableService) {
@@ -274,8 +273,8 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
-     * {@code "/foo"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
+     * However, if you set {@code "/fooHello"} to {@code path}, the {@code Hello} method will be served at
+     * {@code "/fooHello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, BindableService bindableService,
                                          MethodDescriptor<?, ?> methodDescriptor) {
@@ -776,10 +775,11 @@ public final class GrpcServiceBuilder {
         }
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
+            final ImmutableList<ServerInterceptor> interceptors = this.interceptors.build();
             for (Entry entry : registryBuilder.entries()) {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
-                        ServerInterceptors.intercept(entry.service(), interceptors.build());
+                        ServerInterceptors.intercept(entry.service(), interceptors);
                 newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor);
             }
             handlerRegistry = newRegistryBuilder.build();
@@ -796,12 +796,6 @@ public final class GrpcServiceBuilder {
 
         GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,
-                handlerRegistry
-                        .methods()
-                        .keySet()
-                        .stream()
-                        .map(path -> Route.builder().exact('/' + path).build())
-                        .collect(ImmutableSet.toImmutableSet()),
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
                 supportedSerializationFormats,
