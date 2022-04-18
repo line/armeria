@@ -174,7 +174,7 @@ public final class AnnotatedServiceFactory {
      * {@link ExceptionHandlerFunction}s and {@link AnnotatedServiceExtensions}.
      */
     public static List<AnnotatedServiceElement> find(
-            String pathPrefix, Object object, boolean useBlockingTaskExecutor,
+            String pathPrefix, Object object, boolean useBlockingTaskExecutor, @Nullable String queryDelimiter,
             List<RequestConverterFunction> requestConverterFunctions,
             List<ResponseConverterFunction> responseConverterFunctions,
             List<ExceptionHandlerFunction> exceptionHandlerFunctions) {
@@ -182,8 +182,8 @@ public final class AnnotatedServiceFactory {
         return methods.stream()
                       .flatMap((Method method) ->
                                        create(pathPrefix, object, method, useBlockingTaskExecutor,
-                                              requestConverterFunctions, responseConverterFunctions,
-                                              exceptionHandlerFunctions).stream())
+                                              queryDelimiter, requestConverterFunctions,
+                                              responseConverterFunctions, exceptionHandlerFunctions).stream())
                       .collect(toImmutableList());
     }
 
@@ -238,6 +238,7 @@ public final class AnnotatedServiceFactory {
     @VisibleForTesting
     static List<AnnotatedServiceElement> create(String pathPrefix, Object object, Method method,
                                                 boolean useBlockingTaskExecutor,
+                                                @Nullable String queryDelimiter,
                                                 List<RequestConverterFunction> baseRequestConverters,
                                                 List<ResponseConverterFunction> baseResponseConverters,
                                                 List<ExceptionHandlerFunction> baseExceptionHandlers) {
@@ -322,7 +323,8 @@ public final class AnnotatedServiceFactory {
 
         return routes.stream().map(route -> {
             final List<AnnotatedValueResolver> resolvers =
-                    getAnnotatedValueResolvers(req, route, method, clazz, needToUseBlockingTaskExecutor);
+                    getAnnotatedValueResolvers(req, route, method, clazz, needToUseBlockingTaskExecutor,
+                                               queryDelimiter);
             return new AnnotatedServiceElement(
                     route,
                     new AnnotatedService(object, method, resolvers, eh, res, route, defaultStatus,
@@ -334,13 +336,15 @@ public final class AnnotatedServiceFactory {
     private static List<AnnotatedValueResolver> getAnnotatedValueResolvers(List<RequestConverterFunction> req,
                                                                            Route route, Method method,
                                                                            Class<?> clazz,
-                                                                           boolean useBlockingExecutor) {
+                                                                           boolean useBlockingExecutor,
+                                                                           @Nullable String queryDelimiter) {
         final Set<String> expectedParamNames = route.paramNames();
         List<AnnotatedValueResolver> resolvers;
         try {
             resolvers = AnnotatedValueResolver.ofServiceMethod(
                     method, expectedParamNames,
-                    AnnotatedValueResolver.toRequestObjectResolvers(req, method), useBlockingExecutor);
+                    AnnotatedValueResolver.toRequestObjectResolvers(req, method), useBlockingExecutor,
+                    queryDelimiter);
         } catch (NoParameterException ignored) {
             // Allow no parameter like below:
             //

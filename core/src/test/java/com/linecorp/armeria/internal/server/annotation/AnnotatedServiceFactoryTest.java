@@ -155,7 +155,7 @@ class AnnotatedServiceFactoryTest {
     void testFindAnnotatedServiceElementsWithPathPrefixAnnotation() {
         final Object object = new PathPrefixServiceObject();
         final List<AnnotatedServiceElement> elements =
-                find("/", object, /* useBlockingTaskExecutor */ false,
+                find("/", object, /* useBlockingTaskExecutor */ false, /* queryDelimiter */ null,
                      ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
 
         final List<String> paths = elements.stream()
@@ -171,7 +171,7 @@ class AnnotatedServiceFactoryTest {
         final Object serviceObject = new ServiceObject();
         final List<AnnotatedServiceElement> elements =
                 find(HOME_PATH_PREFIX, serviceObject, /* useBlockingTaskExecutor */ false,
-                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
+                        /* queryDelimiter */ null, ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedServiceElement::route)
@@ -195,7 +195,7 @@ class AnnotatedServiceFactoryTest {
         final List<Route> actualRoutes = getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class,
                                                     HttpResponse.class)
                 .map(method -> create("/", serviceObject, method, /* useBlockingTaskExecutor */ false,
-                                      ImmutableList.of(), ImmutableList.of(), ImmutableList.of()))
+                        /* queryDelimiter */ null, ImmutableList.of(), ImmutableList.of(), ImmutableList.of()))
                 .flatMap(Collection::stream)
                 .map(AnnotatedServiceElement::route)
                 .collect(toImmutableList());
@@ -284,7 +284,7 @@ class AnnotatedServiceFactoryTest {
         getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
                 create("/", serviceObject, method, /* useBlockingTaskExecutor */ false,
-                       ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
+                        /* queryDelimiter */ null, ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
             }, method.getName()).isInstanceOf(IllegalArgumentException.class);
         });
     }
@@ -321,6 +321,7 @@ class AnnotatedServiceFactoryTest {
                         method -> {
                             final List<AnnotatedServiceElement> AnnotatedServices = create(
                                     "/", service, method, /* useBlockingTaskExecutor */ false,
+                                    /* queryDelimiter */ null,
                                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
                             return AnnotatedServices.stream();
                         }
