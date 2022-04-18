@@ -81,7 +81,7 @@ public final class GraphqlUtil {
      * };
      * }</pre>
      *
-     * @throws IllegalStateException if the specified {@link GraphQLContext} doesn't contain
+     * @throws IllegalStateException if the specified {@link DataFetchingEnvironment} doesn't contain
      *                               a {@link ServiceRequestContext}.
      */
     public static ServiceRequestContext serviceRequestContext(DataFetchingEnvironment environment) {
