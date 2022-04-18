@@ -95,12 +95,17 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
     }
 
     @Override
+    public Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute() {
+        return delegate.methodsByRoute();
+    }
+
+    @Override
     public Set<SerializationFormat> supportedSerializationFormats() {
         return delegate.supportedSerializationFormats();
     }
 
     @Nullable
-    HttpService lookup(ServiceRequestContext ctx) {
+    private HttpService lookup(ServiceRequestContext ctx) {
         final ServerMethodDefinition<?, ?> method = lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD)
                                                                               : null;
         if (method == null || method.getMethodDescriptor() == null) {

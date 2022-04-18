@@ -140,7 +140,7 @@ public final class RouteBuilder {
         return pathMapping(new RegexPathMappingWithPrefix(prefix, getPathMapping(pathPattern)));
     }
 
-    static PathMapping globPathMapping(String prefix, String glob, int numGroupsToSkip) {
+    private static PathMapping globPathMapping(String prefix, String glob, int numGroupsToSkip) {
         if (glob.startsWith("/")) {
             return globPathMapping(concatPaths(prefix, glob), numGroupsToSkip);
         }

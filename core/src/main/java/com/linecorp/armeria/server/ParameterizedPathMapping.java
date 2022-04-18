@@ -54,6 +54,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
 
     private static final Splitter PATH_SPLITTER = Splitter.on('/');
 
+    private final String prefix;
     /**
      * The original path pattern specified in the constructor.
      */
@@ -99,6 +100,20 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
      * @throws IllegalArgumentException if the {@code pathPattern} is invalid.
      */
     ParameterizedPathMapping(String pathPattern) {
+        this("", pathPattern);
+    }
+
+    /**
+     * Create a {@link ParameterizedPathMapping} instance from given {@code pathPattern}.
+     *
+     * @param pathPattern the {@link String} that contains path params.
+     *                    e.g. {@code /users/{name}}, {@code /users/:name}, {@code /users/{*name}} or
+     *                    {@code /users/:*name}
+     *
+     * @throws IllegalArgumentException if the {@code pathPattern} is invalid.
+     */
+    private ParameterizedPathMapping(String prefix, String pathPattern) {
+        this.prefix = prefix;
         requireNonNull(pathPattern, "pathPattern");
 
         if (!pathPattern.startsWith("/")) {
@@ -219,7 +234,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
 
     @Override
     PathMapping doWithPrefix(String prefix) {
-        return new ParameterizedPathMapping(concatPaths(prefix, pathPattern));
+        return new ParameterizedPathMapping(prefix, concatPaths(prefix, pathPattern));
     }
 
     @Override
@@ -251,7 +266,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
         }
 
         final RoutingResultBuilder builder = RoutingResult.builderWithExpectedNumParams(paramNameArray.length)
-                                                          .path(routingCtx.path())
+                                                          .path(mappedPath(prefix, routingCtx.path()))
                                                           .query(routingCtx.query());
 
         for (int i = 0; i < paramNameArray.length; i++) {
