@@ -24,7 +24,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -35,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -188,14 +188,12 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
         }
         final HttpResponse response;
         final ClientRequestContext ctx;
-        EventLoop eventLoop0 = null;
         try {
             try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
                 response = webClient.execute(requestHeaders);
                 ctx = captor.get();
             }
-            EventLoop eventLoop = ctx.eventLoop().withoutContext();
-            eventLoop0 = eventLoop;
+            final EventLoop eventLoop = ctx.eventLoop().withoutContext();
             response.aggregateWithPooledObjects(eventLoop, ctx.alloc()).handle((aggregatedRes, cause) -> {
                 if (closed) {
                     return null;
@@ -203,8 +201,6 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                 if (cause != null) {
                     logger.warn("Unexpected exception while fetching the registry from: {}." +
                                 " (requestHeaders: {})", webClient.uri(), requestHeaders, cause);
-                } else if (aggregatedRes == null) {
-                    logger.warn("Got null response while fetching the registry from: {}.", webClient.uri());
                 } else {
                     try (HttpData content = aggregatedRes.content()) {
                         final HttpStatus status = aggregatedRes.status();
@@ -231,12 +227,19 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
         } catch (Exception e) {
             logger.warn("Unexpected exception while fetching the registry from: {}." +
                         " (requestHeaders: {})", webClient.uri(), requestHeaders, e);
-            scheduleNextFetch(eventLoop0 != null ? eventLoop0 : CommonPools.blockingTaskExecutor());
+            scheduleNextFetch(CommonPools.workerGroup().next());
         }
     }
 
-    private void scheduleNextFetch(ScheduledExecutorService executorService) {
-        executorService.schedule(this::fetchRegistry, registryFetchIntervalMillis, TimeUnit.MILLISECONDS);
+    private void scheduleNextFetch(EventLoop executorService) {
+        scheduledFuture = executorService.schedule(this::fetchRegistry,
+                                                   registryFetchIntervalMillis, TimeUnit.MILLISECONDS);
+    }
+
+    @VisibleForTesting
+    @Nullable
+    ScheduledFuture<?> scheduledFuture() {
+        return scheduledFuture;
     }
 
     @Override
