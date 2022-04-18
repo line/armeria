@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -28,7 +29,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
@@ -316,9 +317,7 @@ class StreamMessageTest {
         }
         final HttpData[] httpData = bufs.stream().map(HttpData::wrap).toArray(HttpData[]::new);
         final StreamMessage<HttpData> source = StreamMessage.of(httpData);
-        final CompletableFuture<Void> cf = source.subscribe();
-
-        assertThat(cf.join().isDone()).isTrue();
+        source.subscribe().join();
         for (ByteBuf buf : bufs) {
             assertThat(buf.refCnt()).isZero();
         }
@@ -345,9 +344,9 @@ class StreamMessageTest {
                                                      .map(String::getBytes)
                                                      .map(HttpData::wrap)
                                                      .collect(Collectors.toList());
-        final CompletableFuture<Void> cf = aborted.subscribe();
-
-        assertThat(cf.join().isDone()).isTrue();
+        assertThatThrownBy(() -> aborted.subscribe().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(AbortedStreamException.class);
         assertThat(collected).isEqualTo(expected);
         for (ByteBuf buf : bufs) {
             assertThat(buf.refCnt()).isZero();
@@ -375,9 +374,9 @@ class StreamMessageTest {
                                                      .map(String::getBytes)
                                                      .map(HttpData::wrap)
                                                      .collect(Collectors.toList());
-        final CompletableFuture<Void> cf = aborted.subscribe();
-
-        assertThat(cf.join().isDone()).isTrue();
+        assertThatThrownBy(() -> aborted.subscribe().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(CancelledSubscriptionException.class);
         assertThat(collected).isEqualTo(expected);
         for (ByteBuf buf : bufs) {
             assertThat(buf.refCnt()).isZero();
