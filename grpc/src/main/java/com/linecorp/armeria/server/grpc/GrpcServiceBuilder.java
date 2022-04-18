@@ -21,7 +21,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
-import static org.reflections.ReflectionUtils.getAllMethods;
 import static org.reflections.ReflectionUtils.withModifier;
 
 import java.lang.reflect.Method;
@@ -46,7 +45,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
@@ -811,13 +809,12 @@ public final class GrpcServiceBuilder {
         final String serviceName =
                 path != null ? path : '/' + serverServiceDefinition.getServiceDescriptor().getName();
         // In gRPC, A method name is unique.
-        final Map<String, List<Method>> methods = new HashMap<>();
-        for (Method method : getAllMethods(clazz, withModifier(Modifier.PUBLIC))) {
+        final Map<String, Method> methods = new HashMap<>();
+        for (Method method : InternalReflectionUtils.getAllSortedMethods(clazz,
+                                                                         withModifier(Modifier.PUBLIC))) {
             final String methodName = method.getName();
-            if (methods.containsKey(methodName)) {
-                methods.get(methodName).add(method);
-            } else {
-                methods.put(methodName, Lists.newArrayList(method));
+            if (!methods.containsKey(methodName)) {
+                methods.put(methodName, method);
             }
         }
         for (final ServerMethodDefinition<?, ?> serverMethodDefinition : serverServiceDefinition.getMethods()) {
@@ -825,34 +822,19 @@ public final class GrpcServiceBuilder {
             if (targetMethodName == null) {
                 continue;
             }
-            final String methodName = targetMethodName.substring(0, 1)
-                                                      .toLowerCase() + targetMethodName.substring(1);
-            final List<Method> foundMethods = methods.get(methodName);
-            if (foundMethods == null) {
+            final String methodName = targetMethodName.substring(0, 1).toLowerCase()
+                                      + targetMethodName.substring(1);
+            final Method method = methods.get(methodName);
+            if (method == null) {
                 continue;
             }
-            for (Method method : foundMethods) {
-                final List<DecoratorAndOrder> decorators = DecoratorAnnotationUtil.collectDecorators(clazz,
-                                                                                                     method);
-                if (!decorators.isEmpty()) {
-                    String key = serviceName + '/' + targetMethodName;
-                    if (pathToDecorators.containsKey(key)) {
-                        if (decorators.size() > pathToDecorators.get(key).size()) {
-                            pathToDecorators.put(key, decorators);
-                        }
-                    } else {
-                        pathToDecorators.put(key, decorators);
-                    }
-                    if (path == null) {
-                        key = serverMethodDefinition.getMethodDescriptor().getFullMethodName();
-                        if (methodToDecorators.containsKey(key)) {
-                            if (decorators.size() > methodToDecorators.get(key).size()) {
-                                methodToDecorators.put(key, decorators);
-                            }
-                        } else {
-                            methodToDecorators.put(key, decorators);
-                        }
-                    }
+            final List<DecoratorAndOrder> decorators = DecoratorAnnotationUtil.collectDecorators(clazz, method);
+            if (!decorators.isEmpty()) {
+                String key = serviceName + '/' + targetMethodName;
+                pathToDecorators.put(key, decorators);
+                if (path == null) {
+                    key = serverMethodDefinition.getMethodDescriptor().getFullMethodName();
+                    methodToDecorators.put(key, decorators);
                 }
             }
         }
