@@ -134,7 +134,6 @@ public final class Flags {
         }
     }
 
-    @Nullable
     private static final Predicate<InetAddress> PREFERRED_IP_V4_ADDRESSES =
             getValue(FlagsProvider::preferredIpV4Addresses, "preferredIpV4Addresses");
 
@@ -1124,14 +1123,13 @@ public final class Flags {
      * Returns the {@link Predicate} that is used to choose the non-loopback IP v4 address in
      * {@link SystemInfo#defaultNonLoopbackIpV4Address()}.
      *
-     * <p>The default value of this flag is {@code null}, which means all valid IPv4 addresses are
+     * <p>The default value of this flag is {@code ignored -> true}, which means all valid IPv4 addresses are
      * preferred. Specify the {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=<csv>} JVM option
      * to override the default value. The {@code csv} should be
      * <a href="https://datatracker.ietf.org/doc/rfc4632/">Classless Inter-domain Routing(CIDR)</a>s or
      * exact IP addresses separated by commas. For example,
      * {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=211.111.111.111,10.0.0.0/8,192.168.1.0/24}.
      */
-    @Nullable
     public static Predicate<InetAddress> preferredIpV4Addresses() {
         return PREFERRED_IP_V4_ADDRESSES;
     }
@@ -1384,21 +1382,14 @@ public final class Flags {
         for (FlagsProvider provider : FLAGS_PROVIDERS) {
             try {
                 final T value = method.apply(provider);
-                if (provider instanceof DefaultFlagsProvider) {
-                    logger.info("{}: {} ({})", flagName, value, provider.getClass().getSimpleName());
-                    return value;
-                }
-
                 if (value == null) {
                     continue;
                 }
-
                 if (!validator.test(value)) {
                     logger.warn("{}: {} ({}) fail validation",
                                 flagName, value, provider.getClass().getSimpleName());
                     continue;
                 }
-
                 logger.info("{}: {} ({})", flagName, value, provider.getClass().getSimpleName());
                 return value;
             } catch (Exception ex) {

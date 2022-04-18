@@ -768,7 +768,7 @@ public interface FlagsProvider {
      * Returns the {@link Predicate} that is used to choose the non-loopback IP v4 address in
      * {@link SystemInfo#defaultNonLoopbackIpV4Address()}.
      *
-     * <p>The default value of this flag is {@code null}, which means all valid IPv4 addresses are
+     * <p>The default value of this flag is {@code ignored -> true}, which means all valid IPv4 addresses are
      * preferred. Specify the {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=<csv>} JVM option
      * to override the default value. The {@code csv} should be
      * <a href="https://datatracker.ietf.org/doc/rfc4632/">Classless Inter-domain Routing(CIDR)</a>s or

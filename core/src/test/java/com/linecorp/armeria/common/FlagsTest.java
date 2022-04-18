@@ -119,12 +119,6 @@ class FlagsTest {
     }
 
     @Test
-    @ClearSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses")
-    void defaultPreferredIpV4Addresses() throws Throwable {
-        assertFlags("preferredIpV4Addresses").isNull();
-    }
-
-    @Test
     @SetSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses", value = "10.0.0.0/8")
     void systemPropertyPreferredIpV4Addresses() throws Throwable {
         assertFlags("preferredIpV4Addresses").isNotNull();

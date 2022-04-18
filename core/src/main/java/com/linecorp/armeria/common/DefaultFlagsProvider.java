@@ -319,7 +319,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     @Override
     public Predicate<InetAddress> preferredIpV4Addresses() {
-        return null;
+        return ignored -> true;
     }
 
     @Override
