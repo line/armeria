@@ -39,6 +39,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.server.Server;
 
 import io.netty.util.concurrent.ScheduledFuture;
@@ -47,6 +48,7 @@ class EurekaEndpointGroupFailoverTest {
 
     private static final EncoderWrapper encoder = CodecWrappers.getEncoder(JacksonJson.class);
 
+    @FlakyTest
     @Test
     void shouldRefreshEndpointsAfterFailure() {
         final AtomicBoolean firstHealth = new AtomicBoolean();
