@@ -91,6 +91,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public String name() {
+        return "default";
+    }
+
+    @Override
     public Sampler<Class<? extends Throwable>> verboseExceptionSampler() {
         return VERBOSE_EXCEPTION_SAMPLER;
     }

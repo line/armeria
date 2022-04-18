@@ -61,6 +61,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public String name() {
+        return "sysprops";
+    }
+
+    @Override
     public Sampler<Class<? extends Throwable>> verboseExceptionSampler() {
         final String spec = getNormalized("verboseExceptions");
         if (spec == null) {

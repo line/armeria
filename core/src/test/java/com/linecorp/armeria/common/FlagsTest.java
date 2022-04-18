@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
@@ -30,7 +31,7 @@ import java.net.InetAddress;
 import java.net.URL;
 import java.net.URLConnection;
 import java.util.Arrays;
-import java.util.List;
+import java.util.Set;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -223,17 +224,21 @@ class FlagsTest {
 
     @Test
     void testApiConsistencyBetweenFlagsAndFlagsProvider() {
-        //Check Flags methods excluding deprecated methods
-        final List<String> flagsApis = Arrays.stream(Flags.class.getMethods())
+        //Check method consistency between Flags and FlagsProvider excluding deprecated methods
+        final Set<String> flagsApis = Arrays.stream(Flags.class.getMethods())
                                              .filter(m -> !m.isAnnotationPresent(Deprecated.class))
                                              .map(Method::getName)
-                                             .filter(name -> Arrays.stream(Object.class.getMethods())
-                                                                   .noneMatch(om -> om.getName().equals(name)))
-                                             .collect(Collectors.toList());
-        final List<String> armeriaOptionsProviderApis = Arrays.stream(FlagsProvider.class.getMethods())
+                                             .collect(Collectors.toSet());
+        flagsApis.removeAll(Arrays.stream(Object.class.getMethods())
+                                                  .map(Method::getName)
+                                                  .collect(toImmutableSet()));
+
+        final Set<String> armeriaOptionsProviderApis = Arrays.stream(FlagsProvider.class.getMethods())
                                                               .map(Method::getName)
-                                                              .filter(name -> !"priority".equals(name))
-                                                              .collect(Collectors.toList());
+                                                              .collect(Collectors.toSet());
+        final Set<String> knownIgnoreMethods = ImmutableSet.of("priority", "name");
+        armeriaOptionsProviderApis.removeAll(knownIgnoreMethods);
+
         assertThat(flagsApis).hasSameElementsAs(armeriaOptionsProviderApis);
     }
 

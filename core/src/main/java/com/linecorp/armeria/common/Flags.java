@@ -1387,13 +1387,13 @@ public final class Flags {
                 }
                 if (!validator.test(value)) {
                     logger.warn("{}: {} ({}) fail validation",
-                                flagName, value, provider.getClass().getSimpleName());
+                                flagName, value, provider.name());
                     continue;
                 }
-                logger.info("{}: {} ({})", flagName, value, provider.getClass().getSimpleName());
+                logger.info("{}: {} ({})", flagName, value, provider.name());
                 return value;
             } catch (Exception ex) {
-                logger.warn("{}: ({}) fail to get value, {}", flagName, provider.getClass().getSimpleName(),
+                logger.warn("{}: ({}) fail to get value, {}", flagName, provider.name(),
                             ex.getMessage());
             }
         }
