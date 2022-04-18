@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -34,8 +35,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +56,7 @@ import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.netty.buffer.ByteBuf;
@@ -448,9 +452,23 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private final class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
 
+        /**
+         * See `sun.security.ssl.ProtocolVersion.NONE`.
+         */
+        private static final String DUMMY_TLS_PROTOCOL = "NONE";
+        /**
+         * See <a href="https://www.openssl.org/docs/man1.1.1/man3/SSL_get_version.html">SSL_get_version</a>.
+         */
+        private static final String UNKNOWN_TLS_PROTOCOL = "unknown";
+        /**
+         * See {@link SSLEngine#getSession()}.
+         */
+        private static final String DUMMY_CIPHER_SUITE = "SSL_NULL_WITH_NULL_NULL";
+
         @Nullable
         private final ProxiedAddresses proxiedAddresses;
         private boolean loggedHandshakeFailure;
+        private boolean addedExceptionLogger;
 
         Http2OrHttpHandler(@Nullable ProxiedAddresses proxiedAddresses) {
             super(ApplicationProtocolNames.HTTP_1_1);
@@ -460,16 +478,18 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         @Override
         protected void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception {
             if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
+                recordHandshakeSuccess(ctx, H2);
                 addHttp2Handlers(ctx);
                 return;
             }
 
             if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
+                recordHandshakeSuccess(ctx, H1);
                 addHttpHandlers(ctx);
                 return;
             }
 
-            throw new IllegalStateException("unknown protocol: " + protocol);
+            throw new SSLHandshakeException("unsupported application protocol: " + protocol);
         }
 
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
@@ -514,27 +534,28 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         @Override
         protected void handshakeFailure(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            logIfUnexpected(ctx, cause);
-            ctx.close();
-
-            // On handshake failure, ApplicationProtocolNegotiationHandler will remove itself,
-            // leaving no handlers behind it. Add a handler that handles the exceptions raised after this point.
-            ctx.pipeline().addLast(new ChannelInboundHandlerAdapter() {
-                @Override
-                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                    logIfUnexpected(ctx, cause);
-                }
-            });
+            exceptionCaught(ctx, cause);
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
             logIfUnexpected(ctx, cause);
             ctx.close();
+
+            // On handshake failure, ApplicationProtocolNegotiationHandler will remove itself,
+            // leaving no handlers behind it. Add a handler that logs the exceptions raised after this point.
+            if (!addedExceptionLogger) {
+                addedExceptionLogger = true;
+                ctx.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        logIfUnexpected(ctx, cause);
+                    }
+                });
+            }
         }
 
         private void logIfUnexpected(ChannelHandlerContext ctx, Throwable cause) {
-            final Channel ch = ctx.channel();
             if (cause instanceof DecoderException) {
                 if (loggedHandshakeFailure) {
                     if (cause.getCause() instanceof SSLException) {
@@ -544,16 +565,66 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     }
                 } else if (cause.getCause() instanceof SSLHandshakeException) {
                     loggedHandshakeFailure = true;
-                    logger.warn("{} TLS handshake failed: {}", ch, cause.getCause().getMessage());
-                    if (logger.isDebugEnabled()) {
-                        // Print the stack trace only at DEBUG level because it can be noisy.
-                        logger.debug("{} Stack trace for the TLS handshake failure:", ch, cause);
-                    }
+                    final SSLHandshakeException handshakeException = (SSLHandshakeException) cause.getCause();
+                    recordHandshakeFailure(ctx, handshakeException);
                     return;
                 }
             }
 
-            Exceptions.logIfUnexpected(logger, ch, cause);
+            Exceptions.logIfUnexpected(logger, ctx.channel(), cause);
+        }
+
+        private void recordHandshakeSuccess(ChannelHandlerContext ctx, SessionProtocol protocol) {
+            final Channel ch = ctx.channel();
+            incrementHandshakeCounter(ch, protocol, true);
+        }
+
+        private void recordHandshakeFailure(ChannelHandlerContext ctx, SSLHandshakeException cause) {
+            final Channel ch = ctx.channel();
+            incrementHandshakeCounter(ch, null, false);
+
+            logger.warn("{} TLS handshake failed: {}", ch, cause.getMessage());
+            if (logger.isDebugEnabled()) {
+                // Print the stack trace only at DEBUG level because it can be noisy.
+                logger.debug("{} Stack trace for the TLS handshake failure:", ch, cause);
+            }
+        }
+
+        private void incrementHandshakeCounter(
+                Channel ch, @Nullable SessionProtocol protocol, boolean success) {
+
+            final SSLSession sslSession = ChannelUtil.findSslSession(ch);
+            final String protocolText = protocol != null ? protocol.uriText() : "";
+            final String commonName;
+            String cipherSuite;
+            String tlsProtocol;
+            if (sslSession != null) {
+                commonName = firstNonNull(CertificateUtil.getCommonName(sslSession), "");
+                cipherSuite = sslSession.getCipherSuite();
+                if (cipherSuite == null || DUMMY_CIPHER_SUITE.equals(cipherSuite)) {
+                    cipherSuite = "";
+                }
+                tlsProtocol = sslSession.getProtocol();
+                if (tlsProtocol == null ||
+                    UNKNOWN_TLS_PROTOCOL.equals(tlsProtocol) ||
+                    DUMMY_TLS_PROTOCOL.equals(tlsProtocol)) {
+                    tlsProtocol = "";
+                }
+            } else {
+                cipherSuite = "";
+                commonName = "";
+                tlsProtocol = "";
+            }
+
+            // Create or find the TLS handshake counter and increment it.
+            Counter.builder("armeria.server.tls.handshakes")
+                   .tags("cipher.suite", cipherSuite,
+                         "common.name", commonName,
+                         "protocol", protocolText,
+                         "result", success ? "success" : "failure",
+                         "tls.protocol", tlsProtocol)
+                   .register(config.meterRegistry())
+                   .increment();
         }
     }
 

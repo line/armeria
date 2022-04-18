@@ -195,7 +195,7 @@ public interface HttpRequestSetters {
     HttpRequestSetters disablePathParams();
 
     /**
-     * Sets a query param for this request. For example:
+     * Adds a query param for this request. For example:
      * <pre>{@code
      * HttpRequest.builder()
      *            .get("/endpoint")
@@ -206,7 +206,7 @@ public interface HttpRequestSetters {
     HttpRequestSetters queryParam(String name, Object value);
 
     /**
-     * Sets multiple query params for this request. For example:
+     * Adds multiple query params for this request. For example:
      * <pre>{@code
      * HttpRequest.builder()
      *            .get("/endpoint")
