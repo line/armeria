@@ -111,12 +111,6 @@ final class DefaultFlagsProvider implements FlagsProvider {
         if (providers.isEmpty()) {
             return RequestContextStorage::threadLocal;
         }
-        if (providers.size() > 1) {
-            throw new IllegalStateException(
-                    "Found more than one " + RequestContextStorageProvider.class.getSimpleName() +
-                    ". You must specify -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>." +
-                    " providers: " + providers);
-        }
         return providers.get(0);
     }
 

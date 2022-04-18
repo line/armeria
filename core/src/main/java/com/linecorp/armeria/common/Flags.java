@@ -446,12 +446,17 @@ public final class Flags {
     }
 
     /**
-     * Returns the {@link RequestContextStorageProvider} that use for provide {@link RequestContextStorage}.
+     * Returns the {@link RequestContextStorageProvider} that use for provides {@link RequestContextStorage}.
      *
-     * <p>By default, this flag will return the {@link RequestContextStorageProvider} found via Java SPI,
-     * failing in case of more than one SPI provider implementation. If there are more than one, you must
-     * specify the {@code -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>} JVM option
-     * to choose the {@link RequestContextStorageProvider}.</p>
+     * <p>By default, If no {@link RequestContextStorageProvider} SPI provider implementation is provided,
+     * This flag returns {@link RequestContextStorageProvider}</p> that provides
+     * {@link RequestContextStorage#threadLocal()}. Otherwise, the first {@link RequestContextStorageProvider}
+     * SPI provider implementation will be selected.</p>
+     *
+     * <p>By specify the {@code -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>} JVM option, you
+     * are able to select which {@link RequestContextStorageProvider} SPI provider implementation to used.
+     * If none of them matches, the next {@link FlagsProvider#requestContextStorageProvider()} will be
+     * selected.</p>
      */
     public static RequestContextStorageProvider requestContextStorageProvider() {
         return REQUEST_CONTEXT_STORAGE_PROVIDER;

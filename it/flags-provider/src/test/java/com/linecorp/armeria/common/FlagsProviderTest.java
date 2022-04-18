@@ -17,7 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assumptions.assumeThat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -119,16 +119,16 @@ class FlagsProviderTest {
             value = "com.linecorp.armeria.common.InvalidRequestContextStorageProvider")
     void twoRequestContextStorageProvidersAreProvidedAndInvalidFQCNisSpecify() throws Throwable {
         final Method method = flags.getDeclaredMethod("requestContextStorageProvider");
-        assertThatThrownBy(() -> method.invoke(flags))
-                .isInstanceOf(Error.class);
+        final String actual = method.invoke(flags).getClass().getSimpleName();
+        assertThat(actual).isEqualTo(Custom1RequestContextStorageProvider.class.getSimpleName());
     }
 
     @Test
-    @ClearSystemProperty(key = "com.linecorp.armeria.requestContextStorageProvider")
     void twoRequestContextStorageProvidersAreProvidedButNoFQCNisSpecify() throws Throwable {
-        final Method method = flags.getDeclaredMethod("requestContextStorageProvider");
-        assertThatThrownBy(() -> method.invoke(flags))
-                .isInstanceOf(Error.class);
+        assumeThat(System.getProperty("com.linecorp.armeria.requestContextStorageProvider")).isNull();
+
+        final RequestContextStorage actual = Flags.requestContextStorageProvider().newStorage();
+        assertThat(actual).isEqualTo(RequestContextStorage.threadLocal());
     }
 
     @Test
