@@ -55,10 +55,17 @@ public final class GraphqlUtil {
      *     }
      * };
      * }</pre>
+     *
+     * @throws IllegalStateException if the specified {@link GraphQLContext} doesn't contain
+     *                               a {@link ServiceRequestContext}.
      */
     public static ServiceRequestContext serviceRequestContext(GraphQLContext graphQLContext) {
         requireNonNull(graphQLContext, "graphQLContext");
-        return graphQLContext.get(GRAPHQL_CONTEXT_KEY);
+        final ServiceRequestContext ctx = graphQLContext.get(GRAPHQL_CONTEXT_KEY);
+        if (ctx == null) {
+            throw new IllegalStateException("missing request context");
+        }
+        return ctx;
     }
 
     /**
@@ -73,6 +80,9 @@ public final class GraphqlUtil {
      *     }
      * };
      * }</pre>
+     *
+     * @throws IllegalStateException if the specified {@link GraphQLContext} doesn't contain
+     *                               a {@link ServiceRequestContext}.
      */
     public static ServiceRequestContext serviceRequestContext(DataFetchingEnvironment environment) {
         requireNonNull(environment, "environment");
