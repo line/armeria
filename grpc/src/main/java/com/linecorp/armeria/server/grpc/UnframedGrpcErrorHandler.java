@@ -17,8 +17,6 @@ package com.linecorp.armeria.server.grpc;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Map;
-
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
@@ -34,6 +32,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Status;
@@ -96,14 +96,7 @@ public interface UnframedGrpcErrorHandler {
                         .orElse(UnframedGrpcStatusMappingFunction.of());
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();
-            final Map<String, Object> message;
             final String grpcMessage = status.getDescription();
-            if (grpcMessage != null) {
-                message = ImmutableMap.of("grpc-code", grpcCode.name(),
-                                          "message", grpcMessage);
-            } else {
-                message = ImmutableMap.of("grpc-code", grpcCode.name());
-            }
             final RequestLogAccess log = ctx.log();
             final Throwable cause;
             if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
@@ -123,7 +116,15 @@ public interface UnframedGrpcErrorHandler {
             if (!Strings.isNullOrEmpty(grpcStatusDetailsBin)) {
                 responseHeadersBuilder.set(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN, grpcStatusDetailsBin);
             }
-            return HttpResponse.ofJson(responseHeadersBuilder.build(), message);
+            final ImmutableMap.Builder<String, String> messageBuilder = ImmutableMap.builder();
+            messageBuilder.put("grpc-code", grpcCode.name());
+            if (grpcMessage != null) {
+                messageBuilder.put("message", grpcMessage);
+            }
+            if (cause != null && ctx.config().verboseResponses()) {
+                messageBuilder.put("stack-trace", Exceptions.traceText(cause));
+            }
+            return HttpResponse.ofJson(responseHeadersBuilder.build(), messageBuilder.build());
         };
     }
 
@@ -148,11 +149,6 @@ public interface UnframedGrpcErrorHandler {
                         .orElse(UnframedGrpcStatusMappingFunction.of());
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();
-            final StringBuilder message = new StringBuilder("grpc-code: " + grpcCode.name());
-            final String grpcMessage = status.getDescription();
-            if (grpcMessage != null) {
-                message.append(", ").append(grpcMessage);
-            }
             final RequestLogAccess log = ctx.log();
             final Throwable cause;
             if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
@@ -172,7 +168,20 @@ public interface UnframedGrpcErrorHandler {
             if (!Strings.isNullOrEmpty(grpcStatusDetailsBin)) {
                 responseHeadersBuilder.set(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN, grpcStatusDetailsBin);
             }
-            return HttpResponse.of(responseHeadersBuilder.build(), HttpData.ofUtf8(message.toString()));
+            final HttpData content;
+            try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
+                final StringBuilder msg = ttl.stringBuilder();
+                msg.append("grpc-code: ").append(grpcCode.name());
+                final String grpcMessage = status.getDescription();
+                if (grpcMessage != null) {
+                    msg.append(", ").append(grpcMessage);
+                }
+                if (cause != null && ctx.config().verboseResponses()) {
+                    msg.append("\nstack-trace:\n").append(Exceptions.traceText(cause));
+                }
+                content = HttpData.ofUtf8(msg);
+            }
+            return HttpResponse.of(responseHeadersBuilder.build(), content);
         };
     }
 

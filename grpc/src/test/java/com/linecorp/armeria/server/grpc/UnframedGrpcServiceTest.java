@@ -109,7 +109,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.CLIENT_CLOSED_REQUEST);
         assertThat(res.contentUtf8())
-                .isEqualTo("grpc-code: CANCELLED, grpc error message");
+                .startsWith("grpc-code: CANCELLED, grpc error message");
     }
 
     @Test
@@ -148,7 +148,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(res.contentUtf8())
-                .isEqualTo("grpc-code: CANCELLED, Completed without a response");
+                .startsWith("grpc-code: CANCELLED, Completed without a response");
     }
 
     @Test
@@ -160,7 +160,7 @@ class UnframedGrpcServiceTest {
                                                                .build();
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
-        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of());
+        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(), null);
         assertThat(byteBuf.refCnt()).isZero();
     }
 
@@ -184,7 +184,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.UNKNOWN);
         assertThat(res.contentUtf8())
-                .isEqualTo("grpc-code: UNKNOWN, grpc error message");
+                .startsWith("grpc-code: UNKNOWN, grpc error message");
     }
 
     @Test
@@ -200,7 +200,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(res.contentUtf8())
-                .isEqualTo("grpc-code: UNKNOWN, grpc error message");
+                .startsWith("grpc-code: UNKNOWN, grpc error message");
     }
 
     @Test
@@ -218,7 +218,7 @@ class UnframedGrpcServiceTest {
         final AggregatedHttpResponse res = response.aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(res.contentUtf8())
-                .isEqualTo("grpc-code: UNKNOWN, grpc error message");
+                .startsWith("grpc-code: UNKNOWN, grpc error message");
     }
 
     private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService) {
