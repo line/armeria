@@ -69,17 +69,7 @@ class GrpcDecoratingServiceTest {
 
         final TestServiceBlockingStub prefixClient = GrpcClients
                 .builder(server.httpUri())
-                .decorator((delegate, ctx, req) -> {
-                    final String path = req.path();
-                    final HttpRequest newReq = req.mapHeaders(
-                            headers -> headers.toBuilder()
-                                              .path(path.replace(
-                                                      "armeria.grpc.testing.TestService",
-                                                      "grpc/armeria.grpc.testing.TestService"))
-                                              .build());
-                    ctx.updateRequest(newReq);
-                    return delegate.execute(ctx, newReq);
-                })
+                .pathPrefix("/grpc")
                 .build(TestServiceBlockingStub.class);
         prefixClient.unaryCall(SimpleRequest.getDefaultInstance());
         assertThat(SECOND_TEST_RESULT).isEqualTo("SecondDecorator/MethodSecondDecorator");
