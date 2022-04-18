@@ -95,6 +95,11 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
     }
 
     @Override
+    public Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute() {
+        return delegate.methodsByRoute();
+    }
+
+    @Override
     public Set<SerializationFormat> supportedSerializationFormats() {
         return delegate.supportedSerializationFormats();
     }
