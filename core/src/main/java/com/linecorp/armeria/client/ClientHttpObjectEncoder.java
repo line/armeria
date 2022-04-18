@@ -37,7 +37,7 @@ interface ClientHttpObjectEncoder extends HttpObjectEncoder {
                                        ChannelPromise promise) {
         assert eventLoop().inEventLoop();
         if (isClosed()) {
-            promise.setFailure(UnprocessedRequestException.of(ClosedSessionException.get()));
+            promise.tryFailure(UnprocessedRequestException.of(ClosedSessionException.get()));
             return promise;
         }
 
