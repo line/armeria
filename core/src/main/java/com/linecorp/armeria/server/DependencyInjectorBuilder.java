@@ -42,7 +42,7 @@ public final class DependencyInjectorBuilder {
      * Sets the {@link Supplier} to inject the singleton instance of {@link Class}. {@link Supplier#get()} is
      * called only once and the supplied instance is reused. The instance is
      * {@linkplain AutoCloseable#close() closed} if it implements {@link AutoCloseable}
-     * when the {@linkplain Server#stop() server is stopped}.
+     * when the {@link Server} stops.
      */
     public <T> DependencyInjectorBuilder singleton(Class<T> type, Supplier<T> supplier) {
         requireNonNull(type, "type");
@@ -56,7 +56,7 @@ public final class DependencyInjectorBuilder {
     /**
      * Sets the singleton instances to inject.
      * The instances are {@linkplain AutoCloseable#close() closed} if it implements {@link AutoCloseable}
-     * when the {@linkplain Server#stop() server is stopped}.
+     * when the {@link Server} stops.
      */
     public DependencyInjectorBuilder singletons(Object... singletons) {
         return singletons(ImmutableList.copyOf(requireNonNull(singletons, "singletons")));
@@ -65,11 +65,12 @@ public final class DependencyInjectorBuilder {
     /**
      * Sets the singleton instances to inject.
      * The instances are {@linkplain AutoCloseable#close() closed} if it implements {@link AutoCloseable}
-     * when the {@linkplain Server#stop() server is stopped}.
+     * when the {@link Server} stops.
      */
     public DependencyInjectorBuilder singletons(Iterable<Object> singletons) {
         requireNonNull(singletons, "singletons");
         for (Object singleton : singletons) {
+            requireNonNull(singleton, "singleton");
             final Class<?> type = singleton.getClass();
             checkDuplicateType(singletonSuppliers, "singleton", type);
             checkDuplicateType(prototypes, "prototype", type);
@@ -85,7 +86,7 @@ public final class DependencyInjectorBuilder {
      * Unlike {@link #singleton(Class, Supplier)}, {@link Supplier#get()} is called every time when an
      * instance of {@link Class} is needed.
      * The {@linkplain Supplier#get() supplied instance} is {@linkplain AutoCloseable#close() closed}
-     * if it implements {@link AutoCloseable} when the {@linkplain Server#stop() server is stopped}.
+     * if it implements {@link AutoCloseable} when the {@link Server} stops.
      */
     public <T> DependencyInjectorBuilder prototype(Class<T> type, Supplier<T> supplier) {
         requireNonNull(type, "type");

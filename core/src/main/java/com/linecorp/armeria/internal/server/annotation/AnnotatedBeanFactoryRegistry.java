@@ -53,7 +53,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /**
  * A singleton class which manages factories for creating a bean.
- * {@link #register(Class, Set, List, DependencyInjector)} should be called first to let
+ * {@link #register(Class, Set, List, List)} should be called first to let
  * {@link AnnotatedBeanFactoryRegistry} create a factory for a bean.
  */
 final class AnnotatedBeanFactoryRegistry {
@@ -84,12 +84,12 @@ final class AnnotatedBeanFactoryRegistry {
      */
     static synchronized BeanFactoryId register(Class<?> clazz, Set<String> pathParams,
                                                List<RequestObjectResolver> objectResolvers,
-                                               DependencyInjector dependencyInjector) {
+                                               List<DependencyInjector> dependencyInjectors) {
         final BeanFactoryId beanFactoryId = new BeanFactoryId(clazz, pathParams);
         final AnnotatedBeanFactories annotatedBeanFactories = factories.get(clazz);
         if (!annotatedBeanFactories.containsKey(beanFactoryId.pathParams)) {
             final AnnotatedBeanFactory<?> factory =
-                    createFactory(beanFactoryId, objectResolvers, dependencyInjector);
+                    createFactory(beanFactoryId, objectResolvers, dependencyInjectors);
             if (factory != null) {
                 annotatedBeanFactories.put(beanFactoryId.pathParams, factory);
                 logger.debug("Registered a bean factory: {}", beanFactoryId);
@@ -136,7 +136,7 @@ final class AnnotatedBeanFactoryRegistry {
     @Nullable
     private static <T> AnnotatedBeanFactory<T> createFactory(BeanFactoryId beanFactoryId,
                                                              List<RequestObjectResolver> objectResolvers,
-                                                             DependencyInjector dependencyInjector) {
+                                                             List<DependencyInjector> dependencyInjectors) {
         requireNonNull(beanFactoryId, "beanFactoryId");
         requireNonNull(objectResolvers, "objectResolvers");
 
@@ -157,10 +157,10 @@ final class AnnotatedBeanFactoryRegistry {
         // }
         final List<RequestObjectResolver> resolvers = addToFirstIfExists(
                 objectResolvers, AnnotationUtil.findDeclared(beanFactoryId.type, RequestConverter.class),
-                dependencyInjector);
+                dependencyInjectors);
 
         final Entry<Constructor<T>, List<AnnotatedValueResolver>> constructor =
-                findConstructor(beanFactoryId, resolvers, dependencyInjector);
+                findConstructor(beanFactoryId, resolvers, dependencyInjectors);
         if (constructor == null) {
             // There is no constructor, so we cannot create a new instance.
             return null;
@@ -171,12 +171,12 @@ final class AnnotatedBeanFactoryRegistry {
         // Find the methods whose parameters are not annotated with the same annotations in the constructor.
         // If there're parameters used redundantly, it would warn it.
         final Map<Method, List<AnnotatedValueResolver>> methods =
-                findMethods(constructorAnnotatedResolvers, beanFactoryId, resolvers, dependencyInjector);
+                findMethods(constructorAnnotatedResolvers, beanFactoryId, resolvers, dependencyInjectors);
 
         // Find the fields which are not annotated with the same annotations in the constructor and methods.
         // If there're parameters used redundantly, it would warn it.
         final Map<Field, AnnotatedValueResolver> fields = findFields(
-                constructorAnnotatedResolvers, methods, beanFactoryId, resolvers, dependencyInjector);
+                constructorAnnotatedResolvers, methods, beanFactoryId, resolvers, dependencyInjectors);
 
         if (constructor.getValue().isEmpty() && methods.isEmpty() && fields.isEmpty()) {
             // A default constructor exists but there is no annotated field or method.
@@ -194,7 +194,7 @@ final class AnnotatedBeanFactoryRegistry {
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private static <T> Entry<Constructor<T>, List<AnnotatedValueResolver>> findConstructor(
             BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers,
-            DependencyInjector dependencyInjector) {
+            List<DependencyInjector> dependencyInjectors) {
 
         Entry<Constructor<T>, List<AnnotatedValueResolver>> candidate = null;
 
@@ -212,8 +212,8 @@ final class AnnotatedBeanFactoryRegistry {
                 final List<AnnotatedValueResolver> resolvers =
                         AnnotatedValueResolver.ofBeanConstructorOrMethod(
                                 constructor, beanFactoryId.pathParams,
-                                addToFirstIfExists(objectResolvers, converters, dependencyInjector),
-                                dependencyInjector);
+                                addToFirstIfExists(objectResolvers, converters, dependencyInjectors),
+                                dependencyInjectors);
                 if (!resolvers.isEmpty()) {
                     // Can overwrite only if the current candidate is a default constructor.
                     if (candidate == null || candidate.getValue().isEmpty()) {
@@ -234,7 +234,7 @@ final class AnnotatedBeanFactoryRegistry {
     private static Map<Method, List<AnnotatedValueResolver>> findMethods(
             List<AnnotatedValueResolver> constructorAnnotatedResolvers,
             BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers,
-            DependencyInjector dependencyInjector) {
+            List<DependencyInjector> dependencyInjectors) {
         final Set<AnnotatedValueResolver> uniques = uniqueResolverSet();
         uniques.addAll(constructorAnnotatedResolvers);
 
@@ -247,8 +247,8 @@ final class AnnotatedBeanFactoryRegistry {
                 final List<AnnotatedValueResolver> resolvers =
                         AnnotatedValueResolver.ofBeanConstructorOrMethod(
                                 method, beanFactoryId.pathParams,
-                                addToFirstIfExists(objectResolvers, converters, dependencyInjector),
-                                dependencyInjector);
+                                addToFirstIfExists(objectResolvers, converters, dependencyInjectors),
+                                dependencyInjectors);
                 if (!resolvers.isEmpty()) {
                     int redundant = 0;
                     for (AnnotatedValueResolver resolver : resolvers) {
@@ -275,7 +275,7 @@ final class AnnotatedBeanFactoryRegistry {
             List<AnnotatedValueResolver> constructorAnnotatedResolvers,
             Map<Method, List<AnnotatedValueResolver>> methods,
             BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers,
-            DependencyInjector dependencyInjector) {
+            List<DependencyInjector> dependencyInjectors) {
         final Set<AnnotatedValueResolver> uniques = uniqueResolverSet();
         uniques.addAll(constructorAnnotatedResolvers);
         methods.values().forEach(uniques::addAll);
@@ -288,8 +288,8 @@ final class AnnotatedBeanFactoryRegistry {
             final AnnotatedValueResolver resolver =
                     AnnotatedValueResolver.ofBeanField(
                             field, beanFactoryId.pathParams,
-                            addToFirstIfExists(objectResolvers, converters, dependencyInjector),
-                            dependencyInjector);
+                            addToFirstIfExists(objectResolvers, converters, dependencyInjectors),
+                            dependencyInjectors);
             if (resolver != null) {
                 if (uniques.add(resolver)) {
                     builder.put(field, resolver);

@@ -285,10 +285,10 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
      * {@link AnnotatedServiceExtensions} to the {@link ServerBuilder}.
      *
      * @param extensions the {@link AnnotatedServiceExtensions} at the server level.
-     * @param dependencyInjector the {@link DependencyInjector} to inject dependencies.
+     * @param dependencyInjectors the {@link DependencyInjector}s to inject dependencies.
      */
     List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedServiceExtensions extensions,
-                                                         DependencyInjector dependencyInjector) {
+                                                         List<DependencyInjector> dependencyInjectors) {
         final List<RequestConverterFunction> requestConverterFunctions =
                 requestConverterFunctionBuilder.addAll(extensions.requestConverters()).build();
         final List<ResponseConverterFunction> responseConverterFunctions =
@@ -301,7 +301,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
         final List<AnnotatedServiceElement> elements =
                 AnnotatedServiceFactory.find(pathPrefix, service, useBlockingTaskExecutor,
                                              requestConverterFunctions, responseConverterFunctions,
-                                             exceptionHandlerFunctions, dependencyInjector);
+                                             exceptionHandlerFunctions, dependencyInjectors);
         return elements.stream().map(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());

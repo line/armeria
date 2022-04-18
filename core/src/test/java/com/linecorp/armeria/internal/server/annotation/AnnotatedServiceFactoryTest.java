@@ -88,14 +88,14 @@ class AnnotatedServiceFactoryTest {
         }
 
         @Override
-        public void close() {}
+        public void shutdown() {}
     };
 
     @Test
     void ofNoOrdering() throws NoSuchMethodException {
         final List<DecoratorAndOrder> list =
-                collectDecorators(TestClass.class,
-                                  TestClass.class.getMethod("noOrdering"), dependencyInjector);
+                collectDecorators(TestClass.class, TestClass.class.getMethod("noOrdering"),
+                                  ImmutableList.of(dependencyInjector));
         assertThat(values(list)).containsExactly(Decorator1.class,
                                                  LoggingDecoratorFactoryFunction.class,
                                                  LoggingDecoratorFactoryFunction.class,
@@ -111,8 +111,8 @@ class AnnotatedServiceFactoryTest {
     @Test
     void ofMethodScopeOrdering() throws NoSuchMethodException {
         final List<DecoratorAndOrder> list =
-                collectDecorators(TestClass.class,
-                                  TestClass.class.getMethod("methodScopeOrdering"), dependencyInjector);
+                collectDecorators(TestClass.class, TestClass.class.getMethod("methodScopeOrdering"),
+                                  ImmutableList.of(dependencyInjector));
         assertThat(values(list)).containsExactly(Decorator1.class,
                                                  LoggingDecoratorFactoryFunction.class,
                                                  RateLimitingDecoratorFactoryFunction.class,
@@ -132,8 +132,8 @@ class AnnotatedServiceFactoryTest {
     @Test
     void ofGlobalScopeOrdering() throws NoSuchMethodException {
         final List<DecoratorAndOrder> list =
-                collectDecorators(TestClass.class,
-                                  TestClass.class.getMethod("globalScopeOrdering"), dependencyInjector);
+                collectDecorators(TestClass.class, TestClass.class.getMethod("globalScopeOrdering"),
+                                  ImmutableList.of(dependencyInjector));
         assertThat(values(list)).containsExactly(LoggingDecoratorFactoryFunction.class,
                                                  Decorator1.class,
                                                  LoggingDecoratorFactoryFunction.class,
@@ -151,7 +151,7 @@ class AnnotatedServiceFactoryTest {
         final List<DecoratorAndOrder> list =
                 collectDecorators(TestClass.class,
                                   TestClass.class.getMethod("userDefinedRepeatableDecorator"),
-                                  dependencyInjector);
+                                  ImmutableList.of(dependencyInjector));
         assertThat(values(list)).containsExactly(Decorator1.class,
                                                  LoggingDecoratorFactoryFunction.class,
                                                  UserDefinedRepeatableDecoratorFactory.class,
@@ -172,7 +172,7 @@ class AnnotatedServiceFactoryTest {
         final Object object = new PathPrefixServiceObject();
         final List<AnnotatedServiceElement> elements =
                 find("/", object, /* useBlockingTaskExecutor */ false,
-                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), dependencyInjector);
+                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedServiceElement::route)
@@ -187,7 +187,7 @@ class AnnotatedServiceFactoryTest {
         final Object serviceObject = new ServiceObject();
         final List<AnnotatedServiceElement> elements =
                 find(HOME_PATH_PREFIX, serviceObject, /* useBlockingTaskExecutor */ false,
-                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), dependencyInjector);
+                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
 
         final List<String> paths = elements.stream()
                                            .map(AnnotatedServiceElement::route)
@@ -212,7 +212,7 @@ class AnnotatedServiceFactoryTest {
                                                     HttpResponse.class)
                 .map(method -> create("/", serviceObject, method, /* useBlockingTaskExecutor */ false,
                                       ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
-                                      dependencyInjector))
+                                      ImmutableList.of()))
                 .flatMap(Collection::stream)
                 .map(AnnotatedServiceElement::route)
                 .collect(toImmutableList());
@@ -301,7 +301,7 @@ class AnnotatedServiceFactoryTest {
         getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
                 create("/", serviceObject, method, /* useBlockingTaskExecutor */ false,
-                       ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), dependencyInjector);
+                       ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
             }, method.getName()).isInstanceOf(IllegalArgumentException.class);
         });
     }
@@ -339,7 +339,7 @@ class AnnotatedServiceFactoryTest {
                             final List<AnnotatedServiceElement> AnnotatedServices = create(
                                     "/", service, method, /* useBlockingTaskExecutor */ false,
                                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
-                                    dependencyInjector);
+                                    ImmutableList.of());
                             return AnnotatedServices.stream();
                         }
                 )

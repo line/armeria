@@ -190,19 +190,20 @@ final class AnnotatedValueResolver {
     static List<AnnotatedValueResolver> ofServiceMethod(Method method, Set<String> pathParams,
                                                         List<RequestObjectResolver> objectResolvers,
                                                         boolean useBlockingExecutor,
-                                                        DependencyInjector dependencyInjector) {
-        return of(method, pathParams, objectResolvers, true, true, useBlockingExecutor, dependencyInjector);
+                                                        List<DependencyInjector> dependencyInjectors) {
+        return of(method, pathParams, objectResolvers, true, true, useBlockingExecutor, dependencyInjectors);
     }
 
     /**
      * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
      * {@code constructorOrMethod}, {@code pathParams} and {@code objectResolvers}.
      */
-    static List<AnnotatedValueResolver> ofBeanConstructorOrMethod(Executable constructorOrMethod,
-                                                                  Set<String> pathParams,
-                                                                  List<RequestObjectResolver> objectResolvers,
-                                                                  DependencyInjector dependencyInjector) {
-        return of(constructorOrMethod, pathParams, objectResolvers, false, false, false, dependencyInjector);
+    static List<AnnotatedValueResolver> ofBeanConstructorOrMethod(
+            Executable constructorOrMethod,
+            Set<String> pathParams,
+            List<RequestObjectResolver> objectResolvers,
+            List<DependencyInjector> dependencyInjectors) {
+        return of(constructorOrMethod, pathParams, objectResolvers, false, false, false, dependencyInjectors);
     }
 
     /**
@@ -212,10 +213,11 @@ final class AnnotatedValueResolver {
     @Nullable
     static AnnotatedValueResolver ofBeanField(Field field, Set<String> pathParams,
                                               List<RequestObjectResolver> objectResolvers,
-                                              DependencyInjector dependencyInjector) {
+                                              List<DependencyInjector> dependencyInjectors) {
         // 'Field' is only used for converting a bean.
         // So we always need to pass 'implicitRequestObjectAnnotation' as false.
-        return of(field, field, field.getType(), pathParams, objectResolvers, false, false, dependencyInjector);
+        return of(field, field, field.getType(), pathParams,
+                  objectResolvers, false, false, dependencyInjectors);
     }
 
     /**
@@ -231,7 +233,7 @@ final class AnnotatedValueResolver {
                                                    boolean implicitRequestObjectAnnotation,
                                                    boolean isServiceMethod,
                                                    boolean useBlockingExecutor,
-                                                   DependencyInjector dependencyInjector) {
+                                                   List<DependencyInjector> dependencyInjectors) {
         final ImmutableList<Parameter> parameters =
                 Arrays.stream(constructorOrMethod.getParameters())
                       .filter(it -> !KotlinUtil.isContinuation(it.getType()))
@@ -279,7 +281,7 @@ final class AnnotatedValueResolver {
 
             resolver = of(constructorOrMethod,
                           headParameter, headParameter.getType(), pathParams, objectResolvers,
-                          implicitRequestObjectAnnotation, useBlockingExecutor, dependencyInjector);
+                          implicitRequestObjectAnnotation, useBlockingExecutor, dependencyInjectors);
         } else if (!isServiceMethod && parametersSize == 1 &&
                    !AnnotationUtil.findDeclared(constructorOrMethod, RequestConverter.class).isEmpty()) {
             //
@@ -299,7 +301,7 @@ final class AnnotatedValueResolver {
             // void setter(Bean bean) { ... }
             //
             resolver = of(headParameter, pathParams, objectResolvers, true,
-                          useBlockingExecutor, dependencyInjector);
+                          useBlockingExecutor, dependencyInjectors);
         } else {
             //
             // There's no annotation. So there should be no @Default annotation, too.
@@ -328,7 +330,7 @@ final class AnnotatedValueResolver {
         } else {
             list = parameters.stream()
                              .map(p -> of(p, pathParams, objectResolvers, implicitRequestObjectAnnotation,
-                                          useBlockingExecutor, dependencyInjector))
+                                          useBlockingExecutor, dependencyInjectors))
                              .filter(Objects::nonNull)
                              .collect(toImmutableList());
         }
@@ -386,9 +388,10 @@ final class AnnotatedValueResolver {
     static AnnotatedValueResolver of(Parameter parameter, Set<String> pathParams,
                                      List<RequestObjectResolver> objectResolvers,
                                      boolean implicitRequestObjectAnnotation,
-                                     boolean useBlockingExecutor, DependencyInjector dependencyInjector) {
+                                     boolean useBlockingExecutor,
+                                     List<DependencyInjector> dependencyInjectors) {
         return of(parameter, parameter, parameter.getType(), pathParams, objectResolvers,
-                  implicitRequestObjectAnnotation, useBlockingExecutor, dependencyInjector);
+                  implicitRequestObjectAnnotation, useBlockingExecutor, dependencyInjectors);
     }
 
     /**
@@ -416,7 +419,7 @@ final class AnnotatedValueResolver {
                                              List<RequestObjectResolver> objectResolvers,
                                              boolean implicitRequestObjectAnnotation,
                                              boolean useBlockingExecutor,
-                                             DependencyInjector dependencyInjector) {
+                                             List<DependencyInjector> dependencyInjectors) {
         requireNonNull(annotatedElement, "annotatedElement");
         requireNonNull(typeElement, "typeElement");
         requireNonNull(type, "type");
@@ -449,8 +452,8 @@ final class AnnotatedValueResolver {
             final List<RequestConverter> converters =
                     AnnotationUtil.findDeclared(typeElement, RequestConverter.class);
             return ofRequestObject(annotatedElement, type, pathParams,
-                                   addToFirstIfExists(objectResolvers, converters, dependencyInjector),
-                                   dependencyInjector, description);
+                                   addToFirstIfExists(objectResolvers, converters, dependencyInjectors),
+                                   dependencyInjectors, description);
         }
 
         // There should be no '@Default' annotation on 'annotatedElement' if 'annotatedElement' is
@@ -470,13 +473,13 @@ final class AnnotatedValueResolver {
         if (!converters.isEmpty()) {
             // Apply @RequestObject implicitly when a @RequestConverter is specified.
             return ofRequestObject(annotatedElement, type, pathParams,
-                                   addToFirstIfExists(objectResolvers, converters, dependencyInjector),
-                                   dependencyInjector, description);
+                                   addToFirstIfExists(objectResolvers, converters, dependencyInjectors),
+                                   dependencyInjectors, description);
         }
 
         if (implicitRequestObjectAnnotation) {
             return ofRequestObject(annotatedElement, type, pathParams, objectResolvers,
-                                   dependencyInjector, description);
+                                   dependencyInjectors, description);
         }
 
         return null;
@@ -484,7 +487,7 @@ final class AnnotatedValueResolver {
 
     static List<RequestObjectResolver> addToFirstIfExists(List<RequestObjectResolver> resolvers,
                                                           List<RequestConverter> converters,
-                                                          DependencyInjector dependencyInjector) {
+                                                          List<DependencyInjector> dependencyInjectors) {
         if (converters.isEmpty()) {
             return resolvers;
         }
@@ -492,7 +495,7 @@ final class AnnotatedValueResolver {
         final ImmutableList.Builder<RequestObjectResolver> builder = new ImmutableList.Builder<>();
         converters.forEach(c -> builder.add(RequestObjectResolver.of(
                 AnnotatedServiceFactory.getInstance(c, RequestConverterFunction.class,
-                                                    dependencyInjector))));
+                                                    dependencyInjectors))));
         builder.addAll(resolvers);
         return builder.build();
     }
@@ -580,12 +583,12 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofRequestObject(AnnotatedElement annotatedElement,
                                                           Class<?> type, Set<String> pathParams,
                                                           List<RequestObjectResolver> objectResolvers,
-                                                          DependencyInjector dependencyInjector,
+                                                          List<DependencyInjector> dependencyInjectors,
                                                           @Nullable String description) {
         // To do recursive resolution like a bean inside another bean, the original object resolvers should
         // be passed into the AnnotatedBeanFactoryRegistry#register.
         final BeanFactoryId beanFactoryId = AnnotatedBeanFactoryRegistry.register(
-                type, pathParams, objectResolvers, dependencyInjector);
+                type, pathParams, objectResolvers, dependencyInjectors);
         return new Builder(annotatedElement, type)
                 .annotationType(RequestObject.class)
                 .description(description)

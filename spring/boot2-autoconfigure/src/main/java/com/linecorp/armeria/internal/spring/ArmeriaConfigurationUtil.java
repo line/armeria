@@ -189,7 +189,7 @@ public final class ArmeriaConfigurationUtil {
                                                       minBytesToForceChunkedAndEncoding));
         }
 
-        server.dependencyInjector(SpringDependencyInjector.of(beanFactory));
+        server.dependencyInjector(SpringDependencyInjector.of(beanFactory), false);
     }
 
     private static void configureInternalService(ServerBuilder server, InternalServiceId serviceId,

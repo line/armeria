@@ -102,7 +102,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
                 .defaultLogName(defaultLogName)
                 .multipartUploadsLocation(multipartUploadsLocation)
                 .build(new TestService())
-                .build(template, FallbackDependencyInjector.INSTANCE);
+                .build(template, ImmutableList.of());
 
         assertThat(virtualHost.serviceConfigs()).hasSize(2);
         final ServiceConfig pathBar = virtualHost.serviceConfigs().get(0);

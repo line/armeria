@@ -28,16 +28,21 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
 
-enum FallbackDependencyInjector implements DependencyInjector {
+import com.linecorp.armeria.common.annotation.Nullable;
 
-    INSTANCE;
+final class ReflectiveDependencyInjector implements DependencyInjector {
 
-    private static final Logger logger = LoggerFactory.getLogger(FallbackDependencyInjector.class);
+    private static final Logger logger = LoggerFactory.getLogger(ReflectiveDependencyInjector.class);
 
     private static final Map<Class<?>, Object> instances = new HashMap<>();
 
+    private boolean isShutdown;
+
     @Override
     public synchronized <T> T getInstance(Class<T> type) {
+        if (isShutdown) {
+            throw new IllegalStateException("Already shut down");
+        }
         final Object instance = instances.get(type);
         if (instance != null) {
             //noinspection unchecked
@@ -46,14 +51,13 @@ enum FallbackDependencyInjector implements DependencyInjector {
         return create(type);
     }
 
+    @Nullable
     private static <T> T create(Class<? extends T> type) {
         @SuppressWarnings("unchecked")
         final Constructor<? extends T> constructor =
                 Iterables.getFirst(getConstructors(type, withParametersCount(0)), null);
         if (constructor == null) {
-            throw new IllegalArgumentException("cannot inject dependency for " + type.getName() +
-                                               ". Use " + DependencyInjector.class.getName() +
-                                               " or add default constructor to create the instance.");
+            return null;
         }
         constructor.setAccessible(true);
         final T instance;
@@ -67,7 +71,11 @@ enum FallbackDependencyInjector implements DependencyInjector {
     }
 
     @Override
-    public synchronized void close() {
+    public synchronized void shutdown() {
+        if (isShutdown) {
+            return;
+        }
+        isShutdown = true;
         for (Object instance : instances.values()) {
             if (instance instanceof AutoCloseable) {
                 try {

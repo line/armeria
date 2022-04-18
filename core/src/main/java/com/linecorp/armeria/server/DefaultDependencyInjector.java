@@ -38,6 +38,7 @@ final class DefaultDependencyInjector implements DependencyInjector {
     private final Map<Class<?>, Supplier<?>> singletonSuppliers;
     private final Map<Class<?>, Supplier<?>> prototypes;
     private final List<AutoCloseable> closeablePrototypes = new ArrayList<>();
+    private boolean isShutdown;
 
     DefaultDependencyInjector(Map<Class<?>, Object> singletons,
                               Map<Class<?>, Supplier<?>> singletonSuppliers,
@@ -50,6 +51,9 @@ final class DefaultDependencyInjector implements DependencyInjector {
 
     @Override
     public synchronized <T> T getInstance(Class<T> type) {
+        if (isShutdown) {
+            throw new IllegalStateException("Already shut down");
+        }
         final Object instance = singletons.get(type);
         if (instance != null) {
             //noinspection unchecked
@@ -74,7 +78,7 @@ final class DefaultDependencyInjector implements DependencyInjector {
         final Supplier<?> supplier = suppliers.get(type);
         if (supplier != null) {
             final Object supplied = supplier.get();
-            requireNonNull(supplied, supplier + " returns null.");
+            requireNonNull(supplied, supplier + " returned null.");
             if (!type.isInstance(supplied)) {
                 throw new IllegalArgumentException(supplied + " is not an instance of " + type.getName());
             }
@@ -85,7 +89,11 @@ final class DefaultDependencyInjector implements DependencyInjector {
     }
 
     @Override
-    public synchronized void close() {
+    public synchronized void shutdown() {
+        if (isShutdown) {
+            return;
+        }
+        isShutdown = true;
         for (Object instance : singletons.values()) {
             if (instance instanceof AutoCloseable) {
                 close((AutoCloseable) instance);

@@ -708,10 +708,15 @@ public final class Server implements ListenableAsyncCloseable {
 
             CompletableFutures.successfulAsList(completionFutures, cause -> null)
                               .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
-            try {
-                config.dependencyInjector().close();
-            } catch (Throwable t) {
-                logger.warn("Unexpected exception while closing {}", config.dependencyInjector());
+            for (DependencyInjectorEntry entry : config.dependencyInjectors()) {
+                if (entry.shutdownOnStop()) {
+                    final DependencyInjector dependencyInjector = entry.dependencyInjector();
+                    try {
+                        dependencyInjector.shutdown();
+                    } catch (Throwable t) {
+                        logger.warn("Unexpected exception while shutting down {}", dependencyInjector);
+                    }
+                }
             }
         }
 

@@ -21,7 +21,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
@@ -35,16 +34,16 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
  * If the dependencies are not injected by this {@link DependencyInjector}, they are created via the default
  * constructor, which does not have a parameter, of the classes.
  *
- * <p>The dependencies are injected through bean definition automatically, if the Spring integration module
+ * <p>The dependencies are injected through bean definitions automatically, if the Spring integration module
  * such as {@code armeria-spring-boot2-autoconfigure} is added.
  */
 @UnstableApi
-public interface DependencyInjector extends SafeCloseable {
+public interface DependencyInjector {
 
     /**
      * Returns a {@link DependencyInjector} that injects dependencies using the specified singleton instances.
      * The instances are {@linkplain AutoCloseable#close() closed} if it implements {@link AutoCloseable}
-     * when the {@linkplain Server#stop() server is stopped}.
+     * when the {@link Server} stops.
      */
     static DependencyInjector ofSingletons(Object... singletons) {
         return ofSingletons(ImmutableList.copyOf(requireNonNull(singletons, "singletons")));
@@ -53,7 +52,7 @@ public interface DependencyInjector extends SafeCloseable {
     /**
      * Returns a {@link DependencyInjector} that injects dependencies using the specified singleton instances.
      * The instances are {@linkplain AutoCloseable#close() closed} if it implements {@link AutoCloseable}
-     * when the {@linkplain Server#stop() server is stopped}.
+     * when the {@link Server} stops.
      */
     static DependencyInjector ofSingletons(Iterable<Object> singletons) {
         return builder().singletons(singletons).build();
@@ -73,14 +72,7 @@ public interface DependencyInjector extends SafeCloseable {
     <T> T getInstance(Class<T> type);
 
     /**
-     * Returns the composed {@link DependencyInjector} that tries to inject using {@code this} instance first,
-     * and then {@code other}.
+     * Shuts down this {@link DependencyInjector}.
      */
-    default DependencyInjector orElse(DependencyInjector other) {
-        requireNonNull(other, "other");
-        if (this == other) {
-            return this;
-        }
-        return new OrElseDependencyInjector(this, other);
-    }
+    void shutdown();
 }

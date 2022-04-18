@@ -74,7 +74,7 @@ class DependencyInjectorTest {
                    .prototype(FooDecorator.class, () -> new FooDecorator(decoratorCounter));
 
             sb.annotatedService(new Foo())
-              .dependencyInjector(builder.build());
+              .dependencyInjector(builder.build(), true);
         }
     };
 

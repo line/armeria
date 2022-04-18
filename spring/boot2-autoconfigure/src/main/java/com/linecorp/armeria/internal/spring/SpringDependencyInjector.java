@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
+import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 
 import com.google.common.base.MoreObjects;
 
@@ -41,14 +42,16 @@ final class SpringDependencyInjector implements DependencyInjector {
     public <T> T getInstance(Class<T> type) {
         try {
             return beanFactory.getBean(type);
+        } catch (NoUniqueBeanDefinitionException t) {
+            throw t;
         } catch (NoSuchBeanDefinitionException t) {
-            // Return null in order to apply the FallbackDependencyInjector.
+            // Return null in order to apply the ReflectiveDependencyInjector as a fallback.
             return null;
         }
     }
 
     @Override
-    public void close() {
+    public void shutdown() {
         // The lifecycle of the beanFactory is managed by Spring.
     }
 

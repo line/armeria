@@ -29,6 +29,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.HttpMethod;
@@ -161,7 +162,7 @@ class VirtualHostBuilderTest {
         final VirtualHost h = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("foo.com")
                 .hostnamePattern("foo.com")
-                .build(template, FallbackDependencyInjector.INSTANCE);
+                .build(template, ImmutableList.of());
         assertThat(h.hostnamePattern()).isEqualTo("foo.com");
         assertThat(h.defaultHostname()).isEqualTo("foo.com");
     }
@@ -171,7 +172,7 @@ class VirtualHostBuilderTest {
         final VirtualHost h = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
-                .build(template, FallbackDependencyInjector.INSTANCE);
+                .build(template, ImmutableList.of());
         assertThat(h.hostnamePattern()).isEqualTo("*.foo.com");
         assertThat(h.defaultHostname()).isEqualTo("bar.foo.com");
     }
@@ -182,14 +183,14 @@ class VirtualHostBuilderTest {
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
                 .accessLogger(host -> LoggerFactory.getLogger("customize.test"))
-                .build(template, FallbackDependencyInjector.INSTANCE);
+                .build(template, ImmutableList.of());
         assertThat(h1.accessLogger().getName()).isEqualTo("customize.test");
 
         final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
                 .defaultHostname("bar.foo.com")
                 .hostnamePattern("*.foo.com")
                 .accessLogger(LoggerFactory.getLogger("com.foo.test"))
-                .build(template, FallbackDependencyInjector.INSTANCE);
+                .build(template, ImmutableList.of());
         assertThat(h2.accessLogger().getName()).isEqualTo("com.foo.test");
     }
 
@@ -250,12 +251,11 @@ class VirtualHostBuilderTest {
 
         switch (expectedOutcome) {
             case "success":
-                virtualHostBuilder.build(serverBuilder.virtualHostTemplate,
-                                         FallbackDependencyInjector.INSTANCE);
+                virtualHostBuilder.build(serverBuilder.virtualHostTemplate, ImmutableList.of());
                 break;
             case "failure":
                 assertThatThrownBy(() -> virtualHostBuilder.build(serverBuilder.virtualHostTemplate,
-                                                                  FallbackDependencyInjector.INSTANCE))
+                                                                  ImmutableList.of()))
                         .isInstanceOf(IllegalStateException.class)
                         .hasMessageContaining("TLS with a bad cipher suite");
                 break;
@@ -296,7 +296,7 @@ class VirtualHostBuilderTest {
             new VirtualHostBuilder(Server.builder(), false)
                     .defaultHostname("bar.com")
                     .hostnamePattern("foo.com")
-                    .build(template, FallbackDependencyInjector.INSTANCE);
+                    .build(template, ImmutableList.of());
         }).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -306,7 +306,7 @@ class VirtualHostBuilderTest {
             new VirtualHostBuilder(Server.builder(), false)
                     .defaultHostname("bar.com")
                     .hostnamePattern("*.foo.com")
-                    .build(template, FallbackDependencyInjector.INSTANCE);
+                    .build(template, ImmutableList.of());
         }).isInstanceOf(IllegalArgumentException.class);
     }
 
@@ -317,7 +317,7 @@ class VirtualHostBuilderTest {
         final VirtualHost virtualHost = new VirtualHostBuilder(Server.builder(), true)
                 .service(routeA, (ctx, req) -> HttpResponse.of(OK))
                 .service(routeB, (ctx, req) -> HttpResponse.of(OK))
-                .build(template, FallbackDependencyInjector.INSTANCE);
+                .build(template, ImmutableList.of());
         assertThat(virtualHost.serviceConfigs().size()).isEqualTo(2);
         final RoutingContext routingContext = new DefaultRoutingContext(virtualHost(), "example.com",
                                                                         RequestHeaders.of(HttpMethod.GET, "/"),

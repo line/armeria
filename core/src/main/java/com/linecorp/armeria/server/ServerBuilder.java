@@ -60,6 +60,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 
@@ -203,7 +204,7 @@ public final class ServerBuilder {
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
     @Nullable
-    private DependencyInjector dependencyInjector;
+    private final List<DependencyInjectorEntry> dependencyInjectors = new ArrayList<>();
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -1711,17 +1712,16 @@ public final class ServerBuilder {
     /**
      * Sets the {@link DependencyInjector} to inject dependencies in annotated services.
      *
-     * <p>The dependencies are injected through bean definition automatically, if the Spring integration module
+     * <p>The dependencies are injected through bean definitions automatically, if the Spring integration module
      * such as {@code armeria-spring-boot2-autoconfigure} is added.
+     *
+     * @param dependencyInjector the {@link DependencyInjector} to inject dependencies
+     * @param shutdownOnStop whether to shut down the {@link DependencyInjector} when the {@link Server} stops
      */
     @UnstableApi
-    public ServerBuilder dependencyInjector(DependencyInjector dependencyInjector) {
+    public ServerBuilder dependencyInjector(DependencyInjector dependencyInjector, boolean shutdownOnStop) {
         requireNonNull(dependencyInjector, "dependencyInjector");
-        if (this.dependencyInjector == null) {
-            this.dependencyInjector = dependencyInjector;
-        } else {
-            this.dependencyInjector = this.dependencyInjector.orElse(dependencyInjector);
-        }
+        dependencyInjectors.add(new DependencyInjectorEntry(dependencyInjector, shutdownOnStop));
         return this;
     }
 
@@ -1753,13 +1753,17 @@ public final class ServerBuilder {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
         assert extensions != null;
-        final DependencyInjector dependencyInjector = dependencyInjectorWithFallback();
+        final List<DependencyInjectorEntry> dependencyInjectorEntries = dependencyInjectorsWithFallback();
+        final List<DependencyInjector> dependencyInjectors =
+                dependencyInjectorEntries.stream()
+                                         .map(e -> e.dependencyInjector())
+                                         .collect(toImmutableList());
 
         final VirtualHost defaultVirtualHost =
-                defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector);
+                defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjectors);
         final List<VirtualHost> virtualHosts =
                 virtualHostBuilders.stream()
-                                   .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjector))
+                                   .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjectors))
                                    .collect(toImmutableList());
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
@@ -1869,7 +1873,7 @@ public final class ServerBuilder {
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
-                http1HeaderNaming, dependencyInjector);
+                http1HeaderNaming, dependencyInjectorEntries);
     }
 
     /**
@@ -1904,11 +1908,12 @@ public final class ServerBuilder {
         return Collections.unmodifiableList(distinctPorts);
     }
 
-    private DependencyInjector dependencyInjectorWithFallback() {
-        if (dependencyInjector != null) {
-            return dependencyInjector.orElse(FallbackDependencyInjector.INSTANCE);
-        }
-        return FallbackDependencyInjector.INSTANCE;
+    private List<DependencyInjectorEntry> dependencyInjectorsWithFallback() {
+        final Builder<DependencyInjectorEntry> builder =
+                ImmutableList.builderWithExpectedSize(dependencyInjectors.size() + 1);
+        builder.addAll(dependencyInjectors);
+        builder.add(new DependencyInjectorEntry(new ReflectiveDependencyInjector(), true));
+        return builder.build();
     }
 
     private static VirtualHost setSslContextIfAbsent(VirtualHost h,
