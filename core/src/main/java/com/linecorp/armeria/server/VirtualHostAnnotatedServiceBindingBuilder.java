@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceElement;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory;
@@ -181,6 +182,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      *     <li>{@code ?query=a,b,c&query=d,e,f} will be resolved to {@code "a,b,c"} and {@code "d,e,f"}</li>
      * </ul>
      */
+    @UnstableApi
     public VirtualHostAnnotatedServiceBindingBuilder queryDelimiter(String delimiter) {
         this.queryDelimiter = requireNonNull(delimiter, "delimiter");
         return this;
