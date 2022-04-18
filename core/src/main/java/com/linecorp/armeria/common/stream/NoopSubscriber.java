@@ -50,8 +50,7 @@ public final class NoopSubscriber<T> implements Subscriber<T> {
     }
 
     @Override
-    public void onError(Throwable t) {
-    }
+    public void onError(Throwable t) {}
 
     @Override
     public void onComplete() {
