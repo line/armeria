@@ -54,7 +54,6 @@ import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
-import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerErrorHandler;
@@ -352,9 +351,9 @@ public final class Flags {
 
     private static final boolean REPORT_BLOCKED_EVENT_LOOP =
             getValue(FlagsProvider::reportBlockedEventLoop, "reportBlockedEventLoop");
-  
-    private static final boolean REPORT_MASKED_ROUTES = 
-            getValue(FlagsProvider::reportBlockedEventLoop, "reportMaskedRoutes");
+
+    private static final boolean REPORT_MASKED_ROUTES =
+            getValue(FlagsProvider::reportMaskedRoutes, "reportMaskedRoutes");
 
     private static final boolean VALIDATE_HEADERS =
             getValue(FlagsProvider::validateHeaders, "validateHeaders");

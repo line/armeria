@@ -338,6 +338,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean reportMaskedRoutes() {
+        return true;
+    }
+
+    @Override
     public Boolean validateHeaders() {
         return true;
     }

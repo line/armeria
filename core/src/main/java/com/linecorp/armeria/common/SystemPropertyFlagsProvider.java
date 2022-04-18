@@ -392,6 +392,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean reportMaskedRoutes() {
+        return getBoolean("reportMaskedRoutes");
+    }
+
+    @Override
     public Boolean validateHeaders() {
         return getBoolean("validateHeaders");
     }
