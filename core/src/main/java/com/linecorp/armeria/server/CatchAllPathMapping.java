@@ -33,7 +33,7 @@ final class CatchAllPathMapping extends AbstractPathMapping {
     private CatchAllPathMapping() {}
 
     @Override
-    public PathMapping doWithPrefix(String prefix) {
+    PathMapping doWithPrefix(String prefix) {
         return prefixPathMapping(prefix, true);
     }
 

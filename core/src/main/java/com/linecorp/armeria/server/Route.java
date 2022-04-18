@@ -198,7 +198,7 @@ public interface Route {
 
     /**
      * Returns a newly-created {@link Route} which adds the specified {@code prefix} to this {@link Route}.
-     * These are examples of created {@link Route}s when the prefix is {@code foo}:
+     * These are examples of created {@link Route}s when the prefix is {@code /api/v1}:
      *
      * <ul>
      *   <li>{@code /login} -> {@code /api/v1/login}</li>

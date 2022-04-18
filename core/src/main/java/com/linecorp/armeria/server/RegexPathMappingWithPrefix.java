@@ -54,7 +54,7 @@ final class RegexPathMappingWithPrefix extends AbstractPathMapping {
     }
 
     @Override
-    public PathMapping doWithPrefix(String prefix) {
+    PathMapping doWithPrefix(String prefix) {
         return new RegexPathMappingWithPrefix(concatPaths(prefix, pathPrefix), mapping);
     }
 

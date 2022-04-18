@@ -1951,8 +1951,8 @@ public final class ServerBuilder {
             if (((ServiceWithRoutes) service).routes().size() > 0) {
                 logger.warn("The service has self-defined routes but the routes will be ignored. " +
                             "It will be served at the route you specified: path={}, service={}. " +
-                            "If this is intended behavior, you can disable this log message by passing " +
-                            "the -Dcom.linecorp.armeria.reportMaskedRoutes=false system property.",
+                            "If this is intended behavior, you can disable this log message by specifying " +
+                            "the -Dcom.linecorp.armeria.reportMaskedRoutes=false JVM option.",
                             path, service);
             }
         }

@@ -218,7 +218,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public PathMapping doWithPrefix(String prefix) {
+    PathMapping doWithPrefix(String prefix) {
         return new ParameterizedPathMapping(concatPaths(prefix, pathPattern));
     }
 

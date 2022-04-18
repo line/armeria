@@ -38,7 +38,7 @@ final class ExactPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public PathMapping doWithPrefix(String prefix) {
+    PathMapping doWithPrefix(String prefix) {
         return new ExactPathMapping(concatPaths(prefix, exactPath));
     }
 

@@ -51,7 +51,7 @@ final class PrefixPathMapping extends AbstractPathMapping {
     }
 
     @Override
-    public PathMapping doWithPrefix(String prefix) {
+    PathMapping doWithPrefix(String prefix) {
         return new PrefixPathMapping(concatPaths(prefix, this.prefix), stripPrefix);
     }
 
