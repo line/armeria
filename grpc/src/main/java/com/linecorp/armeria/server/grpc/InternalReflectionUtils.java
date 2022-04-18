@@ -29,8 +29,6 @@ import java.util.List;
 import com.google.common.base.Predicate;
 import com.google.common.base.Predicates;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Lists;
-import com.google.common.collect.Streams;
 
 /**
  * Utility class which is used by {@link GrpcServiceBuilder} to get all sorted methods
@@ -54,7 +52,7 @@ final class InternalReflectionUtils {
     private static Iterable<Class<?>> getAllSortedSuperTypes(final Class<?> type,
                                                              Predicate<? super Class<?>>... predicates) {
         final List<Class<?>> result = new ArrayList<>();
-        if (type != null && (includeObject || !type.equals(Object.class))) {
+        if (includeObject || !type.equals(Object.class)) {
             result.add(type);
             for (Class<?> supertype : getSuperTypes(type)) {
                 getAllSortedSuperTypes(supertype).forEach(result::add);
@@ -63,11 +61,11 @@ final class InternalReflectionUtils {
         return filter(result, predicates);
     }
 
-    private static <T> List<T> filter(final Iterable<T> elements, Predicate<? super T>... predicates) {
-        return isEmpty(predicates) ? Lists.newArrayList(elements)
-                                   : Streams.stream(elements)
-                                            .filter(Predicates.and(predicates)::apply)
-                                            .collect(toImmutableList());
+    private static <T> List<T> filter(List<T> elements, Predicate<? super T>... predicates) {
+        return isEmpty(predicates) ? elements
+                                   : elements.stream()
+                                             .filter(Predicates.and(predicates)::apply)
+                                             .collect(toImmutableList());
     }
 
     private InternalReflectionUtils() {}
