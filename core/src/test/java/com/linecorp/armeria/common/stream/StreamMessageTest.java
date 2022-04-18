@@ -347,7 +347,7 @@ class StreamMessageTest {
                                                      .collect(Collectors.toList());
         final CompletableFuture<Void> cf = aborted.subscribe();
 
-        await().untilAsserted(() -> assertThat(cf.isDone()).isTrue());
+        assertThat(cf.join().isDone()).isTrue();
         assertThat(collected).isEqualTo(expected);
         for (ByteBuf buf : bufs) {
             assertThat(buf.refCnt()).isZero();
