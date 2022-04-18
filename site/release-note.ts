@@ -40,7 +40,7 @@ async function getMilestoneId(version: string): Promise<number> {
       repo: 'armeria',
       direction: 'desc',
       per_page: 100,
-      state: 'all',
+      state: 'open',
     },
   );
   const found = response.data.find((milestone) => milestone.title === version);
@@ -52,20 +52,32 @@ async function getMilestoneId(version: string): Promise<number> {
   return found.number;
 }
 
-async function getAllPullRequests(milestone: number): Promise<PullRequest[]> {
+async function getAllRequestIds(milestone: number, page: number = 1): Promise<number[]> {
   const response = await octokit.request('GET /repos/{owner}/{repo}/issues', {
     owner: 'line',
     repo: 'armeria',
     milestone: milestone.toString(),
+    page: page,
+    per_page: 100,
     state: 'all',
   });
 
   const pullRequestIds: number[] = response.data
-    .filter((it) => it.html_url.includes('/pull/'))
-    .map((it) => {
-      return it.number;
-    });
+      .filter((it) => it.html_url.includes('/pull/'))
+      .map((it) => {
+        return it.number;
+      });
+  if (pullRequestIds.length < 100) {
+    return pullRequestIds;
+  } else {
+    // Try to collect PRs in the next page.
+    const nextPullRequestIds = await getAllRequestIds(milestone, page + 1);
+    return pullRequestIds.concat(nextPullRequestIds);
+  }
+}
 
+async function getAllPullRequests(milestone: number): Promise<PullRequest[]> {
+  const pullRequestIds = await getAllRequestIds(milestone);
   const result: PullRequest[] = [];
   for (const id of pullRequestIds) {
     console.log(
@@ -281,7 +293,9 @@ function labelToCategory(label: any): Category {
 
 function today(): string {
   const d = new Date();
-  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  return `${d.getFullYear()}-` +
+      `${d.getMonth() + 1}`.padStart(2, '0') + '-' +
+      `${d.getDate()}`.padStart(2, '0')
 }
 
 async function main() {

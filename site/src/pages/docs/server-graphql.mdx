@@ -1,0 +1,111 @@
+# Running a GraphQL service
+
+<Tip>
+
+Visit [armeria-examples](https://github.com/line/armeria-examples) to find a fully working example.
+
+</Tip>
+
+First, You need the `armeria-graphql` dependency:
+
+<RequiredDependencies
+  boms={[{ groupId: 'com.linecorp.armeria', artifactId: 'armeria-bom' }]}
+  dependencies={[
+    { groupId: 'com.linecorp.armeria', artifactId: 'armeria-graphql' },
+  ]}
+/>
+
+Let's assume we have the following [GraphQL Schema](https://graphql.org/learn/schema/):
+
+```graphql
+type Query {
+  user(id: ID): User
+}
+
+type User {
+  id: ID
+  name: String
+}
+```
+
+The schema describes that if a client requests a `User` data using the `ID` field, the GraphQL server will
+return the `User` data. The GraphQL engine uses a [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html)
+to resolve the ID and fetch the corresponding object. For the sake of simplicity, let's implement
+`UserDataFetcher` that stores `User`s in a `Map`:
+
+```java
+import graphql.schema.DataFetcher;
+import graphql.schema.DataFetchingEnvironment;
+
+class UserDataFetcher implements DataFetcher<User> {
+
+    private final Map<String, User> data = Map.of("1", new User("1", "hero"),
+                                                  "2", new User("2", "human"),
+                                                  "3", new User("3", "droid"));
+
+    @Override
+    public User get(DataFetchingEnvironment environment) throws Exception {
+        final String id = environment.getArgument("id");
+        return data.get(id);
+    }
+}
+```
+
+<Tip>
+
+Please note that this is entirely based on [graphql-java](https://www.graphql-java.com/).
+
+</Tip>
+
+## `GraphqlService`
+
+Once you've finished the implementation of the [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html), you need to build a <type://GraphqlService> using
+a <type://GraphqlServiceBuilder> and add it to the <type://ServerBuilder>:
+
+```java
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.graphql.GraphqlService;
+
+ServerBuilder sb = Server.builder();
+...
+sb.service("/graphql",
+           GraphqlService.builder()
+                         .runtimeWiring(c -> {
+                            c.type("Query",
+                                   typeWiring -> typeWiring.dataFetcher("user", new UserDataFetcher()));
+                         })
+                         .build());
+...
+Server server = sb.build();
+server.start();
+```
+
+We used [RuntimeWiring](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/idl/RuntimeWiring.html) to wire the type with DataFetcher. Please see [Creating a schema using the SDL](https://www.graphql-java.com/documentation/master/schema/#creating-a-schema-using-the-sdl) to find more wiring examples.
+
+## Blocking service implementation
+
+Armeria does not run service logic in a separate thread pool by default. If your service implementation
+requires blocking, either run the individual blocking logic in a thread pool, or set
+<type://GraphqlServiceBuilder#useBlockingTaskExecutor(boolean)> to `true` so the service runs in
+all service methods and lifecycle callbacks.
+
+```java
+ServerBuilder sb = Server.builder();
+sb.service("/graphql",
+           GraphqlService.builder()
+                         .runtimeWiring(c -> {
+                            c.type("Query",
+                                   typeWiring -> typeWiring.dataFetcher("user", new UserDataFetcher()));
+                         })
+                         // All service methods will be run within
+                         // the blocking executor.
+                         .useBlockingTaskExecutor(true)
+                         .build());
+```
+
+<Tip>
+
+You can wrap a [DataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/DataFetcher.html) using [AsyncDataFetcher](https://javadoc.io/doc/com.graphql-java/graphql-java/latest/graphql/schema/AsyncDataFetcher.html) to run it asynchronously.
+
+</Tip>

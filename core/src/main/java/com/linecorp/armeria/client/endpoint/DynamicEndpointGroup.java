@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -27,12 +28,14 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.util.AbstractListenable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
@@ -40,9 +43,15 @@ import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 /**
  * A dynamic {@link EndpointGroup}. The list of {@link Endpoint}s can be updated dynamically.
  */
-public class DynamicEndpointGroup
-        extends AbstractListenable<List<Endpoint>>
-        implements EndpointGroup, ListenableAsyncCloseable {
+public class DynamicEndpointGroup extends AbstractEndpointGroup implements ListenableAsyncCloseable {
+
+    /**
+     * Returns a newly created builder.
+     */
+    @UnstableApi
+    public static DynamicEndpointGroupBuilder builder() {
+        return new DynamicEndpointGroupBuilder();
+    }
 
     // An empty list of endpoints we also use as a marker that we have not initialized endpoints yet.
     private static final List<Endpoint> UNINITIALIZED_ENDPOINTS = Collections.unmodifiableList(
@@ -55,21 +64,51 @@ public class DynamicEndpointGroup
 
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new EventLoopCheckingFuture<>();
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
+    private final boolean allowEmptyEndpoints;
 
     /**
-     * Creates a new empty {@link DynamicEndpointGroup} that uses
-     * {@link EndpointSelectionStrategy#weightedRoundRobin()} as its {@link EndpointSelectionStrategy}.
+     * Creates a new empty instance, using {@link EndpointSelectionStrategy#weightedRoundRobin()}
+     * and allowing an empty {@link Endpoint} list.
      */
     public DynamicEndpointGroup() {
         this(EndpointSelectionStrategy.weightedRoundRobin());
     }
 
     /**
-     * Creates a new empty {@link DynamicEndpointGroup} that uses the specified
-     * {@link EndpointSelectionStrategy}.
+     * Creates a new empty instance, allowing an empty {@link Endpoint} list.
+     *
+     * @param selectionStrategy the {@link EndpointSelectionStrategy} of this {@link EndpointGroup}
      */
     public DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy) {
+        this(selectionStrategy, true);
+    }
+
+    /**
+     * Creates a new empty instance, using {@link EndpointSelectionStrategy#weightedRoundRobin()}.
+     *
+     * @param allowEmptyEndpoints whether to allow an empty {@link Endpoint} list
+     */
+    protected DynamicEndpointGroup(boolean allowEmptyEndpoints) {
+        this(EndpointSelectionStrategy.weightedRoundRobin(), allowEmptyEndpoints);
+    }
+
+    /**
+     * Creates a new empty instance.
+     *
+     * @param selectionStrategy the {@link EndpointSelectionStrategy} of this {@link EndpointGroup}
+     * @param allowEmptyEndpoints whether to allow an empty {@link Endpoint} list
+     */
+    protected DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
+        this.allowEmptyEndpoints = allowEmptyEndpoints;
+    }
+
+    /**
+     * Returns whether this {@link EndpointGroup} allows an empty {@link Endpoint} list.
+     */
+    @UnstableApi
+    public boolean allowsEmptyEndpoints() {
+        return allowEmptyEndpoints;
     }
 
     @Override
@@ -145,6 +184,9 @@ public class DynamicEndpointGroup
         final List<Endpoint> newEndpoints;
         endpointsLock.lock();
         try {
+            if (!allowEmptyEndpoints && endpoints.size() == 1) {
+                return;
+            }
             endpoints = newEndpoints = endpoints.stream()
                                                 .filter(endpoint -> !endpoint.equals(e))
                                                 .collect(toImmutableList());
@@ -158,6 +200,9 @@ public class DynamicEndpointGroup
      * Sets the specified {@link Endpoint}s as current {@link Endpoint} list.
      */
     protected final void setEndpoints(Iterable<Endpoint> endpoints) {
+        if (!allowEmptyEndpoints && Iterables.isEmpty(endpoints)) {
+            return;
+        }
         final List<Endpoint> oldEndpoints = this.endpoints;
         final List<Endpoint> newEndpoints = ImmutableList.sortedCopyOf(endpoints);
 
@@ -198,7 +243,7 @@ public class DynamicEndpointGroup
 
     private void completeInitialEndpointsFuture(List<Endpoint> endpoints) {
         if (endpoints != UNINITIALIZED_ENDPOINTS && !initialEndpointsFuture.isDone()) {
-            initialEndpointsFuture.complete(new LazyList<>(this::endpoints));
+            initialEndpointsFuture.complete(endpoints);
         }
     }
 
@@ -240,5 +285,16 @@ public class DynamicEndpointGroup
     @Override
     public final void close() {
         closeable.close();
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("selectionStrategy", selectionStrategy.getClass())
+                          .add("allowsEmptyEndpoints", allowEmptyEndpoints)
+                          .add("endpoints", truncate(endpoints, 10))
+                          .add("numEndpoints", endpoints.size())
+                          .add("initialized", initialEndpointsFuture.isDone())
+                          .toString();
     }
 }

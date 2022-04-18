@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.common.HttpStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
@@ -35,6 +36,8 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
@@ -54,6 +57,14 @@ class ClientMaxConnectionAgeTest {
             sb.idleTimeoutMillis(0);
             sb.requestTimeoutMillis(0);
             sb.service("/", (ctx, req) -> HttpResponse.of(OK));
+            sb.annotatedService("/delayed", new Object() {
+
+                @Get
+                public HttpResponse delayed(@Param("seconds") long seconds) {
+                    return HttpResponse.delayed(
+                            HttpResponse.of(200), Duration.ofSeconds(seconds));
+                }
+            });
         }
 
         @Override
@@ -156,6 +167,50 @@ class ClientMaxConnectionAgeTest {
                                               .build();
 
             assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
+            await().untilAtomic(opened, Matchers.is(1));
+            await().untilAtomic(closed, Matchers.is(1));
+        }
+    }
+
+    @EnumSource(value = SessionProtocol.class, names = "PROXY", mode = Mode.EXCLUDE)
+    @ParameterizedTest
+    void shouldCloseConnectionAfterLongRequest(SessionProtocol protocol) throws Exception {
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .connectionPoolListener(connectionPoolListener)
+                                                  .idleTimeoutMillis(0)
+                                                  .maxConnectionAgeMillis(MAX_CONNECTION_AGE)
+                                                  .tlsNoVerify()
+                                                  .build()) {
+            final WebClient client = WebClient.builder(server.uri(protocol))
+                                              .factory(factory)
+                                              .responseTimeoutMillis(0)
+                                              .build();
+
+            assertThat(client.get("/delayed?seconds=4").aggregate().join().status()).isEqualTo(OK);
+
+            await().untilAtomic(opened, Matchers.is(1));
+            await().untilAtomic(closed, Matchers.is(1));
+        }
+    }
+
+    @EnumSource(value = SessionProtocol.class, names = "PROXY", mode = Mode.EXCLUDE)
+    @ParameterizedTest
+    void shouldCloseConnectionAfterLongRequestTimeout(SessionProtocol protocol) throws Exception {
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .connectionPoolListener(connectionPoolListener)
+                                                  .idleTimeoutMillis(0)
+                                                  .maxConnectionAgeMillis(MAX_CONNECTION_AGE)
+                                                  .tlsNoVerify()
+                                                  .build()) {
+            final long responseTimeoutMillis = MAX_CONNECTION_AGE + 1000;
+            final WebClient client = WebClient.builder(server.uri(protocol))
+                                              .factory(factory)
+                                              .responseTimeoutMillis(responseTimeoutMillis)
+                                              .build();
+
+            assertThatThrownBy(() -> client.get("/delayed?seconds=10").aggregate().join().status())
+                    .hasRootCauseInstanceOf(ResponseTimeoutException.class);
+
             await().untilAtomic(opened, Matchers.is(1));
             await().untilAtomic(closed, Matchers.is(1));
         }

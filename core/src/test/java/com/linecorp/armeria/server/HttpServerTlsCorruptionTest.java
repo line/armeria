@@ -118,5 +118,6 @@ class HttpServerTlsCorruptionTest {
             logger.warn("Received a corrupt response after {} request(s)", i);
             throw cause;
         }
+        clientFactory.close();
     }
 }

@@ -25,24 +25,29 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.IntSupplier;
 import java.util.function.Predicate;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
-import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 /**
  * Concurrency settings that limits the concurrent number of active requests.
  */
 final class DefaultConcurrencyLimit implements ConcurrencyLimit {
+    private static final Logger logger = LoggerFactory.getLogger(DefaultConcurrencyLimit.class);
 
     private final Predicate<? super ClientRequestContext> predicate;
-    private final int maxConcurrency;
+    private final IntSupplier maxConcurrency;
     private final int maxPendingAcquisitions;
     private final long timeoutMillis;
 
@@ -51,7 +56,7 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
     private final AtomicInteger acquiredPermits = new AtomicInteger();
 
     DefaultConcurrencyLimit(Predicate<? super ClientRequestContext> predicate,
-                            int maxConcurrency, int maxPendingAcquisitions, long timeoutMillis) {
+                            IntSupplier maxConcurrency, int maxPendingAcquisitions, long timeoutMillis) {
         this.predicate = predicate;
         this.maxConcurrency = maxConcurrency;
         this.maxPendingAcquisitions = maxPendingAcquisitions;
@@ -65,7 +70,18 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
 
     @VisibleForTesting
     int availablePermits() {
-        return maxConcurrency - acquiredPermits.get();
+        final int availablePermitCount = maxConcurrency() - acquiredPermits.get();
+        return Math.max(availablePermitCount, 0);
+    }
+
+    @VisibleForTesting
+    int maxConcurrency() {
+        final int maxConcurrency = this.maxConcurrency.getAsInt();
+        if (maxConcurrency < 0) {
+            logger.warn("maxConcurrency.get() returned {}; maxConcurrency is set to 0.", maxConcurrency);
+            return 0;
+        }
+        return maxConcurrency;
     }
 
     @Override
@@ -78,18 +94,18 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
             // Because we don't do checking acquiredPermits and adding the queue at the same time,
             // this doesn't strictly guarantee FIFO.
             // However, the reversal happens within a reasonable window so it should be fine.
-            if (acquiredPermits.incrementAndGet() <= maxConcurrency) {
-                return CompletableFuture.completedFuture(new Permit());
+            if (acquiredPermits.incrementAndGet() <= maxConcurrency()) {
+                return UnmodifiableFuture.completedFuture(new Permit());
             }
             acquiredPermits.decrementAndGet();
         }
 
         if (maxPendingAcquisitions == 0) {
-            return CompletableFutures.exceptionallyCompletedFuture(TooManyPendingAcquisitionsException.get());
+            return UnmodifiableFuture.exceptionallyCompletedFuture(TooManyPendingAcquisitionsException.get());
         }
         if (numPendingAcquisitions.incrementAndGet() > maxPendingAcquisitions) {
             numPendingAcquisitions.decrementAndGet();
-            return CompletableFutures.exceptionallyCompletedFuture(TooManyPendingAcquisitionsException.get());
+            return UnmodifiableFuture.exceptionallyCompletedFuture(TooManyPendingAcquisitionsException.get());
         }
 
         final CompletableFuture<SafeCloseable> future = new CompletableFuture<>();
@@ -103,7 +119,7 @@ final class DefaultConcurrencyLimit implements ConcurrencyLimit {
     void drain() {
         while (!pendingAcquisitions.isEmpty()) {
             final int currentAcquiredPermits = acquiredPermits.get();
-            if (currentAcquiredPermits >= maxConcurrency) {
+            if (currentAcquiredPermits >= maxConcurrency()) {
                 break;
             }
 

@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
@@ -235,6 +236,11 @@ public final class DefaultServiceRequestContext
     @Override
     public Map<String, String> pathParams() {
         return routingResult.pathParams();
+    }
+
+    @Override
+    public QueryParams queryParams() {
+        return routingContext().params();
     }
 
     @Override

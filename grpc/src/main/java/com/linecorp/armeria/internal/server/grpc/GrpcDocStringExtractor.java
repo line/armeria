@@ -24,11 +24,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.DescriptorProtos.DescriptorProto;
 import com.google.protobuf.DescriptorProtos.EnumDescriptorProto;
 import com.google.protobuf.DescriptorProtos.FieldDescriptorProto;
@@ -45,7 +47,8 @@ import com.linecorp.armeria.server.docs.DocStringExtractor;
  *
  * <p>To include docstrings in {@link DocService} pages, configure the protobuf compiler to generate
  * a descriptor set with source info and all imports included. Place the descriptor set in the classpath
- * location {@code META-INF/armeria/grpc} and ensure the file extension is '.dsc'. The classpath location
+ * location {@code META-INF/armeria/grpc} and ensure the file extension is one of '.bin', '.desc', '.dsc',
+ * '.pb', and '.protobin'. The classpath location
  * can be changed by setting the {@code com.linecorp.armeria.grpc.descriptorDir} system property.
  *
  * <p>For example, to generate a descriptor set in Gradle:
@@ -67,13 +70,16 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
 
     private static final Logger logger = LoggerFactory.getLogger(GrpcDocStringExtractor.class);
 
+    private static final Set<String> acceptableExtensions =
+            ImmutableSet.of(".bin", ".desc", ".dsc", ".pb", ".protobin");
+
     GrpcDocStringExtractor() {
         super("META-INF/armeria/grpc", "com.linecorp.armeria.grpc.descriptorDir");
     }
 
     @Override
     protected boolean acceptFile(String filename) {
-        return filename.endsWith(".dsc");
+        return acceptableExtensions.stream().anyMatch(filename::endsWith);
     }
 
     @Override
@@ -106,7 +112,11 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
                              }
                          })
                          .filter(Objects::nonNull)
-                         .collect(toImmutableMap(Entry::getKey, Entry::getValue));
+                         .collect(toImmutableMap(Entry::getKey, Entry::getValue, (first, second) -> {
+                             logger.warn("Multiple keys found while parsing proto comments," +
+                                         " skipping entry \"{}\".", second);
+                             return first;
+                         }));
     }
 
     // A path is field number and indices within a list of types, going through a tree of protobuf
@@ -126,13 +136,22 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
                 final ServiceDescriptorProto serviceDescriptor = descriptor.getService(path.get(1));
                 fullNameSoFar = appendNameComponent(fullNameSoFar, serviceDescriptor.getName());
                 if (path.size() > 2) {
-                    fullNameSoFar = appendFieldComponent(
-                            fullNameSoFar, serviceDescriptor.getMethod(path.get(3)).getName());
+                    fullNameSoFar = appendMethodToFullName(serviceDescriptor, path, fullNameSoFar);
                 }
                 return fullNameSoFar;
             default:
                 return null;
         }
+    }
+
+    @Nullable
+    private static String appendMethodToFullName(ServiceDescriptorProto serviceDescriptorProto,
+                                                 List<Integer> path, String fullNameSoFar) {
+        if (path.size() == 4 && path.get(2) == ServiceDescriptorProto.METHOD_FIELD_NUMBER) {
+            return appendFieldComponent(fullNameSoFar,
+                                        serviceDescriptorProto.getMethod(path.get(3)).getName());
+        }
+        return null;
     }
 
     @Nullable
@@ -161,13 +180,17 @@ final class GrpcDocStringExtractor extends DocStringExtractor {
                                : fullNameSoFar;
     }
 
+    @Nullable
     private static String appendEnumToFullName(
             EnumDescriptorProto enumDescriptor, List<Integer> path, String fullNameSoFar) {
         fullNameSoFar = appendNameComponent(fullNameSoFar, enumDescriptor.getName());
-        if (path.size() > 2) {
-            fullNameSoFar = appendFieldComponent(fullNameSoFar, enumDescriptor.getValue(path.get(3)).getName());
+        if (path.size() <= 2) {
+            return fullNameSoFar;
         }
-        return fullNameSoFar;
+        if (path.get(2) == EnumDescriptorProto.VALUE_FIELD_NUMBER) {
+            return appendFieldComponent(fullNameSoFar, enumDescriptor.getValue(path.get(3)).getName());
+        }
+        return null;
     }
 
     private static String appendNameComponent(String nameSoFar, String component) {

@@ -21,7 +21,8 @@
     "server-access-log",
     "server-cors",
     "server-sse",
-    "server-service-registration"
+    "server-service-registration",
+    "server-graphql"
   ],
   "Client": [
     "client-http",

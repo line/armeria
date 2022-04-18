@@ -18,12 +18,15 @@ package com.linecorp.armeria.client.limit;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.lang.Integer.MAX_VALUE;
+import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.IntSupplier;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.SettableIntSupplier;
 
 /**
  * Limits the concurrency of client requests.
@@ -43,6 +46,35 @@ public interface ConcurrencyLimit {
     }
 
     /**
+     * Returns a newly-created {@link ConcurrencyLimit} with the specified {@link IntSupplier}.
+     * {@link IntSupplier#getAsInt()} might be frequently called, so please consider using
+     * {@link SettableIntSupplier} if supplying the value needs heavy computation. For example:
+     * <pre>{@code
+     * ConcurrencyLimit limit = ConcurrencyLimit.of(new DynamicLimit());
+     *
+     * class DynamicLimit implements IntSupplier {
+     *     private final SettableIntSupplier settableIntSupplier = SettableIntSupplier.of(16);
+     *
+     *     DynamicLimit() {
+     *         LimitChangeListener<Integer> listener = ...
+     *         listener.addListener(updatedValue -> settableIntSupplier.set(updatedValue));
+     *     }
+     *
+     *     @Override
+     *     public int getAsInt() {
+     *         return settableIntSupplier.getAsInt();
+     *     }
+     * }}</pre>
+     *
+     * <p>Note that {@link IntSupplier} must supply a positive number. Otherwise, all requests will end up
+     * in pending state.
+     */
+    @UnstableApi
+    static ConcurrencyLimit of(IntSupplier maxConcurrency) {
+        return builder(maxConcurrency).build();
+    }
+
+    /**
      * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@code maxConcurrency}.
      *
      * @param maxConcurrency the maximum number of concurrent active requests.
@@ -52,6 +84,36 @@ public interface ConcurrencyLimit {
         checkArgument(maxConcurrency >= 0,
                       "maxConcurrency: %s (expected: >= 0)", maxConcurrency);
         return new ConcurrencyLimitBuilder(maxConcurrency == MAX_VALUE ? 0 : maxConcurrency);
+    }
+
+    /**
+     * Returns a new {@link ConcurrencyLimitBuilder} with the specified {@link IntSupplier}.
+     * {@link IntSupplier#getAsInt()} might be frequently called, so please consider using
+     * {@link SettableIntSupplier} if supplying the value needs heavy computation. For example:
+     * <pre>{@code
+     * ConcurrencyLimitBuilder builder = ConcurrencyLimit.builder(new DynamicLimit());
+     *
+     * class DynamicLimit implements IntSupplier {
+     *     private final SettableIntSupplier settableIntSupplier = SettableIntSupplier.of(16);
+     *
+     *     DynamicLimit() {
+     *         LimitChangeListener<Integer> listener = ...
+     *         listener.addListener(updatedValue -> settableIntSupplier.set(updatedValue));
+     *     }
+     *
+     *     @Override
+     *     public int getAsInt() {
+     *         return settableIntSupplier.getAsInt();
+     *     }
+     * }}</pre>
+     *
+     * <p>Note that {@link IntSupplier} must supply a positive number. Otherwise, all requests will end up
+     * in pending state.
+     */
+    @UnstableApi
+    static ConcurrencyLimitBuilder builder(IntSupplier maxConcurrency) {
+        requireNonNull(maxConcurrency, "maxConcurrency");
+        return new ConcurrencyLimitBuilder(maxConcurrency);
     }
 
     /**

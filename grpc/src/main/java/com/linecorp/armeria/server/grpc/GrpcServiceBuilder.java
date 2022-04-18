@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.VirtualHostBuilder;
@@ -131,9 +132,9 @@ public final class GrpcServiceBuilder {
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
-    private int maxInboundMessageSizeBytes = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
+    private int maxRequestMessageLength = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
 
-    private int maxOutboundMessageSizeBytes = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
+    private int maxResponseMessageLength = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
 
     private Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory =
             GrpcJsonMarshaller::of;
@@ -147,6 +148,11 @@ public final class GrpcServiceBuilder {
     private boolean unsafeWrapRequestBuffers;
 
     private boolean useClientTimeoutHeader = true;
+
+    private boolean enableHealthCheckService;
+
+    @Nullable
+    private GrpcHealthCheckService grpcHealthCheckService;
 
     GrpcServiceBuilder() {}
 
@@ -212,11 +218,18 @@ public final class GrpcServiceBuilder {
      * implementations are {@link BindableService}s.
      */
     public GrpcServiceBuilder addService(BindableService bindableService) {
+        requireNonNull(bindableService, "bindableService");
         if (bindableService instanceof ProtoReflectionService) {
             return addService(ServerInterceptors.intercept(bindableService,
                                                            newProtoReflectionServiceInterceptor()));
         }
-
+        if (bindableService instanceof GrpcHealthCheckService) {
+            if (enableHealthCheckService) {
+                throw new IllegalStateException("default gRPC health check service is enabled already.");
+            }
+            grpcHealthCheckService = (GrpcHealthCheckService) bindableService;
+            return this;
+        }
         return addService(bindableService.bindService());
     }
 
@@ -390,23 +403,50 @@ public final class GrpcServiceBuilder {
      * and {@link ServerBuilder#requestTimeoutMillis(long)}
      * (or {@link VirtualHostBuilder#requestTimeoutMillis(long)})
      * to very high values and set this to the expected limit of individual messages in the stream.
+     *
+     * @deprecated Use {@link #maxRequestMessageLength(int)} instead.
      */
+    @Deprecated
     public GrpcServiceBuilder setMaxInboundMessageSizeBytes(int maxInboundMessageSizeBytes) {
-        checkArgument(maxInboundMessageSizeBytes > 0,
-                      "maxInboundMessageSizeBytes must be >0");
-        this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
-        return this;
+        return maxRequestMessageLength(maxInboundMessageSizeBytes);
     }
 
     /**
      * Sets the maximum size in bytes of an individual outgoing message. If not set, all messages will be sent.
      * This can be a safety valve to prevent overflowing network connections with large messages due to business
      * logic bugs.
+     * @deprecated Use {@link #maxResponseMessageLength(int)} instead.
      */
+    @Deprecated
     public GrpcServiceBuilder setMaxOutboundMessageSizeBytes(int maxOutboundMessageSizeBytes) {
-        checkArgument(maxOutboundMessageSizeBytes > 0,
-                      "maxOutboundMessageSizeBytes must be >0");
-        this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
+        return maxResponseMessageLength(maxOutboundMessageSizeBytes);
+    }
+
+    /**
+     * Sets the maximum size in bytes of an individual request message. If not set, will use
+     * {@link VirtualHost#maxRequestLength()}. To support long-running RPC streams, it is recommended to
+     * set {@link ServerBuilder#maxRequestLength(long)}
+     * (or {@link VirtualHostBuilder#maxRequestLength(long)})
+     * and {@link ServerBuilder#requestTimeoutMillis(long)}
+     * (or {@link VirtualHostBuilder#requestTimeoutMillis(long)})
+     * to very high values and set this to the expected limit of individual messages in the stream.
+     */
+    public GrpcServiceBuilder maxRequestMessageLength(int maxRequestMessageLength) {
+        checkArgument(maxRequestMessageLength > 0,
+                      "maxRequestMessageLength: %s (expected: > 0)", maxRequestMessageLength);
+        this.maxRequestMessageLength = maxRequestMessageLength;
+        return this;
+    }
+
+    /**
+     * Sets the maximum size in bytes of an individual response message. If not set, all messages will be sent.
+     * This can be a safety valve to prevent overflowing network connections with large messages due to business
+     * logic bugs.
+     */
+    public GrpcServiceBuilder maxResponseMessageLength(int maxResponseMessageLength) {
+        checkArgument(maxResponseMessageLength > 0,
+                      "maxResponseMessageLength: %s (expected: > 0)", maxResponseMessageLength);
+        this.maxResponseMessageLength = maxResponseMessageLength;
         return this;
     }
 
@@ -563,6 +603,21 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Sets the default {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
+     * The gRPC health check service manages only the health checker that determines
+     * the healthiness of the {@link Server}.
+     *
+     * @see <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
+     */
+    public GrpcServiceBuilder enableHealthCheckService(boolean enableHealthCheckService) {
+        if (grpcHealthCheckService != null && enableHealthCheckService) {
+            throw new IllegalStateException("gRPC health check service is set already.");
+        }
+        this.enableHealthCheckService = enableHealthCheckService;
+        return this;
+    }
+
+    /**
      * Sets the specified {@link GrpcStatusFunction} that maps a {@link Throwable} to a gRPC {@link Status}.
      *
      * <p>Note that this method and {@link #addExceptionMapping(Class, Status)} are mutually exclusive.
@@ -713,9 +768,14 @@ public final class GrpcServiceBuilder {
                     "'httpJsonTranscodingErrorHandler' can only be set if HTTP/JSON transcoding feature " +
                     "is enabled");
         }
+        if (enableHealthCheckService) {
+            grpcHealthCheckService = GrpcHealthCheckService.builder().build();
+        }
+        if (grpcHealthCheckService != null) {
+            registryBuilder.addService(grpcHealthCheckService.bindService());
+        }
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
-
             for (Entry entry : registryBuilder.entries()) {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
@@ -748,12 +808,12 @@ public final class GrpcServiceBuilder {
                 jsonMarshallerFactory,
                 protoReflectionServiceInterceptor,
                 statusFunction,
-                maxOutboundMessageSizeBytes,
+                maxRequestMessageLength, maxResponseMessageLength,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
-                maxInboundMessageSizeBytes,
-                enableUnframedRequests || enableHttpJsonTranscoding);
+                enableUnframedRequests || enableHttpJsonTranscoding,
+                grpcHealthCheckService);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,

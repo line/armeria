@@ -48,10 +48,16 @@ final class KotlinUtil {
     private static final MethodHandle CALL_KOTLIN_SUSPENDING_METHOD;
 
     @Nullable
+    private static final Method IS_K_FUNCTION;
+
+    @Nullable
     private static final Method IS_SUSPENDING_FUNCTION;
 
     @Nullable
     private static final Method IS_RETURN_TYPE_UNIT;
+
+    @Nullable
+    private static final Method IS_RETURN_TYPE_NOTHING;
 
     @Nullable
     private static final Method K_FUNCTION_RETURN_TYPE;
@@ -80,23 +86,29 @@ final class KotlinUtil {
             CALL_KOTLIN_SUSPENDING_METHOD = callKotlinSuspendingMethod;
         }
 
+        Method isKFunction = null;
         Method isSuspendingFunction = null;
         Method isReturnTypeUnit = null;
+        Method isReturnTypeNothing = null;
         Method kFunctionReturnType = null;
         Method kFunctionGenericReturnType = null;
         try {
             final Class<?> kotlinUtilClass =
                     getClass(internalCommonPackageName + ".kotlin.ArmeriaKotlinUtil");
 
+            isKFunction = kotlinUtilClass.getMethod("isKFunction", Method.class);
             isSuspendingFunction = kotlinUtilClass.getMethod("isSuspendingFunction", Method.class);
             isReturnTypeUnit = kotlinUtilClass.getMethod("isReturnTypeUnit", Method.class);
+            isReturnTypeNothing = kotlinUtilClass.getMethod("isReturnTypeNothing", Method.class);
             kFunctionReturnType = kotlinUtilClass.getMethod("kFunctionReturnType", Method.class);
             kFunctionGenericReturnType = kotlinUtilClass.getMethod("kFunctionGenericReturnType", Method.class);
         } catch (ClassNotFoundException | NoSuchMethodException e) {
             // ignore
         } finally {
+            IS_K_FUNCTION = isKFunction;
             IS_SUSPENDING_FUNCTION = isSuspendingFunction;
             IS_RETURN_TYPE_UNIT = isReturnTypeUnit;
+            IS_RETURN_TYPE_NOTHING = isReturnTypeNothing;
             K_FUNCTION_RETURN_TYPE = kFunctionReturnType;
             K_FUNCTION_GENERIC_RETURN_TYPE = kFunctionGenericReturnType;
         }
@@ -155,6 +167,20 @@ final class KotlinUtil {
     }
 
     /**
+     * Returns true if a method can be represented by a Kotlin function.
+     */
+    static boolean isKFunction(Method method) {
+        try {
+            return IS_KOTLIN_REFLECTION_PRESENT &&
+                   IS_K_FUNCTION != null &&
+                   isKotlinMethod(method) &&
+                   (boolean) IS_K_FUNCTION.invoke(null, method);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
      * Returns true if a method is a suspending function.
      */
     static boolean isSuspendingFunction(Method method) {
@@ -183,6 +209,18 @@ final class KotlinUtil {
             return isSuspendingFunction(method) &&
                    IS_RETURN_TYPE_UNIT != null &&
                    (boolean) IS_RETURN_TYPE_UNIT.invoke(null, method);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Returns true if a method returns {@code kotlin.Nothing}.
+     */
+    static boolean isReturnTypeNothing(Method method) {
+        try {
+            return IS_RETURN_TYPE_NOTHING != null &&
+                   (boolean) IS_RETURN_TYPE_NOTHING.invoke(null, method);
         } catch (Exception e) {
             return false;
         }

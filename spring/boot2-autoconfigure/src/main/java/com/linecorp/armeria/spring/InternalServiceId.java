@@ -43,6 +43,10 @@ public enum InternalServiceId {
      */
     METRICS,
     /**
+     * The ID to bind {@code WebOperationService} into internal service.
+     */
+    ACTUATOR,
+    /**
      * The ID that represents all internal {@link HttpService}s.
      */
     ALL;
@@ -51,6 +55,6 @@ public enum InternalServiceId {
      * Returns the default service IDs that need to secure from the external network.
      */
     public static List<InternalServiceId> defaultServiceIds() {
-        return ImmutableList.of(DOCS, HEALTH, METRICS);
+        return ImmutableList.of(DOCS, HEALTH, METRICS, ACTUATOR);
     }
 }

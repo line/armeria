@@ -20,37 +20,66 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.grpc.GrpcClientOptions;
 import com.linecorp.armeria.client.grpc.GrpcClientStubFactory;
+import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
+import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
+import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
+import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceStub;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.grpc.GrpcService;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.CallOptions;
 import io.grpc.Channel;
+import io.grpc.ClientCall;
+import io.grpc.ClientInterceptor;
+import io.grpc.ForwardingClientCall.SimpleForwardingClientCall;
+import io.grpc.Metadata;
+import io.grpc.MethodDescriptor;
 import io.grpc.ServiceDescriptor;
+import io.grpc.stub.StreamObserver;
 
 class CustomGrpcClientFactoryTest {
+
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension(true) {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.requestTimeoutMillis(5000);
+            sb.decorator(LoggingService.newDecorator());
+            sb.service(GrpcService.builder()
+                                  .addService(new TestServiceImpl())
+                                  .build());
+        }
+    };
+
     @Test
     void customFactory() {
         final AtomicBoolean invoked = new AtomicBoolean();
         final TestServiceStub client =
-                Clients.builder("gproto+http://127.0.0.1")
-                       .option(GrpcClientOptions.GRPC_CLIENT_STUB_FACTORY.newValue(new GrpcClientStubFactory() {
-                           @Override
-                           public ServiceDescriptor findServiceDescriptor(Class<?> clientType) {
-                               invoked.set(true);
-                               return TestServiceGrpc.getServiceDescriptor();
-                           }
+                GrpcClients.builder("http://127.0.0.1")
+                           .clientStubFactory(new GrpcClientStubFactory() {
+                               @Override
+                               public ServiceDescriptor findServiceDescriptor(Class<?> clientType) {
+                                   invoked.set(true);
+                                   return TestServiceGrpc.getServiceDescriptor();
+                               }
 
-                           @Override
-                           public Object newClientStub(Class<?> clientType, Channel channel) {
-                               return TestServiceGrpc.newStub(channel);
-                           }
-                       }))
-                       .build(TestServiceStub.class);
+                               @Override
+                               public Object newClientStub(Class<?> clientType, Channel channel) {
+                                   return TestServiceGrpc.newStub(channel);
+                               }
+                           })
+                           .build(TestServiceStub.class);
 
         assertThat(client).isNotNull();
         assertThat(invoked).isTrue();
@@ -60,22 +89,92 @@ class CustomGrpcClientFactoryTest {
     void illegalType() {
         final AtomicBoolean invoked = new AtomicBoolean();
         assertThatThrownBy(() -> {
-            Clients.builder("gproto+http://127.0.0.1")
-                   .option(GrpcClientOptions.GRPC_CLIENT_STUB_FACTORY.newValue(new GrpcClientStubFactory() {
-                       @Override
-                       public ServiceDescriptor findServiceDescriptor(Class<?> clientType) {
-                           invoked.set(true);
-                           return TestServiceGrpc.getServiceDescriptor();
-                       }
+            GrpcClients.builder("http://127.0.0.1")
+                       .clientStubFactory(new GrpcClientStubFactory() {
+                           @Override
+                           public ServiceDescriptor findServiceDescriptor(Class<?> clientType) {
+                               invoked.set(true);
+                               return TestServiceGrpc.getServiceDescriptor();
+                           }
 
-                       @Override
-                       public Object newClientStub(Class<?> clientType, Channel channel) {
-                           return TestServiceGrpc.newBlockingStub(channel);
-                       }
-                   }))
-                   .build(TestServiceStub.class);
+                           @Override
+                           public Object newClientStub(Class<?> clientType, Channel channel) {
+                               return TestServiceGrpc.newBlockingStub(channel);
+                           }
+                       })
+                       .build(TestServiceStub.class);
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Unexpected client stub type: " +
                                 TestServiceGrpc.TestServiceBlockingStub.class.getName());
+    }
+
+    @Test
+    void interceptors() {
+        final AtomicInteger invoked1 = new AtomicInteger();
+        final AtomicInteger invoked2 = new AtomicInteger();
+        final ClientInterceptor firstInterceptor = new ClientInterceptor() {
+            @Override
+            public <I, O> ClientCall<I, O> interceptCall(
+                    MethodDescriptor<I, O> method, CallOptions callOptions, Channel next) {
+                return new SimpleForwardingClientCall<I, O>(next.newCall(method, callOptions)) {
+                    @Override
+                    public void start(Listener<O> responseListener, Metadata headers) {
+                        invoked1.getAndIncrement();
+                        assertThat(invoked1).hasValue(1);
+                        assertThat(invoked2).hasValue(0);
+                        super.start(responseListener, headers);
+                    }
+                };
+            }
+        };
+        final ClientInterceptor secondInterceptor = new ClientInterceptor() {
+            @Override
+            public <I, O> ClientCall<I, O> interceptCall(
+                    MethodDescriptor<I, O> method, CallOptions callOptions, Channel next) {
+                return new SimpleForwardingClientCall<I, O>(next.newCall(method, callOptions)) {
+                    @Override
+                    public void start(Listener<O> responseListener, Metadata headers) {
+                        invoked2.getAndIncrement();
+                        assertThat(invoked1).hasValue(1);
+                        assertThat(invoked2).hasValue(1);
+                        super.start(responseListener, headers);
+                    }
+                };
+            }
+        };
+        final ClientInterceptor thirdInterceptor = new ClientInterceptor() {
+            @Override
+            public <I, O> ClientCall<I, O> interceptCall(
+                    MethodDescriptor<I, O> method, CallOptions callOptions, Channel next) {
+                return new SimpleForwardingClientCall<I, O>(next.newCall(method, callOptions)) {
+                    @Override
+                    public void start(Listener<O> responseListener, Metadata headers) {
+                        invoked1.getAndIncrement();
+                        assertThat(invoked1).hasValue(2);
+                        assertThat(invoked2).hasValue(1);
+                        super.start(responseListener, headers);
+                    }
+                };
+            }
+        };
+        final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
+                                                          .intercept(thirdInterceptor,
+                                                                     secondInterceptor,
+                                                                     firstInterceptor)
+                                                          .build(TestServiceBlockingStub.class);
+        client.unaryCall(SimpleRequest.getDefaultInstance());
+        assertThat(invoked1.get()).isEqualTo(2);
+        assertThat(invoked2.get()).isEqualTo(1);
+    }
+
+    private static class TestServiceImpl extends TestServiceImplBase {
+
+        @Override
+        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onNext(SimpleResponse.newBuilder()
+                                                  .setUsername("test user")
+                                                  .build());
+            responseObserver.onCompleted();
+        }
     }
 }

@@ -78,16 +78,18 @@ class GrpcWebRetryTest {
         retryCounter.set(0);
         ruleWithContent =
                 RetryRuleWithContent.<HttpResponse>builder()
-                        .onResponseHeaders((ctx, headers) -> {
-                            // Trailers may be sent together with response headers, with no message in the body.
-                            final Integer grpcStatus = headers.getInt(GrpcHeaderNames.GRPC_STATUS);
-                            return grpcStatus != null && grpcStatus != 0;
-                        })
-                        .onResponse((ctx, res) -> res.aggregate().thenApply(aggregatedRes -> {
-                            final HttpHeaders trailers = GrpcWebTrailers.get(ctx);
-                            return trailers != null && trailers.getInt(GrpcHeaderNames.GRPC_STATUS, -1) != 0;
-                        }))
-                        .thenBackoff();
+                                    .onResponseHeaders((ctx, headers) -> {
+                                        // Trailers may be sent together with response headers, with no
+                                        // message in the body.
+                                        final Integer grpcStatus = headers.getInt(GrpcHeaderNames.GRPC_STATUS);
+                                        return grpcStatus != null && grpcStatus != 0;
+                                    })
+                                    .onResponse((ctx, res) -> res.aggregate().thenApply(aggregatedRes -> {
+                                        final HttpHeaders trailers = GrpcWebTrailers.get(ctx);
+                                        return trailers != null &&
+                                               trailers.getInt(GrpcHeaderNames.GRPC_STATUS, -1) != 0;
+                                    }))
+                                    .thenBackoff();
     }
 
     @ArgumentsSource(GrpcSerializationFormatArgumentSource.class)
@@ -98,9 +100,9 @@ class GrpcWebRetryTest {
 
     private void unaryCall(SerializationFormat serializationFormat, SimpleRequest request) {
         final TestServiceBlockingStub client =
-                Clients.builder(server.uri(SessionProtocol.H1C, serializationFormat))
-                       .decorator(RetryingClient.newDecorator(ruleWithContent))
-                       .build(TestServiceBlockingStub.class);
+                GrpcClients.builder(server.uri(SessionProtocol.H1C, serializationFormat))
+                           .decorator(RetryingClient.newDecorator(ruleWithContent))
+                           .build(TestServiceBlockingStub.class);
 
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final SimpleResponse result = client.unaryCall(request);
@@ -126,9 +128,9 @@ class GrpcWebRetryTest {
     @ParameterizedTest
     void emptyCall(SerializationFormat serializationFormat) {
         final TestServiceBlockingStub client =
-                Clients.builder(server.uri(SessionProtocol.H1C, serializationFormat))
-                       .decorator(RetryingClient.newDecorator(ruleWithContent))
-                       .build(TestServiceBlockingStub.class);
+                GrpcClients.builder(server.uri(SessionProtocol.H1C, serializationFormat))
+                           .decorator(RetryingClient.newDecorator(ruleWithContent))
+                           .build(TestServiceBlockingStub.class);
 
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final Empty result = client.emptyCall(Empty.newBuilder().build());

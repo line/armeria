@@ -118,7 +118,9 @@ const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
             {specification.getTypeSignatureHtml(variable.typeSignature)}
           </code>
         </TableCell>
-        <TableCell>{variable.docString}</TableCell>
+        <TableCell>
+          <pre>{variable.docString}</pre>
+        </TableCell>
         {hasChildren && (
           <TableCell>{expanded ? <ExpandLess /> : <ExpandMore />}</TableCell>
         )}
@@ -159,6 +161,7 @@ const FieldInfos: React.FunctionComponent<FieldInfosProps> = (props) => {
     colSpanLength += 1;
   }
   return (
+    // eslint-disable-next-line react/jsx-no-useless-fragment
     <>
       {!isEmpty ? (
         props.variables.map((variable, index) => (

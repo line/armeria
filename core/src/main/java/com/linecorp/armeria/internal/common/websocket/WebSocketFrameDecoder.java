@@ -28,8 +28,8 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.HttpDecoder;
-import com.linecorp.armeria.common.stream.HttpDecoderInput;
-import com.linecorp.armeria.common.stream.HttpDecoderOutput;
+import com.linecorp.armeria.common.stream.StreamDecoderInput;
+import com.linecorp.armeria.common.stream.StreamDecoderOutput;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketDecoderConfig;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
@@ -91,7 +91,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
     }
 
     @Override
-    public void process(HttpDecoderInput in, HttpDecoderOutput<WebSocketFrame> out) throws Exception {
+    public void process(StreamDecoderInput in, StreamDecoderOutput<WebSocketFrame> out) throws Exception {
         while (in.readableBytes() > 0) {
             // Discard all data received if closing handshake was received before.
             if (receivedClosingHandshake) {
@@ -300,8 +300,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                             out.add(WebSocketFrame.ofPooledBinary(payloadBuffer, frameFinalFlag));
                             payloadBuffer = null;
                         } else if (frameOpcode == WebSocketFrameType.CONTINUATION.opcode()) {
-                            final boolean isText = currentFragmentOpcode == WebSocketFrameType.TEXT.opcode() ?
-                                                   true : false;
+                            final boolean isText = currentFragmentOpcode == WebSocketFrameType.TEXT.opcode();
                             out.add(WebSocketFrame.ofPooledContinuation(payloadBuffer, frameFinalFlag, isText));
                             payloadBuffer = null;
                         } else {

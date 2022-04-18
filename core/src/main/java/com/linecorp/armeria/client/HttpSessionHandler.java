@@ -213,6 +213,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return false;
         }
 
+        assert responseDecoder != null;
+        responseDecoder.decrementUnfinishedResponses();
+
         // The response has been closed even before its request is sent.
         assert protocol != null;
 

@@ -19,27 +19,41 @@ import java.util.List;
 
 import com.linecorp.armeria.client.Endpoint;
 
+@FunctionalInterface
 interface HealthCheckStrategy {
 
     /**
-     * Updates the candidates.
-     * @param candidates the {@link Endpoint} used to select based on implementation.
+     * Returns a strategy to check all candidates.
      */
-    void updateCandidates(List<Endpoint> candidates);
+    static HealthCheckStrategy all() {
+        return candidates -> candidates;
+    }
+
+    /**
+     * Sets the maximum endpoint count of target selected candidates.
+     * The maximum endpoint count must greater than 0.
+     * You can use only one of the maximum endpoint count or maximum endpoint ratio.
+     */
+    static HealthCheckStrategy ofCount(int maxEndpointCount) {
+        return PartialHealthCheckStrategy.builder()
+                                         .maxEndpointCount(maxEndpointCount)
+                                         .build();
+    }
+
+    /**
+     * Sets the maximum endpoint ratio of target selected candidates.
+     * The maximum endpoint ratio must greater than 0 and less or equal to 1.
+     * You can use only one of the maximum endpoint count or maximum endpoint ratio.
+     */
+    static HealthCheckStrategy ofRatio(double maxEndpointRatio) {
+        return PartialHealthCheckStrategy.builder()
+                                         .maxEndpointRatio(maxEndpointRatio)
+                                         .build();
+    }
 
     /**
      * Returns {@link Endpoint}s selected by this health check strategy.
      */
-    List<Endpoint> getSelectedEndpoints();
-
-    /**
-     * Updates the health of the {@link Endpoint}.
-     * @param endpoint the {@link Endpoint} to update health.
-     * @param health {@code 0.0} indicates the {@link Endpoint} is not able to handle any requests.
-     *               A positive value indicates the {@link Endpoint} is able to handle requests.
-     *               A value greater than {@code 1.0} will be set equal to {@code 1.0}.
-     * @return the result of candidates updated by update health.
-     */
-    boolean updateHealth(Endpoint endpoint, double health);
+    List<Endpoint> select(List<Endpoint> candidates);
 }
 

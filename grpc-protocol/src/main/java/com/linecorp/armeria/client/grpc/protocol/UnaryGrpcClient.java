@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.grpc.protocol;
 
-import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
-
 import java.nio.charset.StandardCharsets;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
@@ -54,6 +52,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.grpc.protocol.GrpcWebTrailers;
 import com.linecorp.armeria.common.grpc.protocol.StatusMessageEscaper;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.grpc.protocol.StatusCodes;
 import com.linecorp.armeria.internal.common.grpc.protocol.UnaryGrpcSerializationFormats;
@@ -206,14 +205,14 @@ public final class UnaryGrpcClient {
                                    GrpcWebTrailers.set(ctx, msg.trailers());
                                }
                                // Nothing to deframe.
-                               return CompletableFuture.completedFuture(msg.toHttpResponse());
+                               return UnmodifiableFuture.completedFuture(msg.toHttpResponse());
                            }
 
                            final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
                            final ArmeriaMessageDeframer deframer =
-                                   new ArmeriaMessageDeframer(Integer.MAX_VALUE);
+                                   new ArmeriaMessageDeframer(Integer.MAX_VALUE, ctx.alloc(), isGrpcWebText);
                            msg.toHttpResponse()
-                              .decode(deframer, ctx.alloc(), byteBufConverter(ctx.alloc(), isGrpcWebText))
+                              .decode(deframer, ctx.alloc())
                               .subscribe(new DeframedMessageSubscriber(
                                                  ctx, msg, serializationFormat, responseFuture),
                                          ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);

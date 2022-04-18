@@ -230,8 +230,8 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a> states the path must not
-     * be empty, and instead should be {@code /}.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3">rfc7540, 8.1.2.3</a>
+     * states the path must not be empty, and instead should be {@code /}.
      */
     private static final String EMPTY_REQUEST_PATH = "/";
 
@@ -286,13 +286,13 @@ public final class ArmeriaHttpUtil {
             return path1 + path2;
         }
 
-        if (path2.charAt(0) == '/') {
-            // path1 does not end with '/' and path2 starts with '/'.
+        if (path2.charAt(0) == '/' || path2.charAt(0) == '?') {
+            // path1 does not end with '/' and path2 starts with '/' or '?'
             // Simple concatenation would suffice.
             return path1 + path2;
         }
 
-        // path1 does not end with '/' and path2 does not start with '/'.
+        // path1 does not end with '/' and path2 does not start with '/' or '?'.
         // Need to insert '/' between path1 and path2.
         return path1 + '/' + path2;
     }
@@ -302,11 +302,37 @@ public final class ArmeriaHttpUtil {
      */
     public static String decodePath(String path) {
         if (path.indexOf('%') < 0) {
-            // No need to decoded; not percent-encoded
+            // No need to decode because it's not percent-encoded
             return path;
         }
 
+        // Decode percent-encoded characters, but don't decode %2F into /, so that a user can choose
+        // to use it as a non-separator.
+        //
+        // For example, for the path pattern `/orgs/{org_name}/agents/{agent_name}`:
+        // - orgs/mi6/agents/ethan-hunt
+        //   - org_name: mi6
+        //   - agent_name: ethan-hunt
+        // - orgs/mi%2F6/agents/ethan-hunt
+        //   - org_name: mi/6
+        //   - agent_name: ethan-hunt
+        return slowDecodePath(path, false);
+    }
+
+    /**
+     * Decodes a single percent-encoded path parameter.
+     */
+    public static String decodePathParam(String pathParam) {
+        if (pathParam.indexOf('%') < 0) {
+            // No need to decode because it's not percent-encoded
+            return pathParam;
+        }
+
         // Decode percent-encoded characters.
+        return slowDecodePath(pathParam, true);
+    }
+
+    private static String slowDecodePath(String path, boolean decodeSlash) {
         // An invalid character is replaced with 0xFF, which will be replaced into '�' by UTF-8 decoder.
         final int len = path.length();
         try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
@@ -333,7 +359,14 @@ public final class ArmeriaHttpUtil {
                     // The first or second digit is not hexadecimal.
                     buf[dstLen++] = (byte) 0xFF;
                 } else {
-                    buf[dstLen++] = (byte) ((digit1 << 4) | digit2);
+                    final byte decoded = (byte) ((digit1 << 4) | digit2);
+                    if (decodeSlash || decoded != 0x2F) {
+                        buf[dstLen++] = decoded;
+                    } else {
+                        buf[dstLen++] = '%';
+                        buf[dstLen++] = '2';
+                        buf[dstLen++] = (byte) path.charAt(i); // f or F - preserve the case.
+                    }
                 }
             }
 
@@ -389,13 +422,13 @@ public final class ArmeriaHttpUtil {
     }
 
     /**
-     * Returns {@code true} if the specified {@code request} is a CORS preflight request.
+     * Returns {@code true} if the specified {@code headers} is a CORS preflight request.
      */
-    public static boolean isCorsPreflightRequest(com.linecorp.armeria.common.HttpRequest request) {
-        requireNonNull(request, "request");
-        return request.method() == HttpMethod.OPTIONS &&
-               request.headers().contains(HttpHeaderNames.ORIGIN) &&
-               request.headers().contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
+    public static boolean isCorsPreflightRequest(RequestHeaders headers) {
+        requireNonNull(headers, "headers");
+        return headers.method() == HttpMethod.OPTIONS &&
+               headers.contains(HttpHeaderNames.ORIGIN) &&
+               headers.contains(HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD);
     }
 
     /**
@@ -764,7 +797,7 @@ public final class ArmeriaHttpUtil {
             builder.remove(disallowed.getKey());
         }
         for (AsciiString disallowed : PSEUDO_HEADERS) {
-           builder.remove(disallowed);
+            builder.remove(disallowed);
         }
         for (Entry<AsciiString, AsciiString> disallowed : HTTP_TRAILER_DISALLOWED_LIST) {
             builder.remove(disallowed.getKey());
@@ -997,6 +1030,7 @@ public final class ArmeriaHttpUtil {
         if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH) || !content.isEmpty()) {
             return headers.toBuilder()
                           .contentLength(content.length())
+                          .removeAndThen(HttpHeaderNames.TRANSFER_ENCODING)
                           .build();
         }
 
@@ -1058,7 +1092,7 @@ public final class ArmeriaHttpUtil {
      * More details can be found at https://github.com/line/armeria/issues/3055.
      */
     public static boolean isRequestTimeoutResponse(HttpResponse httpResponse) {
-        return httpResponse.status() == HttpResponseStatus.REQUEST_TIMEOUT &&
+        return httpResponse.status().code() == HttpResponseStatus.REQUEST_TIMEOUT.code() &&
                "close".equalsIgnoreCase(httpResponse.headers().get(HttpHeaderNames.CONNECTION));
     }
 

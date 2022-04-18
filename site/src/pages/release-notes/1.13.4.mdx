@@ -1,0 +1,46 @@
+---
+date: 2021-12-03
+---
+
+## 🛠️ Bug fixes
+
+- <type://Server> now aborts the startup process if <type://ServerListener#serverStarting(Server)>
+  raises an exception. #3935 #3947
+- You no longer see an <type://EmptyEndpointGroupException> when the entire <typeplural://Endpoint>
+  are replaced in a <type://HealthCheckedEndpointGroup>. #3927
+- You no longer see an `IllegalStateException` in your gRPC calls when an <type://EndpointGroup> is
+  empty. #3951
+
+## 🔒 Security fixes
+
+- (High) [CWE-22: Improper Limitation of a Pathname to a Restricted Directory ('Path Traversal')](https://github.com/line/armeria/security/advisories/GHSA-8fp4-rp6c-5gcv)
+
+## ⛓ Dependencies
+
+- gRPC 1.41.0 → 1.41.1
+- Jetty 9.4.43 → 9.4.44, 9.3.29 → 9.3.30
+- jUnit 5.8.1 → 5.8.2
+- Kotlin 1.5.31 → 1.5.32
+- Logback 1.2.6 → 1.2.7
+- Micrometer 1.7.4 → 1.7.6
+- Netty 4.1.69 → 4.1.70
+- Netty io_uring 0.0.9 → 0.0.10
+- Project Reactor 3.4.11 → 3.4.12
+- Protobuf 3.17.2 → 3.17.3
+- RestEasy 4.7.2 → 4.7.3
+- RxJava 3.1.2 → 3.1.3
+- Sangria 2.1.3 → 2.1.6
+- Scala 2.13.6 → 2.13.7
+- Spring Boot 2.5.5 → 2.5.7
+- Tomcat 9.0.53 → 9.0.55, 8.5.71 → 8.5.73
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ikhoon',
+  'imasahiro',
+  'jrhee17',
+  'minwoox',
+  'r3mariano',
+  'trustin'
+]} />

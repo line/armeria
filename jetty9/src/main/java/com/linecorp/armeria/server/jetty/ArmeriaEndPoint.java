@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.server.jetty;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
-
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -59,7 +57,7 @@ final class ArmeriaEndPoint implements EndPoint {
 
     ArmeriaEndPoint(ServiceRequestContext ctx, @Nullable String hostname) {
         this.ctx = ctx;
-        this.hostname = firstNonNull(hostname, ctx.config().virtualHost().defaultHostname());
+        this.hostname = hostname != null ? hostname : ctx.config().virtualHost().defaultHostname();
     }
 
     @Override

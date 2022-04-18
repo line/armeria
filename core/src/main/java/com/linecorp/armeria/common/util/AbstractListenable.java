@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Set;
 import java.util.function.Consumer;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.IdentityHashStrategy;
 
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenCustomHashSet;
@@ -50,10 +51,37 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
         }
     }
 
+    /**
+     * Returns the latest value notified before.
+     * {@code null} if the value has not been initialized yet or the implementation of this class cannot
+     * cache it.
+     */
+    @Nullable
+    protected T latestValue() {
+        // TODO(ikhoon): Make this method abstract in Armeria 2.0 to avoid the mistake of not defining
+        //               the lastest value in subclasses.
+        return null;
+    }
+
     @Override
     public final void addListener(Consumer<? super T> listener) {
+        addListener(listener, false);
+    }
+
+    /**
+     * Adds a {@link Consumer} that will be invoked when a {@link Listenable} changes its value.
+     * If {@code notifyLatestValue} is set to true and the {@link #latestValue()} is not null,
+     * the {@link Consumer} will be invoked immediately with the {@link #latestValue()}.
+     */
+    public final void addListener(Consumer<? super T> listener, boolean notifyLatestValue) {
         requireNonNull(listener, "listener");
         synchronized (updateListeners) {
+            if (notifyLatestValue) {
+                final T latest = latestValue();
+                if (latest != null) {
+                    listener.accept(latest);
+                }
+            }
             updateListeners.add(listener);
         }
     }

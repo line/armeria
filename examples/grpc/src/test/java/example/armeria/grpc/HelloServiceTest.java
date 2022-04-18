@@ -5,10 +5,12 @@ import static example.armeria.grpc.Main.configureServices;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
+import java.time.Duration;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -21,8 +23,8 @@ import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.protobuf.util.JsonFormat;
 
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -46,7 +48,8 @@ class HelloServiceTest {
 
     @Test
     void getReply() {
-        final HelloServiceBlockingStub helloService = Clients.newClient(uri(), HelloServiceBlockingStub.class);
+        final HelloServiceBlockingStub helloService =
+                GrpcClients.newClient(uri(), HelloServiceBlockingStub.class);
         assertThat(helloService.hello(HelloRequest.newBuilder().setName("Armeria").build()).getMessage())
                 .isEqualTo("Hello, Armeria!");
     }
@@ -68,11 +71,11 @@ class HelloServiceTest {
 
     @Test
     void getReplyWithDelay() {
-        final HelloServiceFutureStub helloService = Clients.newClient(uri(), HelloServiceFutureStub.class);
+        final HelloServiceFutureStub helloService = GrpcClients.newClient(uri(), HelloServiceFutureStub.class);
         final ListenableFuture<HelloReply> future =
                 helloService.lazyHello(HelloRequest.newBuilder().setName("Armeria").build());
         final AtomicBoolean completed = new AtomicBoolean();
-        Futures.addCallback(future, new FutureCallback<HelloReply>() {
+        Futures.addCallback(future, new FutureCallback<>() {
             @Override
             public void onSuccess(HelloReply result) {
                 assertThat(result.getMessage()).isEqualTo("Hello, Armeria!");
@@ -91,7 +94,8 @@ class HelloServiceTest {
 
     @Test
     void getReplyFromServerSideBlockingCall() {
-        final HelloServiceBlockingStub helloService = Clients.newClient(uri(), HelloServiceBlockingStub.class);
+        final HelloServiceBlockingStub helloService =
+                GrpcClients.newClient(uri(), HelloServiceBlockingStub.class);
         final Stopwatch watch = Stopwatch.createStarted();
         assertThat(helloService.blockingHello(HelloRequest.newBuilder().setName("Armeria").build())
                                .getMessage()).isEqualTo("Hello, Armeria!");
@@ -102,15 +106,15 @@ class HelloServiceTest {
     void getLotsOfReplies() {
         final HelloServiceStub helloService = helloService();
         final AtomicBoolean completed = new AtomicBoolean();
+        final AtomicInteger sequence = new AtomicInteger();
         helloService.lotsOfReplies(
                 HelloRequest.newBuilder().setName("Armeria").build(),
-                new StreamObserver<HelloReply>() {
-                    private int sequence;
+                new StreamObserver<>() {
 
                     @Override
                     public void onNext(HelloReply value) {
                         assertThat(value.getMessage())
-                                .isEqualTo("Hello, Armeria! (sequence: " + ++sequence + ')');
+                                .isEqualTo("Hello, Armeria! (sequence: " + sequence.incrementAndGet() + ')');
                     }
 
                     @Override
@@ -121,11 +125,14 @@ class HelloServiceTest {
 
                     @Override
                     public void onCompleted() {
-                        assertThat(sequence).isEqualTo(5);
+                        assertThat(sequence).hasValue(5);
                         completed.set(true);
                     }
                 });
-        await().untilTrue(completed);
+        await().atMost(Duration.ofSeconds(15))
+               .untilAsserted(() -> assertThat(completed)
+                       .overridingErrorMessage(() -> "sequence is " + sequence)
+                       .isTrue());
     }
 
     @Test
@@ -135,7 +142,7 @@ class HelloServiceTest {
         final AtomicBoolean completed = new AtomicBoolean();
         helloService.lotsOfReplies(
                 HelloRequest.newBuilder().setName("Armeria").build(),
-                new StreamObserver<HelloReply>() {
+                new StreamObserver<>() {
 
                     @Override
                     public void onNext(HelloReply value) {
@@ -172,7 +179,7 @@ class HelloServiceTest {
         final String[] names = { "Armeria", "Grpc", "Streaming" };
         final AtomicBoolean completed = new AtomicBoolean();
         final StreamObserver<HelloRequest> request =
-                helloService.lotsOfGreetings(new StreamObserver<HelloReply>() {
+                helloService.lotsOfGreetings(new StreamObserver<>() {
                     private boolean received;
 
                     @Override
@@ -209,7 +216,7 @@ class HelloServiceTest {
         final String[] names = { "Armeria", "Grpc", "Streaming" };
         final AtomicBoolean completed = new AtomicBoolean();
         final StreamObserver<HelloRequest> request =
-                helloService.bidiHello(new StreamObserver<HelloReply>() {
+                helloService.bidiHello(new StreamObserver<>() {
                     private int received;
 
                     @Override
@@ -239,7 +246,7 @@ class HelloServiceTest {
     }
 
     private static HelloServiceStub helloService() {
-        return Clients.newClient(uri(), HelloServiceStub.class);
+        return GrpcClients.newClient(uri(), HelloServiceStub.class);
     }
 
     private static String uri() {

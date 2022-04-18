@@ -372,6 +372,39 @@ public class HttpClientMaxConcurrentStreamTest {
                 .hasSize(numRequests - 1);
     }
 
+    @Test
+    void allStreamsUsedOnEarlyResponseClose() throws Exception {
+        final Queue<ClientConnectionTimings> connectionTimings = new ConcurrentLinkedQueue<>();
+        final WebClient client = WebClient.builder(server.uri(SessionProtocol.H2C))
+                                          .factory(clientFactory)
+                                          .decorator(connectionTimingsAccumulatingDecorator(connectionTimings))
+                                          .build();
+        final AtomicInteger opens = new AtomicInteger();
+        connectionPoolListener = newConnectionPoolListener(opens::incrementAndGet, () -> {});
+        final int numExpectedConnections = 1;
+
+        // queue a request which is closed before headers are written
+        final List<HttpResponse> abortedResponses = new ArrayList<>();
+        runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
+            for (int i = 0; i < 2; i++) {
+                final HttpResponse httpResponse = client.get(PATH);
+                httpResponse.abort();
+                abortedResponses.add(httpResponse);
+            }
+        });
+        await().until(() -> abortedResponses.stream().allMatch(HttpResponse::isComplete));
+
+        // unfinishedResponses should be 0 for the connection now
+        runInsideEventLoop(clientFactory.eventLoopGroup(), () -> {
+            for (int i = 0; i < MAX_CONCURRENT_STREAMS; i++) {
+                client.get(PATH).aggregate();
+            }
+        });
+
+        await().untilAsserted(() -> assertThat(responses).hasSize(MAX_CONCURRENT_STREAMS));
+        assertThat(opens).hasValue(numExpectedConnections);
+    }
+
     // running inside an event loop ensures requests are queued before an initial connect attempt completes.
     private static void runInsideEventLoop(EventLoopGroup eventLoopGroup, Runnable runnable) {
         eventLoopGroup.execute(runnable);

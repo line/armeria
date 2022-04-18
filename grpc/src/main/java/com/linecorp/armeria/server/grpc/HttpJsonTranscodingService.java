@@ -50,6 +50,7 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.protobuf.Any;
 import com.google.protobuf.BoolValue;
 import com.google.protobuf.BytesValue;
 import com.google.protobuf.DescriptorProtos.MethodOptions;
@@ -65,10 +66,13 @@ import com.google.protobuf.Duration;
 import com.google.protobuf.FloatValue;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.Int64Value;
+import com.google.protobuf.ListValue;
 import com.google.protobuf.StringValue;
+import com.google.protobuf.Struct;
 import com.google.protobuf.Timestamp;
 import com.google.protobuf.UInt32Value;
 import com.google.protobuf.UInt64Value;
+import com.google.protobuf.Value;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.HttpData;
@@ -157,8 +161,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
                 final Route route = routeAndVariables.getKey();
                 final List<PathVariable> pathVariables = routeAndVariables.getValue();
-
-                final Map<String, Field> fields = buildFields(methodDesc.getInputType(), ImmutableList.of());
+                final Map<String, Field> fields =
+                        buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of());
 
                 int order = 0;
                 builder.put(route, new TranscodingSpec(order++, httpRule, methodDefinition,
@@ -270,7 +274,9 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         return new SimpleImmutableEntry<>(builder.build(), PathVariable.from(segments, pathMappingType));
     }
 
-    private static Map<String, Field> buildFields(Descriptor desc, List<String> parentNames) {
+    private static Map<String, Field> buildFields(Descriptor desc,
+                                                  List<String> parentNames,
+                                                  Set<Descriptor> visitedTypes) {
         final StringJoiner namePrefixJoiner = new StringJoiner(".");
         parentNames.forEach(namePrefixJoiner::add);
         final String namePrefix = namePrefixJoiner.length() == 0 ? "" : namePrefixJoiner.toString() + '.';
@@ -300,6 +306,12 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         break;
                     }
 
+                    if (visitedTypes.contains(field.getMessageType())) {
+                        // Found recursion. No more analysis for this type.
+                        // Raise an exception in order to mark the root parameter as JavaType.MESSAGE.
+                        throw new RecursiveTypeException(field.getMessageType());
+                    }
+
                     @Nullable
                     Descriptor typeDesc =
                             desc.getNestedTypes().stream()
@@ -320,10 +332,25 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     checkState(typeDesc != null,
                                "Descriptor for the type '%s' does not exist.",
                                field.getMessageType().getFullName());
-                    builder.putAll(buildFields(typeDesc, ImmutableList.<String>builder()
-                                                                      .addAll(parentNames)
-                                                                      .add(field.getName())
-                                                                      .build()));
+                    try {
+                        builder.putAll(buildFields(typeDesc,
+                                                   ImmutableList.<String>builder()
+                                                                .addAll(parentNames)
+                                                                .add(field.getName())
+                                                                .build(),
+                                                   ImmutableSet.<Descriptor>builder()
+                                                               .addAll(visitedTypes)
+                                                               .add(field.getMessageType())
+                                                               .build()));
+                    } catch (RecursiveTypeException e) {
+                        if (e.recursiveTypeDescriptor() != field.getMessageType()) {
+                            // Re-throw the exception if it is not caused by my field.
+                            throw e;
+                        }
+
+                        builder.put(namePrefix + field.getName(),
+                                    new Field(field, parentNames, JavaType.MESSAGE));
+                    }
                     break;
             }
         });
@@ -332,6 +359,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
     @Nullable
     private static JavaType getJavaTypeForWellKnownTypes(FieldDescriptor fd) {
+        // MapField can be sent only via HTTP body.
+        if (fd.isMapField()) {
+            return JavaType.MESSAGE;
+        }
+
         final Descriptor messageType = fd.getMessageType();
         final String fullName = messageType.getFullName();
 
@@ -352,6 +384,24 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             // "value" field. Wrappers must have one field.
             assert messageType.getFields().size() == 1 : "Wrappers must have one 'value' field.";
             return messageType.getFields().get(0).getJavaType();
+        }
+
+        // The messages of the following types can be sent only via HTTP body.
+        if (Struct.getDescriptor().getFullName().equals(fullName) ||
+            ListValue.getDescriptor().getFullName().equals(fullName) ||
+            Value.getDescriptor().getFullName().equals(fullName) ||
+            // google.protobuf.Any message has the following two fields:
+            //   string type_url = 1;
+            //   bytes value = 2;
+            // which look acceptable as HTTP GET parameters, but the client must send the message like below:
+            // {
+            //   "@type": "type.googleapis.com/google.protobuf.Duration",
+            //   "value": "1.212s"
+            // }
+            // There's no specifications about rewriting parameter names, so we will handle
+            // google.protobuf.Any message only when it is sent via HTTP body.
+            Any.getDescriptor().getFullName().equals(fullName)) {
+            return JavaType.MESSAGE;
         }
 
         return null;
@@ -572,6 +622,12 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 // Ignore unknown parameters.
                 continue;
             }
+
+            if (field.javaType == JavaType.MESSAGE) {
+                throw new IllegalArgumentException(
+                        "Unsupported message type: " + field.descriptor.getFullName());
+            }
+
             ObjectNode currentNode = root;
             for (String parentName : field.parentNames) {
                 final JsonNode node = currentNode.get(parentName);
@@ -828,6 +884,28 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                  */
                 REFERENCE
             }
+        }
+    }
+
+    /**
+     * Notifies that a recursively nesting type exists.
+     */
+    private static class RecursiveTypeException extends IllegalArgumentException {
+        private static final long serialVersionUID = -6764357154559606786L;
+
+        private final Descriptor recursiveTypeDescriptor;
+
+        RecursiveTypeException(Descriptor recursiveTypeDescriptor) {
+            this.recursiveTypeDescriptor = recursiveTypeDescriptor;
+        }
+
+        Descriptor recursiveTypeDescriptor() {
+            return recursiveTypeDescriptor;
+        }
+
+        @Override
+        public Throwable fillInStackTrace() {
+            return this;
         }
     }
 }

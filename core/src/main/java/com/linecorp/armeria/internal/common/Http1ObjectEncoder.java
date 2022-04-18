@@ -24,6 +24,7 @@ import java.util.Map.Entry;
 import java.util.Queue;
 
 import com.linecorp.armeria.common.ClosedSessionException;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -44,6 +45,8 @@ import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.ReferenceCountUtil;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.Future;
+import io.netty.util.concurrent.FutureListener;
 
 public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
@@ -112,11 +115,53 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         } else {
             f = write(id, converted, false);
             if (endStream) {
-                f = write(id, LastHttpContent.EMPTY_LAST_CONTENT, true);
+                final ChannelFuture lastFuture = write(id, LastHttpContent.EMPTY_LAST_CONTENT, true);
+                if (Flags.verboseExceptionSampler().isSampled(Http1VerboseWriteException.class)) {
+                    f = combine(f, lastFuture);
+                } else {
+                    f = lastFuture;
+                }
             }
         }
         ch.flush();
         return f;
+    }
+
+    private ChannelPromise combine(ChannelFuture first, ChannelFuture second) {
+        final ChannelPromise promise = channel().newPromise();
+        final FutureListener<Void> listener = new FutureListener<Void>() {
+            private int remaining = 2;
+
+            @Override
+            public void operationComplete(Future<Void> ignore) throws Exception {
+                remaining--;
+                if (remaining == 0) {
+                    final Throwable firstCause = first.cause();
+                    final Throwable secondCause = second.cause();
+
+                    Throwable combinedCause = null;
+                    if (firstCause != null) {
+                        combinedCause = firstCause;
+                    }
+                    if (secondCause != null) {
+                        if (combinedCause == null) {
+                            combinedCause = secondCause;
+                        } else {
+                            combinedCause.addSuppressed(secondCause);
+                        }
+                    }
+
+                    if (combinedCause != null) {
+                        promise.setFailure(combinedCause);
+                    } else {
+                        promise.setSuccess();
+                    }
+                }
+            }
+        };
+        first.addListener(listener);
+        second.addListener(listener);
+        return promise;
     }
 
     @Override
@@ -298,7 +343,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         // NB: this.minClosedId can be overwritten more than once when 3+ pipelined requests are received
         //     and they are handled by different threads simultaneously.
         //     e.g. when the 3rd request triggers a reset and then the 2nd one triggers another.
-        minClosedId = Math.min(minClosedId, id);
+        updateClosedId(id);
 
         if (minClosedId <= maxIdWithPendingWrites) {
             final ClosedSessionException cause =
@@ -331,6 +376,10 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     protected final boolean isWritable(int id) {
         return id < minClosedId;
+    }
+
+    protected final void updateClosedId(int id) {
+        minClosedId = Math.min(minClosedId, id);
     }
 
     protected abstract boolean isPing(int id);
@@ -393,5 +442,16 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     protected final SessionProtocol protocol() {
         return protocol;
+    }
+
+    /**
+     * A dummy {@link Exception} to sample write exceptions.
+     */
+    @SuppressWarnings("serial")
+    private static final class Http1VerboseWriteException extends Exception {
+       private Http1VerboseWriteException() {
+           // Only the class type is used for sampling.
+           throw new UnsupportedOperationException();
+       }
     }
 }

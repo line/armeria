@@ -16,14 +16,13 @@
 
 package com.linecorp.armeria.client.logging;
 
+import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.log;
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logRequest;
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logResponse;
-import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logWhenComplete;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,7 +37,9 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -54,8 +55,8 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     private final ResponseLogger responseLogger = new ResponseLogger();
 
     private final Logger logger;
-    private final Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper;
-    private final Function<? super RequestLog, LogLevel> responseLogLevelMapper;
+    private final RequestLogLevelMapper requestLogLevelMapper;
+    private final ResponseLogLevelMapper responseLogLevelMapper;
 
     private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
             requestHeadersSanitizer;
@@ -73,7 +74,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     private final BiFunction<? super RequestContext, ? super Throwable, ? extends @Nullable Object>
             responseCauseSanitizer;
 
-    private final Sampler<? super ClientRequestContext> sampler;
+    private final Sampler<? super RequestLog> sampler;
 
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
@@ -82,8 +83,8 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
     AbstractLoggingClient(
             Client<I, O> delegate,
             @Nullable Logger logger,
-            Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper,
-            Function<? super RequestLog, LogLevel> responseLogLevelMapper,
+            RequestLogLevelMapper requestLogLevelMapper,
+            ResponseLogLevelMapper responseLogLevelMapper,
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> requestHeadersSanitizer,
             BiFunction<? super RequestContext, Object,
@@ -98,7 +99,8 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
                     ? extends @Nullable Object> responseTrailersSanitizer,
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer,
-            Sampler<? super ClientRequestContext> sampler) {
+            Sampler<? super ClientRequestContext> successSampler,
+            Sampler<? super ClientRequestContext> failureSampler) {
 
         super(requireNonNull(delegate, "delegate"));
 
@@ -114,14 +116,24 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
-        this.sampler = requireNonNull(sampler, "sampler");
+        requireNonNull(successSampler, "successSampler");
+        requireNonNull(failureSampler, "failureSampler");
+        sampler = requestLog -> {
+            final ClientRequestContext ctx = (ClientRequestContext) requestLog.context();
+            if (ctx.options().successFunction().isSuccess(ctx, requestLog)) {
+                return successSampler.isSampled(ctx);
+            }
+            return failureSampler.isSampled(ctx);
+        };
     }
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        if (sampler.isSampled(ctx)) {
-            logWhenComplete(logger, ctx, requestLogger, responseLogger);
-        }
+        ctx.log().whenComplete().thenAccept(log -> {
+            if (sampler.isSampled(log)) {
+                log(logger, ctx, log, requestLogger, responseLogger);
+            }
+        });
         return unwrap().execute(ctx, req);
     }
 

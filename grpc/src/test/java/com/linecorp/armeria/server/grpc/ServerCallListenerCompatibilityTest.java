@@ -37,7 +37,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ReleasableHolder;
@@ -362,9 +362,9 @@ class ServerCallListenerCompatibilityTest {
         return new ReleasableHolder<TestServiceBlockingStub>() {
             @Override
             public TestServiceBlockingStub get() {
-                return Clients.newClient("gproto+http://127.0.0.1:" + armeriaServer.activeLocalPort(),
-                                         TestServiceBlockingStub.class)
-                              .withDeadlineAfter(2, TimeUnit.SECONDS);
+                return GrpcClients.newClient("http://127.0.0.1:" + armeriaServer.activeLocalPort(),
+                                             TestServiceBlockingStub.class)
+                                  .withDeadlineAfter(2, TimeUnit.SECONDS);
             }
 
             @Override
@@ -397,9 +397,9 @@ class ServerCallListenerCompatibilityTest {
 
             @Override
             public TestServiceBlockingStub get() {
-                return Clients.newClient("gproto+http://127.0.0.1:" + grpcJavaServer.getPort(),
-                                         TestServiceBlockingStub.class)
-                              .withDeadlineAfter(2, TimeUnit.SECONDS);
+                return GrpcClients.newClient("http://127.0.0.1:" + grpcJavaServer.getPort(),
+                                             TestServiceBlockingStub.class)
+                                  .withDeadlineAfter(2, TimeUnit.SECONDS);
             }
 
             @Override

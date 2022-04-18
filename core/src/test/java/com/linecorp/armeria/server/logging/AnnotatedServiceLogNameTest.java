@@ -22,7 +22,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -84,17 +84,17 @@ class AnnotatedServiceLogNameTest {
         }
     };
 
-    private static WebClient client;
+    private static BlockingWebClient client;
     private static volatile ServiceRequestContext sctx;
 
     @BeforeAll
     static void setUp() {
-        client = WebClient.of(server.httpUri());
+        client = BlockingWebClient.of(server.httpUri());
     }
 
     @Test
     void serviceName_withLegacyDefaultName() {
-        client.get("/default-name/service-name").aggregate().join();
+        client.get("/default-name/service-name");
         assertThat(sctx.config().defaultServiceNaming().serviceName(sctx)).isEqualTo("DefaultName");
         assertThat(sctx.config().defaultServiceName()).isEqualTo("DefaultName");
         assertThat(sctx.log().whenComplete().join().serviceName()).isEqualTo("DefaultName");
@@ -102,7 +102,7 @@ class AnnotatedServiceLogNameTest {
 
     @Test
     void serviceName_withDefault() {
-        client.get("/default/service-name").aggregate().join();
+        client.get("/default/service-name");
         assertThat(sctx.config().defaultServiceNaming().serviceName(sctx))
                 .isEqualTo(MyAnnotatedService.class.getName());
         assertThat(sctx.config().defaultServiceName()).isNull();
@@ -112,7 +112,7 @@ class AnnotatedServiceLogNameTest {
 
     @Test
     void serviceName_withDefaultNaming() {
-        client.get("/default-naming/service-name").aggregate().join();
+        client.get("/default-naming/service-name");
         assertThat(sctx.config().defaultServiceNaming().serviceName(sctx)).isEqualTo("DefaultNaming");
         // ServiceNaming is used.
         assertThat(sctx.config().defaultServiceName()).isNull();
@@ -121,7 +121,7 @@ class AnnotatedServiceLogNameTest {
 
     @Test
     void serviceName_withSimpleNaming() {
-        client.get("/simple-naming/service-name").aggregate().join();
+        client.get("/simple-naming/service-name");
         final String expectedServiceName = AnnotatedServiceLogNameTest.class.getSimpleName() + '$' +
                                            MyAnnotatedService.class.getSimpleName();
 
@@ -135,7 +135,7 @@ class AnnotatedServiceLogNameTest {
 
     @Test
     void serviceName_withFullNaming() {
-        client.get("/full-naming/service-name").aggregate().join();
+        client.get("/full-naming/service-name");
         assertThat(sctx.config().defaultServiceNaming().serviceName(sctx))
                 .isEqualTo(MyAnnotatedService.class.getName());
         // ServiceNaming is used.
@@ -146,7 +146,7 @@ class AnnotatedServiceLogNameTest {
 
     @Test
     void serviceName_withShortenNaming() {
-        client.get("/shorten-naming/service-name").aggregate().join();
+        client.get("/shorten-naming/service-name");
         final String expectedServiceName = "c.l.a.s.l." + AnnotatedServiceLogNameTest.class.getSimpleName() +
                                            '$' + MyAnnotatedService.class.getSimpleName();
         assertThat(sctx.config().defaultServiceNaming().serviceName(sctx))
@@ -159,7 +159,7 @@ class AnnotatedServiceLogNameTest {
 
     @Test
     void serviceName_withAnnotation() {
-        client.get("/annotation/service-name").aggregate().join();
+        client.get("/annotation/service-name");
         assertThat(sctx.config().defaultServiceNaming().serviceName(sctx))
                 .isEqualTo("MyService");
         assertThat(sctx.config().defaultServiceName()).isEqualTo("MyService");
@@ -169,7 +169,7 @@ class AnnotatedServiceLogNameTest {
 
     @Test
     void serviceName_withAnonymous() {
-        client.get("/anonymous-simple/service-name").aggregate().join();
+        client.get("/anonymous-simple/service-name");
         assertThat(sctx.config().defaultServiceNaming().serviceName(sctx))
                 .isEqualTo("AnnotatedServiceLogNameTest$1$1");
         // ServiceNaming is used.
@@ -184,9 +184,9 @@ class AnnotatedServiceLogNameTest {
                                     .defaultServiceNaming(ctx -> "foo")
                                     .annotatedService(new MyAnnotatedService()).build();
         server.start().join();
-        final WebClient client =
-                WebClient.of("http://127.0.0.1:" + server.activeLocalPort(SessionProtocol.HTTP));
-        client.get("/service-name").aggregate().join();
+        final BlockingWebClient client =
+                BlockingWebClient.of("http://127.0.0.1:" + server.activeLocalPort(SessionProtocol.HTTP));
+        client.get("/service-name");
         assertThat(sctx.log().whenComplete().join().serviceName()).isEqualTo("foo");
         server.stop().join();
     }

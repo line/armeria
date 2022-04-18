@@ -24,7 +24,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.grpc.StatusCauseException;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -76,7 +76,7 @@ public class GrpcStatusCauseTest {
 
     @Before
     public void setUp() {
-        stub = Clients.newClient("gproto+" + server.httpUri(), TestServiceBlockingStub.class);
+        stub = GrpcClients.newClient(server.httpUri(), TestServiceBlockingStub.class);
     }
 
     @Test

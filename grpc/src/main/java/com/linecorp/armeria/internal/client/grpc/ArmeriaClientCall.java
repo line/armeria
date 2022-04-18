@@ -17,7 +17,6 @@ package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 import static com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil.messageBuf;
-import static com.linecorp.armeria.internal.common.grpc.protocol.Base64DecoderUtil.byteBufConverter;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 
@@ -37,6 +36,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.DefaultClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -59,6 +59,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.client.endpoint.StaticEndpointGroup;
 import com.linecorp.armeria.internal.client.grpc.protocol.InternalGrpcWebUtil;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
@@ -82,7 +83,6 @@ import io.grpc.MethodDescriptor;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 
 /**
  * Encapsulates the state of a single client call, writing messages from the client and reading responses
@@ -122,8 +122,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final DecompressorRegistry decompressorRegistry;
     private final int maxInboundMessageSizeBytes;
     private final boolean grpcWebText;
+    private final Compressor compressor;
 
-    private final boolean endpointInitialized;
+    private boolean endpointInitialized;
     @Nullable
     private volatile Runnable pendingTask;
 
@@ -150,6 +151,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             int maxOutboundMessageSizeBytes,
             int maxInboundMessageSizeBytes,
             CallOptions callOptions,
+            Compressor compressor,
             CompressorRegistry compressorRegistry,
             DecompressorRegistry decompressorRegistry,
             SerializationFormat serializationFormat,
@@ -163,6 +165,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.method = method;
         this.simpleMethodNames = simpleMethodNames;
         this.callOptions = callOptions;
+        this.compressor = compressor;
         this.compressorRegistry = compressorRegistry;
         this.decompressorRegistry = decompressorRegistry;
         this.serializationFormat = serializationFormat;
@@ -170,7 +173,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.advertisedEncodingsHeader = advertisedEncodingsHeader;
         grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
-        endpointInitialized = endpointGroup.whenReady().isDone() && !endpointGroup.endpoints().isEmpty();
+        endpointInitialized = endpointGroup instanceof Endpoint || endpointGroup instanceof StaticEndpointGroup;
         if (!endpointInitialized) {
             ctx.whenInitialized().handle((unused1, unused2) -> {
                 runPendingTask();
@@ -208,7 +211,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                 return;
             }
         } else {
-            compressor = Identity.NONE;
+            compressor = this.compressor;
         }
         requestFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
         listener = responseListener;
@@ -237,11 +240,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
                                                                     .withDescription(cause.getMessage())
                                                                     .asRuntimeException()));
 
-        final HttpStreamDeframer deframer =
-                new HttpStreamDeframer(decompressorRegistry, ctx, this, null, maxInboundMessageSizeBytes);
-        final ByteBufAllocator alloc = ctx.alloc();
-        final StreamMessage<DeframedMessage> deframed =
-                res.decode(deframer, alloc, byteBufConverter(alloc, grpcWebText));
+        final HttpStreamDeframer deframer = new HttpStreamDeframer(decompressorRegistry, ctx, this, null,
+                                                                   maxInboundMessageSizeBytes, grpcWebText);
+        final StreamMessage<DeframedMessage> deframed = res.decode(deframer, ctx.alloc());
         deframer.setDeframedStreamMessage(deframed);
 
         if (endpointInitialized) {
@@ -516,11 +517,11 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private boolean needsDirectInvocation() {
-        return (endpointInitialized || ctx.whenInitialized().isDone()) && ctx.eventLoop().inEventLoop();
+        return endpointInitialized && ctx.eventLoop().inEventLoop();
     }
 
     private void execute(Runnable task) {
-        if (endpointInitialized || ctx.whenInitialized().isDone()) {
+        if (endpointInitialized) {
             ctx.eventLoop().execute(task);
         } else {
             addPendingTask(task);
@@ -528,6 +529,8 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     }
 
     private void runPendingTask() {
+        // Visibility is guaranteed by the following CAS operation.
+        endpointInitialized = true;
         for (;;) {
             final Runnable pendingTask = this.pendingTask;
             if (pendingTaskUpdater.compareAndSet(this, pendingTask, NO_OP)) {

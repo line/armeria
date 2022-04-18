@@ -44,6 +44,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler.PingState;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -55,6 +56,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.embedded.EmbeddedChannel;
 
+@FlakyTest
 @MockitoSettings(strictness = Strictness.LENIENT)
 class KeepAliveHandlerTest {
 
@@ -126,7 +128,7 @@ class KeepAliveHandlerTest {
         ctx.channel().closeFuture().addListener(unused -> counter.incrementAndGet());
         await().timeout(4, TimeUnit.SECONDS).untilAtomic(counter, Matchers.is(2));
 
-        assertMeter(CONNECTION_LIFETIME + "#total", 1, withinPercentage(25));
+        await().untilAsserted(() -> assertMeter(CONNECTION_LIFETIME + "#total", 1, withinPercentage(25)));
         idleTimeoutScheduler.destroy();
     }
 
@@ -166,7 +168,7 @@ class KeepAliveHandlerTest {
         await().until(stopwatch::isRunning, Matchers.is(false));
         final Duration elapsed = stopwatch.elapsed();
         assertThat(elapsed.toMillis()).isBetween(1000L, 5000L);
-        assertMeter(CONNECTION_LIFETIME + "#count", 0);
+        await().untilAsserted(() -> assertMeter(CONNECTION_LIFETIME + "#count", 0));
         idleTimeoutScheduler.destroy();
     }
 
@@ -201,7 +203,7 @@ class KeepAliveHandlerTest {
         };
         keepAliveHandler.initialize(ctx);
 
-        assertMeter(CONNECTION_LIFETIME + "#count", 0);
+        await().untilAsserted(() -> assertMeter(CONNECTION_LIFETIME + "#count", 0));
         assertThat(keepAliveHandler.needToCloseConnection()).isFalse();
     }
 
@@ -338,7 +340,7 @@ class KeepAliveHandlerTest {
         assertThat(idleCounter).hasValue(0);
 
         await().timeout(idleTimeout * 2, TimeUnit.MILLISECONDS).untilAtomic(idleCounter, Matchers.is(1));
-        assertMeter(CONNECTION_LIFETIME + "#count", 1);
+        await().untilAsserted(() -> assertMeter(CONNECTION_LIFETIME + "#count", 1));
         idleTimeoutScheduler.destroy();
     }
 

@@ -1,13 +1,22 @@
 import { RouteComponentProps } from '@reach/router';
 import { Typography } from 'antd';
+import { Link } from 'gatsby';
 import React from 'react';
 
 import recentNews from '../../gen-src/news-recent.json';
 import recentReleases from '../../gen-src/release-notes-recent.json';
+import { Tip } from '../components/alert';
 import MdxLayout from './mdx';
 import getPagePath from './page-path';
 
 const { Title } = Typography;
+
+const latestVersionHref = Object.keys(recentReleases)[0];
+const latestVersion = versionFromHref(latestVersionHref);
+
+function versionFromHref(href: string) {
+  return href.substring(href.lastIndexOf('/') + 1);
+}
 
 interface ReleaseNotesLayoutProps extends RouteComponentProps {
   pageContext: any;
@@ -37,9 +46,7 @@ const ReleaseNotesLayout: React.FC<ReleaseNotesLayoutProps> = (props) => {
   });
 
   const path = getPagePath(props.location);
-  let currentVersion =
-    props.version || path.substring(path.lastIndexOf('/') + 1);
-
+  let currentVersion = props.version || versionFromHref(path);
   if (!currentVersion.match(/^[0-9]/)) {
     currentVersion = undefined;
   }
@@ -55,6 +62,14 @@ const ReleaseNotesLayout: React.FC<ReleaseNotesLayoutProps> = (props) => {
       }
       pageTitleSuffix="Armeria release notes"
     >
+      {currentVersion && currentVersion !== latestVersion ? (
+        <Tip>
+          You&apos;re seeing the release note of an old version. Check out{' '}
+          <Link to={latestVersionHref}>the latest release note</Link>.
+        </Tip>
+      ) : (
+        ''
+      )}
       {currentVersion ? (
         <Title id="release-notes" level={1}>
           <a

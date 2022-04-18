@@ -18,8 +18,6 @@ package com.linecorp.armeria.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.concurrent.CompletionException;
-
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -57,7 +55,7 @@ class AdditionalAuthorityTest {
         }
     };
 
-    private static WebClient client;
+    private static BlockingWebClient client;
     private static int serverAPort;
 
     @BeforeAll
@@ -70,7 +68,8 @@ class AdditionalAuthorityTest {
 
         client = WebClient.builder()
                           .factory(clientFactory)
-                          .build();
+                          .build()
+                          .blocking();
         serverAPort = serverA.httpPort();
     }
 
@@ -85,7 +84,7 @@ class AdditionalAuthorityTest {
                 ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY,
                                                       "bar:" + serverAPort))) {
 
-            assertThat(client.get("http://foo:" + serverAPort).aggregate().join().contentUtf8())
+            assertThat(client.get("http://foo:" + serverAPort).contentUtf8())
                     .isEqualTo("bar/bar:" + serverAPort);
         }
     }
@@ -96,16 +95,15 @@ class AdditionalAuthorityTest {
                                                                  .scheme("http")
                                                                  .authority("bar:" + serverAPort)
                                                                  .build());
-        assertThat(client.execute(request).aggregate().join().contentUtf8())
+        assertThat(client.execute(request).contentUtf8())
                 .isEqualTo("bar/bar:" + serverAPort);
     }
 
     @Test
     void noAuthority() {
         final HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"));
-        assertThatThrownBy(() -> client.execute(request).aggregate().join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(IllegalArgumentException.class)
+        assertThatThrownBy(() -> client.execute(request))
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Scheme and authority must be specified in");
     }
 
@@ -113,7 +111,7 @@ class AdditionalAuthorityTest {
     void absolutePath() {
         final HttpRequest request =
                 HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "http://foo:" + serverAPort));
-        assertThat(client.execute(request).aggregate().join().contentUtf8()).isEqualTo(
+        assertThat(client.execute(request).contentUtf8()).isEqualTo(
                 "foo/foo:" + serverAPort);
     }
 
@@ -123,10 +121,9 @@ class AdditionalAuthorityTest {
         try (SafeCloseable ignored = Clients.withContextCustomizer(
                 ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, "[::1"))) {
 
-            assertThatThrownBy(client.get("http://foo:" + serverAPort).aggregate()::join)
-                    .isInstanceOf(CompletionException.class)
-                    .hasCauseInstanceOf(UnprocessedRequestException.class)
-                    .hasRootCauseInstanceOf(IllegalArgumentException.class)
+            assertThatThrownBy(() -> client.get("http://foo:" + serverAPort))
+                    .isInstanceOf(UnprocessedRequestException.class)
+                    .hasCauseInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Invalid bracketed host/port");
         }
 
@@ -139,10 +136,9 @@ class AdditionalAuthorityTest {
                                                                      .authority("bar:" + serverAPort)
                                                                      .build());
 
-            assertThatThrownBy(client.execute(request).aggregate()::join)
-                    .isInstanceOf(CompletionException.class)
-                    .hasCauseInstanceOf(UnprocessedRequestException.class)
-                    .hasRootCauseInstanceOf(IllegalArgumentException.class)
+            assertThatThrownBy(() -> client.execute(request))
+                    .isInstanceOf(UnprocessedRequestException.class)
+                    .hasCauseInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Not a valid domain name");
         }
 
@@ -155,10 +151,9 @@ class AdditionalAuthorityTest {
                                                                      .authority("bar:" + serverAPort)
                                                                      .build());
 
-            assertThatThrownBy(client.execute(request).aggregate()::join)
-                    .isInstanceOf(CompletionException.class)
-                    .hasCauseInstanceOf(UnprocessedRequestException.class)
-                    .hasRootCauseInstanceOf(IllegalArgumentException.class)
+            assertThatThrownBy(() -> client.execute(request))
+                    .isInstanceOf(UnprocessedRequestException.class)
+                    .hasCauseInstanceOf(IllegalArgumentException.class)
                     .hasMessageContaining("Missing port number");
         }
     }

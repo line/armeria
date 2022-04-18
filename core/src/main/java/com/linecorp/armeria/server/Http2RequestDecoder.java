@@ -16,13 +16,18 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -50,6 +55,8 @@ import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
 
 final class Http2RequestDecoder extends Http2EventAdapter {
+
+    private static final Logger logger = LoggerFactory.getLogger(Http2RequestDecoder.class);
 
     private static final ResponseHeaders CONTINUE_RESPONSE = ResponseHeaders.of(HttpStatus.CONTINUE);
 
@@ -91,66 +98,101 @@ final class Http2RequestDecoder extends Http2EventAdapter {
     }
 
     @Override
-    public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers headers, int padding,
+    public void onHeadersRead(ChannelHandlerContext ctx, int streamId, Http2Headers nettyHeaders, int padding,
                               boolean endOfStream) throws Http2Exception {
         keepAliveChannelRead(true);
         DecodedHttpRequest req = requests.get(streamId);
         if (req == null) {
             assert encoder != null;
 
+            // Handle `expect: 100-continue` first to give `handle100Continue()` a chance to remove
+            // the `expect` header before converting the Netty HttpHeaders into Armeria RequestHeaders.
+            // This is because removing a header from RequestHeaders is more expensive due to its
+            // immutability.
+            final boolean hasInvalidExpectHeader = !handle100Continue(streamId, nettyHeaders);
+
             // Validate the method.
-            final CharSequence methodText = headers.method();
+            final CharSequence methodText = nettyHeaders.method();
             if (methodText == null) {
-                writeErrorResponse(streamId, HttpStatus.BAD_REQUEST, "Missing method", null);
+                writeErrorResponse(streamId, null, HttpStatus.BAD_REQUEST, "Missing method", null);
                 return;
             }
 
             // Reject a request with an unsupported method.
-            // Note: Accept a CONNECT request with a :protocol header, as defined in:
-            //       https://datatracker.ietf.org/doc/html/rfc8441#section-4
             final HttpMethod method = HttpMethod.tryParse(methodText.toString());
-            if (method == null ||
-                method == HttpMethod.CONNECT && !headers.contains(HttpHeaderNames.PROTOCOL)) {
-                writeErrorResponse(streamId, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
+            if (method == null) {
+                writeErrorResponse(streamId, null, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
+                return;
+            }
+
+            // Convert the Netty Http2Headers into Armeria RequestHeaders.
+            final RequestHeaders headers =
+                    ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, nettyHeaders, endOfStream, scheme, cfg);
+
+            // Accept a CONNECT request only when it has a :protocol header, as defined in:
+            // https://datatracker.ietf.org/doc/html/rfc8441#section-4
+            if (method == HttpMethod.CONNECT && !nettyHeaders.contains(HttpHeaderNames.PROTOCOL)) {
+                writeErrorResponse(streamId, headers, HttpStatus.METHOD_NOT_ALLOWED,
+                                   "Unsupported method", null);
                 return;
             }
 
             // Validate the 'content-length' header if exists.
-            if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-                final long contentLength = headers.getLong(HttpHeaderNames.CONTENT_LENGTH, -1L);
+            final String contentLengthStr = headers.get(HttpHeaderNames.CONTENT_LENGTH);
+            if (contentLengthStr != null) {
+                long contentLength;
+                try {
+                    contentLength = Long.parseLong(contentLengthStr);
+                } catch (NumberFormatException ignored) {
+                    contentLength = -1;
+                }
                 if (contentLength < 0) {
-                    writeErrorResponse(streamId, HttpStatus.BAD_REQUEST, "Invalid content length", null);
+                    writeErrorResponse(streamId, headers, HttpStatus.BAD_REQUEST,
+                                       "Invalid content length", null);
                     return;
                 }
             }
 
-            if (!handle100Continue(streamId, headers)) {
-                writeErrorResponse(streamId, HttpStatus.EXPECTATION_FAILED, null, null);
+            if (hasInvalidExpectHeader) {
+                writeErrorResponse(streamId, headers, HttpStatus.EXPECTATION_FAILED, null, null);
                 return;
             }
 
-            final EventLoop eventLoop = ctx.channel().eventLoop();
-            final RequestHeaders armeriaRequestHeaders =
-                    ArmeriaHttpUtil.toArmeriaRequestHeaders(ctx, headers, endOfStream, scheme, cfg);
-            final int id = ++nextId;
-            if (endOfStream) {
-                // Close the request early when it is sure that there will be neither content nor trailers.
-                req = new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, armeriaRequestHeaders, true);
+            final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
+            final Routed<ServiceConfig> routed;
+            if (routingCtx.status().routeMustExist()) {
+                try {
+                    // Find the service that matches the path.
+                    routed = routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                } catch (Throwable cause) {
+                    logger.warn("{} Unexpected exception: {}", ctx.channel(), headers, cause);
+                    writeErrorResponse(streamId, headers, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
+                    return;
+                }
+                assert routed.isPresent();
             } else {
-                req = new DefaultDecodedHttpRequest(eventLoop, id, streamId, armeriaRequestHeaders, true,
-                                                    inboundTrafficController,
-                                                    // FIXME(trustin): Use a different maxRequestLength for
-                                                    //                 a different host.
-                                                    cfg.defaultVirtualHost().maxRequestLength());
+                routed = null;
             }
 
+            final int id = ++nextId;
+            final EventLoop eventLoop = ctx.channel().eventLoop();
+            req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, headers, true,
+                                        inboundTrafficController, routingCtx, routed);
             requests.put(streamId, req);
-            ctx.fireChannelRead(req);
+            // An aggregating request will be fired later after all objects are collected.
+            if (!req.isAggregated()) {
+                ctx.fireChannelRead(req);
+            }
         } else {
-            final DefaultDecodedHttpRequest decodedReq = (DefaultDecodedHttpRequest) req;
+            final HttpHeaders trailers = ArmeriaHttpUtil.toArmeria(nettyHeaders, true, endOfStream);
+            final DecodedHttpRequestWriter decodedReq = (DecodedHttpRequestWriter) req;
             try {
                 // Trailers is received. The decodedReq will be automatically closed.
-                decodedReq.write(ArmeriaHttpUtil.toArmeria(headers, true, endOfStream));
+                decodedReq.write(trailers);
+                if (req.isAggregated()) {
+                    // An aggregated request can be fired now.
+                    ctx.fireChannelRead(req);
+                }
             } catch (Throwable t) {
                 decodedReq.close(t);
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");
@@ -192,7 +234,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         goAwayHandler.onStreamClosed(channel, stream);
 
         final DecodedHttpRequest req = requests.remove(stream.id());
-        if (req != null) {
+        if (req != null && !req.isComplete()) {
             // Ignored if the stream has already been closed.
             req.close(ClosedStreamException.get());
         }
@@ -215,11 +257,14 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             // Received an empty DATA frame
             if (endOfStream) {
                 req.close();
+                if (req.isAggregated()) {
+                    ctx.fireChannelRead(req);
+                }
             }
             return padding;
         }
 
-        final DefaultDecodedHttpRequest decodedReq = (DefaultDecodedHttpRequest) req;
+        final DecodedHttpRequestWriter decodedReq = (DecodedHttpRequestWriter) req;
         decodedReq.increaseTransferredBytes(dataLength);
 
         final long maxContentLength = decodedReq.maxRequestLength();
@@ -235,10 +280,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                                                 .transferred(transferredLength)
                                                 .build();
 
-                writeErrorResponse(streamId, HttpStatus.REQUEST_ENTITY_TOO_LARGE, null, cause);
+                writeErrorResponse(streamId, req.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE, null, cause);
 
                 if (decodedReq.isOpen()) {
-                    decodedReq.close(cause);
+                    decodedReq.close(HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause));
                 }
             } else {
                 // The response has been started already. Abort the request and let the response continue.
@@ -248,6 +293,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             try {
                 // The decodedReq will be automatically closed if endOfStream is true.
                 decodedReq.write(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
+                if (endOfStream && decodedReq.isAggregated()) {
+                    // An aggregated request is now ready to be fired.
+                    ctx.fireChannelRead(req);
+                }
             } catch (Throwable t) {
                 decodedReq.close(t);
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a DATA frame");
@@ -271,12 +320,13 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         }
     }
 
-    private void writeErrorResponse(
-            int streamId, HttpStatus status, @Nullable String message, @Nullable Throwable cause) {
+    private void writeErrorResponse(int streamId, @Nullable RequestHeaders headers,
+                                    HttpStatus status, @Nullable String message,
+                                    @Nullable Throwable cause) {
         assert encoder != null;
         encoder.writeErrorResponse(0 /* unused */, streamId,
                                    cfg.defaultVirtualHost().fallbackServiceConfig(),
-                                   status, message, cause);
+                                   headers, status, message, cause);
     }
 
     @Override

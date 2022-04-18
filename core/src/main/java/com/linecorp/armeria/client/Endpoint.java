@@ -30,6 +30,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 
@@ -240,6 +241,14 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     @Override
+    public void addListener(Consumer<? super List<Endpoint>> listener, boolean notifyLatestEndpoints) {
+        if (notifyLatestEndpoints) {
+            // Endpoint will notify only once when a listener is attached.
+            listener.accept(endpoints);
+        }
+    }
+
+    @Override
     public EndpointSelectionStrategy selectionStrategy() {
         return EndpointSelectionStrategy.weightedRoundRobin();
     }
@@ -262,7 +271,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     @Override
     public CompletableFuture<List<Endpoint>> whenReady() {
         if (whenReadyFuture == null) {
-            whenReadyFuture = CompletableFuture.completedFuture(endpoints);
+            whenReadyFuture = UnmodifiableFuture.completedFuture(endpoints);
         }
         return whenReadyFuture;
     }

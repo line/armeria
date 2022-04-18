@@ -31,7 +31,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
@@ -43,6 +43,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import graphql.schema.DataFetcher;
 
 class GraphqlServiceTest {
+    private static final String UNDEFINED = "really_undefined";
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -54,12 +55,15 @@ class GraphqlServiceTest {
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
                                   .runtimeWiring(c -> {
-                                      final DataFetcher bar = dataFetcher("bar");
+                                      final DataFetcher<String> bar = dataFetcher("bar");
                                       c.type("Query",
                                              typeWiring -> typeWiring.dataFetcher("foo", bar));
                                       final DataFetcher<String> error = errorDataFetcher();
                                       c.type("Query",
                                              typeWiring -> typeWiring.dataFetcher("error", error));
+                                      final DataFetcher<String> foobar = optionalInputDataFetcher();
+                                      c.type("Query",
+                                             typeWiring -> typeWiring.dataFetcher("optionalInput", foobar));
                                   })
                                   .build();
             sb.service("/graphql", service);
@@ -84,11 +88,24 @@ class GraphqlServiceTest {
         };
     }
 
+    @SuppressWarnings("ConstantConditions")
+    private static DataFetcher<String> optionalInputDataFetcher() {
+        return environment -> {
+            if (!environment.containsArgument("value")) {
+                return UNDEFINED;
+            }
+            final Object outerValue = environment.getArgument("value");
+            if (outerValue == null) {
+                return null;
+            }
+            return String.valueOf(((Map<?, ?>) outerValue).get("innerValue"));
+        };
+    }
+
     @Test
     void shouldGet() {
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .get("/graphql?query={foo}")
-                                                         .aggregate().join();
+        final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
+                                                                 .get("/graphql?query={foo}");
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
@@ -96,9 +113,8 @@ class GraphqlServiceTest {
 
     @Test
     void shouldGetWithoutQuery() {
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .get("/graphql")
-                                                         .aggregate().join();
+        final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
+                                                                 .get("/graphql");
 
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.contentUtf8()).isEqualTo("Missing query");
@@ -109,9 +125,8 @@ class GraphqlServiceTest {
         final HttpRequest request = HttpRequest.builder().post("/graphql")
                                                .content(MediaType.GRAPHQL, "{foo}")
                                                .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(request)
-                                                         .aggregate().join();
+        final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
+                                                                 .execute(request);
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
@@ -122,9 +137,8 @@ class GraphqlServiceTest {
         final HttpRequest request = HttpRequest.builder().post("/graphql")
                                                .content(MediaType.GRAPHQL_JSON, "{\"query\": \"{foo}\"}")
                                                .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(request)
-                                                         .aggregate().join();
+        final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
+                                                                 .execute(request);
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
@@ -135,9 +149,8 @@ class GraphqlServiceTest {
         final HttpRequest request = HttpRequest.builder().post("/graphql")
                                                .content(MediaType.JSON, "{\"query\": \"{foo}\"}")
                                                .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(request)
-                                                         .aggregate().join();
+        final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
+                                                                 .execute(request);
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8()).node("data.foo").isEqualTo("bar");
@@ -148,9 +161,8 @@ class GraphqlServiceTest {
         final HttpRequest request = HttpRequest.builder().post("/graphql")
                                                .content(MediaType.JSON, "")
                                                .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(request)
-                                                         .aggregate().join();
+        final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
+                                                                 .execute(request);
 
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.contentUtf8()).isEqualTo("Missing request body");
@@ -160,9 +172,8 @@ class GraphqlServiceTest {
     void shouldPostWhenMediaTypeIsEmpty() {
         final HttpRequest request = HttpRequest.builder().post("/graphql")
                                                .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(request)
-                                                         .aggregate().join();
+        final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
+                                                                 .execute(request);
 
         assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         assertThat(response.contentUtf8()).isEqualTo("Unsupported media type. Only JSON compatible types and " +
@@ -175,9 +186,8 @@ class GraphqlServiceTest {
         final HttpRequest request = HttpRequest.builder().post("/graphql")
                                                .content(mediaType, "{\"query\": \"{foo}\"}")
                                                .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(request)
-                                                         .aggregate().join();
+        final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
+                                                                 .execute(request);
 
         assertThat(response.status()).isEqualTo(HttpStatus.UNSUPPORTED_MEDIA_TYPE);
         assertThat(response.contentUtf8()).isEqualTo("Unsupported media type. Only JSON compatible types and " +
@@ -202,9 +212,8 @@ class GraphqlServiceTest {
         final HttpRequest request = HttpRequest.builder().post("/graphql")
                                                .content(MediaType.GRAPHQL, "{error}")
                                                .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(request)
-                                                         .aggregate().join();
+        final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
+                                                                 .execute(request);
 
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThatJson(response.contentUtf8())
@@ -231,9 +240,8 @@ class GraphqlServiceTest {
         final HttpRequest request = HttpRequest.builder().post("/graphql")
                                                .content(MediaType.GRAPHQL_JSON, "{\"query\": \"{__typena\"")
                                                .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                         .execute(request)
-                                                         .aggregate().join();
+        final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
+                                                                 .execute(request);
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
@@ -243,10 +251,62 @@ class GraphqlServiceTest {
                                                 .content(MediaType.GRAPHQL_JSON,
                                                          "{\"query\": \"{null}\"}")
                                                 .build();
-        final AggregatedHttpResponse response = WebClient.of(server.httpUri())
-                                                          .execute(request)
-                                                          .aggregate().join();
+        final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
+                                                                 .execute(request);
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.contentUtf8()).contains("Validation error of type FieldUndefined");
+    }
+
+    @Test
+    void shouldAllowUndefinedParametersQuery() {
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                         .content(MediaType.GRAPHQL_JSON,
+                                                  "{\"operationName\":null," +
+                                                  "\"variables\":{}," +
+                                                  "\"query\":\"query ($value: ComplexTypeInput) " +
+                                                  "{ optionalInput(value: $value) } \"}"
+                                         )
+                                         .build();
+        final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
+                                                                 .execute(request);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8()).node("data.optionalInput").isEqualTo(UNDEFINED);
+    }
+
+    @Test
+    void shouldAllowNonnullParametersQuery() {
+        final String query =
+                "{\n" +
+                "  \"operationName\": null,\n" +
+                "  \"variables\": {\n" +
+                "    \"value\": {\n" +
+                "      \"innerValue\": \"foobar\"\n" +
+                "    }\n" +
+                "  },\n" +
+                "  \"query\": \"query ($value: ComplexTypeInput) { optionalInput(value: $value) }\"\n" +
+                "}\n";
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                                               .content(MediaType.GRAPHQL_JSON, query)
+                                               .build();
+        final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
+                                                                 .execute(request);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8()).node("data.optionalInput").isEqualTo("foobar");
+    }
+
+    @Test
+    void shouldAllowNullParametersQuery() {
+        final HttpRequest request = HttpRequest.builder().post("/graphql")
+                             .content(MediaType.GRAPHQL_JSON,
+                                      "{\"operationName\":null," +
+                                      "\"variables\":{\"value\": null}," +
+                                      "\"query\":\"query ($value: ComplexTypeInput)" +
+                                      " { optionalInput(value: $value) } \"}"
+                             )
+                             .build();
+        final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
+                                                                 .execute(request);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThatJson(response.contentUtf8()).node("data.optionalInput").isEqualTo(null);
     }
 }

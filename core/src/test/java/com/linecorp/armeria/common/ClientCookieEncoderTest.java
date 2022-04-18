@@ -57,19 +57,16 @@ class ClientCookieEncoderTest {
         final String c1 = "myCookie=myValue";
         final String c2 = "myCookie2=myValue2";
         final String c3 = "myCookie3=myValue3";
-        final Cookie cookie1 = Cookie.builder("myCookie", "myValue")
+        final Cookie cookie1 = Cookie.secureBuilder("myCookie", "myValue")
                                      .domain(".adomainsomewhere")
                                      .maxAge(50)
                                      .path("/apathsomewhere")
-                                     .secure(true)
-                                     .httpOnly(true)
-                                     .sameSite("Strict")
                                      .build();
-        final Cookie cookie2 = Cookie.builder("myCookie2", "myValue2")
+        final Cookie cookie2 = Cookie.secureBuilder("myCookie2", "myValue2")
                                      .domain(".anotherdomainsomewhere")
                                      .path("/anotherpathsomewhere")
                                      .build();
-        final Cookie cookie3 = Cookie.of("myCookie3", "myValue3");
+        final Cookie cookie3 = Cookie.ofSecure("myCookie3", "myValue3");
         final String encodedCookie = Cookie.toCookieHeader(cookie1, cookie2, cookie3);
         // Cookies should be sorted into decreasing order of path length, as per RFC 6265.
         // When no path is provided, we assume maximum path length (so cookie3 comes first).
@@ -78,12 +75,12 @@ class ClientCookieEncoderTest {
 
     @Test
     void testWrappedCookieValue() {
-        assertThat(Cookie.of("myCookie", "\"foo\"").toCookieHeader()).isEqualTo("myCookie=\"foo\"");
+        assertThat(Cookie.ofSecure("myCookie", "\"foo\"").toCookieHeader()).isEqualTo("myCookie=\"foo\"");
     }
 
     @Test
     void testRejectCookieValueWithSemicolon() {
-        assertThatThrownBy(() -> Cookie.of("myCookie", "foo;bar").toCookieHeader())
+        assertThatThrownBy(() -> Cookie.ofSecure("myCookie", "foo;bar").toCookieHeader())
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Cookie value contains an invalid char: ;");
     }

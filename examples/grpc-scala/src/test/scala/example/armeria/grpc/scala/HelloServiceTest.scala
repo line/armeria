@@ -1,21 +1,20 @@
 package example.armeria.grpc.scala
 
-import java.util.concurrent.TimeUnit
-import java.util.function.{Function => JFunction}
-import java.util.stream
 import com.google.common.base.Stopwatch
-import com.linecorp.armeria.client.Clients
-import com.linecorp.armeria.client.grpc.GrpcClientOptions
+import com.linecorp.armeria.client.grpc.GrpcClients
 import com.linecorp.armeria.common.SerializationFormat
-import com.linecorp.armeria.common.grpc.{GrpcJsonMarshaller, GrpcSerializationFormats}
+import com.linecorp.armeria.common.grpc.GrpcSerializationFormats
 import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller
 import com.linecorp.armeria.server.Server
 import example.armeria.grpc.scala.HelloServiceImpl.toMessage
 import example.armeria.grpc.scala.HelloServiceTest.{GrpcSerializationProvider, newClient}
 import example.armeria.grpc.scala.hello.HelloServiceGrpc.{HelloServiceBlockingStub, HelloServiceStub}
 import example.armeria.grpc.scala.hello.{HelloReply, HelloRequest}
-import io.grpc.ServiceDescriptor
 import io.grpc.stub.StreamObserver
+import java.time
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.{AtomicBoolean, AtomicInteger}
+import java.util.stream
 import org.assertj.core.api.Assertions.assertThat
 import org.awaitility.Awaitility.await
 import org.junit.jupiter.api.BeforeAll
@@ -56,16 +55,16 @@ class HelloServiceTest {
   @ArgumentsSource(classOf[GrpcSerializationProvider])
   @ParameterizedTest
   def lotsOfReplies(serializationFormat: SerializationFormat): Unit = {
-    var completed = false
+    val completed = new AtomicBoolean()
     val helloService = newClient[HelloServiceStub](serializationFormat)
+    val sequence = new AtomicInteger()
 
     helloService.lotsOfReplies(
       HelloRequest("Armeria"),
       new StreamObserver[HelloReply]() {
-        private var sequence = 0
 
         override def onNext(value: HelloReply): Unit = {
-          sequence += 1
+          sequence.incrementAndGet()
           assertThat(value.message).isEqualTo(s"Hello, Armeria! (sequence: $sequence)")
         }
 
@@ -74,19 +73,20 @@ class HelloServiceTest {
           throw new Error(t)
 
         override def onCompleted(): Unit = {
-          assertThat(sequence).isEqualTo(5)
-          completed = true
+          assertThat(sequence).overridingErrorMessage(() => s"sequence is $sequence").hasValue(5)
+          completed.set(true)
         }
       }
     )
-    await().untilAsserted(() => assertThat(completed).isTrue())
+
+    await().atMost(time.Duration.ofSeconds(15)).untilAsserted(() => { assertThat(completed).isTrue() })
   }
 
   @ArgumentsSource(classOf[GrpcSerializationProvider])
   @ParameterizedTest
   def sendLotsOfGreetings(serializationFormat: SerializationFormat): Unit = {
     val names = List("Armeria", "Grpc", "Streaming")
-    var completed = false
+    val completed = new AtomicBoolean()
     val helloService = newClient[HelloServiceStub](serializationFormat)
 
     val request = helloService.lotsOfGreetings(new StreamObserver[HelloReply]() {
@@ -104,7 +104,7 @@ class HelloServiceTest {
 
       override def onCompleted(): Unit = {
         assertThat(received).isTrue()
-        completed = true
+        completed.set(true)
       }
     })
 
@@ -119,7 +119,7 @@ class HelloServiceTest {
   @ParameterizedTest
   def bidirectionalHello(serializationFormat: SerializationFormat): Unit = {
     val names = List("Armeria", "Grpc", "Streaming")
-    var completed = false
+    val completed = new AtomicBoolean()
     val helloService = newClient[HelloServiceStub](serializationFormat)
 
     val request = helloService.bidiHello(new StreamObserver[HelloReply]() {
@@ -136,7 +136,7 @@ class HelloServiceTest {
 
       override def onCompleted(): Unit = {
         assertThat(received).isEqualTo(names.length)
-        completed = true
+        completed.set(true)
       }
     })
 
@@ -154,12 +154,9 @@ object HelloServiceTest {
 
   private def newClient[A](serializationFormat: SerializationFormat = GrpcSerializationFormats.PROTO)(implicit
       tag: ClassTag[A]): A = {
-    val jsonMarshallerFactory: JFunction[_ >: ServiceDescriptor, _ <: GrpcJsonMarshaller] =
-      _ => ScalaPbJsonMarshaller()
-
-    Clients
+    GrpcClients
       .builder(uri(serializationFormat))
-      .option(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY.newValue(jsonMarshallerFactory))
+      .jsonMarshallerFactory(_ => ScalaPbJsonMarshaller())
       .build(tag.runtimeClass)
       .asInstanceOf[A]
   }

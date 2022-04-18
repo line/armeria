@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
@@ -98,8 +98,8 @@ class GrpcServiceLogNameTest {
     @Test
     void logName() {
         final TestServiceBlockingStub client =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO).resolve("/grpc/"))
-                       .build(TestServiceBlockingStub.class);
+                GrpcClients.builder(server.httpUri().resolve("/grpc/"))
+                           .build(TestServiceBlockingStub.class);
         client.emptyCall(Empty.newBuilder().build());
 
         final RequestLog log = capturedCtx.log().partial();
@@ -111,8 +111,8 @@ class GrpcServiceLogNameTest {
     @Test
     void defaultNames() {
         final TestServiceBlockingStub client =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO).resolve("/default-names/"))
-                       .build(TestServiceBlockingStub.class);
+                GrpcClients.builder(server.httpUri().resolve("/default-names/"))
+                           .build(TestServiceBlockingStub.class);
         client.emptyCall(Empty.newBuilder().build());
 
         final RequestLog log = capturedCtx.log().partial();
@@ -124,8 +124,8 @@ class GrpcServiceLogNameTest {
     @Test
     void logNameInAccessLog() {
         final TestServiceBlockingStub client =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO).resolve("/grpc/"))
-                       .build(TestServiceBlockingStub.class);
+                GrpcClients.builder(server.httpUri().resolve("/grpc/"))
+                           .build(TestServiceBlockingStub.class);
         client.emptyCall(Empty.newBuilder().build());
 
         await().untilAsserted(() -> {
@@ -139,8 +139,8 @@ class GrpcServiceLogNameTest {
     @Test
     void logNameInClientSide() {
         final TestServiceBlockingStub client =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO).resolve("/grpc/"))
-                       .build(TestServiceBlockingStub.class);
+                GrpcClients.builder(server.httpUri().resolve("/grpc/"))
+                           .build(TestServiceBlockingStub.class);
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             client.emptyCall(Empty.newBuilder().build());
             final ClientRequestContext ctx = captor.get();

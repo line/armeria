@@ -16,11 +16,19 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateExpiredException;
+import java.security.cert.CertificateNotYetValidException;
+import java.security.cert.X509Certificate;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -42,6 +50,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import javax.net.ssl.SSLSession;
 
 import org.jctools.maps.NonBlockingHashSet;
 import org.slf4j.Logger;
@@ -102,9 +112,7 @@ public final class Server implements ListenableAsyncCloseable {
         return new ServerBuilder();
     }
 
-    private ServerConfig config;
-    @Nullable
-    private HttpServerPipelineConfigurator pipelineConfigurator;
+    private final UpdatableServerConfig config;
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
 
@@ -117,19 +125,24 @@ public final class Server implements ListenableAsyncCloseable {
     @VisibleForTesting
     ServerBootstrap serverBootstrap;
 
-    Server(ServerConfig config) {
-        this.config = requireNonNull(config, "config");
+    Server(DefaultServerConfig serverConfig) {
+        serverConfig.setServer(this);
+        config = new UpdatableServerConfig(requireNonNull(serverConfig, "serverConfig"));
         sslContexts = config.sslContextMapping();
         startStop = new ServerStartStopSupport(config.startStopExecutor());
         connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
-
-        config.setServer(this);
 
         // Server-wide cache metrics.
         final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.server.parsed.path.cache");
         PathAndQuery.registerMetrics(config.meterRegistry(), idPrefix);
 
         setupVersionMetrics();
+
+        for (VirtualHost virtualHost : config().virtualHosts()) {
+            if (virtualHost.sslContext() != null) {
+                setupTlsMetrics(virtualHost.sslContext(), virtualHost.hostnamePattern());
+            }
+        }
 
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
@@ -391,6 +404,50 @@ public final class Server implements ListenableAsyncCloseable {
              .register(meterRegistry);
     }
 
+    /**
+     * Sets up gauge metric for each server certificate.
+     */
+    private void setupTlsMetrics(SslContext sslContext, String hostnamePattern) {
+        final MeterRegistry meterRegistry = config().meterRegistry();
+
+        final SSLSession sslSession = validateSslContext(sslContext);
+        for (Certificate certificate : sslSession.getLocalCertificates()) {
+            if (!(certificate instanceof X509Certificate)) {
+                continue;
+            }
+
+            try {
+                final X509Certificate x509Certificate = (X509Certificate) certificate;
+                final String commonName = firstNonNull(CertificateUtil.getCommonName(x509Certificate), "");
+
+                Gauge.builder("armeria.server.tls.certificate.validity", x509Certificate, x509Cert -> {
+                         try {
+                             x509Cert.checkValidity();
+                         } catch (CertificateExpiredException | CertificateNotYetValidException e) {
+                             return 0;
+                         }
+                         return 1;
+                     })
+                     .description("1 if TLS certificate is in validity period, 0 if certificate is not in " +
+                                  "validity period")
+                     .tags("common.name", commonName, "hostname.pattern", hostnamePattern)
+                     .register(meterRegistry);
+
+                Gauge.builder("armeria.server.tls.certificate.validity.days", x509Certificate, x509Cert -> {
+                         final Duration diff = Duration.between(Instant.now(),
+                                                                x509Cert.getNotAfter().toInstant());
+                         return diff.isNegative() ? -1 : diff.toDays();
+                     })
+                     .description("Duration in days before TLS certificate expires, which becomes -1 " +
+                                  "if certificate is expired")
+                     .tags("common.name", commonName, "hostname.pattern", hostnamePattern)
+                     .register(meterRegistry);
+            } catch (Exception ex) {
+                logger.warn("Failed to set up TLS certificate metrics for a host: {}", hostnamePattern, ex);
+            }
+        }
+    }
+
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
@@ -406,15 +463,14 @@ public final class Server implements ListenableAsyncCloseable {
      */
     public void reconfigure(ServerConfigurator serverConfigurator) {
         requireNonNull(serverConfigurator, "serverConfigurator");
-        requireNonNull(pipelineConfigurator, "pipelineConfigurator");
         final ServerBuilder sb = builder();
         serverConfigurator.reconfigure(sb);
-        config = sb.buildServerConfig(config());
-        config.setServer(this);
+        final DefaultServerConfig newConfig = sb.buildServerConfig(config());
+        newConfig.setServer(this);
+        config.updateConfig(newConfig);
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
-        pipelineConfigurator.updateConfig(config);
     }
 
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {
@@ -474,12 +530,8 @@ public final class Server implements ListenableAsyncCloseable {
             b.group(bossGroup, config.workerGroup());
             b.channel(Flags.transportType().serverChannelType());
             b.handler(connectionLimitingHandler);
-            pipelineConfigurator = new HttpServerPipelineConfigurator(
-                    config,
-                    port, sslContexts,
-                    gracefulShutdownSupport);
-
-            b.childHandler(pipelineConfigurator);
+            b.childHandler(new HttpServerPipelineConfigurator(config, port,
+                                                              sslContexts, gracefulShutdownSupport));
             return b.bind(port.localAddress());
         }
 

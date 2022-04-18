@@ -1,0 +1,17 @@
+# Use-legacy-processing to use this application-testbed.yml file instead of application.yml
+spring:
+  config:
+    use-legacy-processing: true
+
+armeria:
+  ports:
+    - port: 0
+  internal-services:
+    port: 0
+    protocols: http
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, loggers, prometheus

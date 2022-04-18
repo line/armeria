@@ -1,6 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const gatsbyConfig = require('./gatsby-config.js');
+const gatsbyConfig = require('./gatsby-config');
 
 const pagePathPrefix = path.resolve(__dirname, 'src', 'pages');
 const path2hrefs = {};
@@ -171,7 +171,8 @@ exports.createPages = ({ graphql, actions: { createPage } }) => {
 };
 
 exports.onCreateWebpackConfig = ({ stage, actions, getConfig }) => {
-  if (stage === 'build-javascript') {
+  // From: https://github.com/gatsbyjs/gatsby/discussions/30169
+  if (stage === 'build-javascript' || stage === 'develop') {
     const config = getConfig();
     const miniCssExtractPlugin = config.plugins.find(
       (plugin) => plugin.constructor.name === 'MiniCssExtractPlugin',

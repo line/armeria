@@ -262,8 +262,8 @@ class DefaultRequestHeadersBuilderTest {
 
     @Test
     void testCookieBuilder() {
-        final Cookie cookie1 = Cookie.of("cookie1", "value1");
-        final Cookie cookie2 = Cookie.of("cookie2", "value2");
+        final Cookie cookie1 = Cookie.ofSecure("cookie1", "value1");
+        final Cookie cookie2 = Cookie.ofSecure("cookie2", "value2");
         final RequestHeaders headers = RequestHeaders
                 .builder()
                 .path("/")
@@ -276,8 +276,8 @@ class DefaultRequestHeadersBuilderTest {
 
     @Test
     void testMultipleCookieHeader() {
-        final Cookie cookie1 = Cookie.of("cookie1", "value1");
-        final Cookie cookie2 = Cookie.of("cookie2", "value2");
+        final Cookie cookie1 = Cookie.ofSecure("cookie1", "value1");
+        final Cookie cookie2 = Cookie.ofSecure("cookie2", "value2");
         final RequestHeaders headers = RequestHeaders
                 .builder()
                 .path("/")
@@ -290,8 +290,8 @@ class DefaultRequestHeadersBuilderTest {
 
     @Test
     void testCookieBuilderWithIterable() {
-        final Cookies cookies = Cookies.of(Cookie.of("cookie1", "value1"),
-                                           Cookie.of("cookie2", "value2"));
+        final Cookies cookies = Cookies.of(Cookie.ofSecure("cookie1", "value1"),
+                                           Cookie.ofSecure("cookie2", "value2"));
         final RequestHeaders headers = RequestHeaders
                 .builder()
                 .path("/")

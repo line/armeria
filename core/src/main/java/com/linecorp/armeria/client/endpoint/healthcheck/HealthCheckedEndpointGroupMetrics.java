@@ -54,8 +54,7 @@ final class HealthCheckedEndpointGroupMetrics implements MeterBinder {
                        unused -> endpointGroup.delegate.endpoints().size() - endpointGroup.endpoints().size());
 
         final ListenerImpl listener = new ListenerImpl(registry, idPrefix.append("healthy"));
-        listener.accept(endpointGroup.endpoints());
-        endpointGroup.addListener(listener);
+        endpointGroup.addListener(listener, true);
     }
 
     private final class ListenerImpl implements Consumer<List<Endpoint>> {

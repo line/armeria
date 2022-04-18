@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.sangria
 
+import com.linecorp.armeria.client.WebClientBuilder
+import com.linecorp.armeria.client.logging.LoggingClient
 import com.linecorp.armeria.common.{HttpMethod, HttpStatus}
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.logging.LoggingService
@@ -37,6 +39,10 @@ class SangriaGraphqlSuite extends FunSuite with ServerSuite {
     server.decorator(LoggingService.newDecorator())
   }
 
+  override protected def configureWebClient: WebClientBuilder => Unit = { wcb =>
+    wcb.decorator(LoggingClient.newDecorator())
+  }
+
   // Forked from https://github.com/sangria-graphql/sangria-playground/blob/24e36833bd3b784db57dc57cf5523c504e97f8ff/test/SchemaSpec.scala
 
   List(HttpMethod.GET, HttpMethod.POST).foreach { method =>
@@ -49,7 +55,7 @@ class SangriaGraphqlSuite extends FunSuite with ServerSuite {
           }
         }
         """
-      val response = executeQuery(client, method = method, query = query)
+      val response = executeQuery(server.webClient(), method = method, query = query)
 
       assertEquals(response.headers().status(), HttpStatus.OK)
       assertThatJson(response.contentUtf8()).isEqualTo("""
@@ -77,7 +83,7 @@ class SangriaGraphqlSuite extends FunSuite with ServerSuite {
          }
        """
 
-      val response = executeQuery(client, method, query = query, variables = Map("humanId" -> "1002"))
+      val response = executeQuery(server.webClient(), method, query = query, variables = Map("humanId" -> "1002"))
       assertEquals(response.headers().status(), HttpStatus.OK)
       assertThatJson(response.contentUtf8())
         .isEqualTo("""

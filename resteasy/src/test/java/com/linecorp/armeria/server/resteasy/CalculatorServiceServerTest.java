@@ -76,7 +76,7 @@ public class CalculatorServiceServerTest {
         assertThat(context.content().isEmpty()).isTrue();
         final Cookies cookies =
             Cookie.fromSetCookieHeaders(context.headers().getAll(HttpHeaderNames.SET_COOKIE));
-        assertThat(cookies).containsOnly(Cookie.of("serverCookie", "123"));
+        assertThat(cookies).containsOnly(Cookie.ofSecure("serverCookie", "123"));
     }
 
     @Test

@@ -83,6 +83,7 @@ class HealthCheckedEndpointGroupLongPollingTest {
         try (HealthCheckedEndpointGroup endpointGroup = build(
                 HealthCheckedEndpointGroup.builder(endpoint, HEALTH_CHECK_PATH))) {
 
+            endpointGroup.whenReady().join();
             // Check the initial state (healthy).
             assertThat(endpointGroup.endpoints()).containsExactly(endpoint);
 
@@ -108,6 +109,7 @@ class HealthCheckedEndpointGroupLongPollingTest {
         try (HealthCheckedEndpointGroup endpointGroup = build(
                 HealthCheckedEndpointGroup.builder(endpoint, HEALTH_CHECK_PATH))) {
 
+            endpointGroup.whenReady().join();
             // Check the initial state (healthy).
             assertThat(endpointGroup.endpoints()).containsExactly(endpoint);
 
@@ -176,6 +178,7 @@ class HealthCheckedEndpointGroupLongPollingTest {
         try (HealthCheckedEndpointGroup endpointGroup = build(
                 HealthCheckedEndpointGroup.builder(endpoint, HEALTH_CHECK_PATH))) {
 
+            endpointGroup.whenReady().join();
             // Check the initial state (healthy).
             assertThat(endpointGroup.endpoints()).containsExactly(endpoint);
 

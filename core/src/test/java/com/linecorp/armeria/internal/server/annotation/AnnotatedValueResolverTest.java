@@ -57,6 +57,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregatedResult;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.RequestObjectResolver;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
@@ -117,7 +118,7 @@ class AnnotatedValueResolverTest {
                                        .routingResult(builder.build())
                                        .build();
 
-        resolverContext = new ResolverContext(context, request, null);
+        resolverContext = new ResolverContext(context, request, AggregatedResult.EMPTY);
     }
 
     @AfterAll
@@ -243,10 +244,10 @@ class AnnotatedValueResolverTest {
             // Check whether 'Cookie' header is decoded correctly.
             if (resolver.elementType() == Cookies.class) {
                 final Cookies cookies = (Cookies) value;
-                assertThat(cookies).containsExactly(Cookie.of("a", "1"),
-                                                    Cookie.of("b", "2"),
-                                                    Cookie.of("c", "3"),
-                                                    Cookie.of("a", "4"));
+                assertThat(cookies).containsExactly(Cookie.ofSecure("a", "1"),
+                                                    Cookie.ofSecure("b", "2"),
+                                                    Cookie.ofSecure("c", "3"),
+                                                    Cookie.ofSecure("a", "4"));
             }
             return;
         }

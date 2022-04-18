@@ -90,6 +90,11 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     }
 
     @Override
+    public HttpRequestBuilder content(String content) {
+        return (HttpRequestBuilder) super.content(content);
+    }
+
+    @Override
     public HttpRequestBuilder content(MediaType contentType, CharSequence content) {
         return (HttpRequestBuilder) super.content(contentType, content);
     }
@@ -97,6 +102,12 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     @Override
     public HttpRequestBuilder content(MediaType contentType, String content) {
         return (HttpRequestBuilder) super.content(contentType, content);
+    }
+
+    @Override
+    @FormatMethod
+    public HttpRequestBuilder content(@FormatString String format, Object... content) {
+        return (HttpRequestBuilder) super.content(format, content);
     }
 
     @Override
@@ -119,6 +130,11 @@ public final class HttpRequestBuilder extends AbstractHttpRequestBuilder {
     @Override
     public HttpRequestBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
         return (HttpRequestBuilder) super.content(contentType, publisher);
+    }
+
+    @Override
+    public HttpRequestBuilder contentJson(Object content) {
+        return (HttpRequestBuilder) super.contentJson(content);
     }
 
     @Override

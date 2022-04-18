@@ -28,6 +28,7 @@ import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -39,7 +40,7 @@ import com.linecorp.armeria.common.util.AsyncCloseable;
 /**
  * A skeletal builder implementation for creating a new {@link HealthCheckedEndpointGroup}.
  */
-public abstract class AbstractHealthCheckedEndpointGroupBuilder {
+public abstract class AbstractHealthCheckedEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
 
     static final Backoff DEFAULT_HEALTH_CHECK_RETRY_BACKOFF = Backoff.fixed(3000).withJitter(0.2);
 
@@ -156,7 +157,6 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
 
     /**
      * Sets the maximum endpoint ratio of target selected candidates.
-     * @see PartialHealthCheckStrategyBuilder#maxEndpointRatio(double)
      */
     public AbstractHealthCheckedEndpointGroupBuilder maxEndpointRatio(double maxEndpointRatio) {
         if (maxEndpointCount != null) {
@@ -173,7 +173,6 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
 
     /**
      * Sets the maximum endpoint count of target selected candidates.
-     * @see PartialHealthCheckStrategyBuilder#maxEndpointCount(int)
      */
     public AbstractHealthCheckedEndpointGroupBuilder maxEndpointCount(int maxEndpointCount) {
         if (maxEndpointRatio != null) {
@@ -195,26 +194,28 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
         return this;
     }
 
+    @Override
+    public AbstractHealthCheckedEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        return (AbstractHealthCheckedEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    }
+
     /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} based on the properties set so far.
      */
     public final HealthCheckedEndpointGroup build() {
         final HealthCheckStrategy healthCheckStrategy;
         if (maxEndpointCount != null) {
-            healthCheckStrategy = new PartialHealthCheckStrategyBuilder()
-                                            .maxEndpointCount(maxEndpointCount)
-                                            .build();
+            healthCheckStrategy = HealthCheckStrategy.ofCount(maxEndpointCount);
         } else {
             if (maxEndpointRatio == null || maxEndpointRatio == 1.0) {
-                healthCheckStrategy = new AllHealthCheckStrategy();
+                healthCheckStrategy = HealthCheckStrategy.all();
             } else {
-                healthCheckStrategy = new PartialHealthCheckStrategyBuilder()
-                                                .maxEndpointRatio(maxEndpointRatio)
-                                                .build();
+                healthCheckStrategy = HealthCheckStrategy.ofRatio(maxEndpointRatio);
             }
         }
 
-        return new HealthCheckedEndpointGroup(delegate, protocol, port, retryBackoff,
+        return new HealthCheckedEndpointGroup(delegate, shouldAllowEmptyEndpoints(),
+                                              protocol, port, retryBackoff,
                                               clientOptionsBuilder.build(),
                                               newCheckerFactory(), healthCheckStrategy);
     }

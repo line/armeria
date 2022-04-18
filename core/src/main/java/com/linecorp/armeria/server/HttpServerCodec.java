@@ -30,6 +30,10 @@
  */
 package com.linecorp.armeria.server;
 
+import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_CHUNK_SIZE;
+import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_HEADER_SIZE;
+import static io.netty.handler.codec.http.HttpObjectDecoder.DEFAULT_MAX_INITIAL_LINE_LENGTH;
+
 import java.util.ArrayDeque;
 import java.util.List;
 import java.util.Queue;
@@ -58,6 +62,11 @@ final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequestDeco
 
     /** A queue that is used for correlating a request and a response. */
     private final Queue<HttpMethod> queue = new ArrayDeque<>();
+
+    HttpServerCodec() {
+        this(DEFAULT_MAX_INITIAL_LINE_LENGTH, DEFAULT_MAX_HEADER_SIZE, DEFAULT_MAX_CHUNK_SIZE,
+             WebSocketUpgradeContext.noop());
+    }
 
     /**
      * Creates a new instance with the specified decoder options.

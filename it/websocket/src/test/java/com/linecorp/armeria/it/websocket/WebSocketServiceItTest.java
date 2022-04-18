@@ -122,7 +122,7 @@ class WebSocketServiceItTest {
         i++;
         for (; i < 3; i++) {
             final ContinuousFrame continuousFrame = new ContinuousFrame();
-            continuousFrame.setFin(i == 2 ? true : false);
+            continuousFrame.setFin(i == 2);
             continuousFrame.setPayload(ByteBuffer.wrap(sendingMessages.get(i)
                                                                       .getBytes(StandardCharsets.UTF_8)));
             client.sendFrame(continuousFrame);

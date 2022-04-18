@@ -48,6 +48,7 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
  *
  *     @Test
  *     void test() {
+ *         final WebClient client = WebClient.of(server.httpUri());
  *         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
  *         client.get("/hello").aggregate().join();
  *         assertThat(captor.size()).isEqualTo(1);

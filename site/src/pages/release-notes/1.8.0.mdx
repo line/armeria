@@ -8,7 +8,7 @@ date: 2021-05-14
   ```java
   HealthChecker.of(() -> {
       HealthCheckStatus status = ...;
-      CompletableFuture.completedFuture(status);
+      UnmodifiableFuture.completedFuture(status);
   }, Duration.ofSeconds(5));
   ```
 - You can now create a propagating <type://ContextAwareExecutorService> and
@@ -90,14 +90,6 @@ date: 2021-05-14
   by <type://TransientService>. #3551 #3559
 - You no longer see trailing dollar signs from a service name. #3508
 - You no longer see a `NullPointerException` when a request times out. #3564
-
-## 🏚️ Deprecations
-
-- N/A
-
-## ☢️ Breaking changes
-
-- N/A
 
 ## ⛓ Dependencies
 
