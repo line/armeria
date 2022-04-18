@@ -348,7 +348,7 @@ public interface StreamMessage<T> extends Publisher<T> {
     CompletableFuture<Void> whenComplete();
 
     /**
-     * Drain all data using {@link NoopSubscriber}.
+     * Drains and discards all objects in this {@link StreamMessage}.
      *
      * <p>For example:<pre>{@code
      * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3);
