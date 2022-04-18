@@ -318,7 +318,7 @@ class StreamMessageTest {
         final StreamMessage<HttpData> source = StreamMessage.of(httpData);
         final CompletableFuture<Void> cf = source.subscribe();
 
-        await().untilAsserted(() -> assertThat(cf.isDone()).isTrue());
+        assertThat(cf.join().isDone()).isTrue();
         for (ByteBuf buf : bufs) {
             assertThat(buf.refCnt()).isZero();
         }
