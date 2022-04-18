@@ -1261,7 +1261,9 @@ final class AnnotatedValueResolver {
                 Set.class.isAssignableFrom(rawType)) {
                 try {
                     // Only if there is a default constructor.
-                    rawType.getConstructor();
+                    // Note: `requireNonNull()` is redundant here, but it stops Error Prone from complaining
+                    //       about an ignored return value.
+                    requireNonNull(rawType.getConstructor());
                     return rawType;
                 } catch (Throwable cause) {
                     throw new IllegalArgumentException("Unsupported container type: " + rawType.getName(),
