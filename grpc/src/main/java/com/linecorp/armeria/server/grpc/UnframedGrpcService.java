@@ -144,7 +144,8 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
                     responseFuture.completeExceptionally(t);
                 } else {
                     ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, method);
-                    frameAndServe(unwrap(), ctx, grpcHeaders.build(), clientRequest.content(), responseFuture);
+                    frameAndServe(unwrap(), ctx, grpcHeaders.build(),
+                                  clientRequest.content(), responseFuture, null);
                 }
             }
             return null;

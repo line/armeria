@@ -66,8 +66,8 @@ class HelloServiceTest {
                                       .join()
                                       .contentUtf8();
         assertThat(response).startsWith(
-                "{\"grpc-code\":\"FAILED_PRECONDITION\",\"message\":\"Name cannot be empty\","
-                + "\"stack-trace\":\"io.grpc.StatusException");
+                "{\"grpc-code\":\"FAILED_PRECONDITION\",\"message\":\"Name cannot be empty\"," +
+                "\"stack-trace\":\"io.grpc.StatusException");
     }
 
     @Test
