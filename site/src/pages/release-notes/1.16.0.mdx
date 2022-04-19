@@ -88,7 +88,7 @@ date: 2022-04-19
     .of().prepare()
     .get("/api/v1/greet")
     .queryParam("foo", "1")
-    .queryParams("bar", "2") // 👈👈👈
+    .queryParams(Map.of("bar", "2")) // 👈👈👈
     .execute()
   ```
 - You can now override the global <type://Flags> by implementing your own <type://FlagsProvider> and 
