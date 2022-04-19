@@ -28,12 +28,12 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 
-class InternalGraphqlUtilTest {
+class GraphqlUtilTest {
 
     @ParameterizedTest
     @MethodSource("provideMediaType")
     void test(RequestHeaders requestHeaders, MediaType actual) {
-        final MediaType expected = InternalGraphqlUtil.produceType(requestHeaders);
+        final MediaType expected = GraphqlUtil.produceType(requestHeaders);
         assertThat(actual).isEqualTo(expected);
     }
 

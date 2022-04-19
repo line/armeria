@@ -57,7 +57,7 @@ class GraphqlServiceBlockingTest {
 
     private static DataFetcher<String> dataFetcher(String value) {
         return environment -> {
-            final ServiceRequestContext ctx = GraphqlUtil.serviceRequestContext(environment);
+            final ServiceRequestContext ctx = GraphqlServiceContexts.serviceRequestContext(environment);
             assertThat(ctx.eventLoop().inEventLoop()).isFalse();
             // Make sure that a ServiceRequestContext is available
             assertThat(ServiceRequestContext.current()).isSameAs(ctx);

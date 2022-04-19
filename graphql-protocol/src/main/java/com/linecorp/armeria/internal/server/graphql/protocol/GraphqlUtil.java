@@ -28,7 +28,7 @@ import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
 /**
  * Utility for handling the GraphQL protocol.
  */
-public final class InternalGraphqlUtil {
+public final class GraphqlUtil {
 
     /**
      * Returns the negotiated {@link MediaType}. {@link MediaType#JSON} and {@link MediaType#GRAPHQL_JSON}
@@ -69,5 +69,5 @@ public final class InternalGraphqlUtil {
         return null;
     }
 
-    private InternalGraphqlUtil() {}
+    private GraphqlUtil() {}
 }

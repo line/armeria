@@ -28,10 +28,10 @@ import graphql.com.google.common.collect.ImmutableMap;
 import graphql.schema.DataFetchingEnvironment;
 
 /**
- * Utility for handling the GraphQL.
+ * Utilities for accessing {@link ServiceRequestContext} in a GraphQL environment.
  */
 @UnstableApi
-public final class GraphqlUtil {
+public final class GraphqlServiceContexts {
 
     private static final String GRAPHQL_CONTEXT_KEY = "com.linecorp.armeria.graphql.context.key";
 
@@ -89,5 +89,5 @@ public final class GraphqlUtil {
         return serviceRequestContext(environment.getGraphQlContext());
     }
 
-    private GraphqlUtil() {}
+    private GraphqlServiceContexts() {}
 }
