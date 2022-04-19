@@ -75,7 +75,7 @@ final class WeightedRandomDistributionEndpointSelector {
             while (it.hasNext()) {
                 final Entry entry = it.next();
                 final int weight = entry.weight();
-                target -= entry.weight();
+                target -= weight;
                 if (target < 0) {
                     entry.increment();
                     if (entry.isFull()) {
@@ -83,9 +83,11 @@ final class WeightedRandomDistributionEndpointSelector {
                         entry.reset();
                         remaining -= weight;
                         if (remaining == 0) {
-                            // As all entry are full, reset `currentEntries` and `remaining`.
+                            // As all entries are full, reset `currentEntries` and `remaining`.
                             currentEntries.addAll(allEntries);
                             remaining = total;
+                        } else {
+                            assert remaining > 0 : remaining;
                         }
                     }
                     return entry.endpoint();
