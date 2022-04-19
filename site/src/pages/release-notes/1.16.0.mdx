@@ -37,7 +37,7 @@ date: 2022-04-19
   StreamMessage
     .of(1, 2, 3)
     .peek(value -> System.out.println(value))
-    .subscribe(); // 👈👈👈
+    .subscribe().join(); // 👈👈👈
   ```
 - You can now use the `response_body` option in gRPC-JSON transcoding. #4052 #4132 #4174
   - This option is useful when you need to make a certain response field as a response body.
