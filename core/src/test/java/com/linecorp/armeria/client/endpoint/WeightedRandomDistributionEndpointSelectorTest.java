@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.endpoint;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.Test;
 
@@ -26,6 +27,8 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyTest.EndpointComparator;
 import com.linecorp.armeria.client.endpoint.WeightedRandomDistributionEndpointSelector.Entry;
+import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.util.Exceptions;
 
 final class WeightedRandomDistributionEndpointSelectorTest {
 
@@ -61,23 +64,51 @@ final class WeightedRandomDistributionEndpointSelectorTest {
     }
 
     @Test
-    void resetEntriesWhenAllEntriesAreFull() {
-        final Endpoint foo = Endpoint.of("foo.com").withWeight(10);
-        final Endpoint bar = Endpoint.of("bar.com").withWeight(20);
-        final List<Endpoint> endpoints = ImmutableList.of(foo, bar);
+    void resetEntriesWhenAllEntriesAreFull() throws InterruptedException {
+        final int concurrency = 16;
+        final CountDownLatch startLatch = new CountDownLatch(concurrency);
+        final CountDownLatch checkLatch = new CountDownLatch(concurrency);
+        final CountDownLatch finalLatch = new CountDownLatch(concurrency);
+        final Endpoint foo = Endpoint.of("foo.com").withWeight(1000);
+        final Endpoint bar = Endpoint.of("bar.com").withWeight(2000);
+        final Endpoint qux = Endpoint.of("qux.com").withWeight(3000);
+        final List<Endpoint> endpoints = ImmutableList.of(foo, bar, qux);
         final WeightedRandomDistributionEndpointSelector
                 selector = new WeightedRandomDistributionEndpointSelector(endpoints);
-        final int totalWeight = 30;
-        // Repeatedly check the correctness of `Entry`s state.
-        for (int i = 0; i < 5; i++) {
-            for (int count = 0; count < totalWeight; count++) {
-                assertThat(selector.selectEndpoint()).isNotNull();
-                if (count == totalWeight - 1) {
-                    final int sum = selector.entries().stream().mapToInt(Entry::counter).sum();
+        final int totalWeight = 6000;
+        for (int i = 0; i < concurrency; i++) {
+            CommonPools.blockingTaskExecutor().execute(() -> {
+                try {
+                    startLatch.countDown();
+                    startLatch.await();
+
+                    for (int count = 0; count < totalWeight * concurrency; count++) {
+                        assertThat(selector.selectEndpoint()).isNotNull();
+                    }
+                    checkLatch.countDown();
+                    checkLatch.await();
+
+                    int sum = selector.entries().stream().mapToInt(Entry::counter).sum();
                     // Since all entries were full, `Entry.counter()` should be reset.
-                    assertThat(sum).isEqualTo(0);
+                    assertThat(sum).isZero();
+
+                    for (int count = 0; count < totalWeight * concurrency; count++) {
+                        assertThat(selector.selectEndpoint()).isNotNull();
+                    }
+                    finalLatch.countDown();
+                    finalLatch.await();
+
+                    sum = selector.entries().stream().mapToInt(Entry::counter).sum();
+                    // Since all entries were full, `Entry.counter()` should be reset.
+                    assertThat(sum).isZero();
+                } catch (Exception e) {
+                    Exceptions.throwUnsafely(e);
                 }
-            }
+            });
         }
+
+        finalLatch.await();
+        final int sum = selector.entries().stream().mapToInt(Entry::counter).sum();
+        assertThat(sum).isZero();
     }
 }
