@@ -28,7 +28,8 @@ import graphql.com.google.common.collect.ImmutableMap;
 import graphql.schema.DataFetchingEnvironment;
 
 /**
- * Utilities for accessing {@link ServiceRequestContext} in a GraphQL environment.
+ * Retrieves the current {@link ServiceRequestContext} from a {@link GraphQLContext} or
+ * {@link DataFetchingEnvironment}.
  */
 @UnstableApi
 public final class GraphqlServiceContexts {
@@ -38,13 +39,13 @@ public final class GraphqlServiceContexts {
     /**
      * Returns a {@link Map} containing the {@link ServiceRequestContext}.
      */
-    public static Map<String, Object> graphqlContext(ServiceRequestContext requestContext) {
+    static Map<String, Object> graphqlContext(ServiceRequestContext requestContext) {
         requireNonNull(requestContext, "requestContext");
         return ImmutableMap.of(GRAPHQL_CONTEXT_KEY, requestContext);
     }
 
     /**
-     * Returns {@link ServiceRequestContext} in {@link GraphQLContext}.
+     * Retrieves the current {@link ServiceRequestContext} from the specified {@link GraphQLContext}.
      * For example:
      * <pre>{@code
      * new DataFetcher<>() {
@@ -59,7 +60,7 @@ public final class GraphqlServiceContexts {
      * @throws IllegalStateException if the specified {@link GraphQLContext} doesn't contain
      *                               a {@link ServiceRequestContext}.
      */
-    public static ServiceRequestContext serviceRequestContext(GraphQLContext graphQLContext) {
+    public static ServiceRequestContext get(GraphQLContext graphQLContext) {
         requireNonNull(graphQLContext, "graphQLContext");
         final ServiceRequestContext ctx = graphQLContext.get(GRAPHQL_CONTEXT_KEY);
         if (ctx == null) {
@@ -69,7 +70,7 @@ public final class GraphqlServiceContexts {
     }
 
     /**
-     * Returns {@link ServiceRequestContext} in {@link DataFetchingEnvironment}.
+     * Retrieves the current {@link ServiceRequestContext} from the specified {@link DataFetchingEnvironment}.
      * For example:
      * <pre>{@code
      * new DataFetcher<>() {
@@ -84,9 +85,9 @@ public final class GraphqlServiceContexts {
      * @throws IllegalStateException if the specified {@link DataFetchingEnvironment} doesn't contain
      *                               a {@link ServiceRequestContext}.
      */
-    public static ServiceRequestContext serviceRequestContext(DataFetchingEnvironment environment) {
+    public static ServiceRequestContext get(DataFetchingEnvironment environment) {
         requireNonNull(environment, "environment");
-        return serviceRequestContext(environment.getGraphQlContext());
+        return get(environment.getGraphQlContext());
     }
 
     private GraphqlServiceContexts() {}
