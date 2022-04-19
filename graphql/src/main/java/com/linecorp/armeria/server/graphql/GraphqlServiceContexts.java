@@ -52,7 +52,7 @@ public final class GraphqlServiceContexts {
      *     @Override
      *     public String get(DataFetchingEnvironment env) throws Exception {
      *         final GraphQLContext graphQLContext = env.getGraphQlContext();
-     *         final ServiceRequestContext ctx = GraphqlServiceContexts.serviceRequestContext(graphQLContext);
+     *         final ServiceRequestContext ctx = GraphqlServiceContexts.get(graphQLContext);
      *         // ...
      *     }
      * };
@@ -77,7 +77,7 @@ public final class GraphqlServiceContexts {
      * new DataFetcher<>() {
      *     @Override
      *     public String get(DataFetchingEnvironment env) throws Exception {
-     *         final ServiceRequestContext ctx = GraphqlServiceContexts.serviceRequestContext(env);
+     *         final ServiceRequestContext ctx = GraphqlServiceContexts.get(env);
      *         // ...
      *     }
      * };
