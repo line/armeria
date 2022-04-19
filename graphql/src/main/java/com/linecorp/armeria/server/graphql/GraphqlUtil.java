@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.graphql;
+package com.linecorp.armeria.server.graphql;
 
 import static java.util.Objects.requireNonNull;
 
