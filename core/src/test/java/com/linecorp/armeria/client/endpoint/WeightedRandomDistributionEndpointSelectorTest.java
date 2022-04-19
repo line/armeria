@@ -73,7 +73,7 @@ final class WeightedRandomDistributionEndpointSelectorTest {
             for (int count = 0; count < totalWeight; count++) {
                 assertThat(selector.selectEndpoint()).isNotNull();
                 if (count == totalWeight - 1) {
-                    int sum = selector.entries().stream().mapToInt(Entry::counter).sum();
+                    final int sum = selector.entries().stream().mapToInt(Entry::counter).sum();
                     // Since all entries were full, `Entry.counter()` should be reset.
                     assertThat(sum).isEqualTo(0);
                 }
