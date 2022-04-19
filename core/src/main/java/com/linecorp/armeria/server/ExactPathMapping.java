@@ -29,24 +29,30 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 final class ExactPathMapping extends AbstractPathMapping {
 
+    private final String prefix;
     private final String exactPath;
     private final List<String> paths;
 
     ExactPathMapping(String exactPath) {
+        this("", exactPath);
+    }
+
+    private ExactPathMapping(String prefix, String exactPath) {
+        this.prefix = prefix;
         this.exactPath = ensureAbsolutePath(exactPath, "exactPath");
         paths = ImmutableList.of(exactPath, exactPath);
     }
 
     @Override
     PathMapping doWithPrefix(String prefix) {
-        return new ExactPathMapping(concatPaths(prefix, exactPath));
+        return new ExactPathMapping(prefix, concatPaths(prefix, exactPath));
     }
 
     @Nullable
     @Override
     RoutingResultBuilder doApply(RoutingContext routingCtx) {
         return exactPath.equals(routingCtx.path()) ? RoutingResult.builder()
-                                                                  .path(routingCtx.path())
+                                                                  .path(mappedPath(prefix, routingCtx.path()))
                                                                   .query(routingCtx.query())
                                                    : null;
     }

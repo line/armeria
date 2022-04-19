@@ -26,6 +26,22 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 abstract class AbstractPathMapping implements PathMapping {
 
+    /**
+     * Returns the path with its prefix removed.
+     */
+    static String mappedPath(String prefix, String path) {
+        int length = prefix.length();
+        if (length == 0 || "/".equals(prefix)) {
+            return path;
+        }
+
+        if (prefix.charAt(length - 1) == '/') {
+            // Make sure the mappedPath starts with '/'
+            length -= 1;
+        }
+        return path.substring(length);
+    }
+
     @Override
     public final PathMapping withPrefix(String prefix) {
         prefix = ensureAbsolutePath(prefix, "prefix");

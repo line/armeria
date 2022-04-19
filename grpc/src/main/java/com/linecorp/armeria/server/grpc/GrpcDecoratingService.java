@@ -105,7 +105,7 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
     }
 
     @Nullable
-    HttpService lookup(ServiceRequestContext ctx) {
+    private HttpService lookup(ServiceRequestContext ctx) {
         final ServerMethodDefinition<?, ?> method = lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD)
                                                                               : null;
         if (method == null || method.getMethodDescriptor() == null) {
