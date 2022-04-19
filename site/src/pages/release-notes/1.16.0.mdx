@@ -42,7 +42,7 @@ date: 2022-04-19
 - You can now use the `response_body` option in gRPC-JSON transcoding. #4052 #4132 #4174
   - This option is useful when you need to make a certain response field as a response body.
     For example, the following Protobuf definition allows you to send a JSON array body
-    whose values are sourced from `GetNumbersResponse.numbers`:
+    whose values are sourced from `GetNumbersResponse.myNumberArray`:
     ```protobuf
     service MyService {
       rpc GetNumbers(GetNumbersRequest) returns (GetNumbersResponse) {
