@@ -18,6 +18,10 @@ package com.linecorp.armeria.it.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.BlockingDeque;
+import java.util.concurrent.LinkedBlockingDeque;
+
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -56,23 +60,37 @@ class GrpcDecoratingServiceTest {
         }
     };
 
-    private static String FIRST_TEST_RESULT = "";
-    private static String SECOND_TEST_RESULT = "";
+    private static final BlockingDeque<String> decorators = new LinkedBlockingDeque<>();
+
+    @BeforeEach
+    void setUp() {
+        decorators.clear();
+    }
 
     @Test
     void methodDecorators() {
         final TestServiceBlockingStub client =
                 GrpcClients.newClient(server.httpUri(), TestServiceBlockingStub.class);
         client.unaryCall(SimpleRequest.getDefaultInstance());
-        assertThat(FIRST_TEST_RESULT)
-                .isEqualTo("FirstDecorator/MethodFirstDecorator");
+        final String first = decorators.poll();
+        final String second = decorators.poll();
+        assertThat(first).isEqualTo("FirstDecorator");
+        assertThat(second).isEqualTo("MethodFirstDecorator");
+        assertThat(decorators).isEmpty();
+    }
 
-        final TestServiceBlockingStub prefixClient = GrpcClients
-                .builder(server.httpUri())
-                .pathPrefix("/grpc")
-                .build(TestServiceBlockingStub.class);
+    @Test
+    void methodDecoratorsWithPrefix() {
+        final TestServiceBlockingStub prefixClient = GrpcClients.builder(server.httpUri())
+                                                                .responseTimeoutMillis(0)
+                                                                .pathPrefix("/grpc")
+                                                                .build(TestServiceBlockingStub.class);
         prefixClient.unaryCall(SimpleRequest.getDefaultInstance());
-        assertThat(SECOND_TEST_RESULT).isEqualTo("SecondDecorator/MethodSecondDecorator");
+        final String first = decorators.poll();
+        final String second = decorators.poll();
+        assertThat(first).isEqualTo("SecondDecorator");
+        assertThat(second).isEqualTo("MethodSecondDecorator");
+        assertThat(decorators).isEmpty();
     }
 
     private static class FirstDecorator implements DecoratingHttpServiceFunction {
@@ -80,7 +98,7 @@ class GrpcDecoratingServiceTest {
         public HttpResponse serve(HttpService delegate,
                                   ServiceRequestContext ctx,
                                   HttpRequest req) throws Exception {
-            FIRST_TEST_RESULT += "FirstDecorator/";
+            decorators.offer("FirstDecorator");
             return delegate.serve(ctx, req);
         }
     }
@@ -90,7 +108,7 @@ class GrpcDecoratingServiceTest {
         public HttpResponse serve(HttpService delegate,
                                   ServiceRequestContext ctx,
                                   HttpRequest req) throws Exception {
-            FIRST_TEST_RESULT += "MethodFirstDecorator";
+            decorators.offer("MethodFirstDecorator");
             return delegate.serve(ctx, req);
         }
     }
@@ -100,7 +118,7 @@ class GrpcDecoratingServiceTest {
         public HttpResponse serve(HttpService delegate,
                                   ServiceRequestContext ctx,
                                   HttpRequest req) throws Exception {
-            SECOND_TEST_RESULT += "SecondDecorator/";
+            decorators.offer("SecondDecorator");
             return delegate.serve(ctx, req);
         }
     }
@@ -110,7 +128,7 @@ class GrpcDecoratingServiceTest {
         public HttpResponse serve(HttpService delegate,
                                   ServiceRequestContext ctx,
                                   HttpRequest req) throws Exception {
-            SECOND_TEST_RESULT += "MethodSecondDecorator";
+            decorators.offer("MethodSecondDecorator");
             return delegate.serve(ctx, req);
         }
     }
