@@ -25,6 +25,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategyTest.EndpointComparator;
+import com.linecorp.armeria.client.endpoint.WeightedRandomDistributionEndpointSelector.Entry;
 
 final class WeightedRandomDistributionEndpointSelectorTest {
 
@@ -56,6 +57,27 @@ final class WeightedRandomDistributionEndpointSelectorTest {
             assertThat(selected).usingElementComparator(EndpointComparator.INSTANCE).containsExactlyInAnyOrder(
                     foo, foo, foo, bar, bar, baz
             );
+        }
+    }
+
+    @Test
+    void resetEntriesWhenAllEntriesAreFull() {
+        final Endpoint foo = Endpoint.of("foo.com").withWeight(10);
+        final Endpoint bar = Endpoint.of("bar.com").withWeight(20);
+        final List<Endpoint> endpoints = ImmutableList.of(foo, bar);
+        final WeightedRandomDistributionEndpointSelector
+                selector = new WeightedRandomDistributionEndpointSelector(endpoints);
+        final int totalWeight = 30;
+        // Repeatedly check the correctness of `Entry`s state.
+        for (int i = 0; i < 5; i++) {
+            for (int count = 0; count < totalWeight; count++) {
+                assertThat(selector.selectEndpoint()).isNotNull();
+                if (count == totalWeight - 1) {
+                    int sum = selector.entries().stream().mapToInt(Entry::counter).sum();
+                    // Since all entries were full, `Entry.counter()` should be reset.
+                    assertThat(sum).isEqualTo(0);
+                }
+            }
         }
     }
 }
