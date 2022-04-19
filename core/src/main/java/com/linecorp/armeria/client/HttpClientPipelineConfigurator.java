@@ -174,6 +174,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         } catch (Throwable t) {
             promise.tryFailure(t);
             ctx.close();
+            return;
         } finally {
             if (p.context(this) != null) {
                 p.remove(this);

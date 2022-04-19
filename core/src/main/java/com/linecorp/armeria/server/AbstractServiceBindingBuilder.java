@@ -150,11 +150,21 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
                              ImmutableSet.of());
 
         final List<Route> routes = buildRouteList(fallbackRoutes);
+        final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
         for (Route route : routes) {
-            final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
             final ServiceConfigBuilder serviceConfigBuilder =
                     defaultServiceConfigSetters.toServiceConfigBuilder(route, decoratedService);
             serviceConfigBuilder(serviceConfigBuilder);
         }
+    }
+
+    final void build0(HttpService service, Route mappedRoute) {
+        final List<Route> routes = buildRouteList(ImmutableSet.of());
+        assert routes.size() == 1; // Only one route is set via addRoute().
+        final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
+        final ServiceConfigBuilder serviceConfigBuilder =
+                defaultServiceConfigSetters.toServiceConfigBuilder(routes.get(0), decoratedService);
+        serviceConfigBuilder.addMappedRoute(mappedRoute);
+        serviceConfigBuilder(serviceConfigBuilder);
     }
 }

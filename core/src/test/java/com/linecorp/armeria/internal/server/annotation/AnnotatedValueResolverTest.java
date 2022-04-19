@@ -144,7 +144,8 @@ class AnnotatedValueResolverTest {
         getAllMethods(Service.class).forEach(method -> {
             try {
                 final List<AnnotatedValueResolver> elements =
-                        AnnotatedValueResolver.ofServiceMethod(method, pathParams, objectResolvers, false);
+                        AnnotatedValueResolver.ofServiceMethod(method, pathParams, objectResolvers, false,
+                                                               null);
                 elements.forEach(AnnotatedValueResolverTest::testResolver);
             } catch (NoAnnotatedParameterException ignored) {
                 // Ignore this exception because MixedBean class has not annotated method.

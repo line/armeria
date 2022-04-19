@@ -28,6 +28,7 @@ import java.util.function.Predicate;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -60,6 +61,8 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
 
     private final ServerBuilder serverBuilder;
+    @Nullable
+    private Route mappedRoute;
 
     ServiceBindingBuilder(ServerBuilder serverBuilder) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
@@ -186,6 +189,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
         return (ServiceBindingBuilder) super.addRoute(route);
     }
 
+    ServiceBindingBuilder mappedRoute(Route mappedRoute) {
+        this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
+        return this;
+    }
+
     @Override
     public ServiceBindingBuilder exclude(String pathPattern) {
         return (ServiceBindingBuilder) super.exclude(pathPattern);
@@ -287,7 +295,13 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
      * @throws IllegalStateException if the path that the {@link HttpService} will be bound to is not specified
      */
     public ServerBuilder build(HttpService service) {
-        build0(service);
+        if (mappedRoute != null) {
+            // mappedRoute is only set when the service is an HttpServiceWithRoutes
+            assert service.as(HttpServiceWithRoutes.class) != null;
+            build0(service, mappedRoute);
+        } else {
+            build0(service);
+        }
         return serverBuilder;
     }
 

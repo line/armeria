@@ -50,7 +50,7 @@ final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
         final int id = httpSession.incrementAndGetNumRequestsSent();
 
         decoder.setPingReqId(id);
-        final ChannelFuture future = encoder.writeHeaders(id, 0, HTTP1_PING_REQUEST, true);
+        final ChannelFuture future = encoder.writeHeaders(id, 0, HTTP1_PING_REQUEST, true, ctx.newPromise());
         ctx.flush();
         return future;
     }

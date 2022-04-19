@@ -63,6 +63,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.server.servlet.ServletTlsAttributes;
 import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
@@ -463,6 +464,10 @@ public abstract class TomcatService implements HttpService {
         final String mappedPath = ctx.mappedPath();
 
         coyoteReq.scheme().setString(req.scheme());
+
+        // Set the start time which is used by Tomcat access logging
+        coyoteReq.setStartTime(ctx.log().ensureAvailable(RequestLogProperty.REQUEST_START_TIME)
+                                  .requestStartTimeMillis());
 
         // Set the remote host/address.
         final InetSocketAddress remoteAddr = ctx.remoteAddress();
