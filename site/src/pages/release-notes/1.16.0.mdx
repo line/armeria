@@ -154,7 +154,7 @@ date: 2022-04-19
 - <type://EurekaEndpointGroup> now continues refreshing itself even if it failed to refresh once. #4206
 - <type://HealthCheckedEndpointGroup> now leaves a detailed error message if all endpoints are unhealthy
   on the first check. #4200
-- Fixed a rare infinite loop in <type://WeightRampingUpStrategy> #TBD
+- Fixed a rare infinite loop in <type://EndpointSelectionStrategy#rampingUp()> #4219
 - The search domain DNS resolver no longer incorrectly resolves a search domain that starts with a dot.
   #4195 #4196
 - Fixed a bug where Armeria server doesn't log the remote address when TLS handshake fails. #4181
