@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.spring;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.management.ManagementFactory;
@@ -79,7 +80,7 @@ public class ArmeriaMeterBindersConfigurationTest {
         final OperatingSystemMXBean os = ManagementFactory.getOperatingSystemMXBean();
         boolean hasOpenFdCount = false;
         try {
-            os.getClass().getDeclaredMethod("getOpenFileDescriptorCount");
+            requireNonNull(os.getClass().getDeclaredMethod("getOpenFileDescriptorCount"));
             hasOpenFdCount = true;
         } catch (Exception ignored) {
             // Not supported
