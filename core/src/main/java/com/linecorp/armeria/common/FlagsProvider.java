@@ -149,7 +149,7 @@ public interface FlagsProvider {
      * Returns the {@link RequestContextStorageProvider} that use for provides {@link RequestContextStorage}.
      *
      * <p>By default, If no {@link RequestContextStorageProvider} SPI provider implementation is provided,
-     * This flag returns {@link RequestContextStorageProvider}</p> that provides
+     * This flag returns {@link RequestContextStorageProvider} that provides
      * {@link RequestContextStorage#threadLocal()}. Otherwise, the first {@link RequestContextStorageProvider}
      * SPI provider implementation will be selected.</p>
      *
