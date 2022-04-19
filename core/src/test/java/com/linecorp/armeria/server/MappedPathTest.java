@@ -63,7 +63,6 @@ class MappedPathTest {
 
             sb.serviceUnder("/catch-all",
                             (SimpleHttpServiceWithRoute) Route::ofCatchAll);
-
         }
     };
 
@@ -72,7 +71,7 @@ class MappedPathTest {
             "/regex/users/0001,         /users/0001",
             "/glob/users/0002/profile,  /users/0002/profile",
             "/parameterized/users/0003, /users/0003",
-            "/prefix1/prefix2/0004,        /0004",
+            "/prefix1/prefix2/0004,     /0004",
             "/catch-all/a/n/y,          /a/n/y",
     })
     @ParameterizedTest

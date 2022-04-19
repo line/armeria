@@ -55,6 +55,7 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
     private static final Splitter PATH_SPLITTER = Splitter.on('/');
 
     private final String prefix;
+
     /**
      * The original path pattern specified in the constructor.
      */
@@ -103,15 +104,6 @@ final class ParameterizedPathMapping extends AbstractPathMapping {
         this("", pathPattern);
     }
 
-    /**
-     * Create a {@link ParameterizedPathMapping} instance from given {@code pathPattern}.
-     *
-     * @param pathPattern the {@link String} that contains path params.
-     *                    e.g. {@code /users/{name}}, {@code /users/:name}, {@code /users/{*name}} or
-     *                    {@code /users/:*name}
-     *
-     * @throws IllegalArgumentException if the {@code pathPattern} is invalid.
-     */
     private ParameterizedPathMapping(String prefix, String pathPattern) {
         this.prefix = prefix;
         requireNonNull(pathPattern, "pathPattern");

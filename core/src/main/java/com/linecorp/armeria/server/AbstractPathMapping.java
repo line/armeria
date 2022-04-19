@@ -31,10 +31,7 @@ abstract class AbstractPathMapping implements PathMapping {
      */
     static String mappedPath(String prefix, String path) {
         int length = prefix.length();
-        if (length == 0) {
-            return path;
-        }
-        if ("/".equals(prefix)) {
+        if (length == 0 || "/".equals(prefix)) {
             return path;
         }
 

@@ -18,6 +18,7 @@ package com.linecorp.armeria.it.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -59,7 +60,7 @@ class GrpcDecoratingServiceTest {
         }
     };
 
-    private static final LinkedBlockingDeque<String> decorators = new LinkedBlockingDeque<>();
+    private static final BlockingDeque<String> decorators = new LinkedBlockingDeque<>();
 
     @BeforeEach
     void setUp() {
@@ -89,6 +90,7 @@ class GrpcDecoratingServiceTest {
         final String second = decorators.poll();
         assertThat(first).isEqualTo("SecondDecorator");
         assertThat(second).isEqualTo("MethodSecondDecorator");
+        assertThat(decorators).isEmpty();
     }
 
     private static class FirstDecorator implements DecoratingHttpServiceFunction {
