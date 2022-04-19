@@ -114,7 +114,17 @@ final class DefaultFlagsProvider implements FlagsProvider {
     public RequestContextStorageProvider requestContextStorageProvider() {
         final List<RequestContextStorageProvider> providers = FlagsUtil.getRequestContextStorageProviders();
         if (providers.isEmpty()) {
-            return RequestContextStorage::threadLocal;
+            return new RequestContextStorageProvider() {
+                @Override
+                public RequestContextStorage newStorage() {
+                    return RequestContextStorage.threadLocal();
+                }
+
+                @Override
+                public String toString() {
+                    return "thread-local";
+                }
+            };
         }
         return providers.get(0);
     }
@@ -324,7 +334,17 @@ final class DefaultFlagsProvider implements FlagsProvider {
 
     @Override
     public Predicate<InetAddress> preferredIpV4Addresses() {
-        return ignored -> true;
+        return new Predicate<InetAddress>() {
+            @Override
+            public boolean test(InetAddress ignored) {
+                return true;
+            }
+
+            @Override
+            public String toString() {
+                return "*";
+            }
+        };
     }
 
     @Override

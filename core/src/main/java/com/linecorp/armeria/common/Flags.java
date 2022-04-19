@@ -1364,12 +1364,12 @@ public final class Flags {
 
         if (value != null) {
             if (validator.test(value)) {
-                logger.info("{}: {} (sysprops)", fullName, value);
+                logger.info("{}: {} (sysprops)", name, value);
                 return value;
             }
-            logger.warn("{}: {} (sysprops, validation failed)", fullName, value);
+            logger.warn("{}: {} (sysprops, validation failed)", name, value);
         }
-        logger.info("{}: {} (default)", fullName, defaultValue);
+        logger.info("{}: {} (default)", name, defaultValue);
         return defaultValue;
     }
 
