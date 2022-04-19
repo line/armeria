@@ -25,6 +25,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -32,6 +34,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -45,6 +48,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.api.AnnotationsProto;
 import com.google.api.HttpRule;
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.CaseFormat;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -109,6 +113,7 @@ import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.protobuf.ProtoMethodDescriptorSupplier;
 import io.grpc.protobuf.ProtoServiceDescriptorSupplier;
+import io.netty.util.internal.StringUtil;
 
 /**
  * Converts HTTP/JSON request to gRPC request and delegates it to the {@link FramedGrpcService}.
@@ -126,7 +131,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         requireNonNull(delegate, "delegate");
         requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
 
-        final ImmutableMap.Builder<Route, TranscodingSpec> builder = ImmutableMap.builder();
+        final Map<Route, TranscodingSpec> specs = new HashMap<>();
 
         final List<ServerServiceDefinition> serviceDefinitions = delegate.services();
         for (ServerServiceDefinition serviceDefinition : serviceDefinitions) {
@@ -164,30 +169,36 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 final Map<String, Field> fields =
                         buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of());
 
+                if (specs.containsKey(route)) {
+                    logger.warn("{} is not added because the route is duplicate: {}", httpRule, route);
+                    continue;
+                }
+                final List<FieldDescriptor> topLevelFields = methodDesc.getOutputType().getFields();
+                final String responseBody = getResponseBody(topLevelFields, httpRule.getResponseBody());
                 int order = 0;
-                builder.put(route, new TranscodingSpec(order++, httpRule, methodDefinition,
-                                                       serviceDesc, methodDesc, fields, pathVariables));
-
+                specs.put(route, new TranscodingSpec(order++, httpRule, methodDefinition,
+                                                     serviceDesc, methodDesc, fields, pathVariables,
+                                                     responseBody));
                 for (HttpRule additionalHttpRule : httpRule.getAdditionalBindingsList()) {
                     @Nullable
                     final Entry<Route, List<PathVariable>> additionalRouteAndVariables
                             = toRouteAndPathVariables(additionalHttpRule);
                     if (additionalRouteAndVariables != null) {
-                        builder.put(additionalRouteAndVariables.getKey(),
+                        specs.put(additionalRouteAndVariables.getKey(),
                                     new TranscodingSpec(order++, additionalHttpRule, methodDefinition,
                                                         serviceDesc, methodDesc, fields,
-                                                        additionalRouteAndVariables.getValue()));
+                                                        additionalRouteAndVariables.getValue(),
+                                                        responseBody));
                     }
                 }
             }
         }
 
-        final Map<Route, TranscodingSpec> routeAndSpecs = builder.build();
-        if (routeAndSpecs.isEmpty()) {
+        if (specs.isEmpty()) {
             // We don't need to create a new HttpJsonTranscodingService instance in this case.
             return delegate;
         }
-        return new HttpJsonTranscodingService(delegate, routeAndSpecs, unframedGrpcErrorHandler);
+        return new HttpJsonTranscodingService(delegate, ImmutableMap.copyOf(specs), unframedGrpcErrorHandler);
     }
 
     @Nullable
@@ -416,6 +427,61 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         return file.findMessageTypeByName(messageType.getName());
     }
 
+    // to make it more efficient, we calculate whether extract response body one time
+    // if there is no matching toplevel field, we set it to null
+    @Nullable
+    private static String getResponseBody(List<FieldDescriptor> topLevelFields,
+                                          @Nullable String responseBody) {
+        if (StringUtil.isNullOrEmpty(responseBody)) {
+            return null;
+        }
+        for (FieldDescriptor fieldDescriptor: topLevelFields) {
+            if (fieldDescriptor.getName().equals(responseBody)) {
+                return responseBody;
+            }
+        }
+        return null;
+    }
+
+    @Nullable
+    private static Function<HttpData, HttpData> generateResponseBodyConverter(TranscodingSpec spec) {
+        @Nullable final String responseBody = spec.responseBody;
+        if (responseBody == null) {
+            return null;
+        } else {
+            return httpData -> {
+                try (HttpData data = httpData) {
+                    final byte[] array = data.array();
+                    try {
+                        final JsonNode jsonNode = mapper.readValue(array, JsonNode.class);
+                        // we try to convert lower snake case response body to camel case
+                        final String lowerCamelCaseResponseBody =
+                                CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, responseBody);
+                        final Iterator<Entry<String, JsonNode>> fields = jsonNode.fields();
+                        while (fields.hasNext()) {
+                            final Entry<String, JsonNode> entry = fields.next();
+                            final String fieldName = entry.getKey();
+                            final JsonNode responseBodyJsonNode = entry.getValue();
+                            // try to match field name and response body
+                            // 1. by default the marshaller would use lowerCamelCase in json field
+                            // 2. when the marshaller use original name in .proto file when serializing messages
+                            if (fieldName.equals(lowerCamelCaseResponseBody) ||
+                                fieldName.equals(responseBody)) {
+                                final byte[] bytes = mapper.writeValueAsBytes(responseBodyJsonNode);
+                                return HttpData.wrap(bytes);
+                            }
+                        }
+                        return HttpData.ofUtf8("null");
+                    } catch (IOException e) {
+                        logger.warn("Unexpected exception while extracting responseBody '{}' from {}",
+                                    responseBody, data, e);
+                        return HttpData.wrap(array);
+                    }
+                }
+            };
+        }
+    }
+
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     private final Map<Route, TranscodingSpec> routeAndSpecs;
@@ -465,7 +531,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Route mappedRoute = ctx.config().route();
+        final Route mappedRoute = ctx.config().mappedRoute();
         final TranscodingSpec spec = routeAndSpecs.get(mappedRoute);
         if (spec != null) {
             return serve0(ctx, req, spec);
@@ -502,7 +568,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, spec.method);
                         frameAndServe(unwrap(), ctx, grpcHeaders.build(),
                                       convertToJson(ctx, clientRequest, spec),
-                                      responseFuture);
+                                      responseFuture, generateResponseBodyConverter(spec));
                     } catch (IllegalArgumentException iae) {
                         responseFuture.completeExceptionally(
                                 HttpStatusException.of(HttpStatus.BAD_REQUEST, iae));
@@ -724,6 +790,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         private final Descriptors.MethodDescriptor methodDescriptor;
         private final Map<String, Field> fields;
         private final List<PathVariable> pathVariables;
+        @Nullable
+        private final String responseBody;
 
         private TranscodingSpec(int order,
                                 HttpRule httpRule,
@@ -731,7 +799,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                 ServiceDescriptor serviceDescriptor,
                                 MethodDescriptor methodDescriptor,
                                 Map<String, Field> fields,
-                                List<PathVariable> pathVariables) {
+                                List<PathVariable> pathVariables,
+                                @Nullable String responseBody) {
             this.order = order;
             this.httpRule = httpRule;
             this.method = method;
@@ -739,6 +808,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             this.methodDescriptor = methodDescriptor;
             this.fields = fields;
             this.pathVariables = pathVariables;
+            this.responseBody = responseBody;
         }
     }
 

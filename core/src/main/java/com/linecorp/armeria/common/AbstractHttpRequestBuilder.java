@@ -217,7 +217,7 @@ public abstract class AbstractHttpRequestBuilder
         if (queryParams == null) {
             queryParams = QueryParams.builder();
         }
-        queryParams.setObject(name, value);
+        queryParams.addObject(name, value);
         return this;
     }
 
@@ -228,7 +228,7 @@ public abstract class AbstractHttpRequestBuilder
         if (this.queryParams == null) {
             this.queryParams = QueryParams.builder();
         }
-        this.queryParams.set(queryParams);
+        this.queryParams.add(queryParams);
         return this;
     }
 

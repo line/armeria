@@ -261,10 +261,12 @@ class HttpRequestBuilderTest {
         }
 
         final HttpRequest req = builder.get("/")
-                                           .queryParam("foo", "bar")
-                                           .queryParams(QueryParams.of("from", 0, "limit", 10))
-                                           .build();
-        assertThat(req.path()).isEqualTo("/?foo=bar&from=0&limit=10");
+                                       .queryParam("name", "foo")
+                                       .queryParam("name", "bar")
+                                       .queryParams(QueryParams.of("from", "foo", "limit", 10))
+                                       .queryParams(QueryParams.of("from", "bar", "limit", 20))
+                                       .build();
+        assertThat(req.path()).isEqualTo("/?name=foo&name=bar&from=foo&limit=10&from=bar&limit=20");
         assertThat(req).isInstanceOf(EmptyFixedHttpRequest.class);
     }
 
@@ -430,7 +432,7 @@ class HttpRequestBuilderTest {
                       .cookie(Cookie.ofSecure("cookie", "value"))
                       .content(MediaType.PLAIN_TEXT_UTF_8, "test");
         request = requestBuilder.build();
-        assertThat(request.path()).isEqualTo("/resource1/resource2/resource4/foo-2/3?q=bar&f=10");
+        assertThat(request.path()).isEqualTo("/resource1/resource2/resource4/foo-2/3?q=foo&q=bar&f=10");
         assertThat(request.headers().contains("x-header-1", "5678")).isTrue();
         assertThat(request.headers().contains("x-header-2", "value")).isTrue();
         assertThat(request.headers().contains(COOKIE, "cookie=value")).isTrue();

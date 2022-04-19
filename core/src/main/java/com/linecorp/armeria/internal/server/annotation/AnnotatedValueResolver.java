@@ -59,6 +59,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
@@ -80,6 +81,7 @@ import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegis
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
+import com.linecorp.armeria.server.annotation.Delimiter;
 import com.linecorp.armeria.server.annotation.FallthroughException;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
@@ -165,7 +167,8 @@ final class AnnotatedValueResolver {
         converters.stream().map(RequestObjectResolver::of).forEach(builder::add);
         if (!requestConverterFunctionProviders.isEmpty()) {
             final ImmutableList<RequestConverterFunction> merged =
-                    ImmutableList.<RequestConverterFunction>builder().addAll(converters)
+                    ImmutableList.<RequestConverterFunction>builder()
+                                 .addAll(converters)
                                  .addAll(defaultRequestConverterFunctions)
                                  .build();
             final CompositeRequestConverterFunction composed = new CompositeRequestConverterFunction(merged);
@@ -189,8 +192,9 @@ final class AnnotatedValueResolver {
      */
     static List<AnnotatedValueResolver> ofServiceMethod(Method method, Set<String> pathParams,
                                                         List<RequestObjectResolver> objectResolvers,
-                                                        boolean useBlockingExecutor) {
-        return of(method, pathParams, objectResolvers, true, true, useBlockingExecutor);
+                                                        boolean useBlockingExecutor,
+                                                        @Nullable String queryDelimiter) {
+        return of(method, pathParams, objectResolvers, true, true, useBlockingExecutor, queryDelimiter);
     }
 
     /**
@@ -200,7 +204,7 @@ final class AnnotatedValueResolver {
     static List<AnnotatedValueResolver> ofBeanConstructorOrMethod(Executable constructorOrMethod,
                                                                   Set<String> pathParams,
                                                                   List<RequestObjectResolver> objectResolvers) {
-        return of(constructorOrMethod, pathParams, objectResolvers, false, false, false);
+        return of(constructorOrMethod, pathParams, objectResolvers, false, false, false, null);
     }
 
     /**
@@ -212,7 +216,7 @@ final class AnnotatedValueResolver {
                                               List<RequestObjectResolver> objectResolvers) {
         // 'Field' is only used for converting a bean.
         // So we always need to pass 'implicitRequestObjectAnnotation' as false.
-        return of(field, field, field.getType(), pathParams, objectResolvers, false, false);
+        return of(field, field, field.getType(), pathParams, objectResolvers, false, false, null);
     }
 
     /**
@@ -227,7 +231,8 @@ final class AnnotatedValueResolver {
                                                    List<RequestObjectResolver> objectResolvers,
                                                    boolean implicitRequestObjectAnnotation,
                                                    boolean isServiceMethod,
-                                                   boolean useBlockingExecutor) {
+                                                   boolean useBlockingExecutor,
+                                                   @Nullable String queryDelimiter) {
         final ImmutableList<Parameter> parameters =
                 Arrays.stream(constructorOrMethod.getParameters())
                       .filter(it -> !KotlinUtil.isContinuation(it.getType()))
@@ -275,7 +280,7 @@ final class AnnotatedValueResolver {
 
             resolver = of(constructorOrMethod,
                           headParameter, headParameter.getType(), pathParams, objectResolvers,
-                          implicitRequestObjectAnnotation, useBlockingExecutor);
+                          implicitRequestObjectAnnotation, useBlockingExecutor, queryDelimiter);
         } else if (!isServiceMethod && parametersSize == 1 &&
                    !AnnotationUtil.findDeclared(constructorOrMethod, RequestConverter.class).isEmpty()) {
             //
@@ -294,7 +299,8 @@ final class AnnotatedValueResolver {
             // @RequestConverter(BeanConverter.class)
             // void setter(Bean bean) { ... }
             //
-            resolver = of(headParameter, pathParams, objectResolvers, true, useBlockingExecutor);
+            resolver = of(headParameter, pathParams, objectResolvers, true, useBlockingExecutor,
+                          queryDelimiter);
         } else {
             //
             // There's no annotation. So there should be no @Default annotation, too.
@@ -323,7 +329,7 @@ final class AnnotatedValueResolver {
         } else {
             list = parameters.stream()
                              .map(p -> of(p, pathParams, objectResolvers,
-                                          implicitRequestObjectAnnotation, useBlockingExecutor))
+                                          implicitRequestObjectAnnotation, useBlockingExecutor, queryDelimiter))
                              .filter(Objects::nonNull)
                              .collect(toImmutableList());
         }
@@ -380,9 +386,10 @@ final class AnnotatedValueResolver {
     @Nullable
     static AnnotatedValueResolver of(Parameter parameter, Set<String> pathParams,
                                      List<RequestObjectResolver> objectResolvers,
-                                     boolean implicitRequestObjectAnnotation, boolean useBlockingExecutor) {
+                                     boolean implicitRequestObjectAnnotation, boolean useBlockingExecutor,
+                                     @Nullable String queryDelimiter) {
         return of(parameter, parameter, parameter.getType(), pathParams, objectResolvers,
-                  implicitRequestObjectAnnotation, useBlockingExecutor);
+                  implicitRequestObjectAnnotation, useBlockingExecutor, queryDelimiter);
     }
 
     /**
@@ -409,7 +416,8 @@ final class AnnotatedValueResolver {
                                              Set<String> pathParams,
                                              List<RequestObjectResolver> objectResolvers,
                                              boolean implicitRequestObjectAnnotation,
-                                             boolean useBlockingExecutor) {
+                                             boolean useBlockingExecutor,
+                                             @Nullable String queryDelimiter) {
         requireNonNull(annotatedElement, "annotatedElement");
         requireNonNull(typeElement, "typeElement");
         requireNonNull(type, "type");
@@ -426,7 +434,7 @@ final class AnnotatedValueResolver {
             if (pathParams.contains(name)) {
                 return ofPathVariable(name, annotatedElement, typeElement, type, description);
             } else {
-                return ofQueryParam(name, annotatedElement, typeElement, type, description);
+                return ofQueryParam(name, annotatedElement, typeElement, type, description, queryDelimiter);
             }
         }
 
@@ -479,8 +487,8 @@ final class AnnotatedValueResolver {
         }
 
         final ImmutableList.Builder<RequestObjectResolver> builder = new ImmutableList.Builder<>();
-        converters.forEach(c -> builder.add(RequestObjectResolver.of(
-                AnnotatedServiceFactory.getInstance(c.value()))));
+        converters.forEach(
+                c -> builder.add(RequestObjectResolver.of(AnnotatedObjectFactory.getInstance(c.value()))));
         builder.addAll(resolvers);
         return builder.build();
     }
@@ -519,7 +527,15 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofQueryParam(String name,
                                                        AnnotatedElement annotatedElement,
                                                        AnnotatedElement typeElement, Class<?> type,
-                                                       @Nullable String description) {
+                                                       @Nullable String description,
+                                                       @Nullable String serviceQueryDelimiter) {
+        String queryDelimiter = serviceQueryDelimiter;
+        final Delimiter delimiter = annotatedElement.getAnnotation(Delimiter.class);
+        if (delimiter != null) {
+            if (DefaultValues.isSpecified(delimiter.value())) {
+                queryDelimiter = delimiter.value();
+            }
+        }
         return new Builder(annotatedElement, type)
                 .annotationType(Param.class)
                 .httpElementName(name)
@@ -529,7 +545,8 @@ final class AnnotatedValueResolver {
                 .description(description)
                 .aggregation(AggregationStrategy.FOR_FORM_DATA)
                 .resolver(resolver(ctx -> ctx.queryParams().getAll(name),
-                                   () -> "Cannot resolve a value from a query parameter: " + name))
+                                   () -> "Cannot resolve a value from a query parameter: " + name,
+                                   queryDelimiter))
                 .build();
     }
 
@@ -559,9 +576,9 @@ final class AnnotatedValueResolver {
                 .supportDefault(true)
                 .supportContainer(true)
                 .description(description)
-                .resolver(resolver(
-                        ctx -> ctx.request().headers().getAll(HttpHeaderNames.of(name)),
-                        () -> "Cannot resolve a value from HTTP header: " + name))
+                .resolver(resolver(ctx -> ctx.request().headers().getAll(HttpHeaderNames.of(name)),
+                                   () -> "Cannot resolve a value from HTTP header: " + name,
+                                   null))
                 .build();
     }
 
@@ -685,7 +702,8 @@ final class AnnotatedValueResolver {
      * and adds them to the specified collection data type.
      */
     private static BiFunction<AnnotatedValueResolver, ResolverContext, Object>
-    resolver(Function<ResolverContext, List<String>> getter, Supplier<String> failureMessageSupplier) {
+    resolver(Function<ResolverContext, List<String>> getter, Supplier<String> failureMessageSupplier,
+             @Nullable String queryDelimiter) {
         return (resolver, ctx) -> {
             final List<String> values = getter.apply(ctx);
             if (!resolver.hasContainer()) {
@@ -703,7 +721,15 @@ final class AnnotatedValueResolver {
 
                 // Do not convert value here because the element type is String.
                 if (values != null && !values.isEmpty()) {
-                    values.stream().map(resolver::convert).forEach(resolvedValues::add);
+                    if (queryDelimiter != null && values.size() == 1) {
+                        final String first = values.get(0);
+                        Splitter.on(queryDelimiter)
+                                .splitToStream(first)
+                                .map(resolver::convert)
+                                .forEach(resolvedValues::add);
+                    } else {
+                        values.stream().map(resolver::convert).forEach(resolvedValues::add);
+                    }
                 } else {
                     final Object defaultValue = resolver.defaultOrException();
                     if (defaultValue != null) {
@@ -1262,7 +1288,9 @@ final class AnnotatedValueResolver {
                 Set.class.isAssignableFrom(rawType)) {
                 try {
                     // Only if there is a default constructor.
-                    rawType.getConstructor();
+                    // Note: `requireNonNull()` is redundant here, but it stops Error Prone from complaining
+                    //       about an ignored return value.
+                    requireNonNull(rawType.getConstructor());
                     return rawType;
                 } catch (Throwable cause) {
                     throw new IllegalArgumentException("Unsupported container type: " + rawType.getName(),

@@ -33,10 +33,10 @@ import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 
-class CertificationMetricTest {
+class ServerTlsCertificateMetricsTest {
 
-    private static final String CERT_VALIDITY_GAUGE_NAME = "armeria.server.certificate.validity";
-    private static final String CERT_VALIDITY_DAYS_GAUGE_NAME = "armeria.server.certificate.validity.days";
+    private static final String CERT_VALIDITY_GAUGE_NAME = "armeria.server.tls.certificate.validity";
+    private static final String CERT_VALIDITY_DAYS_GAUGE_NAME = "armeria.server.tls.certificate.validity.days";
 
     @Test
     void noTlsMetricGivenNoTlsSetup() {
@@ -87,16 +87,16 @@ class CertificationMetricTest {
 
     @Test
     void tlsMetricGivenVirtualHostCertificateNotExpired() throws CertificateException {
-        final String defaultHostName = "virtual.com";
-        final String hostnamePattern = "*.virtual.com";
-        final SelfSignedCertificate ssc = new SelfSignedCertificate(hostnamePattern);
+        final String commonName = "*.virtual.com";
+        final String hostnamePattern = "foo.virtual.com";
+        final SelfSignedCertificate ssc = new SelfSignedCertificate(commonName);
         final MeterRegistry meterRegistry = PrometheusMeterRegistries.newRegistry();
 
         Server.builder()
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .meterRegistry(meterRegistry)
               .tls(ssc.certificate(), ssc.privateKey())
-              .virtualHost(defaultHostName,hostnamePattern)
+              .virtualHost(hostnamePattern)
               .service("/", (ctx, req) -> HttpResponse.of(200))
               .tlsSelfSigned().and()
               .build();
@@ -108,12 +108,20 @@ class CertificationMetricTest {
         assertThat(daysValidityGauges.size()).isEqualTo(2);
 
         assertThat(meterRegistry.find(CERT_VALIDITY_GAUGE_NAME)
-                                .tag("common.name", hostnamePattern)
-                                .tag("hostname", defaultHostName)
+                                .tag("common.name", commonName)
+                                .tag("hostname.pattern", "*") // default virtual host
+                                .gauge().value()).isOne();
+        assertThat(meterRegistry.find(CERT_VALIDITY_GAUGE_NAME)
+                                .tag("common.name", commonName)
+                                .tag("hostname.pattern", hostnamePattern) // non-default virtual host
                                 .gauge().value()).isOne();
         assertThat(meterRegistry.find(CERT_VALIDITY_DAYS_GAUGE_NAME)
-                                .tag("common.name", hostnamePattern)
-                                .tag("hostname", defaultHostName)
+                                .tag("common.name", commonName)
+                                .tag("hostname.pattern", "*") // default virtual host
+                                .gauge().value()).isPositive();
+        assertThat(meterRegistry.find(CERT_VALIDITY_DAYS_GAUGE_NAME)
+                                .tag("common.name", commonName)
+                                .tag("hostname.pattern", hostnamePattern) // non-default virtual host
                                 .gauge().value()).isPositive();
     }
 
