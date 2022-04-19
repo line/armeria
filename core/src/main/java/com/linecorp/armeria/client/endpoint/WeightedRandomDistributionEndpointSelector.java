@@ -69,8 +69,8 @@ final class WeightedRandomDistributionEndpointSelector {
         }
 
         final ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
-        long target = threadLocalRandom.nextLong(remaining);
         synchronized (currentEntries) {
+            long target = threadLocalRandom.nextLong(remaining);
             final Iterator<Entry> it = currentEntries.iterator();
             while (it.hasNext()) {
                 final Entry entry = it.next();
@@ -83,8 +83,7 @@ final class WeightedRandomDistributionEndpointSelector {
                         entry.reset();
                         remaining -= weight;
                         if (remaining == 0) {
-                            // Since all entry are full, reset `currentEntries` and
-                            // `remaining` to `total`
+                            // As all entry are full, reset `currentEntries` and `remaining`.
                             currentEntries.addAll(allEntries);
                             remaining = total;
                         }
