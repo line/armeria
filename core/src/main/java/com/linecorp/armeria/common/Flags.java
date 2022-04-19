@@ -444,14 +444,14 @@ public final class Flags {
     }
 
     /**
-     * Returns the {@link RequestContextStorageProvider} that use for provides {@link RequestContextStorage}.
+     * Returns the {@link RequestContextStorageProvider} that provides the {@link RequestContextStorage}.
      *
      * <p>By default, If no {@link RequestContextStorageProvider} SPI provider implementation is provided,
      * This flag returns {@link RequestContextStorageProvider} that provides
      * {@link RequestContextStorage#threadLocal()}. Otherwise, the first {@link RequestContextStorageProvider}
      * SPI provider implementation will be selected.</p>
      *
-     * <p>By specify the {@code -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>} JVM option, you
+     * <p>By specifying the {@code -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>} JVM option, you
      * are able to select which {@link RequestContextStorageProvider} SPI provider implementation to used.
      * If none of them matches, the next {@link FlagsProvider#requestContextStorageProvider()} will be
      * selected.</p>
@@ -1122,9 +1122,10 @@ public final class Flags {
      * Returns the {@link Predicate} that is used to choose the non-loopback IP v4 address in
      * {@link SystemInfo#defaultNonLoopbackIpV4Address()}.
      *
-     * <p>The default value of this flag is {@code ignored -> true}, which means all valid IPv4 addresses are
-     * preferred. Specify the {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=<csv>} JVM option
-     * to override the default value. The {@code csv} should be
+     * <p>This flag by default returns a {@link Predicate} that always returns {@code true},
+     * which means all valid IPv4 addresses are preferred.
+     * Specify the {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=<csv>} JVM option to override the
+     * default value. The {@code csv} should be
      * <a href="https://datatracker.ietf.org/doc/rfc4632/">Classless Inter-domain Routing(CIDR)</a>s or
      * exact IP addresses separated by commas. For example,
      * {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=211.111.111.111,10.0.0.0/8,192.168.1.0/24}.
@@ -1363,10 +1364,10 @@ public final class Flags {
 
         if (value != null) {
             if (validator.test(value)) {
-                logger.info("{}: {} (JVM option)", fullName, value);
+                logger.info("{}: {} (sysprops)", fullName, value);
                 return value;
             }
-            logger.warn("{}: {} (JVM option) fail validation", fullName, value);
+            logger.warn("{}: {} (sysprops, validation failed)", fullName, value);
         }
         logger.info("{}: {} (default)", fullName, defaultValue);
         return defaultValue;
@@ -1385,15 +1386,13 @@ public final class Flags {
                     continue;
                 }
                 if (!validator.test(value)) {
-                    logger.warn("{}: {} ({}) fail validation",
-                                flagName, value, provider.name());
+                    logger.warn("{}: {} ({}, validation failed)", flagName, value, provider.name());
                     continue;
                 }
                 logger.info("{}: {} ({})", flagName, value, provider.name());
                 return value;
             } catch (Exception ex) {
-                logger.warn("{}: ({}) fail to get value, {}", flagName, provider.name(),
-                            ex.getMessage());
+                logger.warn("{}: ({}, {})", flagName, provider.name(), ex.getMessage());
             }
         }
         // Should never reach here because DefaultFlagsProvider always returns a normal value.

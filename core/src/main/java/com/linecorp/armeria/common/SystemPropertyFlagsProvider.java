@@ -82,7 +82,7 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
             Sampler.of(spec);
         } catch (Exception e) {
             // Invalid sampler specification
-            throw new IllegalArgumentException(String.format("%s is invalid specification", spec), e);
+            throw new IllegalArgumentException("invalid sampler spec: " + spec, e);
         }
 
         return new ExceptionSampler(spec);

@@ -146,14 +146,14 @@ public interface FlagsProvider {
     }
 
     /**
-     * Returns the {@link RequestContextStorageProvider} that use for provides {@link RequestContextStorage}.
+     * Returns the {@link RequestContextStorageProvider} that provides the {@link RequestContextStorage}.
      *
      * <p>By default, If no {@link RequestContextStorageProvider} SPI provider implementation is provided,
      * This flag returns {@link RequestContextStorageProvider} that provides
      * {@link RequestContextStorage#threadLocal()}. Otherwise, the first {@link RequestContextStorageProvider}
      * SPI provider implementation will be selected.</p>
      *
-     * <p>By specify the {@code -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>} JVM option, you
+     * <p>By specifying the {@code -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>} JVM option, you
      * are able to select which {@link RequestContextStorageProvider} SPI provider implementation to used.
      * If none of them matches, the next {@link FlagsProvider#requestContextStorageProvider()} will be
      * selected.</p>
@@ -777,9 +777,10 @@ public interface FlagsProvider {
      * Returns the {@link Predicate} that is used to choose the non-loopback IP v4 address in
      * {@link SystemInfo#defaultNonLoopbackIpV4Address()}.
      *
-     * <p>The default value of this flag is {@code ignored -> true}, which means all valid IPv4 addresses are
-     * preferred. Specify the {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=<csv>} JVM option
-     * to override the default value. The {@code csv} should be
+     * <p>This flag by default returns a {@link Predicate} that always returns {@code true},
+     * which means all valid IPv4 addresses are preferred.
+     * Specify the {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=<csv>} JVM option to override the
+     * default value. The {@code csv} should be
      * <a href="https://datatracker.ietf.org/doc/rfc4632/">Classless Inter-domain Routing(CIDR)</a>s or
      * exact IP addresses separated by commas. For example,
      * {@code -Dcom.linecorp.armeria.preferredIpV4Addresses=211.111.111.111,10.0.0.0/8,192.168.1.0/24}.
