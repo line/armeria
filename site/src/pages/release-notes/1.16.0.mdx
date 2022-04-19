@@ -48,14 +48,14 @@ date: 2022-04-19
       rpc GetNumbers(GetNumbersRequest) returns (GetNumbersResponse) {
         option (google.api.http) = {
           get: "/api/v1/numbers"
-          response_body: "numbers"
+          response_body: "my_number_array" // 👈👈👈
         };
       }
     }
     
     message GetNumbersRequest {}
     message GetNumbersResponse {
-      repeated string numbers = 1;
+      repeated string my_number_array = 1; // 👈👈👈
     }
     ```
 - You can now use the <type://@Decorator> annotation to apply decorators to your gRPC stubs. #3967 #4041
