@@ -79,7 +79,7 @@ public interface ResponseLogLevelMapper extends Function<RequestLog, LogLevel> {
                 return null;
             }
             final Class<? extends Throwable> throwableClass = t.getClass();
-            if (throwableClass == clazz) {
+            if (clazz.isAssignableFrom(throwableClass)) {
                 return logLevel;
             }
             return null;
