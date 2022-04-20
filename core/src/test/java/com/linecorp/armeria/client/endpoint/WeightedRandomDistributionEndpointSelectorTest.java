@@ -65,17 +65,17 @@ final class WeightedRandomDistributionEndpointSelectorTest {
 
     @Test
     void resetEntriesWhenAllEntriesAreFull() throws InterruptedException {
-        final int concurrency = 16;
+        final int concurrency = 4;
         final CountDownLatch startLatch = new CountDownLatch(concurrency);
         final CountDownLatch checkLatch = new CountDownLatch(concurrency);
         final CountDownLatch finalLatch = new CountDownLatch(concurrency);
-        final Endpoint foo = Endpoint.of("foo.com").withWeight(1000);
-        final Endpoint bar = Endpoint.of("bar.com").withWeight(2000);
-        final Endpoint qux = Endpoint.of("qux.com").withWeight(3000);
+        final Endpoint foo = Endpoint.of("foo.com").withWeight(10);
+        final Endpoint bar = Endpoint.of("bar.com").withWeight(20);
+        final Endpoint qux = Endpoint.of("qux.com").withWeight(30);
         final List<Endpoint> endpoints = ImmutableList.of(foo, bar, qux);
         final WeightedRandomDistributionEndpointSelector
                 selector = new WeightedRandomDistributionEndpointSelector(endpoints);
-        final int totalWeight = 6000;
+        final int totalWeight = foo.weight() + bar.weight() + qux.weight();
         for (int i = 0; i < concurrency; i++) {
             CommonPools.blockingTaskExecutor().execute(() -> {
                 try {
