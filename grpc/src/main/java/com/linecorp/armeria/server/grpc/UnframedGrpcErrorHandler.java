@@ -17,17 +17,14 @@ package com.linecorp.armeria.server.grpc;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
@@ -105,17 +102,11 @@ public interface UnframedGrpcErrorHandler {
                 cause = null;
             }
             final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
-            final ResponseHeadersBuilder responseHeadersBuilder =
-                    ResponseHeaders.builder(httpStatus)
-                                   .contentType(MediaType.JSON_UTF_8)
-                                   .addInt(GrpcHeaderNames.GRPC_STATUS,
-                                           grpcCode.value());
-            final HttpHeaders trailers = !response.trailers().isEmpty() ?
-                                         response.trailers() : response.headers();
-            final String grpcStatusDetailsBin = trailers.get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN);
-            if (!Strings.isNullOrEmpty(grpcStatusDetailsBin)) {
-                responseHeadersBuilder.set(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN, grpcStatusDetailsBin);
-            }
+            final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
+                                                                   .contentType(MediaType.JSON_UTF_8)
+                                                                   .addInt(GrpcHeaderNames.GRPC_STATUS,
+                                                                           grpcCode.value())
+                                                                   .build();
             final ImmutableMap.Builder<String, String> messageBuilder = ImmutableMap.builder();
             messageBuilder.put("grpc-code", grpcCode.name());
             if (grpcMessage != null) {
@@ -124,7 +115,7 @@ public interface UnframedGrpcErrorHandler {
             if (cause != null && ctx.config().verboseResponses()) {
                 messageBuilder.put("stack-trace", Exceptions.traceText(cause));
             }
-            return HttpResponse.ofJson(responseHeadersBuilder.build(), messageBuilder.build());
+            return HttpResponse.ofJson(responseHeaders, messageBuilder.build());
         };
     }
 
@@ -157,17 +148,11 @@ public interface UnframedGrpcErrorHandler {
                 cause = null;
             }
             final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
-            final ResponseHeadersBuilder responseHeadersBuilder =
-                    ResponseHeaders.builder(httpStatus)
-                                   .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                   .addInt(GrpcHeaderNames.GRPC_STATUS,
-                                           grpcCode.value());
-            final HttpHeaders trailers = !response.trailers().isEmpty() ?
-                                         response.trailers() : response.headers();
-            final String grpcStatusDetailsBin = trailers.get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN);
-            if (!Strings.isNullOrEmpty(grpcStatusDetailsBin)) {
-                responseHeadersBuilder.set(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN, grpcStatusDetailsBin);
-            }
+            final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
+                                                                   .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                                                                   .addInt(GrpcHeaderNames.GRPC_STATUS,
+                                                                           grpcCode.value())
+                                                                   .build();
             final HttpData content;
             try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
                 final StringBuilder msg = ttl.stringBuilder();
@@ -181,7 +166,7 @@ public interface UnframedGrpcErrorHandler {
                 }
                 content = HttpData.ofUtf8(msg);
             }
-            return HttpResponse.of(responseHeadersBuilder.build(), content);
+            return HttpResponse.of(responseHeaders, content);
         };
     }
 
