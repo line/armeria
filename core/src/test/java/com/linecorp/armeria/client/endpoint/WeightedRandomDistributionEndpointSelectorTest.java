@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -31,6 +33,9 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.util.Exceptions;
 
 final class WeightedRandomDistributionEndpointSelectorTest {
+
+    private static final Logger logger =
+            LoggerFactory.getLogger(WeightedRandomDistributionEndpointSelectorTest.class);
 
     @Test
     void zeroWeightFiltered() {
@@ -66,12 +71,13 @@ final class WeightedRandomDistributionEndpointSelectorTest {
     @Test
     void resetEntriesWhenAllEntriesAreFull() throws InterruptedException {
         final int concurrency = 4;
-        final CountDownLatch startLatch = new CountDownLatch(concurrency);
-        final CountDownLatch checkLatch = new CountDownLatch(concurrency);
-        final CountDownLatch finalLatch = new CountDownLatch(concurrency);
-        final Endpoint foo = Endpoint.of("foo.com").withWeight(10);
-        final Endpoint bar = Endpoint.of("bar.com").withWeight(20);
-        final Endpoint qux = Endpoint.of("qux.com").withWeight(30);
+        final CountDownLatch startLatch0 = new CountDownLatch(concurrency);
+        final CountDownLatch finalLatch0 = new CountDownLatch(concurrency);
+        final CountDownLatch startLatch1 = new CountDownLatch(concurrency);
+        final CountDownLatch finalLatch1 = new CountDownLatch(concurrency);
+        final Endpoint foo = Endpoint.of("foo.com").withWeight(100);
+        final Endpoint bar = Endpoint.of("bar.com").withWeight(200);
+        final Endpoint qux = Endpoint.of("qux.com").withWeight(300);
         final List<Endpoint> endpoints = ImmutableList.of(foo, bar, qux);
         final WeightedRandomDistributionEndpointSelector
                 selector = new WeightedRandomDistributionEndpointSelector(endpoints);
@@ -79,35 +85,32 @@ final class WeightedRandomDistributionEndpointSelectorTest {
         for (int i = 0; i < concurrency; i++) {
             CommonPools.blockingTaskExecutor().execute(() -> {
                 try {
-                    startLatch.countDown();
-                    startLatch.await();
+                    startLatch0.countDown();
+                    startLatch0.await();
 
                     for (int count = 0; count < totalWeight * concurrency; count++) {
                         assertThat(selector.selectEndpoint()).isNotNull();
                     }
-                    checkLatch.countDown();
-                    checkLatch.await();
+                    finalLatch0.countDown();
+                    finalLatch0.await();
 
-                    int sum = selector.entries().stream().mapToInt(Entry::counter).sum();
+                    final int sum = selector.entries().stream().mapToInt(Entry::counter).sum();
                     // Since all entries were full, `Entry.counter()` should be reset.
                     assertThat(sum).isZero();
 
+                    startLatch1.countDown();
+                    startLatch1.await();
                     for (int count = 0; count < totalWeight * concurrency; count++) {
                         assertThat(selector.selectEndpoint()).isNotNull();
                     }
-                    finalLatch.countDown();
-                    finalLatch.await();
-
-                    sum = selector.entries().stream().mapToInt(Entry::counter).sum();
-                    // Since all entries were full, `Entry.counter()` should be reset.
-                    assertThat(sum).isZero();
+                    finalLatch1.countDown();
                 } catch (Exception e) {
                     Exceptions.throwUnsafely(e);
                 }
             });
         }
 
-        finalLatch.await();
+        finalLatch1.await();
         final int sum = selector.entries().stream().mapToInt(Entry::counter).sum();
         assertThat(sum).isZero();
     }
