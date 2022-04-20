@@ -160,6 +160,11 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.requestLogLevel(requestLogLevel);
     }
 
+    @Override
+    public LoggingServiceBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
+        return (LoggingServiceBuilder) super.requestLogLevel(clazz, requestLogLevel);
+    }
+
     @Deprecated
     @Override
     public LoggingServiceBuilder requestLogLevelMapper(
@@ -180,6 +185,11 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     @Override
     public LoggingServiceBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
         return (LoggingServiceBuilder) super.responseLogLevel(statusClass, logLevel);
+    }
+
+    @Override
+    public LoggingServiceBuilder responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
+        return (LoggingServiceBuilder) super.responseLogLevel(clazz, logLevel);
     }
 
     @Override
@@ -265,10 +275,5 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer) {
         return (LoggingServiceBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
-    }
-
-    @Override
-    public LoggingServiceBuilder addExpectedException(Class<? extends Throwable> clazz, LogLevel logLevel) {
-        return (LoggingServiceBuilder) super.addExpectedException(clazz, logLevel);
     }
 }

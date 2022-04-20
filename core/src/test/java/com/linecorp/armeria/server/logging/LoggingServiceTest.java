@@ -45,7 +45,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -503,30 +502,5 @@ class LoggingServiceTest {
 
         service.serve(ctx, ctx.request());
         verifyNoInteractions(logger);
-    }
-
-    @Test
-    void expectedExceptions() throws Exception {
-        final ServiceRequestContext ctx = ServiceRequestContext.of(
-                HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/")));
-        final Exception exception = HttpStatusException.of(500, new IllegalStateException("status"));
-        ctx.logBuilder().endResponse(exception);
-        final Logger logger = LoggingTestUtil.newMockLogger(ctx, capturedCause);
-        when(logger.isInfoEnabled()).thenReturn(true);
-
-        final LoggingService service =
-                LoggingService.builder()
-                              .logger(logger)
-                              .addExpectedException(IllegalStateException.class, LogLevel.INFO)
-                              .responseLogLevel(HttpStatus.SERVICE_UNAVAILABLE, LogLevel.ERROR)
-                              .newDecorator().apply(delegate);
-
-        service.serve(ctx, ctx.request());
-        verify(logger, never()).isWarnEnabled();
-        verify(logger).isInfoEnabled();
-        verify(logger).info(eq(REQUEST_FORMAT), same(ctx), matches(".*headers=\\[:method=GET, :path=/.*"));
-        verify(logger).info(eq(RESPONSE_FORMAT), same(ctx),
-                            matches(".*cause=java\\.lang\\.IllegalStateException.*"),
-                            same(exception.getCause()));
     }
 }

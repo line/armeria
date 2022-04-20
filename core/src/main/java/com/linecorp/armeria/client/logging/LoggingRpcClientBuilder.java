@@ -120,6 +120,11 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.requestLogLevel(requestLogLevel);
     }
 
+    @Override
+    public LoggingRpcClientBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
+        return (LoggingRpcClientBuilder) super.requestLogLevel(clazz, requestLogLevel);
+    }
+
     @Deprecated
     @Override
     public LoggingRpcClientBuilder requestLogLevelMapper(
@@ -140,6 +145,11 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     @Override
     public LoggingRpcClientBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
         return (LoggingRpcClientBuilder) super.responseLogLevel(statusClass, logLevel);
+    }
+
+    @Override
+    public LoggingRpcClientBuilder responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
+        return (LoggingRpcClientBuilder) super.responseLogLevel(clazz, logLevel);
     }
 
     @Override
@@ -224,10 +234,5 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer) {
         return (LoggingRpcClientBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
-    }
-
-    @Override
-    public LoggingRpcClientBuilder addExpectedException(Class<? extends Throwable> clazz, LogLevel logLevel) {
-        return (LoggingRpcClientBuilder) super.addExpectedException(clazz, logLevel);
     }
 }

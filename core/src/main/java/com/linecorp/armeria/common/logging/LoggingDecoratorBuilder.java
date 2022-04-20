@@ -106,6 +106,16 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
+     * Sets the {@link LogLevel} to use when the request processing failure occurs by specified
+     * {@link Throwable} and logging requests.
+     */
+    public LoggingDecoratorBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(requestLogLevel, "requestLogLevel");
+        return requestLogLevelMapper(RequestLogLevelMapper.of(clazz, requestLogLevel));
+    }
+
+    /**
      * Sets the {@link Function} to use when mapping the log level of request logs.
      *
      * @deprecated Use {@link #requestLogLevelMapper(RequestLogLevelMapper)} instead.
@@ -160,6 +170,17 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
+     * Sets the {@link LogLevel} to use when the response processing failure occurs by specified
+     * {@link Throwable} and logging responses.
+     */
+    @UnstableApi
+    public LoggingDecoratorBuilder responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(logLevel, "logLevel");
+        return responseLogLevelMapper(ResponseLogLevelMapper.of(clazz, logLevel));
+    }
+
+    /**
      * Sets the {@link LogLevel} to use when logging successful responses (e.g., no unhandled exception).
      * {@link LogLevel#DEBUG} will be used by default.
      */
@@ -211,17 +232,6 @@ public abstract class LoggingDecoratorBuilder {
             return ResponseLogLevelMapper.of(LogLevel.DEBUG, LogLevel.WARN);
         }
         return responseLogLevelMapper.orElse(ResponseLogLevelMapper.of(LogLevel.DEBUG, LogLevel.WARN));
-    }
-
-    /**
-     * Adds an expected exception and the {@link LogLevel} which will be used when the exception occurred.
-     */
-    public LoggingDecoratorBuilder addExpectedException(Class<? extends Throwable> clazz, LogLevel
-            logLevel) {
-        requireNonNull(clazz, "clazz");
-        requireNonNull(logLevel, "logLevel");
-        responseLogLevelMapper(ResponseLogLevelMapper.of(clazz, logLevel));
-        return this;
     }
 
     /**

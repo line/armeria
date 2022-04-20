@@ -203,6 +203,35 @@ class LoggingDecoratorBuilderTest {
     }
 
     @Test
+    void responseLogLevelWithThrowable() {
+        builder.successfulResponseLogLevel(LogLevel.INFO)
+               .responseLogLevel(NullPointerException.class, LogLevel.DEBUG)
+               .responseLogLevel(HttpStatusClass.SERVER_ERROR, LogLevel.ERROR)
+               .responseLogLevel(IllegalStateException.class, LogLevel.INFO);
+
+        final ResponseLogLevelMapper mapper = builder.responseLogLevelMapper();
+        assertThat(mapper.apply(newRequestLog(HttpStatus.OK))).isEqualTo(LogLevel.INFO);
+        assertThat(mapper.apply(newRequestLog(HttpStatus.BAD_REQUEST, new RuntimeException())))
+                .isEqualTo(LogLevel.WARN);
+        assertThat(mapper.apply(newRequestLog(HttpStatus.BAD_REQUEST, new IllegalStateException())))
+                .isEqualTo(LogLevel.INFO);
+        assertThat(mapper.apply(newRequestLog(HttpStatus.INTERNAL_SERVER_ERROR, new RuntimeException())))
+                .isEqualTo(LogLevel.ERROR);
+        assertThat(mapper.apply(newRequestLog(HttpStatus.INTERNAL_SERVER_ERROR, new NullPointerException())))
+                .isEqualTo(LogLevel.DEBUG);
+    }
+
+    @Test
+    void requestLogLevelWithThrowable() {
+        builder.requestLogLevel(IllegalStateException.class, LogLevel.ERROR)
+               .requestLogLevel(LogLevel.INFO);
+
+        final RequestLogLevelMapper mapper = builder.requestLogLevelMapper();
+        assertThat(mapper.apply(newRequestOnlyLog(new IllegalStateException()))).isEqualTo(LogLevel.ERROR);
+        assertThat(mapper.apply(newRequestOnlyLog(new RuntimeException()))).isEqualTo(LogLevel.INFO);
+    }
+
+    @Test
     void requestHeadersSanitizer() {
         assertThatThrownBy(() -> builder.requestHeadersSanitizer(nullBiFunction))
                 .isInstanceOf(NullPointerException.class);
@@ -301,6 +330,13 @@ class LoggingDecoratorBuilderTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         ctx.logBuilder().endRequest();
         return ctx.logBuilder().whenRequestComplete().join();
+    }
+
+    private static RequestOnlyLog newRequestOnlyLog(Throwable cause) {
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final RequestLogBuilder builder = RequestLog.builder(ctx);
+        builder.endRequest(cause);
+        return builder.whenRequestComplete().join();
     }
 
     private static RequestLog newRequestLog(HttpStatus status) {
