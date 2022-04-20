@@ -22,42 +22,29 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
-import java.util.Base64;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.google.common.collect.ImmutableMap;
-import com.google.protobuf.Any;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.rpc.ErrorInfo;
-
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
-import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.grpc.BindableService;
 import io.grpc.Status;
 import io.grpc.Status.Code;
-import io.grpc.protobuf.StatusProto;
 import io.grpc.stub.StreamObserver;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -81,12 +68,6 @@ class UnframedGrpcServiceTest {
 
     private static ServiceRequestContext ctx;
     private static HttpRequest request;
-
-    private static com.google.rpc.Status decodeGrpcStatusDetailsBin(String grpcStatusDetailsBin)
-            throws InvalidProtocolBufferException {
-        final byte[] result = Base64.getDecoder().decode(grpcStatusDetailsBin);
-        return com.google.rpc.Status.parseFrom(result);
-    }
 
     @BeforeEach
     void setUp() {
@@ -117,46 +98,6 @@ class UnframedGrpcServiceTest {
         assertThat(res.status()).isEqualTo(HttpStatus.CLIENT_CLOSED_REQUEST);
         assertThat(res.contentUtf8())
                 .startsWith("grpc-code: CANCELLED, grpc error message");
-    }
-
-    @Test
-    void throwGrpcStatus() throws Exception {
-        final TestService spyTestService = spy(testService);
-        final ErrorInfo errorInfo = ErrorInfo.newBuilder()
-                                             .setDomain("test")
-                                             .setReason("Unknown Exception").build();
-        final com.google.rpc.Status
-                status = com.google.rpc.Status.newBuilder()
-                                              .setCode(2)
-                                              .setMessage("Unknown Exceptions Test")
-                                              .addDetails(
-                                                      Any.pack(errorInfo))
-                                              .build();
-        doThrow(StatusProto.toStatusRuntimeException(status))
-                .when(spyTestService)
-                .emptyCall(any(), any());
-
-
-        final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(spyTestService);
-
-        final HttpResponse response = unframedGrpcService.serve(ctx, request);
-        response.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle(
-                (framedResponse, t) -> {
-                    //try (SafeCloseable ignore = ctx.push()) {
-                    framedResponse.headers();
-                    final ResponseHeaders responseHeaders
-                            = ResponseHeaders.builder().addInt(HttpHeaderNames.STATUS,
-                                                               200)
-
-                                             .set(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN, framedResponse.headers().get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN))
-                                             .build();
-                    //PooledObjects.close(grpcResponse);
-                    System.out.println();
-                    return null;
-                });
-        //final AggregatedHttpResponse res = response.aggregate().get();
-        //final String grpcStatusDetailsBin = res.headers().get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN);
-        //assertThat(decodeGrpcStatusDetailsBin(grpcStatusDetailsBin)).isEqualTo(status);
     }
 
     @Test
@@ -251,37 +192,6 @@ class UnframedGrpcServiceTest {
 
     private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService,
                                                                 UnframedGrpcErrorHandler errorHandler) {
-        final Function<? super HttpService, ? extends HttpService> decorator =
-                s -> new SimpleDecoratingHttpService(s) {
-                    @Override
-                    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                        HttpResponse grpcResponse = unwrap().serve(ctx, req);
-                        RequestHeaders headerss = RequestContext.current().request().headers();
-                        CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-                        grpcResponse.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle(
-                                (framedResponse, t) -> {
-                                    //try (SafeCloseable ignore = ctx.push()) {
-                                    if (t != null) {
-                                        responseFuture.completeExceptionally(t);
-                                    }
-                                    framedResponse.headers();
-                                    final ResponseHeaders responseHeaders
-                                            = ResponseHeaders.builder().addInt(HttpHeaderNames.STATUS,
-                                                                               200)
-
-                                                             .set(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN, framedResponse.headers().get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN))
-                                                             .build();
-                                    //PooledObjects.close(grpcResponse);
-                                    System.out.println();
-                                    responseFuture.complete(HttpResponse.ofJson(responseHeaders, ImmutableMap
-                                            .builder()));
-                                    return null;
-                                });
-                        return HttpResponse.from(responseFuture);
-
-
-                    }
-                };
         return (UnframedGrpcService) GrpcService.builder()
                                                 .addService(bindableService)
                                                 .maxRequestMessageLength(MAX_MESSAGE_BYTES)

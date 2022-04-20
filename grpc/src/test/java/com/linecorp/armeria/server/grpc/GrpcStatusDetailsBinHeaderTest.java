@@ -45,10 +45,10 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import io.grpc.protobuf.StatusProto;
 import io.grpc.stub.StreamObserver;
 
-public class UnframedGrpcErrorHandle2Test {
+public class GrpcStatusDetailsBinHeaderTest {
 
     @RegisterExtension
-    static ServerExtension testServerWithHeaderExtractDecorator = new ServerExtension() {
+    static ServerExtension testServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             configureServer(sb, testServiceWithErrorDetails);
@@ -82,7 +82,10 @@ public class UnframedGrpcErrorHandle2Test {
                               .unframedGrpcErrorHandler((ctx, status, response) -> {
                                   final ResponseHeaders responseHeaders
                                           = ResponseHeaders.builder().addInt(HttpHeaderNames.STATUS, 500)
-                                                           .set(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN, response.headers().get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN))
+                                                           .set(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN,
+                                                                response.headers().get(
+                                                                        GrpcHeaderNames
+                                                                                .GRPC_STATUS_DETAILS_BIN))
                                                            .build();
                                   return HttpResponse.ofJson(responseHeaders, ImmutableMap.builder());
                               })
@@ -97,7 +100,7 @@ public class UnframedGrpcErrorHandle2Test {
 
     @Test
     void googleRpcErrorDetail() throws InvalidProtocolBufferException {
-        final BlockingWebClient client = testServerWithHeaderExtractDecorator.webClient().blocking();
+        final BlockingWebClient client = testServer.webClient().blocking();
         final AggregatedHttpResponse response =
                 client.prepare()
                       .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
