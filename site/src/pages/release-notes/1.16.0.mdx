@@ -17,7 +17,7 @@ date: 2022-04-19
 - You can use the <type://@Delimiter> annotation in an annotated service to specify the delimiter of
   a query parameter or header. #4060
   ```java
-  public class MyAnnotatedService
+  public class MyAnnotatedService {
     // Given the request:
     //   GET /api/v1/users?ids=1,2,3
     // Armeria will inject:
