@@ -55,9 +55,6 @@ class LoggingClientTest {
         return HttpResponse.of(HttpStatus.NO_CONTENT);
     };
 
-    private static final String REQUEST_FORMAT = "{} Request: {}";
-    private static final String RESPONSE_FORMAT = "{} Response: {}";
-
     private final AtomicReference<Throwable> capturedCause = new AtomicReference<>();
 
     @AfterEach
