@@ -21,7 +21,8 @@
     "grpc/blog/run-service",
     "grpc/blog/implement-create",
     "grpc/blog/implement-read",
-    "grpc/blog/implement-update"
+    "grpc/blog/implement-update",
+    "grpc/blog/implement-delete"
   ],
   "Thrift service":{
     "Coming soon": null
