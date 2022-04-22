@@ -137,9 +137,9 @@ final class WeightRampingUpStrategy implements EndpointSelectionStrategy {
 
             final AtomicBoolean initialized = new AtomicBoolean();
             endpointGroup.addListener(newEndpoints -> {
-                final List<Endpoint> dedupEndpoints =
-                        new ArrayList<>(deduplicateEndpoints(newEndpoints).values());
                 if (initialized.compareAndSet(false, true)) {
+                    final List<Endpoint> dedupEndpoints =
+                            new ArrayList<>(deduplicateEndpoints(newEndpoints).values());
                     endpointSelector = new WeightedRandomDistributionEndpointSelector(dedupEndpoints);
                     endpointsFinishedRampingUp.addAll(dedupEndpoints);
                 } else {
