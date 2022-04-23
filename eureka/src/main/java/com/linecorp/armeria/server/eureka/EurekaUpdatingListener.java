@@ -191,7 +191,6 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         final String defaultHostname = server.defaultHostname();
         final String hostName = oldInfo.getHostName() != null ? oldInfo.getHostName() : defaultHostname;
         appName = oldInfo.getAppName() != null ? oldInfo.getAppName() : hostName;
-        final String instanceId = oldInfo.getInstanceId() != null ? oldInfo.getInstanceId() : hostName;
 
         final Inet4Address defaultInet4Address = SystemInfo.defaultNonLoopbackIpV4Address();
         final String defaultIpAddr = defaultInet4Address != null ? defaultInet4Address.getHostAddress()
@@ -201,6 +200,9 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         final PortWrapper portWrapper = portWrapper(server, oldPortWrapper, SessionProtocol.HTTP);
         final PortWrapper oldSecurePortWrapper = oldInfo.getSecurePort();
         final PortWrapper securePortWrapper = portWrapper(server, oldSecurePortWrapper, SessionProtocol.HTTPS);
+
+        final String instanceId = oldInfo.getInstanceId() != null ? oldInfo.getInstanceId() :
+                                  hostName + ":" + appName + ":" + portWrapper.getPort();
 
         final String vipAddress = vipAddress(oldInfo.getVipAddress(), hostName, portWrapper);
         final String secureVipAddress = vipAddress(oldInfo.getSecureVipAddress(), hostName, securePortWrapper);
