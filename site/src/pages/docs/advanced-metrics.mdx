@@ -62,8 +62,8 @@ Server.builder()
 This approach can be used to collect metrics for a <type://WebClient> and a gRPC client:
 
 ```java
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 
 // Decorate a WebClient with MetricCollectingClient
@@ -73,10 +73,10 @@ WebClient.builder(httpUrl)
          .build();
 
 // Decorate a gRPC client with MetricCollectingClient
-Clients.builder(grpcUrl)
-       .decorator(MetricCollectingClient.newDecorator(
-               GrpcMeterIdPrefixFunction.of("grpc.client")))
-       .build(HelloServiceBlockingStub.class);
+GrpcClients.builder(grpcUrl)
+           .decorator(MetricCollectingClient.newDecorator(
+                   GrpcMeterIdPrefixFunction.of("grpc.client")))
+           .build(HelloServiceBlockingStub.class);
 ```
 
 Like the server-side metrics described above, certain scenarios might require you to 

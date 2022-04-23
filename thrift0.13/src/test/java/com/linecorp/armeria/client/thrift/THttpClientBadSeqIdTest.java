@@ -30,7 +30,6 @@ import java.util.concurrent.ExecutionException;
 import org.apache.thrift.TApplicationException;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
@@ -42,7 +41,7 @@ public class THttpClientBadSeqIdTest {
         try (ServerSocket ss = new ServerSocket(0)) {
             ss.setSoTimeout(5000);
 
-            final THttpClient client = Clients.newClient(
+            final THttpClient client = ThriftClients.newClient(
                     "ttext+h1c://127.0.0.1:" + ss.getLocalPort(), THttpClient.class);
 
             final RpcResponse res = client.execute("/", HelloService.Iface.class, "hello", "trustin");

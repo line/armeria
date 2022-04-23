@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.thrift;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -36,11 +37,14 @@ import org.apache.thrift.meta_data.FieldMetaData;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.apache.thrift.protocol.TProtocol;
+import org.apache.thrift.protocol.TProtocolException;
+import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.transport.TTransport;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.ExchangeType;
@@ -74,6 +78,7 @@ import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
@@ -267,18 +272,31 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private final ThriftCallService thriftService;
     private final SerializationFormat defaultSerializationFormat;
     private final Set<SerializationFormat> supportedSerializationFormats;
+    private final int maxRequestStringLength;
+    private final int maxRequestContainerLength;
     private final BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
             exceptionHandler;
+    private final Map<SerializationFormat, TProtocolFactory> responseProtocolFactories;
+    @Nullable
+    private Map<SerializationFormat, TProtocolFactory> requestProtocolFactories;
 
     THttpService(RpcService delegate, SerializationFormat defaultSerializationFormat,
                  Set<SerializationFormat> supportedSerializationFormats,
+                 int maxRequestStringLength, int maxRequestContainerLength,
                  BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
                          exceptionHandler) {
         super(delegate);
         thriftService = findThriftService(delegate);
         this.defaultSerializationFormat = defaultSerializationFormat;
         this.supportedSerializationFormats = ImmutableSet.copyOf(supportedSerializationFormats);
+        this.maxRequestStringLength = maxRequestStringLength;
+        this.maxRequestContainerLength = maxRequestContainerLength;
         this.exceptionHandler = exceptionHandler;
+        responseProtocolFactories = supportedSerializationFormats
+                .stream()
+                .collect(toImmutableMap(
+                        Function.identity(),
+                        format -> ThriftSerializationFormats.protocolFactory(format, 0, 0)));
     }
 
     private static ThriftCallService findThriftService(Service<?, ?> delegate) {
@@ -310,6 +328,24 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
      */
     public SerializationFormat defaultSerializationFormat() {
         return defaultSerializationFormat;
+    }
+
+    @Override
+    public void serviceAdded(ServiceConfig cfg) throws Exception {
+        final int maxStringLength0;
+        if (maxRequestStringLength == -1) {
+            maxStringLength0 = Ints.saturatedCast(cfg.maxRequestLength());
+        } else {
+            maxStringLength0 = maxRequestStringLength;
+        }
+        requestProtocolFactories = supportedSerializationFormats
+                .stream()
+                .collect(toImmutableMap(
+                        Function.identity(),
+                        format -> ThriftSerializationFormats.protocolFactory(
+                                format, maxStringLength0, maxRequestContainerLength)));
+
+        super.serviceAdded(cfg);
     }
 
     @Override
@@ -410,8 +446,10 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
         try (HttpData content = req.content()) {
             final TByteBufTransport inTransport = new TByteBufTransport(content.byteBuf());
-            final TProtocol inProto = ThriftSerializationFormats.protocolFactory(serializationFormat)
-                                                                .getProtocol(inTransport);
+            // protocolFactories should be initialized when this service is added.
+            assert requestProtocolFactories != null;
+            final TProtocol inProto = requestProtocolFactories.get(serializationFormat)
+                                                              .getProtocol(inTransport);
 
             final TMessage header;
             final TBase<?, ?> args;
@@ -421,17 +459,21 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             } catch (Exception e) {
                 logger.debug("{} Failed to decode a {} header:", ctx, serializationFormat, e);
 
-                final HttpResponse errorRes;
-                if (ctx.config().verboseResponses()) {
-                    errorRes = HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
-                                               "Failed to decode a %s header: %s", serializationFormat,
-                                               Exceptions.traceText(e));
+                final HttpStatus httpStatus;
+                String message;
+                if (e instanceof TProtocolException &&
+                    ((TProtocolException) e).getType() == TProtocolException.SIZE_LIMIT) {
+                    httpStatus = HttpStatus.REQUEST_ENTITY_TOO_LARGE;
+                    message = e.getMessage();
                 } else {
-                    errorRes = HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
-                                               "Failed to decode a %s header", serializationFormat);
+                    httpStatus = HttpStatus.BAD_REQUEST;
+                    message = "Failed to decode a " + serializationFormat + " header";
+                }
+                if (ctx.config().verboseResponses()) {
+                    message += '\n' + Exceptions.traceText(e);
                 }
 
-                httpRes.complete(errorRes);
+                httpRes.complete(HttpResponse.of(httpStatus, MediaType.PLAIN_TEXT_UTF_8, message));
                 return;
             }
 
@@ -572,7 +614,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         return RpcRequest.of(serviceType, method, list);
     }
 
-    private static void handleSuccess(
+    private void handleSuccess(
             ServiceRequestContext ctx, RpcResponse rpcRes, CompletableFuture<HttpResponse> httpRes,
             SerializationFormat serializationFormat, int seqId, ThriftFunction func, Object returnValue) {
 
@@ -613,7 +655,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         return res;
     }
 
-    private static void handleException(
+    private void handleException(
             ServiceRequestContext ctx, RpcResponse rpcRes, CompletableFuture<HttpResponse> httpRes,
             SerializationFormat serializationFormat, int seqId, ThriftFunction func, Throwable cause) {
 
@@ -633,7 +675,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         respond(serializationFormat, content, httpRes);
     }
 
-    private static void handlePreDecodeException(
+    private void handlePreDecodeException(
             ServiceRequestContext ctx, CompletableFuture<HttpResponse> httpRes, Throwable cause,
             SerializationFormat serializationFormat, int seqId, String methodName) {
 
@@ -647,18 +689,16 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         res.complete(HttpResponse.of(HttpStatus.OK, serializationFormat.mediaType(), content));
     }
 
-    private static HttpData encodeSuccess(ServiceRequestContext ctx,
-                                          RpcResponse reply,
-                                          SerializationFormat serializationFormat,
-                                          String methodName, int seqId,
-                                          TBase<?, ?> result) {
+    private HttpData encodeSuccess(ServiceRequestContext ctx, RpcResponse reply,
+                                   SerializationFormat serializationFormat, String methodName, int seqId,
+                                   TBase<?, ?> result) {
 
         final ByteBuf buf = ctx.alloc().buffer(128);
         boolean success = false;
         try {
             final TTransport transport = new TByteBufTransport(buf);
-            final TProtocol outProto = ThriftSerializationFormats.protocolFactory(serializationFormat)
-                                                                 .getProtocol(transport);
+            final TProtocol outProto = responseProtocolFactories.get(serializationFormat)
+                                                                .getProtocol(transport);
             final TMessage header = new TMessage(methodName, TMessageType.REPLY, seqId);
             outProto.writeMessageBegin(header);
             result.write(outProto);
@@ -678,10 +718,10 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         }
     }
 
-    private static HttpData encodeException(ServiceRequestContext ctx,
-                                            RpcResponse reply,
-                                            SerializationFormat serializationFormat,
-                                            int seqId, String methodName, Throwable cause) {
+    private HttpData encodeException(ServiceRequestContext ctx,
+                                     RpcResponse reply,
+                                     SerializationFormat serializationFormat,
+                                     int seqId, String methodName, Throwable cause) {
 
         final TApplicationException appException;
         if (cause instanceof TApplicationException) {
@@ -705,8 +745,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         boolean success = false;
         try {
             final TTransport transport = new TByteBufTransport(buf);
-            final TProtocol outProto = ThriftSerializationFormats.protocolFactory(serializationFormat)
-                                                                 .getProtocol(transport);
+            final TProtocol outProto = responseProtocolFactories.get(serializationFormat)
+                                                                .getProtocol(transport);
             final TMessage header = new TMessage(methodName, TMessageType.EXCEPTION, seqId);
             outProto.writeMessageBegin(header);
             appException.write(outProto);

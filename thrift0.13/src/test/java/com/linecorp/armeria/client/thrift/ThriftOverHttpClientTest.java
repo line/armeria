@@ -35,6 +35,7 @@ import java.util.stream.Stream;
 import org.apache.thrift.TApplicationException;
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.apache.thrift.protocol.TMessageType;
+import org.apache.thrift.protocol.TProtocolFactory;
 import org.apache.thrift.protocol.TTupleProtocol;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.AfterAll;
@@ -70,6 +71,7 @@ import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SerializationFormatProvider;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.thrift.ThriftCall;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
@@ -109,9 +111,14 @@ public class ThriftOverHttpClientTest {
 
     public static class TestThriftProtocolFactoryProvider extends ThriftProtocolFactoryProvider {
         @Override
-        public Set<ThriftProtocolFactoryProvider.Entry> entries() {
-            return ImmutableSet.of(new ThriftProtocolFactoryProvider.Entry(
-                    SerializationFormat.of("ttuple"), new TTupleProtocol.Factory()));
+        protected Set<SerializationFormat> serializationFormats() {
+            return ImmutableSet.of(SerializationFormat.of("ttuple"));
+        }
+
+        @Override
+        protected @Nullable TProtocolFactory tProtocolFactory(SerializationFormat serializationFormat,
+                                                              int maxStringLength, int maxContainerLength) {
+            return new TTupleProtocol.Factory();
         }
     }
 
@@ -282,9 +289,9 @@ public class ThriftOverHttpClientTest {
     void testHelloServiceSync(
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
-        final HelloService.Iface client = Clients.builder(uri(Handlers.HELLO, format, protocol))
-                                                 .options(clientOptions)
-                                                 .build(Handlers.HELLO.iface());
+        final HelloService.Iface client = ThriftClients.builder(uri(Handlers.HELLO, format, protocol))
+                                                       .options(clientOptions)
+                                                       .build(Handlers.HELLO.iface());
         assertThat(client.hello("kukuman")).isEqualTo("Hello, kukuman!");
         assertThat(client.hello(null)).isEqualTo("Hello, null!");
 
@@ -299,9 +306,9 @@ public class ThriftOverHttpClientTest {
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         final HelloService.AsyncIface client =
-                Clients.builder(uri(Handlers.HELLO, format, protocol))
-                       .options(clientOptions)
-                       .build(Handlers.HELLO.asyncIface());
+                ThriftClients.builder(uri(Handlers.HELLO, format, protocol))
+                             .options(clientOptions)
+                             .build(Handlers.HELLO.asyncIface());
 
         final int testCount = 10;
         final BlockingQueue<AbstractMap.SimpleEntry<Integer, ?>> resultQueue =
@@ -331,9 +338,9 @@ public class ThriftOverHttpClientTest {
     void contextCaptorSync(
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
-        final HelloService.Iface client = Clients.builder(uri(Handlers.HELLO, format, protocol))
-                                                 .options(clientOptions)
-                                                 .build(Handlers.HELLO.iface());
+        final HelloService.Iface client = ThriftClients.builder(uri(Handlers.HELLO, format, protocol))
+                                                       .options(clientOptions)
+                                                       .build(Handlers.HELLO.iface());
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             client.hello("kukuman");
             final ClientRequestContext ctx = ctxCaptor.get();
@@ -350,9 +357,9 @@ public class ThriftOverHttpClientTest {
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         final HelloService.AsyncIface client =
-                Clients.builder(uri(Handlers.HELLO, format, protocol))
-                       .options(clientOptions)
-                       .build(Handlers.HELLO.asyncIface());
+                ThriftClients.builder(uri(Handlers.HELLO, format, protocol))
+                             .options(clientOptions)
+                             .build(Handlers.HELLO.asyncIface());
 
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
             client.hello("kukuman", new ThriftFuture<>());
@@ -370,9 +377,9 @@ public class ThriftOverHttpClientTest {
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         final OnewayHelloService.Iface client =
-                Clients.builder(uri(Handlers.ONEWAYHELLO, format, protocol))
-                       .options(clientOptions)
-                       .build(Handlers.ONEWAYHELLO.iface());
+                ThriftClients.builder(uri(Handlers.ONEWAYHELLO, format, protocol))
+                             .options(clientOptions)
+                             .build(Handlers.ONEWAYHELLO.iface());
         client.hello("kukuman");
         client.hello("kukuman2");
         assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
@@ -385,9 +392,9 @@ public class ThriftOverHttpClientTest {
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         final OnewayHelloService.AsyncIface client =
-                Clients.builder(uri(Handlers.ONEWAYHELLO, format, protocol))
-                       .options(clientOptions)
-                       .build(Handlers.ONEWAYHELLO.asyncIface());
+                ThriftClients.builder(uri(Handlers.ONEWAYHELLO, format, protocol))
+                             .options(clientOptions)
+                             .build(Handlers.ONEWAYHELLO.asyncIface());
         final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
         final String[] names = { "kukuman", "kukuman2" };
@@ -410,9 +417,9 @@ public class ThriftOverHttpClientTest {
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         final OnewayHelloService.Iface client =
-                Clients.builder(uri(Handlers.EXCEPTION_ONEWAY, format, protocol))
-                       .options(clientOptions)
-                       .build(Handlers.EXCEPTION_ONEWAY.iface());
+                ThriftClients.builder(uri(Handlers.EXCEPTION_ONEWAY, format, protocol))
+                             .options(clientOptions)
+                             .build(Handlers.EXCEPTION_ONEWAY.iface());
         client.hello("kukuman");
         client.hello("kukuman2");
         assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
@@ -425,9 +432,9 @@ public class ThriftOverHttpClientTest {
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         final OnewayHelloService.AsyncIface client =
-                Clients.builder(uri(Handlers.EXCEPTION_ONEWAY, format, protocol))
-                       .options(clientOptions)
-                       .build(Handlers.EXCEPTION_ONEWAY.asyncIface());
+                ThriftClients.builder(uri(Handlers.EXCEPTION_ONEWAY, format, protocol))
+                             .options(clientOptions)
+                             .build(Handlers.EXCEPTION_ONEWAY.asyncIface());
         final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
         final String[] names = { "kukuman", "kukuman2" };
@@ -450,9 +457,9 @@ public class ThriftOverHttpClientTest {
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         final DevNullService.Iface client =
-                Clients.builder(uri(Handlers.DEVNULL, format, protocol))
-                       .options(clientOptions)
-                       .build(Handlers.DEVNULL.iface());
+                ThriftClients.builder(uri(Handlers.DEVNULL, format, protocol))
+                             .options(clientOptions)
+                             .build(Handlers.DEVNULL.iface());
         client.consume("kukuman");
         client.consume("kukuman2");
         assertThat(serverReceivedNames.take()).isEqualTo("kukuman");
@@ -465,9 +472,9 @@ public class ThriftOverHttpClientTest {
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         final DevNullService.AsyncIface client =
-                Clients.builder(uri(Handlers.DEVNULL, format, protocol))
-                       .options(clientOptions)
-                       .build(Handlers.DEVNULL.asyncIface());
+                ThriftClients.builder(uri(Handlers.DEVNULL, format, protocol))
+                             .options(clientOptions)
+                             .build(Handlers.DEVNULL.asyncIface());
         final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
 
         final String[] names = { "kukuman", "kukuman2" };
@@ -489,9 +496,9 @@ public class ThriftOverHttpClientTest {
     void testBinaryServiceSync(
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
-        final BinaryService.Iface client = Clients.builder(uri(Handlers.BINARY, format, protocol))
-                                                  .options(clientOptions)
-                                                  .build(Handlers.BINARY.iface());
+        final BinaryService.Iface client = ThriftClients.builder(uri(Handlers.BINARY, format, protocol))
+                                                        .options(clientOptions)
+                                                        .build(Handlers.BINARY.iface());
 
         final ByteBuffer result = client.process(ByteBuffer.wrap(new byte[] { 1, 2 }));
         final List<Byte> out = new ArrayList<>();
@@ -507,9 +514,9 @@ public class ThriftOverHttpClientTest {
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         final TimeService.Iface client =
-                Clients.builder(uri(Handlers.TIME, format, protocol))
-                       .options(clientOptions)
-                       .build(Handlers.TIME.iface());
+                ThriftClients.builder(uri(Handlers.TIME, format, protocol))
+                             .options(clientOptions)
+                             .build(Handlers.TIME.iface());
 
         final long serverTime = client.getServerTime();
         assertThat(serverTime).isLessThanOrEqualTo(System.currentTimeMillis());
@@ -521,9 +528,9 @@ public class ThriftOverHttpClientTest {
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         final TimeService.AsyncIface client =
-                Clients.builder(uri(Handlers.TIME, format, protocol))
-                       .options(clientOptions)
-                       .build(Handlers.TIME.asyncIface());
+                ThriftClients.builder(uri(Handlers.TIME, format, protocol))
+                             .options(clientOptions)
+                             .build(Handlers.TIME.asyncIface());
 
         final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
         client.getServerTime(new RequestQueuingCallback(resQueue));
@@ -539,9 +546,9 @@ public class ThriftOverHttpClientTest {
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         final FileService.Iface client =
-                Clients.builder(uri(Handlers.FILE, format, protocol))
-                       .options(clientOptions)
-                       .build(Handlers.FILE.iface());
+                ThriftClients.builder(uri(Handlers.FILE, format, protocol))
+                             .options(clientOptions)
+                             .build(Handlers.FILE.iface());
 
         assertThatThrownBy(() -> client.create("test")).isInstanceOf(FileServiceException.class);
     }
@@ -552,9 +559,9 @@ public class ThriftOverHttpClientTest {
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
         final FileService.AsyncIface client =
-                Clients.builder(uri(Handlers.FILE, format, protocol))
-                       .options(clientOptions)
-                       .build(Handlers.FILE.asyncIface());
+                ThriftClients.builder(uri(Handlers.FILE, format, protocol))
+                             .options(clientOptions)
+                             .build(Handlers.FILE.asyncIface());
 
         final BlockingQueue<Object> resQueue = new LinkedBlockingQueue<>();
         client.create("test", new RequestQueuingCallback(resQueue));
@@ -572,9 +579,9 @@ public class ThriftOverHttpClientTest {
         final String TOKEN_A = "token 1234";
         final String TOKEN_B = "token 5678";
 
-        final HeaderService.Iface client = Clients.builder(uri(Handlers.HEADER, format, protocol))
-                                                  .options(clientOptions)
-                                                  .build(Handlers.HEADER.iface());
+        final HeaderService.Iface client = ThriftClients.builder(uri(Handlers.HEADER, format, protocol))
+                                                        .options(clientOptions)
+                                                        .build(Handlers.HEADER.iface());
 
         assertThat(client.header(AUTHORIZATION)).isEqualTo(NO_TOKEN);
 
@@ -598,9 +605,9 @@ public class ThriftOverHttpClientTest {
     void testMessageLogsForCall(
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
-        final HelloService.Iface client = Clients.builder(uri(Handlers.HELLO, format, protocol))
-                                                 .options(clientOptions)
-                                                 .build(Handlers.HELLO.iface());
+        final HelloService.Iface client = ThriftClients.builder(uri(Handlers.HELLO, format, protocol))
+                                                       .options(clientOptions)
+                                                       .build(Handlers.HELLO.iface());
         recordMessageLogs = true;
         client.hello("trustin");
 
@@ -641,9 +648,9 @@ public class ThriftOverHttpClientTest {
     void testMessageLogsForOneWay(
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
-        final OnewayHelloService.Iface client = Clients.builder(uri(Handlers.HELLO, format, protocol))
-                                                       .options(clientOptions)
-                                                       .build(Handlers.ONEWAYHELLO.iface());
+        final OnewayHelloService.Iface client = ThriftClients.builder(uri(Handlers.HELLO, format, protocol))
+                                                             .options(clientOptions)
+                                                             .build(Handlers.ONEWAYHELLO.iface());
         recordMessageLogs = true;
         client.hello("trustin");
 
@@ -677,9 +684,9 @@ public class ThriftOverHttpClientTest {
     void testMessageLogsForException(
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
-        final HelloService.Iface client = Clients.builder(uri(Handlers.EXCEPTION, format, protocol))
-                                                 .options(clientOptions)
-                                                 .build(Handlers.EXCEPTION.iface());
+        final HelloService.Iface client = ThriftClients.builder(uri(Handlers.EXCEPTION, format, protocol))
+                                                       .options(clientOptions)
+                                                       .build(Handlers.EXCEPTION.iface());
         recordMessageLogs = true;
 
         assertThatThrownBy(() -> client.hello("trustin")).isInstanceOf(TApplicationException.class);
@@ -719,9 +726,10 @@ public class ThriftOverHttpClientTest {
     void testBadStatus(
             ClientOptions clientOptions, SerializationFormat format, SessionProtocol protocol)
             throws Exception {
-        final HelloService.Iface client = Clients.builder(server.uri(protocol, format) + "/500")
-                                                 .options(clientOptions)
-                                                 .build(Handlers.HELLO.iface());
+        final HelloService.Iface client = ThriftClients.builder(server.uri(protocol, format))
+                                                       .path("/500")
+                                                       .options(clientOptions)
+                                                       .build(Handlers.HELLO.iface());
         assertThatThrownBy(() -> client.hello(""))
                 .isInstanceOf(TTransportException.class)
                 .getCause()
@@ -740,17 +748,17 @@ public class ThriftOverHttpClientTest {
         final Endpoint group = Endpoint.of("127.0.0.1", protocol.isTls() ? server.httpsPort()
                                                                          : server.httpPort());
         final HelloService.Iface client =
-                Clients.builder(format.uriText() + '+' + protocol.uriText() +
-                                "://my-group/" + Handlers.HELLO.path(format))
-                       .options(clientOptions)
-                       .endpointRemapper(endpoint -> {
-                           if ("my-group".equals(endpoint.host())) {
-                               return group;
-                           } else {
-                               return endpoint;
-                           }
-                       })
-                       .build(Handlers.HELLO.iface());
+                ThriftClients.builder(format.uriText() + '+' + protocol.uriText() +
+                                      "://my-group/" + Handlers.HELLO.path(format))
+                             .options(clientOptions)
+                             .endpointRemapper(endpoint -> {
+                                 if ("my-group".equals(endpoint.host())) {
+                                     return group;
+                                 } else {
+                                     return endpoint;
+                                 }
+                             })
+                             .build(Handlers.HELLO.iface());
 
         assertThat(client.hello("trustin")).isEqualTo("Hello, trustin!");
     }
@@ -768,47 +776,47 @@ public class ThriftOverHttpClientTest {
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             return ThriftSerializationFormats.values().stream().flatMap(serializationFormat -> Stream.of(
-                            arguments(clientOptions.toBuilder()
-                                                   .factory(clientFactoryWithUseHttp2Preface)
-                                                   .build(),
-                                      serializationFormat,
-                                      SessionProtocol.HTTP),
-                            arguments(clientOptions.toBuilder()
-                                                   .factory(clientFactoryWithoutUseHttp2Preface)
-                                                   .build(),
-                                      serializationFormat,
-                                      SessionProtocol.HTTP),
-                            arguments(clientOptions.toBuilder()
-                                                   .factory(clientFactoryWithoutUseHttp2Preface)
-                                                   .build(),
-                                      serializationFormat,
-                                      SessionProtocol.HTTPS),
-                            arguments(clientOptions.toBuilder()
-                                                   .factory(clientFactoryWithoutUseHttp2Preface)
-                                                   .build(),
-                                      serializationFormat,
-                                      SessionProtocol.H1),
-                            arguments(clientOptions.toBuilder()
-                                                   .factory(clientFactoryWithoutUseHttp2Preface)
-                                                   .build(),
-                                      serializationFormat,
-                                      SessionProtocol.H1C),
-                            arguments(clientOptions.toBuilder()
-                                                   .factory(clientFactoryWithoutUseHttp2Preface)
-                                                   .build(),
-                                      serializationFormat,
-                                      SessionProtocol.H2),
-                            arguments(clientOptions.toBuilder()
-                                                   .factory(clientFactoryWithUseHttp2Preface)
-                                                   .build(),
-                                      serializationFormat,
-                                      SessionProtocol.H2C),
-                            arguments(clientOptions.toBuilder()
-                                                   .factory(clientFactoryWithoutUseHttp2Preface)
-                                                   .build(),
-                                      serializationFormat,
-                                      SessionProtocol.H2C)
-                    ));
+                    arguments(clientOptions.toBuilder()
+                                           .factory(clientFactoryWithUseHttp2Preface)
+                                           .build(),
+                              serializationFormat,
+                              SessionProtocol.HTTP),
+                    arguments(clientOptions.toBuilder()
+                                           .factory(clientFactoryWithoutUseHttp2Preface)
+                                           .build(),
+                              serializationFormat,
+                              SessionProtocol.HTTP),
+                    arguments(clientOptions.toBuilder()
+                                           .factory(clientFactoryWithoutUseHttp2Preface)
+                                           .build(),
+                              serializationFormat,
+                              SessionProtocol.HTTPS),
+                    arguments(clientOptions.toBuilder()
+                                           .factory(clientFactoryWithoutUseHttp2Preface)
+                                           .build(),
+                              serializationFormat,
+                              SessionProtocol.H1),
+                    arguments(clientOptions.toBuilder()
+                                           .factory(clientFactoryWithoutUseHttp2Preface)
+                                           .build(),
+                              serializationFormat,
+                              SessionProtocol.H1C),
+                    arguments(clientOptions.toBuilder()
+                                           .factory(clientFactoryWithoutUseHttp2Preface)
+                                           .build(),
+                              serializationFormat,
+                              SessionProtocol.H2),
+                    arguments(clientOptions.toBuilder()
+                                           .factory(clientFactoryWithUseHttp2Preface)
+                                           .build(),
+                              serializationFormat,
+                              SessionProtocol.H2C),
+                    arguments(clientOptions.toBuilder()
+                                           .factory(clientFactoryWithoutUseHttp2Preface)
+                                           .build(),
+                              serializationFormat,
+                              SessionProtocol.H2C)
+            ));
         }
     }
 

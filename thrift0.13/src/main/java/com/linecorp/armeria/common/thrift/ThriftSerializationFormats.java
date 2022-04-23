@@ -15,12 +15,10 @@
  */
 package com.linecorp.armeria.common.thrift;
 
-import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
-import java.util.Map;
 import java.util.ServiceLoader;
 import java.util.Set;
 
@@ -62,21 +60,18 @@ public final class ThriftSerializationFormats {
      */
     public static final SerializationFormat TEXT_NAMED_ENUM = SerializationFormat.of("ttext-named-enum");
 
-    /**
-     * A way to lookup the related {@link TProtocolFactory} from a {@link SerializationFormat}.
-     * Entries are provided via registered SPI {@link ThriftProtocolFactoryProvider} implementations.
-     */
-    private static final Map<SerializationFormat, TProtocolFactory> knownProtocolFactories;
+    private static final List<ThriftProtocolFactoryProvider> protocolFactoryProviders;
+
+    private static final Set<SerializationFormat> knownSerializationFormats;
 
     static {
-        final List<ThriftProtocolFactoryProvider> providers = ImmutableList.copyOf(
+        protocolFactoryProviders = ImmutableList.copyOf(
                 ServiceLoader.load(ThriftProtocolFactoryProvider.class,
                                    ThriftProtocolFactoryProvider.class.getClassLoader()));
-        knownProtocolFactories = providers
+        knownSerializationFormats = protocolFactoryProviders
                 .stream()
-                .map(ThriftProtocolFactoryProvider::entries)
-                .flatMap(Set::stream)
-                .collect(toImmutableMap(e -> e.serializationFormat, e -> e.tProtocolFactory));
+                .flatMap(provider -> provider.serializationFormats().stream())
+                .collect(toImmutableSet());
     }
 
     /**
@@ -84,12 +79,37 @@ public final class ThriftSerializationFormats {
      *
      * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not a
      *         known Thrift serialization format
+     * @deprecated Use {@link #protocolFactory(SerializationFormat, int, int)} instead.
      */
+    @Deprecated
     public static TProtocolFactory protocolFactory(SerializationFormat serializationFormat) {
+        return protocolFactory(serializationFormat, 0, 0);
+    }
+
+    /**
+     * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat},
+     * {@code maxStringLength} and {@code maxContainerLength}.
+     *
+     * @param serializationFormat the serialization that {@link TProtocolFactory} supports.
+     * @param maxStringLength the maximum allowed number of bytes to read from the transport for
+     *                        variable-length fields (such as strings or binary). {@code 0} means unlimited.
+     * @param maxContainerLength the maximum allowed number of bytes to read from the transport for
+     *                           containers (maps, sets, lists). {@code 0} means unlimited.
+     * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not a
+     *                                  known Thrift serialization format
+     */
+    public static TProtocolFactory protocolFactory(SerializationFormat serializationFormat, int maxStringLength,
+                                                   int maxContainerLength) {
         requireNonNull(serializationFormat, "serializationFormat");
-        final TProtocolFactory value = knownProtocolFactories.get(serializationFormat);
-        checkArgument(value != null, "Unsupported Thrift serializationFormat: %s", serializationFormat);
-        return value;
+        for (ThriftProtocolFactoryProvider provider : protocolFactoryProviders) {
+            final TProtocolFactory tProtocolFactory =
+                    provider.tProtocolFactory(serializationFormat, maxStringLength, maxContainerLength);
+            if (tProtocolFactory != null) {
+                return tProtocolFactory;
+            }
+        }
+
+        throw new IllegalArgumentException("Unsupported Thrift serializationFormat: " + serializationFormat);
     }
 
     /**
@@ -98,7 +118,7 @@ public final class ThriftSerializationFormats {
      * @return an view of the registered Thrift serialization formats.
      */
     public static Set<SerializationFormat> values() {
-        return knownProtocolFactories.keySet();
+        return knownSerializationFormats;
     }
 
     /**

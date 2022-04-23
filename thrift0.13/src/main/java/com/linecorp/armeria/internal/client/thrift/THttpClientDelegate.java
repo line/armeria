@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.internal.client.thrift;
 
+import static com.linecorp.armeria.client.thrift.ThriftClientOptions.MAX_RESPONSE_CONTAINER_LENGTH;
+import static com.linecorp.armeria.client.thrift.ThriftClientOptions.MAX_RESPONSE_STRING_LENGTH;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -34,7 +37,9 @@ import org.apache.thrift.transport.TTransport;
 import org.apache.thrift.transport.TTransportException;
 
 import com.google.common.base.Strings;
+import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DecoratingClient;
 import com.linecorp.armeria.client.Endpoint;
@@ -75,15 +80,27 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
     private final AtomicInteger nextSeqId = new AtomicInteger();
 
     private final SerializationFormat serializationFormat;
-    private final TProtocolFactory protocolFactory;
+    private final TProtocolFactory requestProtocolFactory;
+    private final TProtocolFactory responseProtocolFactory;
     private final MediaType mediaType;
     private final Map<Class<?>, ThriftServiceMetadata> metadataMap = new ConcurrentHashMap<>();
 
-    THttpClientDelegate(HttpClient httpClient,
-                        SerializationFormat serializationFormat) {
+    THttpClientDelegate(HttpClient httpClient, ClientOptions options, SerializationFormat serializationFormat) {
         super(httpClient);
         this.serializationFormat = serializationFormat;
-        protocolFactory = ThriftSerializationFormats.protocolFactory(serializationFormat);
+        requestProtocolFactory =
+                ThriftSerializationFormats.protocolFactory(serializationFormat, 0, 0);
+        int maxStringLength = options.get(MAX_RESPONSE_STRING_LENGTH);
+        if (maxStringLength < 0) {
+            maxStringLength = Ints.saturatedCast(options.maxResponseLength());
+        }
+        int maxContainerLength = options.get(MAX_RESPONSE_CONTAINER_LENGTH);
+        if (maxContainerLength < 0) {
+            maxContainerLength = 0;
+        }
+        responseProtocolFactory =
+                ThriftSerializationFormats.protocolFactory(serializationFormat,
+                                                           maxStringLength, maxContainerLength);
         mediaType = serializationFormat.mediaType();
     }
 
@@ -114,7 +131,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
 
             try {
                 final TByteBufTransport outTransport = new TByteBufTransport(buf);
-                final TProtocol tProtocol = protocolFactory.getProtocol(outTransport);
+                final TProtocol tProtocol = requestProtocolFactory.getProtocol(outTransport);
                 tProtocol.writeMessageBegin(header);
                 @SuppressWarnings("rawtypes")
                 final TBase tArgs = func.newArgs(args);
@@ -209,7 +226,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         }
 
         final TTransport inputTransport = new TByteBufTransport(content.byteBuf());
-        final TProtocol inputProtocol = protocolFactory.getProtocol(inputTransport);
+        final TProtocol inputProtocol = responseProtocolFactory.getProtocol(inputTransport);
 
         final TMessage header = inputProtocol.readMessageBegin();
         final TApplicationException appEx = readApplicationException(seqId, func, inputProtocol, header);

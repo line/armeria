@@ -29,7 +29,7 @@ import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -92,6 +92,6 @@ public class TMultiplexedProtocolIntegrationTest {
         } else {
             uri = server.httpUri(BINARY).resolve('#' + serviceName);
         }
-        return Clients.newClient(uri, Iface.class);
+        return ThriftClients.newClient(uri, Iface.class);
     }
 }

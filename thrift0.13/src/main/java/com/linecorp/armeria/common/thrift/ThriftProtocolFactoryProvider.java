@@ -24,6 +24,7 @@ import org.apache.thrift.protocol.TProtocolFactory;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * SPI Provider for links from {@link SerializationFormat} to {@link TProtocolFactory}.
@@ -51,9 +52,22 @@ public abstract class ThriftProtocolFactoryProvider {
     }
 
     /**
-     * Returns the configured {@link Entry}s for this SPI provider.
-     *
-     * @return an immutable set of configured entries
+     * Returns the supported Thrift-related {@link SerializationFormat}s.
      */
-    protected abstract Set<Entry> entries();
+    protected abstract Set<SerializationFormat> serializationFormats();
+
+    /**
+     * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat},
+     * {@code maxStringLength} and {@code maxContainerLength}.
+     * Returns {@code null} if the {@link SerializationFormat} is unsupported.
+     *
+     * @param serializationFormat the serialization that {@link TProtocolFactory} supports.
+     * @param maxStringLength the maximum allowed number of bytes to read from the transport for
+     *                        variable-length fields (such as strings or binary). {@code 0} means unlimited.
+     * @param maxContainerLength the maximum allowed number of bytes to read from the transport for
+     *                           containers (maps, sets, lists). {@code 0} means unlimited.
+     */
+    @Nullable
+    protected abstract TProtocolFactory tProtocolFactory(SerializationFormat serializationFormat,
+                                                         int maxStringLength, int maxContainerLength);
 }

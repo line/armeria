@@ -23,7 +23,6 @@ import java.time.Duration;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
@@ -87,10 +86,11 @@ class GrpcProtoVersionTest {
     @Test
     void testProto3() {
         final Proto3ServiceBlockingStub proto3Service =
-                Clients.builder(server.httpUri(GrpcSerializationFormats.JSON))
-                       .writeTimeout(Duration.ZERO)
-                       .responseTimeout(Duration.ZERO)
-                       .build(Proto3ServiceBlockingStub.class);
+                GrpcClients.builder(server.httpUri())
+                           .serializationFormat(GrpcSerializationFormats.JSON)
+                           .writeTimeout(Duration.ZERO)
+                           .responseTimeout(Duration.ZERO)
+                           .build(Proto3ServiceBlockingStub.class);
         final Proto3Message message = Proto3Message.newBuilder().setFoo(Foo3.B3).build();
         assertThat(proto3Service.echo(message)).isEqualTo(message);
     }
