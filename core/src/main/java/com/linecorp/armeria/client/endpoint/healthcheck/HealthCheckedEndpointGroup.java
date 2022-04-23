@@ -19,9 +19,9 @@ import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Deque;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Queue;
@@ -184,7 +184,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private List<Endpoint> allHealthyEndpoints() {
-        final Set<Endpoint> allHealthyEndpoints = new HashSet<>();
+        final List<Endpoint> allHealthyEndpoints = new ArrayList<>();
         synchronized (contextGroupChain) {
             final HealthCheckContextGroup newGroup = contextGroupChain.getLast();
             for (Endpoint candidate : newGroup.candidates()) {
@@ -206,7 +206,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
             }
         }
-        return ImmutableList.copyOf(allHealthyEndpoints);
+        return allHealthyEndpoints;
     }
 
     @Nullable
