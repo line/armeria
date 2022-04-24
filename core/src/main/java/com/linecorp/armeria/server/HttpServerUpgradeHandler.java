@@ -30,6 +30,8 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.netty.channel.ChannelFutureListener.CLOSE;
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.util.AsciiString.containsContentEqualsIgnoreCase;
@@ -74,6 +76,7 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
     // limitation of the size of content.
 
     private static final FullHttpResponse UPGRADE_RESPONSE = newUpgradeResponse();
+    private static final FullHttpResponse BAD_REQUEST_RESPONSE = newBadRequestResponse();
 
     private static final Splitter COMMA_SPLITTER = Splitter.on(',').omitEmptyStrings().trimResults();
 
@@ -276,6 +279,7 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
         // Prepare and send the upgrade response. Wait for this write to complete before upgrading,
         // since we need the old codec in-place to properly encode the response.
         if (!upgradeCodec.prepareUpgradeResponse(ctx, request)) {
+            ctx.writeAndFlush(BAD_REQUEST_RESPONSE.retain()).addListener(CLOSE);
             return false;
         }
 
@@ -321,5 +325,12 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
         res.headers().add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE);
         res.headers().add(HttpHeaderNames.UPGRADE, Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME);
         return res;
+    }
+
+    /**
+     * Creates the 400 Bad Request response message.
+     */
+    private static FullHttpResponse newBadRequestResponse() {
+        return new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, Unpooled.EMPTY_BUFFER);
     }
 }
