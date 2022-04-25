@@ -277,7 +277,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private final BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
             exceptionHandler;
     private final Map<SerializationFormat, TProtocolFactory> responseProtocolFactories;
-    @Nullable
     private Map<SerializationFormat, TProtocolFactory> requestProtocolFactories;
 
     THttpService(RpcService delegate, SerializationFormat defaultSerializationFormat,
@@ -297,6 +296,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
                 .collect(toImmutableMap(
                         Function.identity(),
                         format -> ThriftSerializationFormats.protocolFactory(format, 0, 0)));
+        // The actual requestProtocolFactories will be set when this service is added.
+        requestProtocolFactories = responseProtocolFactories;
     }
 
     private static ThriftCallService findThriftService(Service<?, ?> delegate) {
@@ -446,8 +447,6 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
         try (HttpData content = req.content()) {
             final TByteBufTransport inTransport = new TByteBufTransport(content.byteBuf());
-            // protocolFactories should be initialized when this service is added.
-            assert requestProtocolFactories != null;
             final TProtocol inProto = requestProtocolFactories.get(serializationFormat)
                                                               .getProtocol(inTransport);
 

@@ -40,7 +40,7 @@ public final class ThriftClientOptions {
      * This option is disabled by default, which means unlimited.
      */
     public static final ClientOption<Integer> MAX_RESPONSE_CONTAINER_LENGTH =
-            ClientOption.define("GRPC_MAX_CONTAINER_LENGTH", 0);
+            ClientOption.define("THRIFT_MAX_CONTAINER_LENGTH", 0);
 
     private ThriftClientOptions() {}
 }

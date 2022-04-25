@@ -150,7 +150,7 @@ public class PooledResponseBufferBenchmark {
         pooledClient = ThriftClients.newClient("http://127.0.0.1:" + httpPort + "/a",
                                                HelloService.Iface.class);
         unpooledClient = ThriftClients.newClient("http://127.0.0.1:" + httpPort + "/b",
-                                           HelloService.Iface.class);
+                                                 HelloService.Iface.class);
     }
 
     @TearDown

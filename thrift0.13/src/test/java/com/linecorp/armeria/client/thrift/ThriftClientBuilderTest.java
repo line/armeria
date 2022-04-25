@@ -18,11 +18,17 @@ package com.linecorp.armeria.client.thrift;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.Arrays;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.Test;
+import org.reflections.ReflectionUtils;
 
+import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
@@ -133,7 +139,7 @@ class ThriftClientBuilderTest {
                                                        .maxResponseContainerLength(200)
                                                        .build(HelloService.Iface.class);
         final int maxContainerLength = Clients.unwrap(client, ClientBuilderParams.class).options()
-                                           .get(ThriftClientOptions.MAX_RESPONSE_CONTAINER_LENGTH);
+                                              .get(ThriftClientOptions.MAX_RESPONSE_CONTAINER_LENGTH);
         assertThat(maxContainerLength).isEqualTo(200);
 
         assertThatThrownBy(() -> {
@@ -141,5 +147,22 @@ class ThriftClientBuilderTest {
                          .maxResponseContainerLength(-1);
         }).isInstanceOf(IllegalArgumentException.class)
           .hasMessageContaining("maxResponseContainerLength: -1 (expected: >= 0)");
+    }
+
+    @Test
+    void apiConsistency() {
+        final Set<Method> overriddenMethods =
+                ReflectionUtils.getMethods(ThriftClientBuilder.class,
+                                           method -> Modifier.isPublic(method.getModifiers()) &&
+                                                     method.getReturnType().equals(ThriftClientBuilder.class));
+        final Set<Method> superMethods =
+                ReflectionUtils.getMethods(AbstractClientOptionsBuilder.class,
+                                           method -> Modifier.isPublic(method.getModifiers()));
+        for (final Method method : superMethods) {
+            assertThat(overriddenMethods).filteredOn(tMethod -> {
+                return method.getName().equals(tMethod.getName()) &&
+                       Arrays.equals(method.getParameterTypes(), tMethod.getParameterTypes());
+            }).hasSize(1);
+        }
     }
 }

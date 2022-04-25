@@ -15,16 +15,19 @@
  */
 package com.linecorp.armeria.common.thrift;
 
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.ServiceLoader;
 import java.util.Set;
 
 import org.apache.thrift.protocol.TProtocolFactory;
 
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.SerializationFormat;
 
@@ -62,23 +65,29 @@ public final class ThriftSerializationFormats {
 
     private static final List<ThriftProtocolFactoryProvider> protocolFactoryProviders;
 
+    private static final Map<SerializationFormat, TProtocolFactory> lengthUnlimitedProtocolFactories;
     private static final Set<SerializationFormat> knownSerializationFormats;
 
     static {
         protocolFactoryProviders = ImmutableList.copyOf(
                 ServiceLoader.load(ThriftProtocolFactoryProvider.class,
                                    ThriftProtocolFactoryProvider.class.getClassLoader()));
-        knownSerializationFormats = protocolFactoryProviders
+
+        lengthUnlimitedProtocolFactories = protocolFactoryProviders
                 .stream()
-                .flatMap(provider -> provider.serializationFormats().stream())
-                .collect(toImmutableSet());
+                .flatMap(provider -> provider.serializationFormats().stream().map(format -> {
+                    return Maps.immutableEntry(format, provider.tProtocolFactory(format, 0, 0));
+                }))
+                .collect(toImmutableMap(Entry::getKey, Entry::getValue));
+
+        knownSerializationFormats = lengthUnlimitedProtocolFactories.keySet();
     }
 
     /**
      * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat}.
      *
      * @throws IllegalArgumentException if the specified {@link SerializationFormat} is not a
-     *         known Thrift serialization format
+     *                                  known Thrift serialization format
      * @deprecated Use {@link #protocolFactory(SerializationFormat, int, int)} instead.
      */
     @Deprecated
@@ -101,6 +110,15 @@ public final class ThriftSerializationFormats {
     public static TProtocolFactory protocolFactory(SerializationFormat serializationFormat, int maxStringLength,
                                                    int maxContainerLength) {
         requireNonNull(serializationFormat, "serializationFormat");
+        if (maxStringLength == 0 && maxContainerLength == 0) {
+            final TProtocolFactory tProtocolFactory = lengthUnlimitedProtocolFactories.get(serializationFormat);
+            if (tProtocolFactory != null) {
+                return tProtocolFactory;
+            } else {
+                throw newUnsupportedFormatException(serializationFormat);
+            }
+        }
+
         for (ThriftProtocolFactoryProvider provider : protocolFactoryProviders) {
             final TProtocolFactory tProtocolFactory =
                     provider.tProtocolFactory(serializationFormat, maxStringLength, maxContainerLength);
@@ -108,8 +126,12 @@ public final class ThriftSerializationFormats {
                 return tProtocolFactory;
             }
         }
+        throw newUnsupportedFormatException(serializationFormat);
+    }
 
-        throw new IllegalArgumentException("Unsupported Thrift serializationFormat: " + serializationFormat);
+    private static IllegalArgumentException newUnsupportedFormatException(
+            SerializationFormat serializationFormat) {
+        return new IllegalArgumentException("Unsupported Thrift serializationFormat: " + serializationFormat);
     }
 
     /**
