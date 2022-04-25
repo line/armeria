@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.thrift;
 
+import static com.linecorp.armeria.common.thrift.ThriftMessageTestUtil.newMessage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -51,7 +52,6 @@ import com.linecorp.armeria.service.test.thrift.main.NameSortService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 
 class ThriftClientLengthLimitTest {
 
@@ -70,10 +70,15 @@ class ThriftClientLengthLimitTest {
                                               .addService(NAME_SERVICE_HANDLER)
                                               .build());
             sb.service("/invalid", (ctx, req) -> {
-                final ByteBuf buf = Unpooled.buffer();
-                // Set a spurious message size.
-                buf.writeInt((int) (Flags.defaultMaxResponseLength() + 1));
-                buf.writeBytes("Hello".getBytes());
+                final SerializationFormat serializationFormat;
+                if (ThriftSerializationFormats.BINARY.mediaType().equals(req.contentType())) {
+                    serializationFormat = ThriftSerializationFormats.BINARY;
+                } else {
+                    serializationFormat = ThriftSerializationFormats.COMPACT;
+                }
+                final ByteBuf buf = newMessage(serializationFormat,
+                                               (int) (Flags.defaultMaxResponseLength() + 1),
+                                               "Hello".getBytes());
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK), HttpData.wrap(buf));
             });
         }

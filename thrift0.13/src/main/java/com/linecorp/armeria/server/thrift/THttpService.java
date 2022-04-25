@@ -71,6 +71,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.thrift.TByteBufTransport;
 import com.linecorp.armeria.internal.common.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
+import com.linecorp.armeria.internal.common.thrift.ThriftProtocolUtil;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpService;
@@ -272,7 +273,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private final ThriftCallService thriftService;
     private final SerializationFormat defaultSerializationFormat;
     private final Set<SerializationFormat> supportedSerializationFormats;
-    private final int maxRequestStringLength;
+    private int maxRequestStringLength;
     private final int maxRequestContainerLength;
     private final BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
             exceptionHandler;
@@ -333,18 +334,15 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
 
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
-        final int maxStringLength0;
         if (maxRequestStringLength == -1) {
-            maxStringLength0 = Ints.saturatedCast(cfg.maxRequestLength());
-        } else {
-            maxStringLength0 = maxRequestStringLength;
+            maxRequestStringLength = Ints.saturatedCast(cfg.maxRequestLength());
         }
         requestProtocolFactories = supportedSerializationFormats
                 .stream()
                 .collect(toImmutableMap(
                         Function.identity(),
                         format -> ThriftSerializationFormats.protocolFactory(
-                                format, maxStringLength0, maxRequestContainerLength)));
+                                format, maxRequestStringLength, maxRequestContainerLength)));
 
         super.serviceAdded(cfg);
     }
@@ -446,7 +444,8 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         final RpcRequest decodedReq;
 
         try (HttpData content = req.content()) {
-            final TByteBufTransport inTransport = new TByteBufTransport(content.byteBuf());
+            final ByteBuf buf = content.byteBuf();
+            final TByteBufTransport inTransport = new TByteBufTransport(buf);
             final TProtocol inProto = requestProtocolFactories.get(serializationFormat)
                                                               .getProtocol(inTransport);
 
@@ -454,6 +453,11 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
             final TBase<?, ?> args;
 
             try {
+                // Optionally checks the message length before calling `readMessageBegin()` because
+                // Thrift 0.9.x and 0.10.x does not support a correct validation of `readMessageBegin()` for
+                // some `TProtocol`s.
+                ThriftProtocolUtil.maybeCheckMessageLength(serializationFormat, buf, maxRequestStringLength);
+
                 header = inProto.readMessageBegin();
             } catch (Exception e) {
                 logger.debug("{} Failed to decode a {} header:", ctx, serializationFormat, e);

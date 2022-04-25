@@ -70,6 +70,7 @@ import com.linecorp.armeria.internal.common.thrift.TApplicationExceptions;
 import com.linecorp.armeria.internal.common.thrift.TByteBufTransport;
 import com.linecorp.armeria.internal.common.thrift.ThriftFieldAccess;
 import com.linecorp.armeria.internal.common.thrift.ThriftFunction;
+import com.linecorp.armeria.internal.common.thrift.ThriftProtocolUtil;
 import com.linecorp.armeria.internal.common.thrift.ThriftServiceMetadata;
 
 import io.netty.buffer.ByteBuf;
@@ -82,6 +83,8 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
     private final SerializationFormat serializationFormat;
     private final TProtocolFactory requestProtocolFactory;
     private final TProtocolFactory responseProtocolFactory;
+    private final int maxStringLength;
+
     private final MediaType mediaType;
     private final Map<Class<?>, ThriftServiceMetadata> metadataMap = new ConcurrentHashMap<>();
 
@@ -101,6 +104,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         responseProtocolFactory =
                 ThriftSerializationFormats.protocolFactory(serializationFormat,
                                                            maxStringLength, maxContainerLength);
+        this.maxStringLength = maxStringLength;
         mediaType = serializationFormat.mediaType();
     }
 
@@ -225,8 +229,14 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
             throw new TApplicationException(TApplicationException.MISSING_RESULT);
         }
 
-        final TTransport inputTransport = new TByteBufTransport(content.byteBuf());
+        final ByteBuf buf = content.byteBuf();
+        final TTransport inputTransport = new TByteBufTransport(buf);
         final TProtocol inputProtocol = responseProtocolFactory.getProtocol(inputTransport);
+
+        // Optionally checks the message length before calling `readMessageBegin()` because
+        // Thrift 0.9.x and 0.10.x does not support a correct length validation of `readMessageBegin()` for
+        // some `TProtocol`s.
+        ThriftProtocolUtil.maybeCheckMessageLength(serializationFormat, buf, maxStringLength);
 
         final TMessage header = inputProtocol.readMessageBegin();
         final TApplicationException appEx = readApplicationException(seqId, func, inputProtocol, header);

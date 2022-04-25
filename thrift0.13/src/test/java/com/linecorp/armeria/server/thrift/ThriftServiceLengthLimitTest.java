@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.thrift;
 
+import static com.linecorp.armeria.common.thrift.ThriftMessageTestUtil.newMessage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.catchThrowable;
@@ -51,7 +52,6 @@ import com.linecorp.armeria.service.test.thrift.main.NameSortService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 
 class ThriftServiceLengthLimitTest {
 
@@ -101,15 +101,12 @@ class ThriftServiceLengthLimitTest {
                             .isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
                 });
 
-        final ByteBuf buf = Unpooled.buffer();
-        // Set a spurious message size.
-        buf.writeInt(MAX_REQUEST_LENGTH + 1);
-        buf.writeBytes("Hello".getBytes());
+        final ByteBuf buf = newMessage(serializationFormat, MAX_REQUEST_LENGTH + 1, "Hello".getBytes());
         final AggregatedHttpResponse response =
                 server.blockingWebClient()
                       .prepare()
                       .post("/default-limit")
-                      .content(ThriftSerializationFormats.BINARY.mediaType(), HttpData.wrap(buf))
+                      .content(serializationFormat.mediaType(), HttpData.wrap(buf))
                       .execute();
         assertThat(response.status()).isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
         assertThat(response.contentUtf8()).contains("Length exceeded max allowed: " + (MAX_REQUEST_LENGTH + 1));
