@@ -1255,7 +1255,7 @@ final class AnnotatedValueResolver {
                     return true;
                 }
             }
-            return false;
+            return KotlinUtil.isMarkedNullable(typeElement);
         }
 
         @Nullable

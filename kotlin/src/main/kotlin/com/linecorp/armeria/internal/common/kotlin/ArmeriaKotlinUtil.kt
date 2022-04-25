@@ -19,11 +19,17 @@
 
 package com.linecorp.armeria.internal.common.kotlin
 
+import java.lang.reflect.AnnotatedElement
+import java.lang.reflect.Constructor
+import java.lang.reflect.Field
 import java.lang.reflect.Method
+import java.lang.reflect.Parameter
 import java.lang.reflect.Type
+import kotlin.reflect.full.valueParameters
 import kotlin.reflect.jvm.javaType
 import kotlin.reflect.jvm.jvmErasure
 import kotlin.reflect.jvm.kotlinFunction
+import kotlin.reflect.jvm.kotlinProperty
 
 /**
  * Returns true if a method can be represented by a Kotlin function.
@@ -70,3 +76,35 @@ internal fun kFunctionReturnType(method: Method): Class<*> =
 internal fun kFunctionGenericReturnType(method: Method): Type =
     requireNotNull(method.kotlinFunction) { "method is not a kotlin function" }
         .returnType.javaType
+
+internal fun isMarkedNullable(field: Field): Boolean =
+    field.kotlinProperty?.returnType?.isMarkedNullable ?: false
+
+internal fun isMarkedNullable(element: AnnotatedElement): Boolean {
+    return when (element) {
+        is Field -> element.kotlinProperty?.returnType?.isMarkedNullable ?: false
+        is Parameter -> {
+            val executable = element.declaringExecutable
+            val i = executable.parameters.indexOf(element)
+            when (executable) {
+                is Method -> executable
+                    .kotlinFunction
+                    ?.valueParameters
+                    ?.get(i) // this parameter
+                    ?.type
+                    ?.isMarkedNullable
+                    ?: false
+                is Constructor<*> -> { executable
+                    .kotlinFunction
+                    ?.valueParameters
+                    ?.get(i)
+                    ?.type
+                    ?.isMarkedNullable
+                    ?: false
+                }
+                else -> false
+            }
+        }
+        else -> false
+    }
+}

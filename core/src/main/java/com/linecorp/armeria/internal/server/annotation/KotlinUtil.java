@@ -20,6 +20,7 @@ import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.Arrays;
@@ -65,6 +66,9 @@ final class KotlinUtil {
     @Nullable
     private static final Method K_FUNCTION_GENERIC_RETURN_TYPE;
 
+    @Nullable
+    private static final Method IS_MARKED_NULLABLE;
+
     static {
         MethodHandle callKotlinSuspendingMethod = null;
         final String internalCommonPackageName = RequestContextUtil.class.getPackage().getName();
@@ -92,6 +96,7 @@ final class KotlinUtil {
         Method isReturnTypeNothing = null;
         Method kFunctionReturnType = null;
         Method kFunctionGenericReturnType = null;
+        Method isMarkedNullable = null;
         try {
             final Class<?> kotlinUtilClass =
                     getClass(internalCommonPackageName + ".kotlin.ArmeriaKotlinUtil");
@@ -102,6 +107,7 @@ final class KotlinUtil {
             isReturnTypeNothing = kotlinUtilClass.getMethod("isReturnTypeNothing", Method.class);
             kFunctionReturnType = kotlinUtilClass.getMethod("kFunctionReturnType", Method.class);
             kFunctionGenericReturnType = kotlinUtilClass.getMethod("kFunctionGenericReturnType", Method.class);
+            isMarkedNullable = kotlinUtilClass.getMethod("isMarkedNullable", AnnotatedElement.class);
         } catch (ClassNotFoundException | NoSuchMethodException e) {
             // ignore
         } finally {
@@ -111,6 +117,7 @@ final class KotlinUtil {
             IS_RETURN_TYPE_NOTHING = isReturnTypeNothing;
             K_FUNCTION_RETURN_TYPE = kFunctionReturnType;
             K_FUNCTION_GENERIC_RETURN_TYPE = kFunctionGenericReturnType;
+            IS_MARKED_NULLABLE = isMarkedNullable;
         }
 
         boolean isKotlinReflectionPresent = false;
@@ -241,6 +248,15 @@ final class KotlinUtil {
             return (Type) K_FUNCTION_GENERIC_RETURN_TYPE.invoke(null, method);
         } catch (Exception e) {
             return Exceptions.throwUnsafely(e);
+        }
+    }
+
+    static boolean isMarkedNullable(AnnotatedElement typeElement) {
+        try {
+            return IS_MARKED_NULLABLE != null &&
+                   (boolean) IS_MARKED_NULLABLE.invoke(null, typeElement);
+        } catch (Exception e) {
+            return false;
         }
     }
 
