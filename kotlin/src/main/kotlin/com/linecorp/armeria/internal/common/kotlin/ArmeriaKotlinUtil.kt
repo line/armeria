@@ -64,22 +64,22 @@ internal fun isReturnTypeNothing(method: Method): Boolean {
 }
 
 /**
- * [Method.getReturnType] equivalent for kotlin suspending function.
+ * [Method.getReturnType] equivalent for Kotlin functions.
  */
 internal fun kFunctionReturnType(method: Method): Class<*> =
     requireNotNull(method.kotlinFunction) { "method is not a kotlin function" }
         .returnType.jvmErasure.java
 
 /**
- * [Method.getGenericReturnType] equivalent for kotlin suspending function.
+ * [Method.getGenericReturnType] equivalent for Kotlin functions.
  */
 internal fun kFunctionGenericReturnType(method: Method): Type =
     requireNotNull(method.kotlinFunction) { "method is not a kotlin function" }
         .returnType.javaType
 
-internal fun isMarkedNullable(field: Field): Boolean =
-    field.kotlinProperty?.returnType?.isMarkedNullable ?: false
-
+/**
+ * Returns true if the [element]'s type is marked nullable.
+ */
 internal fun isMarkedNullable(element: AnnotatedElement): Boolean {
     return when (element) {
         is Field -> element.kotlinProperty?.returnType?.isMarkedNullable ?: false
@@ -89,8 +89,10 @@ internal fun isMarkedNullable(element: AnnotatedElement): Boolean {
             when (executable) {
                 is Method -> executable
                     .kotlinFunction
+                    // Should be `valueParameters` to exclude the `this` instance and
+                    // the extension receiver parameter.
                     ?.valueParameters
-                    ?.get(i) // this parameter
+                    ?.get(i)
                     ?.type
                     ?.isMarkedNullable
                     ?: false

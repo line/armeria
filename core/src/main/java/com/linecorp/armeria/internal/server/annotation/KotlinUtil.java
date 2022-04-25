@@ -233,6 +233,9 @@ final class KotlinUtil {
         }
     }
 
+    /**
+     * {@link Method#getReturnType} equivalent for Kotlin functions.
+     */
     static Class<?> kFunctionReturnType(Method method) {
         assert K_FUNCTION_RETURN_TYPE != null;
         try {
@@ -242,6 +245,9 @@ final class KotlinUtil {
         }
     }
 
+    /**
+     * {@link Method#getGenericReturnType} equivalent for Kotlin functions.
+     */
     static Type kFunctionGenericReturnType(Method method) {
         assert K_FUNCTION_GENERIC_RETURN_TYPE != null;
         try {
@@ -251,6 +257,9 @@ final class KotlinUtil {
         }
     }
 
+    /**
+     * Returns true if the typeElement can be converted to KType and is marked nullable.
+     */
     static boolean isMarkedNullable(AnnotatedElement typeElement) {
         try {
             return IS_MARKED_NULLABLE != null &&

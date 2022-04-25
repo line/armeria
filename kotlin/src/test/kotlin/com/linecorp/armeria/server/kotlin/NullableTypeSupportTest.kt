@@ -29,7 +29,6 @@ import com.linecorp.armeria.server.annotation.RequestConverter
 import com.linecorp.armeria.server.annotation.RequestConverterFunction
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.RegisterExtension
 import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
@@ -79,7 +78,7 @@ class NullableTypeSupportTest {
                     sb.annotatedService("/nullable-type/value-resolver", object {
                         @Get("/of-query-param")
                         fun ofQueryParam(@Param a: String, @Param b: String?) =
-                            HttpResponse.of("a: ${a}, b: ${b}")
+                            HttpResponse.of("a: $a, b: $b")
 
                         @Get("/of-request-converter")
                         @RequestConverter(FooBarRequestConverter::class)
