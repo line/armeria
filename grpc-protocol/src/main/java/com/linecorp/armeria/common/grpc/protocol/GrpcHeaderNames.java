@@ -56,10 +56,5 @@ public final class GrpcHeaderNames {
      */
     public static final AsciiString GRPC_STATUS_DETAILS_BIN = HttpHeaderNames.of("grpc-status-details-bin");
 
-    /**
-     * {@code "grpc-status-details-bin"}.
-     */
-    public static final AsciiString GRPC_STATUS_DETAILS_BIN = HttpHeaderNames.of("grpc-status-details-bin");
-
     private GrpcHeaderNames() {}
 }
