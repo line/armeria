@@ -192,8 +192,8 @@ public final class DecoratorAnnotationUtil {
                 return factory.newDecorator(annotation);
             }
             assert decoratorAnnotation != null;
-            return service -> service.decorate(
-                    AnnotatedObjectFactory.getInstance(decoratorAnnotation, DecoratingHttpServiceFunction.class));
+            return service -> service.decorate(AnnotatedObjectFactory.getInstance(
+                    decoratorAnnotation, DecoratingHttpServiceFunction.class));
         }
 
         public int order() {
