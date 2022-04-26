@@ -75,7 +75,7 @@ class NullableTypeSupportTest {
         val server = object : ServerExtension() {
             override fun configure(sb: ServerBuilder) {
                 sb.apply {
-                    sb.annotatedService("/nullable-type/value-resolver", object {
+                    annotatedService("/nullable-type/value-resolver", object {
                         @Get("/of-query-param")
                         fun ofQueryParam(@Param a: String, @Param b: String?) =
                             HttpResponse.of("a: $a, b: $b")
