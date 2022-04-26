@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.server.grpc.FramedGrpcService.RESOLVED_GRPC_METHOD;
 import static com.linecorp.armeria.server.grpc.FramedGrpcService.methodDefinition;
 
 import java.util.Map;
@@ -60,14 +61,16 @@ import io.grpc.ServerMethodDefinition;
 final class UnframedGrpcService extends AbstractUnframedGrpcService {
 
     private final HandlerRegistry registry;
+    private final boolean lookupMethodFromAttribute;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
     UnframedGrpcService(GrpcService delegate, HandlerRegistry registry,
-                        UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+                        UnframedGrpcErrorHandler unframedGrpcErrorHandler, boolean lookupMethodFromAttribute) {
         super(delegate, unframedGrpcErrorHandler);
         this.registry = registry;
+        this.lookupMethodFromAttribute = lookupMethodFromAttribute;
         checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
     }
 
@@ -98,10 +101,15 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
             }
         }
 
-        final ServerMethodDefinition<?, ?> method = methodDefinition(ctx, registry);
+        ServerMethodDefinition<?, ?> method =
+                lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
         if (method == null) {
-            // Unknown method, let the delegate return a usual error.
-            return unwrap().serve(ctx, req);
+            method = methodDefinition(ctx, registry);
+            if (method == null) {
+                // Unknown method, let the delegate return a usual error.
+                return unwrap().serve(ctx, req);
+            }
+            ctx.setAttr(RESOLVED_GRPC_METHOD, method);
         }
 
         if (method.getMethodDescriptor().getType() != MethodType.UNARY) {
@@ -138,12 +146,13 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
                                RequestLogProperty.RESPONSE_CONTENT);
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
+        final ServerMethodDefinition<?, ?> methodDefinition = method;
         req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((clientRequest, t) -> {
             try (SafeCloseable ignore = ctx.push()) {
                 if (t != null) {
                     responseFuture.completeExceptionally(t);
                 } else {
-                    ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, method);
+                    ctx.setAttr(RESOLVED_GRPC_METHOD, methodDefinition);
                     frameAndServe(unwrap(), ctx, grpcHeaders.build(),
                                   clientRequest.content(), responseFuture, null);
                 }

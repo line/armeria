@@ -19,7 +19,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.client.grpc.GrpcClientUtil.maxInboundMessageSizeBytes;
-import static com.linecorp.armeria.internal.server.grpc.GrpcMethodUtil.extractMethodName;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
@@ -128,7 +127,7 @@ final class GrpcClientFactory extends DecoratingClientFactory {
         final Map<MethodDescriptor<?, ?>, String> simpleMethodNames =
                 serviceDescriptor.getMethods().stream()
                                  .collect(toImmutableMap(Function.identity(),
-                                                         e -> extractMethodName(e.getFullMethodName())));
+                                                         MethodDescriptor::getBareMethodName));
 
         final ClientBuilderParams newParams =
                 addTrailersExtractor(params, options, serializationFormat);
