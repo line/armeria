@@ -13,14 +13,25 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.server.grpc;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
+import java.util.Map;
+
+import org.curioswitch.common.protobuf.json.MessageMarshaller;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
+import com.google.protobuf.InvalidProtocolBufferException;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -167,6 +178,79 @@ public interface UnframedGrpcErrorHandler {
                 content = HttpData.ofUtf8(msg);
             }
             return HttpResponse.of(responseHeaders, content);
+        };
+    }
+
+    /**
+     * Returns a rich json response.
+     */
+    static UnframedGrpcErrorHandler ofRichJson() {
+        return ofRichJson(UnframedGrpcStatusMappingFunction.of());
+    }
+
+    /**
+     * Returns a rich json response.
+     *
+     * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
+     *                              to an {@link HttpStatus} code.
+     */
+    static UnframedGrpcErrorHandler ofRichJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+        // Ensure that unframedGrpcStatusMappingFunction never returns null
+        // by falling back to the default.
+        final UnframedGrpcStatusMappingFunction mappingFunction =
+                requireNonNull(statusMappingFunction, "statusMappingFunction")
+                        .orElse(UnframedGrpcStatusMappingFunction.of());
+        final MessageMarshaller errorDetailsMarshaller
+                = UnframedGrpcErrorHandlerUtils.getErrorDetailsMarshaller();
+        return (ctx, status, response) -> {
+            final Logger logger = LoggerFactory.getLogger(UnframedGrpcErrorHandler.class);
+            final Code grpcCode = status.getCode();
+            final String grpcMessage = status.getDescription();
+            final RequestLogAccess log = ctx.log();
+            final Throwable cause;
+            if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+                cause = log.partial().responseCause();
+            } else {
+                cause = null;
+            }
+            final HttpHeaders trailers = !response.trailers().isEmpty() ?
+                                         response.trailers() : response.headers();
+            final String grpcStatusDetailsBin = trailers.get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN);
+            final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
+            final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
+                                                                   .contentType(MediaType.JSON_UTF_8)
+                                                                   .addInt(GrpcHeaderNames.GRPC_STATUS,
+                                                                           grpcCode.value())
+                                                                   .build();
+            final ImmutableMap.Builder<String, Object> messageBuilder = ImmutableMap.builder();
+            messageBuilder.put("code", grpcCode.name());
+            if (grpcMessage != null) {
+                messageBuilder.put("message", grpcMessage);
+            }
+            if (cause != null && ctx.config().verboseResponses()) {
+                messageBuilder.put("stack-trace", Exceptions.traceText(cause));
+            }
+            if (!Strings.isNullOrEmpty(grpcStatusDetailsBin)) {
+                com.google.rpc.Status rpcStatus = null;
+                try {
+                    rpcStatus = UnframedGrpcErrorHandlerUtils.decodeGrpcStatusDetailsBin(grpcStatusDetailsBin);
+                } catch (InvalidProtocolBufferException e) {
+                    logger.warn("invalid protobuf exception happens when decode grpc-status-details-bin {}",
+                                grpcStatusDetailsBin);
+                }
+                if (rpcStatus != null) {
+                    try {
+                        messageBuilder.put("details", UnframedGrpcErrorHandlerUtils
+                                .convertErrorDetailToJsonNode(rpcStatus.getDetailsList(),
+                                                              errorDetailsMarshaller));
+                    } catch (IOException e) {
+                        logger.warn("error happens when convert error converting rpc status {} to strings",
+                                    rpcStatus);
+                    }
+                }
+            }
+            final Map<String, Object> errorObject = ImmutableMap.of("error", messageBuilder.build());
+            return HttpResponse.ofJson(responseHeaders, errorObject);
         };
     }
 

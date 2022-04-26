@@ -16,10 +16,17 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.protobuf.Any;
+import com.google.rpc.Code;
+import com.google.rpc.ErrorInfo;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -27,11 +34,13 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.Status;
+import io.grpc.protobuf.StatusProto;
 import io.grpc.stub.StreamObserver;
 
 public class UnframedGrpcErrorHandlerTest {
@@ -39,7 +48,7 @@ public class UnframedGrpcErrorHandlerTest {
     static ServerExtension nonVerboseServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            configureServer(sb, false, UnframedGrpcErrorHandler.of());
+            configureServer(sb, false, UnframedGrpcErrorHandler.of(), testService);
         }
     };
 
@@ -47,7 +56,7 @@ public class UnframedGrpcErrorHandlerTest {
     static ServerExtension verbosePlainTextResServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            configureServer(sb, true, UnframedGrpcErrorHandler.ofPlainText());
+            configureServer(sb, true, UnframedGrpcErrorHandler.ofPlainText(), testService);
         }
     };
 
@@ -55,7 +64,15 @@ public class UnframedGrpcErrorHandlerTest {
     static ServerExtension verboseJsonResServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            configureServer(sb, true, UnframedGrpcErrorHandler.ofJson());
+            configureServer(sb, true, UnframedGrpcErrorHandler.ofJson(), testService);
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension testServerGrpcStatus = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            configureServer(sb, false, UnframedGrpcErrorHandler.ofRichJson(), testServiceGrpcStatus);
         }
     };
 
@@ -67,13 +84,39 @@ public class UnframedGrpcErrorHandlerTest {
         }
     }
 
+    private static class TestServiceGrpcStatus extends TestServiceImplBase {
+
+        @Override
+        public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
+            final ErrorInfo errorInfo = ErrorInfo.newBuilder()
+                                                 .setDomain("test")
+                                                 .setReason("Unknown Exception").build();
+
+            final com.google.rpc.Status
+                    status = com.google.rpc.Status.newBuilder()
+                                                  .setCode(
+                                                          Code.UNKNOWN.getNumber())
+                                                  .setMessage("Unknown Exceptions Test")
+                                                  .addDetails(
+                                                          Any.pack(errorInfo))
+                                                  .build();
+
+            responseObserver.onError(StatusProto.toStatusRuntimeException(status));
+        }
+    }
+
+    private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
+
     private static final TestService testService = new TestService();
 
+    private static final TestServiceGrpcStatus testServiceGrpcStatus = new TestServiceGrpcStatus();
+
     private static void configureServer(ServerBuilder sb, boolean verboseResponses,
-                                        UnframedGrpcErrorHandler errorHandler) {
+                                        UnframedGrpcErrorHandler errorHandler,
+                                        TestServiceImplBase testServiceImplBase) {
         sb.verboseResponses(verboseResponses);
         sb.service(GrpcService.builder()
-                              .addService(testService)
+                              .addService(testServiceImplBase)
                               .enableUnframedRequests(true)
                               .unframedGrpcErrorHandler(errorHandler)
                               .build());
@@ -121,5 +164,20 @@ public class UnframedGrpcErrorHandlerTest {
         assertThat(content).startsWith("{\"grpc-code\":\"UNKNOWN\",\"message\":\"grpc error message\"," +
                                        "\"stack-trace\":\"io.grpc.StatusException");
         assertThat(response.trailers()).isEmpty();
+    }
+
+    @Test
+    void richJson() throws JsonProcessingException {
+        final BlockingWebClient client = testServerGrpcStatus.webClient().blocking();
+        final AggregatedHttpResponse response =
+                client.prepare()
+                      .post(TestServiceGrpc.getEmptyCallMethod().getFullMethodName())
+                      .content(MediaType.PROTOBUF, Empty.getDefaultInstance().toByteArray())
+                      .execute();
+        assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThatJson(mapper.readTree(response.contentUtf8())).isEqualTo(
+                "{\"error\":{\"code\":\"UNKNOWN\",\"message\":\"Unknown Exceptions Test\"," +
+                "\"details\":[{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\"," +
+                "\"reason\":\"Unknown Exception\",\"domain\":\"test\"}]}}");
     }
 }
