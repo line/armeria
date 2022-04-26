@@ -197,7 +197,8 @@ final class HandlerRegistry {
                         assert bareMethodName != null;
                         final String pathWithMethod = path + '/' + bareMethodName;
                         methods.put(pathWithMethod, methodDefinition);
-                        methodsByRoute.put(Route.builder().exact('/' + pathWithMethod).build(), methodDefinition);
+                        methodsByRoute.put(Route.builder().exact('/' + pathWithMethod).build(),
+                                           methodDefinition);
                         bareMethodNames.put(methodDescriptor0, bareMethodName);
 
                         final String methodName = javaMethodName(bareMethodName);
