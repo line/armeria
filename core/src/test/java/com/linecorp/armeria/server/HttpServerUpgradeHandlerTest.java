@@ -31,16 +31,24 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.common.HttpStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeCodec;
 import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeCodecFactory;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -63,27 +71,18 @@ class HttpServerUpgradeHandlerTest {
 
     // Forked from http://github.com/netty/netty/blob/cf624c93c5f97097f1b13fe926ed50c32c8b1430/codec-http/src/test/java/io/netty/handler/codec/http/HttpServerUpgradeHandlerTest.java
 
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.service("/", (ctx, req) -> HttpResponse.of(OK));
+        }
+    };
+
     private static class TestUpgradeCodec implements UpgradeCodec {
         @Override
         public boolean prepareUpgradeResponse(ChannelHandlerContext ctx, HttpRequest upgradeRequest) {
             return true;
-        }
-
-        @Override
-        public void upgradeTo(ChannelHandlerContext ctx) {
-            // Ensure that the HttpServerUpgradeHandler is still installed when this is called
-            assertEquals(ctx.pipeline().context(HttpServerUpgradeHandler.class), ctx);
-            assertNotNull(ctx.pipeline().get(HttpServerUpgradeHandler.class));
-
-            // Add a marker handler to signal that the upgrade has happened
-            ctx.pipeline().addAfter(ctx.name(), "marker", new ChannelInboundHandlerAdapter());
-        }
-    }
-
-    private static class TestUpgradeCodecForBadRequest implements UpgradeCodec {
-        @Override
-        public boolean prepareUpgradeResponse(ChannelHandlerContext ctx, HttpRequest upgradeRequest) {
-            return false;
         }
 
         @Override
@@ -214,85 +213,21 @@ class HttpServerUpgradeHandlerTest {
     }
 
     @Test
-    void upgradeFailWithBadRequest() {
-        final HttpServerCodec httpServerCodec = new HttpServerCodec();
-        final UpgradeCodecFactory factory = TestUpgradeCodecForBadRequest::new;
+    void upgradeFailWithBadRequest() throws Exception {
+        try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
+            // Build a h2c upgrade request, but duplicated settings HTTP2-Settings.
+            final String upgradeBody = "Hello";
+            final PrintWriter writer = new PrintWriter(socket.getOutputStream());
+            writer.print("POST / HTTP/1.1\r\n");
+            writer.print("Content-Length: " + upgradeBody.getBytes(StandardCharsets.UTF_8).length + "\r\n");
+            writer.print("Connection: Upgrade, HTTP2-Settings\r\n");
+            writer.print("Upgrade: h2c\r\n");
+            writer.print("HTTP2-Settings: AAMAAABkAAQAAP__\r\n");
+            writer.print("HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n");
+            writer.flush();
 
-        final ChannelHandler testInStackFrame = new ChannelDuplexHandler() {
-            // marker boolean to signal that we're in the `channelRead` method
-            private boolean inReadCall;
-            private boolean writeBadRequestMessage;
-            private boolean writeFlushed;
-            private boolean first = true;
-
-            @Override
-            public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                if (first) {
-                    assertThat(inReadCall).isFalse();
-                    assertThat(writeBadRequestMessage).isFalse();
-
-                    inReadCall = true;
-                    try {
-                        super.channelRead(ctx, msg);
-                        // All in the same call stack, the upgrade codec should receive the message,
-                        // written the bad request response, and not upgraded the pipeline.
-                        assertThat(writeBadRequestMessage).isTrue();
-                        assertThat(writeFlushed).isFalse();
-                        assertThat(ctx.pipeline().get(HttpServerCodec.class)).isNotNull();
-                        assertThat(ctx.pipeline().get("marker")).isNull();
-                    } finally {
-                        inReadCall = false;
-                        first = false;
-                    }
-                } else {
-                    super.channelRead(ctx, msg);
-                    assertThat(ctx.pipeline().get(HttpServerCodec.class)).isNotNull();
-                    assertThat(ctx.pipeline().get(HttpServerUpgradeHandler.class)).isNotNull();
-                    assertThat(ctx.pipeline().get("marker")).isNull();
-                }
-            }
-
-            @Override
-            public void write(final ChannelHandlerContext ctx, final Object msg, final ChannelPromise promise) {
-                // We ensure that we're in the read call and defer the write so we can
-                // make sure the pipeline was reformed irrespective of the flush completing.
-                assertThat(inReadCall).isTrue();
-                writeBadRequestMessage = true;
-                ctx.channel().eventLoop().execute(() -> ctx.write(msg, promise));
-                promise.addListener((ChannelFutureListener) future -> writeFlushed = true);
-            }
-        };
-
-        final HttpServerUpgradeHandler upgradeHandler = new HttpServerUpgradeHandler(httpServerCodec, factory);
-
-        final EmbeddedChannel channel = new EmbeddedChannel(testInStackFrame, httpServerCodec, upgradeHandler);
-
-        // Build a h2c upgrade request, but duplicated settings HTTP2-Settings.
-        final String upgradeBody = "Hello";
-        final String upgradeHeader =
-                "POST / HTTP/1.1\r\n" +
-                "Host: example.com\r\n" +
-                "Content-Length: " + upgradeBody.getBytes(StandardCharsets.UTF_8).length + "\r\n" +
-                "Connection: Upgrade, HTTP2-Settings\r\n" +
-                "Upgrade: h2c\r\n" +
-                "HTTP2-Settings: AAMAAABkAAQAAP__ AAMAAABkAAQAAP__\r\n\r\n";
-        final ByteBuf upgradeHeaderBuf = Unpooled.copiedBuffer(upgradeHeader, CharsetUtil.US_ASCII);
-
-        assertThat(channel.writeInbound(upgradeHeaderBuf)).isTrue();
-        assertThat(channel.pipeline().get(HttpServerCodec.class)).isNotNull();
-        // Should not be removed.
-        assertThat(channel.pipeline().get(HttpServerUpgradeHandler.class)).isNotNull();
-        assertThat(channel.pipeline().get("marker")).isNull(); // Not added.
-
-        final ByteBuf upgradeBodyBuf = Unpooled.copiedBuffer(upgradeBody, CharsetUtil.US_ASCII);
-        assertThat(channel.writeInbound(upgradeBodyBuf)).isTrue();
-        assertThat(channel.pipeline().get(HttpServerCodec.class)).isNotNull();
-
-        channel.flushOutbound();
-        final ByteBuf badRequestMessage = channel.readOutbound();
-        final String expectedHttpResponse = "HTTP/1.1 400 Bad Request\r\n\r\n";
-        assertThat(badRequestMessage.toString(CharsetUtil.US_ASCII)).isEqualTo(expectedHttpResponse);
-        assertThat(badRequestMessage.release()).isTrue();
-        channel.finishAndReleaseAll();
+            final BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            assertThat(in.readLine()).isEqualTo("HTTP/1.1 400 Bad Request");
+        }
     }
 }
