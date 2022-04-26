@@ -1249,13 +1249,20 @@ final class AnnotatedValueResolver {
         }
 
         private boolean isNullable() {
+            boolean hasNullableAnnotation = false;
+
             for (Annotation a : annotatedElement.getAnnotations()) {
                 final String annotationTypeName = a.annotationType().getName();
                 if (annotationTypeName.endsWith(".Nullable")) {
-                    return true;
+                    hasNullableAnnotation = true;
+                    break;
                 }
             }
-            return KotlinUtil.isMarkedNullable(typeElement);
+            final boolean isMarkedNullable = KotlinUtil.isMarkedNullable(typeElement);
+            if (hasNullableAnnotation && isMarkedNullable) {
+                warnRedundantUse("@Nullable", "?(Kotlin nullable type)");
+            }
+            return hasNullableAnnotation || isMarkedNullable;
         }
 
         @Nullable
