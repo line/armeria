@@ -118,9 +118,6 @@ public final class ThriftClients {
      *
      * @throws IllegalArgumentException if the specified {@link Scheme} is invalid or the specified
      *                                  {@code clientType} is an unsupported Thrift client stub.
-     * @throws IllegalArgumentException if the specified {@code scheme} is invalid or
-     *                                  the specified {@code clientType} is unsupported for
-     *                                  the specified {@code scheme}.
      */
     public static <T> T newClient(String scheme, EndpointGroup endpointGroup, String path,
                                   Class<T> clientType) {

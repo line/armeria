@@ -64,7 +64,6 @@ public final class ThriftSerializationFormats {
     public static final SerializationFormat TEXT_NAMED_ENUM = SerializationFormat.of("ttext-named-enum");
 
     private static final List<ThriftProtocolFactoryProvider> protocolFactoryProviders;
-
     private static final Map<SerializationFormat, TProtocolFactory> lengthUnlimitedProtocolFactories;
     private static final Set<SerializationFormat> knownSerializationFormats;
 

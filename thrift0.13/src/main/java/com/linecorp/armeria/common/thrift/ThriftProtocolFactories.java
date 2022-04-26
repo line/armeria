@@ -39,8 +39,8 @@ public final class ThriftProtocolFactories {
      * <p>Note that this Thrift TBinary protocol does not limit the maximum number of bytes to read from the
      * transport. Therefore, it is recommended to NOT use this factory in a public network. If an attacker
      * sends a header with a large message size, an `OutOfMemoryError` may occur.
-     * Related: <a href="https://issues.apache.org/jira/browse/THRIFT-5237">Implement MAX_MESSAGE_SIZE and
-     * consolidate limits into a TConfiguration class</a>
+     * Related: <a href="https://issues.apache.org/jira/browse/THRIFT-2572">Add string/collection length limit
+     * checks (from C++) to java protocol readers</a>
      *
      * @deprecated Use {@link #binary(int, int)} instead.
      */
@@ -53,8 +53,8 @@ public final class ThriftProtocolFactories {
      * <p>Note that this Thrift TCompact protocol does not limit the maximum number of bytes to read from the
      * transport. Therefore, it is recommended to NOT use this factory in a public network. If an attacker
      * sends a header with a large message size, an `OutOfMemoryError` may occur.
-     * Related: <a href="https://issues.apache.org/jira/browse/THRIFT-5237">Implement MAX_MESSAGE_SIZE and
-     * consolidate limits into a TConfiguration class</a>
+     * Related: <a href="https://issues.apache.org/jira/browse/THRIFT-2572">Add string/collection length limit
+     * checks (from C++) to java protocol readers</a>
      *
      * @deprecated Use {@link #compat(int, int)} instead.
      */
