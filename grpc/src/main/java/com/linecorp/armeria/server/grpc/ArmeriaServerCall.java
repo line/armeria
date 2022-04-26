@@ -569,7 +569,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
             assert listener != null;
             listener.onHalfClose();
         } catch (Throwable t) {
-            close(t, generateMetadataFromThrowable(t));
+            close(t);
         }
     }
 
