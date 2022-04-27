@@ -223,7 +223,8 @@ public interface UnframedGrpcErrorHandler {
                                                                            grpcCode.value())
                                                                    .build();
             final ImmutableMap.Builder<String, Object> messageBuilder = ImmutableMap.builder();
-            messageBuilder.put("code", grpcCode.name());
+            messageBuilder.put("code", httpStatus.code());
+            messageBuilder.put("status", grpcCode.name());
             if (grpcMessage != null) {
                 messageBuilder.put("message", grpcMessage);
             }

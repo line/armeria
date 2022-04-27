@@ -176,8 +176,10 @@ public class UnframedGrpcErrorHandlerTest {
                       .execute();
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThatJson(mapper.readTree(response.contentUtf8())).isEqualTo(
-                "{\"error\":{\"code\":\"UNKNOWN\",\"message\":\"Unknown Exceptions Test\"," +
+                "{\"error\":{\"code\":500,\"status\":\"UNKNOWN\"," +
+                "\"message\":\"Unknown Exceptions Test\"," +
                 "\"details\":[{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\"," +
                 "\"reason\":\"Unknown Exception\",\"domain\":\"test\"}]}}");
+        assertThat(response.trailers()).isEmpty();
     }
 }

@@ -16,9 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.linecorp.armeria.server.grpc.UnframedGrpcErrorHandlerUtils.decodeGrpcStatusDetailsBin;
 import static org.assertj.core.api.Assertions.assertThat;
-
-import java.util.Base64;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -90,12 +89,6 @@ public class GrpcStatusDetailsBinHeaderTest {
                                   return HttpResponse.ofJson(responseHeaders, ImmutableMap.builder());
                               })
                               .build());
-    }
-
-    private static Status decodeGrpcStatusDetailsBin(String grpcStatusDetailsBin)
-            throws InvalidProtocolBufferException {
-        final byte[] result = Base64.getDecoder().decode(grpcStatusDetailsBin);
-        return Status.parseFrom(result);
     }
 
     @Test
