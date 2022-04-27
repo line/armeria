@@ -47,20 +47,23 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
  */
 public final class UnframedGrpcErrorHandlerUtils {
 
+    private static final MessageMarshaller ERROR_DETAILS_MARSHALLER =
+            MessageMarshaller.builder()
+                             .omittingInsignificantWhitespace(true)
+                             .register(RetryInfo.getDefaultInstance())
+                             .register(ErrorInfo.getDefaultInstance())
+                             .register(QuotaFailure.getDefaultInstance())
+                             .register(DebugInfo.getDefaultInstance())
+                             .register(PreconditionFailure.getDefaultInstance())
+                             .register(BadRequest.getDefaultInstance())
+                             .register(RequestInfo.getDefaultInstance())
+                             .register(ResourceInfo.getDefaultInstance())
+                             .register(Help.getDefaultInstance())
+                             .register(LocalizedMessage.getDefaultInstance())
+                             .build();
+
     static MessageMarshaller getErrorDetailsMarshaller() {
-        return MessageMarshaller.builder()
-                                .omittingInsignificantWhitespace(true)
-                                .register(RetryInfo.getDefaultInstance())
-                                .register(ErrorInfo.getDefaultInstance())
-                                .register(QuotaFailure.getDefaultInstance())
-                                .register(DebugInfo.getDefaultInstance())
-                                .register(PreconditionFailure.getDefaultInstance())
-                                .register(BadRequest.getDefaultInstance())
-                                .register(RequestInfo.getDefaultInstance())
-                                .register(ResourceInfo.getDefaultInstance())
-                                .register(Help.getDefaultInstance())
-                                .register(LocalizedMessage.getDefaultInstance())
-                                .build();
+        return ERROR_DETAILS_MARSHALLER;
     }
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
