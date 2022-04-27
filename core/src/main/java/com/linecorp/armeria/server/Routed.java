@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A value mapped by {@link Router}.
@@ -43,7 +44,8 @@ public final class Routed<T> {
      * Creates a new {@link Routed} with the specified {@link Route}, {@link RoutingResult} and
      * {@code value}.
      */
-    static <T> Routed<T> of(Route route, RoutingResult routingResult, T value) {
+    @UnstableApi
+    public static <T> Routed<T> of(Route route, RoutingResult routingResult, T value) {
         requireNonNull(route, "route");
         requireNonNull(routingResult, "routingResult");
         requireNonNull(value, "value");
