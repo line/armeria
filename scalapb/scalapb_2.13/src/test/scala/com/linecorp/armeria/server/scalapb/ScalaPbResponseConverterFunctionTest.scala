@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.scalapb
 import com.linecorp.armeria.common.{MediaType, MediaTypeNames}
 import com.linecorp.armeria.scalapb.testing.messages.SimpleResponse
 import com.linecorp.armeria.server.annotation.Produces
+import java.lang
 import java.lang.reflect.Type
 import munit.FunSuite
 import org.reactivestreams.Publisher
@@ -42,9 +43,11 @@ class ScalaPbResponseConverterFunctionTest extends FunSuite {
         case _                                    => None
       }
       val returnType: Type = method.getGenericReturnType
+      val isResponseStreaming = converter.isResponseStreaming(returnType, produceType)
       assert(
-        Option(converter.isResponseStreaming(returnType, produceType)) == expected,
-        s"response streaming from ${method.getName} should be ${expected}")
+        Option(isResponseStreaming) == expected,
+        s"${method.getName}:${returnType} - isResponseStreaming: ${isResponseStreaming} (expected: $expected)"
+      )
     }
   }
 }

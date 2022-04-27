@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.protobuf.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Produces;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -107,75 +108,88 @@ class ProtobufResponseConverterFunctionTest {
 
     private static final class ProtobufService {
         @Streaming("false")
+        @Get("/simple")
         public SimpleResponse simple() {
             return null;
         }
 
         @Streaming("false")
+        @Get("/json")
         @Produces(MediaTypeNames.JSON)
         public SimpleResponse json() {
             return null;
         }
 
         @Streaming("false")
+        @Get("/protobuf")
         @Produces(MediaTypeNames.PROTOBUF)
         public SimpleResponse protobuf() {
             return null;
         }
 
         @Streaming("false")
+        @Get("/simpleFuture")
         public CompletableFuture<SimpleResponse> simpleFuture() {
             return null;
         }
 
         @Streaming("false")
         @Produces(MediaTypeNames.JSON)
+        @Get("/jsonFuture")
         public CompletableFuture<SimpleResponse> jsonFuture() {
             return null;
         }
 
         @Streaming("false")
         @Produces(MediaTypeNames.PROTOBUF)
+        @Get("/protobufFuture")
         public CompletableFuture<SimpleResponse> protobufFuture() {
             return null;
         }
 
         @Streaming("false")
+        @Get("/simpleMono")
         public Mono<SimpleResponse> simpleMono() {
             return null;
         }
 
         @Streaming("false")
         @Produces(MediaTypeNames.JSON)
+        @Get("/jsonMono")
         public Mono<SimpleResponse> jsonMono() {
             return null;
         }
 
         @Streaming("false")
         @Produces(MediaTypeNames.PROTOBUF)
+        @Get("/protobufMono")
         public Mono<SimpleResponse> protobufMono() {
             return null;
         }
 
         @Streaming("null")
         @Produces(MediaTypeNames.JSON_SEQ)
+        @Get("/jsonSeqSimple")
         public List<SimpleResponse> jsonSeqSimple() {
             return null;
         }
 
         @Streaming("true")
+        @Get("/jsonSeqPublisher")
         @Produces(MediaTypeNames.JSON_SEQ)
         public Publisher<SimpleResponse> jsonSeqPublisher() {
             return null;
         }
 
         @Streaming("true")
+        @Get("/jsonSeqStream")
         @Produces(MediaTypeNames.JSON_SEQ)
         public Stream<SimpleResponse> jsonSeqStream() {
             return null;
         }
 
         @Streaming("null")
+        @Get("/unknown")
         public Publisher<SimpleResponse> unknown() {
             return null;
         }

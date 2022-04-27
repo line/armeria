@@ -79,6 +79,7 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
     if (clazz == null) {
       return null
     }
+
     if (classOf[GeneratedMessage].isAssignableFrom(clazz) ||
       classOf[GeneratedSealedOneof].isAssignableFrom(clazz)) {
       return false

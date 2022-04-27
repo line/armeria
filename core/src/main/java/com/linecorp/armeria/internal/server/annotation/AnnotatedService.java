@@ -601,6 +601,9 @@ public final class AnnotatedService implements HttpService {
                 return null;
             }
 
+            if (HttpResponse.class.isAssignableFrom(clazz)) {
+                return true;
+            }
             if (Publisher.class.isAssignableFrom(clazz) || Stream.class.isAssignableFrom(clazz)) {
                 return false;
             }
