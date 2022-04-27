@@ -31,7 +31,7 @@ import io.netty.buffer.ByteBufInputStream;
 import io.netty.buffer.Unpooled;
 
 /**
- * A skeleton implementation of gRPC message deframer. See
+ * A skeletal implementation of gRPC message deframer. See
  * <a href="https://github.com/grpc/grpc/blob/master/doc/PROTOCOL-HTTP2.md">gRPC Wire Format</a>
  * for more detail on the protocol.
  */

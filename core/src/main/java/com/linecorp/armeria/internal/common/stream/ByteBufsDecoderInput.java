@@ -37,7 +37,7 @@ public final class ByteBufsDecoderInput implements StreamDecoderInput {
 
     public ByteBufsDecoderInput(ByteBufAllocator alloc) {
         this.alloc = alloc;
-        queue = new ArrayDeque<>();
+        queue = new ArrayDeque<>(4);
     }
 
     public boolean add(ByteBuf byteBuf) {

@@ -47,21 +47,18 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.internal.common.grpc.DefaultJsonMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcTestUtil;
@@ -289,16 +286,23 @@ class UnaryServerCallTest {
     }
 
     @Test
-    void deferResponseHeaders_streaming_nonResponseMessage() {
-        final HttpResponseWriter response = HttpResponse.streaming();
-        final StreamingServerCall<StreamingOutputCallRequest, StreamingOutputCallResponse> call =
-                new StreamingServerCall<>(
-                        HttpRequest.of(HttpMethod.GET, "/"),
-                        TestServiceGrpc.getStreamingOutputCallMethod(),
-                        TestServiceGrpc.getStreamingOutputCallMethod().getBareMethodName(),
+    void decodeMultipleChunks() {
+        final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
+        final HttpResponse response = HttpResponse.from(resFuture);
+        final byte[] bytes = GrpcTestUtil.uncompressedFrame(GrpcTestUtil.requestByteBuf());
+        final int length = bytes.length;
+        final int middle = length / 2;
+        final HttpData first = HttpData.copyOf(bytes, 0, middle);
+        final HttpData second = HttpData.copyOf(bytes, middle, length - middle);
+        final UnaryServerCall<SimpleRequest, SimpleResponse> unaryCall =
+                new UnaryServerCall<>(
+                        HttpRequest.of(RequestHeaders.of(HttpMethod.POST, "/"), first, second),
+                        TestServiceGrpc.getUnaryCallMethod(),
+                        TestServiceGrpc.getUnaryCallMethod().getBareMethodName(),
                         CompressorRegistry.getDefaultInstance(),
                         DecompressorRegistry.getDefaultInstance(),
                         response,
+                        resFuture,
                         MAX_MESSAGE_BYTES,
                         MAX_MESSAGE_BYTES,
                         ctx,
@@ -311,51 +315,23 @@ class UnaryServerCallTest {
                                        .build(),
                         /* exceptionMappings */ null);
 
-        final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
-        final List<HttpObject> received = new ArrayList<>();
+        final AtomicReference<SimpleRequest> requestCaptor = new AtomicReference<>();
         final AtomicBoolean completed = new AtomicBoolean();
-        response.subscribe(new Subscriber<HttpObject>() {
-
+        unaryCall.setListener(new Listener<SimpleRequest>() {
             @Override
-            public void onSubscribe(Subscription s) {
-                subscriptionRef.set(s);
+            public void onMessage(SimpleRequest message) {
+                requestCaptor.set(message);
             }
 
             @Override
-            public void onNext(HttpObject httpObject) {
-                received.add(httpObject);
-            }
-
-            @Override
-            public void onError(Throwable t) {}
-
-            @Override
-            public void onComplete() {
+            public void onHalfClose() {
                 completed.set(true);
             }
-        }, ctx.eventLoop());
+        });
+        unaryCall.request(1);
+        await().untilTrue(completed);
 
-        final Metadata metadata = new Metadata();
-        metadata.put(EXTRA_HEADER_KEY, "dog");
-        call.sendHeaders(metadata);
-        subscriptionRef.get().request(1);
-        // Headers are deferred until the first response is received.
-        assertThat(received).isEmpty();
-
-        final Metadata closingMetadata = new Metadata();
-        closingMetadata.put(EXTRA_HEADER_KEY1, "cat");
-        // A stream call is successfully completed with no response message.
-        call.close(Status.OK, closingMetadata);
-        subscriptionRef.get().request(1);
-
-        // The headers and trailers will be sent.
-        assertThat(received).hasSize(2);
-        final ResponseHeaders headers = (ResponseHeaders) received.get(0);
-        assertThat(headers.get(EXTRA_HEADER_NAME)).isEqualTo("dog");
-        assertThat(headers.get(EXTRA_HEADER_NAME)).isEqualTo("dog");
-        final HttpHeaders trailers = (HttpHeaders) received.get(1);
-        assertThat(trailers.get(EXTRA_HEADER_NAME1)).isEqualTo("cat");
-        assertThat(completed).isTrue();
+        assertThat(requestCaptor).hasValue(GrpcTestUtil.REQUEST_MESSAGE);
     }
 
     private UnaryServerCall<SimpleRequest, SimpleResponse> newServerCall(

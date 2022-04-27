@@ -16,12 +16,16 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import java.util.List;
+
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.protocol.AbstractMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.Decompressor;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
 import com.linecorp.armeria.internal.common.grpc.protocol.Base64Decoder;
+import com.linecorp.armeria.internal.common.stream.ByteBufsDecoderInput;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -30,22 +34,43 @@ class UnaryMessageDeframer extends AbstractMessageDeframer {
 
     private final ByteBufAllocator alloc;
     private final boolean grpcWebText;
+    @Nullable
+    private final Base64Decoder base64Decoder;
 
     UnaryMessageDeframer(ByteBufAllocator alloc, int maxMessageLength, boolean grpcWebText) {
         super(maxMessageLength);
         this.alloc = alloc;
         this.grpcWebText = grpcWebText;
+        if (grpcWebText) {
+            base64Decoder = new Base64Decoder(alloc);
+        } else {
+            base64Decoder = null;
+        }
     }
-
-    // Valid type is always positive.
 
     DeframedMessage deframe(HttpData data) {
         ByteBuf buf = data.byteBuf();
-        if (grpcWebText) {
-            buf = new Base64Decoder(alloc).decode(buf);
+        if (base64Decoder != null) {
+            buf = base64Decoder.decode(buf);
         }
 
         try (UnaryDecoderInput input = new UnaryDecoderInput(buf)) {
+            readHeader(input);
+            return readBody(input);
+        }
+    }
+
+    DeframedMessage deframe(List<HttpObject> objects) {
+        try (ByteBufsDecoderInput input = new ByteBufsDecoderInput(alloc)) {
+            for (HttpObject object : objects) {
+                if (object instanceof HttpData) {
+                    ByteBuf buf = ((HttpData) object).byteBuf();
+                    if (base64Decoder != null) {
+                        buf = base64Decoder.decode(buf);
+                    }
+                    input.add(buf);
+                }
+            }
             readHeader(input);
             return readBody(input);
         }

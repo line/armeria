@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.HttpMessageAggregator.aggregateData;
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.common.HttpData;
@@ -36,6 +37,7 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -115,20 +117,33 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             return;
         }
         deframingStarted = true;
-        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((agg, cause) -> {
+        req.collect(ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS).handle((objects, cause) -> {
             if (cause != null) {
                 onError(cause);
                 return null;
             }
 
             try {
-                final DeframedMessage deframed = requestDeframer.deframe(agg.content());
-                onRequestMessage(deframed, true);
+                onRequestMessage(deframe(objects), true);
             } catch (Exception ex) {
                 onError(ex);
             }
             return null;
         });
+    }
+
+    private DeframedMessage deframe(List<HttpObject> objects) {
+        if (objects.size() == 1) {
+            final HttpObject object = objects.get(0);
+            if (object instanceof HttpData) {
+                return requestDeframer.deframe((HttpData) object);
+            } else {
+                // invalid request
+                return requestDeframer.deframe(HttpData.empty());
+            }
+        } else {
+            return requestDeframer.deframe(objects);
+        }
     }
 
     @Override
