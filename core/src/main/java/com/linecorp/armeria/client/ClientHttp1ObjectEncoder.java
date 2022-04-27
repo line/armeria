@@ -31,6 +31,7 @@ import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
@@ -52,8 +53,9 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
     }
 
     @Override
-    public ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream) {
-        return writeNonInformationalHeaders(id, convertHeaders(headers, endStream), endStream);
+    public ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream,
+                                        ChannelPromise promise) {
+        return writeNonInformationalHeaders(id, convertHeaders(headers, endStream), endStream, promise);
     }
 
     private HttpObject convertHeaders(RequestHeaders headers, boolean endStream) {

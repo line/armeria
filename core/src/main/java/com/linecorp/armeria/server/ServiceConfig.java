@@ -47,6 +47,7 @@ public final class ServiceConfig {
     private final VirtualHost virtualHost;
 
     private final Route route;
+    private final Route mappedRoute;
     private final HttpService service;
     @Nullable
     private final String defaultServiceName;
@@ -72,7 +73,7 @@ public final class ServiceConfig {
     /**
      * Creates a new instance.
      */
-    ServiceConfig(Route route, HttpService service, @Nullable String defaultLogName,
+    ServiceConfig(Route route, Route mappedRoute, HttpService service, @Nullable String defaultLogName,
                   @Nullable String defaultServiceName, ServiceNaming defaultServiceNaming,
                   long requestTimeoutMillis, long maxRequestLength,
                   boolean verboseResponses, AccessLogWriter accessLogWriter,
@@ -81,7 +82,7 @@ public final class ServiceConfig {
                   boolean shutdownBlockingTaskExecutorOnStop,
                   SuccessFunction successFunction,
                   Path multipartUploadsLocation) {
-        this(null, route, service, defaultLogName, defaultServiceName, defaultServiceNaming,
+        this(null, route, mappedRoute, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              shutdownAccessLogWriterOnStop, extractTransientServiceOptions(service),
              blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
@@ -91,7 +92,8 @@ public final class ServiceConfig {
     /**
      * Creates a new instance.
      */
-    private ServiceConfig(@Nullable VirtualHost virtualHost, Route route, HttpService service,
+    private ServiceConfig(@Nullable VirtualHost virtualHost, Route route,
+                          Route mappedRoute, HttpService service,
                           @Nullable String defaultLogName, @Nullable String defaultServiceName,
                           ServiceNaming defaultServiceNaming, long requestTimeoutMillis, long maxRequestLength,
                           boolean verboseResponses, AccessLogWriter accessLogWriter,
@@ -103,6 +105,7 @@ public final class ServiceConfig {
                           Path multipartUploadsLocation) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
+        this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
         this.service = requireNonNull(service, "service");
         this.defaultLogName = defaultLogName;
         this.defaultServiceName = defaultServiceName;
@@ -150,7 +153,7 @@ public final class ServiceConfig {
 
     ServiceConfig withVirtualHost(VirtualHost virtualHost) {
         requireNonNull(virtualHost, "virtualHost");
-        return new ServiceConfig(virtualHost, route, service, defaultLogName, defaultServiceName,
+        return new ServiceConfig(virtualHost, route, mappedRoute, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
                                  blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
@@ -159,7 +162,7 @@ public final class ServiceConfig {
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
-        return new ServiceConfig(virtualHost, route, service.decorate(decorator), defaultLogName,
+        return new ServiceConfig(virtualHost, route, mappedRoute, service.decorate(decorator), defaultLogName,
                                  defaultServiceName, defaultServiceNaming, requestTimeoutMillis,
                                  maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
@@ -169,7 +172,7 @@ public final class ServiceConfig {
 
     ServiceConfig withRoute(Route route) {
         requireNonNull(route, "route");
-        return new ServiceConfig(virtualHost, route, service, defaultLogName, defaultServiceName,
+        return new ServiceConfig(virtualHost, route, mappedRoute, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
                                  blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
@@ -198,6 +201,33 @@ public final class ServiceConfig {
      */
     public Route route() {
         return route;
+    }
+
+    /**
+     * Returns the {@link Route} whose prefix is removed when an {@link HttpServiceWithRoutes} is added
+     * via {@link ServerBuilder#serviceUnder(String, HttpService)}.
+     * For example, in the following code, the path of the {@link #mappedRoute()} will be ({@code "/bar"})
+     * whereas the path of the {@link #route()} will be ({@code "/foo/bar"}):
+     * <pre>{@code
+     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+     * >
+     * >     @Override
+     * >     public Set<Route> routes() {
+     * >         return Set.of(Route.builder().path("/bar").build());
+     * >     }
+     * > };
+     * >
+     * > Server.builder()
+     * >       .serviceUnder("/foo", serviceWithRoutes)
+     * >       .build();
+     * }</pre>
+     * If the service is not an {@link HttpServiceWithRoutes}, the {@link Route} is the same as
+     * {@link #route()}.
+     */
+    public Route mappedRoute() {
+        return mappedRoute;
     }
 
     /**

@@ -27,11 +27,13 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
@@ -224,9 +226,10 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      * Returns the {@link Function} that starts to send health check requests to the {@link Endpoint}
      * specified in a given {@link HealthCheckerContext} when invoked. The {@link Function} must update
      * the health of the {@link Endpoint} with a value between [0, 1] via
-     * {@link HealthCheckerContext#updateHealth(double)}. {@link HealthCheckedEndpointGroup} will call
-     * {@link AsyncCloseable#closeAsync()} on the {@link AsyncCloseable} returned by the {@link Function}
-     * when it needs to stop sending health check requests.
+     * {@link HealthCheckerContext#updateHealth(double, ClientRequestContext, ResponseHeaders, Throwable)}.
+     * {@link HealthCheckedEndpointGroup} will call {@link AsyncCloseable#closeAsync()} on the
+     * {@link AsyncCloseable} returned by the {@link Function} when it needs to stop sending health check
+     * requests.
      */
     protected abstract Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory();
 }
