@@ -43,7 +43,7 @@ class NullableTypeSupportTest {
         "/value-resolver/of-bean-field",
         "/value-resolver/of-bean-method"
     ])
-    fun test_valueResolverOfBeanConstructor(testPath: String) {
+    fun test_nullableParameters(testPath: String) {
         testNullableParameters("/nullable-type/$testPath")
 
         // Check for backward-compatibility
