@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.LeakTracingRequestContextStorage.PendingRequestContextStackTrace;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -155,7 +156,7 @@ class ServiceRequestContextTest {
         try (SafeCloseable ignored = cctx.push()) {
             assertCurrentCtx(cctx);
             final ServiceRequestContext sctx = serviceRequestContext();
-            assertThatThrownBy(sctx::push).isInstanceOf(IllegalStateException.class);
+            assertThatThrownBy(sctx::push).isInstanceOf(PendingRequestContextStackTrace.class);
         }
         assertCurrentCtx(null);
     }
@@ -166,7 +167,7 @@ class ServiceRequestContextTest {
         final ServiceRequestContext sctx2 = serviceRequestContext();
         try (SafeCloseable ignored = sctx1.push()) {
             assertCurrentCtx(sctx1);
-            assertThatThrownBy(sctx2::push).isInstanceOf(IllegalStateException.class);
+            assertThatThrownBy(sctx2::push).isInstanceOf(PendingRequestContextStackTrace.class);
         }
         assertCurrentCtx(null);
     }

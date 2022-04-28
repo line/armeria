@@ -108,7 +108,7 @@ class TraceRequestContextLeakTest {
 
         latch.await();
         assertThat(isThrown).isTrue();
-        assertThat(exception.get()).hasMessageContaining("It is pushed at the following stacktrace");
+        assertThat(exception.get()).hasMessageContaining("RequestContext didn't popped");
 
         deferredClose.closeAll();
     }
@@ -197,7 +197,7 @@ class TraceRequestContextLeakTest {
 
         latch.await();
         assertThat(isThrown).isTrue();
-        assertThat(exception.get()).hasMessageContaining("It is pushed at the following stacktrace");
+        assertThat(exception.get()).hasMessageContaining("RequestContext didn't popped");
 
         deferredClose.closeAll();
     }

@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.concurrent.FastThreadLocal;
@@ -33,14 +34,26 @@ public final class LeakTracingRequestContextStorage implements RequestContextSto
 
     private final RequestContextStorage delegate;
     private final FastThreadLocal<PendingRequestContextStackTrace> pendingRequestCtx;
+    private final Sampler<Class<? extends Throwable>> sampler;
 
     /**
      * Creates a new instance.
      * @param delegate the underlying {@link RequestContextStorage} that stores {@link RequestContext}
      */
     public LeakTracingRequestContextStorage(RequestContextStorage delegate) {
+        this(delegate, Flags.verboseExceptionSampler());
+    }
+
+    /**
+     * Creates a new instance.
+     * @param delegate the underlying {@link RequestContextStorage} that stores {@link RequestContext}
+     * @param sampler the {@link Sampler} that determines whether to retain the stacktrace of the context leaks
+     */
+    public LeakTracingRequestContextStorage(RequestContextStorage delegate,
+                                            Sampler<Class<? extends Throwable>> sampler) {
         this.delegate = delegate;
         pendingRequestCtx = new FastThreadLocal<>();
+        this.sampler = sampler;
     }
 
     @Nullable
@@ -62,7 +75,12 @@ public final class LeakTracingRequestContextStorage implements RequestContextSto
                 throw pendingRequestCtx.get();
             }
         }
-        pendingRequestCtx.set(new PendingRequestContextStackTrace(toPush));
+
+        if (sampler.isSampled(PendingRequestContextStackTrace.class)) {
+            pendingRequestCtx.set(new PendingRequestContextStackTrace(toPush, true));
+        } else {
+            pendingRequestCtx.set(new PendingRequestContextStackTrace(toPush, false));
+        }
 
         return delegate.push(toPush);
     }
@@ -79,16 +97,14 @@ public final class LeakTracingRequestContextStorage implements RequestContextSto
         return delegate.currentOrNull();
     }
 
-    private static class PendingRequestContextStackTrace extends IllegalStateException {
+    static class PendingRequestContextStackTrace extends RuntimeException {
 
         private static final long serialVersionUID = -689451606253441556L;
 
-        final RequestContext context;
-
-        PendingRequestContextStackTrace(RequestContext context) {
+        PendingRequestContextStackTrace(RequestContext context, boolean isSample) {
             super("At thread [" + currentThread().getName() + "], previous RequestContext didn't popped : " +
-                  context + ", It is pushed at the following stacktrace");
-            this.context = context;
+                  context + (isSample ? ", It is pushed at the following stacktrace" : ""), null,
+                  true, isSample);
         }
     }
 }
