@@ -130,7 +130,7 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
      * <pre>{@code
      * // A Thrift service is bound to "/thrift"
      * Server.builder()
-     *       .service("/thrift", THttpService.of(new MyThriftService())
+     *       .service("/thrift", THttpService.of(new MyThriftService()))
      *       .build();
      *
      * // Set "/thrift" to the Thrift service path.
@@ -153,7 +153,7 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
      * variable-length fields (such as strings or binary).
      * If unspecified, the value of {@link ClientOptions#maxResponseLength()} will be used instead.
      *
-     * <p>Note that this options is only valid for {@link TBinaryProtocol} and {@link TCompactProtocol}.
+     * <p>Note that this option is only valid for {@link TBinaryProtocol} and {@link TCompactProtocol}.
      *
      * @param maxResponseStringLength the maximum allowed string length. {@code 0} disables the length limit.
      */
@@ -166,9 +166,9 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
     /**
      * Sets the maximum allowed number of bytes to read from the transport for
      * containers (maps, sets, lists).
-     * This option is disabled by default, which means unlimited.
+     * If unspecified, the value of {@link ClientOptions#maxResponseLength()} will be used instead.
      *
-     * <p>Note that this options is only valid for {@link TBinaryProtocol} and {@link TCompactProtocol}.
+     * <p>Note that this option is only valid for {@link TBinaryProtocol} and {@link TCompactProtocol}.
      *
      * @param maxResponseContainerLength the maximum allowed string length. {@code 0} disables the length limit.
      */
@@ -179,7 +179,7 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     /**
-     * Returns a newly-created gRPC client which implements the specified {@code clientType}, based on the
+     * Returns a newly-created Thrift client which implements the specified {@code clientType}, based on the
      * properties of this builder.
      */
     public <T> T build(Class<T> clientType) {

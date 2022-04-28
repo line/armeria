@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -37,10 +37,10 @@ public final class ThriftClientOptions {
     /**
      * Sets the maximum allowed number of bytes to read from the transport for
      * containers (maps, sets, lists).
-     * This option is disabled by default, which means unlimited.
+     * If unspecified, the value of {@link ClientOptions#maxResponseLength()} will be used instead.
      */
     public static final ClientOption<Integer> MAX_RESPONSE_CONTAINER_LENGTH =
-            ClientOption.define("THRIFT_MAX_CONTAINER_LENGTH", 0);
+            ClientOption.define("THRIFT_MAX_CONTAINER_LENGTH", -1);
 
     private ThriftClientOptions() {}
 }

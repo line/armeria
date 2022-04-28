@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.ServiceLoader;
 import java.util.Set;
 
@@ -75,8 +76,10 @@ public final class ThriftSerializationFormats {
         lengthUnlimitedProtocolFactories = protocolFactoryProviders
                 .stream()
                 .flatMap(provider -> provider.serializationFormats().stream().map(format -> {
-                    return Maps.immutableEntry(format, provider.tProtocolFactory(format, 0, 0));
+                    final TProtocolFactory factory = provider.tProtocolFactory(format, 0, 0);
+                    return factory != null ? Maps.immutableEntry(format, factory) : null;
                 }))
+                .filter(Objects::nonNull)
                 .collect(toImmutableMap(Entry::getKey, Entry::getValue));
 
         knownSerializationFormats = lengthUnlimitedProtocolFactories.keySet();

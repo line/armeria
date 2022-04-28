@@ -37,7 +37,7 @@ public final class ThriftProtocolFactories {
      * {@link TProtocolFactory} for Thrift TBinary protocol.
      *
      * <p>Note that this Thrift TBinary protocol does not limit the maximum number of bytes to read from the
-     * transport. Therefore, it is recommended to NOT use this factory in a public network. If an attacker
+     * transport. Therefore, it is recommended NOT to use this factory in a public network. If an attacker
      * sends a header with a large message size, an `OutOfMemoryError` may occur.
      * Related: <a href="https://issues.apache.org/jira/browse/THRIFT-2572">Add string/collection length limit
      * checks (from C++) to java protocol readers</a>
@@ -118,7 +118,7 @@ public final class ThriftProtocolFactories {
         final int maxStringLength0 = maxStringLength == 0 ? -1 : maxStringLength;
         final int maxContainerLength0 = maxContainerLength == 0 ? -1 : maxContainerLength;
 
-        return new TBinaryProtocol.Factory(false, false, maxStringLength0, maxContainerLength0) {
+        return new TBinaryProtocol.Factory(false, true, maxStringLength0, maxContainerLength0) {
             private static final long serialVersionUID = -9020693963961565748L;
 
             @Override
