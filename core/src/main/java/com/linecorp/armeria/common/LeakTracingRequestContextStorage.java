@@ -29,7 +29,7 @@ import io.netty.util.concurrent.FastThreadLocal;
  * A {@link RequestContextStorage} which keeps track of {@link RequestContext}s, reporting pushed thread
  * information if a {@link RequestContext} is leaked.
  */
-public final class TraceAbleRequestContextStorage implements RequestContextStorage {
+public final class LeakTracingRequestContextStorage implements RequestContextStorage {
 
     private final RequestContextStorage delegate;
     private final FastThreadLocal<PendingRequestContextStackTrace> pendingRequestCtx;
@@ -38,7 +38,7 @@ public final class TraceAbleRequestContextStorage implements RequestContextStora
      * Creates a new instance.
      * @param delegate the underlying {@link RequestContextStorage} that stores {@link RequestContext}
      */
-    public TraceAbleRequestContextStorage(RequestContextStorage delegate) {
+    public LeakTracingRequestContextStorage(RequestContextStorage delegate) {
         this.delegate = delegate;
         pendingRequestCtx = new FastThreadLocal<>();
     }

@@ -16,10 +16,10 @@
 
 package com.linecorp.armeria.common;
 
-public final class TraceRequestContextStorageProvider implements RequestContextStorageProvider {
+public final class LeakTracingRequestContextStorageProvider implements RequestContextStorageProvider {
 
     @Override
     public RequestContextStorage newStorage() {
-        return new TraceAbleRequestContextStorage(RequestContextStorage.threadLocal());
+        return new LeakTracingRequestContextStorage(RequestContextStorage.threadLocal());
     }
 }

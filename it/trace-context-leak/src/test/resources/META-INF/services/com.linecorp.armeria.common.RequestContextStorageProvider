@@ -1,1 +1,1 @@
-com.linecorp.armeria.common.TraceRequestContextStorageProvider
+com.linecorp.armeria.common.LeakTracingRequestContextStorageProvider
