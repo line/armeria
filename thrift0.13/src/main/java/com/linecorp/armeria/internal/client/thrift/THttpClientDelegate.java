@@ -99,7 +99,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
         }
         int maxContainerLength = options.get(MAX_RESPONSE_CONTAINER_LENGTH);
         if (maxContainerLength < 0) {
-            maxContainerLength = 0;
+            maxContainerLength = Ints.saturatedCast(options.maxResponseLength());
         }
         responseProtocolFactory =
                 ThriftSerializationFormats.protocolFactory(serializationFormat,

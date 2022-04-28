@@ -81,8 +81,9 @@ public final class THttpServiceBuilder {
     private BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
             exceptionHandler = defaultExceptionHandler;
 
-    private int maxRequestStringLength = -1; // -1 means to use the default request length of the Server.
-    private int maxRequestContainerLength;
+    // -1 means to use the default request length of the Server.
+    private int maxRequestStringLength = -1;
+    private int maxRequestContainerLength = -1;
 
     THttpServiceBuilder() {}
 

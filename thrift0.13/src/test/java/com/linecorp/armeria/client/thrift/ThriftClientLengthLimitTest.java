@@ -25,7 +25,14 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.apache.thrift.TException;
+import org.apache.thrift.protocol.TField;
+import org.apache.thrift.protocol.TList;
+import org.apache.thrift.protocol.TMessage;
+import org.apache.thrift.protocol.TMessageType;
+import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.protocol.TProtocolException;
+import org.apache.thrift.protocol.TType;
+import org.apache.thrift.transport.TTransport;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -34,6 +41,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.Clients;
@@ -44,6 +52,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.internal.common.thrift.TByteBufTransport;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
@@ -65,11 +74,14 @@ class ThriftClientLengthLimitTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            sb.maxRequestLength(0);
+
             sb.service("/thrift", THttpService.builder()
                                               .addService(HELLO_SERVICE_HANDLER)
                                               .addService(NAME_SERVICE_HANDLER)
                                               .build());
-            sb.service("/invalid", (ctx, req) -> {
+
+            sb.service("/invalid-string", (ctx, req) -> {
                 final SerializationFormat serializationFormat;
                 if (ThriftSerializationFormats.BINARY.mediaType().equals(req.contentType())) {
                     serializationFormat = ThriftSerializationFormats.BINARY;
@@ -81,21 +93,39 @@ class ThriftClientLengthLimitTest {
                                                "Hello".getBytes());
                 return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK), HttpData.wrap(buf));
             });
+
+            sb.service("/invalid-container", (ctx, req) -> {
+                final ByteBuf buf = ctx.alloc().buffer(128);
+                final SerializationFormat serializationFormat;
+
+                if (ThriftSerializationFormats.BINARY.mediaType().equals(req.contentType())) {
+                    serializationFormat = ThriftSerializationFormats.BINARY;
+                } else {
+                    serializationFormat = ThriftSerializationFormats.COMPACT;
+                }
+                final TMessage header = new TMessage("sort", TMessageType.REPLY, 1);
+                final TTransport transport = new TByteBufTransport(buf);
+                final TProtocol outProto = ThriftSerializationFormats.protocolFactory(serializationFormat, 0, 0)
+                                                                     .getProtocol(transport);
+                outProto.writeMessageBegin(header);
+                final TField field = new TField("success", TType.LIST, (short) 0);
+                outProto.writeFieldBegin(field);
+                // Set an invalid container size larger than the container limit.
+                outProto.writeListBegin(new TList(TType.STRUCT, (int) (Flags.defaultMaxResponseLength() + 1)));
+                return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK), HttpData.wrap(buf));
+            });
         }
     };
 
     @ArgumentsSource(ThriftSerializationFormatProvider.class)
     @ParameterizedTest
-    void defaultLimit(SerializationFormat serializationFormat) throws TException {
+    void defaultStringLimit(SerializationFormat serializationFormat) throws TException {
         final HelloService.Iface client =
                 ThriftClients.newClient(server.httpUri(serializationFormat).resolve("/thrift"),
                                         HelloService.Iface.class);
         final ClientBuilderParams params = Clients.unwrap(client, ClientBuilderParams.class);
         // Should respect maxResponseLength if maxStringLength is unspecified.
         final int maxStringLength = (int) params.options().maxResponseLength();
-        final int maxContainerLength = params.options().get(ThriftClientOptions.MAX_RESPONSE_CONTAINER_LENGTH);
-        // maxContainerLength is disabled by default.
-        assertThat(maxContainerLength).isZero();
 
         final int responseSize = maxStringLength - 30;
         final String response = client.hello(String.valueOf(responseSize));
@@ -103,7 +133,7 @@ class ThriftClientLengthLimitTest {
 
         assertThatThrownBy(() -> {
             final HelloService.Iface client0 =
-                    ThriftClients.newClient(server.httpUri(serializationFormat).resolve("/invalid"),
+                    ThriftClients.newClient(server.httpUri(serializationFormat).resolve("/invalid-string"),
                                             HelloService.Iface.class);
             client0.hello("Hello");
         }).isInstanceOf(TProtocolException.class)
@@ -112,7 +142,23 @@ class ThriftClientLengthLimitTest {
 
     @ArgumentsSource(ThriftSerializationFormatProvider.class)
     @ParameterizedTest
-    void stringLimit(SerializationFormat serializationFormat) {
+    void defaultContainerLimit(SerializationFormat serializationFormat) throws TException {
+        final NameSortService.Iface client =
+                ThriftClients.newClient(server.httpUri(serializationFormat).resolve("/invalid-container"),
+                                        NameSortService.Iface.class);
+        final ClientBuilderParams params = Clients.unwrap(client, ClientBuilderParams.class);
+        // Should respect maxResponseLength if maxContainerLength is unspecified.
+        final int maxContainerLength = (int) params.options().maxResponseLength();
+
+        assertThatThrownBy(() -> {
+            client.sort(ImmutableList.of(new Name("", "", "")));
+        }).isInstanceOf(TProtocolException.class)
+          .hasMessageContaining("Length exceeded max allowed: " + (maxContainerLength + 1));
+    }
+
+    @ArgumentsSource(ThriftSerializationFormatProvider.class)
+    @ParameterizedTest
+    void customStringLimit(SerializationFormat serializationFormat) {
         final int maxStringLength = 100;
         final HelloService.Iface client =
                 ThriftClients.builder(server.httpUri(serializationFormat))
@@ -127,7 +173,7 @@ class ThriftClientLengthLimitTest {
 
     @ArgumentsSource(ThriftSerializationFormatProvider.class)
     @ParameterizedTest
-    void containerLimit(SerializationFormat serializationFormat) {
+    void customContainerLimit(SerializationFormat serializationFormat) {
         final int maxContainerLength = 100;
         final NameSortService.Iface client =
                 ThriftClients.builder(server.httpUri(serializationFormat))

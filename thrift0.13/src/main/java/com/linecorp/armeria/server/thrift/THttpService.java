@@ -273,10 +273,11 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     private final ThriftCallService thriftService;
     private final SerializationFormat defaultSerializationFormat;
     private final Set<SerializationFormat> supportedSerializationFormats;
-    private int maxRequestStringLength;
-    private final int maxRequestContainerLength;
     private final BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
             exceptionHandler;
+
+    private int maxRequestStringLength;
+    private int maxRequestContainerLength;
     private final Map<SerializationFormat, TProtocolFactory> responseProtocolFactories;
     private Map<SerializationFormat, TProtocolFactory> requestProtocolFactories;
 
@@ -336,6 +337,9 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
     public void serviceAdded(ServiceConfig cfg) throws Exception {
         if (maxRequestStringLength == -1) {
             maxRequestStringLength = Ints.saturatedCast(cfg.maxRequestLength());
+        }
+        if (maxRequestContainerLength == -1) {
+            maxRequestContainerLength = Ints.saturatedCast(cfg.maxRequestLength());
         }
         requestProtocolFactories = supportedSerializationFormats
                 .stream()

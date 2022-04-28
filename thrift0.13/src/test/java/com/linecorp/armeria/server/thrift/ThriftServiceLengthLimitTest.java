@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import org.apache.thrift.TApplicationException;
@@ -41,10 +42,16 @@ import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.Name;
@@ -70,7 +77,10 @@ class ThriftServiceLengthLimitTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.maxRequestLength(MAX_REQUEST_LENGTH);
-            sb.service("/default-limit", THttpService.of(HELLO_SERVICE_HANDLER));
+            sb.service("/default-limit", THttpService.builder()
+                                                     .addService(HELLO_SERVICE_HANDLER)
+                                                     .addService(NAME_SERVICE_HANDLER)
+                                                     .build());
             sb.service("/string-limit", THttpService.builder()
                                                     .addService(HELLO_SERVICE_HANDLER)
                                                     .maxRequestStringLength(MAX_STRING_LENGTH)
@@ -86,7 +96,7 @@ class ThriftServiceLengthLimitTest {
 
     @ArgumentsSource(ThriftSerializationFormatProvider.class)
     @ParameterizedTest
-    void defaultLimit(SerializationFormat serializationFormat) throws TException {
+    void defaultStringLimit(SerializationFormat serializationFormat) throws TException {
         final HelloService.Iface client =
                 ThriftClients.newClient(server.httpUri(serializationFormat).resolve("/default-limit"),
                                         HelloService.Iface.class);
@@ -114,7 +124,54 @@ class ThriftServiceLengthLimitTest {
 
     @ArgumentsSource(ThriftSerializationFormatProvider.class)
     @ParameterizedTest
-    void stringLimit(SerializationFormat serializationFormat) {
+    void defaultContainerLimit(SerializationFormat serializationFormat) throws Exception {
+        final AtomicReference<RequestHeaders> capturedHeaders = new AtomicReference<>();
+        final AtomicReference<byte[]> capturedMessage = new AtomicReference<>();
+        final NameSortService.Iface client =
+                ThriftClients.builder(server.httpUri(serializationFormat).resolve("/default-limit"))
+                             .decorator((delegate, ctx, req) -> {
+
+                                 capturedHeaders.set(req.headers());
+                                 final HttpRequest peeked =
+                                         req.peekData(data -> capturedMessage.set(data.array()));
+                                 ctx.updateRequest(peeked);
+                                 return delegate.execute(ctx, peeked);
+                             })
+                             .build(NameSortService.Iface.class);
+        final List<Name> names = new ArrayList<>();
+        final int containerLength = MAX_REQUEST_LENGTH + 1;
+        for (int i = 0; i < containerLength; i++) {
+            names.add(new Name("a", "b", "c"));
+        }
+        // Limited by the HTTP layer.
+        final Throwable cause = catchThrowable(() -> client.sort(names));
+        assertThat(cause).isInstanceOf(TTransportException.class);
+        assertThat(cause.getCause())
+                .isInstanceOf(InvalidResponseHeadersException.class)
+                .satisfies(ex -> {
+                    assertThat(((InvalidResponseHeadersException) ex).headers().status())
+                            .isEqualTo(HttpStatus.REQUEST_ENTITY_TOO_LARGE);
+                });
+
+        // Limited by the `TProtocol`s.
+        final ServiceConfig serviceConfig =
+                server.server().serviceConfigs().stream()
+                      .filter(cfg -> "/default-limit".equals(cfg.route().patternString()))
+                      .findFirst().get();
+        final HttpService service = serviceConfig.service();
+        final ServiceRequestContext ctx = ServiceRequestContext.of(
+                HttpRequest.of(capturedHeaders.get(), HttpData.wrap(capturedMessage.get())));
+        final AggregatedHttpResponse response = service.serve(ctx, ctx.request()).aggregate().join();
+        assertThat(response.contentUtf8())
+                .contains("Length exceeded max allowed: " + containerLength);
+        assertThat(ctx.log().whenAvailable(RequestLogProperty.RESPONSE_CAUSE).join().responseCause())
+                .isInstanceOf(TApplicationException.class)
+                .hasMessageContaining("Length exceeded max allowed: " + containerLength);
+    }
+
+    @ArgumentsSource(ThriftSerializationFormatProvider.class)
+    @ParameterizedTest
+    void customStringLimit(SerializationFormat serializationFormat) {
         final HelloService.Iface client =
                 ThriftClients.newClient(server.httpUri(serializationFormat).resolve("/string-limit"),
                                         HelloService.Iface.class);
@@ -126,7 +183,7 @@ class ThriftServiceLengthLimitTest {
 
     @ArgumentsSource(ThriftSerializationFormatProvider.class)
     @ParameterizedTest
-    void containerLimit(SerializationFormat serializationFormat) {
+    void customContainerLimit(SerializationFormat serializationFormat) {
         final NameSortService.Iface client =
                 ThriftClients.newClient(server.httpUri(serializationFormat).resolve("/container-limit"),
                                         NameSortService.Iface.class);
