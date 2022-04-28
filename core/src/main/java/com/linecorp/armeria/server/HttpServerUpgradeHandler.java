@@ -37,6 +37,7 @@ import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.util.AsciiString.containsContentEqualsIgnoreCase;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import com.google.common.base.Splitter;
@@ -76,7 +77,8 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
     // limitation of the size of content.
 
     private static final FullHttpResponse UPGRADE_RESPONSE = newUpgradeResponse();
-    private static final FullHttpResponse BAD_REQUEST_RESPONSE = newBadRequestResponse();
+    private static final FullHttpResponse INVALID_SETTINGS_HEADERS_RESPONSE =
+            newInvalidSettingsHeadersResponse();
 
     private static final Splitter COMMA_SPLITTER = Splitter.on(',').omitEmptyStrings().trimResults();
 
@@ -279,7 +281,7 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
         // Prepare and send the upgrade response. Wait for this write to complete before upgrading,
         // since we need the old codec in-place to properly encode the response.
         if (!upgradeCodec.prepareUpgradeResponse(ctx, request)) {
-            ctx.writeAndFlush(BAD_REQUEST_RESPONSE.retain()).addListener(CLOSE);
+            ctx.writeAndFlush(INVALID_SETTINGS_HEADERS_RESPONSE.retain()).addListener(CLOSE);
             return false;
         }
 
@@ -330,7 +332,9 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
     /**
      * Creates the 400 Bad Request response message.
      */
-    private static FullHttpResponse newBadRequestResponse() {
-        return new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, Unpooled.EMPTY_BUFFER);
+    private static FullHttpResponse newInvalidSettingsHeadersResponse() {
+        return new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST,
+                                           Unpooled.copiedBuffer("Invalid HTTP2-Settings headers\r\n",
+                                                                 StandardCharsets.UTF_8));
     }
 }

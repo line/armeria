@@ -213,7 +213,7 @@ class HttpServerUpgradeHandlerTest {
     }
 
     @Test
-    void upgradeFailWithBadRequest() throws Exception {
+    void upgradeFailWithInvalidSettingsHeaders() throws Exception {
         try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
             // Build a h2c upgrade request, but duplicated settings HTTP2-Settings.
             final String upgradeBody = "Hello";
@@ -228,6 +228,11 @@ class HttpServerUpgradeHandlerTest {
 
             final BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             assertThat(in.readLine()).isEqualTo("HTTP/1.1 400 Bad Request");
+
+            // empty line
+            in.readLine();
+
+            assertThat(in.readLine()).isEqualTo("Invalid HTTP2-Settings headers");
         }
     }
 }
