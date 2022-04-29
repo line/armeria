@@ -181,7 +181,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                 maybeCancel();
             }
         } catch (Throwable e) {
-            close(e, new Metadata());
+            close(e);
         }
     }
 
@@ -259,7 +259,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     @Override
     public void onError(Throwable t) {
         if (!isCloseCalled() && !(t instanceof AbortedStreamException)) {
-            close(t, new Metadata());
+            close(t);
         }
     }
 

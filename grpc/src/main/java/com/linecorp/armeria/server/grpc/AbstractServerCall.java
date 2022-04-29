@@ -205,13 +205,14 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         }
     }
 
+    final void close(Throwable exception) {
+        final Metadata metadata = generateMetadataFromThrowable(exception);
+        close0(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata, exception);
+    }
+
     @Override
     public final void close(Status status, Metadata metadata) {
         close0(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata, null);
-    }
-
-    final void close(Throwable exception, Metadata metadata) {
-        close0(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata, exception);
     }
 
     private void close0(Status status, Metadata metadata, @Nullable Throwable exception) {
@@ -340,7 +341,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 invokeOnMessage(request, endOfStream);
             }
         } catch (Throwable cause) {
-            close(cause, new Metadata());
+            close(cause);
         }
     }
 
@@ -362,7 +363,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 listener.onReady();
             }
         } catch (Throwable t) {
-            close(t, new Metadata());
+            close(t);
         }
     }
 
@@ -374,7 +375,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 listener.onHalfClose();
             }
         } catch (Throwable cause) {
-            close(cause, new Metadata());
+            close(cause);
         }
     }
 
@@ -383,7 +384,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
             assert listener != null;
             listener.onHalfClose();
         } catch (Throwable t) {
-            close(t, new Metadata());
+            close(t);
         }
     }
 
@@ -409,14 +410,14 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 // A custom error when dealing with client cancel or transport issues should be
                 // returned. We have already closed the listener, so it will not receive any more
                 // callbacks as designed.
-                close(t, new Metadata());
+                close(t);
             }
         }
     }
 
     void onError(Throwable t) {
         if (!closeCalled && !(t instanceof AbortedStreamException)) {
-            close(t, new Metadata());
+            close(t);
         }
     }
 
@@ -535,6 +536,11 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         compressor = compressorRegistry.lookupCompressor(compressorName);
         checkArgument(compressor != null, "Unable to find compressor by name %s", compressorName);
         responseFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
+    }
+
+    private static Metadata generateMetadataFromThrowable(Throwable exception) {
+        @Nullable final Metadata metadata = Status.trailersFromThrowable(exception);
+        return metadata != null ? metadata : new Metadata();
     }
 
     @Nullable

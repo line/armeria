@@ -5,6 +5,9 @@ on:
     tags:
       - armeria-*
 
+env:
+  LC_ALL: "en_US.UTF-8"
+
 jobs:
   publish:
     name: Publish final artifacts

@@ -606,6 +606,23 @@ class MimeParserTest {
     }
 
     @Test
+    void testBodyIsEmpty() {
+        final String boundary = "boundary";
+        final byte[] chunk1 = ("--" + boundary + '\n' +
+                               "Content-Id:    \t  \t\t \n" +
+                               '\n' +
+                               "--" + boundary + "--").getBytes();
+        final List<AggregatedBodyPart> parts = parse(boundary, chunk1);
+        assertThat(parts).hasSize(1);
+
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(2);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("");
+        assertThat(part1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part1.contentUtf8()).isEmpty();
+    }
+
+    @Test
     void testParserClosed() {
         assertThatThrownBy(() -> {
             final MimeParser parser = new MimeParser(null, null, "boundary", null);

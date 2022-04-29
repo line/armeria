@@ -31,8 +31,11 @@ import java.util.function.BiConsumer;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.InvalidResponseException;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
@@ -153,10 +156,28 @@ final class DefaultHealthCheckerContext
 
     @Override
     public void updateHealth(double health) {
-        onUpdateHealth.accept(originalEndpoint,  health > 0);
+        // Should use the new 'updateHealth()' API below.
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public void updateHealth(double health, ClientRequestContext ctx,
+                             @Nullable ResponseHeaders headers, @Nullable Throwable cause) {
+        final boolean isHealthy = health > 0;
+        onUpdateHealth.accept(originalEndpoint, isHealthy);
 
         if (!initialCheckFuture.isDone()) {
-            initialCheckFuture.complete(null);
+            if (isHealthy) {
+                initialCheckFuture.complete(null);
+            } else {
+                if (cause != null) {
+                    initialCheckFuture.completeExceptionally(cause);
+                } else {
+                    assert headers != null;
+                    initialCheckFuture.completeExceptionally(new InvalidResponseException(
+                            ctx + " Received an unhealthy check response. headers: " + headers));
+                }
+            }
         }
     }
 

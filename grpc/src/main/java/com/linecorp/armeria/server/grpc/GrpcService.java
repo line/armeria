@@ -68,8 +68,11 @@ public interface GrpcService extends HttpServiceWithRoutes {
 
     /**
      * Returns a {@link Map} whose key is a route path and whose value is {@link ServerMethodDefinition},
-     * which is serviced by this service.
+     * which is served by this service.
+     *
+     * @deprecated Use {@link #methodsByRoute()}.
      */
+    @Deprecated
     default Map<String, ServerMethodDefinition<?, ?>> methods() {
         return services().stream()
                          .flatMap(service -> service.getMethods().stream())
@@ -77,6 +80,12 @@ public interface GrpcService extends HttpServiceWithRoutes {
                          .collect(toImmutableMap(method -> method.getMethodDescriptor().getFullMethodName(),
                                                  Function.identity()));
     }
+
+    /**
+     * Returns a {@link Map} whose key is a {@link Route} and whose value is {@link ServerMethodDefinition},
+     * which is served by this service.
+     */
+    Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute();
 
     /**
      * Returns the {@link SerializationFormat}s supported by this service.
