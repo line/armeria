@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.server.grpc.FramedGrpcService.RESOLVED_GRPC_METHOD;
-import static com.linecorp.armeria.server.grpc.FramedGrpcService.methodDefinition;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -104,7 +103,7 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
         ServerMethodDefinition<?, ?> method =
                 lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
         if (method == null) {
-            method = methodDefinition(ctx, registry);
+            method = method(ctx);
             if (method == null) {
                 // Unknown method, let the delegate return a usual error.
                 return unwrap().serve(ctx, req);

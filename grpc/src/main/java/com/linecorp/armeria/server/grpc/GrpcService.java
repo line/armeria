@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
@@ -62,17 +63,37 @@ public interface GrpcService extends HttpServiceWithRoutes {
     boolean isFramed();
 
     /**
-     * Returns the {@link ServerServiceDefinition}s serviced by this service.
+     * Returns the {@link ServerServiceDefinition}s served by this service.
      */
     List<ServerServiceDefinition> services();
 
     /**
+     * Returns the {@link ServerMethodDefinition} of the current request.
+     */
+    @Nullable
+    default ServerMethodDefinition<?, ?> method(ServiceRequestContext ctx) {
+        final Route mappedRoute = ctx.config().mappedRoute();
+        // method is found using mappedRoute when the grpcService is set via:
+        // - serverBuilder.service(grpcService);
+        // - serverBuilder.serviceUnder("/prefix", grpcService);
+        final ServerMethodDefinition<?, ?> method = methodsByRoute().get(mappedRoute);
+        if (method != null) {
+            return method;
+        }
+        // method is found using methodName when the grpcService is set via route builder:
+        // - serverBuilder.route().pathPrefix("/prefix")...build(grpcService);
+        final String methodName = GrpcRequestUtil.determineMethod(ctx);
+        if (methodName == null) {
+            return null;
+        }
+
+        return methods().get(methodName);
+    }
+
+    /**
      * Returns a {@link Map} whose key is a route path and whose value is {@link ServerMethodDefinition},
      * which is served by this service.
-     *
-     * @deprecated Use {@link #methodsByRoute()}.
      */
-    @Deprecated
     default Map<String, ServerMethodDefinition<?, ?>> methods() {
         return services().stream()
                          .flatMap(service -> service.getMethods().stream())

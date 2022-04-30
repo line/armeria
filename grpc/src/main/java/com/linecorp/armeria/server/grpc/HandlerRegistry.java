@@ -57,6 +57,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import com.google.common.base.CaseFormat;
+import com.google.common.base.Converter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -74,6 +76,11 @@ import io.grpc.ServerServiceDefinition;
  * documentation generation.
  */
 final class HandlerRegistry {
+
+    // e.g. UnaryCall -> unaryCall
+    private static final Converter<String, String> methodNameConverter =
+            CaseFormat.UPPER_CAMEL.converterTo(CaseFormat.LOWER_CAMEL);
+
     private final List<ServerServiceDefinition> services;
     private final Map<String, ServerMethodDefinition<?, ?>> methods;
     private final Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute;
@@ -227,7 +234,7 @@ final class HandlerRegistry {
                     bareMethodNames.put(methodDescriptor0, bareMethodName);
                     final Class<?> type = entry.type();
                     if (type != null) {
-                        final String methodName = javaMethodName(bareMethodName);
+                        final String methodName = methodNameConverter.convert(bareMethodName);
                         final Optional<Method> method =
                                 InternalReflectionUtils.getAllSortedMethods(type, withModifier(Modifier.PUBLIC))
                                                        .stream()

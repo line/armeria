@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.grpc.FramedGrpcService.RESOLVED_GRPC_METHOD;
-import static com.linecorp.armeria.server.grpc.FramedGrpcService.methodDefinition;
 
 import java.util.List;
 import java.util.Map;
@@ -100,20 +99,16 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
         assert decorated != null;
         ServerMethodDefinition<?, ?> methodDefinition =
                 lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
-        if (methodDefinition != null) {
-            final HttpService decoratedService = decorated.get(methodDefinition);
-            if (decoratedService != null) {
-                return decoratedService.serve(ctx, req);
+        if (methodDefinition == null) {
+            methodDefinition = method(ctx);
+            if (methodDefinition == null) {
+                return delegate.serve(ctx, req);
             }
-        }
-
-        methodDefinition = methodDefinition(ctx, handlerRegistry);
-        if (methodDefinition != null) {
             ctx.setAttr(RESOLVED_GRPC_METHOD, methodDefinition);
-            final HttpService decoratedService = decorated.get(methodDefinition);
-            if (decoratedService != null) {
-                return decoratedService.serve(ctx, req);
-            }
+        }
+        final HttpService decoratedService = decorated.get(methodDefinition);
+        if (decoratedService != null) {
+            return decoratedService.serve(ctx, req);
         }
         return delegate.serve(ctx, req);
     }
@@ -136,6 +131,11 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
     @Override
     public List<ServerServiceDefinition> services() {
         return delegate.services();
+    }
+
+    @Override
+    public Map<String, ServerMethodDefinition<?, ?>> methods() {
+        return delegate.methods();
     }
 
     @Override

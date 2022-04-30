@@ -217,7 +217,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
         ServerMethodDefinition<?, ?> method = lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
         if (method == null) {
-            method = methodDefinition(ctx, registry);
+            method = method(ctx);
             if (method == null) {
                 return HttpResponse.of(
                         (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
@@ -268,26 +268,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             call.startDeframing();
         }
         return res;
-    }
-
-    @Nullable
-    static ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx, HandlerRegistry registry) {
-        final Route mappedRoute = ctx.config().mappedRoute();
-        // method is found using mappedRoute when the grpcService is set via:
-        // - serverBuilder.service(grpcService);
-        // - serverBuilder.serviceUnder("/prefix", grpcService);
-        final ServerMethodDefinition<?, ?> method = registry.lookupMethod(mappedRoute);
-        if (method != null) {
-            return method;
-        }
-        // method is found using methodName when the grpcService is set via route builder:
-        // - serverBuilder.route().pathPrefix("/prefix")...build(grpcService);
-        final String methodName = GrpcRequestUtil.determineMethod(ctx);
-        if (methodName == null) {
-            return null;
-        }
-
-        return registry.lookupMethod(methodName);
     }
 
     @Nullable
