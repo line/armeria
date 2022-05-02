@@ -18,6 +18,9 @@ package com.linecorp.armeria.client;
 
 import java.time.Duration;
 
+import com.linecorp.armeria.common.ExchangeType;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -64,4 +67,13 @@ interface RequestOptionsSetters {
      * by the specified value.
      */
     <V> RequestOptionsSetters attr(AttributeKey<V> key, @Nullable V value);
+
+    /**
+     * Sets the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or
+     * {@link HttpResponse}. If unspecified, {@link ExchangeType#BIDI_STREAMING} used by default.
+     *
+     * <p>Note that an {@link HttpRequest} will be aggregated before being written if
+     * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set.
+     */
+    RequestOptionsSetters exchangeType(ExchangeType exchangeType);
 }

@@ -84,6 +84,7 @@ final class HttpClientDelegate implements HttpClient {
 
         final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol().defaultPort());
         final EventLoop eventLoop = ctx.eventLoop().withoutContext();
+        // TODO(ikhoon) Use ctx.exchangeType() to create an optimized HttpResponse for non-streaming response.
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
         final ClientConnectionTimingsBuilder timingsBuilder = ClientConnectionTimings.builder();

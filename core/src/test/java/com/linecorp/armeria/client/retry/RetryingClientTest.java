@@ -80,6 +80,7 @@ import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.channel.EventLoop;
@@ -119,6 +120,8 @@ class RetryingClientTest {
 
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            sb.decorator(LoggingService.newDecorator());
+
             sb.service("/retry-content", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req)
@@ -343,9 +346,9 @@ class RetryingClientTest {
     @Test
     void retryWhenStatusMatchedWithContent() {
         final WebClient client = client(RetryRuleWithContent.<HttpResponse>builder()
-                                                .onServerErrorStatus()
-                                                .onException()
-                                                .thenBackoff(), 10000, 0, 100);
+                                                            .onServerErrorStatus()
+                                                            .onException()
+                                                            .thenBackoff(), 10000, 0, 100);
         final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
@@ -803,17 +806,17 @@ class RetryingClientTest {
     private WebClient client(RetryRule retryRule, long responseTimeoutMillis,
                              long responseTimeoutForEach, int maxTotalAttempts) {
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
-                RetryingClient.builder(
-                        RetryConfig.<HttpResponse>builder0(retryRule)
-                                .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
-                                .maxTotalAttempts(maxTotalAttempts)
-                                .build())
+                RetryingClient.builder(RetryConfig.<HttpResponse>builder0(retryRule)
+                                                  .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
+                                                  .maxTotalAttempts(maxTotalAttempts)
+                                                  .build())
                               .useRetryAfter(true)
                               .newDecorator();
 
         return WebClient.builder(server.httpUri())
                         .factory(clientFactory)
                         .responseTimeoutMillis(responseTimeoutMillis)
+                        .decorator(LoggingClient.newDecorator())
                         .decorator(retryingDecorator)
                         .build();
     }

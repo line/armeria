@@ -21,9 +21,12 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;
@@ -57,6 +60,13 @@ public interface RequestOptions {
     }
 
     /**
+     * Returns a new builder created from the properties of this {@link RequestOptions}.
+     */
+    default RequestOptionsBuilder toBuilder() {
+        return new RequestOptionsBuilder(this);
+    }
+
+    /**
      * Returns the amount of time allowed until receiving the {@link Response} completely
      * since the transfer of the {@link Response} started or the {@link Request} was fully sent.
      * {@code 0} disables the limit.
@@ -83,4 +93,14 @@ public interface RequestOptions {
      * Returns the {@link Map} of all attributes this {@link RequestOptions} contains.
      */
     Map<AttributeKey<?>, Object> attrs();
+
+    /**
+     * Returns the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or
+     * {@link HttpResponse}. If unspecified, {@link ExchangeType#BIDI_STREAMING} used by default.
+     *
+     * <p>Note that an {@link HttpRequest} will be aggregated before being written if
+     * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set.
+     */
+    @Nullable
+    ExchangeType exchangeType();
 }

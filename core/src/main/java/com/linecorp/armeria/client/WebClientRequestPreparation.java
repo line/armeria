@@ -34,6 +34,7 @@ import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.AbstractHttpRequestBuilder;
 import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -298,8 +299,16 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
             //noinspection unchecked
             attrs.forEach((key, value) -> attr((AttributeKey<Object>) key, value));
         }
-
+        final ExchangeType exchangeType = requestOptions.exchangeType();
+        if (exchangeType != null) {
+            exchangeType(exchangeType);
+        }
         return this;
+    }
+
+    boolean isRequestStreaming() {
+        //noinspection ReactiveStreamsUnusedPublisher
+        return publisher() != null;
     }
 
     @Override
@@ -309,10 +318,7 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
 
     @Override
     public WebClientRequestPreparation responseTimeoutMillis(long responseTimeoutMillis) {
-        if (requestOptionsBuilder == null) {
-            requestOptionsBuilder = RequestOptions.builder();
-        }
-        requestOptionsBuilder.responseTimeoutMillis(responseTimeoutMillis);
+        requestOptionsBuilder().responseTimeoutMillis(responseTimeoutMillis);
         return this;
     }
 
@@ -323,29 +329,33 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
 
     @Override
     public WebClientRequestPreparation writeTimeoutMillis(long writeTimeoutMillis) {
-        if (requestOptionsBuilder == null) {
-            requestOptionsBuilder = RequestOptions.builder();
-        }
-        requestOptionsBuilder.writeTimeoutMillis(writeTimeoutMillis);
+        requestOptionsBuilder().writeTimeoutMillis(writeTimeoutMillis);
         return this;
     }
 
     @Override
     public WebClientRequestPreparation maxResponseLength(long maxResponseLength) {
-        if (requestOptionsBuilder == null) {
-            requestOptionsBuilder = RequestOptions.builder();
-        }
-        requestOptionsBuilder.maxResponseLength(maxResponseLength);
+        requestOptionsBuilder().maxResponseLength(maxResponseLength);
         return this;
     }
 
     @Override
     public <V> WebClientRequestPreparation attr(AttributeKey<V> key, @Nullable V value) {
+        requestOptionsBuilder().attr(key, value);
+        return this;
+    }
+
+    @Override
+    public WebClientRequestPreparation exchangeType(ExchangeType exchangeType) {
+        requestOptionsBuilder().exchangeType(exchangeType);
+        return this;
+    }
+
+    private RequestOptionsBuilder requestOptionsBuilder() {
         if (requestOptionsBuilder == null) {
             requestOptionsBuilder = RequestOptions.builder();
         }
-        requestOptionsBuilder.attr(key, value);
-        return this;
+        return requestOptionsBuilder;
     }
 
     // Override the return types of the chaining methods in the superclass.

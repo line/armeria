@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.client.DefaultWebClient.pathWithQuery;
@@ -36,6 +37,7 @@ import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.ContextAwareEventLoop;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -113,6 +115,7 @@ public final class DefaultClientRequestContext
     private final ClientOptions options;
     private final RequestLogBuilder log;
     private final CancellationScheduler responseCancellationScheduler;
+    private final ExchangeType exchangeType;
     private long writeTimeoutMillis;
     private long maxResponseLength;
 
@@ -227,6 +230,7 @@ public final class DefaultClientRequestContext
             //noinspection unchecked
             setAttr((AttributeKey<Object>) attr.getKey(), attr.getValue());
         }
+        exchangeType = firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING);
 
         additionalRequestHeaders = options.get(ClientOptions.HEADERS);
 
@@ -490,6 +494,7 @@ public final class DefaultClientRequestContext
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
         }
+        this.exchangeType = ctx.exchangeType();
     }
 
     @Nullable
@@ -714,6 +719,11 @@ public final class DefaultClientRequestContext
                 return;
             }
         }
+    }
+
+    @Override
+    public ExchangeType exchangeType() {
+        return exchangeType;
     }
 
     @Override

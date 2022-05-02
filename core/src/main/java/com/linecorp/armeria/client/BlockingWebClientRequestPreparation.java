@@ -33,6 +33,7 @@ import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -63,7 +64,7 @@ public final class BlockingWebClientRequestPreparation
      */
     @Override
     public AggregatedHttpResponse execute() {
-        // TODO(ikhoon): Specify ExchangeType.UNARY or ExchangeType.REQUEST_STREAMING to RequestOptions.
+        delegate.exchangeType(ExchangeType.UNARY);
         return ResponseAs.blocking().as(delegate.execute());
     }
 
@@ -436,6 +437,12 @@ public final class BlockingWebClientRequestPreparation
     @Override
     public <V> BlockingWebClientRequestPreparation attr(AttributeKey<V> key, @Nullable V value) {
         delegate.attr(key, value);
+        return this;
+    }
+
+    @Override
+    public BlockingWebClientRequestPreparation exchangeType(ExchangeType exchangeType) {
+        delegate.exchangeType(exchangeType);
         return this;
     }
 }

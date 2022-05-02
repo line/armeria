@@ -44,6 +44,26 @@ public enum ExchangeType {
      */
     BIDI_STREAMING(true, true);
 
+    /**
+     * Returns an {@link ExchangeType} with the specified {@code requestStreaming} and
+     * {@code responseStreaming}.
+     */
+    public static ExchangeType of(boolean requestStreaming, boolean responseStreaming) {
+        if (requestStreaming) {
+            if (responseStreaming) {
+                return BIDI_STREAMING;
+            } else {
+                return REQUEST_STREAMING;
+            }
+        } else {
+            if (responseStreaming) {
+                return RESPONSE_STREAMING;
+            } else {
+                return UNARY;
+            }
+        }
+    }
+
     private final boolean requestStreaming;
     private final boolean responseStreaming;
 
