@@ -56,8 +56,8 @@ final class StreamWriterOutputStream<T> extends OutputStream {
 
     @Override
     public void write(byte[] b, int off, int len) throws IOException {
-        ensureOpen();
         while (len > 0) {
+            ensureOpen();
             maybeDrain();
             final int writableBytes = maxBufferSize - buffer.readableBytes();
             if (writableBytes < len) {
