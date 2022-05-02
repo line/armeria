@@ -25,6 +25,7 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
@@ -71,6 +72,7 @@ public interface GrpcService extends HttpServiceWithRoutes {
      * Returns the {@link ServerMethodDefinition} of the current request.
      */
     @Nullable
+    @UnstableApi
     default ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
         final Route mappedRoute = ctx.config().mappedRoute();
         // method is found using mappedRoute when the grpcService is set via:
