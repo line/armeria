@@ -59,18 +59,23 @@ import io.grpc.ServerMethodDefinition;
  */
 final class UnframedGrpcService extends AbstractUnframedGrpcService {
 
+    private final GrpcService delegate;
     private final HandlerRegistry registry;
-    private final boolean lookupMethodFromAttribute;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
     UnframedGrpcService(GrpcService delegate, HandlerRegistry registry,
-                        UnframedGrpcErrorHandler unframedGrpcErrorHandler, boolean lookupMethodFromAttribute) {
+                        UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
         super(delegate, unframedGrpcErrorHandler);
+        this.delegate = delegate;
         this.registry = registry;
-        this.lookupMethodFromAttribute = lookupMethodFromAttribute;
         checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
+    }
+
+    @Override
+    public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
+        return delegate.methodDefinition(ctx);
     }
 
     @Override
@@ -100,15 +105,10 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
             }
         }
 
-        ServerMethodDefinition<?, ?> method =
-                lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
+        final ServerMethodDefinition<?, ?> method = methodDefinition(ctx);
         if (method == null) {
-            method = method(ctx);
-            if (method == null) {
-                // Unknown method, let the delegate return a usual error.
-                return unwrap().serve(ctx, req);
-            }
-            ctx.setAttr(RESOLVED_GRPC_METHOD, method);
+            // Unknown method, let the delegate return a usual error.
+            return unwrap().serve(ctx, req);
         }
 
         if (method.getMethodDescriptor().getType() != MethodType.UNARY) {

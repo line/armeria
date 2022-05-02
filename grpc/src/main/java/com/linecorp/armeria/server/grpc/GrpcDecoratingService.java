@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.server.grpc.FramedGrpcService.RESOLVED_GRPC_METHOD;
 
 import java.util.List;
 import java.util.Map;
@@ -51,17 +50,14 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
     private final GrpcService delegate;
 
     private final HandlerRegistry handlerRegistry;
-    private final boolean lookupMethodFromAttribute;
 
     @Nullable
     private Map<ServerMethodDefinition<?, ?>, HttpService> decorated;
 
-    GrpcDecoratingService(GrpcService delegate, HandlerRegistry handlerRegistry,
-                          boolean lookupMethodFromAttribute) {
+    GrpcDecoratingService(GrpcService delegate, HandlerRegistry handlerRegistry) {
         super(delegate);
         this.delegate = delegate;
         this.handlerRegistry = handlerRegistry;
-        this.lookupMethodFromAttribute = lookupMethodFromAttribute;
     }
 
     @Override
@@ -97,14 +93,9 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         assert decorated != null;
-        ServerMethodDefinition<?, ?> methodDefinition =
-                lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
+        final ServerMethodDefinition<?, ?> methodDefinition = methodDefinition(ctx);
         if (methodDefinition == null) {
-            methodDefinition = method(ctx);
-            if (methodDefinition == null) {
-                return delegate.serve(ctx, req);
-            }
-            ctx.setAttr(RESOLVED_GRPC_METHOD, methodDefinition);
+            return delegate.serve(ctx, req);
         }
         final HttpService decoratedService = decorated.get(methodDefinition);
         if (decoratedService != null) {
@@ -131,6 +122,11 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
     @Override
     public List<ServerServiceDefinition> services() {
         return delegate.services();
+    }
+
+    @Override
+    public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
+        return delegate.methodDefinition(ctx);
     }
 
     @Override

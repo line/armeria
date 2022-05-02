@@ -833,10 +833,6 @@ public final class GrpcServiceBuilder {
             statusFunction = this.statusFunction;
         }
 
-        final boolean hasDecorators = !handlerRegistry.decorators().isEmpty();
-        boolean lookupMethodFromAttribute = enableUnframedRequests ||
-                                            enableHttpJsonTranscoding ||
-                                            hasDecorators;
         GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
@@ -849,21 +845,18 @@ public final class GrpcServiceBuilder {
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
-                lookupMethodFromAttribute,
+                enableHttpJsonTranscoding, // The method definition might be set when transcoding is enabled.
                 grpcHealthCheckService);
 
         if (enableUnframedRequests) {
-            lookupMethodFromAttribute = enableHttpJsonTranscoding || hasDecorators;
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,
                     unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
-                                                     : UnframedGrpcErrorHandler.of(),
-                    lookupMethodFromAttribute);
+                                                     : UnframedGrpcErrorHandler.of());
         }
 
-        if (hasDecorators) {
-            lookupMethodFromAttribute = enableHttpJsonTranscoding;
-            grpcService = new GrpcDecoratingService(grpcService, handlerRegistry, lookupMethodFromAttribute);
+        if (!handlerRegistry.decorators().isEmpty()) {
+            grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
         }
         if (enableHttpJsonTranscoding) {
             grpcService = HttpJsonTranscodingService.of(

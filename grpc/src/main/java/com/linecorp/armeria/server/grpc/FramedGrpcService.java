@@ -215,18 +215,15 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
         ctx.logBuilder().serializationFormat(serializationFormat);
 
-        ServerMethodDefinition<?, ?> method = lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
+        final ServerMethodDefinition<?, ?> method = methodDefinition(ctx);
         if (method == null) {
-            method = method(ctx);
-            if (method == null) {
-                return HttpResponse.of(
-                        (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
-                                ctx,
-                                defaultHeaders.get(serializationFormat).toBuilder(),
-                                Status.UNIMPLEMENTED.withDescription(
-                                        "Method not found: " + ctx.config().route().patternString()),
-                                new Metadata()));
-            }
+            return HttpResponse.of(
+                    (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
+                            ctx,
+                            defaultHeaders.get(serializationFormat).toBuilder(),
+                            Status.UNIMPLEMENTED.withDescription(
+                                    "Method not found: " + ctx.config().route().patternString()),
+                            new Metadata()));
         }
 
         if (useClientTimeoutHeader) {
@@ -343,6 +340,17 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         if (grpcHealthCheckService != null) {
             grpcHealthCheckService.serviceAdded(cfg);
         }
+    }
+
+    @Override
+    public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
+        // method could be set in HttpJsonTranscodingService.
+        final ServerMethodDefinition<?, ?> method =
+                lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
+        if (method != null) {
+            return method;
+        }
+        return GrpcService.super.methodDefinition(ctx);
     }
 
     private static Server newDummyServer(Map<String, ServerServiceDefinition> grpcServices) {

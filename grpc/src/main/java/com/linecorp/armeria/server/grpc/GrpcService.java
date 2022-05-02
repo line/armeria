@@ -71,7 +71,7 @@ public interface GrpcService extends HttpServiceWithRoutes {
      * Returns the {@link ServerMethodDefinition} of the current request.
      */
     @Nullable
-    default ServerMethodDefinition<?, ?> method(ServiceRequestContext ctx) {
+    default ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
         final Route mappedRoute = ctx.config().mappedRoute();
         // method is found using mappedRoute when the grpcService is set via:
         // - serverBuilder.service(grpcService);
