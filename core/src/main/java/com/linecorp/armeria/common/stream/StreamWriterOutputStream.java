@@ -32,7 +32,7 @@ final class StreamWriterOutputStream<T> extends OutputStream {
 
     private final StreamWriter<T> writer;
     private final Function<? super HttpData, ? extends T> httpDataConverter;
-    private final ByteBuf buffer = Unpooled.buffer();
+    private final ByteBuf buffer;
     private final int maxBufferSize;
     private boolean closed;
 
@@ -45,6 +45,7 @@ final class StreamWriterOutputStream<T> extends OutputStream {
         this.writer = writer;
         this.httpDataConverter = httpDataConverter;
         this.maxBufferSize = maxBufferSize;
+        buffer = Unpooled.buffer(maxBufferSize);
     }
 
     @Override
@@ -110,5 +111,6 @@ final class StreamWriterOutputStream<T> extends OutputStream {
         final byte[] data = new byte[buffer.readableBytes()];
         buffer.readBytes(data);
         writer.write(httpDataConverter.apply(HttpData.wrap(data)));
+        buffer.clear();
     }
 }
