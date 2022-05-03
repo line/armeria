@@ -35,6 +35,7 @@ import sangria.parser.{QueryParser, SyntaxError}
 import sangria.schema.Schema
 import sangria.slowlog.SlowLog
 import sangria.validation.QueryValidator
+
 import scala.concurrent.ExecutionContext
 import scala.util.{Failure, Success}
 

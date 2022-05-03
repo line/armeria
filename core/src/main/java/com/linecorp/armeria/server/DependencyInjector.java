@@ -55,14 +55,7 @@ public interface DependencyInjector {
      * when the {@link Server} stops.
      */
     static DependencyInjector ofSingletons(Iterable<Object> singletons) {
-        return builder().singletons(singletons).build();
-    }
-
-    /**
-     * Returns a newly-created {@link DependencyInjectorBuilder}.
-     */
-    static DependencyInjectorBuilder builder() {
-        return new DependencyInjectorBuilder();
+        return new DefaultDependencyInjector(singletons);
     }
 
     /**

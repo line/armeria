@@ -17,9 +17,9 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.server.ServerBuilder.decorate;
 import static com.linecorp.armeria.server.ServerSslContextUtil.buildSslContext;
 import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
@@ -440,9 +440,41 @@ public final class VirtualHostBuilder {
 
     /**
      * Binds the specified {@link HttpService} under the specified directory.
+     * If the specified {@link HttpService} is an {@link HttpServiceWithRoutes}, the {@code pathPrefix} is added
+     * to each {@link Route} of {@link HttpServiceWithRoutes#routes()}. For example, the
+     * {@code serviceWithRoutes} in the following code will be bound to
+     * ({@code "/foo/bar"}) and ({@code "/foo/baz"}):
+     * <pre>{@code
+     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+     * >
+     * >     @Override
+     * >     public Set<Route> routes() {
+     * >         return Set.of(Route.builder().path("/bar").build(),
+     * >                       Route.builder().path("/baz").build());
+     * >     }
+     * > };
+     * >
+     * > Server.builder()
+     * >       .serviceUnder("/foo", serviceWithRoutes)
+     * >       .build();
+     * }</pre>
      */
     public VirtualHostBuilder serviceUnder(String pathPrefix, HttpService service) {
-        service(Route.builder().pathPrefix(pathPrefix).build(), service);
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        final HttpServiceWithRoutes serviceWithRoutes = service.as(HttpServiceWithRoutes.class);
+        if (serviceWithRoutes != null) {
+            serviceWithRoutes.routes().forEach(route -> {
+                final ServiceConfigBuilder serviceConfigBuilder =
+                        new ServiceConfigBuilder(route.withPrefix(pathPrefix), service);
+                serviceConfigBuilder.addMappedRoute(route);
+                addServiceConfigSetters(serviceConfigBuilder);
+            });
+        } else {
+            service(Route.builder().pathPrefix(pathPrefix).build(), service);
+        }
         return this;
     }
 
@@ -473,8 +505,7 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
-     * of the default {@link VirtualHost}.
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s.
      *
      * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
@@ -486,21 +517,13 @@ public final class VirtualHostBuilder {
         requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
         requireNonNull(decorators, "decorators");
 
-        HttpService decorated = serviceWithRoutes;
-        for (Function<? super HttpService, ? extends HttpService> d : decorators) {
-            checkNotNull(d, "decorators contains null: %s", decorators);
-            decorated = d.apply(decorated);
-            checkNotNull(decorated, "A decorator returned null: %s", d);
-        }
-
-        final HttpService finalDecorated = decorated;
-        serviceWithRoutes.routes().forEach(route -> service(route, finalDecorated));
+        final HttpService decorated = decorate(serviceWithRoutes, decorators);
+        serviceWithRoutes.routes().forEach(route -> service(route, decorated));
         return this;
     }
 
     /**
-     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
-     * of the default {@link VirtualHost}.
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s.
      *
      * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.

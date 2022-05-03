@@ -60,21 +60,19 @@ class DependencyInjectorTest {
     private static final AtomicInteger closeCounter = new AtomicInteger();
 
     private static final List<FooRequestConverter> converters = new BlockingArrayQueue<>();
-    private static final List<FooDecorator> decorators = new BlockingArrayQueue<>();
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final DependencyInjectorBuilder builder = DependencyInjector.builder();
-            builder.singletons(new FooRequestConverter(requestCounter),
-                               new FooResponseConverter(responseCounter))
-                   .singleton(FooExceptionHandler.class, () -> new FooExceptionHandler(exceptionCounter))
-                   .singleton(FooDecoratorFactory.class, () -> new FooDecoratorFactory(factoryCounter))
-                   .prototype(FooDecorator.class, () -> new FooDecorator(decoratorCounter));
-
+            final DependencyInjector dependencyInjector =
+                    DependencyInjector.ofSingletons(new FooRequestConverter(requestCounter),
+                                                    new FooResponseConverter(responseCounter),
+                                                    new FooExceptionHandler(exceptionCounter),
+                                                    new FooDecoratorFactory(factoryCounter),
+                                                    new FooDecorator(decoratorCounter));
             sb.annotatedService(new Foo())
-              .dependencyInjector(builder.build(), true);
+              .dependencyInjector(dependencyInjector, true);
         }
     };
 
@@ -123,11 +121,8 @@ class DependencyInjectorTest {
         assertThat(decoratorCounter.get()).isSameAs(2);
 
         assertThat(converters.size()).isSameAs(2);
-        assertThat(decorators.size()).isSameAs(2);
         // singletons
         assertThat(converters.get(0)).isSameAs(converters.get(1));
-        // prototypes
-        assertThat(decorators.get(0)).isNotSameAs(decorators.get(1));
 
         // The factory counter is incremented only once when the instance is created.
         assertThat(factoryCounter.get()).isOne();
@@ -197,7 +192,6 @@ class DependencyInjectorTest {
         @Override
         public HttpResponse serve(HttpService delegate, ServiceRequestContext ctx, HttpRequest req)
                 throws Exception {
-            decorators.add(this);
             counter.incrementAndGet();
             return delegate.serve(ctx, req);
         }

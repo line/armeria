@@ -51,7 +51,6 @@ import org.mockito.ArgumentCaptor;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.StringValue;
-import com.google.rpc.RequestInfo;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
@@ -1499,8 +1498,6 @@ class GrpcClientTest {
             if (rpcReq != null) {
                 assertThat(rpcReq.params()).containsExactly(Empty.getDefaultInstance());
             }
-            assertThat(headers.get(GrpcHeaderNames.GRPC_STATUS)).isEqualTo(
-                    String.valueOf(Status.UNIMPLEMENTED.getCode().value()));
         });
     }
 

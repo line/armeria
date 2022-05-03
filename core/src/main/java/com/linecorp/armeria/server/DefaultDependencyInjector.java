@@ -17,9 +17,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.Supplier;
 
@@ -34,19 +32,15 @@ final class DefaultDependencyInjector implements DependencyInjector {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultDependencyInjector.class);
 
-    private final Map<Class<?>, Object> singletons;
-    private final Map<Class<?>, Supplier<?>> singletonSuppliers;
-    private final Map<Class<?>, Supplier<?>> prototypes;
-    private final List<AutoCloseable> closeablePrototypes = new ArrayList<>();
+    private final Map<Class<?>, Object> singletons = new HashMap<>();
     private boolean isShutdown;
 
-    DefaultDependencyInjector(Map<Class<?>, Object> singletons,
-                              Map<Class<?>, Supplier<?>> singletonSuppliers,
-                              Map<Class<?>, Supplier<?>> prototypes) {
-        this.singletons = new HashMap<>(singletons.size() + singletonSuppliers.size());
-        this.singletons.putAll(singletons);
-        this.singletonSuppliers = singletonSuppliers;
-        this.prototypes = prototypes;
+    DefaultDependencyInjector(Iterable<Object> singletons) {
+        requireNonNull(singletons, "singletons");
+        for (Object singleton : singletons) {
+            requireNonNull(singleton, "singleton");
+            this.singletons.put(singleton.getClass(), singleton);
+        }
     }
 
     @Override
@@ -59,18 +53,7 @@ final class DefaultDependencyInjector implements DependencyInjector {
             //noinspection unchecked
             return (T) instance;
         }
-        T supplied = getInstance(type, singletonSuppliers);
-        if (supplied != null) {
-            singletons.put(type, supplied);
-            return supplied;
-        }
-
-        supplied = getInstance(type, prototypes);
-        if (supplied instanceof AutoCloseable) {
-            closeablePrototypes.add((AutoCloseable) supplied);
-        }
-
-        return supplied;
+        return null;
     }
 
     @Nullable
@@ -100,10 +83,6 @@ final class DefaultDependencyInjector implements DependencyInjector {
             }
         }
         singletons.clear();
-        for (AutoCloseable closeable : closeablePrototypes) {
-            close(closeable);
-        }
-        closeablePrototypes.clear();
     }
 
     private static void close(AutoCloseable closeable) {
@@ -118,9 +97,6 @@ final class DefaultDependencyInjector implements DependencyInjector {
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("singletons", singletons)
-                          .add("singletonSuppliers", singletonSuppliers)
-                          .add("prototypes", prototypes)
-                          .add("closeablePrototypes", closeablePrototypes)
                           .toString();
     }
 }
