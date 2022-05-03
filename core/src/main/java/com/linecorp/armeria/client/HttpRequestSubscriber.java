@@ -103,7 +103,7 @@ final class HttpRequestSubscriber extends AbstractHttpRequestHandler implements 
     @Override
     public void onError(Throwable cause) {
         isSubscriptionCompleted = true;
-        fail(cause);
+        failRequest(cause);
     }
 
     @Override

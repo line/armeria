@@ -275,16 +275,16 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
         return (id << 1) + 1;
     }
 
-    final void fail(Throwable cause) {
+    final void failRequest(Throwable cause) {
         if (id() >= 0) {
             failAndReset(cause);
         } else {
             // No need to send RST because we didn't send any packet.
-            fail0(UnprocessedRequestException.of(cause));
+            fail(UnprocessedRequestException.of(cause));
         }
     }
 
-    final void fail0(Throwable cause) {
+    private void fail(Throwable cause) {
         state = State.DONE;
         cancel();
         logBuilder.endRequest(cause);
@@ -307,7 +307,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             return;
         }
 
-        fail0(cause);
+        fail(cause);
 
         final Http2Error error;
         if (Exceptions.isStreamCancelling(cause)) {

@@ -52,7 +52,7 @@ class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
 
     public void apply0(@Nullable AggregatedHttpRequest request, @Nullable Throwable throwable) {
         if (throwable != null) {
-            fail(throwable);
+            failRequest(throwable);
             return;
         }
 
