@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -532,5 +533,6 @@ public interface ClientRequestContext extends RequestContext {
      * <p>Note that an {@link HttpRequest} will be aggregated before being written if
      * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set.
      */
+    @UnstableApi
     ExchangeType exchangeType();
 }

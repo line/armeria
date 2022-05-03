@@ -68,7 +68,7 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
         } else {
             throw new Error(); // Should never reach here.
         }
-        final boolean responseStreaming = responseAs.requiresAggregation();
+        final boolean responseStreaming = !responseAs.requiresAggregation();
         return ExchangeType.of(requestStreaming, responseStreaming);
     }
 

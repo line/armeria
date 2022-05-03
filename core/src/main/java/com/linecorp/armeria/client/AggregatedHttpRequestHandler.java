@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 
-class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
+final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
         implements BiFunction<AggregatedHttpRequest, Throwable, Void> {
 
     private boolean cancelled;
@@ -50,7 +50,7 @@ class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
         return null;
     }
 
-    public void apply0(@Nullable AggregatedHttpRequest request, @Nullable Throwable throwable) {
+    private void apply0(@Nullable AggregatedHttpRequest request, @Nullable Throwable throwable) {
         if (throwable != null) {
             failRequest(throwable);
             return;

@@ -24,6 +24,8 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
@@ -107,6 +109,29 @@ class WebClientPreparationExchangeTypeTest {
                   .asFile(tempDir.resolve("/foo"))
                   .execute();
         }).isEqualTo(ExchangeType.BIDI_STREAMING);
+    }
+
+    @CsvSource({"true, UNARY", "false, RESPONSE_STREAMING"})
+    @ParameterizedTest
+    void responseAs(boolean requiresAggregation, ExchangeType exchangeType) {
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/")
+                  .content("foo")
+                  .as(new ResponseAs<HttpResponse, String>() {
+                          @Override
+                          public String as(HttpResponse response) {
+                              return response.aggregate().join().contentUtf8();
+                          }
+
+                          @Override
+                          public boolean requiresAggregation() {
+                              return requiresAggregation;
+                          }
+                      }
+                  )
+                  .execute();
+        }).isEqualTo(exchangeType);
     }
 
     @Test

@@ -28,7 +28,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.client.redirect.TooManyRedirectsException;
 import com.linecorp.armeria.client.redirect.UnexpectedDomainRedirectException;
@@ -43,7 +42,6 @@ import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class RedirectingClientTest {
@@ -58,9 +56,6 @@ class RedirectingClientTest {
             sb.http(0);
             sb.http(0);
             sb.https(0);
-
-            sb.decorator(LoggingService.newDecorator());
-
             sb.service("/foo", (ctx, req) -> HttpResponse.ofRedirect("/fooRedirect1"))
               .service("/fooRedirect1", (ctx, req) -> HttpResponse.ofRedirect("/fooRedirect2"))
               .service("/fooRedirect2", (ctx, req) -> HttpResponse.of(200));
@@ -210,7 +205,6 @@ class RedirectingClientTest {
     void seeOtherHttpMethodChangedToGet() {
         final WebClient client = WebClient.builder(server.httpUri())
                                           .followRedirects()
-                                          .decorator(LoggingClient.newDecorator())
                                           .build();
         final AggregatedHttpResponse res = client.post("/seeOther", "hello!").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);

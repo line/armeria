@@ -50,17 +50,9 @@ public enum ExchangeType {
      */
     public static ExchangeType of(boolean requestStreaming, boolean responseStreaming) {
         if (requestStreaming) {
-            if (responseStreaming) {
-                return BIDI_STREAMING;
-            } else {
-                return REQUEST_STREAMING;
-            }
+            return responseStreaming ? BIDI_STREAMING : REQUEST_STREAMING;
         } else {
-            if (responseStreaming) {
-                return RESPONSE_STREAMING;
-            } else {
-                return UNARY;
-            }
+            return responseStreaming ? RESPONSE_STREAMING : UNARY;
         }
     }
 
