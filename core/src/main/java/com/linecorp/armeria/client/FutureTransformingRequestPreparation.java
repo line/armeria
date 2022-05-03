@@ -69,8 +69,9 @@ public final class FutureTransformingRequestPreparation<T>
     @Override
     public CompletableFuture<T> execute() {
         final boolean requestStreaming = delegate.isRequestStreaming();
-        final boolean responseStreaming = responseAs.requiresAggregation();
-        delegate.exchangeType(ExchangeType.of(requestStreaming, responseStreaming));
+        final boolean responseStreaming = !responseAs.requiresAggregation();
+        exchangeType(ExchangeType.of(requestStreaming, responseStreaming));
+
         CompletableFuture<T> response;
         try {
             response = responseAs.as(delegate.execute());

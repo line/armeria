@@ -149,10 +149,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       @Nullable GrpcHealthCheckService grpcHealthCheckService) {
         this.registry = requireNonNull(registry, "registry");
         routes = ImmutableSet.copyOf(registry.methodsByRoute().keySet());
-        exchangeTypes =
-                registry.methods().entrySet().stream()
-                        .collect(toImmutableMap(e -> '/' + e.getKey(),
-                                                e -> toExchangeType(e.getValue().getMethodDescriptor())));
+        exchangeTypes = registry.methods().entrySet().stream()
+                                .collect(toImmutableMap(e -> '/' + e.getKey(),
+                                                        e -> toExchangeType(
+                                                                e.getValue().getMethodDescriptor().getType())));
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;

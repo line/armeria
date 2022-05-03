@@ -14,7 +14,7 @@
  *  under the License.
  */
 
-package com.linecorp.armeria.client.retry;
+package com.linecorp.armeria.internal.client;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.ByteBufAccessMode;
@@ -23,11 +23,11 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestDuplicator;
 import com.linecorp.armeria.common.RequestHeaders;
 
-final class AggregatedHttpRequestDuplicator implements HttpRequestDuplicator {
+public final class AggregatedHttpRequestDuplicator implements HttpRequestDuplicator {
 
     private final AggregatedHttpRequest request;
 
-    AggregatedHttpRequestDuplicator(AggregatedHttpRequest request) {
+    public AggregatedHttpRequestDuplicator(AggregatedHttpRequest request) {
         this.request = request;
     }
 

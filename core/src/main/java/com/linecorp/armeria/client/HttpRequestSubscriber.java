@@ -103,12 +103,7 @@ final class HttpRequestSubscriber extends AbstractHttpRequestHandler implements 
     @Override
     public void onError(Throwable cause) {
         isSubscriptionCompleted = true;
-        if (id() >= 0) { // onSubscribe is called.
-            failAndReset(cause);
-        } else {
-            // No need to send RST because we didn't send any packet.
-            fail(UnprocessedRequestException.of(cause));
-        }
+        fail(cause);
     }
 
     @Override

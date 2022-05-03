@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.channel.Channel;
+import io.netty.channel.EventLoop;
 
 class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
         implements BiFunction<AggregatedHttpRequest, Throwable, Void> {
@@ -40,14 +41,29 @@ class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
 
     @Override
     public Void apply(@Nullable AggregatedHttpRequest request, @Nullable Throwable throwable) {
+        final EventLoop eventLoop = channel().eventLoop();
+        if (eventLoop.inEventLoop()) {
+            apply0(request, throwable);
+        } else {
+            eventLoop.execute(() -> apply0(request, throwable));
+        }
+        return null;
+    }
+
+    public void apply0(@Nullable AggregatedHttpRequest request, @Nullable Throwable throwable) {
+        if (throwable != null) {
+            fail(throwable);
+            return;
+        }
+
         if (!tryInitialize()) {
-            return null;
+            return;
         }
 
         writeHeaders(request.headers());
         if (cancelled) {
             // If the headers size exceeds the limit, the headers write fails immediately.
-            return null;
+            return;
         }
 
         HttpData content = request.content();
@@ -64,7 +80,6 @@ class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
             writeTrailers(trailers);
         }
         channel().flush();
-        return null;
     }
 
     @Override

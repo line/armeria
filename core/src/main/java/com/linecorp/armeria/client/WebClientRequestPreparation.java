@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.DefaultWebClient.RESPONSE_STREAMING_REQUEST_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -66,13 +67,33 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
     @Override
     public HttpResponse execute() {
         final HttpRequest httpRequest = buildRequest();
+        final RequestOptions requestOptions = buildRequestOptions();
+        return client.execute(httpRequest, requestOptions);
+    }
+
+    private RequestOptions buildRequestOptions() {
         final RequestOptions requestOptions;
+        final boolean requestStreaming = isRequestStreaming();
         if (requestOptionsBuilder != null) {
+            if (requestOptionsBuilder.exchangeType() == null) {
+                if (!requestStreaming) {
+                    requestOptionsBuilder.exchangeType(ExchangeType.RESPONSE_STREAMING);
+                }
+            }
             requestOptions = requestOptionsBuilder.build();
         } else {
-            requestOptions = RequestOptions.of();
+            if (!requestStreaming) {
+                requestOptions = RESPONSE_STREAMING_REQUEST_OPTIONS;
+            } else {
+                requestOptions = RequestOptions.of();
+            }
         }
-        return client.execute(httpRequest, requestOptions);
+        return requestOptions;
+    }
+
+    @SuppressWarnings("ReactiveStreamsUnusedPublisher")
+    boolean isRequestStreaming() {
+        return publisher() != null;
     }
 
     /**
@@ -304,11 +325,6 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
             exchangeType(exchangeType);
         }
         return this;
-    }
-
-    boolean isRequestStreaming() {
-        //noinspection ReactiveStreamsUnusedPublisher
-        return publisher() != null;
     }
 
     @Override

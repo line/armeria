@@ -109,6 +109,11 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
         return this;
     }
 
+    @Nullable
+    ExchangeType exchangeType() {
+        return exchangeType;
+    }
+
     @Override
     public RequestOptionsBuilder exchangeType(ExchangeType exchangeType) {
         requireNonNull(exchangeType, "exchangeType");
