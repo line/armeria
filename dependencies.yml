@@ -128,7 +128,7 @@ com.google.j2objc:
 # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
 #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
 com.google.protobuf:
-  protobuf-java: { version: &PROTOBUF_VERSION '3.20.1' }
+  protobuf-java: { version: &PROTOBUF_VERSION '3.19.2' }
   protobuf-java-util:
     version: *PROTOBUF_VERSION
     exclusions:
