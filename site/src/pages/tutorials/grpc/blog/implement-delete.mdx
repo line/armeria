@@ -26,7 +26,7 @@ You need to have the files obtained from previous steps:
 
 ## 1. Implement service
 
-Let's add a method for deleting a blog post in the BlogService.java file we've been working on.
+Let's implement a service method 'deleteBlogPost()` in the BlogService.java we've been working on.
 
 1. Add a service method, `deleteBlogPost()`.
 ```java filename=BlogService.java
@@ -59,8 +59,7 @@ private static Server newServer(int port) throws Exception {
 
 ## 2. Implement client
 
-This time, let's use the first client instance we created, `client`. Add a 
-method `deleteBlogPost()` to send a request to update a blog post.
+This time, let's use the first client instance we created, `client`. Add a method `deleteBlogPost()` to send a request to update a blog post.
 
 ```java filename=BlogClient.java
 import example.armeria.server.blog.grpc.Blog.DeleteBlogPostRequest;
@@ -80,28 +79,28 @@ class BlogClient {
 
 ## 3. Test run
 
-Let's test deleting a blog. We know that our client creates a blog post by default when it's executed and that the ID of the first one is always `0`.
+Let's test deleting a blog. We know that our client creates a blog post by default when it's executed and that the ID of the first one has been `0` always.
 
 1. Call the delete method we just implemented followed by `listBlogPosts()` to see that no post with the ID 0 exists after deleting the post.
   ```java filename=BlogClient.java
   static void testRun(){
-    createBlogPost("Second blog", "This is my second attempt");
+    createBlogPost("Another blog post", "Creating a post via createBlogPost().");
     deleteBlogPost(0);
     listBlogPosts();
   }
   ```
-2. If your server is not running, [re-run the server](/tutorials/grpc/blog/run-service#3-serve-the-service). Your server is running if you see the following message.
+2. [Re-run the server](/tutorials/grpc/blog/run-service#3-serve-the-service). Your server is running if you see the following message.
   ```bash
   [armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
   ```
-3. Run the client. The number of blog posts in the log depends on how you have tested so far. Anyhow, since we are deleting the first post, you won't have a problem, unless you've deleted it already.
+3. Run the client. The number of blog posts in the log depends on how you've tested so far. Anyhow, since we are attempting to delete the first post, you won't have a problem, unless you've deleted it already. You can check that the list of posts retrieved start from `1`, which is the second post.
    ```bash
    [armeria-common-worker-nio-2-1] DEBUG c.l.a.client.logging.LoggingClient - [creqId=8573ef34, ... 
    [http://127.0.0.1:8080/example.armeria.server.blog.grpc.BlogService/ListBlogPosts#POST] 
    Response: ..., content=CompletableRpcResponse{blogs {
    id: 1
    ```
-4. Now, while keeping the server running, run the client again, attempting to delete the post with the ID 1, which does not exist any longer.
+4. Now, while keeping the server running, run the client again, attempting to delete the post with the ID 0, which does not exist any longer.
 
    This time, we can't tell if the blog post was deleted or if an error has occurred. (Although we expect an error to occur.) This is because we haven't added anything in the exception block.
   ```java filename=BlogClient.java
@@ -109,7 +108,7 @@ Let's test deleting a blog. We know that our client creates a blog post by defau
       // Handle exception
     }
   ```
-   Suppose we have no time and just want to know if an error has occurred. One way we can do is using the interceptor, again. So, change the client instance from `client` to `cb` in the `deleteBlogPost()` method and run the client again.
+   Suppose we have no time and just want to know if an error has occurred. One way we can check is using the interceptor, again. So, change the client instance from `client` to `cb` in the `deleteBlogPost()` method and run the client again.
 
    ```java filename=BlogClient.java
    try {
@@ -119,11 +118,11 @@ Let's test deleting a blog. We know that our client creates a blog post by defau
    
    Now you'll see the exception logged as the following.
    ```bash
-   io.grpc.StatusException: NOT_FOUND: The blog post does not exist. ID: 100
+   io.grpc.StatusException: NOT_FOUND: The blog post does not exist. ID: 0
    ```
 
 ## What's next
 
-Here, we've implemented a service method and client method for deleting a blog post. In the [next section](/tutorials/grpc/blog/add-docservice), we'll add Armeria's [Documentation service](/docs/server-docservice) to our blog service.
+Here, we've implemented a service method and client method for deleting a blog post. Next, we'll [add](/tutorials/grpc/blog/add-docservice) Armeria's [Documentation service](/docs/server-docservice) to our service.
 
 <TutorialSteps current={6} />

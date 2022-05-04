@@ -10,28 +10,34 @@ type: step
 
 # Implementing CREATE operation
 
-Previously, we ran our blog service on a server and also confirmed that our client could make a call to the service. In this section, we'll implement a create operation and again, try making a call.
+Previously, we ran an empty blog service on a server and also confirmed that our client could make a call to the service. In this step, we'll implement a create operation and again, try making a call to a service method.
 
 <TutorialSteps current={3} />
 
 ## What you need
 
 You need to have the following obtained from previous steps:
+
 - [Java code generated](/tutorials/grpc/blog/define-service#compile-proto-file)
-- [ServerMain.java](/tutorials/grpc/blog/run-service#2-add-a-service-to-a-server)
-- [BlogClient.java](/tutorials/grpc/blog/run-service#4-write-a-client)
+- Main.java
+- BlogService.java
+- BlogClient.java
 
 ## 1. Implement service
 
-To implement a CREATE operation, add a service method `createBlogPost()` on top of the BlogService.java file from the earlier step.
+Let's implement a service method `createBlogPost()` in the BlogService.java from the earlier step.
 
-1. Create an ID generator and a map for containing blogs posts.
+1. Create an ID generator for temporary post IDs and a map for containing blogs posts. Add in a logger for debugging.
   ```java filename=BlogService.java
   import java.util.Map;
   import java.util.concurrent.ConcurrentHashMap;
   import java.util.concurrent.atomic.AtomicInteger;
-
-  final class BlogService extends BlogServiceGrpc.BlogServiceImplBase { }
+  
+  public final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+    private final AtomicInteger idGenerator = new AtomicInteger();
+    private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
+    private static final Logger logger = LoggerFactory.getLogger(Main.class);
+  }
   ```
 2. Add a service method, `createBlogPost()`:
     1. Create a `BlogPost` object with the request parameters.
@@ -40,9 +46,8 @@ To implement a CREATE operation, add a service method `createBlogPost()` on top 
   ```java filename=BlogService.java
   import example.armeria.server.blog.grpc.Blog.BlogPost;
   import io.grpc.stub.StreamObserver;
-
-  public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
-
+  
+  final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
     @Override
     public void createBlogPost(CreateBlogPostRequest request, StreamObserver<BlogPost> responseObserver) {
       final int id = idGenerator.getAndIncrement(); // Generate post ID
@@ -64,20 +69,13 @@ To implement a CREATE operation, add a service method `createBlogPost()` on top 
 
 ## 2. Implement client
 
-We've already added the call to create a blog post in the client's `main()` method. Leave the code there. In addition to that piece of code, we'll make a proper method in the `BlogClient.java` file:
+This time, let's add a proper method for creating a blog post. Previously, we made a call to create a blog post, from the client's `main()` method for testing. Leave the code inside the `main()` for testing purpose.
 
-1. Add a method `createBlogPost()` to send a request to create a blog post.
+Add a method `createBlogPost()` in BlogClient.java to send a request to create a blog post.
   ```java filename=BlogClient.java
-  final class ClientMain {
-    void createBlogPost(String title, String content) { }
-  }
-  ```
-2. Implement the method:
-    - Copy the code in the `main()` to the `createBlogPost()` method.
-    - Replace the arguments with parameter names in `setTitle()` and `setContent()`.
-    - Print out the request and the response just to check.
-  ```java filename=BlogClient.java
-  import example.armeria.server.blog.grpc.Blog.CreateBlogPostRequest;
+  import org.slf4j.Logger;
+  import org.slf4j.LoggerFactory;
+
   class BlogClient {
     private static final Logger logger = LoggerFactory.getLogger(BlogClient.class);
     void createBlogPost(String title, String content) {
@@ -94,6 +92,8 @@ We've already added the call to create a blog post in the client's `main()` meth
 
 ## 3. Test run
 
+Now, let's make a call from the client. Note the code is minimal to keep things simple.
+
 1. Add a method to test run the create method we just implemented.
   ```java filename=BlogClient.java
   public static void main(String[] args) throws Exception {
@@ -103,25 +103,25 @@ We've already added the call to create a blog post in the client's `main()` meth
   }
 
   static void testRun(){
-    createBlogPost("Second blog", "This is my second attempt");
+    createBlogPost("Another blog post", "Creating a post via createBlogPost().");
   }
   ```
-2. If the server is not running, [run the server](/tutorials/grpc/blog/run-service#3-serve-the-service) again. Your server is running if you see the following message.
+2. [Re-run the server](/tutorials/grpc/blog/run-service#3-serve-the-service). Your server is running if you see the following message.
   ```bash
   [armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
   ```
-3. Run the client. You'll see a message only for the second one, because we haven't added logging for the first post.
+3. Run the client. You'll see only a single message for blog posting, because we haven't added logging for the  post created by the `main()`.
   ```bash
-  [main] INFO  e.a.client.blog.grpc.BlogClient - [Create response] Title: Second blog Content: This is my second attempt
+  [main] INFO  e.a.client.blog.grpc.BlogClient - [Create response] Title: Another blog post Content: Creating a post via createBlogPost().
   ```
-  If you want to check that indeed two posts have been created, check the server side:
+  If you want to check that indeed two posts have been created, check the server side.
   ```bash
   [armeria-common-worker-nio-2-1] INFO  e.a.server.blog.grpc.ServerMain - Created at 0 - My first blog
-  [armeria-common-worker-nio-2-1] INFO  e.a.server.blog.grpc.ServerMain - Created at 1 - Second blog
+  [armeria-common-worker-nio-2-1] INFO  e.a.server.blog.grpc.ServerMain - Created at 1 - Another blog post
   ```
 
 ## What's next
 
-Here, we've implemented a service method and client method for creating a blog post. In the [next section](/tutorials/grpc/blog/implement-read), we'll implement a READ operation.
+Here, we've implemented a service method and client method for creating a blog post. Next, we'll [implement a READ operation](/tutorials/grpc/blog/implement-read).
 
 <TutorialSteps current={3} />

@@ -9,8 +9,7 @@ level: basic
 
 # Adding Documentation service 
 
-Take advantage of Armeria's Documentation service which automatically creates documentation of your service methods, as well as providing means to test out the methods.
-
+Take advantage of Armeria's Documentation service which automatically creates documentation of your service methods, as well as providing means to test out the methods. Note that the Documentation service supports only unary calls for testing. To make calls on the Documentation service, you need to enable unframed requests.
 
 <TutorialSteps current={7} />
 
@@ -24,17 +23,16 @@ You need to have the all the files you created for the server-side. No client fi
 - GrpcExceptionHandler.java
 - BlogNotFoundException.java
 
-
 ## 1. Create DocService instance
 
-1. Create a <type://DocService> instance in the Main.java.
+Create a <type://DocService> instance in Main.java.
 
 ```java filename=Main.java
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import io.grpc.reflection.v1alpha.ServerReflectionGrpc;
 
-final class ServerMain {
+final class Main {
   private static Server newServer(int port) throws Exception {
     final BlogPost exampleRequest = BlogPost.newBuilder()
                                             .setTitle("Example title")
@@ -55,7 +53,10 @@ final class ServerMain {
   }
 }
 ```
-2. Enable unframed requests by adding `.enableUnframedRequests(true)` to the GrpcService builder. This makes the blog service to support requests that are not framed in gRPC wire format. Thus enabling you to test out calling service methods from the Documentation service.
+
+## 2. Enabled unframed requests
+To test making calls on the Documentation service, enable unframed requests by adding `.enableUnframedRequests(true)` to the GrpcService builder. This makes the blog service to support requests that are not framed in gRPC wire format. For us, this enables making calls on a web browser.
+
 ```java filename=Main.java
 private static Server newServer(int port) throws Exception {
   final GrpcService grpcService =
@@ -68,12 +69,12 @@ private static Server newServer(int port) throws Exception {
 ```
 
 
-## 2. Add the Documentation service
+## 3. Add the Documentation service
 
 Add the doc service to the server builder.
 
 ```java filename=Main.java
-final class ServerMain {
+final class Main {
   private static Server newServer(int port) throws Exception {
     return Server.builder()
                  .http(port)
@@ -90,7 +91,7 @@ Now, re-run the server. The server and services are launched successfully if you
  Server has been started. Serving DocService at http://127.0.0.1:8080/docs
 ```
 
-## 3. Test DocService
+## 4. Test DocService
 
 Let's test and call our service operations, using Armeria's Documentation service.
 
@@ -117,6 +118,6 @@ Let's test and call our service operations, using Armeria's Documentation servic
 
 ## Next step
 
-In this step, we've added the Documentation service to a server. We've come to the end of this tutorial. Next, try adding more service methods to the tutorial or have a go at developing a service of your own.
+Here, we've finally added the Documentation service to the server. We've come to the end of this tutorial. Next, try adding more service methods to the tutorial or have a go at developing a service of your own.
 
 <TutorialSteps current={7} />

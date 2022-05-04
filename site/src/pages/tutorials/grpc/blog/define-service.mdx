@@ -1,7 +1,8 @@
 ---
-menuTitle: "Define a gRPC service"
+menuTitle: "Define service"
 order: 1
 type: step
+targetLang: java
 ---
 
 # Defining a blog service and messages
@@ -12,7 +13,7 @@ Let's begin by defining our gRPC blog service in a proto file.
 
 ## 1. Create a proto file
 
-Create a file named blog.proto inside the directory, /{project}/src/main/proto. This tutorial uses Protocol Buffers version 3.
+Create a file, blog.proto, inside the directory, {project_root}/src/main/proto. This tutorial uses Protocol Buffers version 3.
 
 ```protobuf filename=blog.proto
 syntax = "proto3";
@@ -23,7 +24,7 @@ option java_package = "example.armeria.server.blog.grpc";
 
 ## 2. Define a blog post
 
-In the proto file, define the `BlogPost` message type with the minimal data. This message type contains the core of a blog post as well as metadata.
+In the proto file, define the `BlogPost` message type with minimal data.
 
 ```protobuf filename=blog.proto
 message BlogPost {
@@ -37,7 +38,7 @@ message BlogPost {
 
 ## 3. Add service methods
 
-Add service methods to our blog service. We have an extra method for retreiving blog posts; one is for retrieving a single post and another for multiple posts.
+Add service methods to our blog service. We have an extra method for retrieving blog posts; one is for retrieving a single post and another for multiple posts.
 
 ```protobuf filename=blog.proto
 import "google/protobuf/empty.proto";
@@ -53,7 +54,7 @@ service BlogService {
 
 ## 4. Add request types
 
-Add request types our blog service will receive. Our service receives requests to create, retrieve, update, and delete blog posts.
+Add request types for create, retrieve, update, and delete operations.
 
 ```protobuf filename=blog.proto
 message CreateBlogPostRequest {
@@ -90,21 +91,18 @@ message ListBlogPostsResponse {
 }
 ```
 
-
 ## 6. Compile proto file
 
-Compile the blog.proto file to generate Java code. The compile will generate code for both client and server.
+Compile the blog.proto file to generate Java code.
 
 ```bash
 ./gradlew generateProto
 ```
 
-Find the Java code output in the directory, /{project}/build/generated/source/proto/main.
+Find the Java code output in the directory, {project_root}/build/generated/source/proto/main.
 
 ## Next step
 
-In this step, we've created a proto file, defined our service, and generated Java code.
-
-Next, at [Step 2. Implementing a gRPC service](/tutorials/grpc/blog/develop-grpc-server), we'll use implement our service based on the Java code generated.
+In this step, we've defined a proto file for our service and generated Java code. Next, we'll implement a minimal blog service and also a client to [test run](/tutorials/grpc/blog/run-service).
 
 <TutorialSteps current={1} />
