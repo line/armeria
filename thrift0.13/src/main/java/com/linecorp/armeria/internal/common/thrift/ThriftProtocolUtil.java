@@ -70,8 +70,13 @@ public final class ThriftProtocolUtil {
 
         final int length = buf.getInt(buf.readerIndex());
         if (length < 0) {
-            throw new TProtocolException(TProtocolException.NEGATIVE_SIZE, "Negative length: " + length);
+            // A negative value means tbinary protocol V1 for which TBinaryProtocol correctly validates
+            // the message length before creating an array.
+            // https://github.com/apache/thrift/blob/0.9.3/lib/java/src/org/apache/thrift/protocol/TBinaryProtocol.java#L225
+            // https://github.com/apache/thrift/blob/0.9.3/lib/java/src/org/apache/thrift/protocol/TBinaryProtocol.java#L358
+            return;
         }
+
         if (length > maxStringLength) {
             throw new TProtocolException(TProtocolException.SIZE_LIMIT,
                                          "Length exceeded max allowed: " + length);
