@@ -212,7 +212,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             requestedByDownstream = LongMath.saturatedAdd(requestedByDownstream, n);
             upstream.request(maxConcurrency - sourceSubscriptions.size());
 
-            dump();
+            flush();
             requestAllAvailable();
         }
 
@@ -263,7 +263,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                                .limit(available).forEach(sub -> sub.request(1));
         }
 
-        private void dump() {
+        private void flush() {
             while (requestedByDownstream > 0 && !buffer.isEmpty()) {
                 final U value = buffer.remove();
 
@@ -283,7 +283,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             sourceSubscriptions.remove(child);
 
             if (sourceSubscriptions.isEmpty() && pendingSubscriptions == 0 && completing) {
-                dump();
+                flush();
                 downstream.onComplete();
             }
         }
