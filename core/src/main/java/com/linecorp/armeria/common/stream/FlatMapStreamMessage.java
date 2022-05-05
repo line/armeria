@@ -42,6 +42,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
     private final int maxConcurrency;
 
     private final CompletableFuture<Void> completionFuture;
+    private FlatMapAggregatingSubscriber<T, U> innerSubscriber;
 
     @SuppressWarnings("unchecked")
     FlatMapStreamMessage(StreamMessage<? extends T> source,
@@ -68,7 +69,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public long demand() {
-        return source.demand();
+        return innerSubscriber.requestedByDownstream;
     }
 
     @Override
@@ -83,10 +84,10 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
 
-        source.subscribe(
-                new FlatMapAggregatingSubscriber<>(subscriber, function, executor, maxConcurrency,
-                                                   completionFuture),
-                executor, options);
+        innerSubscriber = new FlatMapAggregatingSubscriber<>(subscriber, function, executor, maxConcurrency,
+                                                             completionFuture);
+
+        source.subscribe(innerSubscriber, executor, options);
     }
 
     @Override
