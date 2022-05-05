@@ -87,8 +87,11 @@ public final class LeakTracingRequestContextStorage implements RequestContextSto
 
     @Override
     public void pop(RequestContext current, @Nullable RequestContext toRestore) {
-        delegate.pop(current, toRestore);
-        pendingRequestCtx.remove();
+        try {
+            delegate.pop(current, toRestore);
+        } finally {
+            pendingRequestCtx.remove();
+        }
     }
 
     @Nullable
