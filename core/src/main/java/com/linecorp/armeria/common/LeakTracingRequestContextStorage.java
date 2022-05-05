@@ -34,7 +34,7 @@ public final class LeakTracingRequestContextStorage implements RequestContextSto
 
     private final RequestContextStorage delegate;
     private final FastThreadLocal<PendingRequestContextStackTrace> pendingRequestCtx;
-    private final Sampler<Class<? extends Throwable>> sampler;
+    private final Sampler<Object> sampler;
 
     /**
      * Creates a new instance.
@@ -50,10 +50,10 @@ public final class LeakTracingRequestContextStorage implements RequestContextSto
      * @param sampler the {@link Sampler} that determines whether to retain the stacktrace of the context leaks
      */
     public LeakTracingRequestContextStorage(RequestContextStorage delegate,
-                                            Sampler<Class<? extends Throwable>> sampler) {
+                                            Sampler<?> sampler) {
         this.delegate = delegate;
         pendingRequestCtx = new FastThreadLocal<>();
-        this.sampler = sampler;
+        this.sampler = (Sampler<Object>) sampler;
     }
 
     @Nullable
