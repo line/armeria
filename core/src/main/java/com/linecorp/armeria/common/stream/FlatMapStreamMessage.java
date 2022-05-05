@@ -18,8 +18,8 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.ArrayDeque;
 import java.util.HashSet;
-import java.util.LinkedList;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
@@ -136,7 +136,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             this.completionFuture = completionFuture;
 
             sourceSubscriptions = new HashSet<>();
-            buffer = new LinkedList<>();
+            buffer = new ArrayDeque<>();
         }
 
         @Override
