@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Comparator;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Optional;
@@ -42,6 +41,8 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
     private final Function<T, StreamMessage<U>> function;
     private final int maxConcurrency;
 
+    private final CompletableFuture<Void> completionFuture;
+
     @SuppressWarnings("unchecked")
     FlatMapStreamMessage(StreamMessage<? extends T> source,
                          Function<? super T, ? extends StreamMessage<? extends U>> function,
@@ -52,6 +53,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         this.source = (StreamMessage<T>) source;
         this.function = (Function<T, StreamMessage<U>>) function;
         this.maxConcurrency = maxConcurrency;
+        completionFuture = new CompletableFuture<>();
     }
 
     @Override
@@ -71,7 +73,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
     @Override
     public CompletableFuture<Void> whenComplete() {
-        return source.whenComplete();
+        return completionFuture;
     }
 
     @Override
@@ -82,7 +84,8 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         requireNonNull(options, "options");
 
         source.subscribe(
-                new FlatMapAggregatingSubscriber<>(subscriber, function, executor, maxConcurrency),
+                new FlatMapAggregatingSubscriber<>(subscriber, function, executor, maxConcurrency,
+                                                   completionFuture),
                 executor, options);
     }
 
@@ -105,6 +108,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         private final EventExecutor executor;
         private final Set<FlatMapSubscriber<T, U>> sourceSubscriptions;
         private final Queue<U> buffer;
+        private final CompletableFuture<Void> completionFuture;
 
         @Nullable
         private volatile Subscription upstream;
@@ -117,15 +121,18 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         FlatMapAggregatingSubscriber(Subscriber<? super U> downstream,
                                      Function<T, StreamMessage<U>> function,
                                      EventExecutor executor,
-                                     int maxConcurrency) {
+                                     int maxConcurrency,
+                                     CompletableFuture<Void> completionFuture) {
             requireNonNull(downstream, "downstream");
             requireNonNull(function, "function");
             requireNonNull(executor, "executor");
+            requireNonNull(completionFuture, "completionFuture");
 
             this.downstream = downstream;
             this.function = function;
             this.executor = executor;
             this.maxConcurrency = maxConcurrency;
+            this.completionFuture = completionFuture;
 
             sourceSubscriptions = new HashSet<>();
             buffer = new LinkedList<>();
@@ -173,6 +180,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
             if (sourceSubscriptions.isEmpty() && pendingSubscriptions == 0) {
                 downstream.onComplete();
+                completionFuture.complete(null);
             } else {
                 completing = true;
             }
