@@ -258,6 +258,11 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             }
 
             final long available = getAvailableBufferSpace();
+
+            if (available == Long.MAX_VALUE) {
+                sourceSubscriptions.forEach(sub -> sub.request(Long.MAX_VALUE));
+            }
+
             sourceSubscriptions.stream()
                                .filter(sub -> sub.getRequested() == 0)
                                .limit(available).forEach(sub -> sub.request(1));
