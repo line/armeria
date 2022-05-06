@@ -1,35 +1,20 @@
 /*
- * Copyright 2019 LINE Corporation
+ *  Copyright 2022 LINE Corporation
  *
- * LINE Corporation licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
+ *  LINE Corporation licenses this file to you under the Apache License,
+ *  version 2.0 (the "License"); you may not use this file except in compliance
+ *  with the License. You may obtain a copy of the License at:
  *
- *   https://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
- */
-/*
- * Copyright 2015 The Netty Project
- *
- * The Netty Project licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ *  License for the specific language governing permissions and limitations
+ *  under the License.
  */
 
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.common;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
@@ -42,25 +27,27 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Objects;
 import com.google.common.collect.Iterators;
 
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 
-public final class DefaultAttributeMap {
+final class DefaultAttributes implements Attributes, AttributesBuilder {
 
     // Forked from Netty 4.1.34 at 506f0d8f8c10e1b24924f7d992a726d7bdd2e486
     // - Add rootAttributeMap and related methods to retrieve values from the rootAttributeMap.
     // - Add setAttrIfAbsent and computeAttrIfAbsent
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultAttributeMap, AtomicReferenceArray>
-            updater = AtomicReferenceFieldUpdater.newUpdater(DefaultAttributeMap.class,
+    private static final AtomicReferenceFieldUpdater<DefaultAttributes, AtomicReferenceArray>
+            updater = AtomicReferenceFieldUpdater.newUpdater(DefaultAttributes.class,
                                                              AtomicReferenceArray.class, "attributes");
 
-    private static final int BUCKET_SIZE = 8;
+    static final Attributes EMPTY = new DefaultAttributes(null);
+
+    private static final int BUCKET_SIZE = 16;
     private static final int MASK = BUCKET_SIZE - 1;
 
     // Not using ConcurrentHashMap due to high memory consumption.
@@ -70,29 +57,31 @@ public final class DefaultAttributeMap {
     volatile AtomicReferenceArray<DefaultAttribute<?>> attributes;
 
     @Nullable
-    private final RequestContext rootAttributeMap;
+    private final AttributesGetters parent;
 
-    public DefaultAttributeMap(@Nullable RequestContext rootAttributeMap) {
-        this.rootAttributeMap = rootAttributeMap;
+    DefaultAttributes(@Nullable AttributesGetters parent) {
+        this.parent = parent;
     }
 
+    @Override
     @Nullable
     public <T> T ownAttr(AttributeKey<T> key) {
         return attr(key, true);
     }
 
+    @Override
     @Nullable
     public <T> T attr(AttributeKey<T> key) {
         return attr(key, false);
     }
 
     @Nullable
-    public <T> T attr(AttributeKey<T> key, boolean ownAttr) {
+    private <T> T attr(AttributeKey<T> key, boolean ownAttr) {
         requireNonNull(key, "key");
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
-            if (!ownAttr && rootAttributeMap != null) {
-                return rootAttributeMap.attr(key);
+            if (!ownAttr && parent != null) {
+                return parent.attr(key);
             }
             return null;
         }
@@ -100,8 +89,8 @@ public final class DefaultAttributeMap {
         final int i = index(key);
         final DefaultAttribute<?> head = attributes.get(i);
         if (head == null) {
-            if (!ownAttr && rootAttributeMap != null) {
-                return rootAttributeMap.attr(key);
+            if (!ownAttr && parent != null) {
+                return parent.attr(key);
             }
             return null;
         }
@@ -111,8 +100,8 @@ public final class DefaultAttributeMap {
             for (;;) {
                 final DefaultAttribute<?> next = curr.next;
                 if (next == null) {
-                    if (!ownAttr && rootAttributeMap != null) {
-                        return rootAttributeMap.attr(key);
+                    if (!ownAttr && parent != null) {
+                        return parent.attr(key);
                     }
                     return null;
                 }
@@ -131,10 +120,28 @@ public final class DefaultAttributeMap {
         return key.id() & MASK;
     }
 
-    @Nullable
     @SuppressWarnings("unchecked")
-    public <T> T setAttr(AttributeKey<T> key, @Nullable T value) {
+    @Nullable
+    @Override
+    public <T> T getAndSet(AttributeKey<T> key, @Nullable T value) {
+        requireNonNull(key, "key");
         return (T) setAttr(key, value, SetAttrMode.OLD_VALUE);
+    }
+
+    @Override
+    public <T> AttributesBuilder set(AttributeKey<T> key, T value) {
+        requireNonNull(key, "key");
+        requireNonNull(value, "value");
+        // Don't need to look up the old value
+        setAttr(key, value, SetAttrMode.CUR_ATTR);
+        return this;
+    }
+
+    @Override
+    public <T> AttributesBuilder remove(AttributeKey<T> key) {
+        requireNonNull(key, "key");
+        setAttr(key, null, SetAttrMode.CUR_ATTR);
+        return this;
     }
 
     @Nullable
@@ -186,7 +193,7 @@ public final class DefaultAttributeMap {
     private <T> Object getSetAttrResultForNewAttr(SetAttrMode mode, DefaultAttribute<T> attr) {
         switch (mode) {
             case OLD_VALUE:
-                return rootAttributeMap != null ? rootAttributeMap.ownAttr(attr.getKey()) : null;
+                return parent != null ? parent.ownAttr(attr.getKey()) : null;
             case CUR_ATTR:
                 return attr;
             default:
@@ -222,14 +229,15 @@ public final class DefaultAttributeMap {
         return attributes;
     }
 
+    @Override
     public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
-            if (rootAttributeMap == null) {
+            if (parent == null) {
                 return Collections.emptyIterator();
             }
 
-            final Iterator<Entry<AttributeKey<?>, Object>> rootAttrs = rootAttributeMap.attrs();
+            final Iterator<Entry<AttributeKey<?>, Object>> rootAttrs = parent.attrs();
             if (!rootAttrs.hasNext()) {
                 return Collections.emptyIterator();
             }
@@ -238,11 +246,11 @@ public final class DefaultAttributeMap {
         }
 
         final Iterator<Entry<AttributeKey<?>, Object>> ownAttrsIt = new OwnIterator(attributes);
-        if (rootAttributeMap == null) {
+        if (parent == null) {
             return ownAttrsIt;
         }
 
-        final Iterator<Entry<AttributeKey<?>, Object>> rootAttrs = rootAttributeMap.attrs();
+        final Iterator<Entry<AttributeKey<?>, Object>> rootAttrs = parent.attrs();
         if (!rootAttrs.hasNext()) {
             return ownAttrsIt;
         }
@@ -250,6 +258,7 @@ public final class DefaultAttributeMap {
         return new ConcatenatedCopyOnWriteIterator(ownAttrsIt, rootAttrs);
     }
 
+    @Override
     public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
@@ -258,9 +267,50 @@ public final class DefaultAttributeMap {
         return new OwnIterator(attributes);
     }
 
+    @Nullable
+    @Override
+    public AttributesGetters parent() {
+        return parent;
+    }
+
     @SuppressWarnings("unchecked")
     private static <T> T convert(Object o) {
         return (T) o;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return this == EMPTY || !attrs().hasNext();
+    }
+
+    @Override
+    public AttributesBuilder toBuilder() {
+        return copy();
+    }
+
+    @Override
+    public Attributes build() {
+        return copy();
+    }
+
+    private DefaultAttributes copy() {
+        final DefaultAttributes builder = new DefaultAttributes(parent);
+        if (this == EMPTY) {
+            return builder;
+        }
+
+        // TODO(ikhoon): Consider adding ImmutableAttributes to avoid additional copies.
+        for (final Iterator<Entry<AttributeKey<?>, Object>> it = ownAttrs(); it.hasNext();) {
+            final Entry<AttributeKey<?>, Object> next = it.next();
+            //noinspection unchecked
+            final AttributeKey<Object> key = (AttributeKey<Object>) next.getKey();
+            final Object value = next.getValue();
+            if (value != null) {
+                // Copy only unremoved values.
+                ((AttributesBuilder) builder).set(key, value);
+            }
+        }
+        return builder;
     }
 
     @Override
@@ -314,6 +364,33 @@ public final class DefaultAttributeMap {
             final T old = this.value;
             this.value = value;
             return old;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof Entry)) {
+                return false;
+            }
+            final Entry<?, ?> that = (Entry<?, ?>) o;
+            return Objects.equal(key, that.getKey()) &&
+                   Objects.equal(value, that.getValue());
+        }
+
+        @Override
+        public int hashCode() {
+            if (key == null) {
+                return 0;
+            }
+
+            int hashCode = key.hashCode();
+            final T value = getValue();
+            if (value != null) {
+                hashCode = 31 * hashCode + value.hashCode();
+            }
+            return hashCode;
         }
 
         @Override
@@ -469,6 +546,7 @@ public final class DefaultAttributeMap {
             return rootAttr.getKey();
         }
 
+        @Nullable
         @Override
         public T getValue() {
             final Entry<AttributeKey<T>, T> childAttr = this.childAttr;
@@ -492,6 +570,30 @@ public final class DefaultAttributeMap {
             final T old = childAttr.getValue();
             childAttr.setValue(value);
             return old;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof Entry)) {
+                return false;
+            }
+
+            final Entry<?, ?> that = (Entry<?, ?>) o;
+            return getKey().equals(that.getKey()) &&
+                   Objects.equal(getValue(), that.getValue());
+        }
+
+        @Override
+        public int hashCode() {
+            int hashCode = getKey().hashCode();
+            final T value = getValue();
+            if (value != null) {
+                hashCode = 31 * hashCode + value.hashCode();
+            }
+            return hashCode;
         }
 
         @Override

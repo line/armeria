@@ -25,11 +25,8 @@ import java.net.InetAddress;
 import java.net.StandardProtocolFamily;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Collections;
 import java.util.Comparator;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
@@ -45,13 +42,14 @@ import com.google.common.net.InternetDomainName;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.common.Attributes;
+import com.linecorp.armeria.common.AttributesBuilder;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.common.DefaultAttributeMap;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.util.AttributeKey;
@@ -187,7 +185,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private final String strVal;
 
     @Nullable
-    private final DefaultAttributeMap attributes;
+    private final Attributes attributes;
 
     @Nullable
     private CompletableFuture<Endpoint> selectFuture;
@@ -196,7 +194,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private int hashCode;
 
     private Endpoint(String host, @Nullable String ipAddr, int port, int weight, HostType hostType,
-                     @Nullable DefaultAttributeMap attributes) {
+                     @Nullable Attributes attributes) {
         this.host = host;
         this.ipAddr = ipAddr;
         this.port = port;
@@ -578,61 +576,49 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public <T> Endpoint withAttr(AttributeKey<T> key, @Nullable T value) {
         requireNonNull(key, "key");
-        if (value == null && attributes == null) {
+        if (attributes == null) {
+            if (value == null) {
+                return this;
+            }
+            return withAttrs(Attributes.of(key, value));
+        }
+
+        if (attributes.attr(key) == value) {
             return this;
+        } else {
+            final AttributesBuilder attributesBuilder = attributes.toBuilder();
+            if (value == null) {
+                attributesBuilder.remove(key).build();
+            } else {
+                attributesBuilder.set(key, value).build();
+            }
+            return withAttrs(attributesBuilder.build());
         }
-        if (attributes != null && attributes.attr(key) == value) {
-            return this;
-        }
-        final DefaultAttributeMap newAttributes = new DefaultAttributeMap(null);
-        if (attributes != null) {
-            copyAttributes(newAttributes, attributes.attrs());
-        }
-        newAttributes.setAttr(key, value);
-        return withAttributes(newAttributes);
     }
 
     /**
-     * Returns a new host endpoint by adding the specified attributes.
-     *
-     * @return the new endpoint by adding the specified attributes. {@code this} if specified
-     *         attributes are empty.
+     * Returns a new {@link Endpoint} with the specified {@link Attributes}.
+     * Note that the {@link #attrs()} of this {@link Endpoint} is replaced with the specified
+     * {@link Attributes}.
      */
-    public Endpoint withAttrs(Iterable<? extends Entry<AttributeKey<?>, ?>> attributes) {
-        requireNonNull(attributes, "attributes");
-        final Iterator<? extends Entry<AttributeKey<?>, ?>> newAttrIterator = attributes.iterator();
-        if (!newAttrIterator.hasNext()) {
+    public Endpoint withAttrs(Attributes newAttributes) {
+        requireNonNull(newAttributes, "newAttributes");
+        if (newAttributes.isEmpty()) {
             return this;
         }
-        final DefaultAttributeMap newAttributes = new DefaultAttributeMap(null);
-        if (this.attributes != null) {
-            copyAttributes(newAttributes, this.attributes.attrs());
-        }
-        copyAttributes(newAttributes, newAttrIterator);
-        return withAttributes(newAttributes);
+
+        return new Endpoint(host, ipAddr, port, weight, hostType, newAttributes);
     }
 
     /**
      * Returns an iterator of all attributes of this endpoint, or an empty iterator if this endpoint does not
      * have any attributes.
      */
-    public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
+    public Attributes attrs() {
         if (attributes == null) {
-            return Collections.emptyIterator();
+            return Attributes.of();
         }
-        return attributes.attrs();
-    }
-
-    private Endpoint withAttributes(DefaultAttributeMap newAttributes) {
-        return new Endpoint(host, ipAddr, port, weight, hostType, newAttributes);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static void copyAttributes(DefaultAttributeMap attributeMap,
-                                       Iterator<? extends Entry<AttributeKey<?>, ?>> attrs) {
-        attrs.forEachRemaining(attr -> {
-            attributeMap.setAttr((AttributeKey<? super Object>) attr.getKey(), attr.getValue());
-        });
+        return attributes;
     }
 
     /**

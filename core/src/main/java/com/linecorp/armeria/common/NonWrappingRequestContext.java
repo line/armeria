@@ -29,7 +29,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.common.DefaultAttributeMap;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.Channel;
@@ -48,7 +47,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
             NonWrappingRequestContext.class, Supplier.class, "contextHook");
 
     private final MeterRegistry meterRegistry;
-    private final DefaultAttributeMap attrs;
+    private final AttributesSetters attrs;
     private final SessionProtocol sessionProtocol;
     private final RequestId id;
     private final HttpMethod method;
@@ -76,10 +75,10 @@ public abstract class NonWrappingRequestContext implements RequestContext {
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            @Nullable RequestContext rootAttributeMap) {
+            @Nullable AttributesGetters rootAttributeMap) {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
-        attrs = new DefaultAttributeMap(rootAttributeMap);
+        attrs = Attributes.builder(rootAttributeMap);
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.id = requireNonNull(id, "id");
         this.method = requireNonNull(method, "method");
@@ -210,17 +209,27 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     @Override
     public final <V> V setAttr(AttributeKey<V> key, @Nullable V value) {
         requireNonNull(key, "key");
-        return attrs.setAttr(key, value);
+        return attrs.getAndSet(key, value);
     }
 
     @Override
     public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
+        // TODO(ikhoon): Make this method return `AttributesGetters` in Armeria 2.x
         return attrs.attrs();
     }
 
     @Override
     public final Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
         return attrs.ownAttrs();
+    }
+
+    /**
+     * Returns the {@link Attributes} which stores the pairs of a {@link AttributeKey} and a object set via
+     * {@link #setAttr(AttributeKey, Object)}.
+     */
+    @UnstableApi
+    public final AttributesGetters attributes() {
+        return attrs;
     }
 
     /**
