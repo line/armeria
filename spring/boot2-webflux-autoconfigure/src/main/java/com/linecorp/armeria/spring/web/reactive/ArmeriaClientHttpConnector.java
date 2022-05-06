@@ -46,7 +46,7 @@ import reactor.core.publisher.Mono;
  */
 final class ArmeriaClientHttpConnector implements ClientHttpConnector {
 
-    private final List<ArmeriaClientConfigurator> configurators;
+    private final WebClient webClient;
     private final DataBufferFactoryWrapper<?> factoryWrapper;
 
     /**
@@ -70,7 +70,7 @@ final class ArmeriaClientHttpConnector implements ClientHttpConnector {
      */
     ArmeriaClientHttpConnector(Iterable<ArmeriaClientConfigurator> configurators,
                                DataBufferFactoryWrapper<?> factoryWrapper) {
-        this.configurators = ImmutableList.copyOf(requireNonNull(configurators, "configurators"));
+        this.webClient = buildWebClient(requireNonNull(configurators, "configurators"));
         this.factoryWrapper = requireNonNull(factoryWrapper, "factoryWrapper");
     }
 
@@ -90,22 +90,21 @@ final class ArmeriaClientHttpConnector implements ClientHttpConnector {
         }
     }
 
+    private static WebClient buildWebClient(Iterable<ArmeriaClientConfigurator> configurators) {
+        // create the armeria's WebClient without a path, because spring's WebClient will always provide a full path.
+        final WebClientBuilder builder = WebClient.builder();
+        configurators.forEach(c -> c.configure(builder));
+        return builder.build();
+    }
+
     private ArmeriaClientHttpRequest createRequest(HttpMethod method, URI uri) {
-        final String scheme = uri.getScheme();
-        final String authority = uri.getRawAuthority();
         final String path = uri.getRawPath();
         final String query = uri.getRawQuery();
 
-        checkArgument(!Strings.isNullOrEmpty(authority), "URI is not absolute: %s", uri);
         checkArgument(!Strings.isNullOrEmpty(path), "path is undefined: %s", uri);
-
-        final URI baseUri = URI.create(Strings.isNullOrEmpty(scheme) ? authority : scheme + "://" + authority);
-        final WebClientBuilder builder = WebClient.builder(baseUri);
-        configurators.forEach(c -> c.configure(builder));
-
         final String pathAndQuery = Strings.isNullOrEmpty(query) ? path : path + '?' + query;
 
-        return new ArmeriaClientHttpRequest(builder.build(), method, pathAndQuery, uri, factoryWrapper);
+        return new ArmeriaClientHttpRequest(webClient, method, pathAndQuery, uri, factoryWrapper);
     }
 
     private CompletableFuture<ArmeriaClientHttpResponse> createResponse(HttpResponse response) {
