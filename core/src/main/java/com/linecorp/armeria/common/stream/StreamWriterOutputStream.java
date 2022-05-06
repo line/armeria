@@ -32,7 +32,7 @@ final class StreamWriterOutputStream<T> extends OutputStream {
 
     private final StreamWriter<T> writer;
     private final Function<? super HttpData, ? extends T> httpDataConverter;
-    private final ByteBuf buffer;
+    private ByteBuf buffer;
     private final int maxBufferSize;
     private boolean closed;
 
@@ -108,9 +108,7 @@ final class StreamWriterOutputStream<T> extends OutputStream {
         if (!buffer.isReadable() || !writer.isOpen()) {
             return;
         }
-        final byte[] data = new byte[buffer.readableBytes()];
-        buffer.readBytes(data);
-        writer.write(httpDataConverter.apply(HttpData.wrap(data)));
-        buffer.clear();
+        writer.write(httpDataConverter.apply(HttpData.wrap(buffer)));
+        buffer = Unpooled.buffer(maxBufferSize);
     }
 }
