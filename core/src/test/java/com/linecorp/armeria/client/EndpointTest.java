@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.google.common.collect.Maps;
+
 import com.linecorp.armeria.common.Attributes;
 import com.linecorp.armeria.common.AttributesBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -504,23 +506,17 @@ class EndpointTest {
                 .isEqualTo("value2");
         assertThat(endpointB.attrs().attrs())
                 .toIterable()
-                .anyMatch(entry -> entry.getKey().equals(key1) && "value1".equals(entry.getValue()))
-                .anyMatch(entry -> entry.getKey().equals(key2) && "value2".equals(entry.getValue()))
-                .hasSize(2);
+                .containsExactlyInAnyOrder(Maps.immutableEntry(key1, "value1"),
+                                           Maps.immutableEntry(key2, "value2"));
 
-        // key1 is updated, key3 is added.
-        assertThat(endpointC.attr(key1))
-                .isEqualTo("value1-2");
-        assertThat(endpointC.attr(key2))
-                .isEqualTo("value2");
-        assertThat(endpointC.attr(key3))
-                .isEqualTo("value3");
+        // `attrs` should be replaced with `attrs2`
+        assertThat(endpointC.attr(key1)).isEqualTo("value1-2");
+        assertThat(endpointC.attr(key2)).isNull();
+        assertThat(endpointC.attr(key3)).isEqualTo("value3");
         assertThat(endpointC.attrs().attrs())
                 .toIterable()
-                .anyMatch(entry -> entry.getKey().equals(key1) && "value1-2".equals(entry.getValue()))
-                .anyMatch(entry -> entry.getKey().equals(key2) && "value2".equals(entry.getValue()))
-                .anyMatch(entry -> entry.getKey().equals(key3) && "value3".equals(entry.getValue()))
-                .hasSize(3);
+                .containsExactlyInAnyOrder(Maps.immutableEntry(key1, "value1-2"),
+                                           Maps.immutableEntry(key3, "value3"));
 
         // update by empty attrs, not create new endpoint.
         final Endpoint newEndpointB = endpointB.withAttrs(Attributes.of());
