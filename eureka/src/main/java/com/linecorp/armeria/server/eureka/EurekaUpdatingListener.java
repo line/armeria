@@ -201,9 +201,10 @@ public final class EurekaUpdatingListener extends ServerListenerAdapter {
         final PortWrapper oldSecurePortWrapper = oldInfo.getSecurePort();
         final PortWrapper securePortWrapper = portWrapper(server, oldSecurePortWrapper, SessionProtocol.HTTPS);
 
+        final int instancePort = portWrapper.isEnabled() ? portWrapper.getPort() : securePortWrapper.getPort();
         final String instanceId =
                 oldInfo.getInstanceId() != null ? oldInfo.getInstanceId()
-                                                : hostName + ":" + appName + ":" + portWrapper.getPort();
+                                                : hostName + ":" + appName + ":" + instancePort;
 
         final String vipAddress = vipAddress(oldInfo.getVipAddress(), hostName, portWrapper);
         final String secureVipAddress = vipAddress(oldInfo.getSecureVipAddress(), hostName, securePortWrapper);
