@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.common.eureka;
+package com.linecorp.armeria.common.eureka;
 
 import static com.google.common.base.MoreObjects.toStringHelper;
 import static java.util.Objects.requireNonNull;
@@ -32,12 +32,14 @@ import com.google.common.base.Objects;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An instance information.
  */
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonRootName("instance")
+@UnstableApi
 public final class InstanceInfo {
 
     private static final Logger logger = LoggerFactory.getLogger(InstanceInfo.class);
@@ -363,17 +365,26 @@ public final class InstanceInfo {
         private final boolean enabled;
         private final int port;
 
+        /**
+         * Creates a new instance.
+         */
         public PortWrapper(@JsonProperty("@enabled") boolean enabled, @JsonProperty("$") int port) {
             this.enabled = enabled;
             this.port = port;
         }
 
+        /**
+         * return whether is enabled.
+         */
         @JsonProperty("@enabled")
         @JsonSerialize(using = ToStringSerializer.class)
         public boolean isEnabled() {
             return enabled;
         }
 
+        /**
+         * return the port.
+         */
         @JsonProperty("$")
         public int getPort() {
             return port;

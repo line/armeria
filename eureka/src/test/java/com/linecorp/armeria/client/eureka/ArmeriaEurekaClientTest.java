@@ -55,8 +55,8 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.auth.AuthToken;
+import com.linecorp.armeria.common.eureka.InstanceInfo.PortWrapper;
 import com.linecorp.armeria.internal.common.eureka.EurekaWebClient;
-import com.linecorp.armeria.internal.common.eureka.InstanceInfo.PortWrapper;
 
 public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibilityTestSuite {
 
@@ -118,19 +118,19 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
             return convertVoidResponse(delegate.register(convertInstanceInfo(info)));
         }
 
-        private static com.linecorp.armeria.internal.common.eureka.InstanceInfo convertInstanceInfo(
+        private static com.linecorp.armeria.common.eureka.InstanceInfo convertInstanceInfo(
                 InstanceInfo info) {
             final PortWrapper port = new PortWrapper(info.isPortEnabled(PortType.UNSECURE), info.getPort());
             final PortWrapper securePort = new PortWrapper(info.isPortEnabled(PortType.SECURE),
                                                            info.getSecurePort());
 
-            return new com.linecorp.armeria.internal.common.eureka.InstanceInfo(
+            return new com.linecorp.armeria.common.eureka.InstanceInfo(
                     info.getInstanceId(),
                     info.getAppName(), info.getAppGroupName(), info.getHostName(),
                     info.getIPAddr(),
                     info.getVIPAddress(), info.getSecureVipAddress(), port,
                     securePort,
-                    com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus
+                    com.linecorp.armeria.common.eureka.InstanceInfo.InstanceStatus
                             .toEnum(info.getStatus().name()), info.getHomePageUrl(),
                     info.getStatusPageUrl(),
                     info.getHealthCheckUrl(),
@@ -140,9 +140,9 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
                     info.getMetadata());
         }
 
-        private static com.linecorp.armeria.internal.common.eureka.LeaseInfo convertLeaseInfo(
+        private static com.linecorp.armeria.common.eureka.LeaseInfo convertLeaseInfo(
                 LeaseInfo leaseInfo) {
-            return new com.linecorp.armeria.internal.common.eureka.LeaseInfo(
+            return new com.linecorp.armeria.common.eureka.LeaseInfo(
                     leaseInfo.getRenewalIntervalInSecs(),
                     leaseInfo.getDurationInSecs(),
                     leaseInfo.getRegistrationTimestamp(),
@@ -160,10 +160,10 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
         public EurekaHttpResponse<InstanceInfo> sendHeartBeat(String appName, String id, InstanceInfo info,
                                                               @Nullable InstanceStatus overriddenStatus) {
             return convertResponse(delegate.sendHeartBeat(
-                    appName, id, convertInstanceInfo(info),
-                    overriddenStatus == null ?
-                    null : com.linecorp.armeria.internal.common.eureka.InstanceInfo.InstanceStatus
-                            .toEnum(overriddenStatus.name())),
+                                           appName, id, convertInstanceInfo(info),
+                                           overriddenStatus == null ?
+                                           null : com.linecorp.armeria.common.eureka.InstanceInfo.InstanceStatus
+                                                   .toEnum(overriddenStatus.name())),
                                    InstanceInfo.class);
         }
 
@@ -312,7 +312,7 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
             return result;
         }
 
-        private static com.linecorp.armeria.internal.common.eureka.DataCenterInfo convertDataCenterInfo(
+        private static com.linecorp.armeria.common.eureka.DataCenterInfo convertDataCenterInfo(
                 DataCenterInfo dataCenterInfo) {
             final Map<String, String> metadata;
             if (dataCenterInfo.getName() == Name.Amazon) {
@@ -320,7 +320,7 @@ public final class ArmeriaEurekaClientTest extends EurekaHttpClientCompatibility
             } else {
                 metadata = ImmutableMap.of();
             }
-            return new com.linecorp.armeria.internal.common.eureka.DataCenterInfo(
+            return new com.linecorp.armeria.common.eureka.DataCenterInfo(
                     dataCenterInfo.getName().name(), metadata);
         }
 

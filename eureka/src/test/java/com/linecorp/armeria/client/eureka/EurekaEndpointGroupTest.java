@@ -75,4 +75,17 @@ class EurekaEndpointGroupTest {
         // Created 6 instances but 1 is down, so 5 instances.
         assertThat(endpointsCaptor.join()).hasSize(5);
     }
+
+    @Test
+    void instanceWithMetadata() {
+        final EurekaEndpointGroup eurekaEndpointGroup = EurekaEndpointGroup.builder(eurekaServer.httpUri())
+                                                                           .build();
+        final CompletableFuture<List<Endpoint>> endpointsCaptor = new CompletableFuture<>();
+        eurekaEndpointGroup.addListener(endpointsCaptor::complete);
+
+        final List<Endpoint> endpoints = endpointsCaptor.join();
+        assertThat(endpoints).allMatch(endpoint -> endpoint.attr(EurekaEndpointGroup.INSTANCE_INFO) != null);
+        assertThat(endpoints.get(0).attr(EurekaEndpointGroup.INSTANCE_INFO).getAppName()).isEqualTo(
+                "APPLICATION0");
+    }
 }
