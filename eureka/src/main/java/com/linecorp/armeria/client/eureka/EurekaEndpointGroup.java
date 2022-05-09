@@ -76,6 +76,13 @@ import io.netty.util.concurrent.ScheduledFuture;
  */
 public final class EurekaEndpointGroup extends DynamicEndpointGroup {
 
+    /**
+     * Instance info attributeKey.
+     */
+    @UnstableApi
+    public static final AttributeKey<InstanceInfo> INSTANCE_INFO = AttributeKey.valueOf(
+            EurekaEndpointGroup.class, "instanceInfo");
+
     private static final Logger logger = LoggerFactory.getLogger(EurekaEndpointGroup.class);
 
     private static final ObjectMapper mapper =
@@ -88,10 +95,6 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     private static final String VIPS = "/vips/";
     private static final String SVIPS = "/svips/";
     private static final String INSTANCES = "/instances/";
-
-    @UnstableApi
-    public static final AttributeKey<InstanceInfo> INSTANCE_INFO = AttributeKey.valueOf(
-            EurekaEndpointGroup.class, "instanceInfo");
 
     /**
      * Returns a new {@link EurekaEndpointGroup} that retrieves the {@link Endpoint} list from the specified
