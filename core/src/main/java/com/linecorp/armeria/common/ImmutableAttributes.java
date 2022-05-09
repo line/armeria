@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.common.ImmutableAttributesBuilder.NULL_VALUE;
+
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
@@ -49,32 +51,42 @@ class ImmutableAttributes implements Attributes {
         return builder;
     }
 
+    @Override
+    public ConcurrentAttributes toConcurrentAttributes() {
+        final ConcurrentAttributes concurrentAttributes = ConcurrentAttributes.of(parent);
+        if (!attributes.isEmpty()) {
+            //noinspection unchecked
+            attributes.forEach((k, v) -> concurrentAttributes.set((AttributeKey<Object>) k, v));
+        }
+
+        return concurrentAttributes;
+    }
+
     @Nullable
     @Override
     public <T> T attr(AttributeKey<T> key) {
-        final T value = ownAttr(key);
+        final T value = ownAttr0(key);
         if (value != null) {
-            return value;
+            return value == NULL_VALUE ? null : value;
         }
+
         if (parent == null) {
             return null;
         }
         return parent.attr(key);
     }
 
-    @SuppressWarnings("unchecked")
     @Nullable
     @Override
     public <T> T ownAttr(AttributeKey<T> key) {
-        return (T) attributes.get(key);
+        final T value = ownAttr0(key);
+        return value == NULL_VALUE ? null : value;
     }
 
-    @Override
-    public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
-        if (attributes.isEmpty()) {
-            return Collections.emptyIterator();
-        }
-        return attributes.entrySet().iterator();
+    @SuppressWarnings("unchecked")
+    @Nullable
+    private <T> T ownAttr0(AttributeKey<T> key) {
+        return (T) attributes.get(key);
     }
 
     @Override
@@ -83,6 +95,14 @@ class ImmutableAttributes implements Attributes {
             return ownAttrs();
         }
         return new ConcatenatedIterator(parent.attrs(), ownAttrs());
+    }
+
+    @Override
+    public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
+        if (attributes.isEmpty()) {
+            return Collections.emptyIterator();
+        }
+        return attributes.entrySet().stream().filter(x -> x.getValue() != NULL_VALUE).iterator();
     }
 
     @Nullable
@@ -136,10 +156,11 @@ class ImmutableAttributes implements Attributes {
                 this.next = childIt.next();
             } else {
                 // Skip the attribute in parentIt if it's in the child.
-                for (; ; ) {
+                for (;;) {
                     if (parentIt.hasNext()) {
                         final Entry<AttributeKey<?>, Object> tempNext = parentIt.next();
-                        if (!hasOwnAttr(tempNext.getKey())) {
+                        // The value shaded by NULL_VALUE is also skipped.
+                        if (ownAttr0(tempNext.getKey()) == null) {
                             this.next = tempNext;
                             break;
                         }

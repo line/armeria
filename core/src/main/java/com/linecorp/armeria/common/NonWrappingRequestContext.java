@@ -47,7 +47,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
             NonWrappingRequestContext.class, Supplier.class, "contextHook");
 
     private final MeterRegistry meterRegistry;
-    private final AttributesSetters attrs;
+    private final ConcurrentAttributes attrs;
     private final SessionProtocol sessionProtocol;
     private final RequestId id;
     private final HttpMethod method;
@@ -78,7 +78,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
             @Nullable AttributesGetters rootAttributeMap) {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
-        attrs = Attributes.builder(rootAttributeMap);
+        attrs = ConcurrentAttributes.of(rootAttributeMap);
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.id = requireNonNull(id, "id");
         this.method = requireNonNull(method, "method");

@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import io.netty.util.AttributeKey;
 
 /**
- * Holds attributes which can be accessed via {@link AttributeKey}.
+ * An immutable {@link Attributes} that holds attributes which can be accessed via {@link AttributeKey}.
  */
 @UnstableApi
 public interface Attributes extends AttributesGetters {
@@ -79,20 +79,11 @@ public interface Attributes extends AttributesGetters {
     }
 
     /**
-     * Returns a new {@link Attributes} with the specified parent {@link Attributes}.
-     * The parent {@link Attributes} can access via {@link #attr(AttributeKey)} or {@link #attrs()}.
+     * Returns a new {@link Attributes} with the specified parent {@link AttributesGetters}.
+     * The parent {@link AttributesGetters} can access via {@link #attr(AttributeKey)} or {@link #attrs()}.
      */
     static Attributes of(@Nullable AttributesGetters parent) {
         return builder(parent).build();
-    }
-
-    static AttributesSetters newConcurrentAttributes() {
-        return newConcurrentAttributes(null);
-    }
-
-
-    static AttributesSetters newConcurrentAttributes(@Nullable AttributesGetters parent) {
-        new DefaultConcurrentAttributes(parent, null);
     }
 
     /**
@@ -112,11 +103,6 @@ public interface Attributes extends AttributesGetters {
     }
 
     /**
-     * Returns a new builder created from the entries of this {@link Attributes}.
-     */
-    AttributesBuilder toBuilder();
-
-    /**
      * Returns a new {@link Attributes} which is the result from the mutation by the specified {@link Consumer}.
      * This method is a shortcut for:
      * <pre>{@code
@@ -132,4 +118,14 @@ public interface Attributes extends AttributesGetters {
         mutator.accept(builder);
         return builder.build();
     }
+
+    /**
+     * Returns a new builder created from the entries of this {@link Attributes}.
+     */
+    AttributesBuilder toBuilder();
+
+    /**
+     * Converts this {@link Attributes} into a {@link ConcurrentAttributes}.
+     */
+    ConcurrentAttributes toConcurrentAttributes();
 }

@@ -36,7 +36,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.Iterator;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -45,7 +44,6 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
 import com.google.common.collect.Iterators;
-import com.google.common.math.IntMath;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -62,33 +60,20 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             updater = AtomicReferenceFieldUpdater.newUpdater(DefaultConcurrentAttributes.class,
                                                              AtomicReferenceArray.class, "attributes");
 
-    static final Attributes EMPTY = new DefaultConcurrentAttributes(null, null);
-
-    private static final int DEFAULT_BUCKET_SIZE = 8;
+    private static final int BUCKET_SIZE = 8;
+    private static final int MASK = BUCKET_SIZE - 1;
 
     // Not using ConcurrentHashMap due to high memory consumption.
-    // Initialize lazily to reduce memory consumption if an initial value is unspecified; 
-    // updated by AtomicReferenceFieldUpdater above.
+    // Initialize lazily to reduce memory consumption; updated by AtomicReferenceFieldUpdater above.
     @VisibleForTesting
     @Nullable
     volatile AtomicReferenceArray<DefaultAttribute<?>> attributes;
 
     @Nullable
     private final AttributesGetters parent;
-    private final int bucketSize;
-    private final int mask;
 
     DefaultConcurrentAttributes(@Nullable AttributesGetters parent) {
         this.parent = parent;
-        if (initialValues != null && !initialValues.isEmpty()) {
-            bucketSize = IntMath.ceilingPowerOfTwo(initialValues.size());
-            attributes = new AtomicReferenceArray<>(bucketSize);
-            //noinspection unchecked
-            initialValues.forEach((key, value) -> set((AttributeKey<Object>) key, value));
-        } else {
-            bucketSize = DEFAULT_BUCKET_SIZE;
-        }
-        mask = bucketSize - 1;
     }
 
     @Override
@@ -144,8 +129,8 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
         }
     }
 
-    private int index(AttributeKey<?> key) {
-        return key.id() & mask;
+    private static int index(AttributeKey<?> key) {
+        return key.id() & MASK;
     }
 
     @SuppressWarnings("unchecked")
@@ -157,10 +142,8 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
     }
 
     @Override
-    public <T> AttributesBuilder set(AttributeKey<T> key, T value) {
+    public <T> ConcurrentAttributes set(AttributeKey<T> key, @Nullable T value) {
         requireNonNull(key, "key");
-        requireNonNull(value, "value");
-        // Don't need to look up the old value
         setAttr(key, value, SetAttrMode.CUR_ATTR);
         return this;
     }
@@ -238,24 +221,27 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
     }
 
     @Override
-    public <T> AttributesBuilder remove(AttributeKey<T> key) {
+    public <T> boolean remove(AttributeKey<T> key) {
         requireNonNull(key, "key");
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = attributes();
 
         final int i = index(key);
         final DefaultAttribute<?> head = attributes.get(i);
         if (head == null) {
-            return this;
+            return false;
         }
 
         synchronized (head) {
             DefaultAttribute<?> curr = head;
             for (;;) {
                 final DefaultAttribute<?> next = curr.next;
-                if (next != null && next.key == key) {
+                if (next == null) {
+                    return false;
+                }
+                if (next.key == key) {
                     // Remove `next` from the chaining.
                     curr.next = next.next;
-                    return this;
+                    return true;
                 }
                 curr = next;
             }
@@ -265,7 +251,7 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
     private AtomicReferenceArray<DefaultAttribute<?>> attributes() {
         AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
-            attributes = new AtomicReferenceArray<>(bucketSize);
+            attributes = new AtomicReferenceArray<>(BUCKET_SIZE);
 
             if (!updater.compareAndSet(this, null, attributes)) {
                 attributes = this.attributes;
@@ -326,33 +312,7 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
 
     @Override
     public boolean isEmpty() {
-        return this == EMPTY || !attrs().hasNext();
-    }
-
-    @Override
-    public AttributesBuilder toBuilder() {
-        return copy();
-    }
-
-    @Override
-    public Attributes build() {
-        return copy();
-    }
-
-    private DefaultConcurrentAttributes copy() {
-        final DefaultConcurrentAttributes builder = new DefaultConcurrentAttributes(parent);
-        if (this == EMPTY) {
-            return builder;
-        }
-
-        // TODO(ikhoon): Consider adding ImmutableAttributes to avoid additional copies.
-        for (final Iterator<Entry<AttributeKey<?>, Object>> it = ownAttrs(); it.hasNext(); ) {
-            final Entry<AttributeKey<?>, Object> next = it.next();
-            //noinspection unchecked
-            final AttributeKey<Object> key = (AttributeKey<Object>) next.getKey();
-            final Object value = next.getValue();
-        }
-        return builder;
+        return !attrs().hasNext();
     }
 
     @Override

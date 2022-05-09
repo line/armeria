@@ -29,7 +29,6 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
-import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -40,7 +39,7 @@ class DefaultConcurrentAttributesTest {
 
     @Test
     void testGetSetString() {
-        final AttributesBuilder map = Attributes.builder();
+        final ConcurrentAttributes map = ConcurrentAttributes.of();
         final AttributeKey<String> key = AttributeKey.valueOf("str");
         assertThat(map.attr(key)).isNull();
 
@@ -59,7 +58,7 @@ class DefaultConcurrentAttributesTest {
 
     @Test
     void testGetSetInt() {
-        final AttributesBuilder map = Attributes.builder();
+        final ConcurrentAttributes map = ConcurrentAttributes.of();
         final AttributeKey<Integer> key = AttributeKey.valueOf("int");
         assertThat(map.attr(key)).isNull();
 
@@ -78,7 +77,7 @@ class DefaultConcurrentAttributesTest {
 
     @Test
     void testGetSetWithNull() {
-        final DefaultConcurrentAttributes map = new DefaultConcurrentAttributes(null, null);
+        final ConcurrentAttributes map = ConcurrentAttributes.of();
         final AttributeKey<Integer> key = AttributeKey.valueOf("key");
 
         assertThat(map.getAndSet(key, 1)).isNull();
@@ -90,7 +89,7 @@ class DefaultConcurrentAttributesTest {
 
     @Test
     void testIterator() {
-        final DefaultConcurrentAttributes map = new DefaultConcurrentAttributes(null, null);
+        final ConcurrentAttributes map = ConcurrentAttributes.of();
         assertThat(map.attrs().hasNext()).isFalse();
 
         final AttributeKey<Integer> key = AttributeKey.valueOf(DefaultConcurrentAttributes.class, "KEY");
@@ -102,7 +101,7 @@ class DefaultConcurrentAttributesTest {
 
     @Test
     void testIteratorWithFullMap() {
-        final DefaultConcurrentAttributes map = new DefaultConcurrentAttributes(null, null);
+        final DefaultConcurrentAttributes map = (DefaultConcurrentAttributes) ConcurrentAttributes.of();
         final List<AttributeKey<Integer>> expectedKeys = new ArrayList<>();
         for (int i = 0; i < 1024; i++) {
             final AttributeKey<Integer> key =
@@ -140,7 +139,7 @@ class DefaultConcurrentAttributesTest {
     void hasAttributeInRoot() {
         final DefaultServiceRequestContext root =
                 (DefaultServiceRequestContext) ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final AttributesBuilder child = Attributes.builder(root.attributes());
+        final ConcurrentAttributes child = ConcurrentAttributes.of(root.attributes());
 
         // root: [foo], child: []
         final AttributeKey<String> foo = AttributeKey.valueOf("foo");
@@ -173,7 +172,7 @@ class DefaultConcurrentAttributesTest {
     void hasNoAttributeInRoot() {
         final DefaultServiceRequestContext root =
                 (DefaultServiceRequestContext) ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final DefaultConcurrentAttributes child = new DefaultConcurrentAttributes(root.attributes(), null);
+        final ConcurrentAttributes child = ConcurrentAttributes.of(root.attributes());
 
         final AttributeKey<String> foo = AttributeKey.valueOf("foo");
         // root: [], child: [foo]
@@ -199,7 +198,7 @@ class DefaultConcurrentAttributesTest {
     void attrsWithRoot() {
         final DefaultServiceRequestContext root =
                 (DefaultServiceRequestContext) ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final AttributesBuilder child = Attributes.builder(root.attributes());
+        final ConcurrentAttributes child = ConcurrentAttributes.of(root.attributes());
 
         final AttributeKey<String> foo = AttributeKey.valueOf("foo");
         // root: [foo], child: []
@@ -269,102 +268,18 @@ class DefaultConcurrentAttributesTest {
     }
 
     @Test
-    void immutability() {
-        final AttributeKey<Integer> key = AttributeKey.valueOf("foo");
-        final AttributesBuilder builder0 = Attributes.builder();
-        final Attributes attributes0 = builder0.set(key, 0).build();
-        assertThat(attributes0.attr(key)).isEqualTo(0);
-        builder0.set(key, 1);
-        assertThat(attributes0.attr(key)).isEqualTo(0);
-        final Attributes attributes1 = builder0.build();
-        assertThat(attributes1.attr(key)).isEqualTo(1);
-
-        final AttributesBuilder builder2 = attributes0.toBuilder();
-        builder2.set(key, 2);
-        assertThat(attributes0.attr(key)).isEqualTo(0);
-        final Attributes attributes2 = builder2.build();
-        assertThat(attributes2.attr(key)).isEqualTo(2);
-        builder2.remove(key);
-        assertThat(attributes2.attr(key)).isEqualTo(2);
-    }
-
-    @Test
-    void mutate() {
-        final AttributeKey<Integer> key = AttributeKey.valueOf("foo");
-        final Attributes attributes0 = Attributes.of(key, 0);
-        final Attributes attributes1 = attributes0.withMutations(mutator -> mutator.set(key, 1));
-        assertThat(attributes0.attr(key)).isZero();
-        assertThat(attributes1.attr(key)).isOne();
-    }
-
-    @Test
-    void parent() {
-        final AttributeKey<Integer> foo = AttributeKey.valueOf("foo");
-        final AttributeKey<String> bar = AttributeKey.valueOf("bar");
-        final AttributeKey<String> quz = AttributeKey.valueOf("quz");
-        final Attributes parent = Attributes.of(foo, 0, bar, "bar");
-
-        final Attributes attributes = Attributes.builder(parent)
-                                                .set(bar, "override")
-                                                .remove(foo)
-                                                .set(quz, "new")
-                                                .build();
-
-        assertThat(attributes.parent()).isSameAs(parent);
-
-        // Should not mutate the parent.
-        assertThat(parent.attr(foo)).isEqualTo(0);
-        assertThat(parent.attr(bar)).isEqualTo("bar");
-        assertThat(parent.attr(quz)).isNull();
-
-        assertThat(attributes.attr(foo)).isEqualTo(0);
-        assertThat(attributes.ownAttr(foo)).isNull();
-        assertThat(attributes.attr(bar)).isEqualTo("override");
-        assertThat(attributes.ownAttr(bar)).isEqualTo("override");
-        assertThat(attributes.attr(quz)).isEqualTo("new");
-        assertThat(attributes.ownAttr(quz)).isEqualTo("new");
-
-        assertThat(attributes.hasAttr(foo)).isTrue();
-        assertThat(attributes.hasOwnAttr(foo)).isFalse();
-
-        assertThat(ImmutableList.copyOf(attributes.attrs()))
-                .containsExactlyInAnyOrder(Maps.immutableEntry(foo, 0),
-                                           Maps.immutableEntry(bar, "override"),
-                                           Maps.immutableEntry(quz, "new"));
-    }
-
-    @Test
-    void remove() {
-        final AttributeKey<Integer> foo = AttributeKey.valueOf("foo");
-        final AttributeKey<String> bar = AttributeKey.valueOf("bar");
-        final Attributes attributes0 = Attributes.of(foo, 0, bar, "bar");
-        final Attributes attributes1 = attributes0.toBuilder()
-                                                  .remove(bar)
-                                                  .build();
-
-        assertThat(ImmutableList.copyOf(attributes0.attrs()))
-                .containsExactlyInAnyOrder(Maps.immutableEntry(foo, 0), Maps.immutableEntry(bar, "bar"));
-
-        assertThat(ImmutableList.copyOf(attributes1.attrs()))
-                .containsExactly(Maps.immutableEntry(foo, 0));
-    }
-
-    @Test
     void getAndSet() {
         final AttributeKey<Integer> foo = AttributeKey.valueOf("foo");
         final AttributeKey<String> bar = AttributeKey.valueOf("bar");
-        final Attributes attributes0 = Attributes.of(foo, 0, bar, "bar");
-        final AttributesBuilder builder = attributes0.toBuilder();
-        final Integer oldFoo = builder.getAndSet(foo, 1);
-        final String oldBar = builder.getAndSet(bar, "new");
+        final ConcurrentAttributes attributes = ConcurrentAttributes.of();
+        attributes.set(foo, 0)
+                  .set(bar, "bar");
+        final Integer oldFoo = attributes.getAndSet(foo, 1);
+        final String oldBar = attributes.getAndSet(bar, "new");
         assertThat(oldFoo).isZero();
         assertThat(oldBar).isEqualTo("bar");
 
-        assertThat(attributes0.attr(foo)).isEqualTo(0);
-        assertThat(attributes0.attr(bar)).isEqualTo("bar");
-
-        final Attributes attributes1 = builder.build();
-        assertThat(attributes1.attr(foo)).isEqualTo(1);
-        assertThat(attributes1.attr(bar)).isEqualTo("new");
+        assertThat(attributes.attr(foo)).isEqualTo(1);
+        assertThat(attributes.attr(bar)).isEqualTo("new");
     }
 }

@@ -20,12 +20,31 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 
-interface ConcurrentAttributes extends AttributesGetters, AttributesSetters {
+/**
+ * An {@link Attributes} supporting concurrency of retrievals and updates.
+ */
+public interface ConcurrentAttributes extends AttributesGetters, AttributesSetters {
 
     /**
-     * Sets the specified value with the given {@link AttributeKey}.
-     * The old value associated with the {@link AttributeKey} is replaced by the specified value.
-     * If a {@code null} value is specified, the old value is removed in the {@link Attributes}.
+     * Returns a new empty {@link ConcurrentAttributes}.
      */
-    @Nullable <T> T getAndSet(AttributeKey<T> key, @Nullable T value);
+    static ConcurrentAttributes of() {
+        return of(null);
+    }
+
+    /**
+     * Returns a new {@link ConcurrentAttributes} with the specified parent {@link AttributesGetters}.
+     * The parent {@link AttributesGetters} can access via {@link #attr(AttributeKey)} or {@link #attrs()}.
+     */
+    static ConcurrentAttributes of(@Nullable AttributesGetters parent) {
+        return new DefaultConcurrentAttributes(parent);
+    }
+
+    @Override
+    <T> ConcurrentAttributes set(AttributeKey<T> key, @Nullable T value);
+
+    @Override
+    default <T> ConcurrentAttributes removeAndThen(AttributeKey<T> key) {
+        return (ConcurrentAttributes) AttributesSetters.super.removeAndThen(key);
+    }
 }

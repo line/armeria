@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;
@@ -27,7 +28,7 @@ import io.netty.util.AttributeKey;
 public interface AttributesBuilder extends AttributesSetters {
 
     @Override
-    <T> AttributesBuilder set(AttributeKey<T> key, T value);
+    <T> AttributesBuilder set(AttributeKey<T> key, @Nullable T value);
 
     @Override
     default <T> AttributesBuilder removeAndThen(AttributeKey<T> key) {

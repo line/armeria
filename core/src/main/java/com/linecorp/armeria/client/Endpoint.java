@@ -588,9 +588,9 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         } else {
             final AttributesBuilder attributesBuilder = attributes.toBuilder();
             if (value == null) {
-                attributesBuilder.remove(key).build();
+                attributesBuilder.remove(key);
             } else {
-                attributesBuilder.set(key, value).build();
+                attributesBuilder.set(key, value);
             }
             return withAttrs(attributesBuilder.build());
         }

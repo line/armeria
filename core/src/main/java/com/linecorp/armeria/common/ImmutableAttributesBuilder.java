@@ -27,6 +27,8 @@ import io.netty.util.AttributeKey;
 
 final class ImmutableAttributesBuilder implements AttributesBuilder {
 
+    static final Object NULL_VALUE = new Object();
+
     private final Map<AttributeKey<?>, Object> attributes = new HashMap<>();
     @Nullable
     private final AttributesGetters parent;
@@ -36,11 +38,29 @@ final class ImmutableAttributesBuilder implements AttributesBuilder {
     }
 
     @Override
-    public <T> AttributesBuilder set(AttributeKey<T> key, T value) {
+    public <T> AttributesBuilder set(AttributeKey<T> key, @Nullable T value) {
         requireNonNull(key, "key");
-        requireNonNull(value, "value");
-        attributes.put(key, value);
+        getAndSet(key, value);
         return this;
+    }
+
+    @Override
+    public <T> T getAndSet(AttributeKey<T> key, @Nullable T value) {
+        requireNonNull(key, "key");
+
+        final Object oldValue;
+        if (value == null) {
+            if (parent != null && parent.hasAttr(key)) {
+                // Hide the value in the parent.
+                oldValue = attributes.put(key, NULL_VALUE);
+            } else {
+                oldValue = attributes.remove(key);
+            }
+        } else {
+            oldValue = attributes.put(key, value);
+        }
+        //noinspection unchecked
+        return (T) oldValue;
     }
 
     @Override
