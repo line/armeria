@@ -90,7 +90,8 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     private static final String INSTANCES = "/instances/";
 
     @UnstableApi
-    public static final AttributeKey<InstanceInfo> INSTANCE_INFO = AttributeKey.valueOf("instanceInfo");
+    public static final AttributeKey<InstanceInfo> INSTANCE_INFO = AttributeKey.valueOf(
+            EurekaEndpointGroup.class, "instanceInfo");
 
     /**
      * Returns a new {@link EurekaEndpointGroup} that retrieves the {@link Endpoint} list from the specified
