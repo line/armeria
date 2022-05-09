@@ -33,7 +33,7 @@ public interface Attributes extends AttributesGetters {
      * Returns an empty {@link Attributes}.
      */
     static Attributes of() {
-        return DefaultAttributes.EMPTY;
+        return ImmutableAttributes.EMPTY;
     }
 
     /**
@@ -86,6 +86,15 @@ public interface Attributes extends AttributesGetters {
         return builder(parent).build();
     }
 
+    static AttributesSetters newConcurrentAttributes() {
+        return newConcurrentAttributes(null);
+    }
+
+
+    static AttributesSetters newConcurrentAttributes(@Nullable AttributesGetters parent) {
+        new DefaultConcurrentAttributes(parent, null);
+    }
+
     /**
      * Returns a new empty {@link AttributesBuilder}.
      */
@@ -99,7 +108,7 @@ public interface Attributes extends AttributesGetters {
      * Note that any mutations in {@link AttributesBuilder} won't modify the attributes in the parent.
      */
     static AttributesBuilder builder(@Nullable AttributesGetters parent) {
-        return new DefaultAttributes(parent);
+        return new ImmutableAttributesBuilder(parent);
     }
 
     /**

@@ -36,7 +36,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AttributeKey;
 
-class DefaultAttributesTest {
+class DefaultConcurrentAttributesTest {
 
     @Test
     void testGetSetString() {
@@ -78,7 +78,7 @@ class DefaultAttributesTest {
 
     @Test
     void testGetSetWithNull() {
-        final DefaultAttributes map = new DefaultAttributes(null);
+        final DefaultConcurrentAttributes map = new DefaultConcurrentAttributes(null, null);
         final AttributeKey<Integer> key = AttributeKey.valueOf("key");
 
         assertThat(map.getAndSet(key, 1)).isNull();
@@ -90,10 +90,10 @@ class DefaultAttributesTest {
 
     @Test
     void testIterator() {
-        final DefaultAttributes map = new DefaultAttributes(null);
+        final DefaultConcurrentAttributes map = new DefaultConcurrentAttributes(null, null);
         assertThat(map.attrs().hasNext()).isFalse();
 
-        final AttributeKey<Integer> key = AttributeKey.valueOf(DefaultAttributes.class, "KEY");
+        final AttributeKey<Integer> key = AttributeKey.valueOf(DefaultConcurrentAttributes.class, "KEY");
         assertThat(map.getAndSet(key, 42)).isNull();
 
         final ArrayList<Entry<AttributeKey<?>, Object>> attrs = Lists.newArrayList(map.attrs());
@@ -102,11 +102,11 @@ class DefaultAttributesTest {
 
     @Test
     void testIteratorWithFullMap() {
-        final DefaultAttributes map = new DefaultAttributes(null);
+        final DefaultConcurrentAttributes map = new DefaultConcurrentAttributes(null, null);
         final List<AttributeKey<Integer>> expectedKeys = new ArrayList<>();
         for (int i = 0; i < 1024; i++) {
             final AttributeKey<Integer> key =
-                    AttributeKey.valueOf(DefaultAttributesTest.class, String.valueOf(i));
+                    AttributeKey.valueOf(DefaultConcurrentAttributesTest.class, String.valueOf(i));
             expectedKeys.add(key);
             assertThat(map.getAndSet(key, i)).isNull();
         }
@@ -128,7 +128,7 @@ class DefaultAttributesTest {
         assertThat(expectedKeys).isEqualTo(actualKeys(map));
     }
 
-    private static List<AttributeKey<?>> actualKeys(DefaultAttributes map) {
+    private static List<AttributeKey<?>> actualKeys(DefaultConcurrentAttributes map) {
         return ImmutableList.copyOf(map.attrs()).stream().sorted((a, b) -> {
             final Integer aVal = a.getKey().id();
             final Integer bVal = b.getKey().id();
@@ -173,7 +173,7 @@ class DefaultAttributesTest {
     void hasNoAttributeInRoot() {
         final DefaultServiceRequestContext root =
                 (DefaultServiceRequestContext) ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final DefaultAttributes child = new DefaultAttributes(root.attributes());
+        final DefaultConcurrentAttributes child = new DefaultConcurrentAttributes(root.attributes(), null);
 
         final AttributeKey<String> foo = AttributeKey.valueOf("foo");
         // root: [], child: [foo]

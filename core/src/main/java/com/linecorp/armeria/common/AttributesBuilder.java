@@ -30,7 +30,9 @@ public interface AttributesBuilder extends AttributesSetters {
     <T> AttributesBuilder set(AttributeKey<T> key, T value);
 
     @Override
-    <T> AttributesBuilder remove(AttributeKey<T> key);
+    default <T> AttributesBuilder removeAndThen(AttributeKey<T> key) {
+        return (AttributesBuilder) AttributesSetters.super.removeAndThen(key);
+    }
 
     /**
      * Returns a newly created {@link Attributes} with the entries in this builder.

@@ -36,6 +36,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicReferenceArray;
@@ -44,38 +45,50 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
 import com.google.common.collect.Iterators;
+import com.google.common.math.IntMath;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 
-final class DefaultAttributes implements Attributes, AttributesBuilder {
+final class DefaultConcurrentAttributes implements ConcurrentAttributes {
 
     // Forked from Netty 4.1.34 at 506f0d8f8c10e1b24924f7d992a726d7bdd2e486
     // - Add rootAttributeMap and related methods to retrieve values from the rootAttributeMap.
     // - Add setAttrIfAbsent and computeAttrIfAbsent
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultAttributes, AtomicReferenceArray>
-            updater = AtomicReferenceFieldUpdater.newUpdater(DefaultAttributes.class,
+    private static final AtomicReferenceFieldUpdater<DefaultConcurrentAttributes, AtomicReferenceArray>
+            updater = AtomicReferenceFieldUpdater.newUpdater(DefaultConcurrentAttributes.class,
                                                              AtomicReferenceArray.class, "attributes");
 
-    static final Attributes EMPTY = new DefaultAttributes(null);
+    static final Attributes EMPTY = new DefaultConcurrentAttributes(null, null);
 
-    private static final int BUCKET_SIZE = 16;
-    private static final int MASK = BUCKET_SIZE - 1;
+    private static final int DEFAULT_BUCKET_SIZE = 8;
 
     // Not using ConcurrentHashMap due to high memory consumption.
-    // Initialize lazily to reduce memory consumption; updated by AtomicReferenceFieldUpdater above.
+    // Initialize lazily to reduce memory consumption if an initial value is unspecified; 
+    // updated by AtomicReferenceFieldUpdater above.
     @VisibleForTesting
     @Nullable
     volatile AtomicReferenceArray<DefaultAttribute<?>> attributes;
 
     @Nullable
     private final AttributesGetters parent;
+    private final int bucketSize;
+    private final int mask;
 
-    DefaultAttributes(@Nullable AttributesGetters parent) {
+    DefaultConcurrentAttributes(@Nullable AttributesGetters parent) {
         this.parent = parent;
+        if (initialValues != null && !initialValues.isEmpty()) {
+            bucketSize = IntMath.ceilingPowerOfTwo(initialValues.size());
+            attributes = new AtomicReferenceArray<>(bucketSize);
+            //noinspection unchecked
+            initialValues.forEach((key, value) -> set((AttributeKey<Object>) key, value));
+        } else {
+            bucketSize = DEFAULT_BUCKET_SIZE;
+        }
+        mask = bucketSize - 1;
     }
 
     @Override
@@ -131,8 +144,8 @@ final class DefaultAttributes implements Attributes, AttributesBuilder {
         }
     }
 
-    private static int index(AttributeKey<?> key) {
-        return key.id() & MASK;
+    private int index(AttributeKey<?> key) {
+        return key.id() & mask;
     }
 
     @SuppressWarnings("unchecked")
@@ -149,13 +162,6 @@ final class DefaultAttributes implements Attributes, AttributesBuilder {
         requireNonNull(value, "value");
         // Don't need to look up the old value
         setAttr(key, value, SetAttrMode.CUR_ATTR);
-        return this;
-    }
-
-    @Override
-    public <T> AttributesBuilder remove(AttributeKey<T> key) {
-        requireNonNull(key, "key");
-        setAttr(key, null, SetAttrMode.CUR_ATTR);
         return this;
     }
 
@@ -231,10 +237,35 @@ final class DefaultAttributes implements Attributes, AttributesBuilder {
         }
     }
 
+    @Override
+    public <T> AttributesBuilder remove(AttributeKey<T> key) {
+        requireNonNull(key, "key");
+        final AtomicReferenceArray<DefaultAttribute<?>> attributes = attributes();
+
+        final int i = index(key);
+        final DefaultAttribute<?> head = attributes.get(i);
+        if (head == null) {
+            return this;
+        }
+
+        synchronized (head) {
+            DefaultAttribute<?> curr = head;
+            for (;;) {
+                final DefaultAttribute<?> next = curr.next;
+                if (next != null && next.key == key) {
+                    // Remove `next` from the chaining.
+                    curr.next = next.next;
+                    return this;
+                }
+                curr = next;
+            }
+        }
+    }
+
     private AtomicReferenceArray<DefaultAttribute<?>> attributes() {
         AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
-            attributes = new AtomicReferenceArray<>(BUCKET_SIZE);
+            attributes = new AtomicReferenceArray<>(bucketSize);
 
             if (!updater.compareAndSet(this, null, attributes)) {
                 attributes = this.attributes;
@@ -308,22 +339,18 @@ final class DefaultAttributes implements Attributes, AttributesBuilder {
         return copy();
     }
 
-    private DefaultAttributes copy() {
-        final DefaultAttributes builder = new DefaultAttributes(parent);
+    private DefaultConcurrentAttributes copy() {
+        final DefaultConcurrentAttributes builder = new DefaultConcurrentAttributes(parent);
         if (this == EMPTY) {
             return builder;
         }
 
         // TODO(ikhoon): Consider adding ImmutableAttributes to avoid additional copies.
-        for (final Iterator<Entry<AttributeKey<?>, Object>> it = ownAttrs(); it.hasNext();) {
+        for (final Iterator<Entry<AttributeKey<?>, Object>> it = ownAttrs(); it.hasNext(); ) {
             final Entry<AttributeKey<?>, Object> next = it.next();
             //noinspection unchecked
             final AttributeKey<Object> key = (AttributeKey<Object>) next.getKey();
             final Object value = next.getValue();
-            if (value != null) {
-                // Copy only unremoved values.
-                ((AttributesBuilder) builder).set(key, value);
-            }
         }
         return builder;
     }
@@ -444,7 +471,8 @@ final class DefaultAttributes implements Attributes, AttributesBuilder {
 
         @Nullable
         private DefaultAttribute<?> findNext(@Nullable DefaultAttribute<?> next) {
-            loop: for (;;) {
+            loop:
+            for (;;) {
                 if (next == null) {
                     for (idx++; idx < attributes.length(); idx++) {
                         final DefaultAttribute<?> head = attributes.get(idx);

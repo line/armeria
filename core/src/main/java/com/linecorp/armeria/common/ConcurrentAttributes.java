@@ -16,34 +16,16 @@
 
 package com.linecorp.armeria.common;
 
-import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 
-/**
- * Sets entries for building an {@link Attributes}.
- */
-@UnstableApi
-public interface AttributesSetters {
+interface ConcurrentAttributes extends AttributesGetters, AttributesSetters {
 
     /**
      * Sets the specified value with the given {@link AttributeKey}.
      * The old value associated with the {@link AttributeKey} is replaced by the specified value.
+     * If a {@code null} value is specified, the old value is removed in the {@link Attributes}.
      */
-    <T> AttributesSetters set(AttributeKey<T> key, T value);
-
-    /**
-     * Removes the value associated with the specified {@link AttributeKey}.
-     * Note that this method won't remove the value in {@link Attributes#parent()}.
-     */
-    <T> boolean remove(AttributeKey<T> key);
-
-    /**
-     * Removes the value associated with the specified {@link AttributeKey}.
-     * Note that this method won't remove the value in {@link Attributes#parent()}.
-     */
-    default <T> AttributesSetters removeAndThen(AttributeKey<T> key) {
-        remove(key);
-        return this;
-    }
+    @Nullable <T> T getAndSet(AttributeKey<T> key, @Nullable T value);
 }

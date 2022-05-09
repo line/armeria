@@ -1,0 +1,155 @@
+/*
+ * Copyright 2022 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.common;
+
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.NoSuchElementException;
+
+import com.google.common.collect.ImmutableMap;
+
+import com.linecorp.armeria.common.annotation.Nullable;
+
+import io.netty.util.AttributeKey;
+
+class ImmutableAttributes implements Attributes {
+
+    static final Attributes EMPTY = new ImmutableAttributes(null, ImmutableMap.of());
+
+    private final @Nullable AttributesGetters parent;
+    private final Map<AttributeKey<?>, Object> attributes;
+
+    ImmutableAttributes(@Nullable AttributesGetters parent,
+                        Map<AttributeKey<?>, Object> attributes) {
+        this.parent = parent;
+        this.attributes = ImmutableMap.copyOf(attributes);
+    }
+
+    @Override
+    public AttributesBuilder toBuilder() {
+        final ImmutableAttributesBuilder builder = new ImmutableAttributesBuilder(parent);
+        //noinspection unchecked
+        attributes.forEach((k, v) -> builder.set((AttributeKey<Object>) k, v));
+        return builder;
+    }
+
+    @Nullable
+    @Override
+    public <T> T attr(AttributeKey<T> key) {
+        final T value = ownAttr(key);
+        if (value != null) {
+            return value;
+        }
+        if (parent == null) {
+            return null;
+        }
+        return parent.attr(key);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Nullable
+    @Override
+    public <T> T ownAttr(AttributeKey<T> key) {
+        return (T) attributes.get(key);
+    }
+
+    @Override
+    public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
+        if (attributes.isEmpty()) {
+            return Collections.emptyIterator();
+        }
+        return attributes.entrySet().iterator();
+    }
+
+    @Override
+    public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
+        if (parent == null) {
+            return ownAttrs();
+        }
+        return new ConcatenatedIterator(parent.attrs(), ownAttrs());
+    }
+
+    @Nullable
+    @Override
+    public AttributesGetters parent() {
+        return parent;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return attributes.isEmpty() && (parent == null || parent.isEmpty());
+    }
+
+    private class ConcatenatedIterator implements Iterator<Entry<AttributeKey<?>, Object>> {
+
+        private final Iterator<Entry<AttributeKey<?>, Object>> parentIt;
+        private final Iterator<Entry<AttributeKey<?>, Object>> childIt;
+
+        // Need to prefetch next to check whether the attribute in root whose key is the same to the attribute
+        // in the child so that this iterator does not yield that attribute.
+        @Nullable
+        private Entry<AttributeKey<?>, Object> next;
+
+        ConcatenatedIterator(Iterator<Entry<AttributeKey<?>, Object>> parentIt,
+                             Iterator<Entry<AttributeKey<?>, Object>> childIt) {
+            this.childIt = childIt;
+            this.parentIt = parentIt;
+
+            if (childIt.hasNext()) {
+                next = childIt.next();
+            } else if (parentIt.hasNext()) {
+                next = parentIt.next();
+            } else {
+                next = null;
+            }
+        }
+
+        @Override
+        public boolean hasNext() {
+            return next != null;
+        }
+
+        @Override
+        public Entry<AttributeKey<?>, Object> next() {
+            final Entry<AttributeKey<?>, Object> next = this.next;
+            if (next == null) {
+                throw new NoSuchElementException();
+            }
+
+            if (childIt.hasNext()) {
+                this.next = childIt.next();
+            } else {
+                // Skip the attribute in parentIt if it's in the child.
+                for (; ; ) {
+                    if (parentIt.hasNext()) {
+                        final Entry<AttributeKey<?>, Object> tempNext = parentIt.next();
+                        if (!hasOwnAttr(tempNext.getKey())) {
+                            this.next = tempNext;
+                            break;
+                        }
+                    } else {
+                        this.next = null;
+                        break;
+                    }
+                }
+            }
+            return next;
+        }
+    }
+}
