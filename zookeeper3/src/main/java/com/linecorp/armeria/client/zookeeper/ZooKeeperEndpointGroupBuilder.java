@@ -23,6 +23,7 @@ import java.util.function.Consumer;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroupSetters;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
@@ -103,12 +104,22 @@ public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFramewor
         return this;
     }
 
+    /**
+     * Sets the timeout to wait until a successful {@link Endpoint} selection.
+     * {@link Duration#ZERO} disables the timeout.
+     * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used by default.
+     */
     @Override
     public ZooKeeperEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
         dynamicEndpointGroupBuilder.selectionTimeout(selectionTimeout);
         return this;
     }
 
+    /**
+     * Sets the timeout to wait until a successful {@link Endpoint} selection.
+     * {@code 0} disables the timeout.
+     * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used by default.
+     */
     @Override
     public ZooKeeperEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
         dynamicEndpointGroupBuilder.selectionTimeoutMillis(selectionTimeoutMillis);

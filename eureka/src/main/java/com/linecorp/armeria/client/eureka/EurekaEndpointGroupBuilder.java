@@ -428,12 +428,22 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder
         return this;
     }
 
+    /**
+     * Sets the timeout to wait until a successful {@link Endpoint} selection.
+     * {@link Duration#ZERO} disables the timeout.
+     * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used by default.
+     */
     @Override
     public EurekaEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
         dynamicEndpointGroupBuilder.selectionTimeout(selectionTimeout);
         return this;
     }
 
+    /**
+     * Sets the timeout to wait until a successful {@link Endpoint} selection.
+     * {@code 0} disables the timeout.
+     * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used by default.
+     */
     @Override
     public EurekaEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
         dynamicEndpointGroupBuilder.selectionTimeoutMillis(selectionTimeoutMillis);
