@@ -44,11 +44,14 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
+import com.linecorp.armeria.client.endpoint.DynamicEndpointGroupSetters;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.client.retry.RetryRule;
 import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -61,10 +64,12 @@ import com.linecorp.armeria.common.auth.OAuth2Token;
 /**
  * Builds a {@link EurekaEndpointGroup}.
  */
-public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
+public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder
+        implements DynamicEndpointGroupSetters {
 
     private static final long DEFAULT_REGISTRY_FETCH_INTERVAL_MILLIS = 30000;
 
+    private final DynamicEndpointGroupBuilder dynamicEndpointGroupBuilder = new DynamicEndpointGroupBuilder();
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
 
     @Nullable
@@ -253,7 +258,10 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
             final ClientFactory factory = options.factory();
             client = (WebClient) factory.newClient(params);
         }
-        return new EurekaEndpointGroup(selectionStrategy, client, registryFetchIntervalMillis, appName,
+        final boolean allowEmptyEndpoints = dynamicEndpointGroupBuilder.shouldAllowEmptyEndpoints();
+        final long selectionTimeoutMillis = dynamicEndpointGroupBuilder.selectionTimeoutMillis();
+        return new EurekaEndpointGroup(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis,
+                                       client, registryFetchIntervalMillis, appName,
                                        instanceId, vipAddress, secureVipAddress, regions);
     }
 
@@ -412,5 +420,45 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder {
     public EurekaEndpointGroupBuilder contextCustomizer(
             Consumer<? super ClientRequestContext> contextCustomizer) {
         return (EurekaEndpointGroupBuilder) super.contextCustomizer(contextCustomizer);
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        dynamicEndpointGroupBuilder.allowEmptyEndpoints(allowEmptyEndpoints);
+        return this;
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
+        dynamicEndpointGroupBuilder.selectionTimeout(selectionTimeout);
+        return this;
+    }
+
+    @Override
+    public EurekaEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
+        dynamicEndpointGroupBuilder.selectionTimeoutMillis(selectionTimeoutMillis);
+        return this;
+    }
+
+    /**
+     * This workaround delegates DynamicEndpointGroupSetters properties to AbstractDynamicEndpointGroupBuilder.
+     * EurekaEndpointGroupBuilder can't extend AbstractDynamicEndpointGroupBuilder because it already extends
+     * EurekaEndpointGroupBuilder.
+     */
+    private static class DynamicEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
+
+        DynamicEndpointGroupBuilder() {
+            super(Flags.defaultResponseTimeoutMillis());
+        }
+
+        @Override
+        public boolean shouldAllowEmptyEndpoints() {
+            return super.shouldAllowEmptyEndpoints();
+        }
+
+        @Override
+        public long selectionTimeoutMillis() {
+            return super.selectionTimeoutMillis();
+        }
     }
 }

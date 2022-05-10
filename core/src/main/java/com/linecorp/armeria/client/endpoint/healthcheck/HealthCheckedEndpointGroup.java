@@ -118,12 +118,14 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      * Creates a new instance.
      */
     HealthCheckedEndpointGroup(
-            EndpointGroup delegate, boolean allowEmptyEndpoints, SessionProtocol protocol, int port,
+            EndpointGroup delegate, boolean allowEmptyEndpoints, long selectionTimeoutMillis,
+            SessionProtocol protocol, int port,
             Backoff retryBackoff, ClientOptions clientOptions,
             Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory,
             HealthCheckStrategy healthCheckStrategy) {
 
-        super(requireNonNull(delegate, "delegate").selectionStrategy(), allowEmptyEndpoints);
+        super(requireNonNull(delegate, "delegate").selectionStrategy(), allowEmptyEndpoints,
+              selectionTimeoutMillis);
 
         this.delegate = delegate;
         this.protocol = requireNonNull(protocol, "protocol");

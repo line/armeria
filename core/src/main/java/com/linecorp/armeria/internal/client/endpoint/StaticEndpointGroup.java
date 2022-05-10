@@ -76,11 +76,22 @@ public final class StaticEndpointGroup implements EndpointGroup {
         return selector.selectNow(ctx);
     }
 
+    @Deprecated
     @Override
     public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
                                               ScheduledExecutorService executor,
                                               long timeoutMillis) {
+        return select(ctx, executor);
+    }
+
+    @Override
+    public CompletableFuture<Endpoint> select(ClientRequestContext ctx, ScheduledExecutorService executor) {
         return UnmodifiableFuture.completedFuture(selectNow(ctx));
+    }
+
+    @Override
+    public long selectionTimeoutMillis() {
+        return 0;
     }
 
     @Override
@@ -118,11 +129,16 @@ public final class StaticEndpointGroup implements EndpointGroup {
             return null;
         }
 
+        @Deprecated
         @Override
         public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
                                                   ScheduledExecutorService executor,
                                                   long timeoutMillis) {
-            return UnmodifiableFuture.completedFuture(null);
+            return select(ctx, executor);
         }
+
+        @Override
+        public CompletableFuture<Endpoint> select(ClientRequestContext ctx, ScheduledExecutorService executor) {
+            return UnmodifiableFuture.completedFuture(null);        }
     }
 }

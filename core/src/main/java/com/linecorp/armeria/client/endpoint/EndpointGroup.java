@@ -144,6 +144,12 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelec
     Endpoint selectNow(ClientRequestContext ctx);
 
     /**
+     * Returns the timeout to wait until a successful {@link Endpoint} selection.
+     * {@code 0} means {@link #selectNow(ClientRequestContext)} should always return an {@link Endpoint}.
+     */
+    long selectionTimeoutMillis();
+
+    /**
      * Returns a {@link CompletableFuture} which is completed when the initial {@link Endpoint}s are ready.
      */
     CompletableFuture<List<Endpoint>> whenReady();

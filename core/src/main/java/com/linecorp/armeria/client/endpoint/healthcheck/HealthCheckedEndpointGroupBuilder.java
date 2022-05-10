@@ -127,6 +127,16 @@ public final class HealthCheckedEndpointGroupBuilder extends AbstractHealthCheck
         return (HealthCheckedEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
     }
 
+    @Override
+    public HealthCheckedEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
+        return (HealthCheckedEndpointGroupBuilder) super.selectionTimeout(selectionTimeout);
+    }
+
+    @Override
+    public HealthCheckedEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
+        return (HealthCheckedEndpointGroupBuilder) super.selectionTimeoutMillis(selectionTimeoutMillis);
+    }
+
     private static class HttpHealthCheckerFactory implements Function<HealthCheckerContext, AsyncCloseable> {
 
         private final String path;

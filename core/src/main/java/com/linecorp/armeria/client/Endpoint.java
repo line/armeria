@@ -268,14 +268,25 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         return this;
     }
 
+    @Deprecated
     @Override
     public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
                                               ScheduledExecutorService executor,
                                               long timeoutMillis) {
+        return select(ctx, executor);
+    }
+
+    @Override
+    public CompletableFuture<Endpoint> select(ClientRequestContext ctx, ScheduledExecutorService executor) {
         if (selectFuture == null) {
             selectFuture = UnmodifiableFuture.completedFuture(this);
         }
         return selectFuture;
+    }
+
+    @Override
+    public long selectionTimeoutMillis() {
+        return 0;
     }
 
     @Override

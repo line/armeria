@@ -251,6 +251,7 @@ class HealthCheckedEndpointGroupTest {
 
         try (HealthCheckedEndpointGroup group =
                      new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -280,6 +281,7 @@ class HealthCheckedEndpointGroupTest {
 
         try (HealthCheckedEndpointGroup group =
                      new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -310,6 +312,7 @@ class HealthCheckedEndpointGroupTest {
 
         try (HealthCheckedEndpointGroup unused =
                      new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -456,6 +459,13 @@ class HealthCheckedEndpointGroupTest {
     }
 
     static final class MockEndpointGroup extends DynamicEndpointGroup {
+
+        MockEndpointGroup() {}
+
+        MockEndpointGroup(long selectionTimeoutMillis) {
+            super(true, selectionTimeoutMillis);
+        }
+
         void set(Endpoint... endpoints) {
             setEndpoints(ImmutableList.copyOf(endpoints));
         }

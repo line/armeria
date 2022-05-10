@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
+import java.time.Duration;
 import java.util.function.Consumer;
 
 import com.google.common.base.Ascii;
@@ -112,6 +113,22 @@ abstract class DnsEndpointGroupBuilder
         return this;
     }
 
+    @Override
+    public DnsEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
+        dnsDynamicEndpointGroupBuilder.selectionTimeout(selectionTimeout);
+        return this;
+    }
+
+    @Override
+    public DynamicEndpointGroupSetters selectionTimeoutMillis(long selectionTimeoutMillis) {
+        dnsDynamicEndpointGroupBuilder.selectionTimeoutMillis(selectionTimeoutMillis);
+        return this;
+    }
+
+    final long selectionTimeoutMillis() {
+        return dnsDynamicEndpointGroupBuilder.selectionTimeoutMillis();
+    }
+
     final DefaultDnsResolver buildResolver() {
         return buildResolver(unused -> {});
     }
@@ -137,6 +154,11 @@ abstract class DnsEndpointGroupBuilder
         @Override
         public boolean shouldAllowEmptyEndpoints() {
             return super.shouldAllowEmptyEndpoints();
+        }
+
+        @Override
+        public long selectionTimeoutMillis() {
+            return super.selectionTimeoutMillis();
         }
     }
 }

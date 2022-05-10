@@ -53,6 +53,7 @@ class HealthCheckContextGroupTest {
 
         try (HealthCheckedEndpointGroup endpointGroup =
                      new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -120,6 +121,7 @@ class HealthCheckContextGroupTest {
 
         try (HealthCheckedEndpointGroup endpointGroup =
                      new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,

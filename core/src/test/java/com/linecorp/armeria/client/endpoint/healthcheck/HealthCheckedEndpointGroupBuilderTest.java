@@ -19,6 +19,8 @@ package com.linecorp.armeria.client.endpoint.healthcheck;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -44,6 +46,11 @@ public class HealthCheckedEndpointGroupBuilderTest {
 
     @Test
     void partialHealthCheckStrategyMutuallyExclusive() {
+        final HealthCheckedEndpointGroup endpointGroup =
+                HealthCheckedEndpointGroup.builder(delegate, PATH)
+                                          .selectionTimeout(Duration.ofSeconds(10))
+                                          .build();
+        assert endpointGroup.selectionTimeoutMillis() == 10000;
         // max count
         final HealthCheckedEndpointGroupBuilder maxCntBuilder =
                 new HealthCheckedEndpointGroupBuilder(delegate, PATH).maxEndpointCount(10);
