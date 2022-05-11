@@ -139,6 +139,7 @@ public final class StaticEndpointGroup implements EndpointGroup {
 
         @Override
         public CompletableFuture<Endpoint> select(ClientRequestContext ctx, ScheduledExecutorService executor) {
-            return UnmodifiableFuture.completedFuture(null);        }
+            return UnmodifiableFuture.completedFuture(null);
+        }
     }
 }

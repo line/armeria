@@ -60,6 +60,9 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
     @Nullable
     private Integer maxEndpointCount;
 
+    private long initialSelectionTimeoutMillis = Flags.defaultResponseTimeoutMillis();
+    private long selectionTimeoutMillis = Flags.defaultConnectTimeoutMillis();
+
     /**
      * Creates a new {@link AbstractHealthCheckedEndpointGroupBuilder}.
      *
@@ -208,14 +211,16 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
     /**
      * Sets the timeout to wait until a successful {@link Endpoint} selection.
      * {@link Duration#ZERO} disables the timeout.
-     * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used by default.
+     * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used to wait for the
+     * {@linkplain HealthCheckedEndpointGroup#whenReady() initial endpoints}, and
+     * {@link Flags#defaultConnectTimeoutMillis()}} is used after the initial endpoints are resolved by default.
      *
-     * <p>Note that the specified {@code selectionTimeoutMillis} and the delegate's
-     * {@linkplain EndpointGroup#selectionTimeoutMillis() selectionTimeoutMillis} are added and set to
+     * <p>Note that the specified {@code selectionTimeout} and the delegate's
+     * {@linkplain EndpointGroup#selectionTimeoutMillis() selectionTimeout} are added and set to
      * this {@link HealthCheckedEndpointGroup}.
      * For example:<pre>{@code
      * DnsAddressEndpointGroup delegate = DnsAddressEndpointGroup.builder("armeria.dev")
-     *                                                           .selectionTimeout(Duration.ofSeconds(5))
+     *                                                           .selectionTimeout(Duration.ofSeconds(3))
      *                                                           ...
      *                                                           .build();
      * HealthCheckedEndpointGroup endpointGroup =
@@ -223,25 +228,67 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      *                               .selectionTimeout(Duration.ofSeconds(10))
      *                               ...
      *                               .build();
-     * assert endpointGroup.selectionTimeoutMillis() == 15000;
+     * assert endpointGroup.selectionTimeoutMillis() == 13000;
      * }</pre>
      */
     @Override
     public AbstractHealthCheckedEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
-        return (AbstractHealthCheckedEndpointGroupBuilder) super.selectionTimeout(selectionTimeout);
+        return selectionTimeout(selectionTimeout, selectionTimeout);
+    }
+
+    /**
+     * Sets the timeouts to wait until a successful {@link Endpoint} selection.
+     * {@link Duration#ZERO} disables the timeout.
+     *
+     * <p>The final timeout is calculated by adding the
+     * {@link HealthCheckedEndpointGroup#selectionTimeoutMillis()} and the selection timeout of the delegate
+     * specified when creating this builder.
+     * For example:<pre>{@code
+     * DnsAddressEndpointGroup delegate = DnsAddressEndpointGroup.builder("armeria.dev")
+     *                                                           .selectionTimeout(Duration.ofSeconds(3))
+     *                                                           ...
+     *                                                           .build();
+     * HealthCheckedEndpointGroup endpointGroup =
+     *     HealthCheckedEndpointGroup.builder(delegate, "/health")
+     *                               .selectionTimeout(Duration.ofSeconds(10), Duration.ofSeconds(3))
+     *                               ...
+     *                               .build();
+     * assert endpointGroup.selectionTimeoutMillis() == 13000;
+     *
+     * // Wait for the initial endpoints.
+     * endpointGroup.whenReady().join();
+     * assert endpointGroup.selectionTimeoutMillis() == 6000;
+     * }</pre>
+     *
+     * @param initialSelectionTimeout the initial selection timeout to wait for the
+     *                                {@linkplain HealthCheckedEndpointGroup#whenReady() initial endpoints}.
+     *                                If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used by
+     *                                default.
+     * @param selectionTimeout the selection timeout to wait for an {@link Endpoint} after the initial
+     *                         endpoints are resolved.
+     *                         If unspecified, {@link Flags#defaultConnectTimeoutMillis()}} is used by
+     *                         default.
+     */
+    public AbstractHealthCheckedEndpointGroupBuilder selectionTimeout(Duration initialSelectionTimeout,
+                                                                      Duration selectionTimeout) {
+        requireNonNull(initialSelectionTimeout, "initialSelectionTimeout");
+        requireNonNull(selectionTimeout, "selectionTimeout");
+        return selectionTimeoutMillis(initialSelectionTimeout.toMillis(), selectionTimeout.toMillis());
     }
 
     /**
      * Sets the timeout to wait until a successful {@link Endpoint} selection.
      * {@link Duration#ZERO} disables the timeout.
-     * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used by default.
+     * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used to wait for the
+     * {@linkplain HealthCheckedEndpointGroup#whenReady() initial endpoints}, and
+     * {@link Flags#defaultConnectTimeoutMillis()}} is used after the initial endpoints are resolved by default.
      *
      * <p>Note that the specified {@code selectionTimeoutMillis} and the delegate's
      * {@linkplain EndpointGroup#selectionTimeoutMillis() selectionTimeoutMillis} are added and set to
      * this {@link HealthCheckedEndpointGroup}.
      * For example:<pre>{@code
      * DnsAddressEndpointGroup delegate = DnsAddressEndpointGroup.builder("armeria.dev")
-     *                                                           .selectionTimeoutMillis(5000)
+     *                                                           .selectionTimeoutMillis(3000)
      *                                                           ...
      *                                                           .build();
      * HealthCheckedEndpointGroup endpointGroup =
@@ -249,12 +296,62 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      *                               .selectionTimeoutMillis(10000)
      *                               ...
      *                               .build();
-     * assert endpointGroup.selectionTimeoutMillis() == 15000;
+     * assert endpointGroup.selectionTimeoutMillis() == 13000;
      * }</pre>
      */
     @Override
     public AbstractHealthCheckedEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
-        return (AbstractHealthCheckedEndpointGroupBuilder) super.selectionTimeoutMillis(selectionTimeoutMillis);
+        return selectionTimeoutMillis(selectionTimeoutMillis, selectionTimeoutMillis);
+    }
+
+    /**
+     * Sets the timeouts to wait until a successful {@link Endpoint} selection.
+     * {@code 0} disables the timeout.
+     *
+     * <p>The final timeout is calculated by adding the
+     * {@link HealthCheckedEndpointGroup#selectionTimeoutMillis()} and the selection timeout of the delegate
+     * specified when creating this builder.
+     * For example:<pre>{@code
+     * DnsAddressEndpointGroup delegate = DnsAddressEndpointGroup.builder("armeria.dev")
+     *                                                           .selectionTimeoutMillis(3000)
+     *                                                           ...
+     *                                                           .build();
+     * HealthCheckedEndpointGroup endpointGroup =
+     *     HealthCheckedEndpointGroup.builder(delegate, "/health")
+     *                               .selectionTimeoutMillis(10000, 3000)
+     *                               ...
+     *                               .build();
+     * assert endpointGroup.selectionTimeoutMillis() == 13000;
+     *
+     * // Wait for the initial endpoints.
+     * endpointGroup.whenReady().join();
+     * assert endpointGroup.selectionTimeoutMillis() == 6000;
+     * }</pre>
+     *
+     * @param initialSelectionTimeoutMillis the initial selection timeout to wait for the
+     *                                {@linkplain HealthCheckedEndpointGroup#whenReady() initial endpoints}.
+     *                                If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used by
+     *                                default.
+     * @param selectionTimeoutMillis the selection timeout to wait for an {@link Endpoint} after the initial
+     *                         endpoints are resolved.
+     *                         If unspecified, {@link Flags#defaultConnectTimeoutMillis()}} is used by
+     *                         default.
+     */
+    public AbstractHealthCheckedEndpointGroupBuilder selectionTimeoutMillis(long initialSelectionTimeoutMillis,
+                                                                            long selectionTimeoutMillis) {
+        checkArgument(selectionTimeoutMillis >= 0, "selectionTimeoutMillis: %s (expected: >= 0)",
+                      selectionTimeoutMillis);
+        checkArgument(initialSelectionTimeoutMillis >= 0, "initialSelectionTimeoutMillis: %s (expected: >= 0)",
+                      initialSelectionTimeoutMillis);
+        if (initialSelectionTimeoutMillis == 0) {
+            initialSelectionTimeoutMillis = Long.MAX_VALUE;
+        }
+        if (selectionTimeoutMillis == 0) {
+            selectionTimeoutMillis = Long.MAX_VALUE;
+        }
+        this.initialSelectionTimeoutMillis = initialSelectionTimeoutMillis;
+        this.selectionTimeoutMillis = selectionTimeoutMillis;
+        return this;
     }
 
     /**
@@ -272,10 +369,13 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
             }
         }
 
+        final long initialSelectionTimeoutMillis =
+                LongMath.saturatedAdd(this.initialSelectionTimeoutMillis, delegate.selectionTimeoutMillis());
         final long selectionTimeoutMillis =
-                LongMath.saturatedAdd(selectionTimeoutMillis(), delegate.selectionTimeoutMillis());
+                LongMath.saturatedAdd(this.selectionTimeoutMillis, delegate.selectionTimeoutMillis());
 
-        return new HealthCheckedEndpointGroup(delegate, shouldAllowEmptyEndpoints(), selectionTimeoutMillis,
+        return new HealthCheckedEndpointGroup(delegate, shouldAllowEmptyEndpoints(),
+                                              initialSelectionTimeoutMillis, selectionTimeoutMillis,
                                               protocol, port, retryBackoff,
                                               clientOptionsBuilder.build(),
                                               newCheckerFactory(), healthCheckStrategy);

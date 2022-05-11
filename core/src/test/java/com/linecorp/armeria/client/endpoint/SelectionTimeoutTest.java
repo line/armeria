@@ -258,7 +258,7 @@ class SelectionTimeoutTest {
             HealthCheckedEndpointGroup.builder(delegate, "/health")
                                       .selectionTimeout(Duration.ofMillis(-1));
         }).isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("selectionTimeout: PT-0.001S (expected: >= 0)");
+          .hasMessageContaining("selectionTimeoutMillis: -1 (expected: >= 0)");
 
         assertThatThrownBy(() -> {
             HealthCheckedEndpointGroup.builder(delegate, "/health")

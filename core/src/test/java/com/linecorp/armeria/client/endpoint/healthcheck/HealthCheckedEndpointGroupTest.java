@@ -251,7 +251,7 @@ class HealthCheckedEndpointGroupTest {
 
         try (HealthCheckedEndpointGroup group =
                      new HealthCheckedEndpointGroup(delegate, true,
-                                                    10000,
+                                                    10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -281,7 +281,7 @@ class HealthCheckedEndpointGroupTest {
 
         try (HealthCheckedEndpointGroup group =
                      new HealthCheckedEndpointGroup(delegate, true,
-                                                    10000,
+                                                    10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -312,7 +312,7 @@ class HealthCheckedEndpointGroupTest {
 
         try (HealthCheckedEndpointGroup unused =
                      new HealthCheckedEndpointGroup(delegate, true,
-                                                    10000,
+                                                    10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,

@@ -53,7 +53,7 @@ class HealthCheckContextGroupTest {
 
         try (HealthCheckedEndpointGroup endpointGroup =
                      new HealthCheckedEndpointGroup(delegate, true,
-                                                    10000,
+                                                    10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -94,7 +94,7 @@ class HealthCheckContextGroupTest {
             assertThat(contexts).hasSize(4);
 
             assertThat(endpointGroup.endpoints()).usingElementComparator(new EndpointComparator())
-                    .containsExactly(dynamic1WithWeight, dynamic2);
+                                                 .containsExactly(dynamic1WithWeight, dynamic2);
 
             for (int i = 0; i < contexts.size(); i++) {
                 final DefaultHealthCheckerContext context = (DefaultHealthCheckerContext) contexts.get(i);
@@ -121,7 +121,7 @@ class HealthCheckContextGroupTest {
 
         try (HealthCheckedEndpointGroup endpointGroup =
                      new HealthCheckedEndpointGroup(delegate, true,
-                                                    10000,
+                                                    10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,

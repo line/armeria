@@ -97,6 +97,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     final EndpointGroup delegate;
+    private final long initialSelectionTimeoutMillis;
+    private final long selectionTimeoutMillis;
     private final SessionProtocol protocol;
     private final int port;
     private final Backoff retryBackoff;
@@ -118,16 +120,18 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      * Creates a new instance.
      */
     HealthCheckedEndpointGroup(
-            EndpointGroup delegate, boolean allowEmptyEndpoints, long selectionTimeoutMillis,
+            EndpointGroup delegate, boolean allowEmptyEndpoints,
+            long initialSelectionTimeoutMillis, long selectionTimeoutMillis,
             SessionProtocol protocol, int port,
             Backoff retryBackoff, ClientOptions clientOptions,
             Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory,
             HealthCheckStrategy healthCheckStrategy) {
 
-        super(requireNonNull(delegate, "delegate").selectionStrategy(), allowEmptyEndpoints,
-              selectionTimeoutMillis);
+        super(requireNonNull(delegate, "delegate").selectionStrategy(), allowEmptyEndpoints);
 
         this.delegate = delegate;
+        this.initialSelectionTimeoutMillis = initialSelectionTimeoutMillis;
+        this.selectionTimeoutMillis = selectionTimeoutMillis;
         this.protocol = requireNonNull(protocol, "protocol");
         this.port = port;
         this.retryBackoff = requireNonNull(retryBackoff, "retryBackoff");
@@ -239,6 +243,11 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         if (updated && initialized) {
             setEndpoints(allHealthyEndpoints());
         }
+    }
+
+    @Override
+    public long selectionTimeoutMillis() {
+        return initialized ? selectionTimeoutMillis : initialSelectionTimeoutMillis;
     }
 
     @Override
