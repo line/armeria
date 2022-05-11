@@ -17,6 +17,8 @@ package com.linecorp.armeria.dropwizard;
 
 import static java.util.Objects.requireNonNull;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
@@ -30,6 +32,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.codahale.metrics.MetricRegistry;
+import com.codahale.metrics.health.HealthCheckRegistry;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonTypeName;
@@ -38,14 +41,17 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.jetty.JettyService;
 
 import io.dropwizard.jersey.setup.JerseyEnvironment;
 import io.dropwizard.jetty.ContextRoutingHandler;
+import io.dropwizard.jetty.MutableServletContextHandler;
 import io.dropwizard.server.AbstractServerFactory;
 import io.dropwizard.server.ServerFactory;
+import io.dropwizard.setup.AdminEnvironment;
 import io.dropwizard.setup.Environment;
 
 /**
@@ -106,6 +112,38 @@ class ArmeriaServerFactory extends AbstractServerFactory {
         environment.getAdminContext().setContextPath(adminContextPath);
     }
 
+    /**
+     * a helper method to facilitate the signature change in {@link AbstractServerFactory} in release 2.1, where
+     * the 5th {@link AdminEnvironment} param is added.
+     */
+    private Handler createAdminServlet0(Server server, Environment environment, MetricRegistry metrics) {
+        final MutableServletContextHandler adminContext = environment.getAdminContext();
+        final HealthCheckRegistry healthChecks = environment.healthChecks();
+        try {
+            final Method method = AbstractServerFactory.class.getDeclaredMethod("createAdminServlet",
+                    Server.class, MutableServletContextHandler.class, MetricRegistry.class,
+                    HealthCheckRegistry.class, AdminEnvironment.class);
+            logger.debug("createAdminServlet0 resolves to dropwizard2.1 version");
+            final AdminEnvironment adminEnvironment = environment.admin();
+            return (Handler) method.invoke(this, server, adminContext, metrics, healthChecks, adminEnvironment);
+        } catch (NoSuchMethodException e) {
+            // ignore
+        } catch (IllegalAccessException | InvocationTargetException e) {
+            return Exceptions.throwUnsafely(e);
+        }
+
+        try {
+            //noinspection JavaReflectionMemberAccess - this is false warning on dropwizard2 module
+            final Method method = AbstractServerFactory.class.getDeclaredMethod("createAdminServlet",
+                    Server.class, MutableServletContextHandler.class, MetricRegistry.class,
+                    HealthCheckRegistry.class);
+            logger.debug("createAdminServlet0 resolves to dropwizard1 or 2.0 version");
+            return (Handler) method.invoke(this, server, adminContext, metrics, healthChecks);
+        } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
+            return Exceptions.throwUnsafely(e);
+        }
+    }
+
     private void addDefaultHandlers(Server server, Environment environment, MetricRegistry metrics) {
         final JerseyEnvironment jersey = environment.jersey();
         final Handler applicationHandler = createAppServlet(
@@ -116,8 +154,7 @@ class ArmeriaServerFactory extends AbstractServerFactory {
                 environment.getApplicationContext(),
                 environment.getJerseyServletContainer(),
                 metrics);
-        final Handler adminHandler = createAdminServlet(server, environment.getAdminContext(),
-                                                        metrics, environment.healthChecks());
+        final Handler adminHandler = createAdminServlet0(server, environment, metrics);
         final ContextRoutingHandler routingHandler = new ContextRoutingHandler(
                 ImmutableMap.of(applicationContextPath, applicationHandler, adminContextPath, adminHandler));
         final Handler gzipHandler = buildGzipHandler(routingHandler);
@@ -135,7 +172,7 @@ class ArmeriaServerFactory extends AbstractServerFactory {
         }
 
         return serverBuilder.blockingTaskExecutor(newBlockingTaskExecutor(), true)
-                            .serviceUnder("/", JettyService.of(server));
+                .serviceUnder("/", JettyService.of(server));
     }
 
     private ScheduledThreadPoolExecutor newBlockingTaskExecutor() {
