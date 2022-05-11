@@ -100,7 +100,7 @@ final class HttpClientDelegate implements HttpClient {
 
         if (endpointWithPort.hasIpAddr() || proxyConfig.proxyType().isForwardProxy()) {
             // There is no need to resolve the IP address either because it is already known,
-            // or the IP address isn't needed.
+            // or it isn't needed for forward proxies.
             acquireConnectionAndExecute(ctx, endpointWithPort, req, res, timingsBuilder, proxyConfig);
         } else {
             resolveAddress(endpointWithPort, ctx, (resolved, cause) -> {
@@ -162,8 +162,6 @@ final class HttpClientDelegate implements HttpClient {
                                               HttpRequest req, DecodedHttpResponse res,
                                               ClientConnectionTimingsBuilder timingsBuilder,
                                               ProxyConfig proxyConfig) {
-        // For forward proxies, it is possible that the ip address isn't resolved.
-        // In this case, the ip will eventually be resolved at the proxy server.
         final String ipAddr = endpoint.ipAddr();
         final SessionProtocol protocol = ctx.sessionProtocol();
         final PoolKey key = new PoolKey(endpoint.host(), ipAddr, endpoint.port(), proxyConfig);
