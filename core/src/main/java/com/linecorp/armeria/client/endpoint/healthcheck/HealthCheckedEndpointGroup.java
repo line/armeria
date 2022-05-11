@@ -15,11 +15,12 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -107,7 +108,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     @VisibleForTesting
     final HealthCheckStrategy healthCheckStrategy;
 
-    private final Queue<HealthCheckContextGroup> contextGroupChain = new ArrayDeque<>(4);
+    private final Deque<HealthCheckContextGroup> contextGroupChain = new ArrayDeque<>(4);
 
     // Should not use NonBlockingHashSet whose remove operation does not clear the reference of the value
     // from the internal array. The remaining value is revived if a new value having the same hash code is
@@ -189,11 +190,29 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private List<Endpoint> allHealthyEndpoints() {
+        final List<Endpoint> allHealthyEndpoints = new ArrayList<>();
         synchronized (contextGroupChain) {
-            return contextGroupChain.stream().flatMap(group -> group.candidates().stream())
-                                    .filter(healthyEndpoints::contains)
-                                    .collect(toImmutableList());
+            final HealthCheckContextGroup newGroup = contextGroupChain.getLast();
+            for (Endpoint candidate : newGroup.candidates()) {
+                if (healthyEndpoints.contains(candidate)) {
+                    allHealthyEndpoints.add(candidate);
+                }
+            }
+
+            for (HealthCheckContextGroup oldGroup : contextGroupChain) {
+                if (oldGroup == newGroup) {
+                    break;
+                }
+                for (Endpoint candidate : oldGroup.candidates()) {
+                    if (!allHealthyEndpoints.contains(candidate) && healthyEndpoints.contains(candidate)) {
+                        // Add old Endpoints that do not exist in newGroup. When the first check for newGroup is
+                        // completed, the old Endpoints will be removed.
+                        allHealthyEndpoints.add(candidate);
+                    }
+                }
+            }
         }
+        return allHealthyEndpoints;
     }
 
     @Nullable

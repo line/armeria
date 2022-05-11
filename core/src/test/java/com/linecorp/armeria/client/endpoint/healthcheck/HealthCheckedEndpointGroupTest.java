@@ -25,9 +25,11 @@ import java.io.Serializable;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -318,6 +320,42 @@ class HealthCheckedEndpointGroupTest {
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all())) {
             assertThat(counter.get()).isEqualTo(2);
+        }
+    }
+
+    @Test
+    void shouldDeduplicateOldEndpoints() {
+        final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkFactory = ctx -> {
+            ctx.updateHealth(HEALTHY, null, null, null);
+            return AsyncCloseableSupport.of();
+        };
+
+        final Endpoint candidate1 = Endpoint.of("candidate1");
+        final Endpoint candidate2 = Endpoint.of("candidate2");
+        final Endpoint candidate3 = Endpoint.of("candidate3");
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        delegate.set(candidate1, candidate2);
+
+        try (HealthCheckedEndpointGroup endpointGroup =
+                     new HealthCheckedEndpointGroup(delegate, true,
+                                                    SessionProtocol.HTTP, 80,
+                                                    DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
+                                                    ClientOptions.of(), checkFactory,
+                                                    HealthCheckStrategy.all())) {
+            final BlockingQueue<List<Endpoint>> healthyEndpointsList = new LinkedTransferQueue<>();
+            endpointGroup.addListener(healthyEndpointsList::add, true);
+            delegate.set(candidate1, candidate3);
+            final HealthCheckContextGroup contextGroup = endpointGroup.contextGroupChain().poll();
+            assertThat(contextGroup.candidates()).containsExactly(candidate1, candidate3);
+            assertThat(contextGroup.whenInitialized()).isDone();
+            assertThat(healthyEndpointsList).hasSize(3);
+            final List<Endpoint> first = healthyEndpointsList.poll();
+            assertThat(first).containsExactly(candidate1, candidate2);
+            final List<Endpoint> second = healthyEndpointsList.poll();
+            // `candidate1` should be deduplicated.
+            assertThat(second).containsExactly(candidate1, candidate2, candidate3);
+            final List<Endpoint> third = healthyEndpointsList.poll();
+            assertThat(third).containsExactly(candidate1, candidate3);
         }
     }
 
