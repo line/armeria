@@ -16,15 +16,11 @@
 
 package com.linecorp.armeria.server.hessian;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.beans.Introspector;
-import java.util.Map;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
@@ -58,31 +54,13 @@ public final class HessianHttpServiceBuilder {
 
     static final SerializationFormat HESSIAN = SerializationFormat.of("hessian");
 
+    private static final SerializationFormat defaultSerializationFormat = HESSIAN;
+
     private static final BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
             defaultExceptionHandler = (
             ctx, cause) -> RpcResponse.ofFailure(cause);
 
-    private static final Function<Object, Class<?>> defaultApiClassDetector = o -> {
-        final Class<?>[] interfaces = o.getClass().getInterfaces();
-        if (interfaces.length != 1) {
-            throw new IllegalArgumentException(
-                    "Expect hessian implementation " + o.getClass() + " to implement exactly one interface");
-        }
-        return interfaces[0];
-    };
-
     private final ImmutableList.Builder<ServiceEntry> hessianService = ImmutableList.builder();
-
-    private SerializationFormat defaultSerializationFormat = HESSIAN;
-
-    private Function<Object, Class<?>> apiClassDetector;
-
-    private Function<Class<?>, String> autoServicePathProducer = apiClass -> Introspector
-            .decapitalize(apiClass.getSimpleName());
-
-    private String prefix = "";
-
-    private String suffix = "";
 
     @Nullable
     private Function<? super RpcService, ? extends RpcService> decoratorFunction;
@@ -91,33 +69,6 @@ public final class HessianHttpServiceBuilder {
             exceptionHandler = defaultExceptionHandler;
 
     HessianHttpServiceBuilder() {
-        this.apiClassDetector = defaultApiClassDetector;
-    }
-
-    /**
-     * The service route prefix, must start with '/'.
-     */
-    public HessianHttpServiceBuilder prefix(String prefix) {
-        requireNonNull(prefix, "prefix");
-        checkArgument(prefix.startsWith("/"), "prefix must start with '/', got +", prefix);
-        this.prefix = prefix;
-        return this;
-    }
-
-    /**
-     * 服务的路由后缀缀。比如'.hs'
-     */
-    public HessianHttpServiceBuilder suffix(String suffix) {
-        this.suffix = suffix;
-        return this;
-    }
-
-    /**
-     * 对对象来获取hessian的apiClass.
-     */
-    public HessianHttpServiceBuilder apiClassDetector(Function<Object, Class<?>> apiClassDetector) {
-        this.apiClassDetector = apiClassDetector;
-        return this;
     }
 
     /**
@@ -129,6 +80,9 @@ public final class HessianHttpServiceBuilder {
      */
     public HessianHttpServiceBuilder addService(String path, Class<?> apiClass, Object implementation,
                                                 boolean blocking) {
+        requireNonNull(path, "path");
+        requireNonNull(apiClass, "apiClass");
+        requireNonNull(implementation, "implementation");
         hessianService.add(new ServiceEntry(path, apiClass, implementation, blocking));
         return this;
     }
@@ -140,38 +94,7 @@ public final class HessianHttpServiceBuilder {
      * @param implementation hessian的实现
      */
     public HessianHttpServiceBuilder addService(String path, Class<?> apiClass, Object implementation) {
-        hessianService.add(new ServiceEntry(path, apiClass, implementation, true));
-        return this;
-    }
-
-    /**
-     * 增加服务.
-     * @param path 路径。
-     * @param implementation hessian的实现
-     */
-    public HessianHttpServiceBuilder addService(String path, Object implementation) {
-        hessianService.add(new ServiceEntry(path, null, implementation, true));
-        return this;
-    }
-
-    /**
-     * 增加服务， 使用 {@link #autoServicePathProducer} 来确定path.
-     * @param apiClass hessian的api
-     * @param implementation hessian的实现
-     */
-    public HessianHttpServiceBuilder addService(Class<?> apiClass, Object implementation) {
-        hessianService.add(new ServiceEntry(null, apiClass, implementation, true));
-        return this;
-    }
-
-    /**
-     * 增加服务， 使用 {@link #autoServicePathProducer} 来确定path. 增加服务. 使用
-     * {@link #apiClassDetector} 来确定api 使用 {@link #autoServicePathProducer} 来确定path.
-     * @param implementation hessian的实现
-     */
-    public HessianHttpServiceBuilder addService(Object implementation) {
-        hessianService.add(new ServiceEntry(null, null, implementation, true));
-        return this;
+        return addService(path, apiClass, implementation, true);
     }
 
     /**
@@ -212,62 +135,33 @@ public final class HessianHttpServiceBuilder {
      */
     public HessianHttpServiceImpl build() {
         @SuppressWarnings("UnstableApiUsage")
-        final ImmutableList<ServiceEntry> implementations = hessianService.build();
+        final ImmutableList<ServiceEntry> serviceEntries = hessianService.build();
         final ImmutableMap.Builder<String, HessianServiceMetadata> path2ServiceMapBuilder =
                 ImmutableMap.builder();
-        for (ServiceEntry entry : implementations) {
-            final Class<?> apiClass = entry.apiClass != null ? entry.apiClass : apiClassDetector.apply(
-                    entry.implementation);
-            checkArgument(apiClass != null, "apiClass must not be null");
-            final String path = entry.path != null ? entry.path : autoServicePathProducer.apply(apiClass);
-            checkArgument(path != null, "path must not be null");
-            final String fullPath = buildPath(path, prefix, suffix);
-            final HessianServiceMetadata ssm = new HessianServiceMetadata(apiClass, entry.implementation,
+        for (ServiceEntry entry : serviceEntries) {
+            final HessianServiceMetadata ssm = new HessianServiceMetadata(entry.apiClass, entry.implementation,
                                                                           entry.blocking);
-            path2ServiceMapBuilder.put(fullPath, ssm);
+            path2ServiceMapBuilder.put(entry.path, ssm);
         }
         final HessianCallService hcs = HessianCallService.of(path2ServiceMapBuilder.build());
-        return build0(hcs, path2ServiceMapBuilder.build());
+        return build0(hcs);
     }
 
-    private static String buildPath(String path, String prefix, String suffix) {
-        String fullPath;
-        if (Strings.isNullOrEmpty(prefix) || path.startsWith(prefix)) {
-            fullPath = path;
-        } else {
-            fullPath = prefix + path;
-            fullPath = fullPath.replaceAll("//", "/");
-        }
-
-        if (!Strings.isNullOrEmpty(suffix) && !path.endsWith(suffix)) {
-            fullPath = fullPath + suffix;
-        }
-        if (fullPath.startsWith("/")) {
-            return fullPath;
-        } else {
-            return '/' + fullPath;
-        }
-    }
-
-    private HessianHttpServiceImpl build0(RpcService tcs,
-                                          Map<String, HessianServiceMetadata> path2ServiceMap) {
-
+    private HessianHttpServiceImpl build0(RpcService tcs) {
         return new HessianHttpServiceImpl(decorate(tcs), defaultSerializationFormat, exceptionHandler);
     }
 
     private static final class ServiceEntry {
 
-        @Nullable
         private final String path;
 
-        @Nullable
         private final Class<?> apiClass;
 
         private final Object implementation;
 
         private final boolean blocking;
 
-        private ServiceEntry(@Nullable String path, @Nullable Class<?> apiClass, Object implementation,
+        private ServiceEntry(String path, Class<?> apiClass, Object implementation,
                              boolean blocking) {
             this.path = path;
             this.apiClass = apiClass;

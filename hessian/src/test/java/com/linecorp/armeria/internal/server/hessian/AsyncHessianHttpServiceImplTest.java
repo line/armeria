@@ -40,9 +40,10 @@ import com.linecorp.armeria.server.hessian.HessianHttpService;
 public class AsyncHessianHttpServiceImplTest extends AbstractHessianHttpServiceImplTest {
 
     protected HessianHttpService setupHessianHttpService() {
-        return HessianHttpService.builder().prefix("/services/").suffix(".hs")
-                                 .addService("helloService", new AsyncHelloServiceImp())
-                                 .addService("/helloService2", AsyncHelloService.class,
+        return HessianHttpService.builder()
+                                 .addService("/helloService.hs", AsyncHelloService.class,
+                                             new AsyncHelloServiceImp())
+                                 .addService("/helloService2.hs", AsyncHelloService.class,
                                              new AsyncHelloServiceImp(), false).build();
     }
 

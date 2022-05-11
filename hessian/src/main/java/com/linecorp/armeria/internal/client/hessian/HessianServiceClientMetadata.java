@@ -18,13 +18,8 @@ package com.linecorp.armeria.internal.client.hessian;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Method;
-import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,62 +33,56 @@ import com.linecorp.armeria.internal.common.hessian.HessianFunction;
  * Provides the metadata of a Hessian service interface.
  */
 public final class HessianServiceClientMetadata {
-
-    private final boolean isOverloadEnabled;
-
     private static final Logger logger = LoggerFactory.getLogger(HessianServiceClientMetadata.class);
 
-    private final Set<Class<?>> interfaces;
+    private final boolean isOverloadEnabled;
+    private final Class<?> apiClass;
 
     /**
      * A map whose key is a method name and whose value is HessianFunction.
      */
     private final Map<String, HessianFunction> functions = new HashMap<>();
 
-    private final ConcurrentMap<Method, String> mangleMap = new ConcurrentHashMap<>();
+    private final Map<Method, String> mangleMap = new HashMap<>();
 
     /**
      * Creates a new instance from a single Hessian service interface.
      */
-    public HessianServiceClientMetadata(Class<?> serviceType) {
-        this(serviceType, false);
+    public HessianServiceClientMetadata(Class<?> apiClass) {
+        this(apiClass, false);
     }
 
     /**
      * Creates a new instance from a single Hessian service interface.
      */
-    public HessianServiceClientMetadata(Class<?> serviceType, boolean isOverloadEnabled) {
-        requireNonNull(serviceType, "serviceType");
+    public HessianServiceClientMetadata(Class<?> apiClass, boolean isOverloadEnabled) {
+        requireNonNull(apiClass, "apiClass");
         this.isOverloadEnabled = isOverloadEnabled;
-        interfaces = init(Collections.singleton(serviceType));
+        this.apiClass = apiClass;
+        init(apiClass);
     }
 
-    private Set<Class<?>> init(Iterable<Class<?>> candidateInterfaces) {
+    private void init(Class<?> apiClass) {
 
         // Build the map of method names and their corresponding process functions.
         // If a method is defined multiple times, we take the first definition
-        final Set<Class<?>> interfaces = new HashSet<>();
 
-        for (Class<?> serviceTypes : candidateInterfaces) {
-            for (Method method : serviceTypes.getMethods()) {
-                final String name = methodName(method);
-                if (functions.containsKey(name)) {
-                    logger.warn("duplicate Hessian method name: {}", name);
-                    continue;
-                }
-                final HessianFunction
-                        function = HessianFunction.of(serviceTypes, method, name, null);
-                functions.put(name, function);
-                mangleMap.put(method, name);
+        for (Method method : apiClass.getMethods()) {
+            final String name = methodName(method);
+            if (functions.containsKey(name)) {
+                logger.warn("duplicate Hessian method name: {}", name);
+                continue;
             }
-            interfaces.add(serviceTypes);
+            final HessianFunction
+                    function = HessianFunction.of(apiClass, method, name, null);
+            functions.put(name, function);
+            mangleMap.put(method, name);
         }
 
         if (functions.isEmpty()) {
-            throw new IllegalArgumentException("not a Hessian service interface: " + candidateInterfaces);
+            throw new IllegalArgumentException("not a Hessian service interface: " + apiClass);
         }
 
-        return Collections.unmodifiableSet(interfaces);
     }
 
     private String methodName(Method method) {
@@ -101,10 +90,9 @@ public final class HessianServiceClientMetadata {
     }
 
     private static String genMangleName(Method method) {
-
         final Class<?>[] param = method.getParameterTypes();
 
-        if (param == null || param.length == 0) {
+        if (param.length == 0) {
             return method.getName();
         } else {
             return AbstractSkeleton.mangleName(method, false);
@@ -112,10 +100,10 @@ public final class HessianServiceClientMetadata {
     }
 
     /**
-     * Returns the Hessian service interfaces implemented.
+     * Returns the Hessian service interfaces.
      */
-    public Set<Class<?>> interfaces() {
-        return interfaces;
+    public Class<?> apiClass() {
+        return apiClass;
     }
 
     @Nullable

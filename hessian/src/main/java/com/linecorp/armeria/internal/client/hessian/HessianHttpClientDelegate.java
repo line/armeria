@@ -121,7 +121,7 @@ final class HessianHttpClientDelegate
 
             try {
                 try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
-                  final   AbstractHessianOutput out = factory.getHessianOutput(os, options);
+                  final  AbstractHessianOutput out = factory.getHessianOutput(os, options);
                     out.call(method, args.toArray());
                     out.flush();
                 }

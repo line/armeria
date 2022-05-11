@@ -35,7 +35,7 @@ class HessianServiceMetadataTest {
     void testInterface() {
         final HessianServiceClientMetadata metadata = new HessianServiceClientMetadata(HelloService.class);
         assertThat(metadata).isNotNull();
-        assertThat(metadata.interfaces()).hasSize(1);
+        assertThat(metadata.apiClass()).isEqualTo(HelloService.class);
         assertThat(metadata.function("sayHello")).isNotNull();
         assertThat(metadata.function("sayHello2")).isNotNull();
 
@@ -51,7 +51,7 @@ class HessianServiceMetadataTest {
         final HessianServiceClientMetadata metadata = new HessianServiceClientMetadata(HelloService.class,
                                                                                        true);
         assertThat(metadata).isNotNull();
-        assertThat(metadata.interfaces()).hasSize(1);
+        assertThat(metadata.apiClass()).isEqualTo(HelloService.class);
         assertThat(metadata.function("sayHello")).isNotNull();
         assertThat(metadata.function("sayHelloStr_string")).isNotNull();
         assertThat(metadata.function("sayHello2_HelloRequest")).isNotNull();

@@ -42,14 +42,15 @@ abstract class AbstractHessianServerTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service(setupHessianHttpService());
+            sb.serviceUnder("/services/", setupHessianHttpService());
         }
     };
 
     static HessianHttpService setupHessianHttpService() {
-        return HessianHttpService.builder().prefix("/services/").suffix(".hs")
-                                 .addService("helloService", new HelloServiceImp())
-                                 .addService("/helloService2", HelloService.class, new HelloServiceImp(), false)
+        return HessianHttpService.builder()
+                                 .addService("/helloService.hs", HelloService.class, new HelloServiceImp())
+                                 .addService("/helloService2.hs", HelloService.class, new HelloServiceImp(),
+                                             false)
                                  .build();
     }
 

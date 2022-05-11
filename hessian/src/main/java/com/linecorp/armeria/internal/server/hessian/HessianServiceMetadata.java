@@ -79,7 +79,6 @@ public final class HessianServiceMetadata {
             final Class<?>[] param = method.getParameterTypes();
             final String mangledName = method.getName() + "__" + param.length;
             functions.put(mangledName, function);
-
             functions.put(mangleName0(method), function);
         }
 
