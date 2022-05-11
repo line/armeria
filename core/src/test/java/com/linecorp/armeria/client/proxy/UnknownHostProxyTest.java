@@ -20,11 +20,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
+import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -44,6 +48,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.HttpObjectAggregator;
 import io.netty.handler.codec.http.HttpServerCodec;
+import io.netty.handler.codec.socksx.SocksPortUnificationServerHandler;
 import io.netty.handler.logging.LoggingHandler;
 
 class UnknownHostProxyTest {
@@ -71,11 +76,29 @@ class UnknownHostProxyTest {
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
             ch.pipeline().addLast(new LoggingHandler(UnknownHostProxyTest.class));
             ch.pipeline().addLast(new HttpProxyServerHandler());
-            ch.pipeline().addLast(new IntermediaryProxyServerHandler("http", success -> {
-                if (success) {
-                    successCounter.incrementAndGet();
-                }
-            }, ImmutableMap.of("armeria.foo", backendServer.httpSocketAddress())));
+            ch.pipeline().addLast(new IntermediaryProxyServerHandler(
+                    "http", PROXY_CALLBACK,
+                    ImmutableMap.of("armeria.foo", backendServer.httpSocketAddress())));
+        }
+    };
+
+    @RegisterExtension
+    @Order(2)
+    static NettyServerExtension socksProxyServer = new NettyServerExtension() {
+        @Override
+        protected void configure(Channel ch) throws Exception {
+            ch.pipeline().addLast(new SocksPortUnificationServerHandler());
+            ch.pipeline().addLast(new Socks4ProxyServerHandler());
+            ch.pipeline().addLast(new Socks5ProxyServerHandler());
+            ch.pipeline().addLast(new IntermediaryProxyServerHandler(
+                    "socks", PROXY_CALLBACK,
+                    ImmutableMap.of("armeria.foo", backendServer.httpSocketAddress())));
+        }
+    };
+
+    private static final Consumer<Boolean> PROXY_CALLBACK = success -> {
+        if (success) {
+            successCounter.incrementAndGet();
         }
     };
 
@@ -84,15 +107,17 @@ class UnknownHostProxyTest {
         successCounter.set(0);
     }
 
-    @Test
-    void testH1CProxyBasicCase() throws Exception {
+    @ParameterizedTest
+    @MethodSource("forwardProxyConfigs")
+    void testForwardProxies(ProxyConfig proxyConfig) throws Exception {
+        final MockAddressResolverGroup resolverGroup = MockAddressResolverGroup.of(unused -> {
+            throw new RuntimeException("unable to resolve: " + unused);
+        });
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
-                                  .proxyConfig(ProxyConfig.connect(httpProxyServer.address()))
+                                  .proxyConfig(proxyConfig)
                                   .useHttp2Preface(true)
-                                  .addressResolverGroupFactory(eventExecutors -> MockAddressResolverGroup.of(unused -> {
-                                      throw new RuntimeException("unable to resolve: " + unused);
-                                  }))
+                                  .addressResolverGroupFactory(eventExecutors -> resolverGroup)
                                   .build()) {
 
             final WebClient webClient = WebClient.builder("http://armeria.foo")
@@ -105,5 +130,13 @@ class UnknownHostProxyTest {
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(successCounter).hasValue(1);
         }
+    }
+
+    private static Stream<Arguments> forwardProxyConfigs() {
+        return Stream.of(
+                Arguments.of(ProxyConfig.connect(httpProxyServer.address())),
+                Arguments.of(ProxyConfig.socks4(socksProxyServer.address())),
+                Arguments.of(ProxyConfig.socks5(socksProxyServer.address()))
+        );
     }
 }

@@ -137,7 +137,7 @@ final class IntermediaryProxyServerHandler extends ChannelInboundHandlerAdapter 
     private void writeToBackendAndFlush() {
         if (backend != null) {
             boolean wrote = false;
-            for (; ; ) {
+            for (;;) {
                 final Object msg = received.poll();
                 if (msg == null) {
                     break;

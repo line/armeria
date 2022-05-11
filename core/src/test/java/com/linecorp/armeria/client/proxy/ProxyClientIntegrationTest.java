@@ -70,7 +70,6 @@ import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.SimpleChannelInboundHandler;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
@@ -86,16 +85,6 @@ import io.netty.handler.codec.socksx.SocksPortUnificationServerHandler;
 import io.netty.handler.codec.socksx.v4.DefaultSocks4CommandRequest;
 import io.netty.handler.codec.socksx.v4.DefaultSocks4CommandResponse;
 import io.netty.handler.codec.socksx.v4.Socks4CommandStatus;
-import io.netty.handler.codec.socksx.v4.Socks4Message;
-import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandRequest;
-import io.netty.handler.codec.socksx.v5.DefaultSocks5CommandResponse;
-import io.netty.handler.codec.socksx.v5.DefaultSocks5InitialRequest;
-import io.netty.handler.codec.socksx.v5.DefaultSocks5InitialResponse;
-import io.netty.handler.codec.socksx.v5.Socks5AddressType;
-import io.netty.handler.codec.socksx.v5.Socks5AuthMethod;
-import io.netty.handler.codec.socksx.v5.Socks5CommandRequestDecoder;
-import io.netty.handler.codec.socksx.v5.Socks5CommandStatus;
-import io.netty.handler.codec.socksx.v5.Socks5Message;
 import io.netty.handler.logging.LoggingHandler;
 import io.netty.handler.proxy.ProxyConnectException;
 import io.netty.handler.ssl.SslContext;
@@ -737,41 +726,6 @@ class ProxyClientIntegrationTest {
                                                     .hasRootCauseInstanceOf(ProxyConnectException.class);
             assertThat(failedAttempts).hasValue(1);
             assertThat(selector.result()).isTrue();
-        }
-    }
-
-    private static class Socks5ProxyServerHandler extends SimpleChannelInboundHandler<Socks5Message> {
-        @Override
-        protected void channelRead0(ChannelHandlerContext ctx, Socks5Message msg) throws Exception {
-            if (msg instanceof DefaultSocks5InitialRequest) {
-                ctx.pipeline().addBefore(ctx.name(), Socks5CommandRequestDecoder.class.getName(),
-                                         new Socks5CommandRequestDecoder());
-                ctx.writeAndFlush(new DefaultSocks5InitialResponse(Socks5AuthMethod.NO_AUTH));
-            } else if (msg instanceof DefaultSocks5CommandRequest) {
-                final DefaultSocks5CommandRequest req = (DefaultSocks5CommandRequest) msg;
-                ctx.pipeline().remove(Socks5CommandRequestDecoder.class);
-                ctx.fireUserEventTriggered(new ProxySuccessEvent(
-                        new InetSocketAddress(req.dstAddr(), req.dstPort()),
-                        new DefaultSocks5CommandResponse(Socks5CommandStatus.SUCCESS,
-                                                         Socks5AddressType.IPv4)));
-            } else {
-                throw new IllegalStateException("unexpected msg: " + msg);
-            }
-        }
-    }
-
-    private static class Socks4ProxyServerHandler extends SimpleChannelInboundHandler<Socks4Message> {
-        @Override
-        protected void channelRead0(ChannelHandlerContext ctx, Socks4Message msg) throws Exception {
-            if (msg instanceof DefaultSocks4CommandRequest) {
-                final DefaultSocks4CommandRequest req = (DefaultSocks4CommandRequest) msg;
-                final DefaultSocks4CommandResponse response =
-                        new DefaultSocks4CommandResponse(Socks4CommandStatus.SUCCESS);
-                ctx.fireUserEventTriggered(new ProxySuccessEvent(
-                        new InetSocketAddress(req.dstAddr(), req.dstPort()), response));
-            } else {
-                throw new IllegalStateException("unexpected msg: " + msg);
-            }
         }
     }
 
