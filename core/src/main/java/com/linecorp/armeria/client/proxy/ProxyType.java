@@ -52,6 +52,9 @@ public enum ProxyType {
         this.isForwardProxy = isForwardProxy;
     }
 
+    /**
+     * Returns whether this proxy is a forward proxy type.
+     */
     public boolean isForwardProxy() {
         return isForwardProxy;
     }
