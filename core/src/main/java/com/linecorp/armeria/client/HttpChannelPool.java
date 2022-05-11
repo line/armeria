@@ -448,6 +448,7 @@ final class HttpChannelPool implements AsyncCloseable {
             return new InetSocketAddress(inetAddr, key.port);
         } else {
             // key.ipAddr can be null for forward proxies
+            assert key.proxyConfig.proxyType().isForwardProxy();
             return InetSocketAddress.createUnresolved(key.host, key.port);
         }
     }
