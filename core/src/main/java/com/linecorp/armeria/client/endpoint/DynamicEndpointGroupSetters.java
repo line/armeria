@@ -42,6 +42,7 @@ public interface DynamicEndpointGroupSetters {
      * {@link Duration#ZERO} disables the timeout.
      * If unspecified, {@link Flags#defaultConnectTimeoutMillis()} is used by default.
      */
+    @UnstableApi
     default DynamicEndpointGroupSetters selectionTimeout(Duration selectionTimeout) {
         requireNonNull(selectionTimeout, "selectionTimeout");
         checkArgument(!selectionTimeout.isNegative(), "selectionTimeout: %s (expected: >= 0)",
@@ -54,5 +55,6 @@ public interface DynamicEndpointGroupSetters {
      * {@code 0} disables the timeout.
      * If unspecified, {@link Flags#defaultConnectTimeoutMillis()} is used by default.
      */
+    @UnstableApi
     DynamicEndpointGroupSetters selectionTimeoutMillis(long selectionTimeoutMillis);
 }

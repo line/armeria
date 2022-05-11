@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 
@@ -231,6 +232,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      * assert endpointGroup.selectionTimeoutMillis() == 13000;
      * }</pre>
      */
+    @UnstableApi
     @Override
     public AbstractHealthCheckedEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
         return selectionTimeout(selectionTimeout, selectionTimeout);
@@ -269,6 +271,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      *                         If unspecified, {@link Flags#defaultConnectTimeoutMillis()}} is used by
      *                         default.
      */
+    @UnstableApi
     public AbstractHealthCheckedEndpointGroupBuilder selectionTimeout(Duration initialSelectionTimeout,
                                                                       Duration selectionTimeout) {
         requireNonNull(initialSelectionTimeout, "initialSelectionTimeout");
@@ -299,6 +302,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      * assert endpointGroup.selectionTimeoutMillis() == 13000;
      * }</pre>
      */
+    @UnstableApi
     @Override
     public AbstractHealthCheckedEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
         return selectionTimeoutMillis(selectionTimeoutMillis, selectionTimeoutMillis);
@@ -337,6 +341,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      *                         If unspecified, {@link Flags#defaultConnectTimeoutMillis()}} is used by
      *                         default.
      */
+    @UnstableApi
     public AbstractHealthCheckedEndpointGroupBuilder selectionTimeoutMillis(long initialSelectionTimeoutMillis,
                                                                             long selectionTimeoutMillis) {
         checkArgument(selectionTimeoutMillis >= 0, "selectionTimeoutMillis: %s (expected: >= 0)",

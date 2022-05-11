@@ -120,7 +120,7 @@ abstract class DnsEndpointGroupBuilder
     }
 
     @Override
-    public DynamicEndpointGroupSetters selectionTimeoutMillis(long selectionTimeoutMillis) {
+    public DnsEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
         dnsDynamicEndpointGroupBuilder.selectionTimeoutMillis(selectionTimeoutMillis);
         return this;
     }

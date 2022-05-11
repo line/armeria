@@ -133,7 +133,7 @@ public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFramewor
      */
     private static class DynamicEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
         protected DynamicEndpointGroupBuilder() {
-            super(Flags.defaultRequestTimeoutMillis());
+            super(Flags.defaultResponseTimeoutMillis());
         }
 
         @Override

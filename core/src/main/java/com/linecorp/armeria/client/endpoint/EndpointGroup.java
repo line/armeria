@@ -27,6 +27,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.Listenable;
 import com.linecorp.armeria.internal.client.endpoint.StaticEndpointGroup;
@@ -147,6 +148,7 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelec
      * Returns the timeout to wait until a successful {@link Endpoint} selection.
      * {@code 0} means {@link #selectNow(ClientRequestContext)} should always return an {@link Endpoint}.
      */
+    @UnstableApi
     long selectionTimeoutMillis();
 
     /**
