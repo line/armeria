@@ -274,9 +274,9 @@ class SelectionTimeoutTest {
             final int expectedTimeout = 2000;
             assertSelectionTimeout(endpointGroup).isEqualTo(expectedTimeout);
 
+            final Stopwatch stopwatch = Stopwatch.createStarted();
             final CompletableFuture<Endpoint> result =
                     endpointGroup.select(ctx, CommonPools.blockingTaskExecutor());
-            final Stopwatch stopwatch = Stopwatch.createStarted();
             assertThat(result.join()).isNull();
             assertThat(stopwatch.elapsed())
                     .isGreaterThanOrEqualTo(Duration.ofMillis(expectedTimeout))
