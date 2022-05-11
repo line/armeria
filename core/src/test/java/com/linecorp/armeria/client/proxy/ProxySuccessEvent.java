@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,43 +16,22 @@
 
 package com.linecorp.armeria.client.proxy;
 
-/**
- * The proxy protocol type.
- */
-public enum ProxyType {
+import java.net.InetSocketAddress;
 
-    /**
-     * Proxy is absent.
-     */
-    DIRECT(false),
+class ProxySuccessEvent {
+    private final InetSocketAddress backendAddress;
+    private final Object response;
 
-    /**
-     * SOCKS4 proxy protocol.
-     */
-    SOCKS4(true),
-
-    /**
-     * SOCKS5 proxy protocol.
-     */
-    SOCKS5(true),
-
-    /**
-     * CONNECT proxy protocol.
-     */
-    CONNECT(true),
-
-    /**
-     * HAPROXY protocol.
-     */
-    HAPROXY(false);
-
-    private final boolean isForwardProxy;
-
-    ProxyType(boolean isForwardProxy) {
-        this.isForwardProxy = isForwardProxy;
+    ProxySuccessEvent(InetSocketAddress backendAddress, Object response) {
+        this.backendAddress = backendAddress;
+        this.response = response;
     }
 
-    public boolean isForwardProxy() {
-        return isForwardProxy;
+    public Object getResponse() {
+        return response;
+    }
+
+    public InetSocketAddress getBackendAddress() {
+        return backendAddress;
     }
 }

@@ -82,21 +82,32 @@ final class HttpClientDelegate implements HttpClient {
             return HttpResponse.ofFailure(cause);
         }
 
+        final SessionProtocol protocol = ctx.sessionProtocol();
+        final ProxyConfig proxyConfig;
+        try {
+            proxyConfig = getProxyConfig(protocol, endpoint);
+        } catch (Throwable t) {
+            final UnprocessedRequestException wrapped = UnprocessedRequestException.of(t);
+            handleEarlyRequestException(ctx, req, wrapped);
+            return HttpResponse.ofFailure(wrapped);
+        }
+
         final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol().defaultPort());
         final EventLoop eventLoop = ctx.eventLoop().withoutContext();
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
         final ClientConnectionTimingsBuilder timingsBuilder = ClientConnectionTimings.builder();
 
-        if (endpointWithPort.hasIpAddr()) {
-            // IP address has been resolved already.
-            acquireConnectionAndExecute(ctx, endpointWithPort, req, res, timingsBuilder);
+        if (endpointWithPort.hasIpAddr() || proxyConfig.proxyType().isForwardProxy()) {
+            // There is no need to resolve the IP address either because it is already known,
+            // or the IP address isn't needed.
+            acquireConnectionAndExecute(ctx, endpointWithPort, req, res, timingsBuilder, proxyConfig);
         } else {
             resolveAddress(endpointWithPort, ctx, (resolved, cause) -> {
                 timingsBuilder.dnsResolutionEnd();
                 if (cause == null) {
                     assert resolved != null;
-                    acquireConnectionAndExecute(ctx, resolved, req, res, timingsBuilder);
+                    acquireConnectionAndExecute(ctx, resolved, req, res, timingsBuilder, proxyConfig);
                 } else {
                     ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
                     final UnprocessedRequestException wrappedCause = UnprocessedRequestException.of(cause);
@@ -136,36 +147,27 @@ final class HttpClientDelegate implements HttpClient {
 
     private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpoint,
                                              HttpRequest req, DecodedHttpResponse res,
-                                             ClientConnectionTimingsBuilder timingsBuilder) {
+                                             ClientConnectionTimingsBuilder timingsBuilder,
+                                             ProxyConfig proxyConfig) {
         if (ctx.eventLoop().inEventLoop()) {
-            acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder);
+            acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder, proxyConfig);
         } else {
             ctx.eventLoop().execute(() -> {
-                acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder);
+                acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder, proxyConfig);
             });
         }
     }
 
     private void acquireConnectionAndExecute0(ClientRequestContext ctx, Endpoint endpoint,
                                               HttpRequest req, DecodedHttpResponse res,
-                                              ClientConnectionTimingsBuilder timingsBuilder) {
-        // IP address should be resolved already.
-        assert endpoint.hasIpAddr();
-
+                                              ClientConnectionTimingsBuilder timingsBuilder,
+                                              ProxyConfig proxyConfig) {
+        // For forward proxies, it is possible that the ip address isn't resolved.
+        // In this case, the ip will eventually be resolved at the proxy server.
+        final String ipAddr = endpoint.ipAddr();
         final SessionProtocol protocol = ctx.sessionProtocol();
+        final PoolKey key = new PoolKey(endpoint.host(), ipAddr, endpoint.port(), proxyConfig);
         final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
-
-        final ProxyConfig proxyConfig;
-        try {
-            proxyConfig = getProxyConfig(protocol, endpoint);
-        } catch (Throwable t) {
-            final UnprocessedRequestException wrapped = UnprocessedRequestException.of(t);
-            handleEarlyRequestException(ctx, req, wrapped);
-            res.close(wrapped);
-            return;
-        }
-
-        final PoolKey key = new PoolKey(endpoint.host(), endpoint.ipAddr(), endpoint.port(), proxyConfig);
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
         if (pooledChannel != null) {
             logSession(ctx, pooledChannel, null);

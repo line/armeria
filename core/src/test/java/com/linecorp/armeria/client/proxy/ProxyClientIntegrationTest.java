@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.client.proxy;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -35,10 +34,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
-import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -61,28 +60,20 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
 import com.linecorp.armeria.internal.testing.SimpleChannelHandlerFactory;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
-import io.netty.channel.ChannelInitializer;
 import io.netty.channel.SimpleChannelInboundHandler;
-import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
 import io.netty.handler.codec.http.DefaultHttpHeaders;
 import io.netty.handler.codec.http.EmptyHttpHeaders;
-import io.netty.handler.codec.http.FullHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderNames;
 import io.netty.handler.codec.http.HttpHeaders;
 import io.netty.handler.codec.http.HttpMethod;
@@ -145,7 +136,7 @@ class ProxyClientIntegrationTest {
             ch.pipeline().addLast(channelHandlerFactory.newHandler());
             ch.pipeline().addLast(new Socks4ProxyServerHandler());
             ch.pipeline().addLast(new Socks5ProxyServerHandler());
-            ch.pipeline().addLast(new IntermediaryProxyServerHandler("socks"));
+            ch.pipeline().addLast(new IntermediaryProxyServerHandler("socks", PROXY_CALLBACK));
         }
     };
 
@@ -157,7 +148,7 @@ class ProxyClientIntegrationTest {
             ch.pipeline().addLast(new HttpServerCodec());
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
             ch.pipeline().addLast(new HttpProxyServerHandler());
-            ch.pipeline().addLast(new IntermediaryProxyServerHandler("http"));
+            ch.pipeline().addLast(new IntermediaryProxyServerHandler("http", PROXY_CALLBACK));
         }
     };
 
@@ -173,7 +164,7 @@ class ProxyClientIntegrationTest {
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
             ch.pipeline().addLast(new HttpProxyServerHandler());
             ch.pipeline().addLast(new SleepHandler());
-            ch.pipeline().addLast(new IntermediaryProxyServerHandler("http"));
+            ch.pipeline().addLast(new IntermediaryProxyServerHandler("http", PROXY_CALLBACK));
         }
     };
 
@@ -190,6 +181,12 @@ class ProxyClientIntegrationTest {
     };
 
     private static volatile int numSuccessfulProxyRequests;
+
+    private static final Consumer<Boolean> PROXY_CALLBACK = success -> {
+        if (success) {
+            numSuccessfulProxyRequests++;
+        }
+    };
 
     @BeforeEach
     void beforeEach() {
@@ -743,24 +740,6 @@ class ProxyClientIntegrationTest {
         }
     }
 
-    static class ProxySuccessEvent {
-        private final InetSocketAddress backendAddress;
-        private final Object response;
-
-        ProxySuccessEvent(InetSocketAddress backendAddress, Object response) {
-            this.backendAddress = backendAddress;
-            this.response = response;
-        }
-
-        public Object getResponse() {
-            return response;
-        }
-
-        public InetSocketAddress getBackendAddress() {
-            return backendAddress;
-        }
-    }
-
     private static class Socks5ProxyServerHandler extends SimpleChannelInboundHandler<Socks5Message> {
         @Override
         protected void channelRead0(ChannelHandlerContext ctx, Socks5Message msg) throws Exception {
@@ -796,19 +775,6 @@ class ProxyClientIntegrationTest {
         }
     }
 
-    private static class HttpProxyServerHandler extends SimpleChannelInboundHandler<FullHttpRequest> {
-        @Override
-        protected void channelRead0(ChannelHandlerContext ctx, FullHttpRequest msg) throws Exception {
-            final String uri = msg.uri();
-            final String[] split = uri.split(":");
-            checkArgument(split.length == 2, "invalid destination url");
-
-            ctx.fireUserEventTriggered(new ProxySuccessEvent(
-                    new InetSocketAddress(split[0], Integer.parseInt(split[1])),
-                    new DefaultFullHttpResponse(HttpVersion.HTTP_1_1, HttpResponseStatus.OK)));
-        }
-    }
-
     private static final class SleepHandler extends ChannelInboundHandlerAdapter {
 
         @Override
@@ -821,106 +787,6 @@ class ProxyClientIntegrationTest {
                 Thread.sleep(Flags.defaultWriteTimeoutMillis());
             }
             super.userEventTriggered(ctx, evt);
-        }
-    }
-
-    private static final class IntermediaryProxyServerHandler extends ChannelInboundHandlerAdapter {
-        private final ConcurrentLinkedDeque<ByteBuf> received = new ConcurrentLinkedDeque<>();
-        @Nullable
-        private Channel backend;
-        private final String proxyType;
-
-        private IntermediaryProxyServerHandler(String proxyType) {
-            this.proxyType = proxyType;
-        }
-
-        @Override
-        public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
-            if (evt instanceof ProxySuccessEvent) {
-                connectBackend(ctx, ((ProxySuccessEvent) evt).getBackendAddress()).addListener(f -> {
-                    if (f.isSuccess()) {
-                        numSuccessfulProxyRequests++;
-                        ctx.writeAndFlush(((ProxySuccessEvent) evt).getResponse());
-                        if ("http".equals(proxyType)) {
-                            ctx.pipeline().remove(HttpObjectAggregator.class);
-                            ctx.pipeline().remove(HttpServerCodec.class);
-                        }
-                    } else {
-                        ctx.close();
-                    }
-                });
-            }
-        }
-
-        @Override
-        public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-            if (msg instanceof ByteBuf) {
-                final ByteBuf backendMessage = (ByteBuf) msg;
-                received.add(backendMessage);
-                writeToBackendAndFlush();
-            } else {
-                throw new IllegalStateException("unexpected msg: " + msg);
-            }
-        }
-
-        @Override
-        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-            if (backend != null) {
-                backend.close();
-            }
-            super.channelInactive(ctx);
-        }
-
-        private ChannelFuture connectBackend(
-                final ChannelHandlerContext ctx, InetSocketAddress backendAddress) {
-            final ChannelHandlerContext clientCtx = ctx;
-            final Bootstrap b = new Bootstrap();
-            b.group(ctx.channel().eventLoop());
-            b.channel(NioSocketChannel.class);
-            b.handler(new ChannelInitializer<Channel>() {
-                @Override
-                protected void initChannel(Channel ch) throws Exception {
-                    ch.pipeline().addLast(new LoggingHandler());
-                    ch.pipeline().addLast(new ChannelInboundHandlerAdapter() {
-                        @Override
-                        public void channelRead(ChannelHandlerContext ctx, Object msg)
-                                throws Exception {
-                            clientCtx.writeAndFlush(msg);
-                        }
-
-                        @Override
-                        public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-                            clientCtx.close();
-                            super.channelInactive(ctx);
-                        }
-                    });
-                }
-            });
-            return b.connect(backendAddress).addListener((ChannelFutureListener) f -> {
-                if (!f.isSuccess()) {
-                    clientCtx.close();
-                    return;
-                }
-                backend = f.channel();
-                writeToBackendAndFlush();
-            });
-        }
-
-        private void writeToBackendAndFlush() {
-            if (backend != null) {
-                boolean wrote = false;
-                for (;;) {
-                    final Object msg = received.poll();
-                    if (msg == null) {
-                        break;
-                    }
-                    backend.write(msg);
-                    wrote = true;
-                }
-                if (wrote) {
-                    backend.flush();
-                }
-            }
         }
     }
 
