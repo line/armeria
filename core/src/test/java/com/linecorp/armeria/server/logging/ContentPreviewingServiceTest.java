@@ -335,7 +335,7 @@ class ContentPreviewingServiceTest {
         assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
                 .isEqualTo("Hello Armeria!");
         final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
-        assertThat(requestLog.requestContentPreview()).isEqualTo("<sanitized>");
+        assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
         assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
     }
 
@@ -348,7 +348,7 @@ class ContentPreviewingServiceTest {
                 .isEqualTo("Hello Armeria!");
         final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
         assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
-        assertThat(requestLog.responseContentPreview()).isEqualTo("<sanitized>");
+        assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
     }
 
     private static ContentPreviewer contentPreviewer() {
