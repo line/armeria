@@ -34,15 +34,15 @@ public class DefaultMediaTypeResolverTest {
         assertThat(MediaType.PNG.is(RESOLVER.guessFromPath("/static/image.png", null))).isTrue();
         assertThat(MediaType.PDF.is(RESOLVER.guessFromPath("document.pdf", null))).isTrue();
         assertThat(MediaType.WEBP.is(RESOLVER.guessFromPath("image.webp", null))).isTrue();
-        assertThat(MediaType.OCTET_STREAM.is(RESOLVER.guessFromPath("image.png.gz", null))).isTrue();
+        assertThat(MediaType.OCTET_STREAM.is(RESOLVER.guessFromPath("image.png.bin", null))).isTrue();
     }
 
     @Test
     public void preCompressed() {
         assertThat(MediaType.PNG.is(RESOLVER.guessFromPath("image.png.gz", "gzip"))).isTrue();
         assertThat(MediaType.PNG.is(RESOLVER.guessFromPath("/static/image.png.br", "brotli"))).isTrue();
-        assertThat(MediaType.OCTET_STREAM.is(RESOLVER.guessFromPath("image.png.gz", "identity"))).isTrue();
-        assertThat(MediaType.OCTET_STREAM.is(RESOLVER.guessFromPath("image.png.gz", null))).isTrue();
+        assertThat(MediaType.OCTET_STREAM.is(RESOLVER.guessFromPath("image.png.bin", "identity"))).isTrue();
+        assertThat(MediaType.OCTET_STREAM.is(RESOLVER.guessFromPath("image.png.bin", null))).isTrue();
     }
 
     @Test
