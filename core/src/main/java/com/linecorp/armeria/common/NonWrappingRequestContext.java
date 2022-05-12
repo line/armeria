@@ -224,8 +224,8 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     }
 
     /**
-     * Returns the {@link Attributes} which stores the pairs of a {@link AttributeKey} and a object set via
-     * {@link #setAttr(AttributeKey, Object)}.
+     * Returns the {@link AttributesGetters} which stores the pairs of a {@link AttributeKey} and an object
+     * set via {@link #setAttr(AttributeKey, Object)}.
      */
     @UnstableApi
     public final AttributesGetters attributes() {
@@ -244,7 +244,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     @UnstableApi
     public void hook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
-        for (;;) {
+        for (; ; ) {
             final Supplier<? extends AutoCloseable> oldContextHook = this.contextHook;
             final Supplier<? extends AutoCloseable> newContextHook;
             if (oldContextHook == null) {

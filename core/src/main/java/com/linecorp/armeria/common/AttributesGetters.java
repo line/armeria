@@ -25,15 +25,15 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import io.netty.util.AttributeKey;
 
 /**
- * Provides the getter methods to {@link Attributes} and {@link AttributesBuilder}.
+ * Provides the getter methods to {@link Attributes} and {@link ConcurrentAttributes}.
  */
 @UnstableApi
 public interface AttributesGetters {
 
     /**
      * Returns the value associated with the given {@link AttributeKey} or {@code null} if there's no value
-     * set by {@link AttributesBuilder#set(AttributeKey, Object)}.
-     * If there is no value in this {@link Attributes} but it exists in {@link #parent()},
+     * set by {@link AttributesSetters#set(AttributeKey, Object)}.
+     * If there is no value in this {@link AttributesGetters} but it exists in {@link #parent()},
      * the value in the {@link #parent()}} will be returned.
      *
      * @see #ownAttr(AttributeKey)
@@ -73,7 +73,7 @@ public interface AttributesGetters {
     }
 
     /**
-     * Returns the {@link Iterator} of all {@link Entry}s this {@link Attributes} contains.
+     * Returns the {@link Iterator} of all {@link Entry}s this {@link AttributesGetters} contains.
      *
      * <p>Unlike {@link #attrs()}, this does not iterate {@link #parent()}}.</p>
      *
@@ -82,7 +82,7 @@ public interface AttributesGetters {
     Iterator<Entry<AttributeKey<?>, Object>> ownAttrs();
 
     /**
-     * Returns the {@link Iterator} of all {@link Entry}s this {@link Attributes} contains.
+     * Returns the {@link Iterator} of all {@link Entry}s this {@link AttributesGetters} contains.
      *
      * <p>The {@link Iterator} returned by this method will also yield the {@link Entry}s from the
      * {@link #parent()}} except those whose {@link AttributeKey} exist already in this context, e.g.
@@ -90,16 +90,17 @@ public interface AttributesGetters {
     Iterator<Entry<AttributeKey<?>, Object>> attrs();
 
     /**
-     * Returns the {@link #parent()} which was specified when creating this {@link Attributes}.
+     * Returns the {@link #parent()} which was specified when creating this {@link AttributesGetters}.
      *
      * @see Attributes#of(AttributesGetters)
      * @see Attributes#builder(AttributesGetters)
+     * @see ConcurrentAttributes#of(AttributesGetters)
      */
     @Nullable
     AttributesGetters parent();
 
     /**
-     * Returns {@code true} if this {@link Attributes} does not contain any entries.
+     * Returns {@code true} if this {@link AttributesGetters} does not contain any entries.
      */
     boolean isEmpty();
 }

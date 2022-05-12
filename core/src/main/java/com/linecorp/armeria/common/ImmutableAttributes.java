@@ -55,8 +55,14 @@ class ImmutableAttributes implements Attributes {
     public ConcurrentAttributes toConcurrentAttributes() {
         final ConcurrentAttributes concurrentAttributes = ConcurrentAttributes.of(parent);
         if (!attributes.isEmpty()) {
-            //noinspection unchecked
-            attributes.forEach((k, v) -> concurrentAttributes.set((AttributeKey<Object>) k, v));
+            attributes.forEach((k, v) -> {
+                if (v == NULL_VALUE) {
+                    // NULL_VALUE is only valid for ImmutableAttributes
+                    v = null;
+                }
+                //noinspection unchecked
+                concurrentAttributes.set((AttributeKey<Object>) k, v);
+            });
         }
 
         return concurrentAttributes;

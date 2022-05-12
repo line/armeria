@@ -183,4 +183,22 @@ class ImmutableAttributesTest {
         assertThat(concurrentAttributes.attr(bar)).isNull();
         assertThat(immutableAttributes.attr(bar)).isEqualTo("bar");
     }
+
+    @Test
+    void concurrentAttributes_hiddenValue() {
+        final AttributeKey<Integer> foo = AttributeKey.valueOf("foo");
+        final AttributeKey<String> bar = AttributeKey.valueOf("bar");
+        final Attributes parent = Attributes.of(foo, 0, bar, "bar");
+
+        final Attributes child = Attributes.builder(parent)
+                                           .set(foo, null)
+                                           .set(bar, "new")
+                                           .build();
+        assertThat(child.attr(foo)).isNull();
+        assertThat(child.attr(bar)).isEqualTo("new");
+
+        final ConcurrentAttributes concurrentAttributes = child.toConcurrentAttributes();
+        assertThat(concurrentAttributes.attr(foo)).isNull();
+        assertThat(concurrentAttributes.attr(bar)).isEqualTo("new");
+    }
 }

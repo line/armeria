@@ -80,7 +80,7 @@ public interface Attributes extends AttributesGetters {
 
     /**
      * Returns a new {@link Attributes} with the specified parent {@link AttributesGetters}.
-     * The parent {@link AttributesGetters} can access via {@link #attr(AttributeKey)} or {@link #attrs()}.
+     * The parent {@link AttributesGetters} can be accessed via {@link #attr(AttributeKey)} or {@link #attrs()}.
      */
     static Attributes of(@Nullable AttributesGetters parent) {
         return builder(parent).build();
@@ -95,7 +95,7 @@ public interface Attributes extends AttributesGetters {
 
     /**
      * Returns a new empty {@link AttributesBuilder}.
-     * The parent {@link Attributes} can access via {@link #attr(AttributeKey)} or {@link #attrs()}.
+     * The parent {@link Attributes} can be accessed via {@link #attr(AttributeKey)} or {@link #attrs()}.
      * Note that any mutations in {@link AttributesBuilder} won't modify the attributes in the parent.
      */
     static AttributesBuilder builder(@Nullable AttributesGetters parent) {

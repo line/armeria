@@ -17,12 +17,14 @@
 package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;
 
 /**
  * An {@link Attributes} supporting concurrency of retrievals and updates.
  */
+@UnstableApi
 public interface ConcurrentAttributes extends AttributesGetters, AttributesSetters {
 
     /**
@@ -34,7 +36,7 @@ public interface ConcurrentAttributes extends AttributesGetters, AttributesSette
 
     /**
      * Returns a new {@link ConcurrentAttributes} with the specified parent {@link AttributesGetters}.
-     * The parent {@link AttributesGetters} can access via {@link #attr(AttributeKey)} or {@link #attrs()}.
+     * The parent {@link AttributesGetters} can be accessed via {@link #attr(AttributeKey)} or {@link #attrs()}.
      */
     static ConcurrentAttributes of(@Nullable AttributesGetters parent) {
         return new DefaultConcurrentAttributes(parent);

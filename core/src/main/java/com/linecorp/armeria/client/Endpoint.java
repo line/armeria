@@ -558,6 +558,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * Returns the attribute value associated with the given {@link AttributeKey} of this endpoint, or
      * {@code null} if there's no value associated with this key.
      */
+    @UnstableApi
     @Nullable
     public <T> T attr(AttributeKey<T> key) {
         requireNonNull(key, "key");
@@ -574,6 +575,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      *         endpoint has the same value with the specified {@link AttributeKey}.
      *
      */
+    @UnstableApi
     public <T> Endpoint withAttr(AttributeKey<T> key, @Nullable T value) {
         requireNonNull(key, "key");
         if (attributes == null) {
@@ -587,11 +589,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return this;
         } else {
             final AttributesBuilder attributesBuilder = attributes.toBuilder();
-            if (value == null) {
-                attributesBuilder.remove(key);
-            } else {
-                attributesBuilder.set(key, value);
-            }
+            attributesBuilder.set(key, value);
             return withAttrs(attributesBuilder.build());
         }
     }
@@ -601,6 +599,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      * Note that the {@link #attrs()} of this {@link Endpoint} is replaced with the specified
      * {@link Attributes}.
      */
+    @UnstableApi
     public Endpoint withAttrs(Attributes newAttributes) {
         requireNonNull(newAttributes, "newAttributes");
         if (newAttributes.isEmpty()) {
@@ -611,9 +610,10 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     }
 
     /**
-     * Returns an iterator of all attributes of this endpoint, or an empty iterator if this endpoint does not
+     * Returns the {@link Attributes} of this endpoint, or an empty {@link Attributes} if this endpoint does not
      * have any attributes.
      */
+    @UnstableApi
     public Attributes attrs() {
         if (attributes == null) {
             return Attributes.of();

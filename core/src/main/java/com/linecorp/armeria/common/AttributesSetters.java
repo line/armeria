@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import io.netty.util.AttributeKey;
 
 /**
- * Sets entries for building an {@link Attributes}.
+ * Sets entries for building an {@link Attributes} or {@link ConcurrentAttributes}.
  */
 @UnstableApi
 public interface AttributesSetters {
@@ -30,7 +30,8 @@ public interface AttributesSetters {
     /**
      * Sets the specified value with the given {@link AttributeKey}.
      * The old value associated with the {@link AttributeKey} is replaced by the specified value.
-     * If a {@code null} value is specified, the value in the {@link Attributes#parent()} is hidden as well.
+     * If a {@code null} value is specified, the value in the {@link AttributesGetters#parent()} is hidden as
+     * well.
      *
      * <p><pre>{@code
      * static final AttributeKey<String> USER_ID = AttributeKey.valueOf("USER_ID");
@@ -64,7 +65,8 @@ public interface AttributesSetters {
     /**
      * Sets the specified value with the given {@link AttributeKey}.
      * The old value associated with the {@link AttributeKey} is replaced by the specified value.
-     * If a {@code null} value is specified, the value in the {@link Attributes#parent()} is hidden as well.
+     * If a {@code null} value is specified, the value in the {@link AttributesGetters#parent()} is hidden as
+     * well.
      *
      * <p><pre>{@code
      * static final AttributeKey<String> USER_ID = AttributeKey.valueOf("USER_ID");
@@ -92,14 +94,19 @@ public interface AttributesSetters {
      * // Overrides the value of the original attribute.
      * assert child.attr(TRACE_ID).equals("trace-2");
      * }</pre>
+     *
+     * @return the previous value associated with the {@link AttributeKey},
+     *         or {@code null} if there was no mapping for the {@link AttributeKey}.
+     *         A {@code null} can be returned if the {@link AttributeKey} is previously
+     *         associated with {@code null}.
      */
     @Nullable <T> T getAndSet(AttributeKey<T> key, @Nullable T value);
 
     /**
      * Removes the value associated with the specified {@link AttributeKey} in the
-     * {@link Attributes#ownAttrs()}.
+     * {@link AttributesGetters#ownAttrs()}.
      *
-     * <p>Note that this method won't remove the value in {@link Attributes#parent()}.
+     * <p>Note that this method won't remove the value in {@link AttributesGetters#parent()}.
      *
      * <p><pre>{@code
      * static final AttributeKey<String> USER_ID = AttributeKey.valueOf("USER_ID");
@@ -123,14 +130,15 @@ public interface AttributesSetters {
      * // The value in the parent will not be removed.
      * assert attributes.attr(USER_ID).equals("Meri Kim");
      * }</pre>
+     *
      * @return {@code true} if the value associated the {@link AttributeKey} has been removed.
      */
     <T> boolean remove(AttributeKey<T> key);
 
     /**
      * Removes the value associated with the specified {@link AttributeKey} in the
-     * {@link Attributes#ownAttrs()}. Unlike {@link #remove(AttributeKey)} this method returns itself so that
-     * the caller can chain the invocations.
+     * {@link AttributesGetters#ownAttrs()}. Unlike {@link #remove(AttributeKey)} this method returns itself
+     * so that the caller can chain the invocations.
      *
      * <p>Note that this method won't remove the value in {@link Attributes#parent()}.
      */
