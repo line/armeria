@@ -153,6 +153,8 @@ final class HttpHealthChecker implements AsyncCloseable {
         private final HttpResponse res;
         @SuppressWarnings("NotNullFieldNotInitialized")
         private Subscription subscription;
+        @Nullable
+        private ResponseHeaders responseHeaders;
         private boolean isHealthy;
         private boolean receivedExpectedResponse;
         private boolean updatedHealth;
@@ -187,6 +189,7 @@ final class HttpHealthChecker implements AsyncCloseable {
                 }
 
                 final ResponseHeaders headers = (ResponseHeaders) obj;
+                responseHeaders = headers;
                 updateLongPollingSettings(headers);
 
                 final HttpStatus status = headers.status();
@@ -227,12 +230,12 @@ final class HttpHealthChecker implements AsyncCloseable {
 
         @Override
         public void onError(Throwable t) {
-            updateHealth();
+            updateHealth(t);
         }
 
         @Override
         public void onComplete() {
-            updateHealth();
+            updateHealth(null);
         }
 
         private void updateLongPollingSettings(ResponseHeaders headers) {
@@ -280,15 +283,16 @@ final class HttpHealthChecker implements AsyncCloseable {
             pingCheckFuture = reqCtx.eventLoop().withoutContext().scheduleWithFixedDelay(() -> {
                 if (System.nanoTime() - lastPingTimeNanos >= pingTimeoutNanos) {
                     // Did not receive a ping on time.
-                    res.abort(ResponseTimeoutException.get());
+                    final ResponseTimeoutException cause = ResponseTimeoutException.get();
+                    res.abort(cause);
                     isHealthy = false;
                     receivedExpectedResponse = false;
-                    updateHealth();
+                    updateHealth(cause);
                 }
             }, 1, 1, TimeUnit.SECONDS);
         }
 
-        private void updateHealth() {
+        private void updateHealth(@Nullable Throwable cause) {
             if (pingCheckFuture != null) {
                 pingCheckFuture.cancel(false);
             }
@@ -299,7 +303,7 @@ final class HttpHealthChecker implements AsyncCloseable {
 
             updatedHealth = true;
 
-            ctx.updateHealth(isHealthy ? 1 : 0);
+            ctx.updateHealth(isHealthy ? 1 : 0, reqCtx, responseHeaders, cause);
             wasHealthy = isHealthy;
 
             final ScheduledExecutorService executor = ctx.executor();

@@ -46,7 +46,7 @@ final class Samplers {
 
         @Override
         public String toString() {
-            return "AlwaysSample";
+            return "always";
         }
     };
 
@@ -62,7 +62,7 @@ final class Samplers {
 
         @Override
         public String toString() {
-            return "NeverSample";
+            return "never";
         }
     };
 

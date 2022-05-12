@@ -1,0 +1,5 @@
+// This module is for testing ArmeriaOptionsProvider.
+
+dependencies {
+    testImplementation 'org.junit-pioneer:junit-pioneer'
+}

@@ -129,6 +129,9 @@ dependencies {
     // TestNG
     testImplementation 'org.testng:testng'
 
+    // JUnit Pioneer
+    testImplementation 'org.junit-pioneer:junit-pioneer'
+
     // Reactive Streams
     api 'org.reactivestreams:reactive-streams'
     testImplementation 'org.reactivestreams:reactive-streams-tck'

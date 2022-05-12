@@ -135,6 +135,53 @@ service HttpJsonTranscodingTestService {
       }
     };
   }
+
+  rpc EchoResponseBodyValue(EchoResponseBodyRequest) returns (EchoResponseBodyResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/response_body/value"
+      response_body: "value"
+    };
+  }
+
+  rpc EchoResponseBodyRepeated(EchoResponseBodyRequest) returns (EchoResponseBodyResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/response_body/repeated"
+      response_body: "array_field"
+
+      additional_bindings {
+        post: "/v1/echo/response_body/repeated"
+        response_body: "array_field"
+        body: "*"
+      }
+    };
+  }
+
+  rpc EchoResponseBodyStruct(EchoResponseBodyRequest) returns (EchoResponseBodyResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/response_body/struct"
+      response_body: "struct_body"
+
+      additional_bindings {
+        post: "/v1/echo/response_body/struct"
+        response_body: "struct_body"
+        body: "*"
+      }
+    };
+  }
+
+  rpc EchoResponseBodyNoMatching(EchoResponseBodyRequest) returns (EchoResponseBodyResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/response_body/nomatch"
+      response_body: "anonymous"
+
+      additional_bindings {
+        post: "/v1/echo/response_body/nomatch"
+        response_body: "anonymous"
+        body: "*"
+      }
+    };
+  }
+
 }
 
 message GetMessageRequestV1 {
@@ -247,4 +294,20 @@ message EchoRecursiveResponse {
 message Recursive {
   string value = 1;
   Recursive nested = 2;
+}
+
+message StructBody {
+  string struct_body = 1;
+}
+
+message EchoResponseBodyRequest {
+  string value = 1;
+  StructBody struct_body = 2;
+  repeated string array_field = 3;
+}
+
+message EchoResponseBodyResponse {
+  string value = 1;
+  StructBody struct_body = 2;
+  repeated string array_field = 3;
 }

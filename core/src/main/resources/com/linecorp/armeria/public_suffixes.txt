@@ -111,6 +111,7 @@
 0.bg
 001www.com
 0e.vc
+1.azurestaticapps.net
 1.bg
 12hp.at
 12hp.ch
@@ -3071,6 +3072,7 @@ gov.my
 gov.mz
 gov.nc.tr
 gov.ng
+gov.nl
 gov.nr
 gov.om
 gov.ph

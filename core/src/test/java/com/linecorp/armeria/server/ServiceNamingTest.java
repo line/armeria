@@ -35,7 +35,7 @@ class ServiceNamingTest {
     void fullTypeName_topClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), HealthCheckService.builder().build(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), HealthCheckService.builder().build(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
@@ -49,7 +49,7 @@ class ServiceNamingTest {
     void fullTypeName_nestedClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new NestedClass(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new NestedClass(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
@@ -64,7 +64,7 @@ class ServiceNamingTest {
     void fullTypeName_trimTrailingDollarSign() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
@@ -78,7 +78,7 @@ class ServiceNamingTest {
     void fullTypeName_trimTrailingDollarSignMany() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$$$(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$$$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
@@ -92,7 +92,7 @@ class ServiceNamingTest {
     void fullTypeName_trimTrailingDollarSignOnly() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new $$$(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new $$$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
@@ -106,7 +106,7 @@ class ServiceNamingTest {
     void simpleTypeName_topClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), HealthCheckService.builder().build(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), HealthCheckService.builder().build(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
@@ -120,7 +120,7 @@ class ServiceNamingTest {
     void simpleTypeName_nestedClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new NestedClass(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new NestedClass(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
@@ -135,7 +135,7 @@ class ServiceNamingTest {
     void simpleTypeName_trimTrailingDollarSign() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
@@ -149,7 +149,7 @@ class ServiceNamingTest {
     void simpleTypeName_trimTrailingDollarSignMany() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$$$(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$$$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
@@ -163,7 +163,7 @@ class ServiceNamingTest {
     void simpleTypeName_trimTrailingDollarSignOnly() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new $$$(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new $$$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
@@ -177,7 +177,7 @@ class ServiceNamingTest {
     void shorten_topClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), HealthCheckService.builder().build(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), HealthCheckService.builder().build(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
@@ -191,7 +191,7 @@ class ServiceNamingTest {
     void shorten_nestedClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new NestedClass(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new NestedClass(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
@@ -206,7 +206,7 @@ class ServiceNamingTest {
     void shorten_trimTrailingDollarSign() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
@@ -221,7 +221,7 @@ class ServiceNamingTest {
     void shorten_trimTrailingDollarSignMany() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$$$(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$$$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
@@ -236,7 +236,7 @@ class ServiceNamingTest {
     void shorten_trimTrailingDollarSignOnly() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new $$$(),
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new $$$(),
                                   null, null, null, 0, 0, false, AccessLogWriter.common(), false,
                                   CommonPools.blockingTaskExecutor(), true,
                                   SuccessFunction.always(),
