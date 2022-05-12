@@ -164,7 +164,12 @@ public final class ContentPreviewingUtil {
             BiFunction<? super RequestContext, String,
                     ? extends @Nullable Object> contentSanitizer,
             RequestContext ctx, String produced) {
-        final Object sanitized = contentSanitizer.apply(ctx, produced);
+        Object sanitized = null;
+        try {
+            sanitized = contentSanitizer.apply(ctx, produced);
+        } catch (Exception e) {
+            logger.warn("Unexpected exception while sanitizing the content preview.", e);
+        }
         return sanitized != null ? sanitized.toString() : "<sanitized>";
     }
 }
