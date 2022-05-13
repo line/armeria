@@ -73,11 +73,11 @@ final class ArmeriaClientHttpRequest extends AbstractClientHttpRequest {
         this.uri = requireNonNull(uri, "uri");
         this.factoryWrapper = requireNonNull(factoryWrapper, "factoryWrapper");
 
-        this.headers = RequestHeaders.builder()
-                                     .add(HttpHeaderNames.METHOD, httpMethod.name())
-                                     .add(HttpHeaderNames.SCHEME, uri.getScheme())
-                                     .add(HttpHeaderNames.AUTHORITY, uri.getRawAuthority())
-                                     .add(HttpHeaderNames.PATH, requireNonNull(pathAndQuery, "pathAndQuery"));
+        headers = RequestHeaders.builder()
+                                .add(HttpHeaderNames.METHOD, httpMethod.name())
+                                .add(HttpHeaderNames.SCHEME, uri.getScheme())
+                                .add(HttpHeaderNames.AUTHORITY, uri.getRawAuthority())
+                                .add(HttpHeaderNames.PATH, requireNonNull(pathAndQuery, "pathAndQuery"));
     }
 
     @Override
