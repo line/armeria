@@ -23,7 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
@@ -78,19 +77,12 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
     }
 
-    /**
-     * Sets the path prefix to be used for this {@link AnnotatedServiceBindingBuilder}.
-     * @param pathPrefix string representing the path prefix.
-     */
     @Override
     public AnnotatedServiceBindingBuilder pathPrefix(String pathPrefix) {
         this.pathPrefix = requireNonNull(pathPrefix, "pathPrefix");
         return this;
     }
 
-    /**
-     * Adds the given {@link ExceptionHandlerFunction}s to this {@link AnnotatedServiceBindingBuilder}.
-     */
     @Override
     public AnnotatedServiceBindingBuilder exceptionHandlers(
             ExceptionHandlerFunction... exceptionHandlerFunctions) {
@@ -99,9 +91,6 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
         return this;
     }
 
-    /**
-     * Adds the given {@link ExceptionHandlerFunction}s to this {@link AnnotatedServiceBindingBuilder}.
-     */
     @Override
     public AnnotatedServiceBindingBuilder exceptionHandlers(
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
@@ -110,9 +99,6 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
         return this;
     }
 
-    /**
-     * Adds the given {@link ResponseConverterFunction}s to this {@link AnnotatedServiceBindingBuilder}.
-     */
     @Override
     public AnnotatedServiceBindingBuilder responseConverters(
             ResponseConverterFunction... responseConverterFunctions) {
@@ -121,9 +107,6 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
         return this;
     }
 
-    /**
-     * Adds the given {@link ResponseConverterFunction}s to this {@link AnnotatedServiceBindingBuilder}.
-     */
     @Override
     public AnnotatedServiceBindingBuilder responseConverters(
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
@@ -132,9 +115,6 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
         return this;
     }
 
-    /**
-     * Adds the given {@link RequestConverterFunction}s to this {@link AnnotatedServiceBindingBuilder}.
-     */
     @Override
     public AnnotatedServiceBindingBuilder requestConverters(
             RequestConverterFunction... requestConverterFunctions) {
@@ -143,9 +123,6 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
         return this;
     }
 
-    /**
-     * Adds the given {@link RequestConverterFunction}s to this {@link AnnotatedServiceBindingBuilder}.
-     */
     @Override
     public AnnotatedServiceBindingBuilder requestConverters(
             Iterable<? extends RequestConverterFunction> requestConverterFunctions) {
@@ -154,12 +131,6 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
         return this;
     }
 
-    /**
-     * Sets whether the service executes service methods using the blocking executor. By default, service
-     * methods are executed directly on the event loop for implementing fully asynchronous services. If your
-     * service uses blocking logic, you should either execute such logic in a separate thread using something
-     * like {@link Executors#newCachedThreadPool()} or enable this setting.
-     */
     @Override
     public AnnotatedServiceBindingBuilder useBlockingTaskExecutor(boolean useBlockingTaskExecutor) {
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
