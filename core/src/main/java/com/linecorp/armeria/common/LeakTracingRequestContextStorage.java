@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -30,6 +31,7 @@ import io.netty.util.concurrent.FastThreadLocal;
  * A {@link RequestContextStorage} which keeps track of {@link RequestContext}s, reporting pushed thread
  * information if a {@link RequestContext} is leaked.
  */
+@UnstableApi
 public final class LeakTracingRequestContextStorage implements RequestContextStorage {
 
     private final RequestContextStorage delegate;
@@ -51,9 +53,9 @@ public final class LeakTracingRequestContextStorage implements RequestContextSto
      */
     public LeakTracingRequestContextStorage(RequestContextStorage delegate,
                                             Sampler<?> sampler) {
-        this.delegate = delegate;
+        this.delegate = requireNonNull(delegate, "delegate");
         pendingRequestCtx = new FastThreadLocal<>();
-        this.sampler = (Sampler<Object>) sampler;
+        this.sampler = (Sampler<Object>) requireNonNull(sampler, "sampler");
     }
 
     @Nullable
