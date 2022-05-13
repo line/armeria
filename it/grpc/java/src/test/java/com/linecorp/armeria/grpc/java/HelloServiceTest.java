@@ -1,7 +1,22 @@
-package example.armeria.grpc;
+/*
+ *  Copyright 2022 LINE Corporation
+ *
+ *  LINE Corporation licenses this file to you under the Apache License,
+ *  version 2.0 (the "License"); you may not use this file except in compliance
+ *  with the License. You may obtain a copy of the License at:
+ *
+ *    https://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ *  License for the specific language governing permissions and limitations
+ *  under the License.
+ */
 
-import static example.armeria.grpc.HelloServiceImpl.toMessage;
-import static example.armeria.grpc.Main.configureServices;
+package com.linecorp.armeria.grpc.java;
+
+import static com.linecorp.armeria.grpc.java.HelloServiceImpl.toMessage;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -23,14 +38,15 @@ import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.grpc.java.Hello.HelloReply;
+import com.linecorp.armeria.grpc.java.Hello.HelloRequest;
+import com.linecorp.armeria.grpc.java.HelloServiceGrpc.HelloServiceBlockingStub;
+import com.linecorp.armeria.grpc.java.HelloServiceGrpc.HelloServiceFutureStub;
+import com.linecorp.armeria.grpc.java.HelloServiceGrpc.HelloServiceStub;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import example.armeria.grpc.Hello.HelloReply;
-import example.armeria.grpc.Hello.HelloRequest;
-import example.armeria.grpc.HelloServiceGrpc.HelloServiceBlockingStub;
-import example.armeria.grpc.HelloServiceGrpc.HelloServiceFutureStub;
-import example.armeria.grpc.HelloServiceGrpc.HelloServiceStub;
 import io.grpc.stub.StreamObserver;
 
 class HelloServiceTest {
@@ -39,7 +55,10 @@ class HelloServiceTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            configureServices(sb);
+            sb.service(GrpcService.builder()
+                                  .addService(new HelloServiceImpl())
+                                  .enableUnframedRequests(true)
+                                  .build());
         }
     };
 
@@ -57,7 +76,7 @@ class HelloServiceTest {
         final ListenableFuture<HelloReply> future =
                 helloService.lazyHello(HelloRequest.newBuilder().setName("Armeria").build());
         final AtomicBoolean completed = new AtomicBoolean();
-        Futures.addCallback(future, new FutureCallback<>() {
+        Futures.addCallback(future, new FutureCallback<HelloReply>() {
             @Override
             public void onSuccess(HelloReply result) {
                 assertThat(result.getMessage()).isEqualTo("Hello, Armeria!");
@@ -91,7 +110,7 @@ class HelloServiceTest {
         final AtomicInteger sequence = new AtomicInteger();
         helloService.lotsOfReplies(
                 HelloRequest.newBuilder().setName("Armeria").build(),
-                new StreamObserver<>() {
+                new StreamObserver<HelloReply>() {
 
                     @Override
                     public void onNext(HelloReply value) {
@@ -124,7 +143,7 @@ class HelloServiceTest {
         final AtomicBoolean completed = new AtomicBoolean();
         helloService.lotsOfReplies(
                 HelloRequest.newBuilder().setName("Armeria").build(),
-                new StreamObserver<>() {
+                new StreamObserver<HelloReply>() {
 
                     @Override
                     public void onNext(HelloReply value) {
@@ -161,7 +180,7 @@ class HelloServiceTest {
         final String[] names = { "Armeria", "Grpc", "Streaming" };
         final AtomicBoolean completed = new AtomicBoolean();
         final StreamObserver<HelloRequest> request =
-                helloService.lotsOfGreetings(new StreamObserver<>() {
+                helloService.lotsOfGreetings(new StreamObserver<HelloReply>() {
                     private boolean received;
 
                     @Override
@@ -198,7 +217,7 @@ class HelloServiceTest {
         final String[] names = { "Armeria", "Grpc", "Streaming" };
         final AtomicBoolean completed = new AtomicBoolean();
         final StreamObserver<HelloRequest> request =
-                helloService.bidiHello(new StreamObserver<>() {
+                helloService.bidiHello(new StreamObserver<HelloReply>() {
                     private int received;
 
                     @Override
