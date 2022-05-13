@@ -36,13 +36,15 @@ public abstract class AbstractDynamicEndpointGroupBuilder implements DynamicEndp
      * Creates a new instance.
      */
     protected AbstractDynamicEndpointGroupBuilder() {
-        selectionTimeoutMillis = Flags.defaultConnectTimeoutMillis();
+        this(Flags.defaultConnectTimeoutMillis());
     }
 
     /**
      * Creates a new instance with the specified {@code selectionTimeoutMillis}.
      */
     protected AbstractDynamicEndpointGroupBuilder(long selectionTimeoutMillis) {
+        checkArgument(selectionTimeoutMillis >= 0, "selectionTimeoutMillis: %s (expected: >= 0)",
+                      selectionTimeoutMillis);
         this.selectionTimeoutMillis = selectionTimeoutMillis;
     }
 
