@@ -352,7 +352,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
         final InetSocketAddress remoteAddress;
         try {
-            remoteAddress = toRemoteAddress(key);
+            remoteAddress = key.toRemoteAddress();
         } catch (UnknownHostException e) {
             notifyConnect(desiredProtocol, key, eventLoop.newFailedFuture(e), promise, timingsBuilder);
             return;
@@ -438,18 +438,6 @@ final class HttpChannelPool implements AsyncCloseable {
         } catch (Throwable t) {
             logger.warn("Exception while invoking {}.connectFailed() for {}",
                         ProxyConfigSelector.class.getSimpleName(), poolKey, t);
-        }
-    }
-
-    private static InetSocketAddress toRemoteAddress(PoolKey key) throws UnknownHostException {
-        if (key.ipAddr != null) {
-            final InetAddress inetAddr = InetAddress.getByAddress(
-                    key.host, NetUtil.createByteArrayFromIpAddressString(key.ipAddr));
-            return new InetSocketAddress(inetAddr, key.port);
-        } else {
-            // key.ipAddr can be null for forward proxies
-            assert key.proxyConfig.proxyType().isForwardProxy();
-            return InetSocketAddress.createUnresolved(key.host, key.port);
         }
     }
 
@@ -634,6 +622,18 @@ final class HttpChannelPool implements AsyncCloseable {
             this.port = port;
             this.proxyConfig = proxyConfig;
             hashCode = Objects.hash(host, ipAddr, port, proxyConfig);
+        }
+
+        private InetSocketAddress toRemoteAddress() throws UnknownHostException {
+            if (ipAddr != null) {
+                final InetAddress inetAddr = InetAddress.getByAddress(
+                        host, NetUtil.createByteArrayFromIpAddressString(ipAddr));
+                return new InetSocketAddress(inetAddr, port);
+            } else {
+                // key.ipAddr can be null for forward proxies
+                assert proxyConfig.proxyType().isForwardProxy();
+                return InetSocketAddress.createUnresolved(host, port);
+            }
         }
 
         @Override
