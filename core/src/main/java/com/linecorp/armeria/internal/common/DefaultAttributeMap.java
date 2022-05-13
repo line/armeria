@@ -29,7 +29,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
@@ -44,11 +44,12 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.Iterators;
 
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 
-final class DefaultAttributeMap {
+public final class DefaultAttributeMap {
 
     // Forked from Netty 4.1.34 at 506f0d8f8c10e1b24924f7d992a726d7bdd2e486
     // - Add rootAttributeMap and related methods to retrieve values from the rootAttributeMap.
@@ -71,22 +72,22 @@ final class DefaultAttributeMap {
     @Nullable
     private final RequestContext rootAttributeMap;
 
-    DefaultAttributeMap(@Nullable RequestContext rootAttributeMap) {
+    public DefaultAttributeMap(@Nullable RequestContext rootAttributeMap) {
         this.rootAttributeMap = rootAttributeMap;
     }
 
     @Nullable
-    <T> T ownAttr(AttributeKey<T> key) {
+    public <T> T ownAttr(AttributeKey<T> key) {
         return attr(key, true);
     }
 
     @Nullable
-    <T> T attr(AttributeKey<T> key) {
+    public <T> T attr(AttributeKey<T> key) {
         return attr(key, false);
     }
 
     @Nullable
-    private <T> T attr(AttributeKey<T> key, boolean ownAttr) {
+    public <T> T attr(AttributeKey<T> key, boolean ownAttr) {
         requireNonNull(key, "key");
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
@@ -132,7 +133,7 @@ final class DefaultAttributeMap {
 
     @Nullable
     @SuppressWarnings("unchecked")
-    <T> T setAttr(AttributeKey<T> key, @Nullable T value) {
+    public <T> T setAttr(AttributeKey<T> key, @Nullable T value) {
         return (T) setAttr(key, value, SetAttrMode.OLD_VALUE);
     }
 
@@ -221,7 +222,7 @@ final class DefaultAttributeMap {
         return attributes;
     }
 
-    Iterator<Entry<AttributeKey<?>, Object>> attrs() {
+    public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
             if (rootAttributeMap == null) {
@@ -249,7 +250,7 @@ final class DefaultAttributeMap {
         return new ConcatenatedCopyOnWriteIterator(ownAttrsIt, rootAttrs);
     }
 
-    Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
+    public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
             return Collections.emptyIterator();
