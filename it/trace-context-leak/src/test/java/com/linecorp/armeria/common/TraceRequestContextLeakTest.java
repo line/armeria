@@ -18,7 +18,6 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
@@ -83,34 +82,33 @@ class TraceRequestContextLeakTest {
         final AtomicBoolean isThrown = new AtomicBoolean();
         final AtomicReference<Exception> exception = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(2);
-        final DeferredClose deferredClose = new DeferredClose();
 
-        final EventLoop executor =  eventLoopExtension.get();
+        try (DeferredClose deferredClose = new DeferredClose()) {
+            final EventLoop executor =  eventLoopExtension.get();
 
-        executor.execute(() -> {
-            final ServiceRequestContext ctx = newCtx("/1");
-            final SafeCloseable leaked = ctx.push();
-            latch.countDown();
-            deferredClose.add(executor, leaked);
-        });
-
-        executor.execute(() -> {
-            final ServiceRequestContext anotherCtx = newCtx("/2");
-            try (SafeCloseable ignore = anotherCtx.push()) {
-                //ignore
-            } catch (Exception ex) {
-                isThrown.set(true);
-                exception.set(ex);
-            } finally {
+            executor.execute(() -> {
+                final ServiceRequestContext ctx = newCtx("/1");
+                final SafeCloseable leaked = ctx.push();
                 latch.countDown();
-            }
-        });
+                deferredClose.add(executor, leaked);
+            });
 
-        latch.await();
-        assertThat(isThrown).isTrue();
-        assertThat(exception.get()).hasMessageContaining("RequestContext didn't popped");
+            executor.execute(() -> {
+                final ServiceRequestContext anotherCtx = newCtx("/2");
+                try (SafeCloseable ignore = anotherCtx.push()) {
+                    //ignore
+                } catch (Exception ex) {
+                    isThrown.set(true);
+                    exception.set(ex);
+                } finally {
+                    latch.countDown();
+                }
+            });
 
-        deferredClose.closeAll();
+            latch.await();
+            assertThat(isThrown).isTrue();
+            assertThat(exception.get()).hasMessageContaining("RequestContext didn't popped");
+        }
     }
 
     @Test
@@ -118,34 +116,33 @@ class TraceRequestContextLeakTest {
     void multiThreadContextNotLeak() throws InterruptedException {
         final AtomicBoolean isThrown = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(2);
-        final DeferredClose deferredClose = new DeferredClose();
 
         final EventLoopGroup executor =  eventLoopGroupExtension.get();
 
-        executor.next().execute(() -> {
-            final ServiceRequestContext ctx = newCtx("/1");
-            final SafeCloseable leaked = ctx.push();
-            latch.countDown();
-            deferredClose.add(executor, leaked);
-        });
-
-        executor.next().execute(() -> {
-            //Leak happened on the first eventLoop doesn't make eventLoop when trying to push
-            final ServiceRequestContext anotherCtx = newCtx("/2");
-            try (SafeCloseable ignore = anotherCtx.push()) {
-                //ignore
-            } catch (Exception ex) {
-                //Not suppose to throw exception on the second event loop
-                isThrown.set(true);
-            } finally {
+        try (DeferredClose deferredClose = new DeferredClose()) {
+            executor.next().execute(() -> {
+                final ServiceRequestContext ctx = newCtx("/1");
+                final SafeCloseable leaked = ctx.push();
                 latch.countDown();
-            }
-        });
+                deferredClose.add(executor, leaked);
+            });
 
-        latch.await();
-        assertThat(isThrown).isFalse();
+            executor.next().execute(() -> {
+                //Leak happened on the first eventLoop shouldn't affect 2nd eventLoop when trying to push
+                final ServiceRequestContext anotherCtx = newCtx("/2");
+                try (SafeCloseable ignore = anotherCtx.push()) {
+                    //Ignore
+                } catch (Exception ex) {
+                    //Not suppose to throw exception on the second event loop
+                    isThrown.set(true);
+                } finally {
+                    latch.countDown();
+                }
+            });
 
-        deferredClose.closeAll();
+            latch.await();
+            assertThat(isThrown).isFalse();
+        }
     }
 
     @Test
@@ -154,7 +151,6 @@ class TraceRequestContextLeakTest {
         final AtomicBoolean isThrown = new AtomicBoolean(false);
         final AtomicReference<Exception> exception = new AtomicReference<>();
         final CountDownLatch latch = new CountDownLatch(3);
-        final DeferredClose deferredClose = new DeferredClose();
 
         final EventLoopGroup executor =  eventLoopGroupExtension.get();
 
@@ -164,42 +160,42 @@ class TraceRequestContextLeakTest {
         final Executor ex1 = executor.next();
         final Executor ex2 = executor.next();
 
-        ex1.execute(() -> {
-            final SafeCloseable leaked = ctx.push();
-            latch.countDown();
-            deferredClose.add(ex1, leaked);
-        });
-
-        ex2.execute(() -> {
-            try {
-                //intentional leak
-                final SafeCloseable leaked = anotherCtx.push();
-                deferredClose.add(ex2, leaked);
-            } catch (Exception ex) {
-                isThrown.set(true);
-            } finally {
+        try (DeferredClose deferredClose = new DeferredClose()) {
+            ex1.execute(() -> {
+                final SafeCloseable leaked = ctx.push();
                 latch.countDown();
-            }
-        });
+                deferredClose.add(ex1, leaked);
+            });
 
-        assertThat(isThrown).isFalse();
+            ex2.execute(() -> {
+                try {
+                    //Intentional leak
+                    final SafeCloseable leaked = anotherCtx.push();
+                    deferredClose.add(ex2, leaked);
+                } catch (Exception ex) {
+                    isThrown.set(true);
+                } finally {
+                    latch.countDown();
+                }
+            });
 
-        ex1.execute(() -> {
-            try (SafeCloseable ignore = anotherCtx.push()) {
-                //ignore
-            } catch (Exception ex) {
-                isThrown.set(true);
-                exception.set(ex);
-            } finally {
-                latch.countDown();
-            }
-        });
+            assertThat(isThrown).isFalse();
 
-        latch.await();
-        assertThat(isThrown).isTrue();
-        assertThat(exception.get()).hasMessageContaining("RequestContext didn't popped");
+            ex1.execute(() -> {
+                try (SafeCloseable ignore = anotherCtx.push()) {
+                    //ignore
+                } catch (Exception ex) {
+                    isThrown.set(true);
+                    exception.set(ex);
+                } finally {
+                    latch.countDown();
+                }
+            });
 
-        deferredClose.closeAll();
+            latch.await();
+            assertThat(isThrown).isTrue();
+            assertThat(exception.get()).hasMessageContaining("RequestContext didn't popped");
+        }
     }
 
     private static ServiceRequestContext newCtx(String path) {
@@ -208,20 +204,21 @@ class TraceRequestContextLeakTest {
     }
 
     //Utility to clean up RequestContext leak after test
-    private static class DeferredClose {
+    private static class DeferredClose implements SafeCloseable {
 
-        private final AtomicReference<Map<Executor, SafeCloseable>> toClose;
+        private final ConcurrentHashMap<Executor, SafeCloseable> toClose;
 
         DeferredClose() {
-            toClose = new AtomicReference<>(new ConcurrentHashMap<>());
+            toClose = new ConcurrentHashMap<>();
         }
 
         void add(Executor executor, SafeCloseable closeable) {
-            toClose.get().put(executor, closeable);
+            toClose.put(executor, closeable);
         }
 
-        void closeAll() {
-            toClose.get().forEach((executor, closeable) -> executor.execute(closeable::close));
+        @Override
+        public void close() {
+            toClose.forEach((executor, closeable) -> executor.execute(closeable::close));
         }
     }
 }
