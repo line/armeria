@@ -316,6 +316,48 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
     }
 
     @Override
+    public int size() {
+        return Iterators.size(attrs());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof AttributesGetters)) {
+            return false;
+        }
+
+        final AttributesGetters that = (AttributesGetters) o;
+        if (size() != that.size()) {
+            return false;
+        }
+
+        for (final Iterator<Entry<AttributeKey<?>, Object>> it = attrs(); it.hasNext();) {
+            final Entry<AttributeKey<?>, Object> next = it.next();
+            final Object thisVal = next.getValue();
+            final Object thatVal = that.attr(next.getKey());
+            if (!thisVal.equals(thatVal)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int hashCode = 0;
+        for (final Iterator<Entry<AttributeKey<?>, Object>> it = attrs(); it.hasNext();) {
+            final Entry<AttributeKey<?>, Object> next = it.next();
+            hashCode += next.getKey().hashCode();
+            hashCode += next.getValue().hashCode();
+        }
+        return hashCode;
+    }
+
+    @Override
     public String toString() {
         return Iterators.toString(attrs());
     }

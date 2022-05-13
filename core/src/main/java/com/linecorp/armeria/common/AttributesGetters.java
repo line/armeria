@@ -103,4 +103,9 @@ public interface AttributesGetters {
      * Returns {@code true} if this {@link AttributesGetters} does not contain any entries.
      */
     boolean isEmpty();
+
+    /**
+     * Returns the number of {@link AttributeKey}-value mappings in this {@link AttributesGetters}.
+     */
+    int size();
 }

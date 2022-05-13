@@ -201,4 +201,25 @@ class ImmutableAttributesTest {
         assertThat(concurrentAttributes.attr(foo)).isNull();
         assertThat(concurrentAttributes.attr(bar)).isEqualTo("new");
     }
+
+    @Test
+    void equalsAndHash() {
+        final AttributeKey<Integer> foo = AttributeKey.valueOf("foo");
+        final AttributeKey<String> bar = AttributeKey.valueOf("bar");
+        final Attributes attributes0 = Attributes.of(foo, 0, bar, "bar");
+        final Attributes attributes1 = Attributes.of(foo, 0, bar, "bar");
+        final Attributes attributes2 = Attributes.of(foo, 1, bar, "bar");
+        final Attributes attributes3 = Attributes.builder(Attributes.of(foo, 0))
+                                                 .set(bar, "bar")
+                                                 .build();
+
+        assertThat(attributes0).isEqualTo(attributes1);
+        assertThat(attributes0.hashCode()).isEqualTo(attributes1.hashCode());
+
+        assertThat(attributes0).isNotEqualTo(attributes2);
+        assertThat(attributes0.hashCode()).isNotEqualTo(attributes2.hashCode());
+
+        assertThat(attributes0).isEqualTo(attributes3);
+        assertThat(attributes0.hashCode()).isEqualTo(attributes3.hashCode());
+    }
 }

@@ -244,7 +244,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     @UnstableApi
     public void hook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
-        for (; ; ) {
+        for (;;) {
             final Supplier<? extends AutoCloseable> oldContextHook = this.contextHook;
             final Supplier<? extends AutoCloseable> newContextHook;
             if (oldContextHook == null) {

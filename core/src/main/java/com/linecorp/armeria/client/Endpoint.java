@@ -602,7 +602,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     @UnstableApi
     public Endpoint withAttrs(Attributes newAttributes) {
         requireNonNull(newAttributes, "newAttributes");
-        if (newAttributes.isEmpty()) {
+        if (attrs().isEmpty() && newAttributes.isEmpty()) {
             return this;
         }
 

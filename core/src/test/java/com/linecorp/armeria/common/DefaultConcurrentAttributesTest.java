@@ -282,4 +282,25 @@ class DefaultConcurrentAttributesTest {
         assertThat(attributes.attr(foo)).isEqualTo(1);
         assertThat(attributes.attr(bar)).isEqualTo("new");
     }
+
+    @Test
+    void equalsAndHash() {
+        final AttributeKey<Integer> foo = AttributeKey.valueOf("foo");
+        final AttributeKey<String> bar = AttributeKey.valueOf("bar");
+        final ConcurrentAttributes attributes0 = Attributes.of(foo, 0, bar, "bar").toConcurrentAttributes();
+        final ConcurrentAttributes attributes1 = Attributes.of(foo, 0, bar, "bar").toConcurrentAttributes();
+        final ConcurrentAttributes attributes2 = Attributes.of(foo, 1, bar, "bar").toConcurrentAttributes();
+        final ConcurrentAttributes attributes3 = Attributes.builder(Attributes.of(foo, 0))
+                                                           .set(bar, "bar")
+                                                           .build().toConcurrentAttributes();
+
+        assertThat(attributes0).isEqualTo(attributes1);
+        assertThat(attributes0.hashCode()).isEqualTo(attributes1.hashCode());
+
+        assertThat(attributes0).isNotEqualTo(attributes2);
+        assertThat(attributes0.hashCode()).isNotEqualTo(attributes2.hashCode());
+
+        assertThat(attributes0).isEqualTo(attributes3);
+        assertThat(attributes0.hashCode()).isEqualTo(attributes3.hashCode());
+    }
 }
