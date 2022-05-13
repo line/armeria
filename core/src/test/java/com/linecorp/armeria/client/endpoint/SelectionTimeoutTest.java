@@ -96,8 +96,8 @@ class SelectionTimeoutTest {
                           .isCompletedWithValue(endpoint);
 
         final EndpointGroup composed = EndpointGroup.of(mockEndpointGroup1, mockEndpointGroup2);
-        result = composed.select(ctx, CommonPools.blockingTaskExecutor());
         final Stopwatch stopwatch = Stopwatch.createStarted();
+        result = composed.select(ctx, CommonPools.blockingTaskExecutor());
         assertThat(result.join()).isNull();
         assertThat(stopwatch.elapsed())
                 .isGreaterThanOrEqualTo(Duration.ofMillis(expectedTimeout))
