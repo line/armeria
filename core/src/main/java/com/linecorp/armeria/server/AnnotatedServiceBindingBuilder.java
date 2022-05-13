@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableList.Builder;
 
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceElement;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
@@ -68,6 +69,8 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
     private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
 
+    @Nullable
+    private String queryDelimiter;
     private boolean useBlockingTaskExecutor;
     private String pathPrefix = "/";
     @Nullable
@@ -134,6 +137,25 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
     @Override
     public AnnotatedServiceBindingBuilder useBlockingTaskExecutor(boolean useBlockingTaskExecutor) {
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
+        return this;
+    }
+
+    /**
+     * Sets the delimiter for a query parameter value. Multiple values delimited by the specified
+     * {@code delimiter} will be automatically split into a list of values.
+     *
+     * <p>It is disabled by default.
+     *
+     * <p>Note that this delimiter works only when the resolve target class type is collection and the number
+     * of values of the query parameter is one. For example with the query delimiter {@code ","}:
+     * <ul>
+     *     <li>{@code ?query=a,b,c} will be resolved to {@code "a"}, {@code "b"} and {@code "c"}</li>
+     *     <li>{@code ?query=a,b,c&query=d,e,f} will be resolved to {@code "a,b,c"} and {@code "d,e,f"}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public AnnotatedServiceBindingBuilder queryDelimiter(String delimiter) {
+        this.queryDelimiter = requireNonNull(delimiter, "delimiter");
         return this;
     }
 
@@ -276,7 +298,7 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
         assert service != null;
 
         final List<AnnotatedServiceElement> elements =
-                AnnotatedServiceFactory.find(pathPrefix, service, useBlockingTaskExecutor,
+                AnnotatedServiceFactory.find(pathPrefix, service, useBlockingTaskExecutor, queryDelimiter,
                                              requestConverterFunctions, responseConverterFunctions,
                                              exceptionHandlerFunctions);
         return elements.stream().map(element -> {

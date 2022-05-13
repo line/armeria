@@ -113,6 +113,11 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
     }
 
     @Override
+    public Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute() {
+        return delegate.methodsByRoute();
+    }
+
+    @Override
     public List<ServerServiceDefinition> services() {
         return delegate.services();
     }

@@ -324,6 +324,23 @@ public class MyAnnotatedService {
 }
 ```
 
+If you specify query delimiter while building an annotated service, or a <type://@Delimiter> annotation with a
+query parameter, a single parameter will be converted into separated values if the parameter is mapped to a
+`List<?>` or `Set<?>`, e.g. `/hello1?number=1,2,3`.
+
+```java
+sb.annotatedService()
+  .queryDelimiter(",")
+  .build(new MyAnnotatedService());
+```
+
+```java
+public class MyAnnotatedService {
+    @Get("/hello1")
+    public HttpResponse hello1(@Param("number") @Delimiter(",") List<Integer> numbers) { ... }
+}
+```
+
 If an HTTP `POST` request with a `Content-Type: x-www-form-urlencoded` header is received and
 no <type://@Param> value appears in the path pattern, Armeria will aggregate the received request and
 decode its body as a URL-encoded form. After that, Armeria will inject the decoded value into the parameter.

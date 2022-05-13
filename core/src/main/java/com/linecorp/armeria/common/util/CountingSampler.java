@@ -74,6 +74,7 @@ final class CountingSampler<T> implements Sampler<T> {
     private final AtomicInteger counter;
     @VisibleForTesting
     final BitSet sampleDecisions;
+    private final int percent;
 
     /** Fills a bitset with decisions according to the supplied percent. */
     CountingSampler(int percent) {
@@ -86,6 +87,7 @@ final class CountingSampler<T> implements Sampler<T> {
     CountingSampler(int percent, Random random) {
         counter = new AtomicInteger();
         sampleDecisions = randomBitSet(100, percent, random);
+        this.percent = percent;
     }
 
     /** loops over the pre-canned decisions, resetting to zero when it gets to the end. */
@@ -96,7 +98,7 @@ final class CountingSampler<T> implements Sampler<T> {
 
     @Override
     public String toString() {
-        return "CountingSampler()";
+        return "random=" + percent / 100.0;
     }
 
     /**
