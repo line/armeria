@@ -120,20 +120,12 @@ public interface Attributes extends AttributesGetters {
     }
 
     /**
+     * Converts this {@link Attributes} into a {@link ConcurrentAttributes}.
+     */
+    ConcurrentAttributes toConcurrentAttributes();
+
+    /**
      * Returns a new builder created from the entries of this {@link Attributes}.
      */
     AttributesBuilder toBuilder();
-
-    /**
-     * Converts this {@link Attributes} into a {@link ConcurrentAttributes}.
-     */
-    default ConcurrentAttributes toConcurrentAttributes() {
-        final ConcurrentAttributes attributes = ConcurrentAttributes.of(parent());
-        ownAttrs().forEachRemaining(entry -> {
-            @SuppressWarnings("unchecked")
-            final AttributeKey<Object> key = (AttributeKey<Object>) entry.getKey();
-            attributes.set(key, entry.getValue());
-        });
-        return attributes;
-    }
 }

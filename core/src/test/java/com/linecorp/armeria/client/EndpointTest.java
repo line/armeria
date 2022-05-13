@@ -518,10 +518,11 @@ class EndpointTest {
                 .containsExactlyInAnyOrder(Maps.immutableEntry(key1, "value1-2"),
                                            Maps.immutableEntry(key3, "value3"));
 
-        // update by empty attrs, not create new endpoint.
+        // Reset attrs with an empty attributes.
         final Endpoint newEndpointB = endpointB.withAttrs(Attributes.of());
-        assertThat(newEndpointB).isSameAs(endpointB);
-        // not change other properties.
-        assertThat(newEndpointB).isEqualTo(endpointC);
+        assertThat(newEndpointB.attrs().isEmpty()).isTrue();
+
+        final Endpoint sameEndpoint = endpoint.withAttrs(Attributes.of());
+        assertThat(sameEndpoint).isSameAs(endpoint);
     }
 }

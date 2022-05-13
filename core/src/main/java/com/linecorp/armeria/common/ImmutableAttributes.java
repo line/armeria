@@ -52,6 +52,23 @@ class ImmutableAttributes implements Attributes {
         return builder;
     }
 
+    @Override
+    public ConcurrentAttributes toConcurrentAttributes() {
+        final ConcurrentAttributes concurrentAttributes = ConcurrentAttributes.of(parent);
+        if (!attributes.isEmpty()) {
+            attributes.forEach((k, v) -> {
+                if (v == NULL_VALUE) {
+                    // NULL_VALUE is only valid for ImmutableAttributes
+                    v = null;
+                }
+                //noinspection unchecked
+                concurrentAttributes.set((AttributeKey<Object>) k, v);
+            });
+        }
+
+        return concurrentAttributes;
+    }
+
     @Nullable
     @Override
     public <T> T attr(AttributeKey<T> key) {
