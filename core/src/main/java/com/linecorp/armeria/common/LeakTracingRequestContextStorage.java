@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common;
 
+import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPushingException;
 import static java.lang.Thread.currentThread;
 import static java.util.Objects.requireNonNull;
 
@@ -72,9 +73,9 @@ public final class LeakTracingRequestContextStorage implements RequestContextSto
                 // The delegate has the ServiceRequestContext whose root() is toPush
             } else if (toPush instanceof ClientRequestContext &&
                        prevContext.root() == toPush.root()) {
-                // The delegate has the ClientRequestContext whose root() is the same toPush.root()
+                // The delegate has the ClientRequestContext whose root() is the same as toPush.root()
             } else {
-                throw pendingRequestCtx.get();
+                throw newIllegalContextPushingException(prevContext, toPush, pendingRequestCtx.get());
             }
         }
 
