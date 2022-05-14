@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
@@ -53,7 +54,7 @@ class TraceRequestContextLeakTest {
         executor.execute(() -> {
             final ServiceRequestContext ctx = newCtx("/1");
             try (SafeCloseable ignore = ctx.push()) {
-                //ignore
+                //Ignore
             } catch (Exception ex) {
                 isThrown.set(true);
             } finally {
@@ -64,7 +65,7 @@ class TraceRequestContextLeakTest {
         executor.execute(() -> {
             final ServiceRequestContext anotherCtx = newCtx("/2");
             try (SafeCloseable ignore = anotherCtx.push()) {
-                //ignore
+                //Ignore
             } catch (Exception ex) {
                 isThrown.set(true);
             } finally {
@@ -81,7 +82,6 @@ class TraceRequestContextLeakTest {
     void singleTreadContextLeak() throws InterruptedException {
         final AtomicBoolean isThrown = new AtomicBoolean();
         final AtomicReference<Exception> exception = new AtomicReference<>();
-        final CountDownLatch latch = new CountDownLatch(2);
 
         try (DeferredClose deferredClose = new DeferredClose()) {
             final EventLoop executor =  eventLoopExtension.get();
@@ -89,31 +89,27 @@ class TraceRequestContextLeakTest {
             executor.execute(() -> {
                 final ServiceRequestContext ctx = newCtx("/1");
                 final SafeCloseable leaked = ctx.push();
-                latch.countDown();
                 deferredClose.add(executor, leaked);
             });
 
             executor.execute(() -> {
                 final ServiceRequestContext anotherCtx = newCtx("/2");
                 try (SafeCloseable ignore = anotherCtx.push()) {
-                    //ignore
+                    //Ignore
                 } catch (Exception ex) {
                     isThrown.set(true);
                     exception.set(ex);
-                } finally {
-                    latch.countDown();
                 }
             });
 
-            latch.await();
-            assertThat(isThrown).isTrue();
+            await().untilTrue(isThrown);
             assertThat(exception.get()).getRootCause().hasMessageContaining("RequestContext didn't popped");
         }
     }
 
     @Test
     @SuppressWarnings("MustBeClosedChecker")
-    void multiThreadContextNotLeak() throws InterruptedException {
+    void multiThreadContextLeakNotInterfereOthersEventLoop() throws InterruptedException {
         final AtomicBoolean isThrown = new AtomicBoolean(false);
         final CountDownLatch latch = new CountDownLatch(2);
 
@@ -150,7 +146,6 @@ class TraceRequestContextLeakTest {
     void multiThreadContextLeak() throws InterruptedException {
         final AtomicBoolean isThrown = new AtomicBoolean(false);
         final AtomicReference<Exception> exception = new AtomicReference<>();
-        final CountDownLatch latch = new CountDownLatch(3);
 
         final EventLoopGroup executor =  eventLoopGroupExtension.get();
 
@@ -163,7 +158,6 @@ class TraceRequestContextLeakTest {
         try (DeferredClose deferredClose = new DeferredClose()) {
             ex1.execute(() -> {
                 final SafeCloseable leaked = ctx.push();
-                latch.countDown();
                 deferredClose.add(ex1, leaked);
             });
 
@@ -174,8 +168,6 @@ class TraceRequestContextLeakTest {
                     deferredClose.add(ex2, leaked);
                 } catch (Exception ex) {
                     isThrown.set(true);
-                } finally {
-                    latch.countDown();
                 }
             });
 
@@ -183,17 +175,14 @@ class TraceRequestContextLeakTest {
 
             ex1.execute(() -> {
                 try (SafeCloseable ignore = anotherCtx.push()) {
-                    //ignore
+                    //Ignore
                 } catch (Exception ex) {
                     isThrown.set(true);
                     exception.set(ex);
-                } finally {
-                    latch.countDown();
                 }
             });
 
-            latch.await();
-            assertThat(isThrown).isTrue();
+            await().untilTrue(isThrown);
             assertThat(exception.get()).getRootCause().hasMessageContaining("RequestContext didn't popped");
         }
     }
