@@ -875,6 +875,7 @@ biz.tr
 biz.tt
 biz.ua
 biz.vn
+biz.wf
 biz.zm
 bizen.okayama.jp
 bj
@@ -1079,6 +1080,7 @@ bu.no
 budejju.no
 bugatti
 build
+builder.code.com
 builders
 building.museum
 builtwithdark.com
@@ -1930,6 +1932,7 @@ deta.app
 deta.dev
 detroit.museum
 dev
+dev-builder.code.com
 dev-myqnapcloud.com
 dev.br
 dev.static.land
@@ -5503,6 +5506,7 @@ name.mv
 name.my
 name.na
 name.ng
+name.pm
 name.pr
 name.qa
 name.tj
@@ -7171,6 +7175,8 @@ sch.qa
 sch.sa
 sch.so
 sch.ss
+sch.tf
+sch.wf
 sch.zm
 schaeffler
 schlesisches.museum
@@ -7635,6 +7641,7 @@ steam.museum
 steiermark.museum
 steigen.no
 steinkjer.no
+stg-builder.code.com
 sth.ac.at
 stjohn.museum
 stjordal.no
