@@ -100,8 +100,8 @@ public final class RequestContextUtil {
             RequestContext newCtx, RequestContext oldCtx, @Nullable Throwable cause) {
         requireNonNull(newCtx, "newCtx");
         requireNonNull(oldCtx, "oldCtx");
-        final String message = "Trying to call object wrapped with context " + newCtx + ", but context is currently " +
-                               "set to " + oldCtx + ". This means the callback was called from " +
+        final String message = "Trying to call object wrapped with context " + newCtx + ", but context is " +
+                               "currently set to " + oldCtx + ". This means the callback was called from " +
                                "unexpected thread or forgetting to close previous context.";
         final IllegalStateException ex = cause == null ? new IllegalStateException(message)
                                                        : new IllegalStateException(message, cause);
