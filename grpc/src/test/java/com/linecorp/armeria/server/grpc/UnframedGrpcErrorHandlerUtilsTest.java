@@ -112,8 +112,8 @@ class UnframedGrpcErrorHandlerUtilsTest {
                                     .addDetails(Any.pack(localizedMessage))
                                     .build();
 
-        final JsonNode jsonNode = UnframedGrpcErrorHandlerUtils.convertErrorDetailToJsonNode(
-                status.getDetailsList(), UnframedGrpcErrorHandlerUtils.getErrorDetailsMarshaller());
+        final JsonNode jsonNode = DefaultUnframedGrpcErrorHandler.convertErrorDetailToJsonNode(
+                status.getDetailsList());
         final String expectedJsonString =
                 "[{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\"," +
                 "\"reason\":\"Unknown Exception\",\"domain\":\"test\",\"metadata\":{\"key\":\"value\"}}," +
@@ -138,8 +138,7 @@ class UnframedGrpcErrorHandlerUtilsTest {
     void shouldThrowIOException() {
         final Empty empty = Empty.getDefaultInstance();
         final Status status = Status.newBuilder().addDetails(Any.pack(empty)).build();
-        assertThatThrownBy(() -> UnframedGrpcErrorHandlerUtils.convertErrorDetailToJsonNode(
-                status.getDetailsList(), UnframedGrpcErrorHandlerUtils.getErrorDetailsMarshaller()))
-                .isInstanceOf(IOException.class);
+        assertThatThrownBy(() -> DefaultUnframedGrpcErrorHandler.convertErrorDetailToJsonNode(
+                status.getDetailsList())).isInstanceOf(IOException.class);
     }
 }
