@@ -101,6 +101,7 @@ class AnnotatedServiceResponseExchangeTypeTest {
     void responseStreaming_exchangeType(ResponseConverterFunction unused, Class<?> serviceClass)
             throws InterruptedException {
         for (Method method : serviceClass.getDeclaredMethods()) {
+            System.err.println(method);
             final boolean isResponseStreaming = method.getAnnotation(Streaming.class).value();
             final ExchangeType expected;
             if (isResponseStreaming) {
