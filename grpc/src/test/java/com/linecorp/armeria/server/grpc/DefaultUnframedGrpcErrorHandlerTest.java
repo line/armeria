@@ -43,7 +43,7 @@ import com.google.rpc.ResourceInfo;
 import com.google.rpc.RetryInfo;
 import com.google.rpc.Status;
 
-class UnframedGrpcErrorHandlerUtilsTest {
+class DefaultUnframedGrpcErrorHandlerTest {
 
     @Test
     void convertErrorDetailToJsonNodeTest() throws IOException {
@@ -115,22 +115,72 @@ class UnframedGrpcErrorHandlerUtilsTest {
         final JsonNode jsonNode = DefaultUnframedGrpcErrorHandler.convertErrorDetailToJsonNode(
                 status.getDetailsList());
         final String expectedJsonString =
-                "[{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\"," +
-                "\"reason\":\"Unknown Exception\",\"domain\":\"test\",\"metadata\":{\"key\":\"value\"}}," +
-                "{\"@type\":\"type.googleapis.com/google.rpc.RetryInfo\",\"retryDelay\":\"100s\"}," +
-                "{\"@type\":\"type.googleapis.com/google.rpc.DebugInfo\"," +
-                "\"stackEntries\":[\"stack1\",\"stack2\"],\"detail\":\"debug info\"}," +
-                "{\"@type\":\"type.googleapis.com/google.rpc.QuotaFailure\"," +
-                "\"violations\":[{\"description\":\"quota\"}]}," +
-                "{\"@type\":\"type.googleapis.com/google.rpc.PreconditionFailure\"," +
-                "\"violations\":[{\"description\":\"violation\"}]}," +
-                "{\"@type\":\"type.googleapis.com/google.rpc.BadRequest\"," +
-                "\"fieldViolations\":[{\"description\":\"field violation\"}]}," +
-                "{\"@type\":\"type.googleapis.com/google.rpc.RequestInfo\",\"requestId\":\"requestid\"}," +
-                "{\"@type\":\"type.googleapis.com/google.rpc.ResourceInfo\",\"description\":\"description\"}," +
-                "{\"@type\":\"type.googleapis.com/google.rpc.Help\"," +
-                "\"links\":[{\"description\":\"descrption\"}]}," +
-                "{\"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\"message\":\"message\"}]";
+                "[\n" +
+                "  {\n" +
+                "    \"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\",\n" +
+                "    \"reason\":\"Unknown Exception\",\n" +
+                "    \"domain\":\"test\",\n" +
+                "    \"metadata\":{\n" +
+                "      \"key\":\"value\"\n" +
+                "    }\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"@type\":\"type.googleapis.com/google.rpc.RetryInfo\",\n" +
+                "    \"retryDelay\":\"100s\"\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"@type\":\"type.googleapis.com/google.rpc.DebugInfo\",\n" +
+                "    \"stackEntries\":[\n" +
+                "      \"stack1\",\n" +
+                "      \"stack2\"\n" +
+                "    ],\n" +
+                "    \"detail\":\"debug info\"\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"@type\":\"type.googleapis.com/google.rpc.QuotaFailure\",\n" +
+                "    \"violations\":[\n" +
+                "      {\n" +
+                "        \"description\":\"quota\"\n" +
+                "      }\n" +
+                "    ]\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"@type\":\"type.googleapis.com/google.rpc.PreconditionFailure\",\n" +
+                "    \"violations\":[\n" +
+                "      {\n" +
+                "        \"description\":\"violation\"\n" +
+                "      }\n" +
+                "    ]\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"@type\":\"type.googleapis.com/google.rpc.BadRequest\",\n" +
+                "    \"fieldViolations\":[\n" +
+                "      {\n" +
+                "        \"description\":\"field violation\"\n" +
+                "      }\n" +
+                "    ]\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"@type\":\"type.googleapis.com/google.rpc.RequestInfo\",\n" +
+                "    \"requestId\":\"requestid\"\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"@type\":\"type.googleapis.com/google.rpc.ResourceInfo\",\n" +
+                "    \"description\":\"description\"\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"@type\":\"type.googleapis.com/google.rpc.Help\",\n" +
+                "    \"links\":[\n" +
+                "      {\n" +
+                "        \"description\":\"descrption\"\n" +
+                "      }\n" +
+                "    ]\n" +
+                "  },\n" +
+                "  {\n" +
+                "    \"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\n" +
+                "    \"message\":\"message\"\n" +
+                "  }\n" +
+                "]";
         assertThatJson(jsonNode).isEqualTo(expectedJsonString);
     }
 
