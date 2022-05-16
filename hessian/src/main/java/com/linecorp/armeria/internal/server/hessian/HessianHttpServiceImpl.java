@@ -56,7 +56,7 @@ import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.hessian.HessianFaultException;
-import com.linecorp.armeria.internal.common.hessian.HessianFunction;
+import com.linecorp.armeria.internal.common.hessian.HessianMethod;
 import com.linecorp.armeria.internal.common.hessian.HessianNoSuchMethodException;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.HttpResponseException;
@@ -72,7 +72,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 
 /**
- * An {@link HttpService} that handles a Thrift call.
+ * An {@link HttpService} that handles a Hessian method call.
  *
  */
 public final class HessianHttpServiceImpl
@@ -91,7 +91,7 @@ public final class HessianHttpServiceImpl
 
     private final SerializationFormat defaultSerializationFormat;
 
-    private final BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
+    private final BiFunction<? super ServiceRequestContext, ? super Throwable, @Nullable ? extends RpcResponse>
             exceptionHandler;
 
     private final Set<Route> routes;
@@ -127,7 +127,7 @@ public final class HessianHttpServiceImpl
     }
 
     @Override
-    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+    public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
         if (req.method() != HttpMethod.POST) {
             return HttpResponse.of(HttpStatus.METHOD_NOT_ALLOWED);
         }
@@ -144,9 +144,9 @@ public final class HessianHttpServiceImpl
                                    ACCEPT_HESSIAN_PROTOCOL_MUST_MATCH_CONTENT_TYPE);
         }
 
-        if (hessianService.hessianServiceMetadataOfPath(req.path()) == null) {
+        if (hessianService.hessianServiceMetadataOfPath(ctx.mappedPath()) == null) {
             // should not reach here.
-            logger.error("{} not found. But should not reach here.", req.path());
+            logger.error("{} not found. But should not reach here.", req.path()); //NOSONAR
             return HttpResponse.of(HttpStatus.NOT_FOUND, MediaType.PLAIN_TEXT_UTF_8,
                                    req.path() + " not found.");
         }
@@ -202,17 +202,15 @@ public final class HessianHttpServiceImpl
 
         final RpcRequest decodedReq;
         @Nullable
-        final HessianServiceMetadata metadata = hessianService.hessianServiceMetadataOfPath(req.path());
+        final HessianServiceMetadata metadata = hessianService.hessianServiceMetadataOfPath(ctx.mappedPath());
         assert metadata != null;
         AbstractHessianInput in = null;
         final HeaderType headerType;
         try (HttpData content = req.content()) {
-            final InputStream inputStream = content.toInputStream();
-            final InputStream isToUse = inputStream;
+            final InputStream isToUse = content.toInputStream();
 
             // step1: read header
             try {
-                // todo add debug support?
                 headerType = readHeaderType(isToUse);
             } catch (Exception e) {
                 logger.debug("{} Failed to decode a {} header:", ctx, serializationFormat, e);
@@ -251,16 +249,16 @@ public final class HessianHttpServiceImpl
                 if ("_hessian_getAttribute".equals(methodName)) {
                     final String attrName = in.readString();
                     in.completeCall();
-                    decodedReq = new HessianRpcRequest(metadata.interfaces(), null, methodName, metadata,
+                    decodedReq = new HessianRpcRequest(metadata.serviceType(), null, methodName, metadata,
                                                        attrName);
                 } else {
                     @Nullable
-                    final HessianFunction func = metadata.function(methodName);
-                    if (func == null) {
+                    final HessianMethod hessianMethod = metadata.method(methodName);
+                    if (hessianMethod == null) {
                         throw new HessianNoSuchMethodException(
                                 "The service has no method named: " + methodName);
                     }
-                    final Class<?>[] args = func.getMethod().getParameterTypes();
+                    final Class<?>[] args = hessianMethod.getMethod().getParameterTypes();
 
                     if (argLength != args.length && argLength >= 0) {
                         throw new HessianNoSuchMethodException(
@@ -273,7 +271,7 @@ public final class HessianHttpServiceImpl
                         values[i] = in.readObject(args[i]);
                     }
 
-                    decodedReq = new HessianRpcRequest(metadata.interfaces(), null, methodName, metadata,
+                    decodedReq = new HessianRpcRequest(metadata.serviceType(), null, methodName, metadata,
                                                        values);
                 }
                 ctx.logBuilder().requestContent(decodedReq, null);
@@ -287,8 +285,7 @@ public final class HessianHttpServiceImpl
                         logger.error("close hessian input error:", ex);
                     }
                 }
-                handlePreDecodeException(ctx, httpRes, e, serializationFormat, headerType, serializerFactory
-                );
+                handlePreDecodeException(ctx, httpRes, e, serializationFormat, headerType, serializerFactory);
                 return;
             }
         } finally {
@@ -298,8 +295,8 @@ public final class HessianHttpServiceImpl
         invoke(ctx, serializationFormat, decodedReq, httpRes, in, headerType);
     }
 
-    // logic copy from spring hessian.
-    private HeaderType readHeaderType(InputStream isToUse) throws IOException {
+    // read the header.
+    private static HeaderType readHeaderType(InputStream isToUse) throws IOException {
         final int code = isToUse.read();
         final int major = isToUse.read();
         final int minor = isToUse.read();
@@ -343,7 +340,7 @@ public final class HessianHttpServiceImpl
                     logger.error("Close hessian input error:", ex);
                 }
             }
-            handleException(ctx, res, serializationFormat, headerType, call.method(), cause);
+            handleException(ctx, res, serializationFormat, headerType, cause);
             return;
         }
 
@@ -358,16 +355,14 @@ public final class HessianHttpServiceImpl
             }
 
             if (cause != null) {
-                handleException(ctx, res, serializationFormat, headerType, call.method(), cause);
+                handleException(ctx, res, serializationFormat, headerType, cause);
                 return null;
             }
 
             try {
-                handleSuccess(ctx, reply, res, serializationFormat, headerType, serializerFactory,
-                              call.method(),
-                              result);
+                handleSuccess(ctx, res, serializationFormat, headerType, serializerFactory, result);
             } catch (Throwable t) {
-                handleException(ctx, res, serializationFormat, headerType, call.method(), t);
+                handleException(ctx, res, serializationFormat, headerType, t);
                 return null;
             }
 
@@ -375,29 +370,27 @@ public final class HessianHttpServiceImpl
         }).exceptionally(CompletionActions::log);
     }
 
-    private static void handleSuccess(ServiceRequestContext ctx, RpcResponse rpcRes,
+    private static void handleSuccess(ServiceRequestContext ctx,
                                       CompletableFuture<HttpResponse> httpRes,
                                       SerializationFormat serializationFormat, HeaderType headerType,
-                                      SerializerFactory serializerFactory, String methodName,
+                                      SerializerFactory serializerFactory,
                                       Object returnValue) {
         respond(serializationFormat,
-                encodeSuccess(ctx, rpcRes, serializationFormat, headerType, serializerFactory, methodName,
+                encodeSuccess(ctx, headerType, serializerFactory,
                               returnValue),
                 httpRes);
     }
 
     private void handleException(ServiceRequestContext ctx, CompletableFuture<HttpResponse> res,
                                  SerializationFormat serializationFormat, HeaderType headerType,
-                                 String methodName, Throwable cause) {
+                                 Throwable cause) {
         final RpcResponse response = handleException(ctx, cause);
         response.handle((result, convertedCause) -> {
             if (convertedCause != null) {
-                handleException(ctx, response, res, serializationFormat, headerType, serializerFactory,
-                                methodName,
+                handleException(ctx, res, serializationFormat, headerType, serializerFactory,
                                 convertedCause);
             } else {
-                handleSuccess(ctx, response, res, serializationFormat, headerType, serializerFactory,
-                              methodName,
+                handleSuccess(ctx, res, serializationFormat, headerType, serializerFactory,
                               result);
             }
             return null;
@@ -415,10 +408,10 @@ public final class HessianHttpServiceImpl
         return res;
     }
 
-    private static void handleException(ServiceRequestContext ctx, RpcResponse rpcRes,
+    private static void handleException(ServiceRequestContext ctx,
                                         CompletableFuture<HttpResponse> httpRes,
                                         SerializationFormat serializationFormat, HeaderType headerType,
-                                        SerializerFactory serializerFactory, String methodName,
+                                        SerializerFactory serializerFactory,
                                         Throwable cause) {
 
         if (cause instanceof HttpStatusException) {
@@ -433,7 +426,7 @@ public final class HessianHttpServiceImpl
 
         final HttpData content;
         try {
-            content = encodeException(ctx, rpcRes, headerType, serializerFactory,
+            content = encodeException(ctx, headerType, serializerFactory,
                                       cause);
             respond(serializationFormat, content, httpRes);
         } catch (Throwable throwable) {
@@ -447,7 +440,7 @@ public final class HessianHttpServiceImpl
                                                  HeaderType headerType,
                                                  SerializerFactory serializerFactory) {
 
-        final HttpData content = encodeException(ctx, RpcResponse.ofFailure(cause),
+        final HttpData content = encodeException(ctx,
                                                  headerType,
                                                  serializerFactory, cause);
         respond(serializationFormat, content, httpRes);
@@ -458,10 +451,10 @@ public final class HessianHttpServiceImpl
         res.complete(HttpResponse.of(HttpStatus.OK, serializationFormat.mediaType(), content));
     }
 
-    private static HttpData encodeSuccess(ServiceRequestContext ctx, RpcResponse reply,
-                                          SerializationFormat serializationFormat, HeaderType headerType,
+    private static HttpData encodeSuccess(ServiceRequestContext ctx,
+                                          HeaderType headerType,
                                           SerializerFactory serializerFactory,
-                                          String methodName, Object value) {
+                                          Object value) {
 
         final ByteBuf buf = ctx.alloc().buffer(128);
         boolean success = false;
@@ -474,7 +467,7 @@ public final class HessianHttpServiceImpl
             final HttpData encoded = HttpData.wrap(buf);
             success = true;
             return encoded;
-        } catch (IOException e) {
+        } catch (IOException e) { // NOSONAR
             logger.error("Write hessian response error.", e);
             throw new IllegalStateException("Write hessian response error", e);
         } finally {
@@ -484,7 +477,7 @@ public final class HessianHttpServiceImpl
         }
     }
 
-    private static HttpData encodeException(ServiceRequestContext ctx, RpcResponse reply,
+    private static HttpData encodeException(ServiceRequestContext ctx,
                                             HeaderType headerType,
                                             SerializerFactory serializerFactory,
                                             Throwable cause) {
@@ -503,17 +496,17 @@ public final class HessianHttpServiceImpl
         try {
             out = hessianOutput(buf, headerType, serializerFactory);
             if (exception instanceof HessianFaultException) {
-               final HessianFaultException hfe = (HessianFaultException) exception;
+                final HessianFaultException hfe = (HessianFaultException) exception;
                 out.writeFault(hfe.getCode(), escapeMessage(hfe.getMessage()), hfe.getDetail());
             } else {
                 out.writeFault("ServiceException", escapeMessage(exception.getMessage()), exception);
             }
-            // flush, not need to close.
+            // flush, not close.
             out.flush();
             final HttpData encoded = HttpData.wrap(buf);
             success = true;
             return encoded;
-        } catch (IOException e) {
+        } catch (IOException e) { // NOSONAR
             logger.error("write hessian error response failed:", e);
             throw new IllegalStateException("Write error response failed.", e);
         } finally {

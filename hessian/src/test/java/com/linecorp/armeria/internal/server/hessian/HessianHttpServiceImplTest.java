@@ -27,9 +27,13 @@ import com.linecorp.armeria.server.hessian.HessianHttpService;
  */
 public class HessianHttpServiceImplTest extends AbstractHessianHttpServiceImplTest {
 
+    @Override
     protected HessianHttpService setupHessianHttpService() {
-        return HessianHttpService.builder().prefix("/services/").suffix(".hs").addService(new HelloServiceImp())
-                                 .addService("/helloService2", HelloService.class, new HelloServiceImp(), false)
+        return HessianHttpService.builder()
+                                 .addService("/services/helloService.hs", HelloService.class,
+                                             new HelloServiceImp())
+                                 .addService("/services/helloService2.hs", HelloService.class,
+                                             new HelloServiceImp(), false)
                                  .build();
     }
 }

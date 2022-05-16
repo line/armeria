@@ -16,7 +16,7 @@
 package com.linecorp.armeria.internal.common.hessian;
 
 /**
- * Hessian for NoSuchMethodException hessian exception.
+ *  NoSuchMethodException hessian exception.
  *
  * @author eisig
  */

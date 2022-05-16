@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.internal.client.hessian;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -155,7 +157,7 @@ public class HessianClientFactory extends DecoratingClientFactory {
             throw new HessianRuntimeException(url + " has an unknown api.");
         }
 
-      final   Class<?> apiClass = Class.forName(apiClassName, false, classLoader);
+        final Class<?> apiClass = Class.forName(apiClassName, false, classLoader);
 
         return create(apiClass, url);
     }
@@ -191,7 +193,7 @@ public class HessianClientFactory extends DecoratingClientFactory {
      * @return a proxy to the object with the specified interface.
      */
     public <T> T create(Class<T> api, String urlName, ClassLoader loader) {
-     final    URI url;
+        final URI url;
 
         try {
             url = new URI(urlName);
@@ -216,9 +218,7 @@ public class HessianClientFactory extends DecoratingClientFactory {
      */
     @SuppressWarnings("unchecked")
     public <T> T create(Class<T> api, URI url, ClassLoader ignored) {
-        if (api == null) {
-            throw new NullPointerException("api must not be null for HessianProxyFactory.create()");
-        }
+        requireNonNull(api, "api");
         url = ensureHessianSchema(url);
         return (T) newClient(ClientBuilderParams.of(url, api, ClientOptions.of()));
     }
@@ -258,7 +258,7 @@ public class HessianClientFactory extends DecoratingClientFactory {
     public AbstractHessianInput getHessian1Input(InputStream is, ClientOptions options) {
         final AbstractHessianInput in;
 
-        if (options.get(HessianClientOptions.DEBUG)) {
+        if (options.get(HessianClientOptions.DEBUG).booleanValue()) {
             is = new HessianDebugInputStream(is, new PrintWriter(System.out));
         }
 
@@ -274,7 +274,7 @@ public class HessianClientFactory extends DecoratingClientFactory {
     public AbstractHessianInput getHessian2Input(InputStream is, ClientOptions options) {
         final AbstractHessianInput in;
 
-        if (options.get(HessianClientOptions.DEBUG)) {
+        if (options.get(HessianClientOptions.DEBUG).booleanValue()) {
             is = new HessianDebugInputStream(is, new PrintWriter(System.out));
         }
 
@@ -290,13 +290,13 @@ public class HessianClientFactory extends DecoratingClientFactory {
     public AbstractHessianOutput getHessianOutput(OutputStream os, ClientOptions options) {
         final AbstractHessianOutput out;
 
-        if (options.get(HessianClientOptions.HESSIAN2_REQUEST)) {
+        if (options.get(HessianClientOptions.HESSIAN2_REQUEST).booleanValue()) {
             out = new Hessian2Output(os);
         } else {
-          final   HessianOutput out1 = new HessianOutput(os);
+            final HessianOutput out1 = new HessianOutput(os);
             out = out1;
 
-            if (options.get(HessianClientOptions.HESSIAN2_REPLY)) {
+            if (options.get(HessianClientOptions.HESSIAN2_REPLY).booleanValue()) {
                 out1.setVersion(2);
             }
         }
@@ -310,10 +310,10 @@ public class HessianClientFactory extends DecoratingClientFactory {
 
         @Override
         public Object lookup(String type, String url) throws IOException {
-         final    ClassLoader loader = Thread.currentThread().getContextClassLoader();
+            final ClassLoader loader = Thread.currentThread().getContextClassLoader();
 
             try {
-             final    Class<?> api = Class.forName(type, false, loader);
+                final Class<?> api = Class.forName(type, false, loader);
 
                 return create(api, url);
             } catch (Exception e) {

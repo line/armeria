@@ -31,7 +31,7 @@ import com.linecorp.armeria.hessian.service.HelloService;
 class UpstreamHessian1ClientTest extends AbstractHessianServerTest {
 
     @Override
-    HelloService helloService() {
+    HelloService serviceCleinht() {
         final HessianProxyFactory factory = new HessianProxyFactory();
         try {
             return (HelloService) factory.create(HelloService.class,
@@ -43,7 +43,7 @@ class UpstreamHessian1ClientTest extends AbstractHessianServerTest {
     }
 
     @Override
-    HelloService helloServiceCreateWithUrl() {
+    HelloService serviceClientWithoutClass() {
         final HessianProxyFactory factory = new HessianProxyFactory();
         try {
             return (HelloService) factory.create(

@@ -29,21 +29,17 @@ public interface HelloService {
 
     String sayHelloStr(String str);
 
-    HelloResponse sayHello2(
-            HelloRequest request);
+    HelloResponse sayHello2(HelloRequest request);
 
     InputStream replySteam(HelloRequest request);
 
-    HelloResponse delaySayHello(
-            HelloRequest request);
+    HelloResponse delaySayHello(HelloRequest request);
 
-    HelloResponse failedSayHello(
-            HelloRequest request);
+    HelloResponse failedSayHello(HelloRequest request);
 
     SequenceResponse seq(SequenceRequest request);
 
-    HelloResponse largeResponse(
-            HelloRequest request);
+    HelloResponse largeResponse(HelloRequest request);
 
     String threadName();
 }

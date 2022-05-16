@@ -22,8 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.annotation.Nonnull;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,13 +55,13 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.common.hessian.HessianFunction;
+import com.linecorp.armeria.internal.common.hessian.HessianMethod;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 
 /**
- * 实现rpc的http调用.
+ * hessian rpc client.
  *
  */
 final class HessianHttpClientDelegate
@@ -104,14 +102,14 @@ final class HessianHttpClientDelegate
         ctx.logBuilder().serializationFormat(serializationFormat);
 
         @Nullable
-        final HessianFunction func;
+        final HessianMethod func;
         try {
-            func = metadata(call.serviceType()).function(method);
+            func = metadata(call.serviceType()).method(method);
             if (func == null) {
                 throw new IllegalArgumentException("Hessian method not found: " + method);
             }
         } catch (Throwable cause) {
-            // not call hessian, need cast to hessian exceptions.
+            // not call hessian, do not need to cast to hessian exceptions.
             reply.completeExceptionally(cause);
             return reply;
         }
@@ -121,7 +119,7 @@ final class HessianHttpClientDelegate
 
             try {
                 try (ByteBufOutputStream os = new ByteBufOutputStream(buf)) {
-                  final  AbstractHessianOutput out = factory.getHessianOutput(os, options);
+                    final AbstractHessianOutput out = factory.getHessianOutput(os, options);
                     out.call(method, args.toArray());
                     out.flush();
                 }
@@ -134,12 +132,16 @@ final class HessianHttpClientDelegate
             @Nullable
             final Endpoint endpoint = ctx.endpoint();
 
-            final HttpRequest httpReq =
-                    HttpRequest.of(RequestHeaders.builder(HttpMethod.POST, ctx.path())
-                                                 .scheme(ctx.sessionProtocol()).authority(
-                                                   endpoint != null ? endpoint.authority() : "UNKNOWN")
-                                                 .contentType(mediaType).build(),
-                                   HttpData.wrap(buf).withEndOfStream());
+            final HttpRequest httpReq = HttpRequest.of(
+                    RequestHeaders.builder(HttpMethod.POST, ctx.path())
+                                  .scheme(ctx.sessionProtocol()).authority(
+                                          endpoint != null ? endpoint.authority() : "UNKNOWN")
+                                  .contentType(mediaType)
+                                  // X-Hessian-* not standard header.
+                                  .set("X-Hessian-Service", call.serviceName())
+                                  .set("X-Hessian-Method", call.method())
+                                  .build(),
+                    HttpData.wrap(buf).withEndOfStream());
 
             ctx.updateRequest(httpReq);
             ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT);
@@ -192,7 +194,7 @@ final class HessianHttpClientDelegate
                                            type -> new HessianServiceClientMetadata(type, isOverloadEnabled()));
     }
 
-    private void handle(ClientRequestContext ctx, CompletableRpcResponse reply, HessianFunction func,
+    private void handle(ClientRequestContext ctx, CompletableRpcResponse reply, HessianMethod func,
                         HttpData content) throws Throwable {
 
         try {
@@ -200,7 +202,7 @@ final class HessianHttpClientDelegate
                 throw new HessianProtocolException("Missing result");
             }
 
-           final AbstractHessianInput in;
+            final AbstractHessianInput in;
             try (InputStream is = content.toInputStream()) {
                 Object value;
                 final int code = is.read();
@@ -210,7 +212,7 @@ final class HessianHttpClientDelegate
 
                     in = factory.getHessian2Input(is, options);
 
-                    value = in.readReply(func.getReturnType());
+                    value = in.readReply(func.getReturnValueType());
 
                     if (value instanceof InputStream) {
                         value = new ResultInputStream(is, in, (InputStream) value);
@@ -223,7 +225,7 @@ final class HessianHttpClientDelegate
 
                     in.startReplyBody();
 
-                    value = in.readObject(func.getReturnType());
+                    value = in.readObject(func.getReturnValueType());
 
                     if (value instanceof InputStream) {
                         value = new ResultInputStream(is, in, (InputStream) value);
@@ -262,8 +264,8 @@ final class HessianHttpClientDelegate
             return (Exception) cause;
         }
         if (cause instanceof InvalidResponseHeadersException) {
-         final    InvalidResponseHeadersException exception = (InvalidResponseHeadersException) cause;
-         final    String code = exception.headers().status().codeAsText();
+            final InvalidResponseHeadersException exception = (InvalidResponseHeadersException) cause;
+            final String code = exception.headers().status().codeAsText();
             // we do not set InvalidResponseHeadersException as rootCause here.
             return new HessianConnectionException("status code: " + code,
                                                   new RuntimeException(Exceptions.traceText(cause)));
@@ -274,9 +276,7 @@ final class HessianHttpClientDelegate
         return new HessianRuntimeException(cause);
     }
 
-    /**
-     * Hessian service返回InputStream时返回这个.
-     */
+    // TODO: streaming with input stream?
     static class ResultInputStream extends InputStream {
 
         @Nullable
@@ -288,8 +288,8 @@ final class HessianHttpClientDelegate
         @Nullable
         private InputStream hessianIs;
 
-        ResultInputStream(@Nonnull InputStream is, @Nonnull AbstractHessianInput hessianInput,
-                          @Nonnull InputStream hessianIs) {
+        ResultInputStream(InputStream is, AbstractHessianInput hessianInput,
+                          InputStream hessianIs) {
             connIs = is;
             this.hessianInput = hessianInput;
             this.hessianIs = hessianIs;
@@ -298,7 +298,7 @@ final class HessianHttpClientDelegate
         @Override
         public int read() throws IOException {
             if (hessianIs != null) {
-             final    int value = hessianIs.read();
+                final int value = hessianIs.read();
 
                 if (value < 0) {
                     close();
@@ -313,7 +313,7 @@ final class HessianHttpClientDelegate
         @Override
         public int read(byte[] buffer, int offset, int length) throws IOException {
             if (hessianIs != null) {
-             final    int value = hessianIs.read(buffer, offset, length);
+                final int value = hessianIs.read(buffer, offset, length);
 
                 if (value < 0) {
                     close();
@@ -329,16 +329,16 @@ final class HessianHttpClientDelegate
         public void close() {
 
             @Nullable
-            final InputStream connIsTemp = this.connIs;
-            this.connIs = null;
+            final InputStream connIsTemp = connIs;
+            connIs = null;
 
             @Nullable
-            final AbstractHessianInput in = this.hessianInput;
-            this.hessianInput = null;
+            final AbstractHessianInput in = hessianInput;
+            hessianInput = null;
 
             @Nullable
-            final InputStream hessianIsTemp = this.hessianIs;
-            this.hessianIs = null;
+            final InputStream hessianIsTemp = hessianIs;
+            hessianIs = null;
 
             try {
                 if (hessianIsTemp != null) {

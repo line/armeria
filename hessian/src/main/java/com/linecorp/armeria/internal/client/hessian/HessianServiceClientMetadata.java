@@ -27,7 +27,7 @@ import org.slf4j.LoggerFactory;
 import com.caucho.services.server.AbstractSkeleton;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.hessian.HessianFunction;
+import com.linecorp.armeria.internal.common.hessian.HessianMethod;
 
 /**
  * Provides the metadata of a Hessian service interface.
@@ -36,30 +36,30 @@ public final class HessianServiceClientMetadata {
     private static final Logger logger = LoggerFactory.getLogger(HessianServiceClientMetadata.class);
 
     private final boolean isOverloadEnabled;
-    private final Class<?> apiClass;
+    private final Class<?> serviceType;
 
     /**
      * A map whose key is a method name and whose value is HessianFunction.
      */
-    private final Map<String, HessianFunction> functions = new HashMap<>();
+    private final Map<String, HessianMethod> functions = new HashMap<>();
 
     private final Map<Method, String> mangleMap = new HashMap<>();
 
     /**
      * Creates a new instance from a single Hessian service interface.
      */
-    public HessianServiceClientMetadata(Class<?> apiClass) {
-        this(apiClass, false);
+    public HessianServiceClientMetadata(Class<?> serviceType) {
+        this(serviceType, false);
     }
 
     /**
      * Creates a new instance from a single Hessian service interface.
      */
-    public HessianServiceClientMetadata(Class<?> apiClass, boolean isOverloadEnabled) {
-        requireNonNull(apiClass, "apiClass");
+    public HessianServiceClientMetadata(Class<?> serviceType, boolean isOverloadEnabled) {
+        requireNonNull(serviceType, "apiClass");
         this.isOverloadEnabled = isOverloadEnabled;
-        this.apiClass = apiClass;
-        init(apiClass);
+        this.serviceType = serviceType;
+        init(serviceType);
     }
 
     private void init(Class<?> apiClass) {
@@ -73,8 +73,8 @@ public final class HessianServiceClientMetadata {
                 logger.warn("duplicate Hessian method name: {}", name);
                 continue;
             }
-            final HessianFunction
-                    function = HessianFunction.of(apiClass, method, name, null);
+            final HessianMethod
+                    function = HessianMethod.of(apiClass, method, name, null);
             functions.put(name, function);
             mangleMap.put(method, name);
         }
@@ -82,7 +82,6 @@ public final class HessianServiceClientMetadata {
         if (functions.isEmpty()) {
             throw new IllegalArgumentException("not a Hessian service interface: " + apiClass);
         }
-
     }
 
     private String methodName(Method method) {
@@ -102,12 +101,12 @@ public final class HessianServiceClientMetadata {
     /**
      * Returns the Hessian service interfaces.
      */
-    public Class<?> apiClass() {
-        return apiClass;
+    public Class<?> serviceType() {
+        return serviceType;
     }
 
     @Nullable
-    public HessianFunction function(String method) {
+    public HessianMethod method(String method) {
         return functions.get(method);
     }
 

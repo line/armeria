@@ -39,8 +39,8 @@ import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.hessian.HessianFunction;
-import com.linecorp.armeria.internal.common.hessian.HessianFunction.ResponseType;
+import com.linecorp.armeria.internal.common.hessian.HessianMethod;
+import com.linecorp.armeria.internal.common.hessian.HessianMethod.ResponseType;
 
 final class HessianHttpClientInvocationHandler extends AbstractUnwrappable<HessianClient>
         implements InvocationHandler, ClientBuilderParams {
@@ -103,7 +103,8 @@ final class HessianHttpClientInvocationHandler extends AbstractUnwrappable<Hessi
     @Nullable
     @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
-        @Nullable final String mangleName;
+        @Nullable
+        final String mangleName;
 
         mangleName = metadata(params.clientType()).mangleName(method);
 
@@ -150,7 +151,7 @@ final class HessianHttpClientInvocationHandler extends AbstractUnwrappable<Hessi
             args = NO_ARGS;
         }
         @Nullable
-        final HessianFunction func = metadata(params.clientType()).function(mangleName);
+        final HessianMethod func = metadata(params.clientType()).method(mangleName);
         assert func != null;
         @Nullable
         final AsyncCallback callback;
@@ -223,6 +224,9 @@ final class HessianHttpClientInvocationHandler extends AbstractUnwrappable<Hessi
         callback.onError(throwable);
     }
 
+    /**
+     * for async return type. we only support  CompletionStage at this moment.
+     */
     interface AsyncCallback {
 
         void onSuccess(Object result);

@@ -157,7 +157,6 @@ final class HessianRpcRequest implements RpcRequest {
      * Returns the simplified name of the {@link #serviceType()}.
      */
     private String simpleServiceName() {
-        final Class<?> serviceType = serviceType();
         final String fqcn = serviceType.getName();
         final int lastDot = fqcn.lastIndexOf('.');
         return lastDot < 0 ? fqcn : fqcn.substring(lastDot + 1);

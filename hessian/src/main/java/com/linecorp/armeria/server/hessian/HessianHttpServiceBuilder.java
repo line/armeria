@@ -72,11 +72,11 @@ public final class HessianHttpServiceBuilder {
     }
 
     /**
-     * 增加服务.
-     * @param path 路径。
-     * @param apiClass hessian的api
-     * @param implementation hessian的实现
-     * @param blocking 是否非阻塞的实现
+     * Add a hessian service.
+     * @param path service path.
+     * @param apiClass hessian api.
+     * @param implementation hessian implementation.
+     * @param blocking blocking or not.
      */
     public HessianHttpServiceBuilder addService(String path, Class<?> apiClass, Object implementation,
                                                 boolean blocking) {
@@ -88,10 +88,10 @@ public final class HessianHttpServiceBuilder {
     }
 
     /**
-     * 增加服务.
-     * @param path 路径。
-     * @param apiClass hessian的api
-     * @param implementation hessian的实现
+     * Add a hessian service.
+     * @param path service path.
+     * @param apiClass hessian api.
+     * @param implementation hessian implementation.
      */
     public HessianHttpServiceBuilder addService(String path, Class<?> apiClass, Object implementation) {
         return addService(path, apiClass, implementation, true);

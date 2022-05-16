@@ -49,36 +49,34 @@ abstract class AbstractHessianServerTest {
     static HessianHttpService setupHessianHttpService() {
         return HessianHttpService.builder()
                                  .addService("/helloService.hs", HelloService.class, new HelloServiceImp())
-                                 .addService("/helloService2.hs", HelloService.class, new HelloServiceImp(),
-                                             false)
                                  .build();
     }
 
     @Test
     void testSayHello() {
-        final String reply = helloService().sayHello();
+        final String reply = serviceCleinht().sayHello();
         assertThat(reply).isEqualTo("Hello");
     }
 
     @Test
     void testSayHello2() {
-        final HelloResponse reply = helloService().sayHello2(new HelloRequest("JJ"));
-        assertThat(reply).isEqualTo(new HelloResponse("Hello JJ"));
+        final HelloResponse reply = serviceCleinht().sayHello2(new HelloRequest("Armeria"));
+        assertThat(reply).isEqualTo(new HelloResponse("Hello Armeria"));
     }
 
     @Test
     void testServerImplError() {
-        assertThatThrownBy(() -> helloService().failedSayHello(new HelloRequest("JJ")))
+        assertThatThrownBy(() -> serviceCleinht().failedSayHello(new HelloRequest("Armeria")))
                 .isInstanceOf(DemoException.class);
     }
 
     @Test
-    void testServerWithUrl() {
-        final HelloResponse reply = helloServiceCreateWithUrl().sayHello2(new HelloRequest("JJ"));
-        assertThat(reply).isEqualTo(new HelloResponse("Hello JJ"));
+    void testCreateWithoutClass() {
+        final HelloResponse reply = serviceClientWithoutClass().sayHello2(new HelloRequest("Armeria"));
+        assertThat(reply).isEqualTo(new HelloResponse("Hello Armeria"));
     }
 
-    abstract HelloService helloService();
+    abstract HelloService serviceCleinht();
 
-    abstract HelloService helloServiceCreateWithUrl();
+    abstract HelloService serviceClientWithoutClass();
 }

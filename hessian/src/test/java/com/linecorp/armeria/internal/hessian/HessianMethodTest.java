@@ -33,15 +33,15 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 import com.google.common.util.concurrent.ListenableFuture;
 
-import com.linecorp.armeria.internal.common.hessian.HessianFunction;
-import com.linecorp.armeria.internal.common.hessian.HessianFunction.ResponseType;
+import com.linecorp.armeria.internal.common.hessian.HessianMethod;
+import com.linecorp.armeria.internal.common.hessian.HessianMethod.ResponseType;
 
 /**
  * test function parser.
  *
  * @author eisig
  */
-class HessianFunctionTest {
+class HessianMethodTest {
 
     private static final Map<String, Method> methodMap = new HashMap<>();
 
@@ -56,45 +56,45 @@ class HessianFunctionTest {
     @ParameterizedTest
     @ValueSource(strings = { "fun1", "fun2" })
     void testParseSync(String name) {
-        final HessianFunction fun1 = HessianFunction.of(DemoService.class, methodMap.get(name), name, null);
+        final HessianMethod fun1 = HessianMethod.of(DemoService.class, methodMap.get(name), name, null);
         assertThat(fun1).hasFieldOrPropertyWithValue("responseType", ResponseType.OTHER_OBJECTS);
         if ("fun1".equals(name)) {
-            assertThat(fun1).hasFieldOrPropertyWithValue("returnType", String.class);
+            assertThat(fun1).hasFieldOrPropertyWithValue("returnValueType", String.class);
         } else {
-            assertThat(fun1).hasFieldOrPropertyWithValue("returnType", Object.class);
+            assertThat(fun1).hasFieldOrPropertyWithValue("returnValueType", Object.class);
         }
     }
 
     @ParameterizedTest
     @ValueSource(strings = { "listenableFun" })
     void testListenableFuture(String name) {
-        final HessianFunction fun1 = HessianFunction.of(DemoService.class, methodMap.get(name), name, null);
+        final HessianMethod fun1 = HessianMethod.of(DemoService.class, methodMap.get(name), name, null);
         assertThat(fun1).hasFieldOrPropertyWithValue("responseType", ResponseType.OTHER_OBJECTS)
-                        .hasFieldOrPropertyWithValue("returnType", ListenableFuture.class);
+                        .hasFieldOrPropertyWithValue("returnValueType", ListenableFuture.class);
     }
 
     @ParameterizedTest
     @ValueSource(strings = { "asyncFun2", "asyncFun3" })
     void testAsync(String name) {
-        final HessianFunction fun1 = HessianFunction.of(DemoService.class, methodMap.get(name), name, null);
+        final HessianMethod fun1 = HessianMethod.of(DemoService.class, methodMap.get(name), name, null);
         assertThat(fun1).hasFieldOrPropertyWithValue("responseType", ResponseType.COMPLETION_STAGE)
-                        .hasFieldOrPropertyWithValue("returnType", DemoResponse.class);
+                        .hasFieldOrPropertyWithValue("returnValueType", DemoResponse.class);
     }
 
     @Test
     void testNested() {
         final String name = "nested";
-        final HessianFunction fun1 = HessianFunction.of(DemoService.class, methodMap.get(name), name, null);
+        final HessianMethod fun1 = HessianMethod.of(DemoService.class, methodMap.get(name), name, null);
         assertThat(fun1).hasFieldOrPropertyWithValue("responseType", ResponseType.COMPLETION_STAGE)
-                        .hasFieldOrPropertyWithValue("returnType", List.class);
+                        .hasFieldOrPropertyWithValue("returnValueType", List.class);
     }
 
     @Test
     void testNested2() {
         final String name = "nested2";
-        final HessianFunction fun1 = HessianFunction.of(DemoService.class, methodMap.get(name), name, null);
+        final HessianMethod fun1 = HessianMethod.of(DemoService.class, methodMap.get(name), name, null);
         assertThat(fun1).hasFieldOrPropertyWithValue("responseType", ResponseType.OTHER_OBJECTS)
-                        .hasFieldOrPropertyWithValue("returnType", List.class);
+                        .hasFieldOrPropertyWithValue("returnValueType", List.class);
     }
 
     interface DemoService {

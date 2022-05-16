@@ -26,19 +26,19 @@ import com.caucho.services.server.AbstractSkeleton;
 import com.google.common.base.Preconditions;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.hessian.HessianFunction;
+import com.linecorp.armeria.internal.common.hessian.HessianMethod;
 
 /**
  * Provides the metadata of a Hessian service implementation.
  */
 public final class HessianServiceMetadata {
 
-    private final Class<?> apiInterface;
+    private final Class<?> serviceType;
 
     /**
      * A map whose key is a method name and whose value is HessianFunction.
      */
-    private final Map<String, HessianFunction> functions = new HashMap<>();
+    private final Map<String, HessianMethod> methods = new HashMap<>();
 
     private final boolean blocking;
 
@@ -53,11 +53,11 @@ public final class HessianServiceMetadata {
      * Creates a new instance from a single Hessian service interface.
      */
     public HessianServiceMetadata(Class<?> serviceType, Object implementation, boolean blocking) {
-        requireNonNull(serviceType, "serviceType");
+        requireNonNull(serviceType, "apiClass");
         requireNonNull(implementation, "implementation");
         Preconditions.checkArgument(serviceType.isInstance(implementation),
                                     implementation.getClass() + " not instance of " + serviceType.getName());
-        apiInterface = serviceType;
+        this.serviceType = serviceType;
         this.blocking = blocking;
         init(implementation, serviceType);
     }
@@ -70,19 +70,19 @@ public final class HessianServiceMetadata {
         final Method[] methodList = serviceTypes.getMethods();
 
         for (Method method : methodList) {
-            final HessianFunction function = HessianFunction.of(serviceTypes, method, method.getName(),
-                                                                implementation,
-                                                                blocking);
+            final HessianMethod hessianMethod = HessianMethod.of(serviceTypes, method, method.getName(),
+                                                            implementation,
+                                                            blocking);
 
-            functions.putIfAbsent(method.getName(), function);
+            methods.putIfAbsent(method.getName(), hessianMethod);
 
             final Class<?>[] param = method.getParameterTypes();
             final String mangledName = method.getName() + "__" + param.length;
-            functions.put(mangledName, function);
-            functions.put(mangleName0(method), function);
+            methods.put(mangledName, hessianMethod);
+            methods.put(mangleName0(method), hessianMethod);
         }
 
-        if (functions.isEmpty()) {
+        if (methods.isEmpty()) {
             throw new IllegalArgumentException(
                     '\'' + implementation.getClass().getName() + "' is not a Hessian service implementation.");
         }
@@ -102,12 +102,12 @@ public final class HessianServiceMetadata {
     /**
      * Returns the Hessian service interfaces implemented.
      */
-    public Class<?> interfaces() {
-        return apiInterface;
+    public Class<?> serviceType() {
+        return serviceType;
     }
 
     @Nullable
-    public HessianFunction function(String method) {
-        return functions.get(method);
+    public HessianMethod method(String method) {
+        return methods.get(method);
     }
 }

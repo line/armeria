@@ -19,8 +19,6 @@ package com.linecorp.armeria.it.client;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.concurrent.ExecutionException;
-
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
@@ -35,7 +33,7 @@ import com.linecorp.armeria.hessian.service.HelloResponse;
 import com.linecorp.armeria.hessian.service.HelloServiceFutureStub;
 
 /**
- * test send and receive.
+ * test async api with spring mvc server.
  *
  * @author eisig
  */
@@ -45,20 +43,21 @@ import com.linecorp.armeria.hessian.service.HelloServiceFutureStub;
 class AsyncClientTest {
 
     @Autowired
-    private ServletWebServerApplicationContext webServerAppCtxt;
+    private ServletWebServerApplicationContext webServerAppCtx;
 
     private int servicePort() {
-        return webServerAppCtxt.getWebServer().getPort();
+        return webServerAppCtx.getWebServer().getPort();
     }
 
     @Test
-    void testSend() throws ExecutionException, InterruptedException {
+    void testSend() throws Exception {
         final HelloServiceFutureStub helloService = helloService("/services/helloService.hs");
         final String response = helloService.sayHello().join();
         assertThat(response).isEqualTo("Hello");
-        final HelloResponse response2 = helloService.sayHello2(new HelloRequest("Jack")).toCompletableFuture()
+        final HelloResponse response2 = helloService.sayHello2(new HelloRequest("Hessian"))
+                                                    .toCompletableFuture()
                                                     .join();
-        assertThat(response2.getMessage()).isEqualTo("Hello Jack");
+        assertThat(response2.getMessage()).isEqualTo("Hello Hessian");
     }
 
     @Test

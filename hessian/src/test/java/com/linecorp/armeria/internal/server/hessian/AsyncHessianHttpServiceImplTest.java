@@ -39,16 +39,18 @@ import com.linecorp.armeria.server.hessian.HessianHttpService;
  */
 public class AsyncHessianHttpServiceImplTest extends AbstractHessianHttpServiceImplTest {
 
+    @Override
     protected HessianHttpService setupHessianHttpService() {
         return HessianHttpService.builder()
-                                 .addService("/helloService.hs", AsyncHelloService.class,
+                                 .addService("/services/helloService.hs", AsyncHelloService.class,
                                              new AsyncHelloServiceImp())
-                                 .addService("/helloService2.hs", AsyncHelloService.class,
+                                 .addService("/services/helloService2.hs", AsyncHelloService.class,
                                              new AsyncHelloServiceImp(), false).build();
     }
 
     @ParameterizedTest
     @ValueSource(strings = { "java.api.class", "java.home.class", "java.object.class" })
+    @Override
     void testAttributeRequest(String attrName) throws Throwable {
         // Given
         final byte[] data = requestData(HeaderType.HESSIAN_2, "_hessian_getAttribute", attrName);

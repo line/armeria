@@ -1,4 +1,3 @@
-package com.linecorp.armeria.it.server;
 /*
  * Copyright 2021 LINE Corporation
  *
@@ -14,6 +13,7 @@ package com.linecorp.armeria.it.server;
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+package com.linecorp.armeria.it.server;
 
 import java.net.MalformedURLException;
 
@@ -23,14 +23,14 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.hessian.service.HelloService;
 
 /**
- * test with upstream.
+ * test with upstream client.
  *
  * @author eisig
  */
 public class UpstreamClientTest extends AbstractHessianServerTest {
 
     @Override
-    HelloService helloService() {
+    HelloService serviceCleinht() {
         final HessianProxyFactory factory = new HessianProxyFactory();
         factory.setHessian2Request(true);
         try {
@@ -43,7 +43,7 @@ public class UpstreamClientTest extends AbstractHessianServerTest {
     }
 
     @Override
-    HelloService helloServiceCreateWithUrl() {
+    HelloService serviceClientWithoutClass() {
         final HessianProxyFactory factory = new HessianProxyFactory();
         factory.setHessian2Request(true);
         try {

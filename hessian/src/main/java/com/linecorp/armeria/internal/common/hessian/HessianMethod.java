@@ -17,16 +17,18 @@ package com.linecorp.armeria.internal.common.hessian;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
- * hessian 方法的客户端和服务端的信息.
+ * hessian method metadata.
  *
  * @author eisig
  */
-public class HessianFunction {
+public class HessianMethod {
 
     private final String name;
 
@@ -34,10 +36,7 @@ public class HessianFunction {
 
     private final Method method;
 
-    /**
-     * 返回值的类型。 如果返回的Future<?> 这里是Future的参数类型.
-     */
-    private final Class<?> returnType;
+    private final Class<?> returnValueType;
 
     @Nullable
     private final Object implementation;
@@ -46,39 +45,36 @@ public class HessianFunction {
 
     private final boolean blocking;
 
-    HessianFunction(String name, Class<?> serviceType, Method method, Class<?> returnType,
-                    @Nullable Object implementation,
-                    ResponseType responseType, boolean blocking) {
+    HessianMethod(String name, Class<?> serviceType, Method method, Class<?> returnValueType,
+                  @Nullable Object implementation, ResponseType responseType, boolean blocking) {
         this.name = name;
         this.serviceType = serviceType;
         this.method = method;
-        this.returnType = returnType;
+        this.returnValueType = returnValueType;
         this.implementation = implementation;
         this.responseType = responseType;
         this.blocking = blocking;
     }
 
-    public static HessianFunction of(Class<?> serviceType, Method method, String name,
-                                     @Nullable Object implementation) {
+    public static HessianMethod of(Class<?> serviceType, Method method, String name,
+                                   @Nullable Object implementation) {
         return of(serviceType, method, name, implementation, true);
     }
 
-    public static HessianFunction of(Class<?> serviceType, Method method, String name,
-                                     @Nullable Object implementation,
-                                     boolean blocking) {
+    public static HessianMethod of(Class<?> serviceType, Method method, String name,
+                                   @Nullable Object implementation, boolean blocking) {
         final ResponseType responseType = responseType(method);
-        final Class<?> returnType = getActualReturnType(method, responseType);
+        final Class<?> returnType = resolveReturnValueType(method, responseType);
 
-        return new HessianFunction(name, serviceType, method, returnType, implementation, responseType,
-                                   blocking);
+        return new HessianMethod(name, serviceType, method, returnType, implementation, responseType, blocking);
     }
 
-    private static Class<?> getActualReturnType(Method method, ResponseType responseType) {
+    private static Class<?> resolveReturnValueType(Method method, ResponseType responseType) {
         final Class<?> returnType;
         if (responseType == ResponseType.COMPLETION_STAGE) {
             final ParameterizedType parameterizedType = (ParameterizedType) method.getGenericReturnType();
             assert parameterizedType.getActualTypeArguments().length == 1;
-            final java.lang.reflect.Type argType = parameterizedType.getActualTypeArguments()[0];
+            final Type argType = parameterizedType.getActualTypeArguments()[0];
             if (argType instanceof Class) {
                 returnType = (Class<?>) argType;
             } else {
@@ -96,7 +92,8 @@ public class HessianFunction {
 
     static ResponseType responseType(Method method) {
         final Class<?> returnType = method.getReturnType();
-        if (CompletionStage.class.isAssignableFrom(returnType)) {
+        if (CompletionStage.class.isAssignableFrom(returnType) && returnType.isAssignableFrom(
+                CompletableFuture.class)) {
             return ResponseType.COMPLETION_STAGE;
         }
         return ResponseType.OTHER_OBJECTS;
@@ -114,13 +111,19 @@ public class HessianFunction {
         return method;
     }
 
-    public Class<?> getReturnType() {
-        return returnType;
-    }
-
+    /**
+     * The service Implement object, null when use in client side.
+     */
     @Nullable
     public Object getImplementation() {
         return implementation;
+    }
+
+    /**
+     * the return type for the method. if return type isCompletionStage, return the actualTypeArgument.
+     */
+    public Class<?> getReturnValueType() {
+        return returnValueType;
     }
 
     public ResponseType getResponseType() {
@@ -128,14 +131,13 @@ public class HessianFunction {
     }
 
     /**
-     * use blocking excutor or not. only for server side.
+     * use blocking executor or not. only for server side.
      */
     public boolean isBlocking() {
         return blocking;
     }
 
     public enum ResponseType {
-        COMPLETION_STAGE,
-        OTHER_OBJECTS
+        COMPLETION_STAGE, OTHER_OBJECTS
     }
 }

@@ -29,8 +29,8 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.hessian.HessianFaultException;
-import com.linecorp.armeria.internal.common.hessian.HessianFunction;
-import com.linecorp.armeria.internal.common.hessian.HessianFunction.ResponseType;
+import com.linecorp.armeria.internal.common.hessian.HessianMethod;
+import com.linecorp.armeria.internal.common.hessian.HessianMethod.ResponseType;
 import com.linecorp.armeria.internal.common.hessian.HessianNoSuchMethodException;
 import com.linecorp.armeria.server.RpcService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -47,7 +47,7 @@ public final class HessianCallService implements RpcService {
     private final Map<String, HessianServiceMetadata> hessianServices;
 
     /**
-     * 创建 {@code HessianCallService}, key 为path, value服务的metadata.
+     * create {@code HessianCallService}. key 为path, value服务的metadata.
      */
     public static HessianCallService of(Map<String, HessianServiceMetadata> implementations) {
         requireNonNull(implementations, "implementations");
@@ -87,7 +87,7 @@ public final class HessianCallService implements RpcService {
         if (metadata != null) {
             // Ensure that such a method exists.
             @Nullable
-            final HessianFunction f = metadata.function(method);
+            final HessianMethod f = metadata.method(method);
             if (f != null) {
                 if (f.getImplementation() != null) {
                     final CompletableRpcResponse reply = new CompletableRpcResponse();
@@ -122,7 +122,7 @@ public final class HessianCallService implements RpcService {
                 new HessianNoSuchMethodException("not support attrName: " + attrName, "NoSuchMethod"));
     }
 
-    private static void invoke(ServiceRequestContext ctx, Object impl, HessianFunction func, Object[] args,
+    private static void invoke(ServiceRequestContext ctx, Object impl, HessianMethod func, Object[] args,
                                CompletableRpcResponse reply) {
 
         try {
@@ -132,7 +132,7 @@ public final class HessianCallService implements RpcService {
         }
     }
 
-    private static void doInvoke(ServiceRequestContext ctx, Object impl, HessianFunction func, Object[] args,
+    private static void doInvoke(ServiceRequestContext ctx, Object impl, HessianMethod func, Object[] args,
                                  CompletableRpcResponse reply) {
 
         if (func.isBlocking()) {
@@ -144,7 +144,7 @@ public final class HessianCallService implements RpcService {
         }
     }
 
-    private static void doCall(ServiceRequestContext ctx, Object impl, HessianFunction func, Object[] args,
+    private static void doCall(ServiceRequestContext ctx, Object impl, HessianMethod func, Object[] args,
                                CompletableRpcResponse reply) {
 
         if (reply.isDone()) {

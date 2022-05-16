@@ -134,7 +134,7 @@ abstract class AbstractHessianHttpServiceImplTest {
     @Test
     void testMethodNotFound() throws Throwable {
         // Given
-        final byte[] data = requestData(HeaderType.HESSIAN_2, "sayHelloStr2", "Tom");
+        final byte[] data = requestData(HeaderType.HESSIAN_2, "otherMethod", "Tom");
         final HttpRequest req = HttpRequest.of(HttpMethod.POST, "/services/helloService.hs",
                                                MediaType.create("x-application", "hessian"), data);
         final ServiceRequestContext ctx = ServiceRequestContext.of(req);
@@ -146,7 +146,7 @@ abstract class AbstractHessianHttpServiceImplTest {
         final AggregatedHttpResponse aggregatedRes = res.aggregate().join();
         assertThatThrownBy(() -> readReply(String.class, aggregatedRes.content().array()))
                 .isInstanceOf(HessianServiceException.class)
-                .hasMessageContaining("he service has no method named: sayHelloStr2");
+                .hasMessageContaining("he service has no method named: otherMethod");
     }
 
     @Test
@@ -307,6 +307,7 @@ abstract class AbstractHessianHttpServiceImplTest {
         return os.toByteArray();
     }
 
+    @SuppressWarnings("unchecked")
     static <T> T readReply(Class<T> tClass, byte[] data) throws Throwable {
         final ByteArrayInputStream is = new ByteArrayInputStream(data);
         final AbstractHessianInput in;

@@ -47,20 +47,14 @@ import com.linecorp.armeria.hessian.service.HelloResponse;
 import com.linecorp.armeria.hessian.service.HelloService;
 
 /**
- * test send and receive.
+ * test sync api with spring mvc server.
  *
  * @author eisig
  */
-@SpringBootTest(classes = { HessianConfiguration.class },
+@SpringBootTest(classes = HessianConfiguration.class,
         webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @EnableAutoConfiguration
 class SimpleClientTest {
-
-    enum HessianVersion {
-
-        request2_reply2, request1_reply2,
-        // request1_reply1,
-    }
 
     @Autowired
     private ServletWebServerApplicationContext webServerAppCtxt;
@@ -141,10 +135,6 @@ class SimpleClientTest {
                 break;
             case request2_reply2:
                 break;
-            // case request1_reply1:
-            // builder.options(HessianClientOptions.HESSIAN2_REQUEST.newValue(Boolean.FALSE))
-            // .options(HessianClientOptions.HESSIAN2_REPLY.newValue(Boolean.FALSE));
-            // break;
         }
         return builder.build(HelloService.class);
     }
@@ -164,5 +154,9 @@ class SimpleClientTest {
         } catch (MalformedURLException e) {
             return Exceptions.throwUnsafely(e);
         }
+    }
+
+    enum HessianVersion {
+        request2_reply2, request1_reply2,
     }
 }

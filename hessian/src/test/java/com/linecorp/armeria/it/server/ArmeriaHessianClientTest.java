@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.it.server;
 
+import org.junit.jupiter.api.Disabled;
+
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.hessian.service.HelloService;
 
@@ -27,14 +29,20 @@ import com.linecorp.armeria.hessian.service.HelloService;
 public class ArmeriaHessianClientTest extends AbstractHessianServerTest {
 
     @Override
-    HelloService helloService() {
+    HelloService serviceCleinht() {
         return Clients.builder("hessian+http://127.0.0.1:" + server.httpPort() + "/services/helloService.hs")
                       .build(HelloService.class);
     }
 
     @Override
-    HelloService helloServiceCreateWithUrl() {
-        // todo
-        return helloService();
+    @Disabled("not support")
+    void testCreateWithoutClass() {
+        super.testCreateWithoutClass();
+    }
+
+    @Override
+    HelloService serviceClientWithoutClass() {
+        // not support yet
+        throw new UnsupportedOperationException();
     }
 }

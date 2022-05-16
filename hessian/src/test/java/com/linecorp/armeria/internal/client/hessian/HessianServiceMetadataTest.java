@@ -21,8 +21,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.hessian.service.HelloService;
-import com.linecorp.armeria.internal.common.hessian.HessianFunction;
-import com.linecorp.armeria.internal.common.hessian.HessianFunction.ResponseType;
+import com.linecorp.armeria.internal.common.hessian.HessianMethod;
+import com.linecorp.armeria.internal.common.hessian.HessianMethod.ResponseType;
 
 /**
  * test metadata.
@@ -35,11 +35,11 @@ class HessianServiceMetadataTest {
     void testInterface() {
         final HessianServiceClientMetadata metadata = new HessianServiceClientMetadata(HelloService.class);
         assertThat(metadata).isNotNull();
-        assertThat(metadata.apiClass()).isEqualTo(HelloService.class);
-        assertThat(metadata.function("sayHello")).isNotNull();
-        assertThat(metadata.function("sayHello2")).isNotNull();
+        assertThat(metadata.serviceType()).isEqualTo(HelloService.class);
+        assertThat(metadata.method("sayHello")).isNotNull();
+        assertThat(metadata.method("sayHello2")).isNotNull();
 
-        final HessianFunction sayHello = metadata.function("sayHello");
+        final HessianMethod sayHello = metadata.method("sayHello");
         assertThat(sayHello).hasFieldOrPropertyWithValue("responseType", ResponseType.OTHER_OBJECTS)
                             .hasFieldOrPropertyWithValue("serviceType", HelloService.class)
                             .hasFieldOrPropertyWithValue("name", "sayHello").hasFieldOrPropertyWithValue(
@@ -51,12 +51,12 @@ class HessianServiceMetadataTest {
         final HessianServiceClientMetadata metadata = new HessianServiceClientMetadata(HelloService.class,
                                                                                        true);
         assertThat(metadata).isNotNull();
-        assertThat(metadata.apiClass()).isEqualTo(HelloService.class);
-        assertThat(metadata.function("sayHello")).isNotNull();
-        assertThat(metadata.function("sayHelloStr_string")).isNotNull();
-        assertThat(metadata.function("sayHello2_HelloRequest")).isNotNull();
+        assertThat(metadata.serviceType()).isEqualTo(HelloService.class);
+        assertThat(metadata.method("sayHello")).isNotNull();
+        assertThat(metadata.method("sayHelloStr_string")).isNotNull();
+        assertThat(metadata.method("sayHello2_HelloRequest")).isNotNull();
 
-        final HessianFunction sayHello = metadata.function("sayHello");
+        final HessianMethod sayHello = metadata.method("sayHello");
         assertThat(sayHello).hasFieldOrPropertyWithValue("responseType", ResponseType.OTHER_OBJECTS)
                             .hasFieldOrPropertyWithValue("serviceType", HelloService.class)
                             .hasFieldOrPropertyWithValue("name", "sayHello").hasFieldOrPropertyWithValue(

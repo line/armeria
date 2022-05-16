@@ -26,6 +26,8 @@ import java.util.concurrent.ConcurrentMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
+
 /**
  * async demo.
  *
@@ -38,24 +40,24 @@ public class AsyncHelloServiceImp implements AsyncHelloService {
 
     @Override
     public CompletableFuture<String> sayHello() {
-        return CompletableFuture.completedFuture("Hello");
+        return UnmodifiableFuture.completedFuture("Hello");
     }
 
     @Override
     public CompletableFuture<String> sayHelloStr(String str) {
-        return CompletableFuture.completedFuture("Hello " + str);
+        return UnmodifiableFuture.completedFuture("Hello " + str);
     }
 
     @Override
     public CompletableFuture<HelloResponse> sayHello2(
             HelloRequest request) {
-        return CompletableFuture.completedFuture(new HelloResponse("Hello " + request.getMessage()));
+        return UnmodifiableFuture.completedFuture(new HelloResponse("Hello " + request.getMessage()));
     }
 
     @Override
     public CompletableFuture<InputStream> replySteam(HelloRequest request) {
-      final   String result = "Hello " + request.getMessage();
-        return CompletableFuture.completedFuture(
+        final String result = "Hello " + request.getMessage();
+        return UnmodifiableFuture.completedFuture(
                 new ByteArrayInputStream(result.getBytes(StandardCharsets.UTF_8)));
     }
 
@@ -68,7 +70,7 @@ public class AsyncHelloServiceImp implements AsyncHelloService {
         } catch (InterruptedException ex) {
             log.error("interrupted", ex);
         }
-        return CompletableFuture.completedFuture(new HelloResponse("DelaySayHello " + request.getMessage()));
+        return UnmodifiableFuture.completedFuture(new HelloResponse("DelaySayHello " + request.getMessage()));
     }
 
     @Override
@@ -79,13 +81,13 @@ public class AsyncHelloServiceImp implements AsyncHelloService {
 
     @Override
     public CompletableFuture<SequenceResponse> seq(SequenceRequest request) {
-      final   Integer v = seqMap.compute(request.getName(), (s, integer) -> integer != null ? integer + 1 : 1);
+        final Integer v = seqMap.compute(request.getName(), (s, integer) -> integer != null ? integer + 1 : 1);
         log.info("seq: {} -> {}", request.getName(), v);
-        return CompletableFuture.completedFuture(new SequenceResponse(v));
+        return UnmodifiableFuture.completedFuture(new SequenceResponse(v));
     }
 
     @Override
     public CompletableFuture<String> threadName() {
-        return CompletableFuture.completedFuture(Thread.currentThread().getName());
+        return UnmodifiableFuture.completedFuture(Thread.currentThread().getName());
     }
 }

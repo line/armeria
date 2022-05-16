@@ -28,7 +28,7 @@ import com.linecorp.armeria.hessian.service.HelloService;
 import com.linecorp.armeria.hessian.service.HelloServiceImp;
 
 /**
- * config.
+ * spring boot config.
  *
  * @author eisig
  */

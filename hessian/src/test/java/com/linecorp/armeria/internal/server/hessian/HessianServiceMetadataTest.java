@@ -35,17 +35,16 @@ class HessianServiceMetadataTest {
     void function() {
         final HelloServiceImp impl = new HelloServiceImp();
         final HessianServiceMetadata metadata = new HessianServiceMetadata(HelloService.class, impl);
-        assertThat(metadata.function("sayHello")).isNotNull();
-        assertThat(metadata.function("sayHello2")).isNotNull();
-        assertThat(metadata.function("sayHello2__1")).isNotNull();
-        assertThat(metadata.function("sayHello2_HelloRequest")).isNotNull();
-        assertThat(metadata.interfaces()).isEqualTo(HelloService.class);
-        assertThat(metadata.function("sayHello2").getImplementation()).isSameAs(impl);
+        assertThat(metadata.method("sayHello")).isNotNull();
+        assertThat(metadata.method("sayHello2")).isNotNull();
+        assertThat(metadata.method("sayHello2__1")).isNotNull();
+        assertThat(metadata.method("sayHello2_HelloRequest")).isNotNull();
+        assertThat(metadata.serviceType()).isEqualTo(HelloService.class);
+        assertThat(metadata.method("sayHello2").getImplementation()).isSameAs(impl);
     }
 
     @Test
     void testObjectMustImplApi() {
-
         assertThatThrownBy(() -> new HessianServiceMetadata(HelloService.class, new Object()))
                 .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("not instance of");
     }
