@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -156,6 +156,7 @@ final class DefaultUnframedGrpcErrorHandler {
                 = ofStatusMappingFunction(statusMappingFunction);
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();
+            @Nullable
             final String grpcMessage = status.getDescription();
             @Nullable
             final Throwable cause = getThrowableFromContext(ctx);
@@ -188,6 +189,7 @@ final class DefaultUnframedGrpcErrorHandler {
                 = ofStatusMappingFunction(statusMappingFunction);
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();
+            @Nullable
             final String grpcMessage = status.getDescription();
             @Nullable
             final Throwable cause = getThrowableFromContext(ctx);
@@ -225,6 +227,7 @@ final class DefaultUnframedGrpcErrorHandler {
                         .orElse(UnframedGrpcStatusMappingFunction.of());
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();
+            @Nullable
             final String grpcMessage = status.getDescription();
             @Nullable
             final Throwable cause = getThrowableFromContext(ctx);
