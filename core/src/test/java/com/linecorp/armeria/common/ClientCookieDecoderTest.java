@@ -86,7 +86,8 @@ class ClientCookieDecoderTest {
     @Test
     void testDecodingSingleCookieV1() {
         final String cookieString = "myCookie=myValue;max-age=50;path=/apathsomewhere;" +
-                                    "domain=.adomainsomewhere;secure;comment=this is a comment;version=1;";
+                                    "domain=.adomainsomewhere;secure;comment=this is a comment;version=1;" +
+                                    "SameSite=Lax";
         final Cookie cookie = Cookie.fromSetCookieHeader(cookieString);
         assertThat(cookie).isNotNull();
         assertThat(cookie.value()).isEqualTo("myValue");
@@ -94,6 +95,7 @@ class ClientCookieDecoderTest {
         assertThat(cookie.maxAge()).isEqualTo(50);
         assertThat(cookie.path()).isEqualTo("/apathsomewhere");
         assertThat(cookie.isSecure()).isTrue();
+        assertThat(cookie.sameSite()).isEqualTo("Lax");
     }
 
     @Test
@@ -310,5 +312,15 @@ class ClientCookieDecoderTest {
         final Cookie cookie = Cookie.fromSetCookieHeader(emptyPath);
         assertThat(cookie).isNotNull();
         assertThat(cookie.path()).isNull();
+    }
+
+    @Test
+    void testDecodingSameSite() {
+        assertThat(Cookie.fromSetCookieHeader("myCookie=myValue;SameSite=None").sameSite())
+                .isEqualTo("None");
+        assertThat(Cookie.fromSetCookieHeader("myCookie=myValue;HTTPOnly;SameSite=STRICT").sameSite())
+                .isEqualTo("Strict");
+        assertThat(Cookie.fromSetCookieHeader("myCookie=myValue;SameSite=Invalid").sameSite()).isEqualTo("Lax");
+        assertThat(Cookie.fromSetCookieHeader("myCookie=myValue;SameSite=").sameSite()).isEqualTo("Lax");
     }
 }

@@ -22,8 +22,8 @@ apply plugin: 'base'
 apply plugin: 'com.github.node-gradle.node'
 
 node {
-    version = '14.17.4'
-    npmVersion = '6.14.14'
+    version = '16.14.0'
+    npmVersion = '8.5.2'
     download = true
     npmInstallCommand = "ci"
 
@@ -63,7 +63,6 @@ task develop(type: NpmTask) {
     dependsOn tasks.generateSiteSources
     args = ['run', 'develop']
 }
-
 
 task eslint(type: NpmTask) {
     dependsOn tasks.generateSiteSources
@@ -144,9 +143,10 @@ class ApiIndexTask extends DefaultTask {
             result.add([simpleClassName, href])
 
             def doc = Jsoup.parse(path.toFile(), 'UTF-8')
-            doc.select(""".method-details .member-list .detail,
+            doc.select(""".constant-details .member-list .detail,
+                          .constructor-details .member-list .detail,
                           .field-details .member-list .detail,
-                          .constructor-details .member-list .detail""").each {
+                          .method-details .member-list .detail""").each {
                 def methodSignature = it.attr("id")
                 def hrefWithMethod = href + '#' + methodSignature
 
@@ -155,7 +155,9 @@ class ApiIndexTask extends DefaultTask {
                     // Make the type of parameters from FQCN to Simple class name in order to use as a key.
                     def parameters = ''
                     for (int i = 1; i < split.length; i++) {
-                        parameters += ',' + split[i].substring(split[i].lastIndexOf('.') + 1)
+                        // Remove the trailing '...' in varargs
+                        def p = split[i].replaceAll(/\.+$/, '')
+                        parameters += ',' + p.substring(p.lastIndexOf('.') + 1)
                     }
                     methodSignature = split[0] + '(' + parameters.substring(1) + ')'
                 }
@@ -189,7 +191,7 @@ class ContributorListTask extends DefaultTask {
         def nextPattern = Pattern.compile(/<(https:\/\/api\.github\.com\/[^>]+)>; rel="next"/)
         for (def i = 0; i < 10; i++) {
             def req = new URL(url).openConnection()
-            if (accessToken != null) {
+            if (accessToken?.trim()) {
                 req.setRequestProperty('Authorization', "token ${accessToken}")
             }
             def resText = req.getInputStream().getText()
@@ -200,6 +202,7 @@ class ContributorListTask extends DefaultTask {
                             "${req.getResponseCode()}, ${req.getHeaderFields()}, ${resText}")
                 } else {
                     throw new Exception('Received a non-200 response from Github: ' +
+                            'Maybe specify "-PgithubToken=<personalAccessToken>" option: ' +
                             "${req.getResponseCode()}, ${req.getHeaderFields()}, ${resText}")
                 }
             }

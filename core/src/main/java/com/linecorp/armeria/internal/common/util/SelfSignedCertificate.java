@@ -30,6 +30,10 @@
  */
 package com.linecorp.armeria.internal.common.util;
 
+import static org.bouncycastle.asn1.x509.Extension.subjectAlternativeName;
+import static org.bouncycastle.asn1.x509.GeneralName.dNSName;
+import static org.bouncycastle.asn1.x509.GeneralName.iPAddress;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -46,11 +50,15 @@ import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 
 import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.GeneralName;
+import org.bouncycastle.asn1.x509.GeneralNames;
 import org.bouncycastle.cert.X509CertificateHolder;
 import org.bouncycastle.cert.X509v3CertificateBuilder;
 import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
@@ -64,6 +72,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.base64.Base64;
 import io.netty.util.CharsetUtil;
+import io.netty.util.NetUtil;
 import io.netty.util.internal.PlatformDependent;
 import io.netty.util.internal.SystemPropertyUtil;
 
@@ -349,6 +358,28 @@ public final class SelfSignedCertificate {
         final X500Name owner = new X500Name("CN=" + fqdn);
         final X509v3CertificateBuilder builder = new JcaX509v3CertificateBuilder(
                 owner, new BigInteger(64, random), notBefore, notAfter, owner, keypair.getPublic());
+
+        final List<GeneralName> names = new ArrayList<>();
+        // Add fqdn as Subject Alternative Name too for clients that don't use CN when validating such as
+        // OkHttp.
+        if (NetUtil.isValidIpV4Address(fqdn) || NetUtil.isValidIpV6Address(fqdn)) {
+            names.add(new GeneralName(iPAddress, fqdn));
+        } else {
+            names.add(new GeneralName(dNSName, fqdn));
+        }
+
+        // Support request with IP or domain for local connections.
+        if ("localhost".equals(fqdn)) {
+            names.add(new GeneralName(iPAddress, "127.0.0.1"));
+            names.add(new GeneralName(iPAddress, "::1"));
+        } else if ("127.0.0.1".equals(fqdn)) {
+            names.add(new GeneralName(dNSName, "localhost"));
+            names.add(new GeneralName(iPAddress, "::1"));
+        }
+
+        builder.addExtension(subjectAlternativeName,
+                             false,
+                             new GeneralNames(names.toArray(new GeneralName[0])));
 
         final ContentSigner signer = new JcaContentSignerBuilder(
                 "EC".equalsIgnoreCase(algorithm) ? "SHA256withECDSA" : "SHA256WithRSAEncryption").build(key);

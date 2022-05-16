@@ -16,14 +16,19 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 final class ServiceConfigBuilder implements ServiceConfigSetters {
@@ -31,6 +36,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private final Route route;
     private final HttpService service;
 
+    @Nullable
+    private Route mappedRoute;
     @Nullable
     private String defaultServiceName;
     @Nullable
@@ -45,11 +52,22 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private Boolean verboseResponses;
     @Nullable
     private AccessLogWriter accessLogWriter;
+    @Nullable
+    private ScheduledExecutorService blockingTaskExecutor;
+    @Nullable
+    private SuccessFunction successFunction;
+    private boolean shutdownBlockingTaskExecutorOnStop;
     private boolean shutdownAccessLogWriterOnStop;
+    @Nullable
+    private Path multipartUploadsLocation;
 
     ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
+    }
+
+    void addMappedRoute(Route mappedRoute) {
+        this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
     }
 
     @Override
@@ -113,6 +131,36 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                     boolean shutdownOnStop) {
+        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder blockingTaskExecutor(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
+                                                                  .numThreads(numThreads)
+                                                                  .build();
+        return blockingTaskExecutor(executor, true);
+    }
+
+    @Override
+    public ServiceConfigBuilder successFunction(
+            SuccessFunction successFunction) {
+        this.successFunction = requireNonNull(successFunction, "successFunction");
+        return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        this.multipartUploadsLocation = multipartUploadsLocation;
+        return this;
+    }
+
+    @Override
     public ServiceConfigBuilder defaultServiceName(String defaultServiceName) {
         requireNonNull(defaultServiceName, "defaultServiceName");
         this.defaultServiceName = defaultServiceName;
@@ -132,15 +180,25 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         long defaultMaxRequestLength,
                         boolean defaultVerboseResponses,
                         AccessLogWriter defaultAccessLogWriter,
-                        boolean defaultShutdownAccessLogWriterOnStop) {
+                        boolean defaultShutdownAccessLogWriterOnStop,
+                        ScheduledExecutorService defaultBlockingTaskExecutor,
+                        boolean defaultShutdownBlockingTaskExecutorOnStop,
+                        SuccessFunction defaultSuccessFunction,
+                        Path defaultMultipartUploadsLocation) {
         return new ServiceConfig(
-                route, service, defaultLogName, defaultServiceName,
+                route, mappedRoute == null ? route : mappedRoute,
+                service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
                 requestTimeoutMillis != null ? requestTimeoutMillis : defaultRequestTimeoutMillis,
                 maxRequestLength != null ? maxRequestLength : defaultMaxRequestLength,
                 verboseResponses != null ? verboseResponses : defaultVerboseResponses,
                 accessLogWriter != null ? accessLogWriter : defaultAccessLogWriter,
-                accessLogWriter != null ? shutdownAccessLogWriterOnStop : defaultShutdownAccessLogWriterOnStop);
+                accessLogWriter != null ? shutdownAccessLogWriterOnStop : defaultShutdownAccessLogWriterOnStop,
+                blockingTaskExecutor != null ? blockingTaskExecutor : defaultBlockingTaskExecutor,
+                blockingTaskExecutor != null ? shutdownBlockingTaskExecutorOnStop
+                                             : defaultShutdownBlockingTaskExecutorOnStop,
+                successFunction != null ? successFunction : defaultSuccessFunction,
+                multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation);
     }
 
     @Override
@@ -154,6 +212,10 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                           .add("verboseResponses", verboseResponses)
                           .add("accessLogWriter", accessLogWriter)
                           .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
+                          .add("blockingTaskExecutor", blockingTaskExecutor)
+                          .add("shutdownBlockingTaskExecutorOnStop", shutdownBlockingTaskExecutorOnStop)
+                          .add("successFunction", successFunction)
+                          .add("multipartUploadsLocation", multipartUploadsLocation)
                           .toString();
     }
 }

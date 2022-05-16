@@ -16,21 +16,26 @@
 
 package com.linecorp.armeria.server.logging;
 
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.zip.GZIPInputStream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -54,10 +59,13 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.ContentPreviewer;
 import com.linecorp.armeria.common.logging.ContentPreviewerFactory;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.internal.logging.ContentPreviewingUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -66,10 +74,18 @@ import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.compression.Brotli;
 
 class ContentPreviewingServiceTest {
 
     private static final AtomicReference<RequestContext> contextCaptor = new AtomicReference<>();
+
+    private static final BiFunction<? super RequestContext, String, ?> CONTENT_SANITIZER =
+            (ctx, content) -> {
+                assertThat(ctx).isNotNull();
+                assertThat(content).isNotNull();
+                return "dummy content sanitizer";
+            };
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -97,6 +113,35 @@ class ContentPreviewingServiceTest {
                                                     .newDecorator());
             sb.decorator("/encoded", decodingContentPreviewDecorator());
 
+            sb.service("/requestPreviewSanitizer", httpService);
+            sb.decorator("/requestPreviewSanitizer",
+                         ContentPreviewingService.builder(ContentPreviewerFactory.text(100))
+                                                 .requestPreviewSanitizer(CONTENT_SANITIZER)
+                                                 .newDecorator());
+
+            sb.service("/responsePreviewSanitizer", httpService);
+            sb.decorator("/responsePreviewSanitizer",
+                         ContentPreviewingService.builder(ContentPreviewerFactory.text(100))
+                                                 .responsePreviewSanitizer(CONTENT_SANITIZER)
+                                                 .newDecorator());
+
+            sb.service("/previewSanitizer", httpService);
+            sb.decorator("/previewSanitizer",
+                         ContentPreviewingService.builder(ContentPreviewerFactory.text(100))
+                                                 .previewSanitizer(CONTENT_SANITIZER)
+                                                 .newDecorator());
+
+            sb.service("/deferred", httpService);
+            sb.decorator("/deferred", ContentPreviewingService.newDecorator(100));
+            sb.decorator("/deferred", ((delegate, ctx, req) -> HttpResponse.from(
+                    completedFuture(null).handleAsync((ignored, cause) -> {
+                        try {
+                            return delegate.serve(ctx, req);
+                        } catch (Exception e) {
+                            return Exceptions.throwUnsafely(e);
+                        }
+                    }, ctx.eventLoop()))));
+
             sb.decoratorUnder("/", (delegate, ctx, req) -> {
                 contextCaptor.set(ctx);
                 return delegate.serve(ctx, req);
@@ -105,13 +150,19 @@ class ContentPreviewingServiceTest {
 
         private Function<? super HttpService, ContentPreviewingService> decodingContentPreviewDecorator() {
             final BiPredicate<? super RequestContext, ? super HttpHeaders> previewerPredicate =
-                    (requestContext, headers) -> "br".equals(headers.get(HttpHeaderNames.CONTENT_ENCODING));
+                    (requestContext, headers) -> {
+                        final String contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
+                        return "br".equals(contentEncoding) || "gzip".equals(contentEncoding);
+                    };
 
             final BiFunction<HttpHeaders, ByteBuf, String> producer = (headers, data) -> {
+                final String contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
                 final byte[] bytes = new byte[data.readableBytes()];
                 data.getBytes(0, bytes);
                 final byte[] decoded;
-                try (BrotliInputStream unzipper = new BrotliInputStream(new ByteArrayInputStream(bytes))) {
+                final InputStream in = new ByteArrayInputStream(bytes);
+                try (InputStream unzipper = "br".equals(contentEncoding) ? new BrotliInputStream(in)
+                                                                         : new GZIPInputStream(in)) {
                     decoded = ByteStreams.toByteArray(unzipper);
                 } catch (Exception e) {
                     throw new IllegalArgumentException(e);
@@ -160,7 +211,8 @@ class ContentPreviewingServiceTest {
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
         final AggregatedHttpResponse res = client.execute(headers, "Armeria").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
+        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo(
+                Brotli.isAvailable() ? "br" : "gzip");
 
         final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
         assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
@@ -175,7 +227,7 @@ class ContentPreviewingServiceTest {
 
         final ServiceRequestContext ctx = ServiceRequestContext.of(request);
         final HttpRequest filteredRequest = ContentPreviewingUtil.setUpRequestContentPreviewer(
-                ctx, request, contentPreviewer);
+                ctx, request, contentPreviewer, Functions.second());
         filteredRequest.subscribe(new CancelSubscriber());
 
         assertThat(ctx.log()
@@ -196,13 +248,66 @@ class ContentPreviewingServiceTest {
         final ContentPreviewerFactory factory = mock(ContentPreviewerFactory.class);
         when(factory.responseContentPreviewer(any(), any())).thenReturn(contentPreviewer);
         final HttpResponse filteredResponse = ContentPreviewingUtil.setUpResponseContentPreviewer(
-                factory, ctx, response);
+                factory, ctx, response, Functions.second());
         filteredResponse.subscribe(new CancelSubscriber());
 
         assertThat(ctx.log()
                       .whenAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)
                       .join()
                       .responseContentPreview()).isEqualTo("foo");
+    }
+
+    @Test
+    void sanitizeRequestContentPreview() {
+        final WebClient client = WebClient.of(server.httpUri());
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/requestPreviewSanitizer",
+                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+        assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
+                .isEqualTo("Hello Armeria!");
+        final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
+        assertThat(requestLog.requestContentPreview()).isEqualTo("dummy content sanitizer");
+        assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
+    }
+
+    @Test
+    void sanitizeResponseContentPreview() {
+        final WebClient client = WebClient.of(server.httpUri());
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/responsePreviewSanitizer",
+                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+        assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
+                .isEqualTo("Hello Armeria!");
+        final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
+        assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
+        assertThat(requestLog.responseContentPreview()).isEqualTo("dummy content sanitizer");
+    }
+
+    @Test
+    void sanitizeContentPreview() {
+        final WebClient client = WebClient.of(server.httpUri());
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/previewSanitizer",
+                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+        assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
+                .isEqualTo("Hello Armeria!");
+        final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
+        assertThat(requestLog.requestContentPreview()).isEqualTo("dummy content sanitizer");
+        assertThat(requestLog.responseContentPreview()).isEqualTo("dummy content sanitizer");
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
+    void deferredContentPreview(SessionProtocol protocol) {
+        final WebClient client = WebClient.of(server.uri(protocol));
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/deferred",
+                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+        final AggregatedHttpResponse res = client.execute(headers, HttpData.ofUtf8("Armeria"))
+                                                 .aggregate()
+                                                 .join();
+        assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
+
+        final RequestContext ctx = contextCaptor.get();
+        final RequestLog log = ctx.log().whenComplete().join();
+        assertThat(log.requestContentPreview()).isEqualTo("Armeria");
+        assertThat(log.responseContentPreview()).isEqualTo("Hello Armeria!");
     }
 
     private static ContentPreviewer contentPreviewer() {

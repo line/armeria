@@ -20,8 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
-import java.util.List;
-import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -29,7 +27,6 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
 import com.google.errorprone.annotations.MustBeClosed;
 
@@ -65,53 +62,11 @@ public final class RequestContextUtil {
     private static RequestContextStorage requestContextStorage;
 
     static {
-        final List<RequestContextStorageProvider> providers = ImmutableList.copyOf(
-                ServiceLoader.load(RequestContextStorageProvider.class));
-        final String providerFqcn = Flags.requestContextStorageProvider();
-        if (!providers.isEmpty()) {
-
-            RequestContextStorageProvider provider = null;
-            if (providers.size() > 1) {
-                if (providerFqcn == null) {
-                    throw new IllegalStateException(
-                            "Found more than one " + RequestContextStorageProvider.class.getSimpleName() +
-                            ". You must specify -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>." +
-                            " providers: " + providers);
-                }
-
-                for (RequestContextStorageProvider candidate : providers) {
-                    if (candidate.getClass().getName().equals(providerFqcn)) {
-                        if (provider != null) {
-                            throw new IllegalStateException(
-                                    providerFqcn + " matches more than one " +
-                                    RequestContextStorageProvider.class.getSimpleName() + ". providers: " +
-                                    providers);
-                        } else {
-                            provider = candidate;
-                        }
-                    }
-                }
-                if (provider == null) {
-                    throw new IllegalStateException(
-                            providerFqcn + " does not match any " +
-                            RequestContextStorageProvider.class.getSimpleName() + ". providers: " + providers);
-                }
-            } else {
-                provider = providers.get(0);
-                if (logger.isInfoEnabled()) {
-                    logger.info("Using {} as a {}",
-                                provider.getClass().getSimpleName(),
-                                RequestContextStorageProvider.class.getSimpleName());
-                }
-            }
-
-            try {
-                requestContextStorage = provider.newStorage();
-            } catch (Throwable t) {
-                throw new IllegalStateException("Failed to create context storage. provider: " + provider, t);
-            }
-        } else {
-            requestContextStorage = RequestContextStorage.threadLocal();
+        final RequestContextStorageProvider provider = Flags.requestContextStorageProvider();
+        try {
+            requestContextStorage = provider.newStorage();
+        } catch (Throwable t) {
+            throw new IllegalStateException("Failed to create context storage. provider: " + provider, t);
         }
     }
 
@@ -225,20 +180,24 @@ public final class RequestContextUtil {
     public static SafeCloseable invokeHookAndPop(RequestContext current, @Nullable RequestContext toRestore) {
         requireNonNull(current, "current");
 
-        final SafeCloseable closeable = invokeHook(current);
+        final AutoCloseable closeable = invokeHook(current);
         if (closeable == null) {
             return () -> requestContextStorage.pop(current, toRestore);
         } else {
             return () -> {
-                closeable.close();
+                try {
+                    closeable.close();
+                } catch (Throwable t) {
+                    logger.warn("{} Unexpected exception while closing RequestContext.hook().", current, t);
+                }
                 requestContextStorage.pop(current, toRestore);
             };
         }
     }
 
     @Nullable
-    private static SafeCloseable invokeHook(RequestContext ctx) {
-        final Supplier<? extends SafeCloseable> hook;
+    private static AutoCloseable invokeHook(RequestContext ctx) {
+        final Supplier<? extends AutoCloseable> hook;
         if (ctx instanceof DefaultServiceRequestContext) {
             hook = ((DefaultServiceRequestContext) ctx).hook();
         } else if (ctx instanceof DefaultClientRequestContext) {
@@ -251,7 +210,7 @@ public final class RequestContextUtil {
             return null;
         }
 
-        final SafeCloseable closeable;
+        final AutoCloseable closeable;
         try {
             closeable = hook.get();
         } catch (Throwable t) {

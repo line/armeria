@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
@@ -34,7 +35,10 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
+import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
+import javax.net.ssl.SSLHandshakeException;
+import javax.net.ssl.SSLSession;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -45,12 +49,14 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
 import com.linecorp.armeria.internal.common.TrafficLoggingHandler;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
+import io.micrometer.core.instrument.Counter;
 import io.micrometer.core.instrument.Tag;
 import io.micrometer.core.instrument.Timer;
 import io.netty.buffer.ByteBuf;
@@ -67,12 +73,24 @@ import io.netty.handler.codec.haproxy.HAProxyMessage;
 import io.netty.handler.codec.haproxy.HAProxyMessageDecoder;
 import io.netty.handler.codec.haproxy.HAProxyProxiedProtocol.AddressFamily;
 import io.netty.handler.codec.http.HttpServerCodec;
-import io.netty.handler.codec.http.HttpServerUpgradeHandler;
+import io.netty.handler.codec.http2.DefaultHttp2Connection;
+import io.netty.handler.codec.http2.DefaultHttp2ConnectionDecoder;
+import io.netty.handler.codec.http2.DefaultHttp2ConnectionEncoder;
+import io.netty.handler.codec.http2.DefaultHttp2FrameReader;
+import io.netty.handler.codec.http2.DefaultHttp2FrameWriter;
 import io.netty.handler.codec.http2.Http2CodecUtil;
+import io.netty.handler.codec.http2.Http2Connection;
+import io.netty.handler.codec.http2.Http2ConnectionDecoder;
+import io.netty.handler.codec.http2.Http2ConnectionEncoder;
 import io.netty.handler.codec.http2.Http2ConnectionHandler;
-import io.netty.handler.codec.http2.Http2ServerUpgradeCodec;
+import io.netty.handler.codec.http2.Http2FrameLogger;
+import io.netty.handler.codec.http2.Http2FrameReader;
+import io.netty.handler.codec.http2.Http2FrameWriter;
+import io.netty.handler.codec.http2.Http2InboundFrameLogger;
+import io.netty.handler.codec.http2.Http2OutboundFrameLogger;
 import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.flush.FlushConsolidationHandler;
+import io.netty.handler.logging.LogLevel;
 import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.ApplicationProtocolNegotiationHandler;
 import io.netty.handler.ssl.SniHandler;
@@ -95,8 +113,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
     private static final AsciiString SCHEME_HTTP = AsciiString.cached("http");
     private static final AsciiString SCHEME_HTTPS = AsciiString.cached("https");
 
-    private static final int UPGRADE_REQUEST_MAX_LENGTH = 16384;
-
     private static final byte[] PROXY_V1_MAGIC_BYTES = {
             (byte) 'P', (byte) 'R', (byte) 'O', (byte) 'X', (byte) 'Y'
     };
@@ -106,9 +122,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             (byte) 0x51, (byte) 0x55, (byte) 0x49, (byte) 0x54, (byte) 0x0A
     };
 
+    private static final Http2FrameLogger frameLogger =
+            new Http2FrameLogger(LogLevel.TRACE, "com.linecorp.armeria.logging.traffic.server.http2");
+
     private final ServerPort port;
-    private final ServerConfigHolder configHolder;
-    private volatile ServerConfig config;
+    private final ServerConfig config;
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
     private final GracefulShutdownSupport gracefulShutdownSupport;
@@ -120,8 +138,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             ServerConfig config, ServerPort port,
             @Nullable Mapping<String, SslContext> sslContexts,
             GracefulShutdownSupport gracefulShutdownSupport) {
-
-        configHolder = new ServerConfigHolder(requireNonNull(config, "config"));
         this.config = config;
         this.port = requireNonNull(port, "port");
         this.sslContexts = sslContexts;
@@ -130,6 +146,13 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     @Override
     protected void initChannel(Channel ch) throws Exception {
+        // Make sure that `Channel` caches its remote address by calling `Channel.remoteAddress()`
+        // at least once, so that `Channel.remoteAddress()` doesn't return `null` even if it's called
+        // after disconnection. This works thanks to the implementation detail of `AbstractChannel`
+        // which caches the remote address once its underlying transport returns a non-null address.
+        ch.remoteAddress();
+
+        // Disable the write buffer watermark notification because we manage backpressure by ourselves.
         ChannelUtil.disableWriterBufferWatermark(ch);
 
         final ChannelPipeline p = ch.pipeline();
@@ -191,11 +214,12 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         }
         final ServerHttp1ObjectEncoder responseEncoder = new ServerHttp1ObjectEncoder(
                 p.channel(), H1C, keepAliveHandler,
-                config.isDateHeaderEnabled(), config.isServerHeaderEnabled()
+                config.isDateHeaderEnabled(), config.isServerHeaderEnabled(),
+                config.http1HeaderNaming()
         );
         p.addLast(TrafficLoggingHandler.SERVER);
         p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
-        p.addLast(new HttpServerHandler(configHolder,
+        p.addLast(new HttpServerHandler(config,
                                         gracefulShutdownSupport,
                                         responseEncoder,
                                         H1C, proxiedAddresses));
@@ -215,11 +239,29 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private Http2ConnectionHandler newHttp2ConnectionHandler(ChannelPipeline pipeline, AsciiString scheme) {
         final Timer keepAliveTimer = newKeepAliveTimer(scheme == SCHEME_HTTP ? H2C : H2);
+
+        final Http2Connection connection = new DefaultHttp2Connection(/* server */ true);
+        final Http2ConnectionEncoder encoder = encoder(connection);
+        final Http2ConnectionDecoder decoder = decoder(connection, encoder);
         return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config, keepAliveTimer,
                                                        gracefulShutdownSupport, scheme.toString())
-                .server(true)
+                .codec(decoder, encoder)
                 .initialSettings(http2Settings())
                 .build();
+    }
+
+    private static Http2ConnectionEncoder encoder(Http2Connection connection) {
+        Http2FrameWriter writer = new DefaultHttp2FrameWriter();
+        writer = new Http2OutboundFrameLogger(writer, frameLogger);
+        return new DefaultHttp2ConnectionEncoder(connection, writer);
+    }
+
+    private Http2ConnectionDecoder decoder(Http2Connection connection, Http2ConnectionEncoder encoder) {
+        final ArmeriaHttp2HeadersDecoder headersDecoder = new ArmeriaHttp2HeadersDecoder(
+                /* validateHeaders */ true, config.http2MaxHeaderListSize());
+        Http2FrameReader reader = new DefaultHttp2FrameReader(headersDecoder);
+        reader = new Http2InboundFrameLogger(reader, frameLogger);
+        return new DefaultHttp2ConnectionDecoder(connection, encoder, reader);
     }
 
     private Http2Settings http2Settings() {
@@ -244,11 +286,6 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         settings.put((char) 0x8, (Long) 1L);
 
         return settings;
-    }
-
-    void updateConfig(ServerConfig config) {
-        requireNonNull(config, "config");
-        configHolder.replace(config);
     }
 
     private final class ProtocolDetectionHandler extends ByteToMessageDecoder {
@@ -415,8 +452,23 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
     private final class Http2OrHttpHandler extends ApplicationProtocolNegotiationHandler {
 
+        /**
+         * See `sun.security.ssl.ProtocolVersion.NONE`.
+         */
+        private static final String DUMMY_TLS_PROTOCOL = "NONE";
+        /**
+         * See <a href="https://www.openssl.org/docs/man1.1.1/man3/SSL_get_version.html">SSL_get_version</a>.
+         */
+        private static final String UNKNOWN_TLS_PROTOCOL = "unknown";
+        /**
+         * See {@link SSLEngine#getSession()}.
+         */
+        private static final String DUMMY_CIPHER_SUITE = "SSL_NULL_WITH_NULL_NULL";
+
         @Nullable
         private final ProxiedAddresses proxiedAddresses;
+        private boolean loggedHandshakeFailure;
+        private boolean addedExceptionLogger;
 
         Http2OrHttpHandler(@Nullable ProxiedAddresses proxiedAddresses) {
             super(ApplicationProtocolNames.HTTP_1_1);
@@ -426,22 +478,24 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         @Override
         protected void configurePipeline(ChannelHandlerContext ctx, String protocol) throws Exception {
             if (ApplicationProtocolNames.HTTP_2.equals(protocol)) {
+                recordHandshakeSuccess(ctx, H2);
                 addHttp2Handlers(ctx);
                 return;
             }
 
             if (ApplicationProtocolNames.HTTP_1_1.equals(protocol)) {
+                recordHandshakeSuccess(ctx, H1);
                 addHttpHandlers(ctx);
                 return;
             }
 
-            throw new IllegalStateException("unknown protocol: " + protocol);
+            throw new SSLHandshakeException("unsupported application protocol: " + protocol);
         }
 
         private void addHttp2Handlers(ChannelHandlerContext ctx) {
             final ChannelPipeline p = ctx.pipeline();
             p.addLast(newHttp2ConnectionHandler(p, SCHEME_HTTPS));
-            p.addLast(new HttpServerHandler(configHolder,
+            p.addLast(new HttpServerHandler(config,
                                             gracefulShutdownSupport,
                                             null, H2, proxiedAddresses));
         }
@@ -465,45 +519,112 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
             }
 
-            final ServerHttp1ObjectEncoder writer = new ServerHttp1ObjectEncoder(
-                    ch, H1, keepAliveHandler, config.isDateHeaderEnabled(), config.isServerHeaderEnabled());
+            final ServerHttp1ObjectEncoder encoder = new ServerHttp1ObjectEncoder(
+                    ch, H1, keepAliveHandler, config.isDateHeaderEnabled(), config.isServerHeaderEnabled(),
+                    config.http1HeaderNaming());
             p.addLast(new HttpServerCodec(
                     config.http1MaxInitialLineLength(),
                     config.http1MaxHeaderSize(),
                     config.http1MaxChunkSize()));
-            p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, writer));
-            p.addLast(new HttpServerHandler(configHolder,
+            p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, encoder));
+            p.addLast(new HttpServerHandler(config,
                                             gracefulShutdownSupport,
-                                            writer, H1, proxiedAddresses));
+                                            encoder, H1, proxiedAddresses));
         }
 
         @Override
         protected void handshakeFailure(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            if (!Exceptions.isExpected(cause)) {
-                logger.warn("{} TLS handshake failed:", ctx.channel(), cause);
-            }
-            ctx.close();
-
-            // On handshake failure, ApplicationProtocolNegotiationHandler will remove itself,
-            // leaving no handlers behind it. Add a handler that handles the exceptions raised after this point.
-            ctx.pipeline().addLast(new ChannelInboundHandlerAdapter() {
-                @Override
-                public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-                    if (cause instanceof DecoderException &&
-                        cause.getCause() instanceof SSLException) {
-                        // Swallow an SSLException raised after handshake failure.
-                        return;
-                    }
-
-                    Exceptions.logIfUnexpected(logger, ctx.channel(), cause);
-                }
-            });
+            exceptionCaught(ctx, cause);
         }
 
         @Override
         public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
-            Exceptions.logIfUnexpected(logger, ctx.channel(), cause);
+            logIfUnexpected(ctx, cause);
             ctx.close();
+
+            // On handshake failure, ApplicationProtocolNegotiationHandler will remove itself,
+            // leaving no handlers behind it. Add a handler that logs the exceptions raised after this point.
+            if (!addedExceptionLogger) {
+                addedExceptionLogger = true;
+                ctx.pipeline().addLast(new ChannelInboundHandlerAdapter() {
+                    @Override
+                    public void exceptionCaught(ChannelHandlerContext ctx, Throwable cause) throws Exception {
+                        logIfUnexpected(ctx, cause);
+                    }
+                });
+            }
+        }
+
+        private void logIfUnexpected(ChannelHandlerContext ctx, Throwable cause) {
+            if (cause instanceof DecoderException) {
+                if (loggedHandshakeFailure) {
+                    if (cause.getCause() instanceof SSLException) {
+                        // Swallow the SSLExceptions raised after handshake failure
+                        // because we logged the root cause (= the handshake failure).
+                        return;
+                    }
+                } else if (cause.getCause() instanceof SSLHandshakeException) {
+                    loggedHandshakeFailure = true;
+                    final SSLHandshakeException handshakeException = (SSLHandshakeException) cause.getCause();
+                    recordHandshakeFailure(ctx, handshakeException);
+                    return;
+                }
+            }
+
+            Exceptions.logIfUnexpected(logger, ctx.channel(), cause);
+        }
+
+        private void recordHandshakeSuccess(ChannelHandlerContext ctx, SessionProtocol protocol) {
+            final Channel ch = ctx.channel();
+            incrementHandshakeCounter(ch, protocol, true);
+        }
+
+        private void recordHandshakeFailure(ChannelHandlerContext ctx, SSLHandshakeException cause) {
+            final Channel ch = ctx.channel();
+            incrementHandshakeCounter(ch, null, false);
+
+            logger.warn("{} TLS handshake failed: {}", ch, cause.getMessage());
+            if (logger.isDebugEnabled()) {
+                // Print the stack trace only at DEBUG level because it can be noisy.
+                logger.debug("{} Stack trace for the TLS handshake failure:", ch, cause);
+            }
+        }
+
+        private void incrementHandshakeCounter(
+                Channel ch, @Nullable SessionProtocol protocol, boolean success) {
+
+            final SSLSession sslSession = ChannelUtil.findSslSession(ch);
+            final String protocolText = protocol != null ? protocol.uriText() : "";
+            final String commonName;
+            String cipherSuite;
+            String tlsProtocol;
+            if (sslSession != null) {
+                commonName = firstNonNull(CertificateUtil.getCommonName(sslSession), "");
+                cipherSuite = sslSession.getCipherSuite();
+                if (cipherSuite == null || DUMMY_CIPHER_SUITE.equals(cipherSuite)) {
+                    cipherSuite = "";
+                }
+                tlsProtocol = sslSession.getProtocol();
+                if (tlsProtocol == null ||
+                    UNKNOWN_TLS_PROTOCOL.equals(tlsProtocol) ||
+                    DUMMY_TLS_PROTOCOL.equals(tlsProtocol)) {
+                    tlsProtocol = "";
+                }
+            } else {
+                cipherSuite = "";
+                commonName = "";
+                tlsProtocol = "";
+            }
+
+            // Create or find the TLS handshake counter and increment it.
+            Counter.builder("armeria.server.tls.handshakes")
+                   .tags("cipher.suite", cipherSuite,
+                         "common.name", commonName,
+                         "protocol", protocolText,
+                         "result", success ? "success" : "failure",
+                         "tls.protocol", tlsProtocol)
+                   .register(config.meterRegistry())
+                   .increment();
         }
     }
 
@@ -563,15 +684,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             baseName = addAfter(p, baseName, http1codec);
             baseName = addAfter(p, baseName, new HttpServerUpgradeHandler(
                     http1codec,
-                    protocol -> {
-                        if (!AsciiString.contentEquals(Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME, protocol)) {
-                            return null;
-                        }
-
-                        return new Http2ServerUpgradeCodec(
-                                newHttp2ConnectionHandler(p, SCHEME_HTTP));
-                    },
-                    UPGRADE_REQUEST_MAX_LENGTH));
+                    () -> new Http2ServerUpgradeCodec(newHttp2ConnectionHandler(p, SCHEME_HTTP))));
 
             addAfter(p, baseName, new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTP, responseEncoder));
         }

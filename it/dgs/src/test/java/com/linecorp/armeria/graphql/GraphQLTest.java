@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableMap;
-import com.netflix.graphql.dgs.client.DefaultGraphQLClient;
+import com.netflix.graphql.dgs.client.CustomGraphQLClient;
 import com.netflix.graphql.dgs.client.GraphQLClient;
 import com.netflix.graphql.dgs.client.GraphQLResponse;
 import com.netflix.graphql.dgs.client.HttpResponse;
@@ -90,20 +90,19 @@ class GraphQLTest {
 
     private static GraphQLResponse callGraphQL(String query) {
         final WebClient webClient = WebClient.of(server.httpUri());
-        final GraphQLClient client = new DefaultGraphQLClient("/graphql");
-        return client.executeQuery(query, ImmutableMap.of(),
-                                   (url, headers, body) -> {
-                                       final RequestHeadersBuilder headersBuilder =
-                                               RequestHeaders.builder(HttpMethod.POST, url);
+        final GraphQLClient client = new CustomGraphQLClient("/graphql", (url, headers, body) -> {
+            final RequestHeadersBuilder headersBuilder =
+                    RequestHeaders.builder(HttpMethod.POST, url);
 
-                                       headers.forEach(headersBuilder::add);
+            headers.forEach(headersBuilder::add);
 
-                                       final HttpRequest request = HttpRequest.of(headersBuilder.build(),
-                                                                                  HttpData.ofUtf8(body));
-                                       final AggregatedHttpResponse response = webClient.execute(request)
-                                                                                        .aggregate().join();
-                                       return new HttpResponse(response.status().code(),
-                                                               response.contentUtf8());
-                                   });
+            final HttpRequest request = HttpRequest.of(headersBuilder.build(),
+                                                       HttpData.ofUtf8(body));
+            final AggregatedHttpResponse response = webClient.execute(request)
+                                                             .aggregate().join();
+            return new HttpResponse(response.status().code(),
+                                    response.contentUtf8());
+        });
+        return client.executeQuery(query, ImmutableMap.of());
     }
 }

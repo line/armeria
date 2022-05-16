@@ -27,17 +27,22 @@ import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientOptionsBuilder;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 
 /**
  * A skeletal builder implementation for creating a new {@link HealthCheckedEndpointGroup}.
  */
-public abstract class AbstractHealthCheckedEndpointGroupBuilder {
+public abstract class AbstractHealthCheckedEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
 
     static final Backoff DEFAULT_HEALTH_CHECK_RETRY_BACKOFF = Backoff.fixed(3000).withJitter(0.2);
 
@@ -154,7 +159,6 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
 
     /**
      * Sets the maximum endpoint ratio of target selected candidates.
-     * @see PartialHealthCheckStrategyBuilder#maxEndpointRatio(double)
      */
     public AbstractHealthCheckedEndpointGroupBuilder maxEndpointRatio(double maxEndpointRatio) {
         if (maxEndpointCount != null) {
@@ -171,7 +175,6 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
 
     /**
      * Sets the maximum endpoint count of target selected candidates.
-     * @see PartialHealthCheckStrategyBuilder#maxEndpointCount(int)
      */
     public AbstractHealthCheckedEndpointGroupBuilder maxEndpointCount(int maxEndpointCount) {
         if (maxEndpointRatio != null) {
@@ -185,25 +188,36 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
     }
 
     /**
+     * Sets the {@link AuthToken} header using {@link HttpHeaderNames#AUTHORIZATION}.
+     */
+    public AbstractHealthCheckedEndpointGroupBuilder auth(AuthToken token) {
+        requireNonNull(token, "token");
+        clientOptionsBuilder.auth(token);
+        return this;
+    }
+
+    @Override
+    public AbstractHealthCheckedEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        return (AbstractHealthCheckedEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    }
+
+    /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} based on the properties set so far.
      */
     public final HealthCheckedEndpointGroup build() {
         final HealthCheckStrategy healthCheckStrategy;
         if (maxEndpointCount != null) {
-            healthCheckStrategy = new PartialHealthCheckStrategyBuilder()
-                                            .maxEndpointCount(maxEndpointCount)
-                                            .build();
+            healthCheckStrategy = HealthCheckStrategy.ofCount(maxEndpointCount);
         } else {
             if (maxEndpointRatio == null || maxEndpointRatio == 1.0) {
-                healthCheckStrategy = new AllHealthCheckStrategy();
+                healthCheckStrategy = HealthCheckStrategy.all();
             } else {
-                healthCheckStrategy = new PartialHealthCheckStrategyBuilder()
-                                                .maxEndpointRatio(maxEndpointRatio)
-                                                .build();
+                healthCheckStrategy = HealthCheckStrategy.ofRatio(maxEndpointRatio);
             }
         }
 
-        return new HealthCheckedEndpointGroup(delegate, protocol, port, retryBackoff,
+        return new HealthCheckedEndpointGroup(delegate, shouldAllowEmptyEndpoints(),
+                                              protocol, port, retryBackoff,
                                               clientOptionsBuilder.build(),
                                               newCheckerFactory(), healthCheckStrategy);
     }
@@ -212,9 +226,10 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder {
      * Returns the {@link Function} that starts to send health check requests to the {@link Endpoint}
      * specified in a given {@link HealthCheckerContext} when invoked. The {@link Function} must update
      * the health of the {@link Endpoint} with a value between [0, 1] via
-     * {@link HealthCheckerContext#updateHealth(double)}. {@link HealthCheckedEndpointGroup} will call
-     * {@link AsyncCloseable#closeAsync()} on the {@link AsyncCloseable} returned by the {@link Function}
-     * when it needs to stop sending health check requests.
+     * {@link HealthCheckerContext#updateHealth(double, ClientRequestContext, ResponseHeaders, Throwable)}.
+     * {@link HealthCheckedEndpointGroup} will call {@link AsyncCloseable#closeAsync()} on the
+     * {@link AsyncCloseable} returned by the {@link Function} when it needs to stop sending health check
+     * requests.
      */
     protected abstract Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory();
 }

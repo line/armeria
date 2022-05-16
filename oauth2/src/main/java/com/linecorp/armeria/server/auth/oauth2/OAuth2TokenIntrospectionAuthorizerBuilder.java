@@ -61,7 +61,7 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
     private CaffeineSpec cacheSpec;
 
     /**
-     * Constructs new new builder for OAuth 2.0 Token Introspection {@link Authorizer},
+     * Constructs new builder for OAuth 2.0 Token Introspection {@link Authorizer},
      * as per<a href="https://datatracker.ietf.org/doc/html/rfc7662#section-2">[RFC7662], Section 2</a>.
      *
      * @param introspectionEndpoint A {@link WebClient} to facilitate the Token Introspection request. Must
@@ -162,7 +162,7 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
     }
 
     /**
-     * An array of of case-sensitive scope strings permitted by this authorizer.
+     * An array of case-sensitive scope strings permitted by this authorizer.
      * The authorizer will accept any scope if empty.
      */
     public OAuth2TokenIntrospectionAuthorizerBuilder permittedScope(String... scope) {

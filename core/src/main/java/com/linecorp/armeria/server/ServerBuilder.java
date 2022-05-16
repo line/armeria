@@ -23,7 +23,10 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.common.SessionProtocol.HTTP;
 import static com.linecorp.armeria.common.SessionProtocol.HTTPS;
 import static com.linecorp.armeria.common.SessionProtocol.PROXY;
-import static com.linecorp.armeria.server.ServerConfig.validateNonNegative;
+import static com.linecorp.armeria.server.DefaultServerConfig.validateGreaterThanOrEqual;
+import static com.linecorp.armeria.server.DefaultServerConfig.validateIdleTimeoutMillis;
+import static com.linecorp.armeria.server.DefaultServerConfig.validateMaxNumConnections;
+import static com.linecorp.armeria.server.DefaultServerConfig.validateNonNegative;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_LOWER_BOUND;
 import static io.netty.handler.codec.http2.Http2CodecUtil.MAX_FRAME_SIZE_UPPER_BOUND;
 import static java.util.Objects.requireNonNull;
@@ -32,6 +35,7 @@ import java.io.File;
 import java.io.InputStream;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
@@ -40,6 +44,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -56,14 +61,16 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Sets;
+import com.google.common.net.HostAndPort;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
@@ -139,6 +146,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  * @see VirtualHostBuilder
  */
 public final class ServerBuilder {
+    private static final Logger logger = LoggerFactory.getLogger(ServerBuilder.class);
 
     // Defaults to no graceful shutdown.
     private static final Duration DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD = Duration.ZERO;
@@ -183,10 +191,8 @@ public final class ServerBuilder {
     private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
-    private ScheduledExecutorService blockingTaskExecutor = CommonPools.blockingTaskExecutor();
-    private boolean shutdownBlockingTaskExecutorOnStop;
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
-    private ExceptionHandler exceptionHandler = ExceptionHandler.ofDefault();
+    private ServerErrorHandler errorHandler = ServerErrorHandler.ofDefault();
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<? super InetAddress> clientAddressFilter = address -> true;
@@ -195,6 +201,7 @@ public final class ServerBuilder {
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
+    private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
 
     ServerBuilder() {
         // Set the default host-level properties.
@@ -210,10 +217,15 @@ public final class ServerBuilder {
         virtualHostTemplate.tlsAllowUnsafeCiphers(false);
         virtualHostTemplate.annotatedServiceExtensions(ImmutableList.of(), ImmutableList.of(),
                                                        ImmutableList.of());
+        virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
+        virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
+        virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
         requireNonNull(hostnamePattern, "hostnamePattern");
+        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
+        hostnamePattern = hostAndPort.getHost();
         final String[] elements = hostnamePattern.split("\\.");
         final StringBuilder name = new StringBuilder(
                 DEFAULT_ACCESS_LOGGER_PREFIX.length() + hostnamePattern.length() + 1);
@@ -225,6 +237,10 @@ public final class ServerBuilder {
             }
             name.append('.');
             name.append(element);
+        }
+        if (hostAndPort.hasPort()) {
+            name.append(':');
+            name.append(hostAndPort.getPort());
         }
         return name.toString();
     }
@@ -483,7 +499,7 @@ public final class ServerBuilder {
      * Sets the maximum allowed number of open connections.
      */
     public ServerBuilder maxNumConnections(int maxNumConnections) {
-        this.maxNumConnections = ServerConfig.validateMaxNumConnections(maxNumConnections);
+        this.maxNumConnections = validateMaxNumConnections(maxNumConnections);
         return this;
     }
 
@@ -508,7 +524,7 @@ public final class ServerBuilder {
      */
     public ServerBuilder idleTimeout(Duration idleTimeout) {
         requireNonNull(idleTimeout, "idleTimeout");
-        idleTimeoutMillis = ServerConfig.validateIdleTimeoutMillis(idleTimeout.toMillis());
+        idleTimeoutMillis = validateIdleTimeoutMillis(idleTimeout.toMillis());
         return this;
     }
 
@@ -766,8 +782,20 @@ public final class ServerBuilder {
         requireNonNull(timeout, "timeout");
         gracefulShutdownQuietPeriod = validateNonNegative(quietPeriod, "quietPeriod");
         gracefulShutdownTimeout = validateNonNegative(timeout, "timeout");
-        ServerConfig.validateGreaterThanOrEqual(gracefulShutdownTimeout, "quietPeriod",
-                                                gracefulShutdownQuietPeriod, "timeout");
+        validateGreaterThanOrEqual(gracefulShutdownTimeout, "quietPeriod",
+                                   gracefulShutdownQuietPeriod, "timeout");
+        return this;
+    }
+
+    /**
+     * Sets the {@link Path} for storing upload file through multipart/form-data.
+     *
+     * @param path the path of the directory stores the file.
+     */
+    @UnstableApi
+    public ServerBuilder multipartUploadsLocation(Path path) {
+        requireNonNull(path, "path");
+        virtualHostTemplate.multipartUploadsLocation(path);
         return this;
     }
 
@@ -780,8 +808,8 @@ public final class ServerBuilder {
      */
     public ServerBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
                                               boolean shutdownOnStop) {
-        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        virtualHostTemplate.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
         return this;
     }
 
@@ -798,6 +826,16 @@ public final class ServerBuilder {
                                                                   .numThreads(numThreads)
                                                                   .build();
         return blockingTaskExecutor(executor, true);
+    }
+
+    /**
+     * Sets a {@link SuccessFunction} that determines whether a request was handled successfully or not.
+     * If unspecified, {@link SuccessFunction#ofDefault()} is used.
+     */
+    @UnstableApi
+    public ServerBuilder successFunction(SuccessFunction successFunction) {
+        virtualHostTemplate.successFunction(requireNonNull(successFunction, "successFunction"));
+        return this;
     }
 
     /**
@@ -1052,9 +1090,39 @@ public final class ServerBuilder {
 
     /**
      * Binds the specified {@link HttpService} under the specified directory of the default {@link VirtualHost}.
+     * If the specified {@link HttpService} is an {@link HttpServiceWithRoutes}, the {@code pathPrefix} is added
+     * to each {@link Route} of {@link HttpServiceWithRoutes#routes()}. For example, the
+     * {@code serviceWithRoutes} in the following code will be bound to
+     * ({@code "/foo/bar"}) and ({@code "/foo/baz"}):
+     * <pre>{@code
+     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+     * >
+     * >     @Override
+     * >     public Set<Route> routes() {
+     * >         return Set.of(Route.builder().path("/bar").build(),
+     * >                       Route.builder().path("/baz").build());
+     * >     }
+     * > };
+     * >
+     * > Server.builder()
+     * >       .serviceUnder("/foo", serviceWithRoutes)
+     * >       .build();
+     * }</pre>
      */
     public ServerBuilder serviceUnder(String pathPrefix, HttpService service) {
-        return service(Route.builder().pathPrefix(pathPrefix).build(), service);
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        final HttpServiceWithRoutes serviceWithRoutes = service.as(HttpServiceWithRoutes.class);
+        if (serviceWithRoutes != null) {
+            serviceWithRoutes.routes()
+                             .forEach(route -> route().addRoute(route.withPrefix(pathPrefix))
+                                                      .mappedRoute(route)
+                                                      .build(service));
+            return this;
+        }
+        return route().addRoute(Route.builder().pathPrefix(pathPrefix).build()).build(service);
     }
 
     /**
@@ -1073,6 +1141,9 @@ public final class ServerBuilder {
      * @throws IllegalArgumentException if the specified path pattern is invalid
      */
     public ServerBuilder service(String pathPattern, HttpService service) {
+        requireNonNull(pathPattern, "pathPattern");
+        requireNonNull(service, "service");
+        warnIfServiceHasMultipleRoutes(pathPattern, service);
         return route().path(pathPattern).build(service);
     }
 
@@ -1081,6 +1152,9 @@ public final class ServerBuilder {
      * {@link VirtualHost}.
      */
     public ServerBuilder service(Route route, HttpService service) {
+        requireNonNull(route, "route");
+        requireNonNull(service, "service");
+        warnIfServiceHasMultipleRoutes(route.patternString(), service);
         return route().addRoute(route).build(service);
     }
 
@@ -1098,15 +1172,8 @@ public final class ServerBuilder {
         requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
         requireNonNull(decorators, "decorators");
 
-        HttpService decorated = serviceWithRoutes;
-        for (Function<? super HttpService, ? extends HttpService> d : decorators) {
-            checkNotNull(d, "decorators contains null: %s", decorators);
-            decorated = d.apply(decorated);
-            checkNotNull(decorated, "A decorator returned null: %s", d);
-        }
-
-        final HttpService finalDecorated = decorated;
-        serviceWithRoutes.routes().forEach(route -> service(route, finalDecorated));
+        final HttpService decorated = decorate(serviceWithRoutes, decorators);
+        serviceWithRoutes.routes().forEach(route -> route().addRoute(route).build(decorated));
         return this;
     }
 
@@ -1122,6 +1189,18 @@ public final class ServerBuilder {
             HttpServiceWithRoutes serviceWithRoutes,
             Function<? super HttpService, ? extends HttpService>... decorators) {
         return service(serviceWithRoutes, ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
+    }
+
+    static HttpService decorate(
+            HttpServiceWithRoutes serviceWithRoutes,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        HttpService decorated = serviceWithRoutes;
+        for (Function<? super HttpService, ? extends HttpService> d : decorators) {
+            checkNotNull(d, "decorators contains null: %s", decorators);
+            decorated = d.apply(decorated);
+            checkNotNull(decorated, "A decorator returned null: %s", d);
+        }
+        return decorated;
     }
 
     /**
@@ -1351,6 +1430,31 @@ public final class ServerBuilder {
     }
 
     /**
+     * Adds the <a href="https://en.wikipedia.org/wiki/Virtual_hosting#Port-based">port-based virtual host</a>
+     * with the specified {@code port}. The returned virtual host will have a catch-all (wildcard host) name
+     * pattern that allows all host names.
+     *
+     * @param port the port number that this virtual host binds to
+     * @return {@link VirtualHostBuilder} for building the virtual host
+     */
+    public VirtualHostBuilder virtualHost(int port) {
+        checkArgument(port >= 1 && port <= 65535, "port: %s (expected: 1-65535)", port);
+
+        // Look for a virtual host that has already been made and reuse it.
+        final Optional<VirtualHostBuilder> vhost =
+                virtualHostBuilders.stream()
+                                   .filter(v -> v.port() == port && v.defaultVirtualHost())
+                                   .findFirst();
+        if (vhost.isPresent()) {
+            return vhost.get();
+        }
+
+        final VirtualHostBuilder virtualHostBuilder = new VirtualHostBuilder(this, port);
+        virtualHostBuilders.add(virtualHostBuilder);
+        return virtualHostBuilder;
+    }
+
+    /**
      * Decorates all {@link HttpService}s with the specified {@code decorator}.
      * The specified decorator(s) is/are executed in reverse order of the insertion.
      *
@@ -1445,14 +1549,15 @@ public final class ServerBuilder {
     }
 
     /**
-     * Sets the {@link ExceptionHandler} that converts a {@link Throwable} to an {@link AggregatedHttpResponse}.
+     * Sets the {@link ServerErrorHandler} that provides the error responses in case of unexpected exceptions
+     * or protocol errors.
      *
-     * <p>Note that the {@link HttpResponseException} is not handled by the {@link ExceptionHandler}
+     * <p>Note that the {@link HttpResponseException} is not handled by the {@link ServerErrorHandler}
      * but the {@link HttpResponseException#httpResponse()} is sent as-is.
      */
     @UnstableApi
-    public ServerBuilder exceptionHandler(ExceptionHandler exceptionHandler) {
-        this.exceptionHandler = requireNonNull(exceptionHandler, "exceptionHandler");
+    public ServerBuilder errorHandler(ServerErrorHandler errorHandler) {
+        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         return this;
     }
 
@@ -1634,6 +1739,17 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
+     * another HTTP/1 header name. This is useful when communicating with a legacy system that only supports
+     * case sensitive HTTP/1 headers.
+     */
+    public ServerBuilder http1HeaderNaming(Http1HeaderNaming http1HeaderNaming) {
+        requireNonNull(http1HeaderNaming, "http1HeaderNaming");
+        this.http1HeaderNaming = http1HeaderNaming;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
@@ -1642,11 +1758,11 @@ public final class ServerBuilder {
         return server;
     }
 
-    ServerConfig buildServerConfig(ServerConfig existingConfig) {
+    DefaultServerConfig buildServerConfig(ServerConfig existingConfig) {
         return buildServerConfig(existingConfig.ports());
     }
 
-    private ServerConfig buildServerConfig(List<ServerPort> serverPorts) {
+    private DefaultServerConfig buildServerConfig(List<ServerPort> serverPorts) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
 
@@ -1663,10 +1779,26 @@ public final class ServerBuilder {
         final SslContext defaultSslContext = findDefaultSslContext(defaultVirtualHost, virtualHosts);
         final Collection<ServerPort> ports;
 
-        this.ports.forEach(
-                port -> checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
-                                   "protocols: %s (expected: at least one %s or %s)",
-                                   port.protocols(), HTTP, HTTPS));
+        for (ServerPort port : this.ports) {
+            checkState(port.protocols().stream().anyMatch(p -> p != PROXY),
+                       "protocols: %s (expected: at least one %s or %s)",
+                       port.protocols(), HTTP, HTTPS);
+        }
+
+        // The port numbers of port-based virtual hosts must exist in 'ServerPort's.
+        final List<VirtualHost> portBasedVirtualHosts = virtualHosts.stream()
+                                                                    .filter(v -> v.port() > 0)
+                                                                    .collect(toImmutableList());
+        final List<Integer> portNumbers = this.ports.stream()
+                                                    .map(port -> port.localAddress().getPort())
+                                                    .filter(port -> port > 0)
+                                                    .collect(toImmutableList());
+        for (VirtualHost virtualHost : portBasedVirtualHosts) {
+            final int virtualHostPort = virtualHost.port();
+            final boolean portMatched = portNumbers.stream().anyMatch(port -> port == virtualHostPort);
+            checkState(portMatched, "virtual host port: %s (expected: one of %s)",
+                       virtualHostPort, portNumbers);
+        }
 
         if (defaultSslContext == null) {
             sslContexts = null;
@@ -1701,7 +1833,11 @@ public final class ServerBuilder {
             for (VirtualHost h : virtualHosts) {
                 final SslContext sslCtx = h.sslContext();
                 if (sslCtx != null) {
-                    mappingBuilder.add(h.hostnamePattern(), sslCtx);
+                    final String originalHostnamePattern = h.originalHostnamePattern();
+                    // The SslContext for the default virtual host was added when creating DomainMappingBuilder.
+                    if (!"*".equals(originalHostnamePattern)) {
+                        mappingBuilder.add(originalHostnamePattern, sslCtx);
+                    }
                 }
             }
             sslContexts = mappingBuilder.build();
@@ -1725,12 +1861,16 @@ public final class ServerBuilder {
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
-        ExceptionHandler exceptionHandler = this.exceptionHandler;
-        if (exceptionHandler != ExceptionHandler.ofDefault()) {
-            exceptionHandler = exceptionHandler.orElse(ExceptionHandler.ofDefault());
+        ServerErrorHandler errorHandler = this.errorHandler;
+        if (errorHandler != ServerErrorHandler.ofDefault()) {
+            // Ensure that ServerErrorHandler never returns null by falling back to the default.
+            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
         }
 
-        return new ServerConfig(
+        final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
+        final boolean shutdownOnStop = defaultVirtualHost.shutdownBlockingTaskExecutorOnStop();
+
+        return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
@@ -1738,10 +1878,11 @@ public final class ServerBuilder {
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
+                blockingTaskExecutor, shutdownOnStop,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, requestIdGenerator, exceptionHandler, sslContexts);
+                enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
+                http1HeaderNaming);
     }
 
     /**
@@ -1801,15 +1942,30 @@ public final class ServerBuilder {
         return null;
     }
 
+    private static void warnIfServiceHasMultipleRoutes(String path, HttpService service) {
+        if (service instanceof ServiceWithRoutes) {
+            if (!Flags.reportMaskedRoutes()) {
+                return;
+            }
+
+            if (((ServiceWithRoutes) service).routes().size() > 0) {
+                logger.warn("The service has self-defined routes but the routes will be ignored. " +
+                            "It will be served at the route you specified: path={}, service={}. " +
+                            "If this is intended behavior, you can disable this log message by specifying " +
+                            "the -Dcom.linecorp.armeria.reportMaskedRoutes=false JVM option.",
+                            path, service);
+            }
+        }
+    }
+
     @Override
     public String toString() {
-        return ServerConfig.toString(
+        return DefaultServerConfig.toString(
                 getClass(), ports, null, ImmutableList.of(), workerGroup, shutdownWorkerGroupOnStop,
                 maxNumConnections, idleTimeoutMillis, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection, http2MaxFrameSize,
                 http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
-                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
+                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null, false,
                 meterRegistry, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader);

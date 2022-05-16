@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.SocketAddress;
 import java.time.Duration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
@@ -42,6 +43,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
@@ -256,6 +258,35 @@ public interface ServiceRequestContext extends RequestContext {
     @Nullable
     default String pathParam(String name) {
         return pathParams().get(name);
+    }
+
+    /**
+     * Returns the decoded {@linkplain QueryParams query part} of the current {@link Request} URI,
+     * as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
+     */
+    QueryParams queryParams();
+
+    /**
+     * Returns all values for the parameter with the specified name. The returned {@link List} can't be
+     * modified.
+     *
+     * @param name the parameter name
+     * @return a {@link List} of parameter values or an empty {@link List} if there is no such parameter.
+     */
+    default List<String> queryParams(String name) {
+        return queryParams().getAll(name);
+    }
+
+    /**
+     * Returns the value of a parameter with the specified {@code name}. If there are more than one value for
+     * the specified {@code name}, the first value in insertion order is returned.
+     *
+     * @param name the parameter name
+     * @return the first parameter value if found, or {@code null} if there is no such parameter
+     */
+    @Nullable
+    default String queryParam(String name) {
+        return queryParams().get(name);
     }
 
     /**
@@ -550,7 +581,7 @@ public interface ServiceRequestContext extends RequestContext {
 
     /**
      * Initiates graceful connection shutdown with a given drain duration in microseconds and returns
-     * {@link CompletableFuture} that completes when the channel is closed..
+     * {@link CompletableFuture} that completes when the channel is closed.
      *
      * <p>
      * At the connection drain server signals the clients that the connection shutdown is imminent

@@ -110,16 +110,15 @@ class HttpServerConnectMethodTest {
                 .join();
         assertThat(res1.status()).isSameAs(HttpStatus.METHOD_NOT_ALLOWED);
 
-        // TODO(trustin): Uncomment this test once Netty accepts the `:protocol` pseudo header.
-        //                https://github.com/netty/netty/pull/11192
-        // final AggregatedHttpResponse res2 = client
-        //         .prepare()
-        //         .method(HttpMethod.CONNECT)
-        //         .path("/")
-        //         .header(HttpHeaderNames.PROTOCOL, "websocket")
-        //         .execute()
-        //         .aggregate()
-        //         .join();
-        // assertThat(res2.status()).isSameAs(HttpStatus.OK);
+        // However, a WebSocket handshake request should be allowed.
+        final AggregatedHttpResponse res2 = client
+                .prepare()
+                .method(HttpMethod.CONNECT)
+                .path("/")
+                .header(HttpHeaderNames.PROTOCOL, "websocket")
+                .execute()
+                .aggregate()
+                .join();
+        assertThat(res2.status()).isSameAs(HttpStatus.OK);
     }
 }

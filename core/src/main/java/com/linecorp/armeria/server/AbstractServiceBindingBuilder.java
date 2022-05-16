@@ -19,13 +19,16 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -113,6 +116,31 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         return this;
     }
 
+    @Override
+    public AbstractServiceBindingBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                              boolean shutdownOnStop) {
+        defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder blockingTaskExecutor(int numThreads) {
+        defaultServiceConfigSetters.blockingTaskExecutor(numThreads);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder successFunction(SuccessFunction successFunction) {
+        defaultServiceConfigSetters.successFunction(successFunction);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
+        return this;
+    }
+
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(HttpService service) {
@@ -122,11 +150,21 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
                              ImmutableSet.of());
 
         final List<Route> routes = buildRouteList(fallbackRoutes);
+        final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
         for (Route route : routes) {
-            final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
             final ServiceConfigBuilder serviceConfigBuilder =
                     defaultServiceConfigSetters.toServiceConfigBuilder(route, decoratedService);
             serviceConfigBuilder(serviceConfigBuilder);
         }
+    }
+
+    final void build0(HttpService service, Route mappedRoute) {
+        final List<Route> routes = buildRouteList(ImmutableSet.of());
+        assert routes.size() == 1; // Only one route is set via addRoute().
+        final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
+        final ServiceConfigBuilder serviceConfigBuilder =
+                defaultServiceConfigSetters.toServiceConfigBuilder(routes.get(0), decoratedService);
+        serviceConfigBuilder.addMappedRoute(mappedRoute);
+        serviceConfigBuilder(serviceConfigBuilder);
     }
 }

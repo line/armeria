@@ -31,6 +31,7 @@ import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http.DefaultHttpRequest;
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http.HttpMethod;
@@ -52,8 +53,9 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
     }
 
     @Override
-    public ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream) {
-        return writeNonInformationalHeaders(id, convertHeaders(headers, endStream), endStream);
+    public ChannelFuture doWriteHeaders(int id, int streamId, RequestHeaders headers, boolean endStream,
+                                        ChannelPromise promise) {
+        return writeNonInformationalHeaders(id, convertHeaders(headers, endStream), endStream, promise);
     }
 
     private HttpObject convertHeaders(RequestHeaders headers, boolean endStream) {
@@ -61,7 +63,7 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
         final HttpRequest req = new DefaultHttpRequest(HttpVersion.HTTP_1_1, HttpMethod.valueOf(method),
                                                        headers.path(), false);
         final io.netty.handler.codec.http.HttpHeaders nettyHeaders = req.headers();
-        ArmeriaHttpUtil.toNettyHttp1ClientHeader(headers, nettyHeaders, http1HeaderNaming);
+        ArmeriaHttpUtil.toNettyHttp1ClientHeaders(headers, nettyHeaders, http1HeaderNaming);
 
         if (!nettyHeaders.contains(HttpHeaderNames.USER_AGENT)) {
             nettyHeaders.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
@@ -109,7 +111,7 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
     @Override
     protected void convertTrailers(HttpHeaders inputHeaders,
                                    io.netty.handler.codec.http.HttpHeaders outputHeaders) {
-        ArmeriaHttpUtil.toNettyHttp1ClientTrailer(inputHeaders, outputHeaders, http1HeaderNaming);
+        ArmeriaHttpUtil.toNettyHttp1ClientTrailers(inputHeaders, outputHeaders, http1HeaderNaming);
     }
 
     @Override

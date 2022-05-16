@@ -58,6 +58,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.server.Route;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.ServerMethodDefinition;
@@ -70,19 +71,27 @@ import io.grpc.ServerServiceDefinition;
 final class HandlerRegistry {
     private final ImmutableList<ServerServiceDefinition> services;
     private final ImmutableMap<String, ServerMethodDefinition<?, ?>> methods;
+    private final ImmutableMap<Route, ServerMethodDefinition<?, ?>> methodsByRoute;
     private final ImmutableMap<MethodDescriptor<?, ?>, String> simpleMethodNames;
 
     private HandlerRegistry(ImmutableList<ServerServiceDefinition> services,
                             ImmutableMap<String, ServerMethodDefinition<?, ?>> methods,
+                            ImmutableMap<Route, ServerMethodDefinition<?, ?>> methodsByRoute,
                             ImmutableMap<MethodDescriptor<?, ?>, String> simpleMethodNames) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
+        this.methodsByRoute = requireNonNull(methodsByRoute, "methodsByRoute");
         this.simpleMethodNames = requireNonNull(simpleMethodNames, "simpleMethodNames");
     }
 
     @Nullable
     ServerMethodDefinition<?, ?> lookupMethod(String methodName) {
         return methods.get(methodName);
+    }
+
+    @Nullable
+    ServerMethodDefinition<?, ?> lookupMethod(Route route) {
+        return methodsByRoute.get(route);
     }
 
     String simpleMethodName(MethodDescriptor<?, ?> methodName) {
@@ -95,6 +104,10 @@ final class HandlerRegistry {
 
     Map<String, ServerMethodDefinition<?, ?>> methods() {
         return methods;
+    }
+
+    Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute() {
+        return methodsByRoute;
     }
 
     static final class Builder {
@@ -141,6 +154,7 @@ final class HandlerRegistry {
             // Store per-service first, to make sure services are added/replaced atomically.
             final Map<String, ServerServiceDefinition> services = new HashMap<>();
             final Map<String, ServerMethodDefinition<?, ?>> methods = new HashMap<>();
+            final Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute = new HashMap<>();
             final Map<MethodDescriptor<?, ?>, String> simpleMethodNames = new HashMap<>();
 
             for (Entry entry : entries) {
@@ -153,7 +167,9 @@ final class HandlerRegistry {
                         final MethodDescriptor<?, ?> methodDescriptor0 = method.getMethodDescriptor();
                         final String fullMethodName = methodDescriptor0.getFullMethodName();
                         final String simpleMethodName = extractMethodName(fullMethodName);
-                        methods.put(path + '/' + simpleMethodName, method);
+                        final String pathWithMethod = path + '/' + simpleMethodName;
+                        methods.put(pathWithMethod, method);
+                        methodsByRoute.put(Route.builder().exact('/' + pathWithMethod).build(), method);
                         simpleMethodNames.put(methodDescriptor0, simpleMethodName);
                     }
                 } else {
@@ -164,12 +180,14 @@ final class HandlerRegistry {
                                    .orElseThrow(() -> new IllegalArgumentException(
                                            "Failed to retrieve " + methodDescriptor + " in " + service));
                     methods.put(path, method);
+                    methodsByRoute.put(Route.builder().exact('/' + path).build(), method);
                     final MethodDescriptor<?, ?> methodDescriptor0 = method.getMethodDescriptor();
                     final String fullMethodName = methodDescriptor0.getFullMethodName();
                     simpleMethodNames.put(methodDescriptor0, extractMethodName(fullMethodName));
                 }
             }
             return new HandlerRegistry(ImmutableList.copyOf(services.values()), ImmutableMap.copyOf(methods),
+                                       ImmutableMap.copyOf(methodsByRoute),
                                        ImmutableMap.copyOf(simpleMethodNames));
         }
     }

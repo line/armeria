@@ -18,13 +18,17 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 /**
@@ -57,6 +61,8 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
 public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
 
     private final ServerBuilder serverBuilder;
+    @Nullable
+    private Route mappedRoute;
 
     ServiceBindingBuilder(ServerBuilder serverBuilder) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
@@ -183,6 +189,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
         return (ServiceBindingBuilder) super.addRoute(route);
     }
 
+    ServiceBindingBuilder mappedRoute(Route mappedRoute) {
+        this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
+        return this;
+    }
+
     @Override
     public ServiceBindingBuilder exclude(String pathPattern) {
         return (ServiceBindingBuilder) super.exclude(pathPattern);
@@ -206,6 +217,22 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     @Override
     public ServiceBindingBuilder defaultLogName(String defaultLogName) {
         return (ServiceBindingBuilder) super.defaultLogName(defaultLogName);
+    }
+
+    @Override
+    public ServiceBindingBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                      boolean shutdownOnStop) {
+        return (ServiceBindingBuilder) super.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
+    }
+
+    @Override
+    public ServiceBindingBuilder blockingTaskExecutor(int numThreads) {
+        return (ServiceBindingBuilder) super.blockingTaskExecutor(numThreads);
+    }
+
+    @Override
+    public ServiceBindingBuilder successFunction(SuccessFunction successFunction) {
+        return (ServiceBindingBuilder) super.successFunction(successFunction);
     }
 
     @Override
@@ -239,6 +266,11 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     }
 
     @Override
+    public ServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        return (ServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
+    }
+
+    @Override
     public ServiceBindingBuilder decorator(Function<? super HttpService, ? extends HttpService> decorator) {
         return (ServiceBindingBuilder) super.decorator(decorator);
     }
@@ -263,7 +295,13 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
      * @throws IllegalStateException if the path that the {@link HttpService} will be bound to is not specified
      */
     public ServerBuilder build(HttpService service) {
-        build0(service);
+        if (mappedRoute != null) {
+            // mappedRoute is only set when the service is an HttpServiceWithRoutes
+            assert service.as(HttpServiceWithRoutes.class) != null;
+            build0(service, mappedRoute);
+        } else {
+            build0(service);
+        }
         return serverBuilder;
     }
 

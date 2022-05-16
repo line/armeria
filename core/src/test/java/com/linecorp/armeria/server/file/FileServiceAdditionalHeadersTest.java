@@ -20,7 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpStatus;
@@ -47,8 +47,8 @@ public class FileServiceAdditionalHeadersTest {
 
     @Test
     public void testAdditionalHeaders() {
-        final WebClient client = WebClient.of(server.httpUri());
-        final AggregatedHttpResponse res = client.get("/java/lang/Object.class").aggregate().join();
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+        final AggregatedHttpResponse res = client.get("/java/lang/Object.class");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().getAll(HttpHeaderNames.of("foo"))).containsExactly("1", "2");
         assertThat(res.headers().getAll(HttpHeaderNames.of("bar"))).containsExactly("3");

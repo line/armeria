@@ -18,17 +18,24 @@ package com.linecorp.armeria.internal.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.endpointInfoBuilder;
 import static com.linecorp.armeria.internal.server.grpc.GrpcMethodUtil.extractMethodName;
 import static java.util.Objects.requireNonNull;
 
 import java.io.UncheckedIOException;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
@@ -36,6 +43,7 @@ import com.google.common.collect.Multimap;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.EnumDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
+import com.google.protobuf.Descriptors.FieldDescriptor.JavaType;
 import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
@@ -47,7 +55,9 @@ import com.google.protobuf.util.JsonFormat;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.internal.server.grpc.HttpEndpointSpecification.Parameter;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
@@ -58,6 +68,8 @@ import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
+import com.linecorp.armeria.server.docs.FieldInfoBuilder;
+import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfo;
@@ -67,6 +79,7 @@ import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.grpc.GrpcService;
 
+import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.protobuf.ProtoFileDescriptorSupplier;
 
@@ -110,6 +123,9 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     @VisibleForTesting
     static final TypeSignature UNKNOWN = TypeSignature.ofBase("unknown");
 
+    @VisibleForTesting
+    public static final String HTTP_SERVICE_SUFFIX = "_HTTP";
+
     private static final JsonFormat.Printer defaultExamplePrinter =
             JsonFormat.printer().includingDefaultValueFields();
 
@@ -131,68 +147,235 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(filter, "filter");
 
+        final Set<GrpcService> addedService = new HashSet<>();
+        final ImmutableList.Builder<HttpEndpoint> httpEndpoints = ImmutableList.builder();
         final ServiceInfosBuilder serviceInfosBuilder = new ServiceInfosBuilder();
         for (ServiceConfig serviceConfig : serviceConfigs) {
             final GrpcService grpcService = serviceConfig.service().as(GrpcService.class);
             assert grpcService != null;
 
-            final ImmutableSet.Builder<MediaType> supportedMediaTypesBuilder = ImmutableSet.builder();
-            supportedMediaTypesBuilder.addAll(grpcService.supportedSerializationFormats()
-                                                         .stream()
-                                                         .map(SerializationFormat::mediaType)::iterator);
+            if (addedService.add(grpcService)) {
+                addServiceDescriptor(serviceInfosBuilder, grpcService);
+            }
 
-            if (!grpcService.isFramed()) {
-                if (grpcService.supportedSerializationFormats().contains(GrpcSerializationFormats.PROTO)) {
-                    // Normal clients of a GrpcService are not required to set a protocol when using unframed
-                    // requests but we set it here for clarity in DocService, where there may be multiple
-                    // services with similar mime types but different protocols.
-                    supportedMediaTypesBuilder.add(MediaType.PROTOBUF.withParameter("protocol", "gRPC"));
-                }
-                if (grpcService.supportedSerializationFormats().contains(GrpcSerializationFormats.JSON)) {
-                    supportedMediaTypesBuilder.add(MediaType.JSON_UTF_8.withParameter("protocol", "gRPC"));
+            if (grpcService instanceof HttpEndpointSupport) {
+                // grpcService is a HttpJsonTranscodingService.
+                // There are two routes for a method in HttpJsonTranscodingService:
+                // - The HTTP route is added below using the spec.
+                // - The auto generated route(e.g. /package.name/MethodName) is added using EndpointInfo.
+                final HttpEndpointSpecification spec =
+                        ((HttpEndpointSupport) grpcService).httpEndpointSpecification(
+                                serviceConfig.mappedRoute()); // Use mappedRoute to find the specification.
+                if (spec != null) {
+                    if (filter.test(NAME, spec.serviceName(), spec.methodName())) {
+                        httpEndpoints.add(new HttpEndpoint(serviceConfig,
+                                                           // Use route which has the full path.
+                                                           spec.withRoute(serviceConfig.route())));
+                    }
+                    continue;
+                } else {
+                    // The current route is one of the routes from FramedGrpcService.routes()
+                    // so we add it below.
                 }
             }
-            final Set<MediaType> supportedMediaTypes = supportedMediaTypesBuilder.build();
 
-            // Find the ServiceDescriptors of all services and put them all into the 'map'
-            // after wrapping with ServiceEntryBuilder.
-            grpcService.services().stream()
-                       .map(ServerServiceDefinition::getServiceDescriptor)
-                       .filter(Objects::nonNull)
-                       .filter(desc -> desc.getSchemaDescriptor() instanceof ProtoFileDescriptorSupplier)
-                       .forEach(desc -> {
-                           final String serviceName = desc.getName();
-
-                           final ProtoFileDescriptorSupplier fileDescSupplier =
-                                   (ProtoFileDescriptorSupplier) desc.getSchemaDescriptor();
-                           final FileDescriptor fileDesc = fileDescSupplier.getFileDescriptor();
-                           final ServiceDescriptor serviceDesc =
-                                   fileDesc.getServices().stream()
-                                           .filter(sd -> sd.getFullName().equals(serviceName))
-                                           .findFirst()
-                                           .orElseThrow(IllegalStateException::new);
-                           serviceInfosBuilder.addService(serviceDesc);
-                       });
-
-            final String pathPrefix;
             final Route route = serviceConfig.route();
+            final Set<MediaType> supportedMediaTypes = supportedMediaTypes(grpcService);
             if (route.pathType() == RoutePathType.PREFIX) {
-                pathPrefix = route.paths().get(0);
-            } else {
-                pathPrefix = "/";
-            }
+                // The route is PREFIX type when the grpcService is set via route builder:
+                // - serverBuilder.route().pathPrefix("/prefix")...build(grpcService);
+                // So we add endpoints of all methods in the grpcService with the pathPrefix.
+                final String pathPrefix = route.paths().get(0);
+                grpcService.methodsByRoute().forEach((methodRoute, method) -> {
+                    final EndpointInfo endpointInfo =
+                            EndpointInfo.builder(serviceConfig.virtualHost().hostnamePattern(),
+                                                 concatPaths(pathPrefix, methodRoute.patternString()))
+                                        .availableMimeTypes(supportedMediaTypes)
+                                        .build();
 
-            grpcService.methods().forEach((path, method) -> {
+                    serviceInfosBuilder.addEndpoint(method.getMethodDescriptor(), endpointInfo);
+                });
+            } else if (route.pathType() == RoutePathType.EXACT) {
+                // The route is EXACT type when the grpcService is set via:
+                // - serverBuilder.service(grpcService);
+                // - serverBuilder.serviceUnder("/prefix", grpcService);
+                final ServerMethodDefinition<?, ?> methodDefinition =
+                        // Use mappedRoute to find the methodDefinition.
+                        grpcService.methodsByRoute().get(serviceConfig.mappedRoute());
+                assert methodDefinition != null;
                 final EndpointInfo endpointInfo =
                         EndpointInfo.builder(serviceConfig.virtualHost().hostnamePattern(),
-                                             pathPrefix + path)
+                                             route.patternString())
                                     .availableMimeTypes(supportedMediaTypes)
                                     .build();
-
-                serviceInfosBuilder.addEndpoint(method.getMethodDescriptor(), endpointInfo);
-            });
+                serviceInfosBuilder.addEndpoint(methodDefinition.getMethodDescriptor(), endpointInfo);
+            } else {
+                // Should never reach here.
+                throw new Error();
+            }
         }
-        return generate(serviceInfosBuilder.build(filter));
+
+        return generate(ImmutableList.<ServiceInfo>builder()
+                                     .addAll(serviceInfosBuilder.build(filter))
+                                     .addAll(buildHttpServiceInfos(httpEndpoints.build()))
+                                     .build());
+    }
+
+    private static void addServiceDescriptor(ServiceInfosBuilder serviceInfosBuilder, GrpcService grpcService) {
+        grpcService.services().stream()
+                   .map(ServerServiceDefinition::getServiceDescriptor)
+                   .filter(Objects::nonNull)
+                   .filter(desc -> desc.getSchemaDescriptor() instanceof ProtoFileDescriptorSupplier)
+                   .forEach(desc -> {
+                       final String serviceName = desc.getName();
+                       final ProtoFileDescriptorSupplier fileDescSupplier =
+                               (ProtoFileDescriptorSupplier) desc.getSchemaDescriptor();
+                       final FileDescriptor fileDesc = fileDescSupplier.getFileDescriptor();
+                       final ServiceDescriptor serviceDesc =
+                               fileDesc.getServices().stream()
+                                       .filter(sd -> sd.getFullName().equals(serviceName))
+                                       .findFirst()
+                                       .orElseThrow(IllegalStateException::new);
+                       serviceInfosBuilder.addService(serviceDesc);
+                   });
+    }
+
+    private static Set<MediaType> supportedMediaTypes(GrpcService grpcService) {
+        final ImmutableSet.Builder<MediaType> supportedMediaTypesBuilder = ImmutableSet.builder();
+        supportedMediaTypesBuilder.addAll(grpcService.supportedSerializationFormats()
+                                                     .stream()
+                                                     .map(SerializationFormat::mediaType)::iterator);
+
+        if (!grpcService.isFramed()) {
+            if (grpcService.supportedSerializationFormats().contains(GrpcSerializationFormats.PROTO)) {
+                // Normal clients of a GrpcService are not required to set a protocol when using unframed
+                // requests but we set it here for clarity in DocService, where there may be multiple
+                // services with similar mime types but different protocols.
+                supportedMediaTypesBuilder.add(MediaType.PROTOBUF.withParameter("protocol", "gRPC"));
+            }
+            if (grpcService.supportedSerializationFormats().contains(GrpcSerializationFormats.JSON)) {
+                supportedMediaTypesBuilder.add(MediaType.JSON_UTF_8.withParameter("protocol", "gRPC"));
+            }
+        }
+        return supportedMediaTypesBuilder.build();
+    }
+
+    @VisibleForTesting
+    static List<ServiceInfo> buildHttpServiceInfos(List<HttpEndpoint> httpEndpoints) {
+        if (httpEndpoints.isEmpty()) {
+            return ImmutableList.of();
+        }
+
+        final Multimap<String, HttpEndpoint> byServiceName = HashMultimap.create();
+        httpEndpoints.forEach(
+                httpEndpoint -> byServiceName.put(httpEndpoint.spec().serviceName(), httpEndpoint));
+
+        final ImmutableList.Builder<ServiceInfo> serviceInfos = ImmutableList.builder();
+        byServiceName.asMap().forEach(
+                (key, value) -> serviceInfos.add(buildHttpServiceInfo(key + HTTP_SERVICE_SUFFIX, value)));
+        return serviceInfos.build();
+    }
+
+    private static ServiceInfo buildHttpServiceInfo(String serviceName,
+                                                    Collection<HttpEndpoint> endpoints) {
+        final Multimap<String, HttpEndpoint> byMethodName = HashMultimap.create();
+        endpoints.stream()
+                 // Order by gRPC method name and the specified order of HTTP endpoints.
+                 .sorted(Comparator.comparing(
+                         httpEndpoint -> httpEndpoint.spec().methodName() + httpEndpoint.spec().order()))
+                 // Group by gRPC method name and HTTP method.
+                 .forEach(entry -> byMethodName.put(entry.spec().methodName() + '/' + entry.httpMethod(),
+                                                    entry));
+
+        final ImmutableList.Builder<MethodInfo> methodInfos = ImmutableList.builder();
+        byMethodName.asMap().forEach((name, httpEndpoints) -> {
+            final List<HttpEndpoint> sortedEndpoints =
+                    httpEndpoints.stream().sorted(Comparator.comparingInt(ep -> ep.spec.order()))
+                                 .collect(toImmutableList());
+
+            final HttpEndpoint firstEndpoint = sortedEndpoints.get(0);
+            final HttpEndpointSpecification firstSpec = firstEndpoint.spec();
+
+            final ImmutableList.Builder<FieldInfo> fieldInfosBuilder = ImmutableList.builder();
+            firstSpec.pathVariables().forEach(paramName -> {
+                @Nullable
+                final Parameter parameter = firstSpec.parameters().get(paramName);
+                // It is possible not to have a gRPC field mapped by a path variable.
+                // In this case, we treat the type of the path variable as 'String'.
+                final TypeSignature typeSignature =
+                        parameter != null ? toTypeSignature(parameter)
+                                          : TypeSignature.ofBase(JavaType.STRING.name());
+                fieldInfosBuilder.add(FieldInfo.builder(paramName, typeSignature)
+                                               .requirement(FieldRequirement.REQUIRED)
+                                               .location(FieldLocation.PATH)
+                                               .build());
+            });
+            final String bodyParamName = firstSpec.httpRule().getBody();
+            final FieldLocation fieldLocation = Strings.isNullOrEmpty(bodyParamName) ? FieldLocation.QUERY
+                                                                                     : FieldLocation.BODY;
+            firstSpec.parameters().forEach((paramName, parameter) -> {
+                if (!firstSpec.pathVariables().contains(paramName)) {
+                    final FieldInfoBuilder builder;
+                    if (fieldLocation == FieldLocation.BODY && !"*".equals(bodyParamName) &&
+                        paramName.startsWith(bodyParamName + '.')) {
+                        builder = FieldInfo.builder(paramName.substring(bodyParamName.length() + 1),
+                                                    toTypeSignature(parameter));
+                    } else {
+                        builder = FieldInfo.builder(paramName, toTypeSignature(parameter));
+                    }
+
+                    fieldInfosBuilder.add(builder.requirement(FieldRequirement.REQUIRED)
+                                                 .location(fieldLocation)
+                                                 .build());
+                }
+            });
+
+            final List<EndpointInfo> endpointInfos =
+                    sortedEndpoints.stream()
+                                   .map(httpEndpoint -> endpointInfoBuilder(
+                                           httpEndpoint.spec().route(),
+                                           httpEndpoint.config().virtualHost().hostnamePattern())
+                                           // DocService client works only if the media type equals to
+                                           // 'application/json; charset=utf-8'.
+                                           .availableMimeTypes(MediaType.JSON_UTF_8)
+                                           .build()).collect(toImmutableList());
+
+            final List<String> examplePaths =
+                    sortedEndpoints.stream().map(httpEndpoint -> httpEndpoint.spec().route().patternString())
+                                   .collect(toImmutableList());
+
+            final List<String> exampleQueries =
+                    sortedEndpoints.stream().map(httpEndpoint -> {
+                        final HttpEndpointSpecification spec = httpEndpoint.spec();
+                        return spec.parameters().entrySet().stream()
+                                   // Exclude path parameters.
+                                   .filter(entry -> !spec.pathVariables().contains(entry.getKey()))
+                                   // Join all remaining parameters as a single query string.
+                                   .map(p -> p.getKey() + '=' + p.getValue().type().name())
+                                   .collect(Collectors.joining("&"));
+                    }).filter(queries -> !queries.isEmpty()).collect(toImmutableList());
+
+            methodInfos.add(new MethodInfo(
+                    // Order 0 is primary.
+                    firstSpec.order() == 0 ? firstSpec.methodName()
+                                           : firstSpec.methodName() + '-' + firstSpec.order(),
+                    namedMessageSignature(firstSpec.methodDescriptor().getOutputType()),
+                    fieldInfosBuilder.build(),
+                    /* exceptionTypeSignatures */ ImmutableList.of(),
+                    endpointInfos,
+                    /* exampleHeaders */ ImmutableList.of(),
+                    /* exampleRequests */ ImmutableList.of(),
+                    examplePaths,
+                    exampleQueries,
+                    firstEndpoint.httpMethod(),
+                    /* docString */ null));
+        });
+        return new ServiceInfo(serviceName, methodInfos.build());
+    }
+
+    private static TypeSignature toTypeSignature(Parameter parameter) {
+        final TypeSignature typeSignature = TypeSignature.ofBase(parameter.type().name());
+        return parameter.isRepeated() ? TypeSignature.ofList(typeSignature) : typeSignature;
     }
 
     @Override
@@ -380,22 +563,26 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    static final class ServiceEntry {
-        final ServiceDescriptor service;
-        final List<EndpointInfo> endpointInfos;
+    static final class HttpEndpoint {
+        private final ServiceConfig config;
+        private final HttpEndpointSpecification spec;
 
-        ServiceEntry(ServiceDescriptor service,
-                     List<EndpointInfo> endpointInfos) {
-            this.service = service;
-            this.endpointInfos = ImmutableList.copyOf(endpointInfos);
+        HttpEndpoint(ServiceConfig config, HttpEndpointSpecification spec) {
+            this.config = config;
+            this.spec = spec;
         }
 
-        String name() {
-            return service.getFullName();
+        ServiceConfig config() {
+            return config;
         }
 
-        List<MethodDescriptor> methods() {
-            return ImmutableList.copyOf(service.getMethods());
+        HttpEndpointSpecification spec() {
+            return spec;
+        }
+
+        HttpMethod httpMethod() {
+            // Only one HTTP method can be specified for the route specified by gRPC transcoding.
+            return spec.route().methods().stream().findFirst().get();
         }
     }
 

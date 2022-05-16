@@ -35,8 +35,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.util.concurrent.Uninterruptibles;
 
-import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
@@ -90,8 +88,7 @@ class GrpcClientTimeoutTest {
     @Test
     void clientTimeout() throws InterruptedException {
         final TestServiceBlockingStub client =
-                Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO),
-                                  TestServiceBlockingStub.class);
+                GrpcClients.newClient(server.httpUri(), TestServiceBlockingStub.class);
         final StatusRuntimeException exception = catchThrowableOfType(() -> {
             client.withDeadlineAfter(1000, TimeUnit.MILLISECONDS)
                   .unaryCall(SimpleRequest.getDefaultInstance());
@@ -110,9 +107,9 @@ class GrpcClientTimeoutTest {
 
     @Test
     void serverTimeout() throws InterruptedException {
-        final TestServiceBlockingStub client = Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                                                      .responseTimeoutMillis(0)
-                                                      .build(TestServiceBlockingStub.class);
+        final TestServiceBlockingStub client = GrpcClients.builder(server.httpUri())
+                                                          .responseTimeoutMillis(0)
+                                                          .build(TestServiceBlockingStub.class);
 
         final StatusRuntimeException exception = catchThrowableOfType(() -> {
             client.unaryCall(SimpleRequest.getDefaultInstance());

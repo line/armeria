@@ -16,16 +16,21 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -52,7 +57,14 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private Function<? super HttpService, ? extends HttpService> decorator;
     @Nullable
     private AccessLogWriter accessLogWriter;
+    @Nullable
+    private ScheduledExecutorService blockingTaskExecutor;
+    private boolean shutdownBlockingTaskExecutorOnStop;
     private boolean shutdownAccessLogWriterOnStop;
+    @Nullable
+    private SuccessFunction successFunction;
+    @Nullable
+    private Path multipartUploadsLocation;
 
     @Override
     public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
@@ -151,6 +163,35 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         return this;
     }
 
+    @Override
+    public ServiceConfigSetters blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                     boolean shutdownOnStop) {
+        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters blockingTaskExecutor(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
+                                                                  .numThreads(numThreads)
+                                                                  .build();
+        return blockingTaskExecutor(executor, true);
+    }
+
+    @Override
+    public ServiceConfigSetters successFunction(SuccessFunction successFunction) {
+        this.successFunction = requireNonNull(successFunction, "successFunction");
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation) {
+        this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
+        return this;
+    }
+
     /**
      * Note: {@link ServiceConfigBuilder} built by this method is not decorated with the decorator function
      * which can be configured using {@link DefaultServiceConfigSetters#decorator()} because
@@ -198,6 +239,15 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         }
         if (accessLogWriter != null) {
             serviceConfigBuilder.accessLogWriter(accessLogWriter, shutdownAccessLogWriterOnStop);
+        }
+        if (blockingTaskExecutor != null) {
+            serviceConfigBuilder.blockingTaskExecutor(blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+        }
+        if (successFunction != null) {
+            serviceConfigBuilder.successFunction(successFunction);
+        }
+        if (multipartUploadsLocation != null) {
+            serviceConfigBuilder.multipartUploadsLocation(multipartUploadsLocation);
         }
         return serviceConfigBuilder;
     }

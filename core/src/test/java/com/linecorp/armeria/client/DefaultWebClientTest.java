@@ -23,12 +23,13 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 
 class DefaultWebClientTest {
 
     @Test
-    void testConcatenateRequestPath() throws Exception {
+    void testConcatenateRequestPath() {
         final String clientUriPath = "http://127.0.0.1/hello";
         final String requestPath = "world/test?q1=foo";
         final WebClient client = WebClient.of(clientUriPath);
@@ -40,7 +41,7 @@ class DefaultWebClientTest {
     }
 
     @Test
-    void testRequestParamsUndefinedEndPoint() throws Exception {
+    void testRequestParamsUndefinedEndPoint() {
         final String path = "http://127.0.0.1/helloWorld/test?q1=foo";
         final WebClient client = WebClient.of(AbstractWebClientBuilder.UNDEFINED_URI);
 
@@ -51,7 +52,7 @@ class DefaultWebClientTest {
     }
 
     @Test
-    void testWithoutRequestParamsUndefinedEndPoint() throws Exception {
+    void testWithoutRequestParamsUndefinedEndPoint() {
         final String path = "http://127.0.0.1/helloWorld/test";
         final WebClient client = WebClient.of(AbstractWebClientBuilder.UNDEFINED_URI);
 
@@ -108,6 +109,24 @@ class DefaultWebClientTest {
                 assertThat(cctx.endpoint()).isEqualTo(Endpoint.of("127.0.0.1", 1));
                 assertThat(cctx.request().authority()).isEqualTo("127.0.0.1:1");
             });
+        }
+    }
+
+    @Test
+    void testWithQueryParams() {
+        final String path = "http://127.0.0.1/helloWorld/test";
+        final QueryParams queryParams = QueryParams.builder()
+                                                   .add("q1", "foo")
+                                                   .build();
+        final WebClient client = WebClient.of(AbstractWebClientBuilder.UNDEFINED_URI);
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.get(path, queryParams).aggregate();
+            assertThat(captor.get().request().path()).isEqualTo("/helloWorld/test?q1=foo");
+        }
+
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            client.post(path, queryParams, "").aggregate();
+            assertThat(captor.get().request().path()).isEqualTo("/helloWorld/test?q1=foo");
         }
     }
 }

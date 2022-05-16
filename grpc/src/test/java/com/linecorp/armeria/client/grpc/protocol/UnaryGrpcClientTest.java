@@ -84,7 +84,7 @@ class UnaryGrpcClientTest {
     @ParameterizedTest
     @ArgumentsSource(UnsupportedGrpcSerializationFormatArgumentsProvider.class)
     void unsupportedSerializationFormat(SerializationFormat serializationFormat) {
-        assertThrows(AssertionError.class,
+        assertThrows(IllegalStateException.class,
                      () -> Clients.newClient(getUri(serializationFormat), UnaryGrpcClient.class));
     }
 

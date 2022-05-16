@@ -1,0 +1,2 @@
+com.linecorp.armeria.common.Custom1RequestContextStorageProvider
+com.linecorp.armeria.common.Custom2RequestContextStorageProvider

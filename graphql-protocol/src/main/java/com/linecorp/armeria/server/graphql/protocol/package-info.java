@@ -16,7 +16,7 @@
 /**
  * {@link com.linecorp.armeria.server.HttpService} implementations for supporting the GraphQL protocol.
  * This GraphQL service only handles network layers and cannot parse a GraphQL query. You should parse
- * the {@link com.linecorp.armeria.server.graphql.protocol.GraphqlRequest#query()} with third party GraphQL
+ * the {@link com.linecorp.armeria.common.graphql.protocol.GraphqlRequest#query()} with third party GraphQL
  * libraries.
  */
 @UnstableApi

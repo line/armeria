@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import io.reactivex.rxjava3.disposables.Disposable;
 import io.reactivex.rxjava3.flowables.ConnectableFlowable;
 import io.reactivex.rxjava3.functions.Consumer;
-import io.reactivex.rxjava3.internal.fuseable.ConditionalSubscriber;
+import io.reactivex.rxjava3.operators.ConditionalSubscriber;
 
 final class RequestContextConnectableFlowable<T> extends ConnectableFlowable<T> {
     private final ConnectableFlowable<T> source;

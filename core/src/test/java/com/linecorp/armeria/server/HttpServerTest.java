@@ -46,6 +46,7 @@ import java.util.zip.InflaterInputStream;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -499,7 +500,7 @@ class HttpServerTest {
         final AggregatedHttpResponse res = client.get("/delay/2000").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.contentUtf8()).isEqualTo("503 Service Unavailable");
+        assertThat(res.contentUtf8()).startsWith("Status: 503\n");
         assertThat(requestLogs.take().responseHeaders().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
@@ -510,7 +511,7 @@ class HttpServerTest {
         final AggregatedHttpResponse res = client.get("/delay-deferred/2000").aggregate().get();
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.contentUtf8()).isEqualTo("503 Service Unavailable");
+        assertThat(res.contentUtf8()).startsWith("Status: 503\n");
         assertThat(requestLogs.take().responseHeaders().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
@@ -549,7 +550,7 @@ class HttpServerTest {
 
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(res.contentType()).isEqualTo(MediaType.PLAIN_TEXT_UTF_8);
-        assertThat(res.contentUtf8()).isEqualTo("503 Service Unavailable");
+        assertThat(res.contentUtf8()).startsWith("Status: 503\n");
         assertThat(requestLogs.take().responseHeaders().status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 
@@ -598,7 +599,7 @@ class HttpServerTest {
         final byte[] content = new byte[(int) MAX_CONTENT_LENGTH + 1];
         final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
-        assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
+        assertThat(res.contentUtf8()).startsWith("Status: 404\n");
     }
 
     @ParameterizedTest
@@ -617,6 +618,7 @@ class HttpServerTest {
 
     @ParameterizedTest
     @ArgumentsSource(ClientAndProtocolProvider.class)
+    @EnabledIf("io.netty.handler.codec.compression.Brotli#isAvailable")
     void testStrings_acceptEncodingBrotli(WebClient client) throws Exception {
         final RequestHeaders req = RequestHeaders.of(HttpMethod.GET, "/strings",
                                                      HttpHeaderNames.ACCEPT_ENCODING, "br");

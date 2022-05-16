@@ -1,0 +1,4 @@
+dependencies {
+    testImplementation 'com.squareup.okhttp3:okhttp'
+    testImplementation 'com.squareup.okhttp3:okhttp-tls'
+}

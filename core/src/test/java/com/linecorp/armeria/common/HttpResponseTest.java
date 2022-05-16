@@ -19,7 +19,14 @@ package com.linecorp.armeria.common;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.time.Duration;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
+import java.util.function.Supplier;
+
 import org.junit.jupiter.api.Test;
+
+import com.google.common.base.Stopwatch;
 
 class HttpResponseTest {
 
@@ -149,5 +156,90 @@ class HttpResponseTest {
         assertThatThrownBy(() -> HttpResponse.ofRedirect(HttpStatus.MOVED_PERMANENTLY, "locationFor : %s",
             null))
             .isInstanceOf(NullPointerException.class).hasMessageContaining("args");
+    }
+
+    @Test
+    void httpResponseUsingDeliveredExecutor() {
+        final Supplier<HttpResponse> responseSupplier = () -> HttpResponse.of(HttpStatus.OK);
+        final HttpResponse res = HttpResponse.from(responseSupplier,
+                                                   Executors.newSingleThreadScheduledExecutor());
+
+        assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    void delayedHttpResponseWithAggregatedHttpResponseUsingCurrentEventLoopOrCommonPools() {
+        final AggregatedHttpResponse aggregatedHttpResponse = AggregatedHttpResponse.of(HttpStatus.OK);
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        final HttpResponse res = HttpResponse.delayed(aggregatedHttpResponse, Duration.ofSeconds(1L));
+
+        assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
+        assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
+                .isGreaterThanOrEqualTo(1L);
+    }
+
+    @Test
+    void delayedHttpResponseWithAggregatedHttpResponseUsingScheduledExecutorService() {
+        final AggregatedHttpResponse aggregatedHttpResponse = AggregatedHttpResponse.of(HttpStatus.OK);
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        final HttpResponse res = HttpResponse.delayed(aggregatedHttpResponse,
+                                                      Duration.ofSeconds(1L),
+                                                      Executors.newSingleThreadScheduledExecutor());
+
+        assertThat(res.aggregate().join().status()).isEqualTo(HttpStatus.OK);
+        assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
+                .isGreaterThanOrEqualTo(1L);
+    }
+
+    @Test
+    void delayedHttpResponseWithHttpResponseUsingCurrentEventLoopOrCommonPools() {
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        final HttpResponse res = HttpResponse.delayed(HttpResponse.of(HttpStatus.OK),
+                                                      Duration.ofSeconds(1L));
+        final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
+
+        assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
+                .isGreaterThanOrEqualTo(1L);
+    }
+
+    @Test
+    void delayedHttpResponseWithHttpResponseUsingScheduledExecutorService() {
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        final HttpResponse res = HttpResponse.delayed(HttpResponse.of(HttpStatus.OK),
+                                                      Duration.ofSeconds(1L),
+                                                      Executors.newSingleThreadScheduledExecutor());
+        final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
+
+        assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
+                .isGreaterThanOrEqualTo(1L);
+    }
+
+    @Test
+    void delayedHttpResponseWithHttpResponseSupplierCurrentEventLoopOrCommonPools() {
+        final Supplier<HttpResponse> responseSupplier = () -> HttpResponse.of(HttpStatus.OK);
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        final HttpResponse res = HttpResponse.delayed(responseSupplier,
+                                                      Duration.ofSeconds(1L));
+        final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
+
+        assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
+                .isGreaterThanOrEqualTo(1L);
+    }
+
+    @Test
+    void delayedHttpResponseWithHttpResponseSupplierUsingScheduledExecutorService() {
+        final Supplier<HttpResponse> responseSupplier = () -> HttpResponse.of(HttpStatus.OK);
+        final Stopwatch stopwatch = Stopwatch.createStarted();
+        final HttpResponse res = HttpResponse.delayed(responseSupplier,
+                                                      Duration.ofSeconds(1L),
+                                                      Executors.newSingleThreadScheduledExecutor());
+        final AggregatedHttpResponse aggregatedHttpRes = res.aggregate().join();
+
+        assertThat(aggregatedHttpRes.status()).isEqualTo(HttpStatus.OK);
+        assertThat(stopwatch.elapsed(TimeUnit.SECONDS))
+                .isGreaterThanOrEqualTo(1L);
     }
 }

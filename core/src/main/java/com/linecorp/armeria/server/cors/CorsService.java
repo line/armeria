@@ -102,7 +102,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         // check if CORS preflight must be returned, or if
         // we need to forbid access because origin could not be validated
-        if (isCorsPreflightRequest(req)) {
+        if (isCorsPreflightRequest(req.headers())) {
             return handleCorsPreflight(ctx, req);
         }
         if (config.isShortCircuit() &&
@@ -127,7 +127,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
         final CorsPolicy policy = setCorsOrigin(ctx, req, headers);
         if (policy != null) {
             policy.setCorsAllowMethods(headers);
-            policy.setCorsAllowHeaders(headers);
+            policy.setCorsAllowHeaders(req.headers(), headers);
             policy.setCorsAllowCredentials(headers);
             policy.setCorsMaxAge(headers);
             policy.setCorsPreflightResponseHeaders(headers);
@@ -147,7 +147,7 @@ public final class CorsService extends SimpleDecoratingHttpService {
         final CorsPolicy policy = setCorsOrigin(ctx, req, headers);
         if (policy != null) {
             policy.setCorsAllowCredentials(headers);
-            policy.setCorsAllowHeaders(headers);
+            policy.setCorsAllowHeaders(req.headers(), headers);
             policy.setCorsExposeHeaders(headers);
         }
     }

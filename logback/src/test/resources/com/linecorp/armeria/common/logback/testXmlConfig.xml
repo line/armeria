@@ -69,6 +69,21 @@
     <appender-ref ref="RCEA_WITH_PREFIX" />
   </logger>
 
+  <appender name="RCEA1" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+    <appender-ref ref="NOP" />
+    <export>remote.ip</export>
+  </appender>
+
+  <appender name="RCEA2" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+    <appender-ref ref="NOP" />
+    <export>remote.port</export>
+  </appender>
+
+  <logger name="multiple-exporters" level="trace">
+    <appender-ref ref="RCEA1" />
+    <appender-ref ref="RCEA2" />
+  </logger>
+
   <!-- Copied from testing-internal/src/main/resources/logback-test.xml -->
   <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
     <encoder>

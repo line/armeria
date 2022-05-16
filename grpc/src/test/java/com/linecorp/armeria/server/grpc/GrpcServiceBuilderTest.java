@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.server.grpc.GrpcServiceBuilder.toGrpcStatusFunction;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -30,11 +31,24 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
+import com.linecorp.armeria.common.logging.LogLevel;
+import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
+import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.MetricsServiceGrpc.MetricsServiceImplBase;
 import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
+import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
+import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
+import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.Decorator;
+import com.linecorp.armeria.server.annotation.DecoratorFactory;
+import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
+import com.linecorp.armeria.server.annotation.decorator.LoggingDecoratorFactoryFunction;
 import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.A1Exception;
 import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.A2Exception;
 import com.linecorp.armeria.server.grpc.GrpcStatusMappingTest.A3Exception;
@@ -50,6 +64,7 @@ import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
 import io.grpc.Status;
 import io.grpc.Status.Code;
+import io.grpc.stub.StreamObserver;
 
 class GrpcServiceBuilderTest {
 
@@ -244,6 +259,111 @@ class GrpcServiceBuilderTest {
         }
     }
 
+    @Test
+    void cannotSetUnframedErrorHandlerIfDisabledUnframedRequests() {
+        assertThatThrownBy(() -> GrpcService.builder()
+                                            .enableUnframedRequests(false)
+                                            .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.of())
+                                            .build())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining(
+                        "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
+    }
+
+    @Test
+    void addServiceWithDecorators() {
+        final FirstTestServiceImpl firstTestService = new FirstTestServiceImpl();
+        final SecondTestServiceImpl secondTestService = new SecondTestServiceImpl();
+
+        final GrpcServiceBuilder builder = GrpcService.builder()
+                                                      .addService(firstTestService)
+                                                      .addService("/foo", secondTestService);
+
+        final Map<String, List<DecoratorAndOrder>> pathToDecorators = builder.pathToDecorators();
+        assertThat(pathToDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
+        assertThat(values(pathToDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
+                .containsExactly(Decorator1.class,
+                                 Decorator2.class,
+                                 LoggingDecoratorFactoryFunction.class);
+        assertThat(pathToDecorators.containsKey("/foo/EmptyCall")).isTrue();
+        assertThat(values(pathToDecorators.get("/foo/EmptyCall")))
+                .containsExactly(Decorator1.class,
+                                 Decorator2.class);
+        assertThat(pathToDecorators.containsKey("/foo/UnaryCall")).isTrue();
+        assertThat(values(pathToDecorators.get("/foo/UnaryCall")))
+                .containsExactly(Decorator1.class,
+                                 Decorator3.class);
+
+        final Map<String, List<DecoratorAndOrder>> methodToDecorators = builder.methodToDecorators();
+        assertThat(methodToDecorators.containsKey("armeria.grpc.testing.TestService/UnaryCall")).isTrue();
+        assertThat(values(methodToDecorators.get("armeria.grpc.testing.TestService/UnaryCall")))
+                .containsExactly(Decorator1.class,
+                                 Decorator2.class,
+                                 LoggingDecoratorFactoryFunction.class);
+    }
+
+    @Test
+    void addServiceWithHierarchicalDecorators() {
+        final ThirdTestServiceImpl thirdTestService = new ThirdTestServiceImpl();
+
+        final GrpcServiceBuilder builder = GrpcService.builder()
+                                                      .addService(thirdTestService);
+
+        final Map<String, List<DecoratorAndOrder>> pathToDecorators = builder.pathToDecorators();
+        assertThat(pathToDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
+        assertThat(values(pathToDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
+                .containsExactly(Decorator1.class, Decorator2.class);
+
+        assertThat(pathToDecorators.containsKey("/armeria.grpc.testing.TestService/EmptyCall")).isTrue();
+        assertThat(values(pathToDecorators.get("/armeria.grpc.testing.TestService/EmptyCall")))
+                .containsExactly(Decorator1.class, Decorator3.class);
+    }
+
+    @Test
+    void addServiceWithInterceptorAndDecorators() {
+        final FirstTestServiceImpl firstTestService = new FirstTestServiceImpl();
+        final GrpcServiceBuilder builder = GrpcService
+                .builder()
+                .addService(firstTestService,
+                            impl -> ServerInterceptors.intercept(impl, new DummyInterceptor()));
+
+        final Map<String, List<DecoratorAndOrder>> pathToDecorators = builder.pathToDecorators();
+        assertThat(pathToDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
+        assertThat(values(pathToDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
+                .containsExactly(Decorator1.class,
+                                 Decorator2.class,
+                                 LoggingDecoratorFactoryFunction.class);
+    }
+
+    @Test
+    void setGrpcHealthCheckService() {
+        final GrpcService grpcService =
+                GrpcService.builder()
+                           .addService(GrpcHealthCheckService.builder().build())
+                           .build();
+        assertThat(grpcService.services().stream().map(it -> it.getServiceDescriptor().getName()))
+                .containsExactlyInAnyOrderElementsOf(ImmutableList.of("grpc.health.v1.Health"));
+    }
+
+    @Test
+    void enableDefaultGrpcHealthCheckService() {
+        final GrpcService grpcService =
+                GrpcService.builder()
+                           .enableHealthCheckService(true)
+                           .build();
+        assertThat(grpcService.services().stream().map(it -> it.getServiceDescriptor().getName()))
+                .containsExactlyInAnyOrderElementsOf(ImmutableList.of("grpc.health.v1.Health"));
+    }
+
+    @Test
+    void illegalStateOfGrpcHealthCheckService() {
+        assertThatThrownBy(() -> GrpcService.builder()
+                                            .addService(GrpcHealthCheckService.builder().build())
+                                            .enableHealthCheckService(true)
+                                            .build())
+                .isInstanceOf(IllegalStateException.class);
+    }
+
     private static class MetricsServiceImpl extends MetricsServiceImplBase {}
 
     private static class ReconnectServiceImpl extends ReconnectServiceImplBase {}
@@ -254,5 +374,106 @@ class GrpcServiceBuilderTest {
                                                        ServerCallHandler<REQ, RESP> next) {
             return next.startCall(call, headers);
         }
+    }
+
+    private static class Decorator1 implements DecoratingHttpServiceFunction {
+
+        @Override
+        public HttpResponse serve(HttpService delegate, ServiceRequestContext ctx,
+                                  HttpRequest req) throws Exception {
+            return delegate.serve(ctx, req);
+        }
+    }
+
+    private static class Decorator2 implements DecoratingHttpServiceFunction {
+
+        @Override
+        public HttpResponse serve(HttpService delegate, ServiceRequestContext ctx,
+                                  HttpRequest req) throws Exception {
+            return delegate.serve(ctx, req);
+        }
+    }
+
+    private static class Decorator3 implements DecoratingHttpServiceFunction {
+
+        @Override
+        public HttpResponse serve(HttpService delegate, ServiceRequestContext ctx,
+                                  HttpRequest req) throws Exception {
+            return delegate.serve(ctx, req);
+        }
+    }
+
+    @Decorator(Decorator1.class)
+    @Decorator(Decorator2.class)
+    @LoggingDecorator(requestLogLevel = LogLevel.INFO)
+    private static class FirstTestServiceImpl extends TestServiceImplBase {
+
+        @Override
+        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onNext(SimpleResponse.newBuilder()
+                                                  .setUsername("test user")
+                                                  .build());
+            responseObserver.onCompleted();
+        }
+    }
+
+    @Decorator(Decorator1.class)
+    private static class SecondTestServiceImpl extends TestServiceImplBase {
+
+        @Override
+        @Decorator(Decorator2.class)
+        public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
+            responseObserver.onNext(Empty.getDefaultInstance());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        @Decorator(Decorator3.class)
+        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onNext(SimpleResponse.newBuilder()
+                                                  .setUsername("test user")
+                                                  .build());
+            responseObserver.onCompleted();
+        }
+    }
+
+    @Decorator(Decorator1.class)
+    private abstract static class AbstractThirdTestServiceImpl extends TestServiceImplBase {
+
+        @Override
+        @Decorator(Decorator2.class)
+        public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onNext(SimpleResponse.newBuilder()
+                                                  .setUsername("test user")
+                                                  .build());
+            responseObserver.onCompleted();
+        }
+    }
+
+    private static class ThirdTestServiceImpl extends AbstractThirdTestServiceImpl {
+
+        @Override
+        @Decorator(Decorator3.class)
+        public void emptyCall(Empty request, StreamObserver<Empty> responseObserver) {
+            responseObserver.onNext(Empty.getDefaultInstance());
+            responseObserver.onCompleted();
+        }
+    }
+
+    private static List<Class<?>> values(List<DecoratorAndOrder> list) {
+        return list.stream()
+                   .map(DecoratorAndOrder::annotation)
+                   .map(annotation -> {
+                       if (annotation instanceof Decorator) {
+                           return ((Decorator) annotation).value();
+                       }
+                       final DecoratorFactory factory =
+                               annotation.annotationType().getAnnotation(DecoratorFactory.class);
+                       if (factory != null) {
+                           return factory.value();
+                       }
+                       throw new Error("Should not reach here.");
+                   })
+                   .collect(toImmutableList());
     }
 }

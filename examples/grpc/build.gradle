@@ -15,6 +15,7 @@ dependencies {
     testImplementation 'org.assertj:assertj-core'
     testImplementation 'org.awaitility:awaitility'
     testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'com.google.protobuf:protobuf-java-util'
 }
 
 application {

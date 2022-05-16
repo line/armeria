@@ -21,11 +21,13 @@ import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.function.Function;
 
+import org.assertj.core.util.Files;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -56,6 +58,7 @@ class ServiceBindingTest {
     static final ServerExtension server = new ServerExtension(true) {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
+            final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
             sb.route().get("/greet/{name}")
               .post("/greet")
               .produces(MediaType.PLAIN_TEXT_UTF_8)
@@ -63,11 +66,13 @@ class ServiceBindingTest {
               .maxRequestLength(8192)
               .verboseResponses(true)
               .accessLogWriter(log -> accessLogWriterCheckLatch.countDown(), true)
+              .multipartUploadsLocation(multipartUploadsLocation)
               .decorator(delegate -> (ctx, req) -> {
                   ctx.log().whenComplete().thenAccept(log -> {
                       assertThat(ctx.requestTimeoutMillis()).isEqualTo(1000);
                       assertThat(ctx.maxRequestLength()).isEqualTo(8192);
                       assertThat(ctx.config().verboseResponses()).isTrue();
+                      assertThat(ctx.config().multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
 
                       propertyCheckLatch.countDown();
                   });

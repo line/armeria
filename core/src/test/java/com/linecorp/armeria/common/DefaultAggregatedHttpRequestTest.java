@@ -94,7 +94,7 @@ class DefaultAggregatedHttpRequestTest {
                                                                             AggregatedHttpObject.class);
         for (String httpRequestMethod : httpRequestMethods) {
             if (httpRequestMethod.startsWith("builder") || httpRequestMethod.startsWith("aggregate") ||
-                httpRequestMethod.startsWith("toDuplicator")) {
+                httpRequestMethod.startsWith("toDuplicator") || httpRequestMethod.startsWith("split")) {
                 // Not a getter.
                 continue;
             }

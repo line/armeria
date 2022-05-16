@@ -27,7 +27,6 @@ import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Consumer;
 
 import org.assertj.core.data.Percentage;
 import org.hamcrest.Matchers;
@@ -45,6 +44,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler.PingState;
+import com.linecorp.armeria.internal.testing.FlakyTest;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -56,6 +56,7 @@ import io.netty.channel.ChannelPromise;
 import io.netty.channel.EventLoop;
 import io.netty.channel.embedded.EmbeddedChannel;
 
+@FlakyTest
 @MockitoSettings(strictness = Strictness.LENIENT)
 class KeepAliveHandlerTest {
 
@@ -121,8 +122,13 @@ class KeepAliveHandlerTest {
                 };
 
         idleTimeoutScheduler.initialize(ctx);
-        await().timeout(20, TimeUnit.SECONDS).untilAtomic(counter, Matchers.is(10));
-        assertMeter(CONNECTION_LIFETIME + "#total", 1, withinPercentage(25));
+        await().timeout(4, TimeUnit.SECONDS).untilAtomic(counter, Matchers.is(1));
+
+        // add another listener to ensure all closeFuture listeners are invoked at this point
+        ctx.channel().closeFuture().addListener(unused -> counter.incrementAndGet());
+        await().timeout(4, TimeUnit.SECONDS).untilAtomic(counter, Matchers.is(2));
+
+        await().untilAsserted(() -> assertMeter(CONNECTION_LIFETIME + "#total", 1, withinPercentage(25)));
         idleTimeoutScheduler.destroy();
     }
 
@@ -162,7 +168,7 @@ class KeepAliveHandlerTest {
         await().until(stopwatch::isRunning, Matchers.is(false));
         final Duration elapsed = stopwatch.elapsed();
         assertThat(elapsed.toMillis()).isBetween(1000L, 5000L);
-        assertMeter(CONNECTION_LIFETIME + "#count", 0);
+        await().untilAsserted(() -> assertMeter(CONNECTION_LIFETIME + "#count", 0));
         idleTimeoutScheduler.destroy();
     }
 
@@ -197,7 +203,7 @@ class KeepAliveHandlerTest {
         };
         keepAliveHandler.initialize(ctx);
 
-        assertMeter(CONNECTION_LIFETIME + "#count", 0);
+        await().untilAsserted(() -> assertMeter(CONNECTION_LIFETIME + "#count", 0));
         assertThat(keepAliveHandler.needToCloseConnection()).isFalse();
     }
 
@@ -237,27 +243,15 @@ class KeepAliveHandlerTest {
         assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS)).isBetween(500L, 1000L);
     }
 
-    @CsvSource({
-            "2000, 0, CONNECTION_IDLE",
-            "0, 1000, PING_IDLE",
-    })
-    @ParameterizedTest
-    void testKeepAlive(long connectionIdleTimeout, long pingInterval, String mode)
-            throws InterruptedException {
+    @Test
+    void shouldNotWritePingIfConnectionIsActive() throws InterruptedException {
         final AtomicLong lastIdleEventTime = new AtomicLong();
-        final AtomicInteger idleCounter = new AtomicInteger();
         final AtomicInteger pingCounter = new AtomicInteger();
-        final long idleTime = "CONNECTION_IDLE".equals(mode) ? connectionIdleTimeout : pingInterval;
-        final int maxConnectionAgeMillis = 0;
-        final int maxNumRequestsPerConnection = 0;
-        final Consumer<AbstractKeepAliveHandler> activator =
-                "CONNECTION_IDLE".equals(mode) ?
-                AbstractKeepAliveHandler::onReadOrWrite : AbstractKeepAliveHandler::onPing;
+        final long pingInterval = 1000;
 
-        final AbstractKeepAliveHandler idleTimeoutScheduler =
-                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, connectionIdleTimeout,
-                                             pingInterval, maxConnectionAgeMillis,
-                                             maxNumRequestsPerConnection) {
+        final AbstractKeepAliveHandler pingScheduler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, 0,
+                                             pingInterval, 0, 0) {
 
                     @Override
                     public boolean isHttp2() {
@@ -280,6 +274,55 @@ class KeepAliveHandlerTest {
 
                     @Override
                     protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
+                        return true;
+                    }
+                };
+
+        lastIdleEventTime.set(System.nanoTime());
+        pingScheduler.initialize(ctx);
+
+        for (int i = 0; i < 10; i++) {
+            pingScheduler.onPing();
+            Thread.sleep(pingInterval - 500);
+        }
+        assertThat(pingScheduler.isClosing()).isFalse();
+        assertThat(pingCounter).hasValue(0);
+
+        await().timeout(pingInterval, TimeUnit.MILLISECONDS).untilAtomic(pingCounter, Matchers.is(1));
+        pingScheduler.destroy();
+    }
+
+    @Test
+    void testKeepAliveWithIdleTimeout() throws InterruptedException {
+        final AtomicLong lastIdleEventTime = new AtomicLong();
+        final AtomicInteger idleCounter = new AtomicInteger();
+        final long idleTimeout = 2000;
+
+        final AbstractKeepAliveHandler idleTimeoutScheduler =
+                new AbstractKeepAliveHandler(channel, "test", keepAliveTimer, idleTimeout,
+                                             0, 0, 0) {
+
+                    @Override
+                    public boolean isHttp2() {
+                        return false;
+                    }
+
+                    @Override
+                    public void onPingAck(long data) {}
+
+                    @Override
+                    protected boolean pingResetsPreviousPing() {
+                        return true;
+                    }
+
+                    @Override
+                    protected ChannelFuture writePing(ChannelHandlerContext ctx) {
+                        // Should never reach here.
+                        throw new Error();
+                    }
+
+                    @Override
+                    protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
                         idleCounter.incrementAndGet();
                         return false;
                     }
@@ -289,18 +332,15 @@ class KeepAliveHandlerTest {
         idleTimeoutScheduler.initialize(ctx);
 
         for (int i = 0; i < 10; i++) {
-            activator.accept(idleTimeoutScheduler);
-            Thread.sleep(idleTime - 1000);
+            idleTimeoutScheduler.onReadOrWrite();
+            Thread.sleep(idleTimeout - 1000);
+            // Make sure that a connection was not closed by an idle timeout handler.
+            assertThat(idleTimeoutScheduler.isClosing()).isFalse();
         }
         assertThat(idleCounter).hasValue(0);
 
-        if ("CONNECTION_IDLE".equals(mode)) {
-            await().timeout(idleTime * 10, TimeUnit.SECONDS).untilAtomic(idleCounter, Matchers.is(5));
-            assertMeter(CONNECTION_LIFETIME + "#count", 1);
-        } else {
-            await().timeout(idleTime * 2, TimeUnit.SECONDS).untilAtomic(pingCounter, Matchers.is(1));
-        }
-
+        await().timeout(idleTimeout * 2, TimeUnit.MILLISECONDS).untilAtomic(idleCounter, Matchers.is(1));
+        await().untilAsserted(() -> assertMeter(CONNECTION_LIFETIME + "#count", 1));
         idleTimeoutScheduler.destroy();
     }
 

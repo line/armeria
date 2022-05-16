@@ -17,12 +17,14 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.server.ServerBuilder.decorate;
+import static com.linecorp.armeria.server.ServerSslContextUtil.buildSslContext;
+import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
-import static com.linecorp.armeria.server.VirtualHost.HOSTNAME_PATTERN;
+import static com.linecorp.armeria.server.VirtualHost.HOSTNAME_WITH_NO_PORT_PATTERN;
 import static com.linecorp.armeria.server.VirtualHost.ensureHostnamePatternMatchesDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
@@ -33,7 +35,7 @@ import java.io.File;
 import java.io.IOError;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.ByteBuffer;
+import java.nio.file.Path;
 import java.security.PrivateKey;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -41,15 +43,13 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLException;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,22 +58,27 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
+import com.google.common.net.HostAndPort;
 
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
-import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.metric.MetricCollectingService;
 
-import io.netty.buffer.ByteBufAllocator;
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 import io.netty.util.ReferenceCountUtil;
 
 /**
@@ -97,6 +102,7 @@ public final class VirtualHostBuilder {
     private String defaultHostname;
     @Nullable
     private String hostnamePattern;
+    private int port = -1;
     @Nullable
     private Supplier<SslContextBuilder> sslContextBuilderSupplier;
     @Nullable
@@ -125,6 +131,13 @@ public final class VirtualHostBuilder {
     private boolean shutdownAccessLogWriterOnStop;
     @Nullable
     private AnnotatedServiceExtensions annotatedServiceExtensions;
+    @Nullable
+    private ScheduledExecutorService blockingTaskExecutor;
+    private boolean shutdownBlockingTaskExecutorOnStop;
+    @Nullable
+    private SuccessFunction successFunction;
+    @Nullable
+    private Path multipartUploadsLocation;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -135,6 +148,18 @@ public final class VirtualHostBuilder {
     VirtualHostBuilder(ServerBuilder serverBuilder, boolean defaultVirtualHost) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
         this.defaultVirtualHost = defaultVirtualHost;
+    }
+
+    /**
+     * Creates a new {@link VirtualHostBuilder}.
+     *
+     * @param serverBuilder the parent {@link ServerBuilder} to be returned by {@link #and()}
+     * @param port the port that this virtual host binds to
+     */
+    VirtualHostBuilder(ServerBuilder serverBuilder, int port) {
+        this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
+        this.port = port;
+        defaultVirtualHost = true;
     }
 
     /**
@@ -156,6 +181,8 @@ public final class VirtualHostBuilder {
 
     /**
      * Sets the hostname pattern of this {@link VirtualHost}.
+     * If the hostname pattern contains a port number such {@code *.example.com:8080}, the returned virtual host
+     * will be bound to the {@code 8080} port. Otherwise, the virtual host will allow all active ports.
      *
      * @throws UnsupportedOperationException if this is the default {@link VirtualHostBuilder}
      */
@@ -167,14 +194,21 @@ public final class VirtualHostBuilder {
 
         checkArgument(!hostnamePattern.isEmpty(), "hostnamePattern is empty.");
 
+        final HostAndPort hostAndPort = HostAndPort.fromString(hostnamePattern);
+        if (hostAndPort.hasPort()) {
+            port = hostAndPort.getPort();
+            checkArgument(port >= 1 && port <= 65535, "port: %s (expected: 1-65535)", port);
+            hostnamePattern = hostAndPort.getHost();
+        }
+
         final boolean validHostnamePattern;
         if (hostnamePattern.charAt(0) == '*') {
             validHostnamePattern =
                     hostnamePattern.length() >= 3 &&
                     hostnamePattern.charAt(1) == '.' &&
-                    HOSTNAME_PATTERN.matcher(hostnamePattern.substring(2)).matches();
+                    HOSTNAME_WITH_NO_PORT_PATTERN.matcher(hostnamePattern.substring(2)).matches();
         } else {
-            validHostnamePattern = HOSTNAME_PATTERN.matcher(hostnamePattern).matches();
+            validHostnamePattern = HOSTNAME_WITH_NO_PORT_PATTERN.matcher(hostnamePattern).matches();
         }
 
         checkArgument(validHostnamePattern,
@@ -406,9 +440,41 @@ public final class VirtualHostBuilder {
 
     /**
      * Binds the specified {@link HttpService} under the specified directory.
+     * If the specified {@link HttpService} is an {@link HttpServiceWithRoutes}, the {@code pathPrefix} is added
+     * to each {@link Route} of {@link HttpServiceWithRoutes#routes()}. For example, the
+     * {@code serviceWithRoutes} in the following code will be bound to
+     * ({@code "/foo/bar"}) and ({@code "/foo/baz"}):
+     * <pre>{@code
+     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+     * >
+     * >     @Override
+     * >     public Set<Route> routes() {
+     * >         return Set.of(Route.builder().path("/bar").build(),
+     * >                       Route.builder().path("/baz").build());
+     * >     }
+     * > };
+     * >
+     * > Server.builder()
+     * >       .serviceUnder("/foo", serviceWithRoutes)
+     * >       .build();
+     * }</pre>
      */
     public VirtualHostBuilder serviceUnder(String pathPrefix, HttpService service) {
-        service(Route.builder().pathPrefix(pathPrefix).build(), service);
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        final HttpServiceWithRoutes serviceWithRoutes = service.as(HttpServiceWithRoutes.class);
+        if (serviceWithRoutes != null) {
+            serviceWithRoutes.routes().forEach(route -> {
+                final ServiceConfigBuilder serviceConfigBuilder =
+                        new ServiceConfigBuilder(route.withPrefix(pathPrefix), service);
+                serviceConfigBuilder.addMappedRoute(route);
+                addServiceConfigSetters(serviceConfigBuilder);
+            });
+        } else {
+            service(Route.builder().pathPrefix(pathPrefix).build(), service);
+        }
         return this;
     }
 
@@ -439,8 +505,7 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
-     * of the default {@link VirtualHost}.
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s.
      *
      * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
@@ -452,21 +517,13 @@ public final class VirtualHostBuilder {
         requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
         requireNonNull(decorators, "decorators");
 
-        HttpService decorated = serviceWithRoutes;
-        for (Function<? super HttpService, ? extends HttpService> d : decorators) {
-            checkNotNull(d, "decorators contains null: %s", decorators);
-            decorated = d.apply(decorated);
-            checkNotNull(decorated, "A decorator returned null: %s", d);
-        }
-
-        final HttpService finalDecorated = decorated;
-        serviceWithRoutes.routes().forEach(route -> service(route, finalDecorated));
+        final HttpService decorated = decorate(serviceWithRoutes, decorators);
+        serviceWithRoutes.routes().forEach(route -> service(route, decorated));
         return this;
     }
 
     /**
-     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
-     * of the default {@link VirtualHost}.
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s.
      *
      * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
@@ -655,9 +712,9 @@ public final class VirtualHostBuilder {
         final List<RouteDecoratingService> routeDecoratingServices;
         if (defaultVirtualHostBuilder != null) {
             routeDecoratingServices = ImmutableList.<RouteDecoratingService>builder()
-                    .addAll(this.routeDecoratingServices)
-                    .addAll(defaultVirtualHostBuilder.routeDecoratingServices)
-                    .build();
+                                                   .addAll(this.routeDecoratingServices)
+                                                   .addAll(defaultVirtualHostBuilder.routeDecoratingServices)
+                                                   .build();
         } else {
             routeDecoratingServices = ImmutableList.copyOf(this.routeDecoratingServices);
         }
@@ -865,6 +922,56 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Sets the {@link ScheduledExecutorService} dedicated to the execution of blocking tasks or invocations.
+     * If not set, {@linkplain CommonPools#blockingTaskExecutor() the common pool} is used.
+     *
+     * @param shutdownOnStop whether to shut down the {@link ScheduledExecutorService} when the
+     *                       {@link Server} stops
+     */
+    public VirtualHostBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                   boolean shutdownOnStop) {
+        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        return this;
+    }
+
+    /**
+     * Uses a newly created {@link BlockingTaskExecutor} with the specified number of threads dedicated to
+     * the execution of blocking tasks or invocations.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of threads in the executor
+     */
+    public VirtualHostBuilder blockingTaskExecutor(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
+                                                                  .numThreads(numThreads)
+                                                                  .build();
+        return blockingTaskExecutor(executor, true);
+    }
+
+    /**
+     * Sets the {@link SuccessFunction} to define successful responses.
+     * {@link MetricCollectingService} and {@link LoggingService} use this function.
+     */
+    @UnstableApi
+    public VirtualHostBuilder successFunction(SuccessFunction successFunction) {
+        this.successFunction = requireNonNull(successFunction, "successFunction");
+        return this;
+    }
+
+    /**
+     * Sets the {@link Path} for storing the files uploaded from
+     * {@code multipart/form-data} requests.
+     *
+     * @param multipartUploadsLocation the path of the directory which stores the files.
+     */
+    public VirtualHostBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
+        return this;
+    }
+
+    /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
      * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
      *
@@ -948,10 +1055,34 @@ public final class VirtualHostBuilder {
                 annotatedServiceExtensions != null ?
                 annotatedServiceExtensions : template.annotatedServiceExtensions;
 
+        final ScheduledExecutorService blockingTaskExecutor;
+        final boolean shutdownBlockingTaskExecutorOnStop;
+        if (this.blockingTaskExecutor != null) {
+            blockingTaskExecutor = this.blockingTaskExecutor;
+            shutdownBlockingTaskExecutorOnStop = this.shutdownBlockingTaskExecutorOnStop;
+        } else {
+            blockingTaskExecutor = template.blockingTaskExecutor;
+            shutdownBlockingTaskExecutorOnStop = template.shutdownBlockingTaskExecutorOnStop;
+        }
+
+        final SuccessFunction successFunction;
+        if (this.successFunction != null) {
+            successFunction = this.successFunction;
+        } else {
+            successFunction = template.successFunction;
+        }
+
+        final Path multipartUploadsLocation =
+                this.multipartUploadsLocation != null ?
+                this.multipartUploadsLocation : template.multipartUploadsLocation;
+
         assert rejectedRouteHandler != null;
         assert accessLogWriter != null;
         assert accessLoggerMapper != null;
         assert extensions != null;
+        assert blockingTaskExecutor != null;
+        assert successFunction != null;
+        assert multipartUploadsLocation != null;
 
         final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)
                 .stream()
@@ -971,13 +1102,17 @@ public final class VirtualHostBuilder {
                     }
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
-                                            verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop);
+                                            verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop,
+                                            blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
+                                            successFunction, multipartUploadsLocation);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
-                               accessLogWriter, shutdownAccessLogWriterOnStop);
+                               accessLogWriter, shutdownAccessLogWriterOnStop, blockingTaskExecutor,
+                               shutdownBlockingTaskExecutorOnStop, successFunction,
+                               multipartUploadsLocation);
 
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;
@@ -1041,11 +1176,12 @@ public final class VirtualHostBuilder {
             }
 
             final VirtualHost virtualHost =
-                    new VirtualHost(defaultHostname, hostnamePattern, sslContext,
+                    new VirtualHost(defaultHostname, hostnamePattern, port, sslContext,
                                     serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                     accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
                                     maxRequestLength, verboseResponses, accessLogWriter,
-                                    shutdownAccessLogWriterOnStop);
+                                    shutdownAccessLogWriterOnStop,
+                                    blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
 
             final Function<? super HttpService, ? extends HttpService> decorator =
                     getRouteDecoratingService(template);
@@ -1067,98 +1203,12 @@ public final class VirtualHostBuilder {
         return selfSignedCertificate;
     }
 
-    private static SslContext buildSslContext(
-            Supplier<SslContextBuilder> sslContextBuilderSupplier,
-            boolean tlsAllowUnsafeCiphers,
-            Iterable<? extends Consumer<? super SslContextBuilder>> tlsCustomizers) {
-        return SslContextUtil
-                .createSslContext(sslContextBuilderSupplier,
-                        /* forceHttp1 */ false, tlsAllowUnsafeCiphers, tlsCustomizers);
+    int port() {
+        return port;
     }
 
-    /**
-     * Makes sure the specified {@link SslContext} is configured properly. If configured as client context or
-     * key store password is not given to key store when {@link SslContext} was created using
-     * {@link KeyManagerFactory}, the validation will fail and an {@link IllegalStateException} will be raised.
-     */
-    private static SslContext validateSslContext(SslContext sslContext) {
-        if (!sslContext.isServer()) {
-            throw new IllegalArgumentException("sslContext: " + sslContext + " (expected: server context)");
-        }
-
-        SSLEngine serverEngine = null;
-        SSLEngine clientEngine = null;
-
-        try {
-            serverEngine = sslContext.newEngine(ByteBufAllocator.DEFAULT);
-            serverEngine.setUseClientMode(false);
-            serverEngine.setNeedClientAuth(false);
-
-            // Create a client-side engine with very permissive settings.
-            final SslContext sslContextClient =
-                    buildSslContext(() -> SslContextBuilder.forClient()
-                                                           .trustManager(InsecureTrustManagerFactory.INSTANCE),
-                                    true, ImmutableList.of());
-            clientEngine = sslContextClient.newEngine(ByteBufAllocator.DEFAULT);
-            clientEngine.setUseClientMode(true);
-            clientEngine.setEnabledProtocols(clientEngine.getSupportedProtocols());
-            clientEngine.setEnabledCipherSuites(clientEngine.getSupportedCipherSuites());
-
-            final ByteBuffer packetBuf = ByteBuffer.allocate(clientEngine.getSession().getPacketBufferSize());
-
-            // Wrap an empty app buffer to initiate handshake.
-            wrap(clientEngine, packetBuf);
-
-            // Feed the handshake packet to the server engine.
-            packetBuf.flip();
-            unwrap(serverEngine, packetBuf);
-
-            // See if the server has something to say.
-            packetBuf.clear();
-            wrap(serverEngine, packetBuf);
-        } catch (SSLException e) {
-            throw new IllegalStateException("failed to validate SSL/TLS configuration: " + e.getMessage(), e);
-        } finally {
-            ReferenceCountUtil.release(serverEngine);
-            ReferenceCountUtil.release(clientEngine);
-        }
-
-        return sslContext;
-    }
-
-    private static void unwrap(SSLEngine engine, ByteBuffer packetBuf) throws SSLException {
-        final ByteBuffer appBuf = ByteBuffer.allocate(engine.getSession().getApplicationBufferSize());
-        // Limit the number of unwrap() calls to 8 times, to prevent a potential infinite loop.
-        // 8 is an arbitrary number, it can be any number greater than 2.
-        for (int i = 0; i < 8; i++) {
-            appBuf.clear();
-            final SSLEngineResult result = engine.unwrap(packetBuf, appBuf);
-            switch (result.getHandshakeStatus()) {
-                case NEED_UNWRAP:
-                    continue;
-                case NEED_TASK:
-                    engine.getDelegatedTask().run();
-                    continue;
-            }
-            break;
-        }
-    }
-
-    private static void wrap(SSLEngine sslEngine, ByteBuffer packetBuf) throws SSLException {
-        final ByteBuffer appBuf = ByteBuffer.allocate(0);
-        // Limit the number of wrap() calls to 8 times, to prevent a potential infinite loop.
-        // 8 is an arbitrary number, it can be any number greater than 2.
-        for (int i = 0; i < 8; i++) {
-            final SSLEngineResult result = sslEngine.wrap(appBuf, packetBuf);
-            switch (result.getHandshakeStatus()) {
-                case NEED_WRAP:
-                    continue;
-                case NEED_TASK:
-                    sslEngine.getDelegatedTask().run();
-                    continue;
-            }
-            break;
-        }
+    boolean defaultVirtualHost() {
+        return defaultVirtualHost;
     }
 
     @Override

@@ -64,17 +64,17 @@ class CircuitBreakerRpcClientTest {
     @Test
     void testSingletonDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         final int COUNT = 1;
         failFastInvocation(CircuitBreakerRpcClient.newDecorator(circuitBreaker, rule()), COUNT);
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
     }
 
     @Test
     void testPerMethodDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
         final Function<String, CircuitBreaker> factory = mock(Function.class);
@@ -83,14 +83,14 @@ class CircuitBreakerRpcClientTest {
         final int COUNT = 2;
         failFastInvocation(CircuitBreakerRpcClient.newPerMethodDecorator(factory, rule()), COUNT);
 
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
         verify(factory, times(1)).apply("methodA");
     }
 
     @Test
     void testPerHostDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
         final Function<String, CircuitBreaker> factory = mock(Function.class);
@@ -99,14 +99,14 @@ class CircuitBreakerRpcClientTest {
         final int COUNT = 2;
         failFastInvocation(CircuitBreakerRpcClient.newPerHostDecorator(factory, rule()), COUNT);
 
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
         verify(factory, times(1)).apply("dummyhost:8080");
     }
 
     @Test
     void testPerHostAndMethodDecorator() {
         final CircuitBreaker circuitBreaker = mock(CircuitBreaker.class);
-        when(circuitBreaker.canRequest()).thenReturn(false);
+        when(circuitBreaker.tryRequest()).thenReturn(false);
 
         @SuppressWarnings("unchecked")
         final BiFunction<String, String, CircuitBreaker> factory = mock(BiFunction.class);
@@ -115,7 +115,7 @@ class CircuitBreakerRpcClientTest {
         final int COUNT = 2;
         failFastInvocation(CircuitBreakerRpcClient.newPerHostAndMethodDecorator(factory, rule()), COUNT);
 
-        verify(circuitBreaker, times(COUNT)).canRequest();
+        verify(circuitBreaker, times(COUNT)).tryRequest();
         verify(factory, times(1)).apply("dummyhost:8080", "methodA");
     }
 

@@ -143,6 +143,11 @@ public abstract class AbstractHttpFile implements HttpFile {
         return entityTagFunction != null ? entityTagFunction.apply(pathOrUri(), attrs) : null;
     }
 
+    @Nullable
+    BiFunction<String, HttpFileAttributes, String> entityTagFunction() {
+        return entityTagFunction;
+    }
+
     @Override
     public CompletableFuture<ResponseHeaders> readHeaders(Executor fileReadExecutor) {
         return readAttributes(fileReadExecutor).thenApply(this::readHeaders);

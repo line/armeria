@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import io.reactivex.rxjava3.core.Observable;
 import io.reactivex.rxjava3.core.ObservableSource;
 import io.reactivex.rxjava3.core.Observer;
-import io.reactivex.rxjava3.internal.fuseable.ScalarSupplier;
+import io.reactivex.rxjava3.operators.ScalarSupplier;
 
 final class RequestContextScalarSupplierObservable<T> extends Observable<T> implements ScalarSupplier<T> {
 

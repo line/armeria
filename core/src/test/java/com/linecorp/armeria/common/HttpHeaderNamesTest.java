@@ -15,14 +15,48 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.common.MediaTypeTest.getConstantFields;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.lang.reflect.Field;
+import java.util.List;
+
 import org.junit.jupiter.api.Test;
+
+import com.google.common.collect.FluentIterable;
+import com.google.common.collect.ImmutableList;
+import com.google.common.net.HttpHeaders;
 
 import io.netty.util.AsciiString;
 
 class HttpHeaderNamesTest {
+
+    @Test
+    void httpHeaderNamesContainsAllFieldsInHttpHeadersInGuava() throws Exception {
+        final List<String> headerNames = names(getConstantFields(HttpHeaderNames.class, AsciiString.class));
+        final List<String> guavaHttpHeaders = names(getConstantFields(HttpHeaders.class, String.class));
+
+        final List<String> excludes = ImmutableList.of(HttpHeaders.X_CONTENT_SECURITY_POLICY,
+                                                       HttpHeaders.X_CONTENT_SECURITY_POLICY_REPORT_ONLY,
+                                                       HttpHeaders.X_WEBKIT_CSP,
+                                                       HttpHeaders.X_WEBKIT_CSP_REPORT_ONLY,
+                                                       HttpHeaders.SEC_CH_PREFERS_COLOR_SCHEME)
+                                                   .stream()
+                                                   .map(name -> name.toUpperCase().replace('-', '_'))
+                                                   .collect(toImmutableList());
+        final List<String> filtered = guavaHttpHeaders.stream()
+                                                      .filter(name -> !excludes.contains(name))
+                                                      .collect(toImmutableList());
+        assertThat(headerNames).containsAll(filtered);
+    }
+
+    private static ImmutableList<String> names(FluentIterable<Field> constantFields) {
+        return constantFields.stream()
+                             .map(Field::getName)
+                             .collect(toImmutableList());
+    }
 
     @Test
     void testOfAsciiString() {

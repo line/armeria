@@ -26,9 +26,12 @@ import java.net.UnknownHostException;
 import java.util.Enumeration;
 import java.util.List;
 
+import org.springframework.util.SocketUtils;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
@@ -84,6 +87,22 @@ public final class ArmeriaConfigurationNetUtil {
                 throw new IllegalStateException("A port cannot have both IP and iface: " + p);
             }
         });
+    }
+
+    /**
+     * Returns a newly created {@link Port}.
+     * {@code null} if the specified {@code code} is either {@code null} or a negative number.
+     * Note that if the given {@code port} is zero, an available port randomly selected will be assigned.
+     */
+    @Nullable
+    public static Port maybeNewPort(@Nullable Integer port, SessionProtocol protocol) {
+        if (port == null || port < 0) {
+            return null;
+        }
+        if (port == 0) {
+            port = SocketUtils.findAvailableTcpPort();
+        }
+        return new Port().setPort(port).setProtocol(protocol);
     }
 
     private ArmeriaConfigurationNetUtil() {}

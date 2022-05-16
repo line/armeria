@@ -1,0 +1,66 @@
+---
+date: 2021-10-15
+---
+
+## 🌟 New features
+
+- You can now customize HTTP/1 header names on the server side
+  using <type://ServerBuilder#http1HeaderNaming(Http1HeaderNaming)>. #3845 #3866
+  ```java
+  Server.builder()
+        .http1HeaderNaming(Http1HeaderNaming.traditional());
+  ```
+- You can now easily create an <type://HttpResponse> from a specific executor
+  using <type://HttpResponse#from(Supplier,Executor)>. #3834 #3864
+  ```java
+  Server.builder()
+        .service("/blocking" (ctx, req) -> {
+          return HttpResponse.from(() -> { // 👈👈👈
+              // Perform a long running task.
+              ...
+              return HttpResponse.of(...);
+          }, ctx.blockingTaskExecutor());
+        });
+  ```
+  
+## 📈 Improvements
+
+- Various <type://HttpHeaderNames> are added. #3872
+
+## 🛠️ Bug fixes
+
+- You no longer see a `NullPointerExcepiton` when no suitable <type://ClientFactory> was found. #3867 #3868
+  - An `IllegalStateException` with a proper error message will be raised instead.
+- You no longer see a false positive warning when adding <typeplural://GrpcService>. #3869 #3871
+- You no longer see an `IllegalStateException` when a gRPC client call starts with 
+  an empty <type://EndpointGroup>. #3876
+- [`management.server.port`](https://docs.spring.io/spring-boot/docs/current/reference/html/actuator.html#actuator.monitoring.customizing-management-server-port)
+  is now correctly activated only when Armeria Actuator is configured. #3873
+
+## ☢️ Breaking changes
+
+- <type://GraphqlRequest> has been moved to `common` from `server` package. #3865
+
+## ⛓ Dependencies
+
+- Netty 4.1.68 → 4.1.69
+- Netty io_uring 0.0.8 → 0.0.9
+- Reactor 3.4.10 → 3.4.11
+- reactor-kotlin-extensions 1.1.4 → 1.1.5
+- RxJava 3.1.1 → 3.1.2
+- ScalaPB 0.11.5 → 0.11.6
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ghkim3221',
+  'heowc',
+  'hyangtack',
+  'ikhoon',
+  'jupiny',
+  'mauhiz',
+  'minwoox',
+  'octo47',
+  'TheWeaVer',
+  'trustin'
+]} />

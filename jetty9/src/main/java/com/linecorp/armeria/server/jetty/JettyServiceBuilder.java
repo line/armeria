@@ -18,8 +18,6 @@ package com.linecorp.armeria.server.jetty;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledExecutorService;
@@ -27,6 +25,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.eclipse.jetty.server.Handler;
+import org.eclipse.jetty.server.HttpConfiguration;
 import org.eclipse.jetty.server.RequestLog;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.SessionIdManager;
@@ -34,8 +33,11 @@ import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.eclipse.jetty.util.component.Container;
 import org.eclipse.jetty.util.component.LifeCycle;
 
+import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.server.jetty.JettyServiceConfig.Bean;
 
 /**
  * Builds a {@link JettyService}. Use {@link JettyService#of(Server)} if you have a configured Jetty
@@ -43,12 +45,12 @@ import com.linecorp.armeria.server.jetty.JettyServiceConfig.Bean;
  */
 public final class JettyServiceBuilder {
 
-    private final Map<String, Object> attrs = new LinkedHashMap<>();
-    private final List<Bean> beans = new ArrayList<>();
-    private final List<HandlerWrapper> handlerWrappers = new ArrayList<>();
-    private final List<Container.Listener> eventListeners = new ArrayList<>();
-    private final List<LifeCycle.Listener> lifeCycleListeners = new ArrayList<>();
-    private final List<Consumer<? super Server>> configurators = new ArrayList<>();
+    private final ImmutableMap.Builder<String, Object> attrs = ImmutableMap.builder();
+    private final ImmutableList.Builder<Bean> beans = ImmutableList.builder();
+    private final ImmutableList.Builder<HandlerWrapper> handlerWrappers = ImmutableList.builder();
+    private final ImmutableList.Builder<Container.Listener> eventListeners = ImmutableList.builder();
+    private final ImmutableList.Builder<LifeCycle.Listener> lifeCycleListeners = ImmutableList.builder();
+    private final ImmutableList.Builder<Consumer<? super Server>> customizers = ImmutableList.builder();
 
     @Nullable
     private String hostname;
@@ -64,6 +66,7 @@ public final class JettyServiceBuilder {
     private Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory;
     @Nullable
     private Long stopTimeoutMillis;
+    private boolean tlsReverseDnsLookup;
 
     JettyServiceBuilder() {}
 
@@ -146,6 +149,14 @@ public final class JettyServiceBuilder {
     }
 
     /**
+     * Adds the specified {@link HttpConfiguration} to the Jetty {@link Server}.
+     * This method is a type-safe alias of {@link #bean(Object)}.
+     */
+    public JettyServiceBuilder httpConfiguration(HttpConfiguration httpConfiguration) {
+        return bean(httpConfiguration);
+    }
+
+    /**
      * Sets the {@link RequestLog} of the Jetty {@link Server}.
      *
      * @see Server#setRequestLog(RequestLog)
@@ -207,49 +218,85 @@ public final class JettyServiceBuilder {
     }
 
     /**
+     * Sets whether Jetty has to perform reverse DNS lookup for the remote IP address on a TLS connection.
+     * By default, this flag is disabled because it is known to cause performance issues when the DNS server
+     * is not responsive enough. However, you might want to take the risk and enable it if you want the same
+     * behavior with Jetty 9.3 when mTLS is enabled.
+     *
+     * @see <a href="https://github.com/eclipse/jetty.project/issues/1235">Jetty issue #1235</a>
+     * @see <a href="https://github.com/eclipse/jetty.project/commit/de7c146bd741307cd924a9dcef386d516e75b1e9">Jetty commit de7c146</a>
+     */
+    public JettyServiceBuilder tlsReverseDnsLookup(boolean tlsReverseDnsLookup) {
+        this.tlsReverseDnsLookup = tlsReverseDnsLookup;
+        return this;
+    }
+
+    /**
      * Adds a {@link Consumer} that performs additional configuration operations against
      * the Jetty {@link Server} created by a {@link JettyService}.
      */
-    public JettyServiceBuilder configurator(Consumer<? super Server> configurator) {
-        configurators.add(requireNonNull(configurator, "configurator"));
+    public JettyServiceBuilder customizer(Consumer<? super Server> customizer) {
+        customizers.add(requireNonNull(customizer, "customizer"));
         return this;
+    }
+
+    /**
+     * Adds a {@link Consumer} that performs additional configuration operations against
+     * the Jetty {@link Server} created by a {@link JettyService}.
+     *
+     * @deprecated Use {@link #customizer(Consumer)}.
+     */
+    @Deprecated
+    public JettyServiceBuilder configurator(Consumer<? super Server> configurator) {
+        return customizer(requireNonNull(configurator, "configurator"));
     }
 
     /**
      * Returns a newly-created {@link JettyService} based on the properties of this builder.
      */
     public JettyService build() {
-        final JettyServiceConfig config = new JettyServiceConfig(
-                hostname, dumpAfterStart, dumpBeforeStop, stopTimeoutMillis, handler, requestLog,
-                sessionIdManagerFactory, attrs, beans, handlerWrappers, eventListeners, lifeCycleListeners,
-                configurators);
+        // Make a copy of the properties that's used in `serverFactory` so that any further modification of
+        // this builder doesn't affect the built server.
+        final Boolean dumpAfterStart = this.dumpAfterStart;
+        final Boolean dumpBeforeStop = this.dumpBeforeStop;
+        final Long stopTimeoutMillis = this.stopTimeoutMillis;
+        final Handler handler = this.handler;
+        final RequestLog requestLog = this.requestLog;
+        final Function<? super Server, ? extends SessionIdManager> sessionIdManagerFactory =
+                this.sessionIdManagerFactory;
+        final Map<String, Object> attrs = this.attrs.build();
+        final List<Bean> beans = this.beans.build();
+        final List<HandlerWrapper> handlerWrappers = this.handlerWrappers.build();
+        final List<Container.Listener> eventListeners = this.eventListeners.build();
+        final List<LifeCycle.Listener> lifeCycleListeners = this.lifeCycleListeners.build();
+        final List<Consumer<? super Server>> customizers = this.customizers.build();
 
         final Function<ScheduledExecutorService, Server> serverFactory = blockingTaskExecutor -> {
             final Server server = new Server(new ArmeriaThreadPool(blockingTaskExecutor));
 
-            if (config.dumpAfterStart() != null) {
-                server.setDumpAfterStart(config.dumpAfterStart());
+            if (dumpAfterStart != null) {
+                server.setDumpAfterStart(dumpAfterStart);
             }
-            if (config.dumpBeforeStop() != null) {
-                server.setDumpBeforeStop(config.dumpBeforeStop());
+            if (dumpBeforeStop != null) {
+                server.setDumpBeforeStop(dumpBeforeStop);
             }
-            if (config.stopTimeoutMillis() != null) {
-                server.setStopTimeout(config.stopTimeoutMillis());
+            if (stopTimeoutMillis != null) {
+                server.setStopTimeout(stopTimeoutMillis);
             }
 
-            if (config.handler() != null) {
-                server.setHandler(config.handler());
+            if (handler != null) {
+                server.setHandler(handler);
             }
-            if (config.requestLog() != null) {
+            if (requestLog != null) {
                 server.setRequestLog(requestLog);
             }
-            if (config.sessionIdManagerFactory() != null) {
-                server.setSessionIdManager(config.sessionIdManagerFactory().apply(server));
+            if (sessionIdManagerFactory != null) {
+                server.setSessionIdManager(sessionIdManagerFactory.apply(server));
             }
 
-            config.handlerWrappers().forEach(server::insertHandler);
-            config.attrs().forEach(server::setAttribute);
-            config.beans().forEach(bean -> {
+            handlerWrappers.forEach(server::insertHandler);
+            attrs.forEach(server::setAttribute);
+            beans.forEach(bean -> {
                 final Boolean managed = bean.isManaged();
                 if (managed == null) {
                     server.addBean(bean.bean());
@@ -258,10 +305,10 @@ public final class JettyServiceBuilder {
                 }
             });
 
-            config.eventListeners().forEach(server::addEventListener);
-            config.lifeCycleListeners().forEach(server::addLifeCycleListener);
+            eventListeners.forEach(server::addEventListener);
+            lifeCycleListeners.forEach(server::addLifeCycleListener);
 
-            config.configurators().forEach(c -> c.accept(server));
+            customizers.forEach(c -> c.accept(server));
 
             return server;
         };
@@ -275,14 +322,55 @@ public final class JettyServiceBuilder {
             }
         };
 
-        return new JettyService(config.hostname(), serverFactory, postStopTask);
+        return new JettyService(hostname, tlsReverseDnsLookup, serverFactory, postStopTask);
     }
 
     @Override
     public String toString() {
-        return JettyServiceConfig.toString(
-                this, hostname, dumpAfterStart, dumpBeforeStop, stopTimeoutMillis, handler, requestLog,
-                sessionIdManagerFactory, attrs, beans, handlerWrappers, eventListeners, lifeCycleListeners,
-                configurators);
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("hostname", hostname)
+                          .add("dumpAfterStart", dumpAfterStart)
+                          .add("dumpBeforeStop", dumpBeforeStop)
+                          .add("stopTimeoutMillis", stopTimeoutMillis)
+                          .add("handler", handler)
+                          .add("requestLog", requestLog)
+                          .add("sessionIdManagerFactory", sessionIdManagerFactory)
+                          .add("attrs", attrs)
+                          .add("beans", beans)
+                          .add("handlerWrappers", handlerWrappers)
+                          .add("eventListeners", eventListeners)
+                          .add("lifeCycleListeners", lifeCycleListeners)
+                          .add("tlsReverseDnsLookup", tlsReverseDnsLookup)
+                          .add("customizers", customizers)
+                          .toString();
+    }
+
+    static final class Bean {
+
+        private final Object bean;
+        @Nullable
+        private final Boolean managed;
+
+        Bean(Object bean, @Nullable Boolean managed) {
+            this.bean = requireNonNull(bean, "bean");
+            this.managed = managed;
+        }
+
+        Object bean() {
+            return bean;
+        }
+
+        @Nullable
+        Boolean isManaged() {
+            return managed;
+        }
+
+        @Override
+        public String toString() {
+            final String mode = managed != null ? managed ? "managed" : "unmanaged"
+                                                : "auto";
+            return "(" + bean + ", " + mode + ')';
+        }
     }
 }

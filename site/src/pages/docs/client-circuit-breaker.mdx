@@ -232,15 +232,15 @@ If you use <type://CircuitBreakerBuilder>, you can configure the parameters whic
 - `listeners`:
   - The listeners which are notified by a <type://CircuitBreaker> when an event occurs. The events are one of
     `stateChanged`, `eventCountUpdated` and `requestRejected`. You can use
-    <type://MetricCollectingCircuitBreakerListener> to export metrics:
+    <type://CircuitBreakerListener#metricCollecting()> to export metrics:
 
   ```java
-  import com.linecorp.armeria.client.circuitbreaker.MetricCollectingCircuitBreakerListener
+  import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerListener
 
   import io.micrometer.core.instrument.Metrics;
 
-  final MetricCollectingCircuitBreakerListener listener =
-          new MetricCollectingCircuitBreakerListener(Metrics.globalRegistry);
+  final CircuitBreakerListener listener =
+          CircuitBreakerListener.metricCollecting(Metrics.globalRegistry);
   final CircuitBreakerBuilder builder = CircuitBreaker.builder()
                                                       .listener(listener);
   ```

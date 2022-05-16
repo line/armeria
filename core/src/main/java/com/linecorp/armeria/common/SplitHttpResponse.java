@@ -20,37 +20,19 @@ import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscriber;
 
-import com.google.errorprone.annotations.CheckReturnValue;
-
-import com.linecorp.armeria.common.stream.StreamMessage;
-
 /**
  * An {@link HttpResponse} which splits a stream of {@link HttpObject}s into HTTP headers and payloads.
  * {@link #headers()} will be completed before publishing the first {@link HttpData}.
- * {@link #trailers()} might not complete until the entire response body is consumed completely.
  *
  * <p>Note that
  * <a href="https://developer.mozilla.org/en-US/docs/Web/HTTP/Status#Information_responses">informational
  * headers</a> are not collected by this {@link HttpResponse}. If you want to get informational headers,
  * use {@link HttpResponse#subscribe(Subscriber)} instead.
  */
-public interface SplitHttpResponse {
+public interface SplitHttpResponse extends SplitHttpMessage {
 
     /**
      * Returns a {@link CompletableFuture} completed with a non-informational {@link ResponseHeaders}.
      */
     CompletableFuture<ResponseHeaders> headers();
-
-    /**
-     * Returns a {@link StreamMessage} publishes HTTP payloads as a stream of {@link HttpData}.
-     */
-    @CheckReturnValue
-    StreamMessage<HttpData> body();
-
-    /**
-     * Returns a {@link CompletableFuture} completed with a {@linkplain HttpHeaders trailers}.
-     * If an {@link HttpResponse} does not contain trailers, the returned {@link CompletableFuture} will be
-     * completed with an {@linkplain HttpHeaders#of() empty headers}.
-     */
-    CompletableFuture<HttpHeaders> trailers();
 }

@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * An exception indicating that the {@linkplain URI#getScheme()} session protocol} of the redirection URI
+ * An exception indicating that the {@linkplain URI#getScheme() session protocol} of the redirection URI
  * is not allowed to redirect.
  *
  * @see RedirectConfigBuilder#allowProtocols(Iterable)

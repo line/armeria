@@ -1,0 +1,13 @@
+plugins {
+    id "application"
+}
+
+dependencies {
+    implementation project(':core')
+    implementation project(':grpc')
+    implementation 'javax.annotation:javax.annotation-api'
+}
+
+application {
+    mainClass.set('com.linecorp.armeria.grpc.ghz.GreeterServer')
+}

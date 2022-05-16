@@ -17,9 +17,8 @@ package com.linecorp.armeria.server.auth;
 
 import java.util.concurrent.CompletionStage;
 
-import com.spotify.futures.CompletableFutures;
-
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 final class AuthorizerUtil {
@@ -40,7 +39,7 @@ final class AuthorizerUtil {
             }
             return f;
         } catch (Throwable cause) {
-            return CompletableFutures.exceptionallyCompletedFuture(cause);
+            return UnmodifiableFuture.exceptionallyCompletedFuture(cause);
         }
     }
 

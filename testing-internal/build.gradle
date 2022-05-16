@@ -2,6 +2,8 @@ dependencies {
     api project(':junit5')
     api project(':junit4')
 
+    api 'net.javacrumbs.json-unit:json-unit'
+    api 'net.javacrumbs.json-unit:json-unit-fluent'
     api 'org.apache.httpcomponents:httpclient'
     api 'org.assertj:assertj-core'
     api 'org.junit.jupiter:junit-jupiter-params'

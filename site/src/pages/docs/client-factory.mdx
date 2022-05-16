@@ -96,7 +96,7 @@ ClientFactory factory =
         ClientFactory.builder()
                      .maxNumEventLoopsFunction(endpoint -> {
                          if (endpoint.equals(Endpoint.of("lotsOfTraffic.com"))) {
-                             // We are going to use all EventLoops to send reqeusts.
+                             // We are going to use all EventLoops to send requests.
                              return Integer.MAX_VALUE;
                          }
                          // We use just one `EventLoop` per endpoint for the rest.

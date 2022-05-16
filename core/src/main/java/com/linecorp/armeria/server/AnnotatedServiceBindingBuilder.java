@@ -16,18 +16,24 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceElement;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory;
@@ -64,6 +70,8 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
 
+    @Nullable
+    private String queryDelimiter;
     private boolean useBlockingTaskExecutor;
     private String pathPrefix = "/";
     @Nullable
@@ -153,6 +161,25 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
         return this;
     }
 
+    /**
+     * Sets the delimiter for a query parameter value. Multiple values delimited by the specified
+     * {@code delimiter} will be automatically split into a list of values.
+     *
+     * <p>It is disabled by default.
+     *
+     * <p>Note that this delimiter works only when the resolve target class type is collection and the number
+     * of values of the query parameter is one. For example with the query delimiter {@code ","}:
+     * <ul>
+     *     <li>{@code ?query=a,b,c} will be resolved to {@code "a"}, {@code "b"} and {@code "c"}</li>
+     *     <li>{@code ?query=a,b,c&query=d,e,f} will be resolved to {@code "a,b,c"} and {@code "d,e,f"}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public AnnotatedServiceBindingBuilder queryDelimiter(String delimiter) {
+        this.queryDelimiter = requireNonNull(delimiter, "delimiter");
+        return this;
+    }
+
     @Override
     public AnnotatedServiceBindingBuilder decorator(
             Function<? super HttpService, ? extends HttpService> decorator) {
@@ -230,6 +257,34 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
         return this;
     }
 
+    @Override
+    public AnnotatedServiceBindingBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
+                                                               boolean shutdownOnStop) {
+        defaultServiceConfigSetters.blockingTaskExecutor(blockingTaskExecutor, shutdownOnStop);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder blockingTaskExecutor(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final BlockingTaskExecutor executor = BlockingTaskExecutor.builder()
+                                                                  .numThreads(numThreads)
+                                                                  .build();
+        return blockingTaskExecutor(executor, true);
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder successFunction(SuccessFunction successFunction) {
+        defaultServiceConfigSetters.successFunction(successFunction);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
+        defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
+        return this;
+    }
+
     /**
      * Registers the given service to {@link ServerBuilder} and return {@link ServerBuilder}
      * to continue building {@link Server}.
@@ -264,7 +319,7 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
         assert service != null;
 
         final List<AnnotatedServiceElement> elements =
-                AnnotatedServiceFactory.find(pathPrefix, service, useBlockingTaskExecutor,
+                AnnotatedServiceFactory.find(pathPrefix, service, useBlockingTaskExecutor, queryDelimiter,
                                              requestConverterFunctions, responseConverterFunctions,
                                              exceptionHandlerFunctions);
         return elements.stream().map(element -> {

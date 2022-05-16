@@ -16,8 +16,14 @@
 
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.HttpObjectEncoder;
 
 import io.netty.channel.Channel;
@@ -58,4 +64,48 @@ interface ServerHttpObjectEncoder extends HttpObjectEncoder {
      * Tells whether the {@link ResponseHeaders} is sent.
      */
     boolean isResponseHeadersSent(int id, int streamId);
+
+    /**
+     * Writes an error response.
+     */
+    default ChannelFuture writeErrorResponse(int id,
+                                             int streamId,
+                                             ServiceConfig serviceConfig,
+                                             @Nullable RequestHeaders headers,
+                                             HttpStatus status,
+                                             @Nullable String message,
+                                             @Nullable Throwable cause) {
+
+        final AggregatedHttpResponse res =
+                serviceConfig.server().config().errorHandler()
+                             .onProtocolViolation(serviceConfig, headers, status, message, cause);
+        assert res != null;
+
+        final HttpData content = res.content();
+        boolean transferredContent = false;
+        try {
+            final ResponseHeaders resHeaders = res.headers();
+            final HttpHeaders resTrailers = res.trailers();
+            if (resTrailers.isEmpty()) {
+                if (content.isEmpty()) {
+                    return writeHeaders(id, streamId, resHeaders, true);
+                }
+
+                writeHeaders(id, streamId, resHeaders, false);
+                transferredContent = true;
+                return writeData(id, streamId, content, true);
+            }
+
+            writeHeaders(id, streamId, resHeaders, false);
+            if (!content.isEmpty()) {
+                transferredContent = true;
+                writeData(id, streamId, content, false);
+            }
+            return writeTrailers(id, streamId, resTrailers);
+        } finally {
+            if (!transferredContent) {
+                content.close();
+            }
+        }
+    }
 }

@@ -20,8 +20,8 @@ import munit.FunSuite
 
 class CookieSuite extends FunSuite {
   test("should be able to create Cookies from cookie headers") {
-    val cookieA = Cookie.of("session_id", "foobar")
-    val cookieB = Cookie.of("device_id", "Armeria")
+    val cookieA = Cookie.ofSecure("session_id", "foobar")
+    val cookieB = Cookie.ofSecure("device_id", "Armeria")
     Cookie.fromCookieHeaders(cookieA.toCookieHeader)
     Cookie.fromCookieHeaders(cookieA.toCookieHeader, cookieB.toCookieHeader)
     Cookie.fromCookieHeaders(List(cookieA, cookieB).map(_.toCookieHeader).asJava)

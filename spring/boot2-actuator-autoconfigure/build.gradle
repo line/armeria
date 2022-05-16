@@ -12,7 +12,7 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-actuator'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'io.micrometer:micrometer-registry-prometheus'
-    testRuntimeOnly project(':spring:boot2-starter')
+    testImplementation project(':spring:boot2-starter')
 }
 
 // Copy common files from boot2-autoconfigure module to gen-src directory in order to use them as a source set.
@@ -22,6 +22,7 @@ task generateSources(type: Copy) {
     include '**/ArmeriaConfigurationNetUtil.java'
     include '**/ArmeriaServerConfigurator.java'
     include '**/ArmeriaSettings.java'
+    include '**/InternalServiceId.java'
     include '**/Ssl.java'
 }
 

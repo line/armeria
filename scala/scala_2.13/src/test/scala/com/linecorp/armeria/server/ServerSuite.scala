@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server
 
+import com.linecorp.armeria.client.WebClientBuilder
 import com.linecorp.armeria.internal.testing.ServerRuleDelegate
 import munit.Suite
 
@@ -25,6 +26,8 @@ trait ServerSuite {
   private var delegate: ServerRuleDelegate = _
 
   protected def configureServer: ServerBuilder => Unit
+
+  protected def configureWebClient: WebClientBuilder => Unit = _ => ()
 
   protected def server: ServerRuleDelegate = delegate
 
@@ -37,6 +40,8 @@ trait ServerSuite {
   override def beforeAll(): Unit = {
     delegate = new ServerRuleDelegate(false) {
       override def configure(sb: ServerBuilder): Unit = configureServer(sb)
+
+      override def configureWebClient(wcb: WebClientBuilder): Unit = self.configureWebClient(wcb)
     }
 
     if (!runServerForEachTest) {

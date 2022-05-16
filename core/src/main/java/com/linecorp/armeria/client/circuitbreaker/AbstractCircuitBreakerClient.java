@@ -128,7 +128,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
             return unwrap().execute(ctx, req);
         }
 
-        if (circuitBreaker.canRequest()) {
+        if (circuitBreaker.tryRequest()) {
             return doExecute(ctx, req, circuitBreaker);
         } else {
             // the circuit is tripped; raise an exception without delegating.

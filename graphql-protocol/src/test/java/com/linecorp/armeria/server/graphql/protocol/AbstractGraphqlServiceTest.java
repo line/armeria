@@ -18,18 +18,22 @@ package com.linecorp.armeria.server.graphql.protocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.Map;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -40,11 +44,24 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
+import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class AbstractGraphqlServiceTest {
 
     private TestGraphqlService testGraphqlService;
+
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.service("/graphql", new TestGraphqlService());
+        }
+    };
 
     @BeforeEach
     void setUp() {
@@ -66,7 +83,7 @@ class AbstractGraphqlServiceTest {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/graphql?" + query.toQueryString());
         final ServiceRequestContext ctx = ServiceRequestContext.of(request);
         testGraphqlService.serve(ctx, request);
-        assertThat(testGraphqlService.graphqlRequest.produceType()).isEqualTo(MediaType.GRAPHQL_JSON);
+        assertThat(testGraphqlService.produceType).isEqualTo(MediaType.GRAPHQL_JSON);
     }
 
     @ArgumentsSource(MediaTypeProvider.class)
@@ -83,10 +100,38 @@ class AbstractGraphqlServiceTest {
         testGraphqlService.serve(ctx, request);
         if (mediaType == MediaType.PLAIN_TEXT) {
             // May be rejected by implementation
-            assertThat(testGraphqlService.graphqlRequest.produceType()).isNull();
+            assertThat(testGraphqlService.produceType).isNull();
         } else {
-            assertThat(testGraphqlService.graphqlRequest.produceType()).isEqualTo(mediaType);
+            assertThat(testGraphqlService.produceType).isEqualTo(mediaType);
         }
+    }
+
+    @MethodSource("providePostMethodArguments")
+    @ParameterizedTest
+    void post(Map<String, Object> content, HttpStatus status) throws Exception {
+        final HttpRequest request = HttpRequest.builder()
+                .post("/graphql")
+                .contentJson(content)
+                .build();
+
+        final ServiceRequestContext ctx = ServiceRequestContext.of(request);
+        final AggregatedHttpResponse response = testGraphqlService.serve(ctx, request).aggregate().join();
+        assertThat(response.status()).isEqualTo(status);
+    }
+
+    @MethodSource("provideThrowsExceptionPostMethodArguments")
+    @ParameterizedTest
+    void throwsExceptionPost(Map<Object, Object> content) throws Exception {
+        final HttpRequest request = HttpRequest.builder()
+                                               .post("/graphql")
+                                               .contentJson(content)
+                                               .build();
+
+        final BlockingWebClient client = server.webClient().blocking();
+        final AggregatedHttpResponse response = client.execute(request);
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
+        final RequestLog log = server.requestContextCaptor().take().log().whenComplete().join();
+        assertThat(log.responseCause()).isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
@@ -116,15 +161,44 @@ class AbstractGraphqlServiceTest {
         }
     }
 
+    private static Stream<Arguments> providePostMethodArguments() {
+        return Stream.of(
+                Arguments.of(ImmutableMap.of(), HttpStatus.BAD_REQUEST),
+                Arguments.of(ImmutableMap.of("query", ""), HttpStatus.BAD_REQUEST),
+                Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}"), HttpStatus.OK),
+                Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
+                                             "operationName", "dummy"), HttpStatus.OK),
+                Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
+                                             "variables", ImmutableMap.of()), HttpStatus.OK),
+                Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
+                                             "extensions", ImmutableMap.of()), HttpStatus.OK)
+        );
+    }
+
+    private static Stream<Arguments> provideThrowsExceptionPostMethodArguments() {
+        return Stream.of(
+                Arguments.of(ImmutableMap.of("query", ImmutableMap.of())),
+                Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
+                                             "operationName", ImmutableMap.of())),
+                Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
+                                             "variables", "variables_string")),
+                Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
+                                             "extensions", "extension_string"))
+        );
+    }
+
     private static class TestGraphqlService extends AbstractGraphqlService {
 
         @Nullable
         private GraphqlRequest graphqlRequest;
+        @Nullable
+        private MediaType produceType;
 
         @Override
         protected HttpResponse executeGraphql(ServiceRequestContext ctx, GraphqlRequest req) throws Exception {
             graphqlRequest = req;
-            return null;
+            produceType = GraphqlUtil.produceType(ctx.request().headers());
+            return HttpResponse.of(HttpStatus.OK);
         }
     }
 }

@@ -19,7 +19,6 @@ package com.linecorp.armeria.client;
 import java.util.Iterator;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
@@ -94,11 +93,6 @@ abstract class HttpResponseDecoder {
     }
 
     @Nullable
-    final HttpResponseWrapper getResponse(int id, boolean remove) {
-        return remove ? removeResponse(id) : getResponse(id);
-    }
-
-    @Nullable
     final HttpResponseWrapper removeResponse(int id) {
         if (closing) {
             // `unfinishedResponses` will be removed by `failUnfinishedResponses()`
@@ -124,6 +118,10 @@ abstract class HttpResponseDecoder {
 
         unfinishedResponses++;
         return true;
+    }
+
+    final void decrementUnfinishedResponses() {
+        unfinishedResponses--;
     }
 
     final void failUnfinishedResponses(Throwable cause) {
@@ -302,23 +300,22 @@ abstract class HttpResponseDecoder {
         }
 
         void onSubscriptionCancelled(@Nullable Throwable cause) {
-            close(cause, this::cancelAction);
+            close(cause, true);
         }
 
         @Override
         public void close() {
-            close(null, this::closeAction);
+            close(null, false);
         }
 
         @Override
         public void close(Throwable cause) {
-            close(cause, this::closeAction);
+            close(cause, false);
         }
 
-        private void close(@Nullable Throwable cause,
-                           Consumer<Throwable> actionOnNotTimedOut) {
+        private void close(@Nullable Throwable cause, boolean cancel) {
             state = State.DONE;
-            cancelTimeoutOrLog(cause, actionOnNotTimedOut);
+            cancelTimeoutOrLog(cause, cancel);
             if (ctx != null) {
                 if (cause == null) {
                     ctx.request().abort();
@@ -354,8 +351,7 @@ abstract class HttpResponseDecoder {
             }
         }
 
-        private void cancelTimeoutOrLog(@Nullable Throwable cause,
-                                        Consumer<Throwable> actionOnNotTimedOut) {
+        private void cancelTimeoutOrLog(@Nullable Throwable cause, boolean cancel) {
 
             CancellationScheduler responseCancellationScheduler = null;
             if (ctx instanceof DefaultClientRequestContext) {
@@ -368,7 +364,11 @@ abstract class HttpResponseDecoder {
                     responseCancellationScheduler.clearTimeout(false);
                 }
                 // There's no timeout or the response has not been timed out.
-                actionOnNotTimedOut.accept(cause);
+                if (cancel) {
+                    cancelAction(cause);
+                } else {
+                    closeAction(cause);
+                }
                 return;
             }
 

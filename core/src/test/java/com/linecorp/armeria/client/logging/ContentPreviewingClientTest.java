@@ -19,10 +19,12 @@ package com.linecorp.armeria.client.logging;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.function.BiFunction;
 import java.util.function.BiPredicate;
 import java.util.function.Function;
+import java.util.zip.GZIPInputStream;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -30,6 +32,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream;
 import com.google.common.io.ByteStreams;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
@@ -54,8 +57,16 @@ import com.linecorp.armeria.server.encoding.EncodingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.compression.Brotli;
 
 class ContentPreviewingClientTest {
+
+    private static final BiFunction<? super RequestContext, String, ?> CONTENT_SANITIZER =
+            (ctx, content) -> {
+                assertThat(ctx).isNotNull();
+                assertThat(content).isNotNull();
+                return "dummy content sanitizer";
+            };
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -78,18 +89,20 @@ class ContentPreviewingClientTest {
 
     @Test
     void decodedContentPreview() {
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .decorator(DecodingClient.newDecorator())
-                                          .decorator(ContentPreviewingClient.newDecorator(100))
-                                          .build();
+        final BlockingWebClient client = WebClient.builder(server.httpUri())
+                                                  .decorator(DecodingClient.newDecorator())
+                                                  .decorator(ContentPreviewingClient.newDecorator(100))
+                                                  .build()
+                                                  .blocking();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
 
         final ClientRequestContext context;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final AggregatedHttpResponse res = client.execute(headers, "Armeria").aggregate().join();
+            final AggregatedHttpResponse res = client.execute(headers, "Armeria");
             assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
-            assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
+            assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo(
+                    Brotli.isAvailable() ? "br" : "gzip");
             context = captor.get();
         }
 
@@ -104,19 +117,21 @@ class ContentPreviewingClientTest {
      */
     @Test
     void contentPreviewIsDecodedInPreviewer() {
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .decorator(decodingContentPreviewDecorator())
-                                          .decorator(DecodingClient.newDecorator())
-                                          .build();
+        final BlockingWebClient client = WebClient.builder(server.httpUri())
+                                                  .decorator(decodingContentPreviewDecorator())
+                                                  .decorator(DecodingClient.newDecorator())
+                                                  .build()
+                                                  .blocking();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
                                                          HttpHeaderNames.CONTENT_TYPE,
                                                          MediaType.PLAIN_TEXT_UTF_8);
 
         final ClientRequestContext context;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            final AggregatedHttpResponse res = client.execute(headers, "Armeria").aggregate().join();
+            final AggregatedHttpResponse res = client.execute(headers, "Armeria");
             assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
-            assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("br");
+            assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo(
+                    Brotli.isAvailable() ? "br" : "gzip");
             context = captor.get();
         }
 
@@ -125,14 +140,92 @@ class ContentPreviewingClientTest {
         assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
     }
 
+    @Test
+    void sanitizeRequestContentPreview() {
+        final BlockingWebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
+                                                           .requestPreviewSanitizer(CONTENT_SANITIZER)
+                                                           .newDecorator())
+                         .build()
+                         .blocking();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
+                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.execute(headers, "Armeria").contentUtf8())
+                    .isEqualTo("Hello Armeria!");
+            ctx = captor.get();
+        }
+
+        final RequestLog requestLog = ctx.log().whenComplete().join();
+        assertThat(requestLog.requestContentPreview()).isEqualTo("dummy content sanitizer");
+        assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
+    }
+
+    @Test
+    void sanitizeResponseContentPreview() {
+        final BlockingWebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
+                                                           .responsePreviewSanitizer(CONTENT_SANITIZER)
+                                                           .newDecorator())
+                         .build()
+                         .blocking();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
+                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.execute(headers, "Armeria").contentUtf8())
+                    .isEqualTo("Hello Armeria!");
+            ctx = captor.get();
+        }
+
+        final RequestLog requestLog = ctx.log().whenComplete().join();
+        assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
+        assertThat(requestLog.responseContentPreview()).isEqualTo("dummy content sanitizer");
+    }
+
+    @Test
+    void sanitizeContentPreview() {
+        final BlockingWebClient client =
+                WebClient.builder(server.httpUri())
+                         .decorator(ContentPreviewingClient.builder(ContentPreviewerFactory.text(100))
+                                                           .previewSanitizer(CONTENT_SANITIZER)
+                                                           .newDecorator())
+                         .build()
+                         .blocking();
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
+                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+
+        final ClientRequestContext ctx;
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            assertThat(client.execute(headers, "Armeria").contentUtf8())
+                    .isEqualTo("Hello Armeria!");
+            ctx = captor.get();
+        }
+
+        final RequestLog requestLog = ctx.log().whenComplete().join();
+        assertThat(requestLog.requestContentPreview()).isEqualTo("dummy content sanitizer");
+        assertThat(requestLog.responseContentPreview()).isEqualTo("dummy content sanitizer");
+    }
+
     private static Function<? super HttpClient, ContentPreviewingClient> decodingContentPreviewDecorator() {
         final BiPredicate<? super RequestContext, ? super HttpHeaders> previewerPredicate =
-                (requestContext, headers) -> "br".equals(headers.get(HttpHeaderNames.CONTENT_ENCODING));
+                (requestContext, headers) -> {
+                    final String contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
+                    return "br".equals(contentEncoding) || "gzip".equals(contentEncoding);
+                };
         final BiFunction<HttpHeaders, ByteBuf, String> producer = (headers, data) -> {
+            final String contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
             final byte[] bytes = new byte[data.readableBytes()];
             data.getBytes(0, bytes);
             final byte[] decoded;
-            try (BrotliInputStream unzipper = new BrotliInputStream(new ByteArrayInputStream(bytes))) {
+            final InputStream in = new ByteArrayInputStream(bytes);
+            try (InputStream unzipper = "br".equals(contentEncoding) ? new BrotliInputStream(in)
+                                                                     : new GZIPInputStream(in)) {
                 decoded = ByteStreams.toByteArray(unzipper);
             } catch (Exception e) {
                 throw new IllegalArgumentException(e);

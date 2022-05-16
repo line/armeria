@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static java.util.Objects.requireNonNull;
-
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 
@@ -32,16 +30,32 @@ import io.netty.handler.codec.http2.Http2Stream;
 public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     private final ChannelHandlerContext ctx;
     private final Http2ConnectionEncoder encoder;
+    private final KeepAliveHandler keepAliveHandler;
     private volatile boolean closed;
 
-    protected Http2ObjectEncoder(ChannelHandlerContext ctx, Http2ConnectionEncoder encoder) {
-        this.ctx = requireNonNull(ctx, "ctx");
-        this.encoder = requireNonNull(encoder, "encoder");
+    protected Http2ObjectEncoder(ChannelHandlerContext connectionHandlerCtx,
+                                 AbstractHttp2ConnectionHandler connectionHandler) {
+        ctx = connectionHandlerCtx;
+        encoder = connectionHandler.encoder();
+        keepAliveHandler = connectionHandler.keepAliveHandler();
     }
 
     @Override
     public final Channel channel() {
         return ctx.channel();
+    }
+
+    protected final ChannelHandlerContext ctx() {
+        return ctx;
+    }
+
+    protected final Http2ConnectionEncoder encoder() {
+        return encoder;
+    }
+
+    @Override
+    public final KeepAliveHandler keepAliveHandler() {
+        return keepAliveHandler;
     }
 
     @Override
@@ -113,13 +127,5 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
     @Override
     public boolean isClosed() {
         return closed;
-    }
-
-    protected final ChannelHandlerContext ctx() {
-        return ctx;
-    }
-
-    protected final Http2ConnectionEncoder encoder() {
-        return encoder;
     }
 }

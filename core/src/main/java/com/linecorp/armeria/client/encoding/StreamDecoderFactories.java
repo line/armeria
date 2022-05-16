@@ -21,7 +21,7 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 /**
  * Stream Decoder Factories for gzip, deflate.
  *
- * @deprecated Use {@link com.linecorp.armeria.common.encoding.StreamDecoderFactories} instead.
+ * @deprecated Use {@code com.linecorp.armeria.common.encoding.StreamDecoderFactories} instead.
  */
 @Deprecated
 enum StreamDecoderFactories implements StreamDecoderFactory {

@@ -22,14 +22,14 @@ class ServerListenerBuilderSuite extends FunSuite {
   test("Should be able to register a callback with a lambda expression") {
     ServerListener
       .builder()
-      .whenStarting { server: Server => println(s"$server is starting.") }
-      .whenStarting { server: Server => server.activePorts }
-      .whenStarted { server: Server => println(s"$server is started.") }
-      .whenStarted { server: Server => server.isClosing }
-      .whenStopping { server: Server => println(s"$server is stopping.") }
-      .whenStopping { server: Server => server.activePorts }
-      .whenStopped { server: Server => println(s"$server is stopped.") }
-      .whenStopped { server: Server => server.isClosed }
+      .whenStarting { (server: Server) => println(s"$server is starting.") }
+      .whenStarting { (server: Server) => server.activePorts }
+      .whenStarted { (server: Server) => println(s"$server is started.") }
+      .whenStarted { (server: Server) => server.isClosing }
+      .whenStopping { (server: Server) => println(s"$server is stopping.") }
+      .whenStopping { (server: Server) => server.activePorts }
+      .whenStopped { (server: Server) => println(s"$server is stopped.") }
+      .whenStopped { (server: Server) => server.isClosed }
       .build()
   }
 }

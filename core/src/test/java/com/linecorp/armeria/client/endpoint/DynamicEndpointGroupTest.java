@@ -17,6 +17,7 @@ package com.linecorp.armeria.client.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
@@ -73,29 +74,82 @@ class DynamicEndpointGroupTest {
     }
 
     @Test
-    void whenReadyContainsEndpointGroupWhenTheListIsUsedForTheFirstTime() {
-        final DynamicEndpointGroup endpointGroup1 = new DynamicEndpointGroup();
-        endpointGroup1.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 3333),
-                                                     Endpoint.of("127.0.0.1", 1111)));
-        assertThat(endpointGroup1.whenReady().join())
-                .containsExactlyInAnyOrder(Endpoint.of("127.0.0.1", 3333),
-                                           Endpoint.of("127.0.0.1", 1111));
-        // Add a new endpoint.
-        endpointGroup1.addEndpoint(Endpoint.of("127.0.0.1", 2222));
-        // The list from whenReady is not changed.
-        assertThat(endpointGroup1.whenReady().join())
-                .containsExactlyInAnyOrder(Endpoint.of("127.0.0.1", 3333),
-                                           Endpoint.of("127.0.0.1", 1111));
+    void removeEndpointWhenAllowEmptyEndpointsIsTrue() {
+        final Endpoint endpoint1 = Endpoint.of("127.0.0.1", 1111);
+        final Endpoint endpoint2 = Endpoint.of("127.0.0.1", 2222);
+        final Iterable<Endpoint> endpoints = ImmutableList.of(endpoint1, endpoint2);
+        final DynamicEndpointGroup dynamicEndpointGroup = new DynamicEndpointGroup();
+        dynamicEndpointGroup.setEndpoints(endpoints);
+        dynamicEndpointGroup.removeEndpoint(endpoint1);
+        assertThat(dynamicEndpointGroup.endpoints()).containsExactlyInAnyOrder(endpoint2);
 
-        final DynamicEndpointGroup endpointGroup2 = new DynamicEndpointGroup();
-        endpointGroup2.setEndpoints(ImmutableList.of(Endpoint.of("127.0.0.1", 3333),
-                                                     Endpoint.of("127.0.0.1", 1111)));
-        endpointGroup2.addEndpoint(Endpoint.of("127.0.0.1", 2222));
+        dynamicEndpointGroup.removeEndpoint(endpoint2);
+        assertThat(dynamicEndpointGroup.endpoints()).isEmpty();
+    }
 
-        // whenReady contains every endpoints.
-        assertThat(endpointGroup2.whenReady().join())
-                .containsExactlyInAnyOrder(Endpoint.of("127.0.0.1", 3333),
-                                           Endpoint.of("127.0.0.1", 1111),
-                                           Endpoint.of("127.0.0.1", 2222));
+    @Test
+    void removeEndpointWhenAllowEmptyEndpointsIsFalse() {
+        final Endpoint endpoint1 = Endpoint.of("127.0.0.1", 1111);
+        final Endpoint endpoint2 = Endpoint.of("127.0.0.1", 2222);
+        final Iterable<Endpoint> endpoints = ImmutableList.of(endpoint1, endpoint2);
+        final DynamicEndpointGroup dynamicEndpointGroup = new DynamicEndpointGroup(false);
+        dynamicEndpointGroup.setEndpoints(endpoints);
+        dynamicEndpointGroup.removeEndpoint(endpoint1);
+        assertThat(dynamicEndpointGroup.endpoints()).containsExactlyInAnyOrder(endpoint2);
+
+        // Shouldn't remove the last endpoint when allowEmptyEndpoints is false.
+        dynamicEndpointGroup.removeEndpoint(endpoint2);
+        assertThat(dynamicEndpointGroup.endpoints()).isNotEmpty();
+        assertThat(dynamicEndpointGroup.endpoints()).containsExactlyInAnyOrder(endpoint2);
+    }
+
+    @Test
+    void whenAllowEmptyEndpointsIsTrueByDefault() {
+        final Iterable<Endpoint> endpoints = ImmutableList.of(Endpoint.of("127.0.0.1", 3333),
+                                                              Endpoint.of("127.0.0.1", 1111));
+        final DynamicEndpointGroup dynamicEndpointGroup = new DynamicEndpointGroup();
+        testWhenAllowEmptyEndpointsIsTrue(dynamicEndpointGroup, endpoints);
+
+        // Using builder
+        final DynamicEndpointGroup dynamicEndpointGroupFromBuilder =
+                DynamicEndpointGroup.builder().build();
+        testWhenAllowEmptyEndpointsIsTrue(dynamicEndpointGroupFromBuilder, endpoints);
+    }
+
+    @Test
+    void whenAllowEmptyEndpointsIsFalse() {
+        final Iterable<Endpoint> endpoints = ImmutableList.of(Endpoint.of("127.0.0.1", 3333),
+                                                              Endpoint.of("127.0.0.1", 1111));
+        final DynamicEndpointGroup dynamicEndpointGroup = new DynamicEndpointGroup(false);
+        testWhenAllowEmptyEndpointsIsFalse(dynamicEndpointGroup, endpoints);
+
+        // Using builder
+        final DynamicEndpointGroup dynamicEndpointGroupFromBuilder =
+                DynamicEndpointGroup.builder()
+                                    .allowEmptyEndpoints(false)
+                                    .build();
+
+        testWhenAllowEmptyEndpointsIsFalse(dynamicEndpointGroupFromBuilder, endpoints);
+    }
+
+    private static void testWhenAllowEmptyEndpointsIsTrue(DynamicEndpointGroup dynamicEndpointGroup,
+                                                          Iterable<Endpoint> endpoints) {
+        dynamicEndpointGroup.setEndpoints(endpoints);
+        assertThat(dynamicEndpointGroup.endpoints()).containsExactlyInAnyOrderElementsOf(endpoints);
+
+        // Should be allowed to set an empty list.
+        dynamicEndpointGroup.setEndpoints(new ArrayList<>());
+        assertThat(dynamicEndpointGroup.endpoints()).isEmpty();
+    }
+
+    private static void testWhenAllowEmptyEndpointsIsFalse(DynamicEndpointGroup dynamicEndpointGroup,
+                                                           Iterable<Endpoint> endpoints) {
+        dynamicEndpointGroup.setEndpoints(endpoints);
+        assertThat(dynamicEndpointGroup.endpoints()).containsExactlyInAnyOrderElementsOf(endpoints);
+
+        // Should not allow any attempt to set an empty list.
+        dynamicEndpointGroup.setEndpoints(ImmutableList.of());
+        assertThat(dynamicEndpointGroup.endpoints()).containsExactlyInAnyOrderElementsOf(endpoints);
+        assertThat(dynamicEndpointGroup.endpoints()).isNotEmpty();
     }
 }

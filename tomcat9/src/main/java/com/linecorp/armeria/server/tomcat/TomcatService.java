@@ -49,6 +49,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -58,11 +59,15 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.internal.server.servlet.ServletTlsAttributes;
 import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
@@ -124,7 +129,7 @@ public abstract class TomcatService implements HttpService {
         } catch (ReflectiveOperationException e) {
             throw new IllegalStateException(
                     "could not find the matching classes for Tomcat version " + ServerInfo.getServerNumber() +
-                            "; using a wrong armeria-tomcat JAR?", e);
+                    "; using a wrong armeria-tomcat JAR?", e);
         }
 
         if (TomcatVersion.major() >= 9) {
@@ -389,6 +394,8 @@ public abstract class TomcatService implements HttpService {
                 coyoteReq.setResponse(coyoteRes);
                 coyoteRes.setRequest(coyoteReq);
 
+                ServletTlsAttributes.fill(ctx.sslSession(), coyoteReq::setAttribute);
+
                 final Queue<HttpData> data = new ArrayDeque<>();
                 coyoteRes.setOutputBuffer((OutputBuffer) OUTPUT_BUFFER_CONSTRUCTOR.invoke(data));
 
@@ -457,6 +464,10 @@ public abstract class TomcatService implements HttpService {
         final String mappedPath = ctx.mappedPath();
 
         coyoteReq.scheme().setString(req.scheme());
+
+        // Set the start time which is used by Tomcat access logging
+        coyoteReq.setStartTime(ctx.log().ensureAvailable(RequestLogProperty.REQUEST_START_TIME)
+                                  .requestStartTimeMillis());
 
         // Set the remote host/address.
         final InetSocketAddress remoteAddr = ctx.remoteAddress();
@@ -608,5 +619,10 @@ public abstract class TomcatService implements HttpService {
             }
         }
         return null;
+    }
+
+    @Override
+    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+        return ExchangeType.RESPONSE_STREAMING;
     }
 }

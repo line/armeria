@@ -32,7 +32,7 @@ export default class AnnotatedHttpTransport extends Transport {
     const regexPathPrefix = endpoint.regexPathPrefix;
     const originalPath = endpoint.pathMapping;
 
-    if (originalPath.startsWith(`exact:`)) {
+    if (originalPath.startsWith('exact:')) {
       const exact = originalPath.substring('exact:'.length);
       if (path !== exact) {
         return {

@@ -97,6 +97,11 @@ public final class CorsPolicyBuilder extends AbstractCorsPolicyBuilder {
     }
 
     @Override
+    public CorsPolicyBuilder allowAllRequestHeaders(boolean allowAllRequestHeaders) {
+        return (CorsPolicyBuilder) super.allowAllRequestHeaders(allowAllRequestHeaders);
+    }
+
+    @Override
     public CorsPolicyBuilder allowRequestHeaders(CharSequence... headers) {
         return (CorsPolicyBuilder) super.allowRequestHeaders(headers);
     }

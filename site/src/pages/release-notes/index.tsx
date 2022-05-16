@@ -4,6 +4,6 @@ import React from 'react';
 import Redirect from '../../layouts/redirect';
 import recentReleases from '../../../gen-src/release-notes-recent.json';
 
-export default () => (
-  <Redirect href={withPrefix(Object.keys(recentReleases)[0])} />
-);
+export default () => {
+  return <Redirect href={withPrefix(Object.keys(recentReleases)[0])} />;
+};

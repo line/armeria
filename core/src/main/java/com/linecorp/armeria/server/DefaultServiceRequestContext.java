@@ -29,6 +29,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
@@ -43,6 +44,7 @@ import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.NonWrappingRequestContext;
+import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
@@ -237,13 +239,18 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
+    public QueryParams queryParams() {
+        return routingContext().params();
+    }
+
+    @Override
     public ContextAwareScheduledExecutorService blockingTaskExecutor() {
         if (blockingTaskExecutor != null) {
             return blockingTaskExecutor;
         }
 
-        return blockingTaskExecutor = ContextAwareScheduledExecutorService.of(
-                this, config().server().config().blockingTaskExecutor());
+        final ScheduledExecutorService executor = config().blockingTaskExecutor();
+        return blockingTaskExecutor = ContextAwareScheduledExecutorService.of(this, executor);
     }
 
     @Override

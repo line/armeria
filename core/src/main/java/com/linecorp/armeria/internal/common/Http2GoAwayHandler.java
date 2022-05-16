@@ -77,6 +77,14 @@ public final class Http2GoAwayHandler {
 
         onGoAway(channel, "Received", lastStreamId, errorCode, debugData);
 
+        if (lastStreamId == Integer.MAX_VALUE && errorCode == Http2Error.NO_ERROR.code()) {
+            // Should not close a connection if a last stream identifier is 2^31-1 and a NO_ERROR code.
+            // The server attempted to gracefully shut a connection down.
+            // The server will send another GOAWAY frame with an updated last stream identifier.
+            // https://datatracker.ietf.org/doc/html/rfc7540#section-6.8
+            return;
+        }
+
         // Send a GOAWAY back to the peer and close the connection gracefully if we did not send GOAWAY yet.
         // This makes sure that the connection is closed eventually once we receive GOAWAY.
         if (!goAwaySent) {

@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
@@ -30,8 +29,6 @@ import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatusClass;
-import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -79,11 +76,11 @@ class GrpcRetryWithCircuitBreakerTest {
                                              })
                                              .thenFailure();
         final TestServiceBlockingStub client =
-                Clients.builder(server.uri(SessionProtocol.HTTP, GrpcSerializationFormats.PROTO))
-                       .decorator(LoggingClient.newDecorator())
-                       .decorator(RetryingClient.newDecorator(retryRuleWithContent))
-                       .decorator(CircuitBreakerClient.newDecorator(circuitBreaker, cbRuleWithContent))
-                       .build(TestServiceBlockingStub.class);
+                GrpcClients.builder(server.httpUri())
+                           .decorator(LoggingClient.newDecorator())
+                           .decorator(RetryingClient.newDecorator(retryRuleWithContent))
+                           .decorator(CircuitBreakerClient.newDecorator(circuitBreaker, cbRuleWithContent))
+                           .build(TestServiceBlockingStub.class);
 
         // Make sure to complete a call successfully
         assertThat(client.unaryCall(SimpleRequest.getDefaultInstance()).getUsername())

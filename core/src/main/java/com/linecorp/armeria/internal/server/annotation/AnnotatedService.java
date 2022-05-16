@@ -1,17 +1,17 @@
 /*
- *  Copyright 2017 LINE Corporation
+ * Copyright 2017 LINE Corporation
  *
- *  LINE Corporation licenses this file to you under the Apache License,
- *  version 2.0 (the "License"); you may not use this file except in compliance
- *  with the License. You may obtain a copy of the License at:
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
  *
- *    https://www.apache.org/licenses/LICENSE-2.0
+ *   https://www.apache.org/licenses/LICENSE-2.0
  *
- *  Unless required by applicable law or agreed to in writing, software
- *  distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- *  WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- *  License for the specific language governing permissions and limitations
- *  under the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
  */
 
 package com.linecorp.armeria.internal.server.annotation;
@@ -31,6 +31,7 @@ import java.util.ServiceLoader;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -40,8 +41,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -49,16 +50,21 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregatedResult;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationStrategy;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.AggregationType;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ExceptionVerbosity;
@@ -96,6 +102,9 @@ public final class AnnotatedService implements HttpService {
 
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
+    private static final CompletableFuture<AggregatedResult>
+            NO_AGGREGATION_FUTURE = UnmodifiableFuture.completedFuture(AggregatedResult.EMPTY);
+
     static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
             ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
                                                     AnnotatedService.class.getClassLoader()));
@@ -121,7 +130,8 @@ public final class AnnotatedService implements HttpService {
     private final ResponseConverterFunction responseConverter;
 
     private final Route route;
-    private final ResponseHeaders defaultHttpHeaders;
+    private final HttpStatus defaultStatus;
+    private final HttpHeaders defaultHttpHeaders;
     private final HttpHeaders defaultHttpTrailers;
 
     private final ResponseType responseType;
@@ -134,7 +144,8 @@ public final class AnnotatedService implements HttpService {
                      List<ExceptionHandlerFunction> exceptionHandlers,
                      List<ResponseConverterFunction> responseConverters,
                      Route route,
-                     ResponseHeaders defaultHttpHeaders,
+                     HttpStatus defaultStatus,
+                     HttpHeaders defaultHttpHeaders,
                      HttpHeaders defaultHttpTrailers,
                      boolean useBlockingTaskExecutor) {
         this.object = requireNonNull(object, "object");
@@ -157,6 +168,7 @@ public final class AnnotatedService implements HttpService {
         aggregationStrategy = AggregationStrategy.from(resolvers);
         this.route = requireNonNull(route, "route");
 
+        this.defaultStatus = requireNonNull(defaultStatus, "defaultStatus");
         this.defaultHttpHeaders = requireNonNull(defaultHttpHeaders, "defaultHttpHeaders");
         this.defaultHttpTrailers = requireNonNull(defaultHttpTrailers, "defaultHttpTrailers");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
@@ -194,15 +206,7 @@ public final class AnnotatedService implements HttpService {
     private static ResponseConverterFunction responseConverter(
             Method method, List<ResponseConverterFunction> responseConverters) {
 
-        final Type actualType;
-        if (HttpResult.class.isAssignableFrom(method.getReturnType())) {
-            final ParameterizedType type = (ParameterizedType) method.getGenericReturnType();
-            warnIfHttpResponseArgumentExists(type, type);
-            actualType = type.getActualTypeArguments()[0];
-        } else {
-            actualType = method.getGenericReturnType();
-        }
-
+        final Type actualType = getActualReturnType(method);
         final ImmutableList<ResponseConverterFunction> backingConverters =
                 ImmutableList
                         .<ResponseConverterFunction>builder()
@@ -228,6 +232,31 @@ public final class AnnotatedService implements HttpService {
         }
 
         return responseConverter;
+    }
+
+    private static Type getActualReturnType(Method method) {
+        final Class<?> returnType;
+        final Type genericReturnType;
+
+        if (KotlinUtil.isKFunction(method)) {
+            returnType = KotlinUtil.kFunctionReturnType(method);
+            if (KotlinUtil.isReturnTypeNothing(method)) {
+                genericReturnType = KotlinUtil.kFunctionReturnType(method);
+            } else {
+                genericReturnType = KotlinUtil.kFunctionGenericReturnType(method);
+            }
+        } else {
+            returnType = method.getReturnType();
+            genericReturnType = method.getGenericReturnType();
+        }
+
+        if (HttpResult.class.isAssignableFrom(returnType)) {
+            final ParameterizedType type = (ParameterizedType) genericReturnType;
+            warnIfHttpResponseArgumentExists(type, type);
+            return type.getActualTypeArguments()[0];
+        } else {
+            return genericReturnType;
+        }
     }
 
     private static void warnIfHttpResponseArgumentExists(Type returnType, ParameterizedType type) {
@@ -280,21 +309,20 @@ public final class AnnotatedService implements HttpService {
             // If an error occurs, the default ExceptionHandler will handle the error.
             if (Flags.annotatedServiceExceptionVerbosity() == ExceptionVerbosity.ALL &&
                 logger.isWarnEnabled()) {
-                return response.mapError(cause -> {
+                return response.peekError(cause -> {
                     logger.warn("{} Exception raised by method '{}' in '{}':",
                                 ctx, methodName(), object.getClass().getSimpleName(), Exceptions.peel(cause));
-                    return cause;
                 });
-            } else {
-                return response;
             }
-        } else {
-            return response.recover(cause -> {
-                try (SafeCloseable ignored = ctx.push()) {
-                    return exceptionHandler.handleException(ctx, req, cause);
-                }
-            });
         }
+        return response;
+    }
+
+    HttpService withExceptionHandler(HttpService service) {
+        if (exceptionHandler == null) {
+            return service;
+        }
+        return new ExceptionHandlingHttpService(service, exceptionHandler);
     }
 
     /**
@@ -303,11 +331,20 @@ public final class AnnotatedService implements HttpService {
      * {@link HttpResponse}, it will be executed in the blocking task executor.
      */
     private CompletionStage<HttpResponse> serve0(ServiceRequestContext ctx, HttpRequest req) {
-        final CompletableFuture<AggregatedHttpRequest> f;
-        if (AggregationStrategy.aggregationRequired(aggregationStrategy, req)) {
-            f = req.aggregate();
-        } else {
-            f = CompletableFuture.completedFuture(null);
+        final CompletableFuture<AggregatedResult> f;
+        switch (AnnotatedValueResolver.aggregationType(aggregationStrategy, req.headers())) {
+            case MULTIPART:
+                f = FileAggregatedMultipart.aggregateMultipart(ctx, req).thenApply(AggregatedResult::new);
+                break;
+            case ALL:
+                f = req.aggregate().thenApply(AggregatedResult::new);
+                break;
+            case NONE:
+                f = NO_AGGREGATION_FUTURE;
+                break;
+            default:
+                // Should never reach here.
+                throw new Error();
         }
 
         ctx.mutateAdditionalResponseHeaders(mutator -> mutator.add(defaultHttpHeaders));
@@ -337,7 +374,7 @@ public final class AnnotatedService implements HttpService {
                 return composedFuture
                         .thenApply(result -> convertResponse(ctx, null, result, HttpHeaders.of()));
             default:
-                final Function<AggregatedHttpRequest, HttpResponse> defaultApplyFunction =
+                final Function<AggregatedResult, HttpResponse> defaultApplyFunction =
                         aReq -> convertResponse(ctx, null, invoke(ctx, req, aReq), HttpHeaders.of());
                 if (useBlockingTaskExecutor) {
                     return f.thenApplyAsync(defaultApplyFunction, ctx.blockingTaskExecutor());
@@ -351,16 +388,22 @@ public final class AnnotatedService implements HttpService {
      * Invokes the service method with arguments.
      */
     @Nullable
-    private Object invoke(ServiceRequestContext ctx, HttpRequest req,
-                          @Nullable AggregatedHttpRequest aggregatedRequest) {
+    private Object invoke(ServiceRequestContext ctx, HttpRequest req, AggregatedResult aggregatedResult) {
         try (SafeCloseable ignored = ctx.push()) {
-            final ResolverContext resolverContext = new ResolverContext(ctx, req, aggregatedRequest);
+            final ResolverContext resolverContext = new ResolverContext(ctx, req, aggregatedResult);
             final Object[] arguments = AnnotatedValueResolver.toArguments(resolvers, resolverContext);
             if (isKotlinSuspendingMethod) {
                 assert callKotlinSuspendingMethod != null;
+                final ScheduledExecutorService executor;
+                // The request context will be injected by ArmeriaRequestCoroutineContext
+                if (useBlockingTaskExecutor) {
+                    executor = ctx.blockingTaskExecutor().withoutContext();
+                } else {
+                    executor = ctx.eventLoop().withoutContext();
+                }
                 return callKotlinSuspendingMethod.invoke(
                         method, object, arguments,
-                        useBlockingTaskExecutor ? ctx.blockingTaskExecutor() : ctx.eventLoop(),
+                        executor,
                         ctx);
             } else {
                 return methodHandle.invoke(arguments);
@@ -429,8 +472,7 @@ public final class AnnotatedService implements HttpService {
             return headers.build();
         }
 
-        final HttpStatus defaultHttpStatus = defaultHttpHeaders.status();
-        return headers.status(defaultHttpStatus).build();
+        return headers.status(defaultStatus).build();
     }
 
     /**
@@ -443,7 +485,17 @@ public final class AnnotatedService implements HttpService {
         if (obj != null && ScalaUtil.isScalaFuture(obj.getClass())) {
             return ScalaUtil.FutureConverter.toCompletableFuture((scala.concurrent.Future<?>) obj, executor);
         }
-        return CompletableFuture.completedFuture(obj);
+        return UnmodifiableFuture.completedFuture(obj);
+    }
+
+    @Override
+    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+        // TODO(ikhoon): Support a non-streaming response type.
+        if (AnnotatedValueResolver.aggregationType(aggregationStrategy, headers) == AggregationType.ALL) {
+            return ExchangeType.RESPONSE_STREAMING;
+        } else {
+            return ExchangeType.BIDI_STREAMING;
+        }
     }
 
     /**
@@ -489,6 +541,30 @@ public final class AnnotatedService implements HttpService {
             }
 
             return HttpResponse.ofFailure(peeledCause);
+        }
+    }
+
+    private static final class ExceptionHandlingHttpService extends SimpleDecoratingHttpService {
+
+        private final ExceptionHandlerFunction exceptionHandler;
+
+        ExceptionHandlingHttpService(HttpService service, ExceptionHandlerFunction exceptionHandler) {
+            super(service);
+            this.exceptionHandler = exceptionHandler;
+        }
+
+        @Override
+        public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) {
+            try {
+                final HttpResponse response = unwrap().serve(ctx, req);
+                return response.recover(cause -> {
+                    try (SafeCloseable ignored = ctx.push()) {
+                        return exceptionHandler.handleException(ctx, req, cause);
+                    }
+                });
+            } catch (Exception ex) {
+                return exceptionHandler.handleException(ctx, req, ex);
+            }
         }
     }
 

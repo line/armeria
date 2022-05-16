@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.endpoint.dns;
 
 import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
@@ -29,15 +28,13 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.client.DnsQuestionWithoutTrailingDot;
+import com.linecorp.armeria.internal.client.dns.ByteArrayDnsRecord;
+import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
+import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufHolder;
 import io.netty.channel.EventLoop;
-import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
-import io.netty.resolver.dns.DnsServerAddressStreamProvider;
 
 /**
  * {@link DynamicEndpointGroup} which resolves targets using DNS {@code TXT} records. This is useful for
@@ -74,13 +71,13 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
 
     private final Function<byte[], @Nullable Endpoint> mapping;
 
-    DnsTextEndpointGroup(EndpointSelectionStrategy selectionStrategy, EventLoop eventLoop,
-                         int minTtl, int maxTtl, long queryTimeoutMillis,
-                         DnsServerAddressStreamProvider serverAddressStreamProvider,
-                         Backoff backoff, String hostname, Function<byte[], @Nullable Endpoint> mapping) {
-        super(selectionStrategy, eventLoop, minTtl, maxTtl, queryTimeoutMillis, serverAddressStreamProvider,
-              backoff, ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.TXT)),
-              unused -> {});
+    DnsTextEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
+                         DefaultDnsResolver resolver, EventLoop eventLoop, Backoff backoff, int minTtl,
+                         int maxTtl, String hostname, Function<byte[], @Nullable Endpoint> mapping) {
+
+        super(selectionStrategy, allowEmptyEndpoints, resolver, eventLoop,
+              ImmutableList.of(DnsQuestionWithoutTrailingDot.of(hostname, DnsRecordType.TXT)),
+              backoff, minTtl, maxTtl);
         this.mapping = mapping;
         start();
     }
@@ -89,36 +86,33 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
     ImmutableSortedSet<Endpoint> onDnsRecords(List<DnsRecord> records, int ttl) throws Exception {
         final ImmutableSortedSet.Builder<Endpoint> builder = ImmutableSortedSet.naturalOrder();
         for (DnsRecord r : records) {
-            if (!(r instanceof DnsRawRecord) || r.type() != DnsRecordType.TXT) {
+            if (!(r instanceof ByteArrayDnsRecord) || r.type() != DnsRecordType.TXT) {
                 continue;
             }
 
-            final ByteBuf content = ((ByteBufHolder) r).content();
-            if (!content.isReadable()) { // Missing length octet
+            final byte[] content = ((ByteArrayDnsRecord) r).content();
+            if (content.length == 0) { // Missing length octet
                 warnInvalidRecord(DnsRecordType.TXT, content);
                 continue;
             }
 
-            content.markReaderIndex();
-            final int txtLen = content.readUnsignedByte();
+            final int txtLen = content[0] & 0xFF;
             if (txtLen == 0) { // Empty content
                 continue;
             }
 
-            if (content.readableBytes() != txtLen) { // Mismatching number of octets
-                content.resetReaderIndex();
+            if (content.length != txtLen + 1) { // Mismatching number of octets
                 warnInvalidRecord(DnsRecordType.TXT, content);
                 continue;
             }
 
             final byte[] txt = new byte[txtLen];
-            content.readBytes(txt);
+            System.arraycopy(content, 1, txt, 0, txtLen);
 
             final Endpoint endpoint;
             try {
                 endpoint = mapping.apply(txt);
             } catch (Exception e) {
-                content.resetReaderIndex();
                 warnInvalidRecord(DnsRecordType.TXT, content);
                 continue;
             }
@@ -129,13 +123,7 @@ public final class DnsTextEndpointGroup extends DnsEndpointGroup {
         }
 
         final ImmutableSortedSet<Endpoint> endpoints = builder.build();
-        if (logger().isDebugEnabled()) {
-            logger().debug("{} Resolved: {} (TTL: {})",
-                           logPrefix(),
-                           endpoints.stream().map(Object::toString).collect(Collectors.joining(", ")),
-                           ttl);
-        }
-
+        logDnsResolutionResult(endpoints, ttl);
         return endpoints;
     }
 }

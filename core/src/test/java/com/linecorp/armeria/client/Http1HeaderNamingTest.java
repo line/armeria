@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.CompletableFuture;
@@ -35,7 +36,11 @@ import com.google.common.base.Strings;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.server.ServerBuilder;
 
 class Http1HeaderNamingTest {
 
@@ -101,6 +106,62 @@ class Http1HeaderNamingTest {
             final HttpStatus status = response.join().status();
             assertThat(status).isEqualTo(HttpStatus.OK);
             clientFactory.close();
+        }
+    }
+
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void serverTraditionalHeaderNaming(boolean useHeaderNaming) throws IOException {
+        final ServerBuilder serverBuilder = Server
+                .builder()
+                .service("/", (ctx, req) -> HttpResponse
+                        .of(ResponseHeaders.of(HttpStatus.OK,
+                                               HttpHeaderNames.AUTHORIZATION, "Bearer foo",
+                                               HttpHeaderNames.X_FORWARDED_FOR, "bar")));
+        if (useHeaderNaming) {
+            serverBuilder.http1HeaderNaming(Http1HeaderNaming.traditional());
+        }
+        final Server server = serverBuilder.build();
+        server.start().join();
+
+        try (Socket socket = new Socket()) {
+            socket.connect(server.activePort().localAddress());
+
+            final PrintWriter outWriter = new PrintWriter(socket.getOutputStream(), false);
+            outWriter.print("GET / HTTP/1.1\r\n");
+            outWriter.print("\r\n");
+            outWriter.flush();
+
+            final InputStream is = socket.getInputStream();
+            final BufferedReader reader = new BufferedReader(new InputStreamReader(is));
+
+            boolean hasAuthorization = false;
+            boolean hasXForwardedFor = false;
+            for (;;) {
+                final String line = reader.readLine();
+                System.out.println(line);
+                if (Strings.isNullOrEmpty(line)) {
+                    break;
+                }
+                if (useHeaderNaming) {
+                    if ("Authorization: Bearer foo".equals(line)) {
+                        hasAuthorization = true;
+                    }
+                    if ("X-Forwarded-For: bar".equals(line)) {
+                        hasXForwardedFor = true;
+                    }
+                } else {
+                    if ("authorization: Bearer foo".equals(line)) {
+                        hasAuthorization = true;
+                    }
+                    if ("x-forwarded-for: bar".equals(line)) {
+                        hasXForwardedFor = true;
+                    }
+                }
+            }
+
+            assertThat(hasAuthorization).isTrue();
+            assertThat(hasXForwardedFor).isTrue();
         }
     }
 }

@@ -25,12 +25,16 @@ import java.util.function.Function;
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
 import com.linecorp.armeria.common.logging.RequestLog;
+import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
+import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -40,26 +44,76 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  */
 public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
 
-    private Sampler<? super ServiceRequestContext> sampler = Sampler.always();
+    private Sampler<? super ServiceRequestContext> successSampler = Sampler.always();
+
+    private Sampler<? super ServiceRequestContext> failureSampler = Sampler.always();
 
     LoggingServiceBuilder() {}
 
     /**
      * Sets the {@link Sampler} that determines which request needs logging.
+     * This method sets both success and failure sampler.
+     * Use {@link #successSampler(Sampler)} and {@link #failureSampler(Sampler)}
+     * if you want to specify a different sampler for each case.
      */
     public LoggingServiceBuilder sampler(Sampler<? super ServiceRequestContext> sampler) {
-        this.sampler = requireNonNull(sampler, "sampler");
+        requireNonNull(sampler, "sampler");
+        this.successSampler = sampler;
+        this.failureSampler = sampler;
         return this;
     }
 
     /**
      * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
      * cause a random sample of the requests to be logged.
+     * This method sets both success and failure sampling rate.
+     * Use {@link #successSamplingRate(float)} and {@link #failureSamplingRate(float)}
+     * if you want to specify a different sampling rate for each case.
      */
     public LoggingServiceBuilder samplingRate(float samplingRate) {
         checkArgument(0.0 <= samplingRate && samplingRate <= 1.0,
                       "samplingRate: %s (expected: 0.0 <= samplingRate <= 1.0)", samplingRate);
         return sampler(Sampler.random(samplingRate));
+    }
+
+    /**
+     * Sets the {@link Sampler} that determines which success request needs logging.
+     */
+    public LoggingServiceBuilder successSampler(
+            Sampler<? super ServiceRequestContext> successSampler) {
+        this.successSampler = requireNonNull(successSampler, "successSampler");
+        return this;
+    }
+
+    /**
+     * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
+     * cause a random sample of the success requests to be logged.
+     */
+    public LoggingServiceBuilder successSamplingRate(float successSamplingRate) {
+        checkArgument(0.0 <= successSamplingRate && successSamplingRate <= 1.0,
+                      "successSamplingRate: %s (expected: 0.0 <= successSamplingRate <= 1.0)",
+                      successSamplingRate);
+        return successSampler(Sampler.random(successSamplingRate));
+    }
+
+    /**
+     * Sets the {@link Sampler} that determines which failure request needs logging.
+     */
+    public LoggingServiceBuilder failureSampler(
+            Sampler<? super ServiceRequestContext> failureSampler) {
+        this.failureSampler = requireNonNull(failureSampler, "failureSampler");
+        return this;
+    }
+
+    /**
+     * Sets the rate at which to sample requests to log. Any number between {@code 0.0} and {@code 1.0} will
+     * cause a random sample of the failure requests to be logged.
+     */
+    public LoggingServiceBuilder failureSamplingRate(float failureSamplingRate) {
+        checkArgument(0.0 <= failureSamplingRate && failureSamplingRate <= 1.0,
+                      "failureSamplingRate: %s (expected: 0.0 <= failureSamplingRate <= 1.0)",
+                      failureSamplingRate);
+        return failureSampler(Sampler.random(failureSamplingRate));
     }
 
     /**
@@ -78,7 +132,8 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
                                   responseContentSanitizer(),
                                   responseTrailersSanitizer(),
                                   responseCauseSanitizer(),
-                                  sampler);
+                                  successSampler,
+                                  failureSampler);
     }
 
     /**
@@ -105,16 +160,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.requestLogLevel(requestLogLevel);
     }
 
-    @Override
-    public LoggingServiceBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
-        return (LoggingServiceBuilder) super.successfulResponseLogLevel(successfulResponseLogLevel);
-    }
-
-    @Override
-    public LoggingServiceBuilder failureResponseLogLevel(LogLevel failedResponseLogLevel) {
-        return (LoggingServiceBuilder) super.failureResponseLogLevel(failedResponseLogLevel);
-    }
-
+    @Deprecated
     @Override
     public LoggingServiceBuilder requestLogLevelMapper(
             Function<? super RequestOnlyLog, LogLevel> requestLogLevelMapper) {
@@ -122,8 +168,39 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     }
 
     @Override
+    public LoggingServiceBuilder requestLogLevelMapper(RequestLogLevelMapper requestLogLevelMapper) {
+        return (LoggingServiceBuilder) super.requestLogLevelMapper(requestLogLevelMapper);
+    }
+
+    @Override
+    public LoggingServiceBuilder responseLogLevel(HttpStatus status, LogLevel logLevel) {
+        return (LoggingServiceBuilder) super.responseLogLevel(status, logLevel);
+    }
+
+    @Override
+    public LoggingServiceBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
+        return (LoggingServiceBuilder) super.responseLogLevel(statusClass, logLevel);
+    }
+
+    @Override
+    public LoggingServiceBuilder successfulResponseLogLevel(LogLevel successfulResponseLogLevel) {
+        return (LoggingServiceBuilder) super.successfulResponseLogLevel(successfulResponseLogLevel);
+    }
+
+    @Override
+    public LoggingServiceBuilder failureResponseLogLevel(LogLevel failureResponseLogLevel) {
+        return (LoggingServiceBuilder) super.failureResponseLogLevel(failureResponseLogLevel);
+    }
+
+    @Deprecated
+    @Override
     public LoggingServiceBuilder responseLogLevelMapper(
             Function<? super RequestLog, LogLevel> responseLogLevelMapper) {
+        return (LoggingServiceBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
+    }
+
+    @Override
+    public LoggingServiceBuilder responseLogLevelMapper(ResponseLogLevelMapper responseLogLevelMapper) {
         return (LoggingServiceBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 

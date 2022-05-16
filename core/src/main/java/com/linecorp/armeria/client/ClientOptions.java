@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -32,6 +33,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
@@ -77,6 +79,15 @@ public final class ClientOptions
             ClientOption.define("REDIRECT_CONFIG", RedirectConfig.disabled());
 
     /**
+     * The {@link ClientRequestContext} customizer.
+     *
+     * @see Clients#withContextCustomizer(Consumer)
+     */
+    @UnstableApi
+    public static final ClientOption<Consumer<ClientRequestContext>> CONTEXT_CUSTOMIZER =
+            ClientOption.define("CONTEXT_CUSTOMIZER", ctx -> {});
+
+    /**
      * The {@link Function} that decorates the client components.
      */
     public static final ClientOption<ClientDecoration> DECORATION =
@@ -104,6 +115,12 @@ public final class ClientOptions
             "REQUEST_ID_GENERATOR", RequestId::random);
 
     /**
+     * The {@link SuccessFunction} that determines if the request is successful or not.
+     */
+    public static final ClientOption<SuccessFunction> SUCCESS_FUNCTION =
+            ClientOption.define("SUCCESS_FUNCTION", SuccessFunction.ofDefault());
+
+    /**
      * A {@link Function} that remaps a target {@link Endpoint} into an {@link EndpointGroup}.
      *
      * @see ClientBuilder#endpointRemapper(Function)
@@ -121,7 +138,7 @@ public final class ClientOptions
             HttpHeaderNames.STATUS,
             HttpHeaderNames.TRANSFER_ENCODING,
             HttpHeaderNames.UPGRADE,
-            ArmeriaHttpUtil.HEADER_NAME_KEEP_ALIVE,
+            HttpHeaderNames.KEEP_ALIVE,
             ArmeriaHttpUtil.HEADER_NAME_PROXY_CONNECTION,
             ExtensionHeaderNames.PATH.text(),
             ExtensionHeaderNames.SCHEME.text(),
@@ -284,12 +301,26 @@ public final class ClientOptions
     }
 
     /**
+     * Returns the {@link SuccessFunction} that determines if the request is successful or not.
+     */
+    public SuccessFunction successFunction() {
+        return get(SUCCESS_FUNCTION);
+    }
+
+    /**
      * Returns the {@link Function} that remaps a target {@link Endpoint} into an {@link EndpointGroup}.
      *
      * @see ClientBuilder#endpointRemapper(Function)
      */
     public Function<? super Endpoint, ? extends EndpointGroup> endpointRemapper() {
         return get(ENDPOINT_REMAPPER);
+    }
+
+    /**
+     * Returns the {@link Consumer} that customizes a {@link ClientRequestContext}.
+     */
+    public Consumer<ClientRequestContext> contextCustomizer() {
+        return get(CONTEXT_CUSTOMIZER);
     }
 
     /**

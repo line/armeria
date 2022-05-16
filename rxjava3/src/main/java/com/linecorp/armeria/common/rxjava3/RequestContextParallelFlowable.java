@@ -21,7 +21,7 @@ import org.reactivestreams.Subscriber;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
-import io.reactivex.rxjava3.internal.fuseable.ConditionalSubscriber;
+import io.reactivex.rxjava3.operators.ConditionalSubscriber;
 import io.reactivex.rxjava3.parallel.ParallelFlowable;
 
 final class RequestContextParallelFlowable<T> extends ParallelFlowable<T> {

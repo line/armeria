@@ -1,37 +1,41 @@
-1. Upload the artifacts to the staging repository and prepare the web site:
+1. Wait until the publish job is finished and the artifacts are up in the Maven Central.
 
-   git checkout ${tag}
-   ./gradlew --no-daemon clean publish site
+   - Publish job: https://github.com/line/armeria/actions/workflows/publish-release.yml
+   - Sonatype repository: https://oss.sonatype.org/
+   - Maven Central: https://repo.maven.apache.org/maven2/com/linecorp/armeria/armeria-bom/${releaseVersion}/
 
-2. Close and release the staging repository at:
+2. Build the web site:
 
-   https://oss.sonatype.org/
+   git checkout ${tag} && \
+   ./gradlew --no-daemon clean site
 
 3. Close the milestone and set its due date with the date of the release at:
 
    https://github.com/line/armeria/milestones
 
-4. Update the release note at:
+4. Copy the generated web site to the 'gh-pages' branch, e.g.
+
+   cd ../site-armeria && \
+   git checkout gh-pages && \
+   rm -fr .buildinfo .doctrees .gradle * && \
+   rsync -aiP ../upstream-armeria/site/public/ . && \
+   git add -A . && \
+   git commit --amend -m 'Deploy the web site' && \
+   git push --force
+
+5. Update the release note at:
 
    https://github.com/line/armeria/releases/tag/${tag}
 
-5. Copy the web site generated to the 'gh-pages' branch, e.g.
-
-   cd ../site-armeria
-   git checkout gh-pages
-   rm -fr .buildinfo .doctrees .gradle *
-   rsync -aiP ../upstream-armeria/site/public/ .
-   git add -A .
-   git commit --amend -m 'Deploy the web site'
-   git push --force
-
 6. Copy the examples to armeria-examples using the script:
 
-   cd ../armeria-examples
-   ./update-examples.sh ${releaseVersion} ../upstream-armeria
-   git add -A .
-   git commit -m 'Update Armeria to ${releaseVersion}'
+   cd ../armeria-examples && \
+   ./update-examples.sh ${releaseVersion} ../upstream-armeria && \
+   git add -A . && \
+   git commit -m 'Update Armeria to ${releaseVersion}' && \
    git push
 
-7. Send an update pull request to openzipkin-contrib/zipkin-armeria-example
-8. Announce the release via Twitter.
+7. Announce the release via Twitter.
+
+8. Send an update pull request to https://github.com/TechEmpower/FrameworkBenchmarks
+   if we made performance improvements.

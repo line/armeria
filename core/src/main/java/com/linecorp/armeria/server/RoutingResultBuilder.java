@@ -96,7 +96,7 @@ public final class RoutingResultBuilder {
      */
     public RoutingResultBuilder rawParam(String name, String value) {
         pathParams().put(requireNonNull(name, "name"),
-                         ArmeriaHttpUtil.decodePath(requireNonNull(value, "value")));
+                         ArmeriaHttpUtil.decodePathParam(requireNonNull(value, "value")));
         return this;
     }
 

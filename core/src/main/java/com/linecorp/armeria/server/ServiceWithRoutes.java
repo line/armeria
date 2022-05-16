@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.Response;
  */
 public interface ServiceWithRoutes<I extends Request, O extends Response> extends Service<I, O> {
     /**
-     * Returns the set of {@link Route}s to which this {@link HttpService} is bound.
+     * Returns the set of {@link Route}s to which this {@link Service} is bound.
      */
     Set<Route> routes();
 }

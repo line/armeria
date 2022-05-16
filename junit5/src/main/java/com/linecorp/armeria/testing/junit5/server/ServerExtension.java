@@ -16,14 +16,20 @@
 
 package com.linecorp.armeria.testing.junit5.server;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.InetSocketAddress;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Consumer;
 
 import org.junit.jupiter.api.extension.Extension;
 import org.junit.jupiter.api.extension.ExtensionContext;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -62,6 +68,11 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
             public void configure(ServerBuilder sb) throws Exception {
                 ServerExtension.this.configure(sb);
                 sb.decorator(contextCaptor.newDecorator(ServerExtension.this::shouldCapture));
+            }
+
+            @Override
+            public void configureWebClient(WebClientBuilder wcb) throws Exception {
+                ServerExtension.this.configureWebClient(wcb);
             }
         };
     }
@@ -107,6 +118,12 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      * Configures the {@link Server} with the given {@link ServerBuilder}.
      */
     protected abstract void configure(ServerBuilder sb) throws Exception;
+
+    /**
+     * Configures the {@link WebClient} with the given {@link WebClientBuilder}.
+     * You can get the configured {@link WebClient} using {@link #webClient()}.
+     */
+    protected void configureWebClient(WebClientBuilder webClientBuilder) throws Exception {}
 
     /**
      * Stops the {@link Server} asynchronously.
@@ -298,6 +315,40 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      */
     public final ServiceRequestContextCaptor requestContextCaptor() {
         return contextCaptor;
+    }
+
+    /**
+     * Returns the {@link WebClient} configured by {@link #configureWebClient(WebClientBuilder)}.
+     */
+    public WebClient webClient() {
+        return delegate.webClient();
+    }
+
+    /**
+     * Returns a newly created {@link WebClient} configured by {@link #configureWebClient(WebClientBuilder)}
+     * and then the specified customizer.
+     */
+    public WebClient webClient(Consumer<WebClientBuilder> webClientCustomizer) {
+        requireNonNull(webClientCustomizer, "webClientCustomizer");
+        return delegate.webClient(webClientCustomizer);
+    }
+
+    /**
+     * Returns the {@link BlockingWebClient} configured by {@link #configureWebClient(WebClientBuilder)}.
+     */
+    @UnstableApi
+    public BlockingWebClient blockingWebClient() {
+        return delegate.webClient().blocking();
+    }
+
+    /**
+     * Returns a newly created {@link BlockingWebClient} configured by
+     * {@link #configureWebClient(WebClientBuilder)} and then the specified customizer.
+     */
+    @UnstableApi
+    public BlockingWebClient blockingWebClient(Consumer<WebClientBuilder> webClientCustomizer) {
+        requireNonNull(webClientCustomizer, "webClientCustomizer");
+        return delegate.webClient(webClientCustomizer).blocking();
     }
 
     /**

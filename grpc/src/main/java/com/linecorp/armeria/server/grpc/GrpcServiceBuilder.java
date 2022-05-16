@@ -19,10 +19,15 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
+import static org.reflections.ReflectionUtils.withModifier;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.time.Duration;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -39,22 +44,26 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
-import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.VirtualHostBuilder;
@@ -69,6 +78,7 @@ import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
+import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
@@ -85,6 +95,15 @@ public final class GrpcServiceBuilder {
     private static final Logger logger = LoggerFactory.getLogger(GrpcServiceBuilder.class);
 
     private static final boolean USE_COROUTINE_CONTEXT_INTERCEPTOR;
+
+    private static Map<String, HttpService> applyGrpcServiceToDecorators(
+            Map<String, List<DecoratorAndOrder>> mp, GrpcService grpcService) {
+        return mp.entrySet()
+                 .stream()
+                 .collect(toImmutableMap(Map.Entry::getKey,
+                                         e -> DecoratorAnnotationUtil.applyDecorators(e.getValue(),
+                                                                                      grpcService)));
+    }
 
     static {
         boolean useCoroutineContextInterceptor;
@@ -121,22 +140,39 @@ public final class GrpcServiceBuilder {
     @Nullable
     private ImmutableList.Builder<ServerInterceptor> interceptors;
 
+    @Nullable
+    private UnframedGrpcErrorHandler unframedGrpcErrorHandler;
+
+    @Nullable
+    private UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler;
+
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
-    private int maxInboundMessageSizeBytes = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
+    private int maxRequestMessageLength = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
 
-    private int maxOutboundMessageSizeBytes = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
+    private int maxResponseMessageLength = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
 
     private Function<? super ServiceDescriptor, ? extends GrpcJsonMarshaller> jsonMarshallerFactory =
             GrpcJsonMarshaller::of;
 
     private boolean enableUnframedRequests;
 
+    private boolean enableHttpJsonTranscoding;
+
     private boolean useBlockingTaskExecutor;
 
     private boolean unsafeWrapRequestBuffers;
 
     private boolean useClientTimeoutHeader = true;
+
+    private final Map<String, List<DecoratorAndOrder>> pathToDecorators = new HashMap<>();
+
+    private final Map<String, List<DecoratorAndOrder>> methodToDecorators = new HashMap<>();
+
+    private boolean enableHealthCheckService;
+
+    @Nullable
+    private GrpcHealthCheckService grpcHealthCheckService;
 
     GrpcServiceBuilder() {}
 
@@ -163,7 +199,7 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
+     * However, if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
      * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, ServerServiceDefinition service) {
@@ -186,8 +222,8 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
-     * {@code "/foo"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
+     * However, if you set {@code "/fooHello"} to {@code path}, the {@code Hello} method will be served at
+     * {@code "/fooHello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, ServerServiceDefinition service,
                                          MethodDescriptor<?, ?> methodDescriptor) {
@@ -202,12 +238,23 @@ public final class GrpcServiceBuilder {
      * implementations are {@link BindableService}s.
      */
     public GrpcServiceBuilder addService(BindableService bindableService) {
+        requireNonNull(bindableService, "bindableService");
         if (bindableService instanceof ProtoReflectionService) {
             return addService(ServerInterceptors.intercept(bindableService,
                                                            newProtoReflectionServiceInterceptor()));
         }
 
-        return addService(bindableService.bindService());
+        if (bindableService instanceof GrpcHealthCheckService) {
+            if (enableHealthCheckService) {
+                throw new IllegalStateException("default gRPC health check service is enabled already.");
+            }
+            grpcHealthCheckService = (GrpcHealthCheckService) bindableService;
+            return this;
+        }
+
+        final ServerServiceDefinition serverServiceDefinition = bindableService.bindService();
+        collectDecorators(bindableService.getClass(), null, serverServiceDefinition);
+        return addService(serverServiceDefinition);
     }
 
     /**
@@ -224,7 +271,7 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
+     * However, if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
      * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, BindableService bindableService) {
@@ -232,8 +279,41 @@ public final class GrpcServiceBuilder {
             return addService(path, ServerInterceptors.intercept(bindableService,
                                                                  newProtoReflectionServiceInterceptor()));
         }
+        final ServerServiceDefinition serverServiceDefinition = bindableService.bindService();
+        collectDecorators(bindableService.getClass(), path, serverServiceDefinition);
+        return addService(path, serverServiceDefinition);
+    }
 
-        return addService(path, bindableService.bindService());
+    /**
+     * Adds an implementation of gRPC service to this {@link GrpcServiceBuilder}.
+     * Most gRPC service implementations are {@link BindableService}s.
+     * This method is useful in cases like the followings.
+     *
+     * <p>Used for ScalaPB gRPC stubs
+     *
+     * <pre>{@code
+     * GrpcService.builder()
+     *            .addService(new HelloServiceImpl,
+     *                        HelloServiceGrpc.bindService(_,
+     *                                                     ExecutionContext.global))}
+     * </pre>
+     *
+     * <p>Used for intercepted gRPC-Java stubs
+     * <pre>{@code
+     * GrpcService.builder()
+     *            .addService(new TestServiceImpl,
+     *                        impl -> ServerInterceptors.intercept(impl, interceptors));
+     * }</pre>
+     */
+    public <T> GrpcServiceBuilder addService(
+            T implementation,
+            Function<? super T, ServerServiceDefinition> serviceDefinitionFactory) {
+        requireNonNull(implementation, "implementation");
+        requireNonNull(serviceDefinitionFactory, "serviceDefinitionFactory");
+        final ServerServiceDefinition serverServiceDefinition = serviceDefinitionFactory.apply(implementation);
+        requireNonNull(serverServiceDefinition, "serviceDefinitionFactory.apply() returned null");
+        collectDecorators(implementation.getClass(), null, serverServiceDefinition);
+        return addService(serverServiceDefinition);
     }
 
     /**
@@ -251,8 +331,8 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
-     * {@code "/foo"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
+     * However, if you set {@code "/fooHello"} to {@code path}, the {@code Hello} method will be served at
+     * {@code "/fooHello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, BindableService bindableService,
                                          MethodDescriptor<?, ?> methodDescriptor) {
@@ -261,8 +341,9 @@ public final class GrpcServiceBuilder {
                     ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
             return addService(path, interceptor, methodDescriptor);
         }
-
-        return addService(path, bindableService.bindService(), methodDescriptor);
+        final ServerServiceDefinition serverServiceDefinition = bindableService.bindService();
+        collectDecorators(bindableService.getClass(), null, serverServiceDefinition);
+        return addService(path, serverServiceDefinition, methodDescriptor);
     }
 
     /**
@@ -380,23 +461,50 @@ public final class GrpcServiceBuilder {
      * and {@link ServerBuilder#requestTimeoutMillis(long)}
      * (or {@link VirtualHostBuilder#requestTimeoutMillis(long)})
      * to very high values and set this to the expected limit of individual messages in the stream.
+     *
+     * @deprecated Use {@link #maxRequestMessageLength(int)} instead.
      */
+    @Deprecated
     public GrpcServiceBuilder setMaxInboundMessageSizeBytes(int maxInboundMessageSizeBytes) {
-        checkArgument(maxInboundMessageSizeBytes > 0,
-                      "maxInboundMessageSizeBytes must be >0");
-        this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
-        return this;
+        return maxRequestMessageLength(maxInboundMessageSizeBytes);
     }
 
     /**
      * Sets the maximum size in bytes of an individual outgoing message. If not set, all messages will be sent.
      * This can be a safety valve to prevent overflowing network connections with large messages due to business
      * logic bugs.
+     * @deprecated Use {@link #maxResponseMessageLength(int)} instead.
      */
+    @Deprecated
     public GrpcServiceBuilder setMaxOutboundMessageSizeBytes(int maxOutboundMessageSizeBytes) {
-        checkArgument(maxOutboundMessageSizeBytes > 0,
-                      "maxOutboundMessageSizeBytes must be >0");
-        this.maxOutboundMessageSizeBytes = maxOutboundMessageSizeBytes;
+        return maxResponseMessageLength(maxOutboundMessageSizeBytes);
+    }
+
+    /**
+     * Sets the maximum size in bytes of an individual request message. If not set, will use
+     * {@link VirtualHost#maxRequestLength()}. To support long-running RPC streams, it is recommended to
+     * set {@link ServerBuilder#maxRequestLength(long)}
+     * (or {@link VirtualHostBuilder#maxRequestLength(long)})
+     * and {@link ServerBuilder#requestTimeoutMillis(long)}
+     * (or {@link VirtualHostBuilder#requestTimeoutMillis(long)})
+     * to very high values and set this to the expected limit of individual messages in the stream.
+     */
+    public GrpcServiceBuilder maxRequestMessageLength(int maxRequestMessageLength) {
+        checkArgument(maxRequestMessageLength > 0,
+                      "maxRequestMessageLength: %s (expected: > 0)", maxRequestMessageLength);
+        this.maxRequestMessageLength = maxRequestMessageLength;
+        return this;
+    }
+
+    /**
+     * Sets the maximum size in bytes of an individual response message. If not set, all messages will be sent.
+     * This can be a safety valve to prevent overflowing network connections with large messages due to business
+     * logic bugs.
+     */
+    public GrpcServiceBuilder maxResponseMessageLength(int maxResponseMessageLength) {
+        checkArgument(maxResponseMessageLength > 0,
+                      "maxResponseMessageLength: %s (expected: > 0)", maxResponseMessageLength);
+        this.maxResponseMessageLength = maxResponseMessageLength;
         return this;
     }
 
@@ -418,6 +526,55 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder enableUnframedRequests(boolean enableUnframedRequests) {
         this.enableUnframedRequests = enableUnframedRequests;
+        return this;
+    }
+
+    /**
+     * Set a custom error response mapper. This is useful to serve custom response when using unframed gRPC
+     * service.
+     * @param unframedGrpcErrorHandler The function which maps the error response to an {@link HttpResponse}.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder unframedGrpcErrorHandler(UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+        requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
+        this.unframedGrpcErrorHandler = unframedGrpcErrorHandler;
+        return this;
+    }
+
+    /**
+     * Sets whether the service handles HTTP/JSON requests using the gRPC wire protocol.
+     *
+     * <p>Limitations:
+     * <ul>
+     *     <li>Only unary methods (single request, single response) are supported.</li>
+     *     <li>
+     *         Message compression is not supported.
+     *         {@link EncodingService} should be used instead for
+     *         transport level encoding.
+     *     </li>
+     *     <li>
+     *         Transcoding will not work if the {@link GrpcService} is configured with
+     *         {@link ServerBuilder#serviceUnder(String, HttpService)}.
+     *     </li>
+     * </ul>
+     *
+     * @see <a href="https://cloud.google.com/endpoints/docs/grpc/transcoding">Transcoding HTTP/JSON to gRPC</a>
+     */
+    @UnstableApi
+    public GrpcServiceBuilder enableHttpJsonTranscoding(boolean enableHttpJsonTranscoding) {
+        this.enableHttpJsonTranscoding = enableHttpJsonTranscoding;
+        return this;
+    }
+
+    /**
+     * Sets an error handler which handles an exception raised while serving a gRPC request transcoded from
+     * an HTTP/JSON request. By default, {@link UnframedGrpcErrorHandler#ofJson()} would be set.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder httpJsonTranscodingErrorHandler(
+            UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler) {
+        requireNonNull(httpJsonTranscodingErrorHandler, "httpJsonTranscodingErrorHandler");
+        this.httpJsonTranscodingErrorHandler = httpJsonTranscodingErrorHandler;
         return this;
     }
 
@@ -500,6 +657,21 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder useClientTimeoutHeader(boolean useClientTimeoutHeader) {
         this.useClientTimeoutHeader = useClientTimeoutHeader;
+        return this;
+    }
+
+    /**
+     * Sets the default {@link GrpcHealthCheckService} to this {@link GrpcServiceBuilder}.
+     * The gRPC health check service manages only the health checker that determines
+     * the healthiness of the {@link Server}.
+     *
+     * @see <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
+     */
+    public GrpcServiceBuilder enableHealthCheckService(boolean enableHealthCheckService) {
+        if (grpcHealthCheckService != null && enableHealthCheckService) {
+            throw new IllegalStateException("gRPC health check service is set already.");
+        }
+        this.enableHealthCheckService = enableHealthCheckService;
         return this;
     }
 
@@ -631,6 +803,52 @@ public final class GrpcServiceBuilder {
         return interceptors;
     }
 
+    private void collectDecorators(Class<?> clazz, @Nullable String path,
+                                   ServerServiceDefinition serverServiceDefinition) {
+        final String serviceName =
+                path != null ? path : '/' + serverServiceDefinition.getServiceDescriptor().getName();
+        // In gRPC, A method name is unique.
+        final Map<String, Method> methods = new HashMap<>();
+        for (Method method : InternalReflectionUtils.getAllSortedMethods(clazz,
+                                                                         withModifier(Modifier.PUBLIC))) {
+            final String methodName = method.getName();
+            if (!methods.containsKey(methodName)) {
+                methods.put(methodName, method);
+            }
+        }
+        for (final ServerMethodDefinition<?, ?> serverMethodDefinition : serverServiceDefinition.getMethods()) {
+            final String targetMethodName = serverMethodDefinition.getMethodDescriptor().getBareMethodName();
+            if (targetMethodName == null) {
+                continue;
+            }
+            final String methodName = targetMethodName.substring(0, 1).toLowerCase() +
+                                      targetMethodName.substring(1);
+            final Method method = methods.get(methodName);
+            if (method == null) {
+                continue;
+            }
+            final List<DecoratorAndOrder> decorators = DecoratorAnnotationUtil.collectDecorators(clazz, method);
+            if (!decorators.isEmpty()) {
+                String key = serviceName + '/' + targetMethodName;
+                pathToDecorators.put(key, decorators);
+                if (path == null) {
+                    key = serverMethodDefinition.getMethodDescriptor().getFullMethodName();
+                    methodToDecorators.put(key, decorators);
+                }
+            }
+        }
+    }
+
+    @VisibleForTesting
+    Map<String, List<DecoratorAndOrder>> pathToDecorators() {
+        return pathToDecorators;
+    }
+
+    @VisibleForTesting
+    Map<String, List<DecoratorAndOrder>> methodToDecorators() {
+        return methodToDecorators;
+    }
+
     /**
      * Constructs a new {@link GrpcService} that can be bound to
      * {@link ServerBuilder}. It is recommended to bind the service to a server using
@@ -645,13 +863,28 @@ public final class GrpcServiceBuilder {
                     new ArmeriaCoroutineContextInterceptor(useBlockingTaskExecutor);
             interceptors().add(coroutineContextInterceptor);
         }
+        if (!enableUnframedRequests && unframedGrpcErrorHandler != null) {
+            throw new IllegalStateException(
+                    "'unframedGrpcErrorHandler' can only be set if unframed requests are enabled");
+        }
+        if (!enableHttpJsonTranscoding && httpJsonTranscodingErrorHandler != null) {
+            throw new IllegalStateException(
+                    "'httpJsonTranscodingErrorHandler' can only be set if HTTP/JSON transcoding feature " +
+                    "is enabled");
+        }
+        if (enableHealthCheckService) {
+            grpcHealthCheckService = GrpcHealthCheckService.builder().build();
+        }
+        if (grpcHealthCheckService != null) {
+            registryBuilder.addService(grpcHealthCheckService.bindService());
+        }
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
-
+            final ImmutableList<ServerInterceptor> interceptors = this.interceptors.build();
             for (Entry entry : registryBuilder.entries()) {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
-                        ServerInterceptors.intercept(entry.service(), interceptors.build());
+                        ServerInterceptors.intercept(entry.service(), interceptors);
                 newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor);
             }
             handlerRegistry = newRegistryBuilder.build();
@@ -666,25 +899,43 @@ public final class GrpcServiceBuilder {
             statusFunction = this.statusFunction;
         }
 
-        final GrpcService grpcService = new FramedGrpcService(
+        final boolean lookupMethodFromAttribute = enableUnframedRequests || enableHttpJsonTranscoding;
+        GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,
-                handlerRegistry
-                        .methods()
-                        .keySet()
-                        .stream()
-                        .map(path -> Route.builder().exact('/' + path).build())
-                        .collect(ImmutableSet.toImmutableSet()),
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
                 supportedSerializationFormats,
                 jsonMarshallerFactory,
                 protoReflectionServiceInterceptor,
                 statusFunction,
-                maxOutboundMessageSizeBytes,
+                maxRequestMessageLength, maxResponseMessageLength,
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
-                maxInboundMessageSizeBytes);
-        return enableUnframedRequests ? new UnframedGrpcService(grpcService, handlerRegistry) : grpcService;
+                lookupMethodFromAttribute,
+                grpcHealthCheckService);
+        if (enableUnframedRequests) {
+            grpcService = new UnframedGrpcService(
+                    grpcService, handlerRegistry,
+                    unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
+                                                     : UnframedGrpcErrorHandler.of());
+        }
+        if (!pathToDecorators.isEmpty()) {
+            final Map<String, HttpService> pathToComposeDecorators = applyGrpcServiceToDecorators(
+                    pathToDecorators, grpcService);
+            final Map<String, HttpService> methodToComposedDecorators = applyGrpcServiceToDecorators(
+                    methodToDecorators, grpcService);
+            grpcService = new GrpcDecoratingService(grpcService,
+                                                    pathToComposeDecorators,
+                                                    methodToComposedDecorators,
+                                                    lookupMethodFromAttribute);
+        }
+        if (enableHttpJsonTranscoding) {
+            grpcService = HttpJsonTranscodingService.of(
+                    grpcService,
+                    httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
+                                                            : UnframedGrpcErrorHandler.ofJson());
+        }
+        return grpcService;
     }
 }

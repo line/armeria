@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
@@ -31,9 +32,12 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
@@ -46,6 +50,9 @@ public class AbstractClientOptionsBuilder {
     private final Map<ClientOption<?>, ClientOptionValue<?>> options = new LinkedHashMap<>();
     private final ClientDecorationBuilder decoration = ClientDecoration.builder();
     private final HttpHeadersBuilder headers = HttpHeaders.builder();
+
+    @Nullable
+    private Consumer<ClientRequestContext> contextCustomizer;
 
     /**
      * Creates a new instance.
@@ -175,6 +182,15 @@ public class AbstractClientOptionsBuilder {
      */
     public AbstractClientOptionsBuilder requestIdGenerator(Supplier<RequestId> requestIdGenerator) {
         return option(ClientOptions.REQUEST_ID_GENERATOR, requestIdGenerator);
+    }
+
+    /**
+     * Sets a {@link SuccessFunction} that determines whether a request was handled successfully or not.
+     * If unspecified, {@link SuccessFunction#ofDefault()} is used.
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder successFunction(SuccessFunction successFunction) {
+        return option(ClientOptions.SUCCESS_FUNCTION, successFunction);
     }
 
     /**
@@ -311,28 +327,40 @@ public class AbstractClientOptionsBuilder {
      * Sets the
      * <a href="https://en.wikipedia.org/wiki/Basic_access_authentication">HTTP basic access authentication</a>
      * header using {@link HttpHeaderNames#AUTHORIZATION}.
+     *
+     * @deprecated Use {@link #auth(AuthToken)} instead.
      */
+    @Deprecated
     public AbstractClientOptionsBuilder auth(BasicToken token) {
-        requireNonNull(token, "token");
-        headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
-        return this;
+        return auth((AuthToken) token);
     }
 
     /**
      * Sets the <a href="https://oauth.net/core/1.0a/">OAuth Core 1.0 Revision A</a> header
      * using {@link HttpHeaderNames#AUTHORIZATION}.
+     *
+     * @deprecated Use {@link #auth(AuthToken)} instead.
      */
+    @Deprecated
     public AbstractClientOptionsBuilder auth(OAuth1aToken token) {
-        requireNonNull(token, "token");
-        headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
-        return this;
+        return auth((AuthToken) token);
     }
 
     /**
      * Sets the <a href="https://www.oauth.com/">OAuth 2.0</a> header using
      * {@link HttpHeaderNames#AUTHORIZATION}.
+     *
+     * @deprecated Use {@link #auth(AuthToken)} instead.
      */
+    @Deprecated
     public AbstractClientOptionsBuilder auth(OAuth2Token token) {
+        return auth((AuthToken) token);
+    }
+
+    /**
+     * Sets the {@link AuthToken} header using {@link HttpHeaderNames#AUTHORIZATION}.
+     */
+    public AbstractClientOptionsBuilder auth(AuthToken token) {
         requireNonNull(token, "token");
         headers.set(HttpHeaderNames.AUTHORIZATION, token.asHeaderValue());
         return this;
@@ -356,6 +384,69 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
+     * Adds the specified {@link ClientRequestContext} customizer function so that
+     * it customizes the context in the thread that initiated the client call.
+     * The given customizer function is evaluated before the customizer function specified by
+     * {@link Clients#withContextCustomizer(Consumer)}.
+     *
+     * <pre>{@code
+     * static final ThreadLocal<String> USER_ID = new ThreadLocal<>();
+     * static final AttributeKey<String> USER_ID_ATTR = AttributeKey.valueOf("USER_ID");
+     * ...
+     * MyClientStub client =
+     *     Clients.builder(...)
+     *            .contextCustomizer(ctx -> {
+     *                // This customizer will be invoked from the thread that initiates a client call.
+     *                ctx.setAttr(USER_ID_ATTR, USER_ID.get());
+     *            })
+     *            .build(MyClientStub.class);
+     *
+     * // Good:
+     * // The context data is set by the thread that initiates the client call.
+     * USER_ID.set("user1");
+     * try {
+     *     client.executeSomething1(..);
+     *     ...
+     *     client.executeSomethingN(..);
+     * } finally {
+     *     // Should clean up the thread local storage.
+     *     USER_ID.remove();
+     * }
+     *
+     * // Bad:
+     * USER_ID.set("user1");
+     * executor.execute(() -> {
+     *     // The variable in USER_ID won't be propagated to the context.
+     *     // The variable is not valid at the moment client.executeSomething1() is called.
+     *      client.executeSomething1(..);
+     * });
+     * }</pre>
+     *
+     * <p>Note that certain properties of {@link ClientRequestContext}, such as:
+     * <ul>
+     *   <li>{@link ClientRequestContext#endpoint()}</li>
+     *   <li>{@link ClientRequestContext#localAddress()}</li>
+     *   <li>{@link ClientRequestContext#remoteAddress()}</li>
+     * </ul>
+     * may be {@code null} while the customizer function runs, because the target host of the {@link Request}
+     * is not determined yet.
+     *
+     * @see Clients#withContextCustomizer(Consumer)
+     */
+    @UnstableApi
+    public AbstractClientOptionsBuilder contextCustomizer(
+            Consumer<? super ClientRequestContext> contextCustomizer) {
+        requireNonNull(contextCustomizer, "contextCustomizer");
+        if (this.contextCustomizer == null) {
+            //noinspection unchecked
+            this.contextCustomizer = (Consumer<ClientRequestContext>) contextCustomizer;
+        } else {
+            this.contextCustomizer = this.contextCustomizer.andThen(contextCustomizer);
+        }
+        return this;
+    }
+
+    /**
      * Builds {@link ClientOptions} with the given options and the
      * {@linkplain ClientOptions#of() default options}.
      */
@@ -370,9 +461,13 @@ public class AbstractClientOptionsBuilder {
     protected final ClientOptions buildOptions(@Nullable ClientOptions baseOptions) {
         final Collection<ClientOptionValue<?>> optVals = options.values();
         final int numOpts = optVals.size();
-        final ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + 2]);
+        final int extra = contextCustomizer == null ? 2 : 3;
+        final ClientOptionValue<?>[] optValArray = optVals.toArray(new ClientOptionValue[numOpts + extra]);
         optValArray[numOpts] = ClientOptions.DECORATION.newValue(decoration.build());
         optValArray[numOpts + 1] = ClientOptions.HEADERS.newValue(headers.build());
+        if (contextCustomizer != null) {
+            optValArray[numOpts + 2] = ClientOptions.CONTEXT_CUSTOMIZER.newValue(contextCustomizer);
+        }
 
         if (baseOptions != null) {
             return ClientOptions.of(baseOptions, optValArray);

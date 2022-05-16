@@ -113,14 +113,28 @@ function createMapByName<T extends NamedObject>(objs: T[]): Map<string, T> {
   return new Map(objs.map((obj) => [obj.name, obj] as [string, T]));
 }
 
+function hasUniqueNames<T extends NamedObject>(map: Map<string, T>): boolean {
+  const names = new Set();
+  for (const key of map.keys()) {
+    names.add(simpleName(key));
+  }
+  return names.size === map.size;
+}
+
 export class Specification {
   private data: SpecificationData;
 
-  private enumsByName: Map<string, Enum>;
+  private readonly enumsByName: Map<string, Enum>;
 
-  private servicesByName: Map<string, Service>;
+  private readonly servicesByName: Map<string, Service>;
 
-  private structsByName: Map<string, Struct>;
+  private readonly structsByName: Map<string, Struct>;
+
+  private readonly uniqueEnumNames: boolean;
+
+  private readonly uniqueServiceNames: boolean;
+
+  private readonly uniqueStructNames: boolean;
 
   constructor(data: SpecificationData) {
     this.data = JSON.parse(JSON.stringify(data));
@@ -131,6 +145,10 @@ export class Specification {
       ...this.data.structs,
       ...this.data.exceptions,
     ]);
+
+    this.uniqueEnumNames = hasUniqueNames(this.enumsByName);
+    this.uniqueServiceNames = hasUniqueNames(this.servicesByName);
+    this.uniqueStructNames = hasUniqueNames(this.structsByName);
 
     this.updateDocStrings();
   }
@@ -165,6 +183,18 @@ export class Specification {
 
   public getStructByName(name: string): Struct | undefined {
     return this.structsByName.get(name);
+  }
+
+  public hasUniqueEnumNames(): boolean {
+    return this.uniqueEnumNames;
+  }
+
+  public hasUniqueServiceNames(): boolean {
+    return this.uniqueServiceNames;
+  }
+
+  public hasUniqueStructNames(): boolean {
+    return this.uniqueStructNames;
   }
 
   public getTypeSignatureHtml(typeSignature: string) {

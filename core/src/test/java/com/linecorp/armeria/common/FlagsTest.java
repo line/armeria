@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assumptions.assumeThat;
 
@@ -25,15 +26,29 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodHandles.Lookup;
 import java.lang.invoke.MethodType;
+import java.lang.reflect.Method;
+import java.net.InetAddress;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
+import org.assertj.core.api.ObjectAssert;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junitpioneer.jupiter.ClearSystemProperty;
+import org.junitpioneer.jupiter.SetSystemProperty;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.netty.channel.epoll.Epoll;
 import io.netty.handler.ssl.OpenSsl;
@@ -41,6 +56,13 @@ import io.netty.handler.ssl.OpenSsl;
 class FlagsTest {
 
     private static final String osName = Ascii.toLowerCase(System.getProperty("os.name"));
+    private Class<?> flags;
+
+    @BeforeEach
+    private void reloadFlags() throws ClassNotFoundException {
+        final FlagsClassLoader classLoader = new FlagsClassLoader();
+        flags = classLoader.loadClass(Flags.class.getCanonicalName());
+    }
 
     /**
      * Makes sure /dev/epoll is used while running tests on Linux.
@@ -62,7 +84,7 @@ class FlagsTest {
     @Test
     void openSslAvailable() {
         assumeThat(osName.startsWith("linux") || osName.startsWith("windows") ||
-                   osName.startsWith("macosx") || osName.startsWith("osx")).isTrue();
+                   osName.startsWith("mac") || osName.startsWith("osx")).isTrue();
         assumeThat(System.getProperty("com.linecorp.armeria.useOpenSsl")).isNull();
 
         assertThat(Flags.useOpenSsl()).isTrue();
@@ -89,6 +111,145 @@ class FlagsTest {
         assertThat(dumpOpenSslInfoMethodHandle.invoke()).isSameAs(Boolean.TRUE);
     }
 
+    @Test
+    void defaultRequestContextStorageProvider() throws Throwable {
+        assumeThat(System.getProperty("com.linecorp.armeria.requestContextStorageProvider")).isNull();
+
+        final RequestContextStorage actual = Flags.requestContextStorageProvider().newStorage();
+        assertThat(actual).isEqualTo(RequestContextStorage.threadLocal());
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses", value = "10.0.0.0/8")
+    void systemPropertyPreferredIpV4Addresses() throws Throwable {
+        assertFlags("preferredIpV4Addresses").isNotNull();
+    }
+
+    @Test
+    @ClearSystemProperty(key = "com.linecorp.armeria.transientServiceOptions")
+    void defaultTransientServiceOptions() throws Throwable {
+        assertFlags("transientServiceOptions").isEqualTo(ImmutableSet.of());
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.transientServiceOptions", value = "with_tracing")
+    void systemPropertyTransientServiceOptions() throws Throwable {
+        assertFlags("transientServiceOptions")
+                .usingRecursiveComparison()
+                .isEqualTo(Sets.immutableEnumSet(TransientServiceOption.WITH_TRACING));
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.defaultWriteTimeoutMillis", value = "-5")
+    void systemPropertyDefaultWriteTimeoutMillisFailValidation() throws Throwable {
+        assertFlags("defaultWriteTimeoutMillis").isEqualTo(1000L);
+    }
+
+    @Test
+    @ClearSystemProperty(key = "com.linecorp.armeria.defaultUseHttp2Preface")
+    void defaultValueOfDefaultUseHttp2Preface() throws Throwable {
+        assertFlags("defaultUseHttp2Preface").isEqualTo(true);
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.defaultUseHttp2Preface", value = "false")
+    void systemPropertyDefaultUseHttp2Preface() throws Throwable {
+        assertFlags("defaultUseHttp2Preface").isEqualTo(false);
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.useDefaultSocketOptions", value = "falze")
+    void invalidBooleanSystemPropertyFlag() throws Throwable {
+        assertFlags("useDefaultSocketOptions").isEqualTo(true);
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses",
+            value = "211.111.111.111,10.0.0.0/8,192.168.1.0/24")
+    void preferredIpV4Addresses() throws Throwable {
+        final Lookup lookup = MethodHandles.publicLookup();
+        final MethodHandle method =
+                lookup.findStatic(flags, "preferredIpV4Addresses", MethodType.methodType(
+                        Flags.class.getMethod("preferredIpV4Addresses").getReturnType()));
+        final Predicate<InetAddress> preferredIpV4Addresses = (Predicate) method.invoke();
+        assertThat(preferredIpV4Addresses).accepts(InetAddress.getByName("192.168.1.1"),
+                                                   InetAddress.getByName("10.255.255.255"),
+                                                   InetAddress.getByName("211.111.111.111"));
+        assertThat(preferredIpV4Addresses).rejects(InetAddress.getByName("192.168.2.1"),
+                                                   InetAddress.getByName("11.0.0.0"),
+                                                   InetAddress.getByName("211.111.111.110"));
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.preferredIpV4Addresses",
+            value = "211.111.111.111,10.0.0.0/40")
+    void someOfPreferredIpV4AddressesIsInvalid() throws Throwable {
+        // 10.0.0.0/40 is invalid cidr
+        final Lookup lookup = MethodHandles.publicLookup();
+        final MethodHandle method =
+                lookup.findStatic(flags, "preferredIpV4Addresses", MethodType.methodType(
+                        Flags.class.getMethod("preferredIpV4Addresses").getReturnType()));
+        final Predicate<InetAddress> preferredIpV4Addresses = (Predicate) method.invoke();
+        assertThat(preferredIpV4Addresses).accepts(InetAddress.getByName("211.111.111.111"));
+        assertThat(preferredIpV4Addresses).rejects(InetAddress.getByName("10.0.0.0"),
+                                                   InetAddress.getByName("10.0.0.1"));
+    }
+
+    @Test
+    @ClearSystemProperty(key = "com.linecorp.armeria.verboseExceptions")
+    void defaultVerboseExceptionSamplerSpec() throws Throwable {
+        final Method method = flags.getDeclaredMethod("verboseExceptionSampler");
+        assertThat(method.invoke(flags))
+                .usingRecursiveComparison()
+                .isEqualTo(new ExceptionSampler("rate-limit=10"));
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.verboseExceptions", value = "true")
+    void systemPropertyVerboseExceptionSampler() throws Throwable {
+        final Method method = flags.getDeclaredMethod("verboseExceptionSampler");
+        assertThat(method.invoke(flags))
+                .usingRecursiveComparison()
+                .isEqualTo(Sampler.always());
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.verboseExceptions", value = "invalid-sampler-spec")
+    void invalidSystemPropertyVerboseExceptionSampler() throws Throwable {
+        final Method method = flags.getDeclaredMethod("verboseExceptionSampler");
+        assertThat(method.invoke(flags))
+                .usingRecursiveComparison()
+                .isEqualTo(new ExceptionSampler("rate-limit=10"));
+    }
+
+    @Test
+    void testApiConsistencyBetweenFlagsAndFlagsProvider() {
+        //Check method consistency between Flags and FlagsProvider excluding deprecated methods
+        final Set<String> flagsApis = Arrays.stream(Flags.class.getMethods())
+                                             .filter(m -> !m.isAnnotationPresent(Deprecated.class))
+                                             .map(Method::getName)
+                                             .collect(Collectors.toSet());
+        flagsApis.removeAll(Arrays.stream(Object.class.getMethods())
+                                                  .map(Method::getName)
+                                                  .collect(toImmutableSet()));
+
+        final Set<String> armeriaOptionsProviderApis = Arrays.stream(FlagsProvider.class.getMethods())
+                                                              .map(Method::getName)
+                                                              .collect(Collectors.toSet());
+        final Set<String> knownIgnoreMethods = ImmutableSet.of("priority", "name");
+        armeriaOptionsProviderApis.removeAll(knownIgnoreMethods);
+
+        assertThat(flagsApis).hasSameElementsAs(armeriaOptionsProviderApis);
+    }
+
+    private ObjectAssert<Object> assertFlags(String flagsMethod) throws Throwable {
+        final Lookup lookup = MethodHandles.publicLookup();
+        final MethodHandle method =
+                lookup.findStatic(flags, flagsMethod, MethodType.methodType(
+                        Flags.class.getMethod(flagsMethod).getReturnType()));
+        return assertThat(method.invoke());
+    }
+
     private static class FlagsClassLoader extends ClassLoader {
         FlagsClassLoader() {
             super(getSystemClassLoader());
@@ -96,11 +257,11 @@ class FlagsTest {
 
         @Override
         public Class<?> loadClass(String name) throws ClassNotFoundException {
-            if (!name.startsWith("com.linecorp.armeria.common")) {
+            if (!name.startsWith("com.linecorp.armeria")) {
                 return super.loadClass(name);
             }
 
-            // Reload every class in common package.
+            // Reload every class in armeria package.
             try {
                 // Classes do not have an inner class.
                 final String replaced = name.replace('.', '/') + ".class";

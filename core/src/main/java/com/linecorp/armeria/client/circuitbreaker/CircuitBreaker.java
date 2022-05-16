@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import java.time.Duration;
+
 /**
  * A <a href="https://martinfowler.com/bliki/CircuitBreaker.html">circuit breaker</a>, which tracks the number of
  * success/failure requests and detects a remote service failure.
@@ -71,6 +73,35 @@ public interface CircuitBreaker {
 
     /**
      * Decides whether a request should be sent or failed depending on the current circuit state.
+     *
+     * @deprecated Use {@link #tryRequest()}.
      */
+    @Deprecated
     boolean canRequest();
+
+    /**
+     * Decides whether a request should be sent or failed depending on the current circuit state.
+     * If the current state is {@link CircuitState#OPEN} and
+     * {@link CircuitBreakerBuilder#circuitOpenWindow(Duration)} has passed, the state will enter
+     * {@link CircuitState#HALF_OPEN}.
+     */
+    default boolean tryRequest() {
+        return canRequest();
+    }
+
+    /**
+     * Returns the current {@link CircuitState}.
+     */
+    CircuitState circuitState();
+
+    /**
+     * Enters the specified {@link CircuitState}. Note that even if the {@link CircuitBreaker}
+     * is already in the specified {@link CircuitState}, the internal state will be reinitialized.
+     * For instance, calling this method with {@link CircuitState#OPEN} will always
+     * reset the timeout to {@link CircuitBreakerBuilder#circuitOpenWindow(Duration)}.
+     *
+     * <p>This method should be only used if users want extra control over the
+     * {@link CircuitBreaker}'s state. Normally state transitions are handled internally.
+     */
+    void enterState(CircuitState circuitState);
 }

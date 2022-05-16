@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
@@ -95,26 +95,26 @@ public class AnnotatedServiceAccessModifierTest {
 
     @Test
     public void testAccessModifier() throws Exception {
-        final WebClient client = WebClient.of(rule.httpUri());
+        final BlockingWebClient client = BlockingWebClient.of(rule.httpUri());
 
-        assertThat(client.get("/anonymous/public").aggregate().join().contentUtf8())
+        assertThat(client.get("/anonymous/public").contentUtf8())
                 .isEqualTo("hello");
-        assertThat(client.get("/anonymous/package").aggregate().join().status())
+        assertThat(client.get("/anonymous/package").status())
                 .isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(client.get("/anonymous/private").aggregate().join().status())
+        assertThat(client.get("/anonymous/private").status())
                 .isEqualTo(HttpStatus.NOT_FOUND);
 
-        assertThat(client.get("/named/public").aggregate().join().contentUtf8())
+        assertThat(client.get("/named/public").contentUtf8())
                 .isEqualTo("hello");
-        assertThat(client.get("/named/public/static").aggregate().join().contentUtf8())
+        assertThat(client.get("/named/public/static").contentUtf8())
                 .isEqualTo("hello");
-        assertThat(client.get("/named/package").aggregate().join().status())
+        assertThat(client.get("/named/package").status())
                 .isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(client.get("/named/package/static").aggregate().join().status())
+        assertThat(client.get("/named/package/static").status())
                 .isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(client.get("/named/private").aggregate().join().status())
+        assertThat(client.get("/named/private").status())
                 .isEqualTo(HttpStatus.NOT_FOUND);
-        assertThat(client.get("/named/private/static").aggregate().join().status())
+        assertThat(client.get("/named/private/static").status())
                 .isEqualTo(HttpStatus.NOT_FOUND);
     }
 }

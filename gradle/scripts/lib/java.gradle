@@ -1,4 +1,4 @@
-def buildJdkVersion = 16
+def buildJdkVersion = 17
 if (rootProject.hasProperty('buildJdkVersion')) {
     def jdkVersion = Integer.parseInt(rootProject.findProperty('buildJdkVersion'))
     if (buildJdkVersion != jdkVersion) {
@@ -49,7 +49,6 @@ configure(projectsWithFlags('java')) {
     java {
         toolchain {
             languageVersion = JavaLanguageVersion.of(rootProject.ext.buildJdkVersion)
-            vendor = JvmVendorSpec.ADOPTOPENJDK
             implementation = JvmImplementation.VENDOR_SPECIFIC
         }
     }

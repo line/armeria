@@ -18,12 +18,16 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.nio.file.Path;
 import java.util.Set;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
+import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -43,6 +47,7 @@ public final class ServiceConfig {
     private final VirtualHost virtualHost;
 
     private final Route route;
+    private final Route mappedRoute;
     private final HttpService service;
     @Nullable
     private final String defaultServiceName;
@@ -58,31 +63,49 @@ public final class ServiceConfig {
     private final boolean shutdownAccessLogWriterOnStop;
     private final Set<TransientServiceOption> transientServiceOptions;
     private final boolean handlesCorsPreflight;
+    private final SuccessFunction successFunction;
+
+    private final ScheduledExecutorService blockingTaskExecutor;
+    private final boolean shutdownBlockingTaskExecutorOnStop;
+
+    private final Path multipartUploadsLocation;
 
     /**
      * Creates a new instance.
      */
-    ServiceConfig(Route route, HttpService service, @Nullable String defaultLogName,
+    ServiceConfig(Route route, Route mappedRoute, HttpService service, @Nullable String defaultLogName,
                   @Nullable String defaultServiceName, ServiceNaming defaultServiceNaming,
                   long requestTimeoutMillis, long maxRequestLength,
                   boolean verboseResponses, AccessLogWriter accessLogWriter,
-                  boolean shutdownAccessLogWriterOnStop) {
-        this(null, route, service, defaultLogName, defaultServiceName, defaultServiceNaming,
+                  boolean shutdownAccessLogWriterOnStop,
+                  ScheduledExecutorService blockingTaskExecutor,
+                  boolean shutdownBlockingTaskExecutorOnStop,
+                  SuccessFunction successFunction,
+                  Path multipartUploadsLocation) {
+        this(null, route, mappedRoute, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
-             shutdownAccessLogWriterOnStop, extractTransientServiceOptions(service));
+             shutdownAccessLogWriterOnStop, extractTransientServiceOptions(service),
+             blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
+             multipartUploadsLocation);
     }
 
     /**
      * Creates a new instance.
      */
-    private ServiceConfig(@Nullable VirtualHost virtualHost, Route route, HttpService service,
+    private ServiceConfig(@Nullable VirtualHost virtualHost, Route route,
+                          Route mappedRoute, HttpService service,
                           @Nullable String defaultLogName, @Nullable String defaultServiceName,
                           ServiceNaming defaultServiceNaming, long requestTimeoutMillis, long maxRequestLength,
                           boolean verboseResponses, AccessLogWriter accessLogWriter,
                           boolean shutdownAccessLogWriterOnStop,
-                          Set<TransientServiceOption> transientServiceOptions) {
+                          Set<TransientServiceOption> transientServiceOptions,
+                          ScheduledExecutorService blockingTaskExecutor,
+                          boolean shutdownBlockingTaskExecutorOnStop,
+                          SuccessFunction successFunction,
+                          Path multipartUploadsLocation) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
+        this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
         this.service = requireNonNull(service, "service");
         this.defaultLogName = defaultLogName;
         this.defaultServiceName = defaultServiceName;
@@ -93,6 +116,10 @@ public final class ServiceConfig {
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
         this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
         this.transientServiceOptions = requireNonNull(transientServiceOptions, "transientServiceOptions");
+        this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
+        this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
+        this.successFunction = requireNonNull(successFunction, "successFunction");
+        this.multipartUploadsLocation = multipartUploadsLocation;
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
     }
@@ -126,24 +153,30 @@ public final class ServiceConfig {
 
     ServiceConfig withVirtualHost(VirtualHost virtualHost) {
         requireNonNull(virtualHost, "virtualHost");
-        return new ServiceConfig(virtualHost, route, service, defaultLogName, defaultServiceName,
+        return new ServiceConfig(virtualHost, route, mappedRoute, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions);
+                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
+                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
+                                 multipartUploadsLocation);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
         requireNonNull(decorator, "decorator");
-        return new ServiceConfig(virtualHost, route, service.decorate(decorator), defaultLogName,
+        return new ServiceConfig(virtualHost, route, mappedRoute, service.decorate(decorator), defaultLogName,
                                  defaultServiceName, defaultServiceNaming, requestTimeoutMillis,
                                  maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions);
+                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
+                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
+                                 multipartUploadsLocation);
     }
 
     ServiceConfig withRoute(Route route) {
         requireNonNull(route, "route");
-        return new ServiceConfig(virtualHost, route, service, defaultLogName, defaultServiceName,
+        return new ServiceConfig(virtualHost, route, mappedRoute, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions);
+                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
+                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
+                                 multipartUploadsLocation);
     }
 
     /**
@@ -168,6 +201,33 @@ public final class ServiceConfig {
      */
     public Route route() {
         return route;
+    }
+
+    /**
+     * Returns the {@link Route} whose prefix is removed when an {@link HttpServiceWithRoutes} is added
+     * via {@link ServerBuilder#serviceUnder(String, HttpService)}.
+     * For example, in the following code, the path of the {@link #mappedRoute()} will be ({@code "/bar"})
+     * whereas the path of the {@link #route()} will be ({@code "/foo/bar"}):
+     * <pre>{@code
+     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+     * >
+     * >     @Override
+     * >     public Set<Route> routes() {
+     * >         return Set.of(Route.builder().path("/bar").build());
+     * >     }
+     * > };
+     * >
+     * > Server.builder()
+     * >       .serviceUnder("/foo", serviceWithRoutes)
+     * >       .build();
+     * }</pre>
+     * If the service is not an {@link HttpServiceWithRoutes}, the {@link Route} is the same as
+     * {@link #route()}.
+     */
+    public Route mappedRoute() {
+        return mappedRoute;
     }
 
     /**
@@ -286,6 +346,41 @@ public final class ServiceConfig {
         return handlesCorsPreflight;
     }
 
+    /**
+     * Returns the {@link ScheduledExecutorService} dedicated to the execution of blocking tasks or invocations
+     * within this route.
+     * Note that the {@link ScheduledExecutorService} returned by this method does not set the
+     * {@link ServiceRequestContext} when executing a submitted task.
+     * Use {@link ServiceRequestContext#blockingTaskExecutor()} if possible.
+     */
+    public ScheduledExecutorService blockingTaskExecutor() {
+        return blockingTaskExecutor;
+    }
+
+    /**
+     * Returns whether the blocking task {@link Executor} is shut down when the {@link Server} stops.
+     *
+     * @see VirtualHost#shutdownBlockingTaskExecutorOnStop()
+     */
+    public boolean shutdownBlockingTaskExecutorOnStop() {
+        return shutdownBlockingTaskExecutorOnStop;
+    }
+
+    /**
+     * Returns the {@link SuccessFunction} that determines whether a request was
+     * handled successfully or not.
+     */
+    public SuccessFunction successFunction() {
+        return successFunction;
+    }
+
+    /**
+     * Returns the {@link Path} that is used to store uploaded file through multipart/form-data.
+     */
+    public Path multipartUploadsLocation() {
+        return multipartUploadsLocation;
+    }
+
     @Override
     public String toString() {
         final ToStringHelper toStringHelper = MoreObjects.toStringHelper(this).omitNullValues();
@@ -301,6 +396,10 @@ public final class ServiceConfig {
                              .add("verboseResponses", verboseResponses)
                              .add("accessLogWriter", accessLogWriter)
                              .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
+                             .add("blockingTaskExecutor", blockingTaskExecutor)
+                             .add("shutdownBlockingTaskExecutorOnStop", shutdownBlockingTaskExecutorOnStop)
+                             .add("successFunction", successFunction)
+                             .add("multipartUploadsLocation", multipartUploadsLocation)
                              .toString();
     }
 }

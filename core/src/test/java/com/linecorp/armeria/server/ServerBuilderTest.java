@@ -155,6 +155,7 @@ class ServerBuilderTest {
     @Test
     void setAccessLoggerTest1() {
         final Server sb = Server.builder()
+                                .http(8080)  // Used for virtual host mapping
                                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                 .accessLogger(LoggerFactory.getLogger("default"))
                                 .virtualHost("*.example.com")
@@ -170,24 +171,30 @@ class ServerBuilderTest {
                                 .virtualHost("def.example5.com", "*.example5.com")
                                 .accessLogger("com.ex5")
                                 .and()
+                                .virtualHost("port.example5.com", "*.example5.com:8080")
+                                .accessLogger("port.ex5")
+                                .and()
                                 .build();
         assertThat(sb.config().defaultVirtualHost()).isNotNull();
         assertThat(sb.config().defaultVirtualHost().accessLogger().getName()).isEqualTo("default");
 
-        assertThat(sb.config().findVirtualHost("*.example.com").accessLogger().getName())
+        assertThat(sb.config().findVirtualHost("*.example.com", -1).accessLogger().getName())
                 .isEqualTo("default");
 
-        assertThat(sb.config().findVirtualHost("*.example2.com").accessLogger().getName())
+        assertThat(sb.config().findVirtualHost("*.example2.com", -1).accessLogger().getName())
                 .isEqualTo("com.ex2");
 
-        assertThat(sb.config().findVirtualHost("*.example3.com").accessLogger().getName())
+        assertThat(sb.config().findVirtualHost("*.example3.com", -1).accessLogger().getName())
                 .isEqualTo("com.ex3");
 
-        assertThat(sb.config().findVirtualHost("*.example4.com").accessLogger().getName())
+        assertThat(sb.config().findVirtualHost("*.example4.com", -1).accessLogger().getName())
                 .isEqualTo("default");
 
-        assertThat(sb.config().findVirtualHost("*.example5.com").accessLogger().getName())
+        assertThat(sb.config().findVirtualHost("*.example5.com", -1).accessLogger().getName())
                 .isEqualTo("com.ex5");
+
+        assertThat(sb.config().findVirtualHost("*.example5.com", 8080).accessLogger().getName())
+                .isEqualTo("port.ex5");
     }
 
     /**
@@ -204,7 +211,7 @@ class ServerBuilderTest {
                                 .build();
         assertThat(sb.config().defaultVirtualHost().accessLogger().getName())
                 .isEqualTo("test.default");
-        assertThat(sb.config().findVirtualHost("*.example.com").accessLogger().getName())
+        assertThat(sb.config().findVirtualHost("*.example.com", -1).accessLogger().getName())
                 .isEqualTo("test.default");
     }
 
@@ -215,16 +222,21 @@ class ServerBuilderTest {
     @Test
     void defaultAccessLoggerTest() {
         final Server sb = Server.builder()
+                                .http(8080)
                                 .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                 .virtualHost("*.example.com")
                                 .and()
                                 .virtualHost("*.example2.com")
                                 .and()
+                                .virtualHost("*.example2.com:8080")
+                                .and()
                                 .build();
-        assertThat(sb.config().findVirtualHost("*.example.com").accessLogger().getName())
+        assertThat(sb.config().findVirtualHost("*.example.com", -1).accessLogger().getName())
                 .isEqualTo("com.linecorp.armeria.logging.access.com.example");
-        assertThat(sb.config().findVirtualHost("*.example2.com").accessLogger().getName())
+        assertThat(sb.config().findVirtualHost("*.example2.com", -1).accessLogger().getName())
                 .isEqualTo("com.linecorp.armeria.logging.access.com.example2");
+        assertThat(sb.config().findVirtualHost("*.example2.com", 8080).accessLogger().getName())
+                .isEqualTo("com.linecorp.armeria.logging.access.com.example2:8080");
     }
 
     /**

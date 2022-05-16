@@ -19,14 +19,14 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.common.auth.OAuth2Token;
+import com.linecorp.armeria.common.auth.AuthToken;
 
 class OAuth2TokenTest {
     @Test
     void testEquals() {
-        assertThat(OAuth2Token.of("a")).isEqualTo(OAuth2Token.of("a"));
-        assertThat(OAuth2Token.of("a")).isNotEqualTo(OAuth2Token.of("x"));
-        assertThat(OAuth2Token.of("b")).isNotEqualTo(OAuth2Token.of("bb"));
-        assertThat(OAuth2Token.of("bb")).isNotEqualTo(OAuth2Token.of("b"));
+        assertThat(AuthToken.ofOAuth2("a")).isEqualTo(AuthToken.ofOAuth2("a"));
+        assertThat(AuthToken.ofOAuth2("a")).isNotEqualTo(AuthToken.ofOAuth2("x"));
+        assertThat(AuthToken.ofOAuth2("b")).isNotEqualTo(AuthToken.ofOAuth2("bb"));
+        assertThat(AuthToken.ofOAuth2("bb")).isNotEqualTo(AuthToken.ofOAuth2("b"));
     }
 }

@@ -16,12 +16,12 @@
 
 package com.linecorp.armeria.server.auth;
 
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.auth.AuthorizerChain.AuthorizerSelectionStrategy;
 
@@ -57,7 +57,7 @@ public interface Authorizer<T> {
     default CompletionStage<AuthorizationStatus> authorizeAndSupplyHandlers(ServiceRequestContext ctx,
                                                                             @Nullable T data) {
         if (data == null) {
-            return CompletableFuture.completedFuture(AuthorizationStatus.of(false));
+            return UnmodifiableFuture.completedFuture(AuthorizationStatus.of(false));
         }
         return authorize(ctx, data).thenApply(b -> {
             if (b == null) {

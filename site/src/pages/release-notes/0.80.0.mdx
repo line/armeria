@@ -64,7 +64,7 @@ date: 2019-02-19
       })
       .build();
   ```
-- A user can define a custome annotation which attaches other annotations for simplicity. #1560
+- A user can define a custom annotation which attaches other annotations for simplicity. #1560
   ```java
   // Define a custom annotation:
   @ProducesJson
@@ -114,7 +114,7 @@ date: 2019-02-19
   ```java
   ServerBuilder sb = ...
   final Function<Throwable, Throwable> responseCauseSanitizer = cause -> {
-      if (cause instanceOf AnticipatedException) {
+      if (cause instanceof AnticipatedException) {
           return null; // Do not log when AnticipatedException is raised. 
       }
       return cause;
@@ -174,4 +174,4 @@ date: 2019-02-19
 - RxJava 2.2.5 -> 2.2.6
 - Thrift 0.11.0 -> 0.12.0
 - Tomcat 9.0.14 -> 9.0.16, 8.5.37 -> 8.5.38
-- spring-boot-starter-actuator has benn removed from the transitive dependencies.
+- spring-boot-starter-actuator has been removed from the transitive dependencies.

@@ -74,16 +74,23 @@ final class ArmeriaEndpoint extends AbstractEndpoint {
     public void stopInternal() throws Exception {}
 
     @Override
-    protected Acceptor createAcceptor() {
-        // Doesn't seem to be used.
-        return null;
-    }
-
-    @Override
     protected Log getLog() {
         return log;
     }
 
     @Override
     protected void doCloseServerSocket() throws IOException {}
+
+    @Override
+    protected Object serverSocketAccept() throws Exception {
+        return null;
+    }
+
+    @Override
+    protected boolean setSocketOptions(Object socket) {
+        return false;
+    }
+
+    @Override
+    protected void destroySocket(Object socket) {}
 }

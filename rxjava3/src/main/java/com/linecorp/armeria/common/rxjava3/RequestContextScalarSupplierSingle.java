@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import io.reactivex.rxjava3.core.Single;
 import io.reactivex.rxjava3.core.SingleObserver;
 import io.reactivex.rxjava3.core.SingleSource;
-import io.reactivex.rxjava3.internal.fuseable.ScalarSupplier;
+import io.reactivex.rxjava3.operators.ScalarSupplier;
 
 final class RequestContextScalarSupplierSingle<T> extends Single<T> implements ScalarSupplier<T> {
     private final SingleSource<T> source;

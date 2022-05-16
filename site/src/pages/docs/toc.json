@@ -21,7 +21,8 @@
     "server-access-log",
     "server-cors",
     "server-sse",
-    "server-service-registration"
+    "server-service-registration",
+    "server-graphql"
   ],
   "Client": [
     "client-http",
@@ -40,6 +41,7 @@
     "advanced-logging",
     "advanced-structured-logging",
     "advanced-custom-attributes",
+    "advanced-streaming-backpressure",
     "advanced-structured-logging-kafka",
     "advanced-metrics",
     "advanced-unit-testing",

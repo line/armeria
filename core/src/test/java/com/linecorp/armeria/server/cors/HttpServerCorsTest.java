@@ -69,7 +69,7 @@ public class HttpServerCorsTest {
         @Get("/dup_test")
         @StatusCode(200)
         @CorsDecorator(origins = "http://example2.com", exposedHeaders = "expose_header_2",
-                allowedRequestHeaders = "content-type")
+                       allowedRequestHeaders = "content-type")
         public void dupTest() {}
     }
 
@@ -84,6 +84,17 @@ public class HttpServerCorsTest {
 
         @Get("/not_configured")
         public void notConfigured() {}
+    }
+
+    @CorsDecorator(
+            origins = "http://example.com",
+            allowedRequestMethods = HttpMethod.GET,
+            allowAllRequestHeaders = true
+    )
+    private static class MyAnnotatedService3 {
+        @Get("/index")
+        @StatusCode(200)
+        public void index() {}
     }
 
     @ClassRule
@@ -178,7 +189,7 @@ public class HttpServerCorsTest {
                         allowedRequestMethods = HttpMethod.GET, maxAge = 3600,
                         preflightRequestHeaders = {
                                 @AdditionalHeader(name = "x-preflight-cors",
-                                        value = { "Hello CORS", "Hello CORS2" })
+                                                  value = { "Hello CORS", "Hello CORS2" })
                         })
                 public HttpResponse anyoneGet() {
                     return HttpResponse.of(HttpStatus.OK);
@@ -199,9 +210,9 @@ public class HttpServerCorsTest {
 
                 @Get("/multi/get")
                 @CorsDecorator(origins = "http://example.com", exposedHeaders = "expose_header_1",
-                        allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
+                               allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
                 @CorsDecorator(origins = "http://example2.com", exposedHeaders = "expose_header_2",
-                        allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
+                               allowedRequestMethods = HttpMethod.GET, credentialsAllowed = true)
                 public HttpResponse multiGet() {
                     return HttpResponse.of(HttpStatus.OK);
                 }
@@ -266,6 +277,12 @@ public class HttpServerCorsTest {
             // No CORS decorator & not bound for OPTIONS.
             sb.route().get("/cors12/get")
               .build((ctx, req) -> HttpResponse.of(HttpStatus.OK));
+
+            sb.service("/cors13", myService.decorate(CorsService.builder("http://example.com")
+                                                                .allowRequestMethods(HttpMethod.GET)
+                                                                .allowAllRequestHeaders(true)
+                                                                .newDecorator()));
+            sb.annotatedService("/cors14", new MyAnnotatedService3());
         }
     };
 
@@ -282,7 +299,7 @@ public class HttpServerCorsTest {
                                   HttpHeaderNames.ACCEPT, "utf-8",
                                   HttpHeaderNames.ORIGIN, origin,
                                   HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, requestMethod)
-        ).aggregate().join();
+                             ).aggregate().join();
     }
 
     static AggregatedHttpResponse preflightRequest(WebClient client, String path, String origin,
@@ -608,5 +625,49 @@ public class HttpServerCorsTest {
         assertThat(res.status()).isEqualTo(HttpStatus.FORBIDDEN);
         // .. but will not contain CORS headers.
         assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isNull();
+    }
+
+    @Test
+    public void testAllowAllHeaders() {
+        final WebClient client = client();
+
+        HttpRequest preflightReq = HttpRequest.of(
+                RequestHeaders.of(HttpMethod.OPTIONS, "/cors13",
+                                  HttpHeaderNames.ORIGIN, "http://example.com",
+                                  HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "GET",
+                                  HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS, "foo,bar"));
+        AggregatedHttpResponse res = client.execute(preflightReq).aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
+                .isEqualTo("http://example.com");
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET");
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS)).isEqualTo("foo,bar");
+
+        preflightReq = HttpRequest.of(
+                RequestHeaders.of(HttpMethod.OPTIONS, "/cors13",
+                                  HttpHeaderNames.ORIGIN, "http://example.com",
+                                  HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "GET"));
+        res = client.execute(preflightReq).aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
+                .isEqualTo("http://example.com");
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET");
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS)).isNull();
+    }
+
+    @Test
+    public void testAnnotatedServiceAllowAllHeaders() {
+        final WebClient client = client();
+        final HttpRequest preflightReq = HttpRequest.of(
+                RequestHeaders.of(HttpMethod.OPTIONS, "/cors14/index",
+                                  HttpHeaderNames.ORIGIN, "http://example.com",
+                                  HttpHeaderNames.ACCESS_CONTROL_REQUEST_METHOD, "GET",
+                                  HttpHeaderNames.ACCESS_CONTROL_REQUEST_HEADERS, "foo,bar"));
+        final AggregatedHttpResponse res = client.execute(preflightReq).aggregate().join();
+        assertThat(res.status()).isEqualTo(HttpStatus.OK);
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN))
+                .isEqualTo("http://example.com");
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_METHODS)).isEqualTo("GET");
+        assertThat(res.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_HEADERS)).isEqualTo("foo,bar");
     }
 }

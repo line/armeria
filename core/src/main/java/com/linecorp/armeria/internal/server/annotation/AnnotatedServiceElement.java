@@ -75,9 +75,10 @@ public final class AnnotatedServiceElement {
     public HttpService buildSafeDecoratedService(
             Function<? super HttpService, ? extends HttpService> localDecorator) {
         // Apply decorators which are specified in the service class.
-        final HttpService decoratedService = decorator.apply(service);
+        HttpService decoratedService = decorator.apply(service);
         // Apply localDecorator passed in through method parameter
-        return decoratedService.decorate(localDecorator);
+        decoratedService = decoratedService.decorate(localDecorator);
+        return service.withExceptionHandler(decoratedService);
     }
 
     @Override

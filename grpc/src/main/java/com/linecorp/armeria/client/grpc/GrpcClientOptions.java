@@ -21,6 +21,7 @@ import java.util.function.Function;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
@@ -33,9 +34,15 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
+import com.linecorp.armeria.internal.client.grpc.NullCallCredentials;
 import com.linecorp.armeria.internal.client.grpc.NullGrpcClientStubFactory;
 import com.linecorp.armeria.unsafe.grpc.GrpcUnsafeBufferUtil;
 
+import io.grpc.CallCredentials;
+import io.grpc.ClientInterceptor;
+import io.grpc.Codec;
+import io.grpc.Compressor;
+import io.grpc.DecompressorRegistry;
 import io.grpc.ServiceDescriptor;
 
 /**
@@ -97,15 +104,15 @@ public final class GrpcClientOptions {
      *       {@link MessageMarshaller.Builder#preservingProtoFieldNames(boolean)} via
      *       {@link GrpcJsonMarshallerBuilder#jsonMarshallerCustomizer(Consumer)}.
      *       <pre>{@code
-     *        Clients.builder(grpcServerUri)
-     *               .option(GrpcClientOptions.GRPC_JSON_MARSHALLER_FACTORY.newValue(serviceDescriptor -> {
-     *                   return GrpcJsonMarshaller.builder()
-     *                                            .jsonMarshallerCustomizer(builder -> {
-     *                                                builder.preservingProtoFieldNames(true);
-     *                                            })
-     *                                            .build(serviceDescriptor);
-     *               }))
-     *               .build();
+     *       GrpcClients.builder(grpcServerUri)
+     *                  .jsonMarshallerFactory(serviceDescriptor -> {
+     *                      return GrpcJsonMarshaller.builder()
+     *                                               .jsonMarshallerCustomizer(builder -> {
+     *                                                   builder.preservingProtoFieldNames(true);
+     *                                               })
+     *                                               .build(serviceDescriptor);
+     *                  })
+     *                  .build();
      *       }</pre></li>
      *   <li>Set a customer marshaller for non-{@link Message} types such as {@code scalapb.GeneratedMessage}
      *       for Scala and {@code pbandk.Message} for Kotlin.</li>
@@ -128,6 +135,35 @@ public final class GrpcClientOptions {
     public static final ClientOption<GrpcClientStubFactory>
             GRPC_CLIENT_STUB_FACTORY = ClientOption.define("GRPC_CLIENT_STUB_FACTORY",
                                                            NullGrpcClientStubFactory.INSTANCE);
+
+    /**
+     * Sets the {@link ClientInterceptor}s to the gRPC client stub.
+     * The specified interceptor(s) is/are executed in reverse order.
+     */
+    public static final ClientOption<Iterable<? extends ClientInterceptor>>
+            INTERCEPTORS = ClientOption.define("GRPC_CLIENT_INTERCEPTORS", ImmutableList.of());
+
+    /**
+     * Sets the {@link Compressor} to use when compressing messages. If not set, {@link Codec.Identity#NONE}
+     * will be used by default.
+     */
+    public static final ClientOption<Compressor> COMPRESSOR =
+            ClientOption.define("GRPC_CLIENT_COMPRESSOR", Codec.Identity.NONE);
+
+    /**
+     * Sets the {@link DecompressorRegistry} to use when decompressing messages. If not set, will use
+     * the default, which supports gzip only.
+     */
+    public static final ClientOption<DecompressorRegistry> DECOMPRESSOR_REGISTRY =
+            ClientOption.define("GRPC_CLIENT_DECOMPRESSOR_REGISTRY",
+                                DecompressorRegistry.getDefaultInstance());
+
+    /**
+     * Sets the {@link CallCredentials} that carries credential data that will be propagated to the server
+     * via request metadata.
+     */
+    public static final ClientOption<CallCredentials> CALL_CREDENTIALS =
+            ClientOption.define("GRPC_CLIENT_CALL_CREDENTIALS", NullCallCredentials.INSTANCE);
 
     private GrpcClientOptions() {}
 }

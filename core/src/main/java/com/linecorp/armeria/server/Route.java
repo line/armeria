@@ -76,7 +76,7 @@ public interface Route {
      *                         {@code false} if this method is called for services.
      *                         If {@code true}, an {@link HttpStatusException} will not be
      *                         {@linkplain RoutingContext#deferStatusException(HttpStatusException) deferred}
-     *                         and {@linkplain RoutingContext#isCorsPreflight() preflight request} will not
+     *                         and {@linkplain RoutingStatus#CORS_PREFLIGHT preflight request} will not
      *                         be handled by this {@link Route}.
      *
      * @return a non-empty {@link RoutingResult} if the {@linkplain RoutingContext#path() path},
@@ -195,4 +195,18 @@ public interface Route {
      * Returns a new {@link RouteBuilder} with the values of this {@link Route} instance.
      */
     RouteBuilder toBuilder();
+
+    /**
+     * Returns a newly-created {@link Route} which adds the specified {@code prefix} to this {@link Route}.
+     * These are examples of created {@link Route}s when the prefix is {@code /api/v1}:
+     *
+     * <ul>
+     *   <li>{@code /login} -> {@code /api/v1/login}</li>
+     *   <li>{@code /users/{userId}} -> {@code /api/v1/users/{userId}}</li>
+     *   <li>{@code prefix:/files} -> {@code prefix:/api/v1/files} (prefix match)</li>
+     *   <li>{@code regex:^/files/(?<filePath>.*)$} ->
+     *       {@code regex:^/api/v1/files/(?<filePath>.*)$} (regular expression) </li>
+     * </ul>
+     */
+    Route withPrefix(String prefix);
 }
