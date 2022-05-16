@@ -1,25 +1,11 @@
-/*
- * Copyright 2021 LINE Corporation
- *
- * LINE Corporation licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
- *
- *   https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
- */
-
 package com.linecorp.armeria.server.grpc;
 
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.util.Map;
+
+import javax.annotation.Nonnull;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
@@ -29,14 +15,13 @@ import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -47,48 +32,64 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 
-/**
- * Error handler which maps a gRPC response to an {@link HttpResponse}.
- */
-@FunctionalInterface
-@UnstableApi
-public interface UnframedGrpcErrorHandler {
+class DefaultUnframedGrpcErrorHandler {
 
-    /**
-     * Returns a plain text or json response based on the content type.
-     */
-    static UnframedGrpcErrorHandler of() {
-        return DefaultUnframedGrpcErrorHandler.of(UnframedGrpcStatusMappingFunction.of());
-    }
+    static final Logger logger = LoggerFactory.getLogger(DefaultUnframedGrpcErrorHandler.class);
 
 //    /**
 //     * Returns a plain text or json response based on the content type.
-//     *
-//     * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
-//     *                              to an {@link HttpStatus} code.
 //     */
-//    static UnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-//        // Ensure that unframedGrpcStatusMappingFunction never returns null
-//        // by falling back to the default.
-//        final UnframedGrpcStatusMappingFunction mappingFunction =
-//                requireNonNull(statusMappingFunction, "statusMappingFunction")
-//                        .orElse(UnframedGrpcStatusMappingFunction.of());
-//        return (ctx, status, response) -> {
-//            final MediaType grpcMediaType = response.contentType();
-//            if (grpcMediaType != null && grpcMediaType.isJson()) {
-//                return ofJson(mappingFunction).handle(ctx, status, response);
-//            } else {
-//                return ofPlainText(mappingFunction).handle(ctx, status, response);
-//            }
-//        };
+//    static UnframedGrpcErrorHandler of() {
+//        return of(UnframedGrpcStatusMappingFunction.of());
 //    }
 
-    /**
-     * Returns a json response.
-     */
-    static UnframedGrpcErrorHandler ofJson() {
-        return ofJson(UnframedGrpcStatusMappingFunction.of());
+    private static UnframedGrpcStatusMappingFunction get(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+        return requireNonNull(statusMappingFunction, "statusMappingFunction")
+                .orElse(UnframedGrpcStatusMappingFunction.of());
     }
+
+    private static ResponseHeadersBuilder buildResponseHeaders(ServiceRequestContext ctx, Status status, UnframedGrpcStatusMappingFunction mappingFunction) {
+        final Code grpcCode = status.getCode();
+        final RequestLogAccess log = ctx.log();
+        final Throwable cause;
+        if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+            cause = log.partial().responseCause();
+        } else {
+            cause = null;
+        }
+        final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
+        return ResponseHeaders.builder(httpStatus)
+                       .addInt(GrpcHeaderNames.GRPC_STATUS,
+                               grpcCode.value());
+    }
+
+    /**
+     * Returns a plain text or json response based on the content type.
+     *
+     * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
+     *                              to an {@link HttpStatus} code.
+     */
+    static UnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+        // Ensure that unframedGrpcStatusMappingFunction never returns null
+        // by falling back to the default.
+        final UnframedGrpcStatusMappingFunction mappingFunction = get(statusMappingFunction);
+        return (ctx, status, response) -> {
+            final MediaType grpcMediaType = response.contentType();
+            if (grpcMediaType != null && grpcMediaType.isJson()) {
+                return ofJson(mappingFunction).handle(ctx, status, response);
+            } else {
+                return ofPlainText(mappingFunction).handle(ctx, status, response);
+            }
+        };
+    }
+
+//    /**
+//     * Returns a json response.
+//     */
+//    static UnframedGrpcErrorHandler ofJson() {
+//        return ofJson(UnframedGrpcStatusMappingFunction.of());
+//    }
+
 
     /**
      * Returns a json response.
@@ -99,11 +100,8 @@ public interface UnframedGrpcErrorHandler {
     static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
         // Ensure that unframedGrpcStatusMappingFunction never returns null
         // by falling back to the default.
-        final UnframedGrpcStatusMappingFunction mappingFunction =
-                requireNonNull(statusMappingFunction, "statusMappingFunction")
-                        .orElse(UnframedGrpcStatusMappingFunction.of());
+        final UnframedGrpcStatusMappingFunction mappingFunction = get(statusMappingFunction);
         return (ctx, status, response) -> {
-            final Code grpcCode = status.getCode();
             final String grpcMessage = status.getDescription();
             final RequestLogAccess log = ctx.log();
             final Throwable cause;
@@ -116,7 +114,7 @@ public interface UnframedGrpcErrorHandler {
             final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
                                                                    .contentType(MediaType.JSON_UTF_8)
                                                                    .addInt(GrpcHeaderNames.GRPC_STATUS,
-                                                                           grpcCode.value())
+                                                                           status.getCode().value())
                                                                    .build();
             final ImmutableMap.Builder<String, String> messageBuilder = ImmutableMap.builder();
             messageBuilder.put("grpc-code", grpcCode.name());
@@ -146,9 +144,7 @@ public interface UnframedGrpcErrorHandler {
     static UnframedGrpcErrorHandler ofPlainText(UnframedGrpcStatusMappingFunction statusMappingFunction) {
         // Ensure that unframedGrpcStatusMappingFunction never returns null
         // by falling back to the default.
-        final UnframedGrpcStatusMappingFunction mappingFunction =
-                requireNonNull(statusMappingFunction, "statusMappingFunction")
-                        .orElse(UnframedGrpcStatusMappingFunction.of());
+        final UnframedGrpcStatusMappingFunction mappingFunction = get(statusMappingFunction);
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();
             final RequestLogAccess log = ctx.log();
@@ -204,7 +200,7 @@ public interface UnframedGrpcErrorHandler {
         final MessageMarshaller errorDetailsMarshaller
                 = UnframedGrpcErrorHandlerUtils.getErrorDetailsMarshaller();
         return (ctx, status, response) -> {
-            final Logger logger = LoggerFactory.getLogger(UnframedGrpcErrorHandler.class);
+            //final Logger logger = LoggerFactory.getLogger(UnframedGrpcErrorHandler.class);
             final Code grpcCode = status.getCode();
             final String grpcMessage = status.getDescription();
             final RequestLogAccess log = ctx.log();
@@ -256,14 +252,4 @@ public interface UnframedGrpcErrorHandler {
         };
     }
 
-    /**
-     * Maps the gRPC error response to the {@link HttpResponse}.
-     *
-     * @param ctx the service context.
-     * @param status the gRPC {@link Status} code.
-     * @param response the gRPC response.
-     *
-     * @return the {@link HttpResponse}.
-     */
-    HttpResponse handle(ServiceRequestContext ctx, Status status, AggregatedHttpResponse response);
 }

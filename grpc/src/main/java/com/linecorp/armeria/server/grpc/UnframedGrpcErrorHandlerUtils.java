@@ -45,7 +45,7 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 /**
  * An Utility class which contains methods related to Unframed grpc error handler.
  */
-public final class UnframedGrpcErrorHandlerUtils {
+final class UnframedGrpcErrorHandlerUtils {
 
     private static final MessageMarshaller ERROR_DETAILS_MARSHALLER =
             MessageMarshaller.builder()
