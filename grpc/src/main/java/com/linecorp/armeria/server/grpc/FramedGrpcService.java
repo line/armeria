@@ -365,7 +365,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     defaultHeaders.get(serializationFormat),
                     statusFunction);
         } else {
-            assert res instanceof HttpResponseWriter;
             return new StreamingServerCall<>(
                     req,
                     methodDescriptor,
