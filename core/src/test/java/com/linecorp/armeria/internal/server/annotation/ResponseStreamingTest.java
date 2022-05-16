@@ -23,6 +23,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
@@ -62,6 +63,9 @@ public class ResponseStreamingTest {
     @ParameterizedTest
     void responseStreaming_converter(ResponseConverterFunction converter, Class<?> serviceClass) {
         for (Method method : serviceClass.getDeclaredMethods()) {
+            if (!Modifier.isPublic(method.getModifiers())) {
+                return;
+            }
             final Produces annotation = method.getAnnotation(Produces.class);
             final MediaType produceType;
             if (annotation == null) {

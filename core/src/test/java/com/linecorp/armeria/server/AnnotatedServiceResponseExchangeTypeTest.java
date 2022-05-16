@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -101,7 +102,9 @@ class AnnotatedServiceResponseExchangeTypeTest {
     void responseStreaming_exchangeType(ResponseConverterFunction unused, Class<?> serviceClass)
             throws InterruptedException {
         for (Method method : serviceClass.getDeclaredMethods()) {
-            System.err.println(method);
+            if (!Modifier.isPublic(method.getModifiers())) {
+                continue;
+            }
             final boolean isResponseStreaming = method.getAnnotation(Streaming.class).value();
             final ExchangeType expected;
             if (isResponseStreaming) {
