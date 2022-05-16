@@ -6,14 +6,15 @@ import static org.assertj.core.api.Assertions.catchThrowable;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 
-import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.client.grpc.GrpcClientOptions;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -31,6 +32,7 @@ import example.armeria.server.blog.grpc.BlogServiceGrpc.BlogServiceBlockingStub;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 
+@TestMethodOrder(OrderAnnotation.class)
 class BlogServiceTest {
 
     @RegisterExtension
@@ -49,13 +51,14 @@ class BlogServiceTest {
 
     @BeforeAll
     static void beforeAll() {
-        client = Clients.newClient(server.httpUri(GrpcSerializationFormats.PROTO),
-                                   BlogServiceBlockingStub.class);
+        client = GrpcClients.newClient(server.httpUri(),
+                                       BlogServiceBlockingStub.class);
 
-        decoratedClient = Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                .decorator(LoggingClient.newDecorator())
-                .options(GrpcClientOptions.MAX_INBOUND_MESSAGE_SIZE_BYTES.newValue(10000))
-                .build(BlogServiceBlockingStub.class);
+        decoratedClient = GrpcClients.builder(server.httpUri())
+                                     .serializationFormat(GrpcSerializationFormats.JSON)
+                                     .maxResponseMessageLength(10000)
+                                     .decorator(LoggingClient.newDecorator())
+                                     .build(BlogServiceBlockingStub.class);
     }
 
     @Test
@@ -117,14 +120,14 @@ class BlogServiceTest {
     @Order(4)
     void updateBlogPosts() throws JsonProcessingException {
         final UpdateBlogPostRequest request = UpdateBlogPostRequest.newBuilder()
-                                                       .setId(0)
-                                                       .setTitle("My first blog")
-                                                       .setContent("Hello awesome Armeria!")
-                                                       .build();
+                                                                   .setId(0)
+                                                                   .setTitle("My first blog")
+                                                                   .setContent("Hello awesome Armeria!")
+                                                                   .build();
         final BlogPost updated = client.updateBlogPost(request);
         assertThat(updated.getId()).isZero();
         assertThat(updated.getTitle()).isEqualTo("My first blog");
-        assertThat(updated.getContent()).isEqualTo("Hello Armeria!");
+        assertThat(updated.getContent()).isEqualTo("Hello awesome Armeria!");
     }
 
     @Test
