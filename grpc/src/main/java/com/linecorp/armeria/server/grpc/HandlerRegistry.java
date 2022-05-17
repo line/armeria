@@ -208,7 +208,7 @@ final class HandlerRegistry {
                                            methodDefinition);
                         bareMethodNames.put(methodDescriptor0, bareMethodName);
 
-                        final String methodName = javaMethodName(bareMethodName);
+                        final String methodName = methodNameConverter.convert(bareMethodName);
                         final Method method = publicMethods.get(methodName);
                         if (method != null) {
                             assert type != null;
@@ -256,11 +256,6 @@ final class HandlerRegistry {
                                        methodsByRoute.build(),
                                        bareMethodNames.buildKeepingLast(),
                                        decorators.build());
-        }
-
-        private static String javaMethodName(String bareMethodName) {
-            // e.g. UnaryCall -> unaryCall
-            return bareMethodName.substring(0, 1).toLowerCase() + bareMethodName.substring(1);
         }
     }
 

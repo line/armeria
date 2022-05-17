@@ -145,13 +145,12 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
                                RequestLogProperty.RESPONSE_CONTENT);
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        final ServerMethodDefinition<?, ?> methodDefinition = method;
         req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((clientRequest, t) -> {
             try (SafeCloseable ignore = ctx.push()) {
                 if (t != null) {
                     responseFuture.completeExceptionally(t);
                 } else {
-                    ctx.setAttr(RESOLVED_GRPC_METHOD, methodDefinition);
+                    ctx.setAttr(RESOLVED_GRPC_METHOD, method);
                     frameAndServe(unwrap(), ctx, grpcHeaders.build(),
                                   clientRequest.content(), responseFuture, null);
                 }
