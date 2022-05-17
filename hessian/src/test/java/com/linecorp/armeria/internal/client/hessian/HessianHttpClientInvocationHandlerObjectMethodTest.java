@@ -34,9 +34,9 @@ class HessianHttpClientInvocationHandlerObjectMethodTest {
 
     @Test
     void testObjectMethod() {
-     final    HelloService client = Clients.builder("hessian+http://127.0.0.1:1/helloService.hs").build(
+        final HelloService client = Clients.builder("hessian+http://127.0.0.1:1/helloService.hs").build(
                 HelloService.class);
-     final    HelloService client2 = Clients.builder("hessian+http://127.0.0.1:1/helloService.hs").build(
+        final HelloService client2 = Clients.builder("hessian+http://127.0.0.1:1/helloService.hs").build(
                 HelloService.class);
 
         assertThat(client.toString()).isEqualTo("HelloService(/helloService.hs)");
@@ -45,9 +45,9 @@ class HessianHttpClientInvocationHandlerObjectMethodTest {
 
     @Test
     void testHessianRemoteObjectMethod() {
-     final    HessianRemoteObject client = (HessianRemoteObject) Clients.builder(
-                                                                          "hessian+http://127.0.0.1:1/helloService.hs")
-                                                                  .build(HelloService.class);
+        final HessianRemoteObject client = (HessianRemoteObject) Clients.builder(
+                                                                                "hessian+http://127.0.0.1:1/helloService.hs")
+                                                                        .build(HelloService.class);
 
         assertThat(client.toString()).isEqualTo("HelloService(/helloService.hs)");
         assertThat(client.getHessianType()).isEqualTo("com.linecorp.armeria.hessian.service.HelloService");

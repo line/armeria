@@ -25,7 +25,7 @@ public enum HeaderType {
     CALL_1_REPLY_1, CALL_1_REPLY_2, HESSIAN_2, REPLY_1, REPLY_2;
 
     public boolean isCall2() {
-        return this == HeaderType.HESSIAN_2;
+        return this == HESSIAN_2;
     }
 
     public boolean isReply2() {

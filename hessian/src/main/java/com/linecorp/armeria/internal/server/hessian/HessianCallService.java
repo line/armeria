@@ -47,7 +47,7 @@ public final class HessianCallService implements RpcService {
     private final Map<String, HessianServiceMetadata> hessianServices;
 
     /**
-     * create {@code HessianCallService}. key 为path, value服务的metadata.
+     * create {@code HessianCallService}. key is path, value is metadata.
      */
     public static HessianCallService of(Map<String, HessianServiceMetadata> implementations) {
         requireNonNull(implementations, "implementations");
@@ -110,8 +110,9 @@ public final class HessianCallService implements RpcService {
 
     private RpcResponse handleAttributeRequest(RpcRequest call, Object attrName) {
         assert attrName instanceof CharSequence;
-       final CharSequence name = (CharSequence) attrName;
-      final   String apiCLass = call.serviceType().getName();
+        final CharSequence name = (CharSequence) attrName;
+        final String apiCLass = call.serviceType().getName();
+        //
         if ("java.api.class".contentEquals(name) ||
             "java.home.class".contentEquals(name) ||
             "java.object.class".contentEquals(name)

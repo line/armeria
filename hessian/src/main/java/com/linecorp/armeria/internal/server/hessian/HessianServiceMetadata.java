@@ -71,15 +71,15 @@ public final class HessianServiceMetadata {
 
         for (Method method : methodList) {
             final HessianMethod hessianMethod = HessianMethod.of(serviceTypes, method, method.getName(),
-                                                            implementation,
-                                                            blocking);
+                                                                 implementation,
+                                                                 blocking);
 
             methods.putIfAbsent(method.getName(), hessianMethod);
 
             final Class<?>[] param = method.getParameterTypes();
             final String mangledName = method.getName() + "__" + param.length;
-            methods.put(mangledName, hessianMethod);
-            methods.put(mangleName0(method), hessianMethod);
+            methods.putIfAbsent(mangledName, hessianMethod);
+            methods.putIfAbsent(mangleName0(method), hessianMethod);
         }
 
         if (methods.isEmpty()) {
