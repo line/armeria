@@ -95,12 +95,6 @@ public final class ClientFactoryOptions
     public static final ClientFactoryOption<Boolean> TLS_ALLOW_UNSAFE_CIPHERS =
             ClientFactoryOption.define("tlsAllowUnsafeCiphers", Flags.tlsAllowUnsafeCiphers());
 
-    public static final ClientFactoryOption<Long> WRITE_BYTES_PER_SEC_LIMIT =
-            ClientFactoryOption.define("writeBytesPerSec", 0L);
-
-    public static final ClientFactoryOption<Long> READ_BYTES_PER_SEC_LIMIT =
-            ClientFactoryOption.define("readBytesPerSec", 0L);
-
     /**
      * The factory that creates an {@link AddressResolverGroup} which resolves remote addresses into
      * {@link InetSocketAddress}es.
@@ -267,6 +261,26 @@ public final class ClientFactoryOptions
                 });
                 builder.putAll(newOptions);
                 return newValue.option().newValue(builder.build());
+            });
+
+    /**
+     *  The number of bytes per sec allowed to be read for each channel.
+     *  A value of {@code 0} signifies no limit is applied.
+     */
+    public static final ClientFactoryOption<Long> WRITE_BYTES_PER_SEC_LIMIT =
+            ClientFactoryOption.define("WRITE_BYTES_PER_SEC_LIMIT", 0L, v -> {
+                checkArgument(v >= 0);
+                return v;
+            });
+
+    /**
+     *  The number of bytes per sec allowed to be read for each channel.
+     *  A value of {@code 0} signifies no limit is applied.
+     */
+    public static final ClientFactoryOption<Long> READ_BYTES_PER_SEC_LIMIT =
+            ClientFactoryOption.define("READ_BYTES_PER_SEC_LIMIT", 0L, v -> {
+                checkArgument(v >= 0);
+                return v;
             });
 
     private static final ClientFactoryOptions EMPTY = new ClientFactoryOptions(ImmutableList.of());
@@ -534,16 +548,16 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the size of bytes per sec allowed to be written for each channel.
-     * A {@code 0} value indicates there is no limit.
+     * Returns the number of bytes per sec allowed to be written for each channel.
+     * A value of {@code 0} signifies no limit is applied.
      */
     public long writeBytesPerSec() {
         return get(WRITE_BYTES_PER_SEC_LIMIT);
     }
 
     /**
-     * Returns the size of bytes per sec allowed to be read for each channel.
-     * A {@code 0} value indicates there is no limit.
+     * Returns the number of bytes per sec allowed to be read for each channel.
+     * A value of {@code 0} signifies no limit is applied.
      */
     public long readBytesPerSec() {
         return get(READ_BYTES_PER_SEC_LIMIT);
