@@ -65,6 +65,7 @@ class WriteTimeoutTest {
         headersBuilder.add("header1", Strings.repeat("a", 512)); // set a header over (2 * 512) bytes
         assertThatThrownBy(() -> server.webClient()
                                        .blocking()
-                                       .execute(headersBuilder.build())).isInstanceOf(WriteTimeoutException.class);
+                                       .execute(headersBuilder.build()))
+                .isInstanceOf(WriteTimeoutException.class);
     }
 }
