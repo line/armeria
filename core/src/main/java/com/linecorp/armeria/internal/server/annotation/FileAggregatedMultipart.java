@@ -32,14 +32,17 @@ import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.multipart.Multipart;
+import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.server.ServiceRequestContext;
+
+import io.netty.channel.EventLoop;
 
 final class FileAggregatedMultipart {
     private final ListMultimap<String, String> params;
-    private final ListMultimap<String, Path> files;
+    private final ListMultimap<String, MultipartFile> files;
 
     private FileAggregatedMultipart(ListMultimap<String, String> params,
-                                    ListMultimap<String, Path> files) {
+                                    ListMultimap<String, MultipartFile> files) {
         this.params = params;
         this.files = files;
     }
@@ -48,43 +51,45 @@ final class FileAggregatedMultipart {
         return params;
     }
 
-    ListMultimap<String, Path> files() {
+    ListMultimap<String, MultipartFile> files() {
         return files;
     }
 
     static CompletableFuture<FileAggregatedMultipart> aggregateMultipart(ServiceRequestContext ctx,
                                                                          HttpRequest req) {
-        final Path multipartUploadsLocation = ctx.config().multipartUploadsLocation();
+        final Path destination = ctx.config().multipartUploadsLocation();
         return Multipart.from(req).collect(bodyPart -> {
-            if (bodyPart.filename() != null) {
-                final ScheduledExecutorService blockingExecutorService =
-                        ctx.blockingTaskExecutor().withoutContext();
-                return resolveTmpFile(multipartUploadsLocation.resolve("incomplete"),
-                                      blockingExecutorService)
-                        .thenComposeAsync(
-                                path -> bodyPart
-                                        .writeTo(path)
-                                        .thenCompose(ignore -> moveFile(
-                                                path,
-                                                multipartUploadsLocation.resolve("complete"),
-                                                blockingExecutorService))
-                                        .thenApply(completePath -> Maps.<String, Object>immutableEntry(
-                                                bodyPart.name(), completePath)),
-                                ctx.eventLoop());
+            final String name = bodyPart.name();
+            final String filename = bodyPart.filename();
+            final EventLoop eventLoop = ctx.eventLoop();
+
+            if (filename != null) {
+                final Path incompleteDir = destination.resolve("incomplete");
+                final ScheduledExecutorService executor = ctx.blockingTaskExecutor().withoutContext();
+
+                return resolveTmpFile(incompleteDir, filename, executor).thenComposeAsync(path -> {
+                    return bodyPart.writeTo(path).thenCompose(ignore -> {
+                        final Path completeDir = destination.resolve("complete");
+                        return moveFile(path, completeDir, executor);
+                    }).thenApply(completePath -> MultipartFile.of(name, filename, completePath.toFile()));
+                }, eventLoop);
             }
-            return bodyPart.aggregate()
-                           .thenApply(aggregatedBodyPart -> Maps.<String, Object>immutableEntry(
-                                   bodyPart.name(), aggregatedBodyPart.contentUtf8()));
-        }).thenApply(result -> {
+
+            return bodyPart.aggregate(eventLoop).thenApply(aggregatedBodyPart -> {
+                return Maps.<String, Object>immutableEntry(name, aggregatedBodyPart.contentUtf8());
+            });
+        }).thenApply(results -> {
             final ImmutableListMultimap.Builder<String, String> params = ImmutableListMultimap.builder();
-            final ImmutableListMultimap.Builder<String, Path> files =
+            final ImmutableListMultimap.Builder<String, MultipartFile> files =
                     ImmutableListMultimap.builder();
-            for (Entry<String, Object> entry : result) {
-                final Object value = entry.getValue();
-                if (value instanceof Path) {
-                    files.put(entry.getKey(), (Path) value);
+            for (Object result : results) {
+                if (result instanceof MultipartFile) {
+                    final MultipartFile multipartFile = (MultipartFile) result;
+                    files.put(multipartFile.name(), multipartFile);
                 } else {
-                    params.put(entry.getKey(), (String) value);
+                    @SuppressWarnings("unchecked")
+                    final Entry<String, String> entry = (Entry<String, String>) result;
+                    params.put(entry.getKey(), entry.getValue());
                 }
             }
             return new FileAggregatedMultipart(params.build(), files.build());
@@ -106,11 +111,12 @@ final class FileAggregatedMultipart {
     }
 
     private static CompletableFuture<Path> resolveTmpFile(Path directory,
+                                                          String filename,
                                                           ExecutorService blockingExecutorService) {
         return CompletableFuture.supplyAsync(() -> {
             try {
                 Files.createDirectories(directory);
-                return Files.createTempFile(directory, null, ".multipart");
+                return Files.createTempFile(directory, null, '-' + filename);
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
