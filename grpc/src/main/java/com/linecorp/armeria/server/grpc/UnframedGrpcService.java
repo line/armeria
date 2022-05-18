@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.server.grpc.FramedGrpcService.RESOLVED_GRPC_METHOD;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -150,7 +149,6 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
                 if (t != null) {
                     responseFuture.completeExceptionally(t);
                 } else {
-                    ctx.setAttr(RESOLVED_GRPC_METHOD, method);
                     frameAndServe(unwrap(), ctx, grpcHeaders.build(),
                                   clientRequest.content(), responseFuture, null);
                 }
