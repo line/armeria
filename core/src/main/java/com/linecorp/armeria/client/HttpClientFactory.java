@@ -100,6 +100,8 @@ final class HttpClientFactory implements ClientFactory {
     private MeterRegistry meterRegistry;
     private final ProxyConfigSelector proxyConfigSelector;
     private final Http1HeaderNaming http1HeaderNaming;
+    private final long writeBytesPerSec;
+    private final long readBytesPerSec;
 
     private final ConcurrentMap<EventLoop, HttpChannelPool> pools = new MapMaker().weakKeys().makeMap();
     private final HttpClientDelegate clientDelegate;
@@ -158,6 +160,8 @@ final class HttpClientFactory implements ClientFactory {
         http1HeaderNaming = options.http1HeaderNaming();
         maxConnectionAgeMillis = options.maxConnectionAgeMillis();
         maxNumRequestsPerConnection = options.maxNumRequestsPerConnection();
+        writeBytesPerSec = options.writeBytesPerSec();
+        readBytesPerSec = options.readBytesPerSec();
 
         this.options = options;
 
@@ -239,6 +243,14 @@ final class HttpClientFactory implements ClientFactory {
     @VisibleForTesting
     AddressResolverGroup<InetSocketAddress> addressResolverGroup() {
         return addressResolverGroup;
+    }
+
+    long writeBytesPerSec() {
+        return writeBytesPerSec;
+    }
+
+    long readBytesPerSec() {
+        return readBytesPerSec;
     }
 
     @Override

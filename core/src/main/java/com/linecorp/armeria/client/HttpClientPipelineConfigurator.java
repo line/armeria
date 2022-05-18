@@ -98,6 +98,7 @@ import io.netty.handler.ssl.ApplicationProtocolNames;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
@@ -164,6 +165,12 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         final ChannelPipeline p = ch.pipeline();
         p.addLast(new FlushConsolidationHandler());
         p.addLast(ReadSuppressingAndChannelDeactivatingHandler.INSTANCE);
+
+        final long writeLimit = clientFactory.writeBytesPerSec();
+        final long readLimit = clientFactory.readBytesPerSec();
+        if (writeLimit != 0 || readLimit != 0) {
+            p.addLast(new ChannelTrafficShapingHandler(writeLimit, readLimit));
+        }
 
         try {
             if (sslCtx != null) {
