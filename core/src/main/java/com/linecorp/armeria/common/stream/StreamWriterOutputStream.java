@@ -56,17 +56,20 @@ final class StreamWriterOutputStream<T> extends OutputStream {
     }
 
     @Override
-    public void write(byte[] b, int off, int len) throws IOException {
+    public void write(byte[] bytes, int off, int len) throws IOException {
+        requireNonNull(bytes, "bytes");
+        checkArgument(off >= 0, "offset should be non negative");
+        checkArgument(len >= 0, "length should be non negative");
         while (len > 0) {
             ensureOpen();
             maybeDrain();
             final int writableBytes = maxBufferSize - buffer.readableBytes();
             if (writableBytes < len) {
-                buffer.writeBytes(b, off, writableBytes);
+                buffer.writeBytes(bytes, off, writableBytes);
                 off += writableBytes;
                 len -= writableBytes;
             } else {
-                buffer.writeBytes(b, off, len);
+                buffer.writeBytes(bytes, off, len);
                 break;
             }
         }
