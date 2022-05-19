@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -31,6 +31,8 @@ import org.junit.jupiter.params.provider.ValueSource;
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
 
+import com.linecorp.armeria.common.HttpData;
+
 import reactor.test.StepVerifier;
 
 class StreamWriterOutputStreamTest {
@@ -38,11 +40,7 @@ class StreamWriterOutputStreamTest {
     @Test
     void write() throws IOException {
         final DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
-        final OutputStream outputStream = writer.toOutputStream(x -> {
-            final byte[] data = new byte[x.byteBuf().readableBytes()];
-            x.byteBuf().readBytes(data);
-            return new String(data);
-        }, 128);
+        final OutputStream outputStream = writer.toOutputStream(HttpData::toStringUtf8, 128);
 
         for (byte b : "foo".getBytes()) {
             outputStream.write(b);
@@ -57,11 +55,7 @@ class StreamWriterOutputStreamTest {
     @Test
     void writeStrings() throws IOException {
         final DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
-        final OutputStream outputStream = writer.toOutputStream(x -> {
-            final byte[] data = new byte[x.byteBuf().readableBytes()];
-            x.byteBuf().readBytes(data);
-            return new String(data);
-        }, 128);
+        final OutputStream outputStream = writer.toOutputStream(HttpData::toStringUtf8, 128);
 
         final List<String> strings = ImmutableList.of("foo", "bar", "baz");
         for (String string : strings) {
@@ -121,11 +115,7 @@ class StreamWriterOutputStreamTest {
     @Test
     void writeWithOffset() throws IOException {
         final DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
-        final OutputStream outputStream = writer.toOutputStream(x -> {
-            final byte[] data = new byte[x.byteBuf().readableBytes()];
-            x.byteBuf().readBytes(data);
-            return new String(data);
-        }, 128);
+        final OutputStream outputStream = writer.toOutputStream(HttpData::toStringUtf8, 128);
         final List<String> strings = ImmutableList.of("foo", "bar", "baz");
         final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         byteArrayOutputStream.write(0);
@@ -145,11 +135,7 @@ class StreamWriterOutputStreamTest {
     @Test
     void write_exceedMaxBufferSize() throws IOException {
         final DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
-        final OutputStream outputStream = writer.toOutputStream(x -> {
-            final byte[] data = new byte[x.byteBuf().readableBytes()];
-            x.byteBuf().readBytes(data);
-            return new String(data);
-        }, 3);
+        final OutputStream outputStream = writer.toOutputStream(HttpData::toStringUtf8, 3);
 
         for (byte b : "foobarbaz".getBytes()) {
             outputStream.write(b);
@@ -164,11 +150,7 @@ class StreamWriterOutputStreamTest {
     @Test
     void writeWithOffset_exceedMaxBufferSize() throws IOException {
         final DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
-        final OutputStream outputStream = writer.toOutputStream(x -> {
-            final byte[] data = new byte[x.byteBuf().readableBytes()];
-            x.byteBuf().readBytes(data);
-            return new String(data);
-        }, 3);
+        final OutputStream outputStream = writer.toOutputStream(HttpData::toStringUtf8, 3);
         final List<String> strings = ImmutableList.of("3", "456", "789", "ABC", "D");
         final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         byteArrayOutputStream.write(0);
@@ -192,11 +174,7 @@ class StreamWriterOutputStreamTest {
     @ParameterizedTest
     void write_nonPositiveMaxBufferSize(int maxBufferSize) throws IOException {
         final DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
-        assertThatThrownBy(() -> writer.toOutputStream(x -> {
-            final byte[] data = new byte[x.byteBuf().readableBytes()];
-            x.byteBuf().readBytes(data);
-            return new String(data);
-        }, maxBufferSize))
+        assertThatThrownBy(() -> writer.toOutputStream(HttpData::toStringUtf8, maxBufferSize))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("maxBufferSize should be positive");
     }
@@ -213,7 +191,7 @@ class StreamWriterOutputStreamTest {
             outputStream.flush();
         }
 
-        assertDoesNotThrow(outputStream::close);
+        assertThatCode(outputStream::close).doesNotThrowAnyException();
         StepVerifier.create(writer)
                     .expectNext(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                     .verifyComplete();
@@ -256,7 +234,7 @@ class StreamWriterOutputStreamTest {
         assertThatThrownBy(outputStream::flush)
                 .isInstanceOf(IOException.class)
                 .hasMessage("Stream closed");
-        assertDoesNotThrow(outputStream::close);
+        assertThatCode(outputStream::close).doesNotThrowAnyException();
     }
 
     @Test
@@ -265,7 +243,7 @@ class StreamWriterOutputStreamTest {
         final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()),
                                                                 128);
 
-        assertDoesNotThrow(outputStream::close);
+        assertThatCode(outputStream::close).doesNotThrowAnyException();
         StepVerifier.create(writer)
                     .verifyComplete();
         assertThatThrownBy(() -> outputStream.write(0))
@@ -290,13 +268,13 @@ class StreamWriterOutputStreamTest {
             outputStream.write(integer.byteValue());
             outputStream.flush();
         }
-        assertDoesNotThrow(outputStream::close);
+        assertThatCode(outputStream::close).doesNotThrowAnyException();
         StepVerifier.create(writer)
                     .expectNext(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                     .verifyComplete();
 
         for (int i = 0; i < 10; i++) {
-            assertDoesNotThrow(outputStream::close);
+            assertThatCode(outputStream::close).doesNotThrowAnyException();
             assertThatThrownBy(() -> outputStream.write(0))
                     .isInstanceOf(IOException.class)
                     .hasMessage("Stream closed");
