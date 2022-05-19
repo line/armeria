@@ -121,8 +121,11 @@ class ArmeriaServerFactory extends AbstractServerFactory {
         final HealthCheckRegistry healthChecks = environment.healthChecks();
         try {
             final Method method = AbstractServerFactory.class.getDeclaredMethod("createAdminServlet",
-                    Server.class, MutableServletContextHandler.class, MetricRegistry.class,
-                    HealthCheckRegistry.class, AdminEnvironment.class);
+                                                                                Server.class,
+                                                                                MutableServletContextHandler.class,
+                                                                                MetricRegistry.class,
+                                                                                HealthCheckRegistry.class,
+                                                                                AdminEnvironment.class);
             logger.debug("createAdminServlet0 resolves to dropwizard2.1 version");
             final AdminEnvironment adminEnvironment = environment.admin();
             return (Handler) method.invoke(this, server, adminContext, metrics, healthChecks, adminEnvironment);
@@ -135,8 +138,10 @@ class ArmeriaServerFactory extends AbstractServerFactory {
         try {
             //noinspection JavaReflectionMemberAccess - this is false warning on dropwizard2 module
             final Method method = AbstractServerFactory.class.getDeclaredMethod("createAdminServlet",
-                    Server.class, MutableServletContextHandler.class, MetricRegistry.class,
-                    HealthCheckRegistry.class);
+                                                                                Server.class,
+                                                                                MutableServletContextHandler.class,
+                                                                                MetricRegistry.class,
+                                                                                HealthCheckRegistry.class);
             logger.debug("createAdminServlet0 resolves to dropwizard1 or 2.0 version");
             return (Handler) method.invoke(this, server, adminContext, metrics, healthChecks);
         } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
@@ -172,7 +177,7 @@ class ArmeriaServerFactory extends AbstractServerFactory {
         }
 
         return serverBuilder.blockingTaskExecutor(newBlockingTaskExecutor(), true)
-                .serviceUnder("/", JettyService.of(server));
+                            .serviceUnder("/", JettyService.of(server));
     }
 
     private ScheduledThreadPoolExecutor newBlockingTaskExecutor() {
