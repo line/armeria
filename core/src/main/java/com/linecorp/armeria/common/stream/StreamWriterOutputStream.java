@@ -45,7 +45,7 @@ final class StreamWriterOutputStream<T> extends OutputStream {
         this.writer = writer;
         this.httpDataConverter = httpDataConverter;
         this.maxBufferSize = maxBufferSize;
-        buffer = Unpooled.buffer(maxBufferSize);
+        buffer = Unpooled.buffer(maxBufferSize, maxBufferSize);
     }
 
     @Override
@@ -109,6 +109,6 @@ final class StreamWriterOutputStream<T> extends OutputStream {
             return;
         }
         writer.write(httpDataConverter.apply(HttpData.wrap(buffer)));
-        buffer = Unpooled.buffer(maxBufferSize);
+        buffer = Unpooled.buffer(maxBufferSize, maxBufferSize);
     }
 }
