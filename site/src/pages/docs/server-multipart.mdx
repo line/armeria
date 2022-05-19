@@ -7,8 +7,14 @@ Armeria provides <type://Multipart> encoder and decoder built on top of
 
 A <type://Multipart> consists of multiple <typeplural://BodyPart>.
 Each <type://BodyPart> is divided into a headers and a body. A <type://BodyPart> headers can be created simply 
-using <type://ContentDisposition>. You can use <type://HttpHeaders> to set a complex headers as well. 
+using <type://ContentDisposition>. 
 `String`, <type://HttpData>, or <type://StreamMessage> can be set as the body of the <type://BodyPart>.
+
+<Tip>
+
+You can also use <type://HttpHeaders> to set a complex headers into <type://BobyPart#headers()>.
+
+</Tip>
 
 ```java
 import java.nio.file.Path;
@@ -28,17 +34,17 @@ Path image = Paths.get("/path/to/image");
 // Create a BodyPart with 'Content-Disposition' header and its file.
 BodyPart bodyPart2 = BodyPart.of(imageDisposition, StreamMessage.of(image));
 
-// Create a new multipart with two body parts.
+// Create a new multipart with the two body parts.
 Multipart multipart = Multipart.of(bodyPart1, bodyPart2);
 ```
 
-If we decode and print the <type://Multipart> created above,
+If we encode and print the <type://Multipart> created above,
 ```java
 for (HttpData httpData : multipart.toStreamMessage().collect().join()) {
   System.out.print(httpData.toStringUtf8());
 }
 ```
-we will see a raw multipart data as shown below:
+we can see how the <type://Multipart> is encoded as shown below:
 ```
 --ArmeriaBoundaryEsbNVr9Z66DAIYIN
 content-disposition:form-data; name="name"
@@ -66,7 +72,7 @@ client.execute(request).aggregate()...;
 
 ## Receiving a multipart request
 
-On the server side, the multipart HTTP request sent from the client can be decoded into a <type://Multipart>
+On the server side, the multipart request sent from the client can be decoded into a <type://Multipart>
 using <type://Multipart#from(HttpRequest)>.
 ```java
 Server.builder()
@@ -81,7 +87,7 @@ Since <type://Multipart> does not have the actual multipart data, you can use
 If the size of the data is not large, the data can be read after being loaded into memory through 
 <type://Multipart#aggregate()>.
 ```java
-// Use Reactive Streams' Subscriber to read the data with backpressure.
+// Use a `Subscriber` to read the data with backpressure.
 multiPart.bodyParts().subsribe(new Subsriber() {
    ...
 });
@@ -98,13 +104,13 @@ Multipart.from(req).aggregate()
 
 ## Using <type://@Param> annotation
 
-In Annotated service, you can directly map the body part data of `multipart/form-data` to `String`, `Path`, 
-`File`, or <type://Multipart> using `@Param` annotation.
+In annotated services, a body part content of `multipart/form-data` can be directly mapped into a `String`, 
+`Path`, `File`, or <type://MultipartFile> using <type://@Param> annotation.
 
 <Tip>
 
-Note that a <type://BodyPart> can be converted into a `Path`, `File` or <type://Multipart> only when 
-a <type://ContentDisposition#filename()> is specified.
+Note that a <type://BodyPart> can be converted into a `Path`, `File` or <type://MultipartFile> only when 
+a <type://BodyPart#filename()> is specified.
 
 </Tip>
 
@@ -131,7 +137,7 @@ public HttpResponse upload(
 
 <Tip>
 
-The multipart files created by annotated service are stored into
+The multipart files uploaded to an annotated service are stored into
 <type://ServerBuilder#multipartUploadsLocation(Path)> and the files are not removed automatically. 
 You should explicitly **delete** the files after use.
 
