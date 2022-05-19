@@ -40,7 +40,7 @@ class StreamWriterOutputStreamTest {
     @Test
     void write() throws IOException {
         final DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
-        final OutputStream outputStream = writer.toOutputStream(HttpData::toStringUtf8, 128);
+        final OutputStream outputStream = writer.toOutputStream(HttpData::toStringUtf8);
 
         for (byte b : "foo".getBytes()) {
             outputStream.write(b);
@@ -55,7 +55,7 @@ class StreamWriterOutputStreamTest {
     @Test
     void writeStrings() throws IOException {
         final DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
-        final OutputStream outputStream = writer.toOutputStream(HttpData::toStringUtf8, 128);
+        final OutputStream outputStream = writer.toOutputStream(HttpData::toStringUtf8);
 
         final List<String> strings = ImmutableList.of("foo", "bar", "baz");
         for (String string : strings) {
@@ -74,8 +74,7 @@ class StreamWriterOutputStreamTest {
     @Test
     void writeIntegers() throws IOException {
         final DefaultStreamMessage<Integer> writer = new DefaultStreamMessage<>();
-        final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()),
-                                                                128);
+        final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()));
 
         final List<Integer> integers = ImmutableList.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         for (Integer integer : integers) {
@@ -96,8 +95,7 @@ class StreamWriterOutputStreamTest {
                 .filter(x -> x % 2 == 0)
                 .map(x -> x + 10); // 12, 14, 16, 18, 20
         final DefaultStreamMessage<Integer> writer = new DefaultStreamMessage<>();
-        final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()),
-                                                                128);
+        final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()));
         final StreamMessage<Integer> concat = StreamMessage.concat(source, writer);
 
         final List<Integer> integers = ImmutableList.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
@@ -115,7 +113,7 @@ class StreamWriterOutputStreamTest {
     @Test
     void writeWithOffset() throws IOException {
         final DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
-        final OutputStream outputStream = writer.toOutputStream(HttpData::toStringUtf8, 128);
+        final OutputStream outputStream = writer.toOutputStream(HttpData::toStringUtf8);
         final List<String> strings = ImmutableList.of("foo", "bar", "baz");
         final ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
         byteArrayOutputStream.write(0);
@@ -182,8 +180,7 @@ class StreamWriterOutputStreamTest {
     @Test
     void close() throws IOException {
         final DefaultStreamMessage<Integer> writer = new DefaultStreamMessage<>();
-        final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()),
-                                                                128);
+        final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()));
 
         final List<Integer> integers = ImmutableList.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         for (Integer integer : integers) {
@@ -209,8 +206,7 @@ class StreamWriterOutputStreamTest {
     @Test
     void closeWriter() throws IOException {
         final DefaultStreamMessage<Integer> writer = new DefaultStreamMessage<>();
-        final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()),
-                                                                128);
+        final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()));
 
         final List<Integer> integers = ImmutableList.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         for (Integer integer : integers) {
@@ -240,8 +236,7 @@ class StreamWriterOutputStreamTest {
     @Test
     void closeBeforeWrite() throws IOException {
         final DefaultStreamMessage<Integer> writer = new DefaultStreamMessage<>();
-        final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()),
-                                                                128);
+        final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()));
 
         assertThatCode(outputStream::close).doesNotThrowAnyException();
         StepVerifier.create(writer)
@@ -260,8 +255,7 @@ class StreamWriterOutputStreamTest {
     @Test
     void closeMultipleTimes() throws IOException {
         final DefaultStreamMessage<Integer> writer = new DefaultStreamMessage<>();
-        final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()),
-                                                                128);
+        final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()));
 
         final List<Integer> integers = ImmutableList.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         for (Integer integer : integers) {
