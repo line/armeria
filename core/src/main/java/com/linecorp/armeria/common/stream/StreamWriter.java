@@ -141,12 +141,7 @@ public interface StreamWriter<T> {
      *
      * <p>For example:<pre>{@code
      * DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
-     * int maxBufferSize = 128;
-     * OutputStream outputStream = writer.toOutputStream(x -> {
-     *     byte[] data = new byte[x.byteBuf().readableBytes()];
-     *     x.byteBuf().readBytes(data);
-     *     return new String(data);
-     * }, maxBufferSize);
+     * OutputStream outputStream = writer.toOutputStream(HttpData::toStringUtf8);
      *
      * List<String> strings = List.of("foo", "bar", "baz");
      * for (String string : strings) {
@@ -159,6 +154,15 @@ public interface StreamWriter<T> {
      *
      * assert writer.collect().join().equals(List.of("foo", "bar", "baz"));
      * }</pre>
+     */
+    default OutputStream toOutputStream(Function<? super HttpData, ? extends T> httpDataConverter) {
+        return toOutputStream(httpDataConverter, 8192);
+    }
+
+    /**
+     * Adapts this {@link StreamWriter} to {@link OutputStream}.
+     *
+     * @param maxBufferSize the maximum allowed size of the {@link StreamWriterOutputStream} buffer
      */
     default OutputStream toOutputStream(Function<? super HttpData, ? extends T> httpDataConverter,
                                         int maxBufferSize) {
