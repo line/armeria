@@ -48,7 +48,7 @@ public interface MultipartFile {
     String name();
 
     /**
-     * Returns the filename parameter of the {@code "content-disposition"} header.
+     * Returns the {@code filename} parameter of the {@code "content-disposition"} header.
      * @see BodyPart#filename()
      */
     String filename();
