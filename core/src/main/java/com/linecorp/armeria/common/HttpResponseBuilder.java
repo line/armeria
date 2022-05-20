@@ -238,6 +238,41 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
         return (HttpResponseBuilder) super.trailers(trailers);
     }
 
+    /**
+     * Sets a cookie for this response. For example:
+     * <pre>{@code
+     * HttpResponse.builder()
+     *             .ok()
+     *             .cookie(Cookie.ofSecure("cookie", "foo"))
+     *             .build();
+     * }</pre>
+     *
+     * @see Cookie
+     */
+    @Override
+    public HttpResponseBuilder cookie(Cookie cookie) {
+        responseHeadersBuilder.cookie(cookie);
+        return this;
+    }
+
+    /**
+     * Sets multiple cookies for this response.
+     * <pre>{@code
+     * HttpResponse.builder()
+     *             .ok()
+     *             .cookies(Cookies.ofSecure(Cookie.ofSecure("cookie1", "foo"),
+     *                                       Cookie.ofSecure("cookie2", "bar")))
+     *             .build();
+     * }</pre>
+     *
+     * @see Cookies
+     */
+    @Override
+    public HttpResponseBuilder cookies(Iterable<? extends Cookie> cookies) {
+        responseHeadersBuilder.cookies(cookies);
+        return this;
+    }
+
     @Override
     HttpHeadersBuilder headersBuilder() {
         return responseHeadersBuilder;

@@ -18,21 +18,22 @@ package com.linecorp.armeria.client;
 
 import java.time.Duration;
 
-import com.linecorp.armeria.common.HttpRequestSetters;
+import com.linecorp.armeria.common.HttpMessageSetters;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.PathAndQueryParamSetters;
 
 import io.netty.util.AttributeKey;
 
-interface RequestPreparationSetters<T> extends HttpRequestSetters, RequestOptionsSetters {
-
-    /**
-     * Builds and executes the request.
-     */
-    T execute();
+/**
+ * Sets properties for building an {@link HttpRequest} and {@link RequestOptions}.
+ */
+public interface RequestPreparationSetters extends PathAndQueryParamSetters, HttpMessageSetters,
+                                                   RequestOptionsSetters {
 
     /**
      * Sets the specified {@link RequestOptions} that could overwrite the previously configured values such as
      * {@link #responseTimeout(Duration)}, {@link #writeTimeout(Duration)}, {@link #maxResponseLength(long)}
      * and {@link #attr(AttributeKey, Object)}.
      */
-    RequestPreparationSetters<T> requestOptions(RequestOptions requestOptions);
+    RequestPreparationSetters requestOptions(RequestOptions requestOptions);
 }

@@ -49,7 +49,7 @@ import io.netty.util.AttributeKey;
  */
 @UnstableApi
 public final class FutureTransformingRequestPreparation<T>
-        implements RequestPreparationSetters<CompletableFuture<T>> {
+        implements WebRequestPreparationSetters<CompletableFuture<T>> {
 
     private static final Logger logger = LoggerFactory.getLogger(FutureTransformingRequestPreparation.class);
 
@@ -288,6 +288,12 @@ public final class FutureTransformingRequestPreparation<T>
     public FutureTransformingRequestPreparation<T> headers(
             Iterable<? extends Entry<? extends CharSequence, String>> headers) {
         delegate.headers(headers);
+        return this;
+    }
+
+    @Override
+    public FutureTransformingRequestPreparation<T> trailer(CharSequence name, Object value) {
+        delegate.trailer(name, value);
         return this;
     }
 

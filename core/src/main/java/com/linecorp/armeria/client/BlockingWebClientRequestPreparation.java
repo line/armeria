@@ -50,7 +50,7 @@ import io.netty.util.AttributeKey;
  */
 @UnstableApi
 public final class BlockingWebClientRequestPreparation
-        implements RequestPreparationSetters<AggregatedHttpResponse> {
+        implements WebRequestPreparationSetters<AggregatedHttpResponse> {
 
     private final WebClientRequestPreparation delegate;
 
@@ -350,6 +350,12 @@ public final class BlockingWebClientRequestPreparation
     public BlockingWebClientRequestPreparation headers(
             Iterable<? extends Entry<? extends CharSequence, String>> headers) {
         delegate.headers(headers);
+        return this;
+    }
+
+    @Override
+    public BlockingWebClientRequestPreparation trailer(CharSequence name, Object value) {
+        delegate.trailer(name, value);
         return this;
     }
 
