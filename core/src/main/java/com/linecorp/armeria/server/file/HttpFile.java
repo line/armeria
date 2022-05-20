@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.lang.UnsupportedOperationException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
@@ -178,6 +179,33 @@ public interface HttpFile {
     }
 
     /**
+     * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the specified
+     * {@link URL}. Supports file: and jar:file: protocol
+     */
+    static HttpFileBuilder builder(URL url) {
+        requireNonNull(url, "url");
+        if (url.getPath().endsWith("/")) {
+            // Non-existent resource.
+            return new NonExistentHttpFileBuilder();
+        }
+
+        // Convert to a real file if possible.
+        if ("file".equals(url.getProtocol())) {
+            File f;
+            try {
+                f = new File(url.toURI());
+            } catch (URISyntaxException ignored) {
+                f = new File(url.getPath());
+            }
+
+            return builder(f.toPath());
+        } else if ("jar".equals(url.getProtocol())) {
+            return new ClassPathHttpFileBuilder(url);
+        }
+        throw new UnsupportedOperationException("Not supported URL protocol " + url.getProtocol());
+    }
+
+    /**
      * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the classpath resource
      * at the specified {@code path} using the specified {@link ClassLoader}.
      */
@@ -193,24 +221,11 @@ public interface HttpFile {
         // Retrieve the resource URL.
         @Nullable
         final URL url = classLoader.getResource(path);
-        if (url == null || url.getPath().endsWith("/")) {
+        if (url == null) {
             // Non-existent resource.
             return new NonExistentHttpFileBuilder();
         }
-
-        // Convert to a real file if possible.
-        if ("file".equals(url.getProtocol())) {
-            File f;
-            try {
-                f = new File(url.toURI());
-            } catch (URISyntaxException ignored) {
-                f = new File(url.getPath());
-            }
-
-            return builder(f.toPath());
-        }
-
-        return new ClassPathHttpFileBuilder(url);
+        return builder(url);
     }
 
     /**
