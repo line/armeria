@@ -504,6 +504,26 @@ class GrpcServiceServerTest {
         }
     };
 
+    @RegisterExtension
+    static final ServerExtension autoCompressionServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.workerGroup(1);
+            sb.requestTimeoutMillis(5000);
+            sb.serviceUnder("/",
+                            GrpcService.builder()
+                                       .autoCompression(true)
+                                       .enableUnframedRequests(true)
+                                       .addService(new UnitTestServiceImpl())
+                                       .build()
+                                       .decorate(LoggingService.newDecorator())
+                                       .decorate((delegate, ctx, req) -> {
+                                           ctx.log().whenComplete().thenAccept(requestLogQueue::add);
+                                           return delegate.serve(ctx, req);
+                                       }));
+        }
+    };
+
     private static ManagedChannel channel;
     private static ManagedChannel blockingChannel;
 
@@ -1226,6 +1246,23 @@ class GrpcServiceServerTest {
                 .isEqualTo(SimpleResponse.getDefaultInstance());
 
         requestLogQueue.take();
+    }
+
+    @Test
+    void autoCompression() throws Exception {
+        final ManagedChannel autoCompressionChannel =
+                ManagedChannelBuilder.forAddress("127.0.0.1", autoCompressionServer.httpPort())
+                                     .usePlaintext()
+                                     .build();
+        final UnitTestServiceBlockingStub client = UnitTestServiceGrpc.newBlockingStub(
+                autoCompressionChannel);
+        assertThat(client.staticUnaryCall(REQUEST_MESSAGE))
+                .isEqualTo(RESPONSE_MESSAGE);
+        autoCompressionChannel.shutdownNow();
+
+        final RequestLog log = requestLogQueue.take();
+        assertThat(log.requestHeaders().get("grpc-accept-encoding")).isEqualTo("gzip");
+        assertThat(log.responseHeaders().get("grpc-encoding")).isEqualTo("gzip");
     }
 
     private static class BlockingClientProvider implements ArgumentsProvider {
