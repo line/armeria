@@ -178,7 +178,7 @@ public final class GrpcServiceBuilder {
 
     private boolean enableHealthCheckService;
 
-    private boolean autoCompression = false;
+    private boolean autoCompression;
 
     @Nullable
     private GrpcHealthCheckService grpcHealthCheckService;
@@ -699,6 +699,15 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Sets whether the gRPC response is compressed automatically when grpc-accept-encoding is specified
+     * and the encoding is registered in {@link CompressorRegistry}.
+     */
+    public GrpcServiceBuilder autoCompression(boolean autoCompression) {
+        this.autoCompression = autoCompression;
+        return this;
+    }
+
+    /**
      * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
      * The mapping is used to handle a {@link Throwable} when it is raised.
      *
@@ -754,15 +763,6 @@ public final class GrpcServiceBuilder {
         }
 
         addExceptionMapping(exceptionMappings, exceptionType, statusFunction);
-        return this;
-    }
-
-    /**
-     * Sets whether the gRPC response is compressed automatically when grpc-accept-encoding is specified
-     * and the encoding is registered in {@link CompressorRegistry}.
-     */
-    public GrpcServiceBuilder autoCompression(boolean autoCompression) {
-        this.autoCompression = autoCompression;
         return this;
     }
 
@@ -899,9 +899,9 @@ public final class GrpcServiceBuilder {
         if (autoCompression) {
             intercept(new ServerInterceptor() {
                 @Override
-                public <ReqT, RespT> Listener<ReqT> interceptCall(ServerCall<ReqT, RespT> call,
-                                                                  Metadata headers,
-                                                                  ServerCallHandler<ReqT, RespT> next) {
+                public <I, O> Listener<I> interceptCall(ServerCall<I, O> call,
+                                                        Metadata headers,
+                                                        ServerCallHandler<I, O> next) {
                     final HttpHeadersBuilder headersBuilder = HttpHeaders.builder();
                     MetadataUtil.fillHeaders(headers, headersBuilder);
                     final HttpHeaders fromClient = headersBuilder.build();
