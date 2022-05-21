@@ -46,10 +46,10 @@ import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.AsyncCloseableShutdownHooks;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TransportType;
-import com.linecorp.armeria.internal.common.ShutdownUtil;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -340,7 +340,7 @@ final class HttpClientFactory implements ClientFactory {
 
     private void closeAsync(CompletableFuture<?> future) {
         final List<CompletableFuture<?>> dependencies = new ArrayList<>(pools.size());
-        for (final Iterator<HttpChannelPool> i = pools.values().iterator(); i.hasNext(); ) {
+        for (final Iterator<HttpChannelPool> i = pools.values().iterator(); i.hasNext();) {
             dependencies.add(i.next().closeAsync());
             i.remove();
         }
@@ -390,9 +390,7 @@ final class HttpClientFactory implements ClientFactory {
     @Override
     public CompletableFuture<Void> closeOnShutdown(@Nullable Runnable whenClosing) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
-        final Runnable task = ShutdownUtil.newClosingTask(
-                whenClosing, this::closeAsync, future, "HttpClientFactory");
-        DefaultClientFactory.addCloseOnShutdown(this, task);
+        AsyncCloseableShutdownHooks.addClosingTask(whenClosing, this, future, "HttpClientFactory");
         return future;
     }
 

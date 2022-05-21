@@ -46,7 +46,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -70,14 +69,13 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
+import com.linecorp.armeria.common.util.AsyncCloseableShutdownHooks;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.StartStopSupport;
-import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.PathAndQuery;
-import com.linecorp.armeria.internal.common.ShutdownUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
@@ -107,10 +105,6 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 public final class Server implements ListenableAsyncCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(Server.class);
-
-    private static final ThreadFactory THREAD_FACTORY = ThreadFactories
-            .builder("armeria-server-shutdown-hook")
-            .build();
 
     /**
      * Creates a new {@link ServerBuilder}.
@@ -494,8 +488,7 @@ public final class Server implements ListenableAsyncCloseable {
      */
     public CompletableFuture<Void> closeOnShutdown(@Nullable Runnable whenClosing) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
-        final Runnable task = ShutdownUtil.newClosingTask(whenClosing, this::closeAsync, future, "Server");
-        Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(task));
+        AsyncCloseableShutdownHooks.addClosingTask(whenClosing, this, future, "Server");
         return future;
     }
 
