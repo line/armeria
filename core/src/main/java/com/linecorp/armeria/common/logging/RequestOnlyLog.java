@@ -273,26 +273,29 @@ public interface RequestOnlyLog extends RequestLogAccess {
      * }</pre>
      */
     default String toStringRequestOnly() {
-        return toStringRequestOnly(Functions.second(), Functions.second(), Functions.second());
+        return toStringRequestOnly(Functions.second(), Functions.second(), Functions.second(),
+                                   LogFormat.ofText());
     }
 
     /**
      * Returns the string representation of the {@link Request}. This method is a shortcut for:
      * <pre>{@code
-     * toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
+     * toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer, logFormat);
      * }</pre>
      *
      * @param headersSanitizer a {@link BiFunction} for sanitizing HTTP headers for logging. The result of
      *                         the {@link BiFunction} is what is actually logged as headers.
      * @param contentSanitizer a {@link BiFunction} for sanitizing request content for logging. The result of
      *                         the {@link BiFunction} is what is actually logged as content.
+     * @param logFormat a {@link LogFormat} for formatting messages.
      */
     default String toStringRequestOnly(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> headersSanitizer,
             BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> contentSanitizer) {
-        return toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer);
+                    ? extends @Nullable Object> contentSanitizer,
+            LogFormat logFormat) {
+        return toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer, logFormat);
     }
 
     /**
@@ -304,6 +307,7 @@ public interface RequestOnlyLog extends RequestLogAccess {
      *                         the {@link BiFunction} is what is actually logged as content.
      * @param trailersSanitizer a {@link BiFunction} for sanitizing HTTP trailers for logging. The result of
      *                          the {@link BiFunction} is what is actually logged as trailers.
+     * @param logFormat a {@link LogFormat} for formatting messages.
      */
     String toStringRequestOnly(
             BiFunction<? super RequestContext, ? super RequestHeaders,
@@ -311,5 +315,6 @@ public interface RequestOnlyLog extends RequestLogAccess {
             BiFunction<? super RequestContext, Object,
                     ? extends @Nullable Object> contentSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> trailersSanitizer);
+                    ? extends @Nullable Object> trailersSanitizer,
+            LogFormat logFormat);
 }

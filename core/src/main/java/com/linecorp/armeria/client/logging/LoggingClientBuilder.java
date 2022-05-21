@@ -27,6 +27,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.LogFormat;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
@@ -58,7 +59,8 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
                                  responseTrailersSanitizer(),
                                  responseCauseSanitizer(),
                                  successSampler(),
-                                 failureSampler());
+                                 failureSampler(),
+                                 logFormat());
     }
 
     /**
@@ -222,5 +224,10 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer) {
         return (LoggingClientBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
+    }
+
+    @Override
+    public LoggingClientBuilder logFormat(LogFormat logFormat) {
+        return (LoggingClientBuilder) super.logFormat(logFormat);
     }
 }

@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.LogFormat;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
 import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
@@ -81,11 +82,12 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer,
             Sampler<? super ClientRequestContext> successSampler,
-            Sampler<? super ClientRequestContext> failureSampler) {
+            Sampler<? super ClientRequestContext> failureSampler,
+            LogFormat logFormat) {
 
         super(delegate, logger, requestLogLevelMapper, responseLogLevelMapper,
               requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
               responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
-              responseCauseSanitizer, successSampler, failureSampler);
+              responseCauseSanitizer, successSampler, failureSampler, logFormat);
     }
 }

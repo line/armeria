@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.LogFormat;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
@@ -92,6 +93,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
             ? extends @Nullable Object> responseCauseSanitizer;
 
     private final Sampler<? super RequestLog> sampler;
+    private final LogFormat logFormat;
 
     /**
      * Creates a new instance that logs {@link HttpRequest}s and {@link HttpResponse}s at the specified
@@ -117,7 +119,8 @@ public final class LoggingService extends SimpleDecoratingHttpService {
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer,
             Sampler<? super ServiceRequestContext> successSampler,
-            Sampler<? super ServiceRequestContext> failureSampler) {
+            Sampler<? super ServiceRequestContext> failureSampler,
+            LogFormat logFormat) {
 
         super(requireNonNull(delegate, "delegate"));
 
@@ -132,6 +135,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
+        this.logFormat = requireNonNull(logFormat, "logFormat");
         requireNonNull(successSampler, "successSampler");
         requireNonNull(failureSampler, "failureSampler");
         sampler = requestLog -> {
@@ -159,7 +163,9 @@ public final class LoggingService extends SimpleDecoratingHttpService {
             logRequest(logger, log,
                        requestLogLevelMapper,
                        requestHeadersSanitizer,
-                       requestContentSanitizer, requestTrailersSanitizer);
+                       requestContentSanitizer,
+                       requestTrailersSanitizer,
+                       logFormat);
         }
     }
 
@@ -175,7 +181,8 @@ public final class LoggingService extends SimpleDecoratingHttpService {
                         responseHeadersSanitizer,
                         responseContentSanitizer,
                         responseTrailersSanitizer,
-                        responseCauseSanitizer);
+                        responseCauseSanitizer,
+                        logFormat);
         }
     }
 }

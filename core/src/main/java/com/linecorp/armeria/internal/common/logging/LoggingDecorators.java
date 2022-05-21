@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.LogFormat;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
@@ -71,7 +72,8 @@ public final class LoggingDecorators {
             BiFunction<? super RequestContext, Object,
                     ? extends @Nullable Object> requestContentSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> requestTrailersSanitizer) {
+                    ? extends @Nullable Object> requestTrailersSanitizer,
+            LogFormat logFormat) {
 
         final LogLevel requestLogLevel = requestLogLevelMapper.apply(log);
         assert requestLogLevel != null;
@@ -82,7 +84,8 @@ public final class LoggingDecorators {
             }
             final String requestStr = log.toStringRequestOnly(requestHeadersSanitizer,
                                                               requestContentSanitizer,
-                                                              requestTrailersSanitizer);
+                                                              requestTrailersSanitizer,
+                                                              logFormat);
             try (SafeCloseable ignored = ctx.push()) {
                 // We don't log requestCause when it's not null because responseCause is the same exception when
                 // the requestCause is not null. That's way we don't have requestCauseSanitizer.
@@ -111,7 +114,8 @@ public final class LoggingDecorators {
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> responseTrailersSanitizer,
             BiFunction<? super RequestContext, ? super Throwable,
-                    ? extends @Nullable Object> responseCauseSanitizer) {
+                    ? extends @Nullable Object> responseCauseSanitizer,
+            LogFormat logFormat) {
 
         final LogLevel responseLogLevel = responseLogLevelMapper.apply(log);
         assert responseLogLevel != null;
@@ -127,7 +131,8 @@ public final class LoggingDecorators {
 
             final String responseStr = log.toStringResponseOnly(responseHeadersSanitizer,
                                                                 responseContentSanitizer,
-                                                                responseTrailersSanitizer);
+                                                                responseTrailersSanitizer,
+                                                                logFormat);
             try (SafeCloseable ignored = ctx.push()) {
                 if (responseCause == null) {
                     responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
@@ -142,7 +147,8 @@ public final class LoggingDecorators {
                     responseLogLevel.log(logger, REQUEST_FORMAT, ctx,
                                          log.toStringRequestOnly(requestHeadersSanitizer,
                                                                  requestContentSanitizer,
-                                                                 requestTrailersSanitizer));
+                                                                 requestTrailersSanitizer,
+                                                                 logFormat));
                 }
 
                 final Object sanitizedResponseCause = responseCauseSanitizer.apply(ctx, responseCause);

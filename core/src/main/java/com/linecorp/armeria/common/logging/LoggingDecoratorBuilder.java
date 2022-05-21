@@ -69,6 +69,8 @@ public abstract class LoggingDecoratorBuilder {
     private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
             responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
 
+    private LogFormat logFormat = LogFormat.ofText();
+
     /**
      * Sets the {@link Logger} to use when logging.
      * If unset, a default {@link Logger} will be used.
@@ -399,6 +401,22 @@ public abstract class LoggingDecoratorBuilder {
     protected final BiFunction<? super RequestContext, ? super Throwable, ? extends @Nullable Object>
     responseCauseSanitizer() {
         return responseCauseSanitizer;
+    }
+
+    /**
+     * Sets the {@link LogFormat} to convert {@link RequestLog} into log message.
+     * If unset, will use {@link DefaultTextLogFormat}.
+     */
+    public LoggingDecoratorBuilder logFormat(LogFormat logFormat) {
+        this.logFormat = requireNonNull(logFormat, "logFormat");
+        return this;
+    }
+
+    /**
+     * Returns the {@link LogFormat} to convert {@link RequestLog} into log message.
+     */
+    protected LogFormat logFormat() {
+        return logFormat;
     }
 
     @Override
