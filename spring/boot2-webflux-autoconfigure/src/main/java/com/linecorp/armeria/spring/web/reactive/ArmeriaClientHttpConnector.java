@@ -91,7 +91,8 @@ final class ArmeriaClientHttpConnector implements ClientHttpConnector {
     }
 
     private static WebClient buildWebClient(Iterable<ArmeriaClientConfigurator> configurators) {
-        // create the armeria's WebClient without a path, because spring's WebClient will always provide a full path.
+        // create the armeria's WebClient without a path,
+        // because spring's WebClient will always provide a full path.
         final WebClientBuilder builder = WebClient.builder();
         configurators.forEach(c -> c.configure(builder));
         return builder.build();
