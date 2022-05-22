@@ -157,7 +157,7 @@ public abstract class AbstractHttpMessageBuilder implements HttpMessageSetters {
     }
 
     @Override
-    public HttpMessageSetters trailer(CharSequence name, Object value) {
+    public AbstractHttpMessageBuilder trailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
         if (httpTrailers == null) {

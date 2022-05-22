@@ -30,7 +30,7 @@ import kotlinx.coroutines.future.await
  * @see JacksonObjectMapperProvider
  */
 suspend inline fun <reified T> RestClientPreparation.execute(): ResponseEntity<T> {
-    return execute(object : TypeReference<T>(){}).await()
+    return execute(object : TypeReference<T>() {}).await()!!
 }
 
 /**
@@ -38,5 +38,5 @@ suspend inline fun <reified T> RestClientPreparation.execute(): ResponseEntity<T
  * [ObjectMapper].
  */
 suspend inline fun <reified T> RestClientPreparation.execute(mapper: ObjectMapper): ResponseEntity<T> {
-    return execute(object : TypeReference<T>(){}, mapper).await()
+    return execute(object : TypeReference<T>() {}, mapper).await()!!
 }
