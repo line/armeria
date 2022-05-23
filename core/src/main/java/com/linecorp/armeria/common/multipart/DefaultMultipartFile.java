@@ -25,12 +25,11 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultMultipartFile implements MultipartFile {
 
-    @Nullable
     private final String name;
     private final String filename;
     private final File file;
 
-    DefaultMultipartFile(@Nullable String name, String filename, File file) {
+    DefaultMultipartFile(String name, String filename, File file) {
         this.name = name;
         this.filename = filename;
         this.file = file;

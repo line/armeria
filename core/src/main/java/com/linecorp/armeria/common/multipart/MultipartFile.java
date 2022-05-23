@@ -20,8 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-
 /**
  * An uploaded file received in a {@link Multipart} request.
  */
@@ -34,7 +32,8 @@ public interface MultipartFile {
      *                 header.
      * @param file the file that stores the {@link BodyPart#content()}.
      */
-    static MultipartFile of(@Nullable String name, String filename, File file) {
+    static MultipartFile of(String name, String filename, File file) {
+        requireNonNull(name, "name");
         requireNonNull(file, "file");
         requireNonNull(filename, "filename");
         return new DefaultMultipartFile(name, filename, file);
@@ -44,7 +43,6 @@ public interface MultipartFile {
      * Returns the {@code name} parameter of the {@code "content-disposition"} header.
      * @see BodyPart#name()
      */
-    @Nullable
     String name();
 
     /**

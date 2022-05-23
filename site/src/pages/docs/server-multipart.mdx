@@ -6,13 +6,13 @@ Armeria provides <type://Multipart> encoder and decoder built on top of
 ## Building a multipart request
 
 A <type://Multipart> consists of multiple <typeplural://BodyPart>.
-Each <type://BodyPart> is divided into a headers and a body. A <type://BodyPart> headers can be created simply 
+Each <type://BodyPart> is divided into headers and a body. A <type://BodyPart> headers can be created simply 
 using <type://ContentDisposition>. 
 `String`, <type://HttpData>, or <type://StreamMessage> can be set as the body of the <type://BodyPart>.
 
 <Tip>
 
-You can also use <type://HttpHeaders> to set a complex headers into <type://BobyPart#headers()>.
+You can also use <type://HttpHeaders> to set complex headers for <type://BobyPart#headers()>.
 
 </Tip>
 
@@ -21,13 +21,14 @@ import java.nio.file.Path;
 import com.linecorp.armeria.common.ContentDisposition;
 import com.linecorp.armeria.common.multipart.BodyPart;
 
-// Create a 'Content-Disposition' header for 'name' field.
+// Create a 'Content-Disposition' header with the 'name' parameter set to 'name'.
 ContentDisposition nameDisposition = 
     ContentDisposition.of("form-data", "name");
 // Create a BodyPart with 'Content-Disposition' header and its data.
 BodyPart bodyPart1 = BodyPart.of(nameDisposition, "Meri Kim");
 
-// Create a 'Content-Disposition' header for 'image' field.
+// Create a 'Content-Disposition' header with the name parameter set to "image", 
+// and the filename parameter set to "profile.png"
 ContentDisposition imageDisposition =
     ContentDisposition.of("form-data", "image", "profile.png");
 Path image = Paths.get("/path/to/image");
@@ -89,7 +90,7 @@ If the size of the data is not large, the data can be read after being loaded in
 <type://Multipart#aggregate()>.
 ```java
 // Use a `Subscriber` to read the data with backpressure.
-multiPart.bodyParts().subsribe(new Subsriber() {
+multiPart.bodyParts().subsribe(new Subscriber() {
    ...
 });
 
@@ -106,12 +107,12 @@ Multipart.from(req).aggregate()
 ## Using <type://@Param> annotation
 
 In annotated services, a body part content of `multipart/form-data` can be directly mapped into a `String`, 
-`Path`, `File`, or <type://MultipartFile> using <type://@Param> annotation.
+`Path`, `File`, or <type://MultipartFile> using the <type://@Param> annotation.
 
 <Tip>
 
 Note that a <type://BodyPart> can be converted into a `Path`, `File` or <type://MultipartFile> only when 
-a <type://BodyPart#filename()> is specified.
+the <type://BodyPart#filename()> and <type://BodyPart#name()> is specified.
 
 </Tip>
 
