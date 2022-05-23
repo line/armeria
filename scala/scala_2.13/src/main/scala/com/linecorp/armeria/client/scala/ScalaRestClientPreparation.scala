@@ -17,9 +17,14 @@
 package com.linecorp.armeria.client.scala
 
 import com.fasterxml.jackson.module.scala.{ClassTagExtensions, JavaTypeable}
-import com.linecorp.armeria.client.{RequestOptions, RequestPreparationSetters, RestClientPreparation}
+import com.linecorp.armeria.client.{
+  RequestOptions,
+  RequestPreparationSetters,
+  ResponseAs,
+  RestClientPreparation
+}
 import com.linecorp.armeria.common.annotation.UnstableApi
-import com.linecorp.armeria.common.{Cookie, HttpData, MediaType, ResponseEntity}
+import com.linecorp.armeria.common.{Cookie, HttpData, HttpResponse, MediaType, ResponseEntity}
 import com.linecorp.armeria.scala.implicits._
 import io.netty.util.AttributeKey
 import java.lang.{Iterable => JIterable}
@@ -49,6 +54,14 @@ final class ScalaRestClientPreparation private[scala] (delegate: RestClientPrepa
    */
   def execute[A: JavaTypeable](mapper: ClassTagExtensions): Future[ResponseEntity[A]] =
     delegate.execute(ScalaResponseAs.json[A](mapper))
+
+  /**
+   * Sends the HTTP request and converts the `HttpResponse` using the `ResponseAs`.
+   * `ScalaResponseAs` provides converters for well-known types.
+   */
+  def execute[T](responseAs: ResponseAs[HttpResponse, T]): T = {
+    delegate.execute(responseAs)
+  }
 
   override def requestOptions(requestOptions: RequestOptions): ScalaRestClientPreparation = {
     delegate.requestOptions(requestOptions)

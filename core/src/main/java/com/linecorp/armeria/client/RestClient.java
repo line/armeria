@@ -29,7 +29,6 @@ import com.linecorp.armeria.common.util.Unwrappable;
 /**
  * A <a href="https://restfulapi.net/">REST</a> client.
  * This client is designed to easily exchange RESTful APIs.
- * If you want to handle a non-JSON or streaming response, please use {@link WebClient}.
  */
 @UnstableApi
 public interface RestClient extends ClientBuilderParams, Unwrappable {

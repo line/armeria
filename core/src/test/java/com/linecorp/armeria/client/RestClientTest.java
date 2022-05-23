@@ -37,8 +37,19 @@ import com.google.common.collect.Iterables;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.Delete;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Header;
+import com.linecorp.armeria.server.annotation.Param;
+import com.linecorp.armeria.server.annotation.Patch;
+import com.linecorp.armeria.server.annotation.Path;
+import com.linecorp.armeria.server.annotation.Post;
+import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class RestClientTest {
@@ -46,17 +57,29 @@ class RestClientTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/rest/{id}", (ctx, req) -> {
-                return HttpResponse.from(req.aggregate().thenApply(agg -> {
+            sb.annotatedService(new Object() {
+                @Get
+                @Post
+                @Put
+                @Delete
+                @Patch
+                @ProducesJson
+                @Path("/rest/{id}")
+                public HttpResponse restApi(@Param String id, @Param String query,
+                                            @Header("x-header") String header, String content,
+                                            ServiceRequestContext ctx) {
+                    final HttpRequest req = ctx.request();
                     final RestResponse restResponse =
-                            new RestResponse(ctx.pathParam("id"),
+                            new RestResponse(id,
                                              req.method().toString(),
-                                             ctx.queryParam("query"),
-                                             req.headers().get("x-header"),
+                                             query,
+                                             header,
                                              Iterables.getFirst(req.headers().cookies(), null).value(),
-                                             agg.contentUtf8());
+                                             content);
                     return HttpResponse.ofJson(restResponse);
-                }));
+                }
+
+                ;
             });
         }
     };
