@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.lang.UnsupportedOperationException;
+import java.net.JarURLConnection;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
@@ -180,7 +181,7 @@ public interface HttpFile {
 
     /**
      * Returns a new {@link HttpFileBuilder} that builds an {@link HttpFile} from the specified
-     * {@link URL}. Supports file: and jar:file: protocol
+     * {@link URL}. {@code file:}, {@code jrt:} and {@linkplain JarURLConnection jar:file:} protocol.
      */
     static HttpFileBuilder builder(URL url) {
         requireNonNull(url, "url");
@@ -199,10 +200,10 @@ public interface HttpFile {
             }
 
             return builder(f.toPath());
-        } else if ("jar".equals(url.getProtocol())) {
+        } else if ("jar".equals(url.getProtocol()) || "jrt".equals(url.getProtocol())) {
             return new ClassPathHttpFileBuilder(url);
         }
-        throw new UnsupportedOperationException("Not supported URL protocol " + url.getProtocol());
+        throw new IllegalArgumentException("Not supported URL protocol " + url.getProtocol());
     }
 
     /**

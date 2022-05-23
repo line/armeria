@@ -16,8 +16,13 @@
 package com.linecorp.armeria.server.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.File;
+import java.net.URL;
+import java.nio.file.Path;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
@@ -72,5 +77,32 @@ class HttpFileTest {
         final AggregatedHttpResponse agg = response.aggregate().join();
         assertThat(agg.status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
         assertThat(agg.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/foo/bar?a=b");
+    }
+
+    @Test
+    void createFromFileUrl(@TempDir Path tempDir) throws Exception {
+        final URL file = tempDir.resolve("test.txt").toUri().toURL();
+        final HttpFileBuilder builder = HttpFile.builder(file);
+        assertThat(builder).isInstanceOf(HttpFileBuilder.FileSystemHttpFileBuilder.class);
+    }
+
+    @Test
+    void createFromHttpUrl() throws Exception {
+        final URL url = new URL("https://line.me");
+        assertThatThrownBy(() -> HttpFile.builder(url)).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void createFromJrtUrl() throws Exception {
+        final URL jarFileUrl = ClassLoader.getSystemClassLoader().getResource("java/lang/Object.class");
+        final HttpFileBuilder builder = HttpFile.builder(jarFileUrl);
+        assertThat(builder).isInstanceOf(HttpFileBuilder.ClassPathHttpFileBuilder.class);
+    }
+
+    @Test
+    void createFromJarFileUrl() throws Exception {
+        final URL jarFileUrl = ClassLoader.getSystemClassLoader().getResource("META-INF/MANIFEST.MF");
+        final HttpFileBuilder builder = HttpFile.builder(jarFileUrl);
+        assertThat(builder).isInstanceOf(HttpFileBuilder.ClassPathHttpFileBuilder.class);
     }
 }
