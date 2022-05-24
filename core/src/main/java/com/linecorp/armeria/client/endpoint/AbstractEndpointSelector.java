@@ -75,8 +75,10 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
 
         // Schedule the timeout task.
         final ScheduledFuture<?> timeoutFuture =
-                executor.schedule(() -> listeningFuture.complete(null),
-                                  timeoutMillis, TimeUnit.MILLISECONDS);
+                executor.schedule(() -> listeningFuture.completeExceptionally(
+                                          EndpointSelectionTimeoutException.get(endpointGroup)),
+                                  timeoutMillis,
+                                  TimeUnit.MILLISECONDS);
         listeningFuture.timeoutFuture = timeoutFuture;
 
         // Cancel the timeout task if listeningFuture is done already.

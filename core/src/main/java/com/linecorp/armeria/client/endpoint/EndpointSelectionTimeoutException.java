@@ -16,7 +16,27 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import com.linecorp.armeria.client.Endpoint;
+
+/**
+ * An {@link EndpointGroupException} raised when an {@link EndpointGroup} fails to resolve
+ * an {@link Endpoint} within a configured selection timeout.
+ */
 public final class EndpointSelectionTimeoutException extends EndpointGroupException {
 
     private static final long serialVersionUID = -3079582212067997365L;
+
+    /**
+     * Returns an {@link EndpointSelectionTimeoutException} which prints a message about
+     * the {@link EndpointGroup} when thrown.
+     */
+    public static EndpointSelectionTimeoutException get(EndpointGroup endpointGroup) {
+        return new EndpointSelectionTimeoutException(endpointGroup);
+    }
+
+    private EndpointSelectionTimeoutException() {}
+
+    private EndpointSelectionTimeoutException(EndpointGroup endpointGroup) {
+        super("Timed out selecting an endpoint: " + endpointGroup);
+    }
 }
