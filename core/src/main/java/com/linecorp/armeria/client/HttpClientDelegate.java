@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.client.ClientAttributeUtil;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.ProxiedAddresses;
@@ -57,6 +58,12 @@ final class HttpClientDelegate implements HttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+        final Throwable throwable = ClientAttributeUtil.throwable(ctx);
+        if (throwable != null) {
+            final UnprocessedRequestException cause = UnprocessedRequestException.of(throwable);
+            handleEarlyRequestException(ctx, req, cause);
+            return HttpResponse.ofFailure(cause);
+        }
         final Endpoint endpoint = ctx.endpoint();
         if (endpoint == null) {
             // It is possible that we reach here even when `EndpointGroup` is not empty,

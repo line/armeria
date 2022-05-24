@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
+import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 
 import java.time.Duration;
 import java.util.Date;
@@ -29,6 +30,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -282,16 +284,22 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             duplicateReq = rootReqDuplicator.duplicate(newHeaders.build());
         }
 
-        final ClientRequestContext derivedCtx;
+        final DefaultClientRequestContext derivedCtx;
         try {
-            derivedCtx = newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
+            derivedCtx = (DefaultClientRequestContext) newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
         } catch (Throwable t) {
             handleException(ctx, rootReqDuplicator, future, t, initialAttempt);
             return;
         }
 
-        final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
-                                                          (context, cause) -> HttpResponse.ofFailure(cause));
+        final HttpResponse response;
+        if (derivedCtx.endpointGroup() != null && derivedCtx.endpoint() == null) {
+            // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
+            response = initContextAndExecuteWithFallback(unwrap(), derivedCtx, derivedCtx.endpointGroup(), HttpResponse::from,
+                                                         (context, cause) -> HttpResponse.ofFailure(cause));
+        } else {
+            response = executeWithFallback(unwrap(), derivedCtx, (context, cause) -> HttpResponse.ofFailure(cause));
+        }
 
         final RetryConfig<HttpResponse> config = mapping().get(ctx, duplicateReq);
         if (config.requiresResponseTrailers()) {
