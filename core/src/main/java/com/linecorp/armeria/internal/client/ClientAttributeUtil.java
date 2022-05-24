@@ -23,15 +23,24 @@ import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.AttributeKey;
 
+/**
+ * Contains attributes used for armeria client internals.
+ */
 public final class ClientAttributeUtil {
 
-    public static final AttributeKey<Throwable> UNPROCESSED_THROWABLE_KEY =
+    private static final AttributeKey<Throwable> UNPROCESSED_THROWABLE_KEY =
             AttributeKey.valueOf(ClientAttributeUtil.class, "UNPROCESSED_THROWABLE");
 
+    /**
+     * Sets the cause for the specified context.
+     */
     public static void set(ClientRequestContext ctx, Throwable cause) {
         ctx.setAttr(UNPROCESSED_THROWABLE_KEY, Exceptions.peel(cause));
     }
 
+    /**
+     * Retrieves the cause for the specified context.
+     */
     @Nullable
     public static Throwable throwable(RequestContext ctx) {
         return ctx.attr(UNPROCESSED_THROWABLE_KEY);
