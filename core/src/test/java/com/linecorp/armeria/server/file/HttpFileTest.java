@@ -93,15 +93,15 @@ class HttpFileTest {
     }
 
     @Test
-    void createFromJrtUrl() throws Exception {
+    void createFromJrtUrl() {
         final URL jarFileUrl = ClassLoader.getSystemClassLoader().getResource("java/lang/Object.class");
         final HttpFileBuilder builder = HttpFile.builder(jarFileUrl);
         assertThat(builder).isInstanceOf(HttpFileBuilder.ClassPathHttpFileBuilder.class);
     }
 
     @Test
-    void createFromJarFileUrl() throws Exception {
-        final URL jarFileUrl = ClassLoader.getSystemClassLoader().getResource("META-INF/MANIFEST.MF");
+    void createFromJarFileUrl() {
+        final URL jarFileUrl = Test.class.getClassLoader().getResource("META-INF/LICENSE.md");
         final HttpFileBuilder builder = HttpFile.builder(jarFileUrl);
         assertThat(builder).isInstanceOf(HttpFileBuilder.ClassPathHttpFileBuilder.class);
     }
