@@ -74,11 +74,10 @@ public class GrpcServiceAutoCompressTest {
 
     @Test
     void autoCompressionWithMultipleAcceptEncoding() throws Exception {
-        final UnitTestServiceBlockingStub client = GrpcClients.builder(autoCompressionServer.httpUri(
-                                                                      GrpcSerializationFormats.PROTO).toString())
-                                                              .addHeader("grpc-accept-encoding",
-                                                                         "gzip,identity")
-                                                              .build(UnitTestServiceBlockingStub.class);
+        final UnitTestServiceBlockingStub client =
+                GrpcClients.builder(autoCompressionServer.httpUri(GrpcSerializationFormats.PROTO).toString())
+                           .addHeader("grpc-accept-encoding", "gzip,identity")
+                           .build(UnitTestServiceBlockingStub.class);
         assertThat(client.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
         final RequestLog log = requestLogQueue.take();
         assertThat(log.requestHeaders().get("grpc-accept-encoding")).isEqualTo("gzip,identity");
