@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common;
 
 import com.linecorp.armeria.common.util.Sampler;
-import com.linecorp.armeria.internal.common.LeakDetectionConfiguration;
 
 public final class EnableLeakDetectionFlagsProvider implements FlagsProvider {
 

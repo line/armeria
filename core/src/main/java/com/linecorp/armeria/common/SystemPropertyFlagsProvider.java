@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TransportType;
-import com.linecorp.armeria.internal.common.LeakDetectionConfiguration;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 /**

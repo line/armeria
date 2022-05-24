@@ -53,7 +53,6 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
-import com.linecorp.armeria.internal.common.LeakDetectionConfiguration;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;

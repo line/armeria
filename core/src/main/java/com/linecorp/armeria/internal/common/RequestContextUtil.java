@@ -33,6 +33,7 @@ import com.google.errorprone.annotations.MustBeClosed;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.LeakDetectionConfiguration;
 import com.linecorp.armeria.common.LeakTracingRequestContextStorage;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;

@@ -28,7 +28,6 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TransportType;
-import com.linecorp.armeria.internal.common.LeakDetectionConfiguration;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 /**

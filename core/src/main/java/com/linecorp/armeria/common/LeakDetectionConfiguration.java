@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
@@ -24,17 +24,23 @@ import com.linecorp.armeria.common.util.Sampler;
 
 /**
  * The configuration that determines whether to trace request context leaks and how frequently to
- * keeps stack trace
+ * keeps stack trace.
  */
 public final class LeakDetectionConfiguration {
 
     private static final LeakDetectionConfiguration DISABLE_INSTANCE =
             new LeakDetectionConfiguration(false, null);
 
+    /**
+     * Return the instance of disabled {@link LeakDetectionConfiguration}.
+     */
     public static LeakDetectionConfiguration disable() {
         return DISABLE_INSTANCE;
     }
 
+    /**
+     * Return the instance of enabled {@link LeakDetectionConfiguration} with specified {@link Sampler}.
+     */
     public static LeakDetectionConfiguration enable(Sampler<?> sampler) {
         return new LeakDetectionConfiguration(true, requireNonNull(sampler, "sampler"));
     }
@@ -47,10 +53,16 @@ public final class LeakDetectionConfiguration {
         this.sampler = sampler;
     }
 
+    /**
+     * Return the whether {@link LeakDetectionConfiguration} is enabled.
+     */
     public boolean isEnable() {
         return isEnable;
     }
 
+    /**
+     * Return the {@link Sampler}. If this {@link LeakDetectionConfiguration} is disabled then return null.
+     */
     public Sampler<?> sampler() {
         return sampler;
     }
