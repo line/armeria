@@ -174,7 +174,7 @@ class StreamWriterOutputStreamTest {
         final DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
         assertThatThrownBy(() -> writer.toOutputStream(HttpData::toStringUtf8, maxBufferSize))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("maxBufferSize should be positive");
+                .hasMessage("maxBufferSize: %s (expected: > 0)", maxBufferSize);
     }
 
     @Test

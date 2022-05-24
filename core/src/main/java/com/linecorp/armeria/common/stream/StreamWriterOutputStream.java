@@ -41,7 +41,7 @@ final class StreamWriterOutputStream<T> extends OutputStream {
                              int maxBufferSize) {
         requireNonNull(writer, "writer");
         requireNonNull(httpDataConverter, "httpDataConverter");
-        checkArgument(maxBufferSize > 0, "maxBufferSize should be positive");
+        checkArgument(maxBufferSize > 0, "maxBufferSize: %s (expected: > 0)", maxBufferSize);
         this.writer = writer;
         this.httpDataConverter = httpDataConverter;
         this.maxBufferSize = maxBufferSize;
@@ -58,8 +58,8 @@ final class StreamWriterOutputStream<T> extends OutputStream {
     @Override
     public void write(byte[] bytes, int off, int len) throws IOException {
         requireNonNull(bytes, "bytes");
-        checkArgument(off >= 0, "offset should be non negative");
-        checkArgument(len >= 0, "length should be non negative");
+        checkArgument(off >= 0, "off: %s (expected: >= 0)", off);
+        checkArgument(len >= 0, "len: %s (expected: >= 0)", len);
         while (len > 0) {
             ensureOpen();
             maybeDrain();
