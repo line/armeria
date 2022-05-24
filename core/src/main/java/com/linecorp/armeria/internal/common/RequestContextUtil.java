@@ -33,6 +33,7 @@ import com.google.errorprone.annotations.MustBeClosed;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.LeakTracingRequestContextStorage;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestContextStorageProvider;
@@ -63,8 +64,15 @@ public final class RequestContextUtil {
 
     static {
         final RequestContextStorageProvider provider = Flags.requestContextStorageProvider();
+        final LeakDetectionConfiguration leakDetectionConfiguration = Flags.requestContextLeakDetection();
         try {
-            requestContextStorage = provider.newStorage();
+            if (leakDetectionConfiguration.isEnable()) {
+                requestContextStorage =
+                        new LeakTracingRequestContextStorage(provider.newStorage(),
+                                                             leakDetectionConfiguration.sampler());
+            } else {
+                requestContextStorage = provider.newStorage();
+            }
         } catch (Throwable t) {
             throw new IllegalStateException("Failed to create context storage. provider: " + provider, t);
         }

@@ -48,6 +48,7 @@ import com.google.common.collect.Sets;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.common.LeakDetectionConfiguration;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 import io.netty.channel.epoll.Epoll;
@@ -220,6 +221,32 @@ class FlagsTest {
         assertThat(method.invoke(flags))
                 .usingRecursiveComparison()
                 .isEqualTo(new ExceptionSampler("rate-limit=10"));
+    }
+
+    @Test
+    void defaultRequestContextLeakDetection() throws Exception {
+        final Method method = flags.getDeclaredMethod("requestContextLeakDetection");
+        assertThat(method.invoke(flags))
+                .usingRecursiveComparison()
+                .isEqualTo(LeakDetectionConfiguration.disable());
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.requestContextLeakDetection", value = "always")
+    void systemPropertyRequestContextLeakDetection() throws Exception {
+        final Method method = flags.getDeclaredMethod("requestContextLeakDetection");
+        assertThat(method.invoke(flags))
+                .usingRecursiveComparison()
+                .isEqualTo(LeakDetectionConfiguration.enable(Sampler.always()));
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.requestContextLeakDetection", value = "invalid-spec")
+    void invalidSystemPropertyRequestContextLeakDetection() throws Exception {
+        final Method method = flags.getDeclaredMethod("requestContextLeakDetection");
+        assertThat(method.invoke(flags))
+                .usingRecursiveComparison()
+                .isEqualTo(LeakDetectionConfiguration.disable());
     }
 
     @Test

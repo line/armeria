@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.common.LeakDetectionConfiguration;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 /**
@@ -397,5 +398,10 @@ final class DefaultFlagsProvider implements FlagsProvider {
         return Paths.get(System.getProperty("java.io.tmpdir") +
                          File.separatorChar + "armeria" +
                          File.separatorChar + "multipart-uploads");
+    }
+
+    @Override
+    public LeakDetectionConfiguration requestContextLeakDetection() {
+        return LeakDetectionConfiguration.disable();
     }
 }

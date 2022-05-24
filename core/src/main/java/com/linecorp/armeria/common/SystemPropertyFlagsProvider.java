@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.common.LeakDetectionConfiguration;
 import com.linecorp.armeria.server.TransientServiceOption;
 
 /**
@@ -436,6 +437,26 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Path defaultMultipartUploadsLocation() {
         return getAndParse("defaultMultipartUploadsLocation", Paths::get);
+    }
+
+    @Override
+    public LeakDetectionConfiguration requestContextLeakDetection() {
+        final String spec = getNormalized("requestContextLeakDetection");
+        if (spec == null) {
+            return null;
+        }
+        if ("true".equals(spec) || "always".equals(spec)) {
+            return LeakDetectionConfiguration.enable(Sampler.always());
+        }
+        if ("false".equals(spec) || "never".equals(spec)) {
+            return LeakDetectionConfiguration.enable(Sampler.never());
+        }
+        try {
+            return LeakDetectionConfiguration.enable(Sampler.of(spec));
+        } catch (Exception e) {
+            // Invalid sampler specification
+            throw new IllegalArgumentException("invalid sampler spec: " + spec, e);
+        }
     }
 
     @Nullable

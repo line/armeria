@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.common.LeakDetectionConfiguration;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -375,6 +376,9 @@ public final class Flags {
 
     private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION =
             getValue(FlagsProvider::defaultMultipartUploadsLocation, "defaultMultipartUploadsLocation");
+
+    private static final LeakDetectionConfiguration REQUEST_CONTEXT_LEAK_DETECTION =
+            getValue(FlagsProvider::requestContextLeakDetection, "requestContextLeakDetection");
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -1293,6 +1297,21 @@ public final class Flags {
      */
     public static boolean allowDoubleDotsInQueryString() {
         return ALLOW_DOUBLE_DOTS_IN_QUERY_STRING;
+    }
+
+    /**
+     * Returns the {@link LeakDetectionConfiguration} that determines whether to trace the stack trace of
+     * request context leaks and how frequently to keeps stack trace. A sampled exception will have the stack
+     * trace while the others will have an empty stack trace to eliminate the cost of capturing the stack
+     * trace.
+     *
+     * <p>This flag is disabled by default.
+     * Specify the {@code -Dcom.linecorp.armeria.requestContextLeakDetection=<specification>} JVM option to
+     * override the default. By providing specification of {@link Sampler}, {@link LeakDetectionConfiguration}
+     * is enable. See {@link Sampler#of(String)} for the specification string format.</p>
+     */
+    public static LeakDetectionConfiguration requestContextLeakDetection() {
+        return REQUEST_CONTEXT_LEAK_DETECTION;
     }
 
     @Nullable

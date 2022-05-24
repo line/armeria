@@ -16,10 +16,18 @@
 
 package com.linecorp.armeria.common;
 
-public final class LeakTracingRequestContextStorageProvider implements RequestContextStorageProvider {
+import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.internal.common.LeakDetectionConfiguration;
+
+public final class EnableLeakDetectionFlagsProvider implements FlagsProvider {
 
     @Override
-    public RequestContextStorage newStorage() {
-        return new LeakTracingRequestContextStorage(RequestContextStorage.threadLocal());
+    public int priority() {
+        return 10;
+    }
+
+    @Override
+    public LeakDetectionConfiguration requestContextLeakDetection() {
+        return LeakDetectionConfiguration.enable(Sampler.always());
     }
 }
