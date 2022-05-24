@@ -156,7 +156,7 @@ public interface StreamWriter<T> {
      * }</pre>
      */
     default OutputStream toOutputStream(Function<? super HttpData, ? extends T> httpDataConverter) {
-        return toOutputStream(httpDataConverter, 8192);
+        return toOutputStream(httpDataConverter, PathStreamMessage.DEFAULT_FILE_BUFFER_SIZE);
     }
 
     /**
