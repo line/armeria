@@ -60,10 +60,11 @@ public class GrpcServiceAutoCompressTest {
         }
     };
 
-    private static final BlockingQueue<RequestLog> requestLogQueue = new LinkedTransferQueue<>();
+    private static BlockingQueue<RequestLog> requestLogQueue = new LinkedTransferQueue<>();
 
     @Test
     void autoCompression() throws Exception {
+        requestLogQueue = new LinkedTransferQueue<>();
         final UnitTestServiceBlockingStub client = GrpcClients.newClient(autoCompressionServer.httpUri(
                 GrpcSerializationFormats.PROTO).toString(), UnitTestServiceBlockingStub.class);
         assertThat(client.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
@@ -74,6 +75,7 @@ public class GrpcServiceAutoCompressTest {
 
     @Test
     void autoCompressionWithMultipleAcceptEncoding() throws Exception {
+        requestLogQueue = new LinkedTransferQueue<>();
         final UnitTestServiceBlockingStub client =
                 GrpcClients.builder(autoCompressionServer.httpUri(GrpcSerializationFormats.PROTO).toString())
                            .addHeader("grpc-accept-encoding", "gzip,identity")
