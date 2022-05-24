@@ -24,6 +24,7 @@ import java.io.OutputStream;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -86,7 +87,7 @@ final class StreamWriterOutputStream<T> extends OutputStream {
         if (closed) {
             return;
         }
-        flush();
+        drain();
         writer.close();
         closed = true;
     }
@@ -111,7 +112,14 @@ final class StreamWriterOutputStream<T> extends OutputStream {
         if (!buffer.isReadable() || !writer.isOpen()) {
             return;
         }
-        writer.write(httpDataConverter.apply(HttpData.wrap(buffer)));
+        final T result;
+        try {
+            result = httpDataConverter.apply(HttpData.wrap(buffer));
+        } catch (Throwable ex) {
+            StreamMessageUtil.closeOrAbort(writer, ex);
+            throw ex;
+        }
+        writer.write(result);
         buffer = Unpooled.buffer(maxBufferSize, maxBufferSize);
     }
 }

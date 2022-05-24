@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -32,6 +33,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import reactor.test.StepVerifier;
 
@@ -279,5 +281,19 @@ class StreamWriterOutputStreamTest {
                     .isInstanceOf(IOException.class)
                     .hasMessage("Stream closed");
         }
+    }
+
+    @Test
+    void httpDataConverter_error_thrown() throws IOException {
+        final DefaultStreamMessage<Integer> writer = new DefaultStreamMessage<>();
+        final OutputStream outputStream = writer
+                .toOutputStream(x -> Exceptions.throwUnsafely(new RuntimeException()));
+
+        outputStream.write(1);
+        assertThatThrownBy(outputStream::flush).isInstanceOf(RuntimeException.class);
+
+        assertThatCode(outputStream::close).doesNotThrowAnyException();
+        assertThat(writer.isOpen()).isFalse();
+        assertThat(writer.isComplete()).isTrue();
     }
 }
