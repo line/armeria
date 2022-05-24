@@ -18,16 +18,10 @@ package com.linecorp.armeria.client.scala
 
 import com.google.common.collect.Iterables
 import com.linecorp.armeria.client.RequestPreparationSetters
-import com.linecorp.armeria.common.{
-  AggregatedHttpRequest,
-  AggregatedHttpResponse,
-  Cookie,
-  HttpResponse,
-  ResponseEntity
-}
+import com.linecorp.armeria.common.{AggregatedHttpRequest, Cookie, ResponseEntity}
 import com.linecorp.armeria.scala.implicits._
 import com.linecorp.armeria.server.annotation._
-import com.linecorp.armeria.server.{ServerBuilder, ServerSuite, ServiceRequestContext}
+import com.linecorp.armeria.server.{ServerBuilder, ServerSuite}
 import munit.FunSuite
 import org.reflections.ReflectionUtils
 import scala.concurrent.duration.Duration
@@ -35,16 +29,20 @@ import scala.concurrent.{Await, Future}
 
 class RestClientSuite extends FunSuite with ServerSuite {
   override protected def configureServer: ServerBuilder => Unit = { sb =>
-    sb.annotatedService(new {
-      @Get
-      @Post
-      @Put
-      @Delete
-      @Patch
-      @ProducesJson
-      @Path("/rest/{id}")
-      def restApi(@Param id: String, content: String): RestResponse = RestResponse(id, content)
-    })
+    sb.annotatedService(
+      new {
+        @Get
+        @Post
+        @Put
+        @Delete
+        @Patch
+        @ProducesJson
+        @Path("/rest/{id}")
+        def restApi(@Param id: String, content: String): RestResponse = RestResponse(id, content)
+      },
+      Array.empty: _*
+    )
+
     sb.annotatedService(
       new {
         @Get
@@ -69,7 +67,8 @@ class RestClientSuite extends FunSuite with ServerSuite {
             content = agg.contentUtf8()
           )
         }
-      }
+      },
+      Array.empty: _*
     )
   }
 
@@ -125,7 +124,7 @@ class RestClientSuite extends FunSuite with ServerSuite {
         if ("execute" != method.getName) {
           val overridden = classOf[ScalaRestClientPreparation]
             .getMethod(method.getName, method.getParameterTypes: _*)
-          assert(overridden.getReturnType.isInstanceOf[Class[ScalaRestClientPreparation]])
+          assert(overridden.getReturnType == classOf[ScalaRestClientPreparation])
         }
       })
   }
