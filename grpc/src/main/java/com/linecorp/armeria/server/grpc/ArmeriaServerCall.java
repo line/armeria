@@ -167,7 +167,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       boolean unsafeWrapRequestBuffers,
                       boolean useBlockingTaskExecutor,
                       ResponseHeaders defaultHeaders,
-                      @Nullable GrpcStatusFunction statusFunction) {
+                      @Nullable GrpcStatusFunction statusFunction,
+                      boolean autoCompression) {
         requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
         this.simpleMethodName = requireNonNull(simpleMethodName, "simpleMethodName");
@@ -193,6 +194,9 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         clientAcceptEncoding =
                 Strings.emptyToNull(clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING));
+        if (autoCompression && clientAcceptEncoding != null) {
+            setCompression(clientAcceptEncoding);
+        }
         marshaller = new GrpcMessageMarshaller<>(alloc, serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapRequestBuffers);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
@@ -695,7 +699,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     private static Metadata generateMetadataFromThrowable(Throwable exception) {
-        @Nullable final Metadata metadata = Status.trailersFromThrowable(exception);
+        @Nullable
+        final Metadata metadata = Status.trailersFromThrowable(exception);
         return metadata != null ? metadata : new Metadata();
     }
 

@@ -20,7 +20,6 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames.GRPC_ACCEPT_ENCODING;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.withModifier;
 
@@ -49,8 +48,6 @@ import com.google.common.collect.ImmutableSet;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -62,7 +59,6 @@ import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
-import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.HttpService;
@@ -80,9 +76,6 @@ import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
-import io.grpc.ServerCall;
-import io.grpc.ServerCall.Listener;
-import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
 import io.grpc.ServerMethodDefinition;
@@ -699,7 +692,7 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Sets whether the gRPC response is compressed automatically when grpc-accept-encoding is specified
+     * Sets whether the gRPC response is compressed automatically when {@code grpc-accept-encoding} is specified
      * and the encoding is registered in {@link CompressorRegistry}.
      */
     public GrpcServiceBuilder autoCompression(boolean autoCompression) {
@@ -896,23 +889,6 @@ public final class GrpcServiceBuilder {
         if (grpcHealthCheckService != null) {
             registryBuilder.addService(grpcHealthCheckService.bindService());
         }
-        if (autoCompression) {
-            intercept(new ServerInterceptor() {
-                @Override
-                public <I, O> Listener<I> interceptCall(ServerCall<I, O> call,
-                                                        Metadata headers,
-                                                        ServerCallHandler<I, O> next) {
-                    final HttpHeadersBuilder headersBuilder = HttpHeaders.builder();
-                    MetadataUtil.fillHeaders(headers, headersBuilder);
-                    final HttpHeaders fromClient = headersBuilder.build();
-                    if (fromClient.contains(GRPC_ACCEPT_ENCODING)) {
-                        final String encoding = fromClient.get(GRPC_ACCEPT_ENCODING);
-                        call.setCompression(encoding);
-                    }
-                    return next.startCall(call, headers);
-                }
-            });
-        }
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
             final ImmutableList<ServerInterceptor> interceptors = this.interceptors.build();
@@ -948,7 +924,8 @@ public final class GrpcServiceBuilder {
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
                 lookupMethodFromAttribute,
-                grpcHealthCheckService);
+                grpcHealthCheckService,
+                autoCompression);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,
