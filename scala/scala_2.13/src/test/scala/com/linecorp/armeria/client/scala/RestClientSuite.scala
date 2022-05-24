@@ -17,42 +17,58 @@
 package com.linecorp.armeria.client.scala
 
 import com.google.common.collect.Iterables
-import com.linecorp.armeria.common.{Cookie, HttpResponse, ResponseEntity}
+import com.linecorp.armeria.client.RequestPreparationSetters
+import com.linecorp.armeria.common.{
+  AggregatedHttpRequest,
+  AggregatedHttpResponse,
+  Cookie,
+  HttpResponse,
+  ResponseEntity
+}
 import com.linecorp.armeria.scala.implicits._
-import com.linecorp.armeria.server.{ServerBuilder, ServerSuite}
+import com.linecorp.armeria.server.annotation._
+import com.linecorp.armeria.server.{ServerBuilder, ServerSuite, ServiceRequestContext}
 import munit.FunSuite
+import org.reflections.ReflectionUtils
 import scala.concurrent.duration.Duration
 import scala.concurrent.{Await, Future}
 
 class RestClientSuite extends FunSuite with ServerSuite {
   override protected def configureServer: ServerBuilder => Unit = { sb =>
-    sb.service(
-      "/rest/{id}",
-      (ctx, req) => {
-        req
-          .aggregate()
-          .thenApply[HttpResponse](agg => {
-            HttpResponse.ofJson(RestResponse(ctx.pathParam("id"), agg.contentUtf8()))
-          })
-          .toHttpResponse
-      }
-    ).service(
-      "/rest/complex/{id}",
-      (ctx, req) => {
-        req
-          .aggregate()
-          .thenApply[HttpResponse](agg => {
-            HttpResponse.ofJson(ComplexResponse(
-              id = ctx.pathParam("id"),
-              method = ctx.method().toString,
-              query = ctx.queryParam("query"),
-              header = req.headers.get("x-header"),
-              trailer = agg.trailers().get("x-trailer"),
-              cookie = Iterables.getFirst(req.headers.cookies, null).value(),
-              content = agg.contentUtf8()
-            ))
-          })
-          .toHttpResponse
+    sb.annotatedService(new {
+      @Get
+      @Post
+      @Put
+      @Delete
+      @Patch
+      @ProducesJson
+      @Path("/rest/{id}")
+      def restApi(@Param id: String, content: String): RestResponse = RestResponse(id, content)
+    })
+    sb.annotatedService(
+      new {
+        @Get
+        @Post
+        @Put
+        @Delete
+        @Patch
+        @ProducesJson
+        @Path("/rest/complex/{id}")
+        def restApi(
+            @Param id: String,
+            @Param query: String,
+            @Header("x-header") header: String,
+            agg: AggregatedHttpRequest): ComplexResponse = {
+          ComplexResponse(
+            id = id,
+            method = agg.method().toString,
+            query = query,
+            header = header,
+            trailer = agg.trailers().get("x-trailer"),
+            cookie = Iterables.getFirst(agg.headers.cookies, null).value(),
+            content = agg.contentUtf8()
+          )
+        }
       }
     )
   }
@@ -100,6 +116,18 @@ class RestClientSuite extends FunSuite with ServerSuite {
     assertEquals(content.trailer, "trailer-value")
     assertEquals(content.cookie, "cookie-value")
     assertEquals(content.content, "content")
+  }
+
+  test("ScalaRestClientPreparation should return self type") {
+    ReflectionUtils
+      .getMethods(classOf[RequestPreparationSetters])
+      .forEach(method => {
+        if ("execute" != method.getName) {
+          val overridden = classOf[ScalaRestClientPreparation]
+            .getMethod(method.getName, method.getParameterTypes: _*)
+          assert(overridden.getReturnType.isInstanceOf[Class[ScalaRestClientPreparation]])
+        }
+      })
   }
 }
 

@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.auth.OAuth2Token;
 /**
  * Creates a new <a href="https://restfulapi.net/">REST</a> client that connects to the specified {@link URI}
  * using the builder pattern. This client is designed to easily exchange RESTful APIs.
- * If you want to handle a non-JSON or streaming response, please use {@link WebClient}.
  *
  * <p>Use the factory methods in {@link RestClient} if you do not have many options to
  * override. Please refer to {@link ClientBuilder} for how decorators and HTTP headers are configured.

@@ -26,9 +26,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Sets properties for building an {@link HttpRequest}.
  */
+@UnstableApi
 public interface HttpRequestSetters extends RequestMethodSetters, PathAndQueryParamSetters, HttpMessageSetters {
 
     /**

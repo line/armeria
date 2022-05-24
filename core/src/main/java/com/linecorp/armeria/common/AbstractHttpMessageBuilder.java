@@ -29,12 +29,14 @@ import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
  * A skeletal builder implementation for {@link HttpMessage}.
  */
 @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
+@UnstableApi
 public abstract class AbstractHttpMessageBuilder implements HttpMessageSetters {
 
     @Nullable

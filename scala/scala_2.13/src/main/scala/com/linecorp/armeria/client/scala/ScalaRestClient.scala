@@ -27,7 +27,6 @@ import java.util.Objects.requireNonNull
 /**
  * A [[https://restfulapi.net/ REST]] client for Scala.
  * This client is designed to easily exchange RESTful APIs.
- * If you want to handle a non-JSON or streaming response, please use `WebClient`.
  */
 @UnstableApi
 trait ScalaRestClient extends ClientBuilderParams with Unwrappable {
@@ -107,7 +106,7 @@ trait ScalaRestClient extends ClientBuilderParams with Unwrappable {
 
 /**
  * A [[https://restfulapi.net/ REST]] client for Scala.
- * If you want to create a `ScalaRestClient`` with various options, create a `WebClient`` first
+ * If you want to create a `ScalaRestClient` with various options, create a `WebClient` first
  * and convert it into a ScalaRestClient} via `WebClient.toScalaRestClient` or `ScalaRestClient(WebClient)`.
  * {{{
  * val webClient: WebClient =

@@ -21,12 +21,14 @@ import java.time.Duration;
 import com.linecorp.armeria.common.HttpMessageSetters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.PathAndQueryParamSetters;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;
 
 /**
  * Sets properties for building an {@link HttpRequest} and {@link RequestOptions}.
  */
+@UnstableApi
 public interface RequestPreparationSetters extends PathAndQueryParamSetters, HttpMessageSetters,
                                                    RequestOptionsSetters {
 
