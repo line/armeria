@@ -195,7 +195,14 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         clientAcceptEncoding =
                 Strings.emptyToNull(clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING));
         if (autoCompression && clientAcceptEncoding != null) {
-            setCompression(clientAcceptEncoding);
+            final List<String> acceptedEncodingsList =
+                    ACCEPT_ENCODING_SPLITTER.splitToList(clientAcceptEncoding);
+            for (final String encoding : acceptedEncodingsList) {
+                if (compressorRegistry.lookupCompressor(encoding) != null) {
+                    setCompression(encoding);
+                    break;
+                }
+            }
         }
         marshaller = new GrpcMessageMarshaller<>(alloc, serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapRequestBuffers);
