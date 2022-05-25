@@ -37,7 +37,7 @@ final class AnnotatedObjectFactory {
      * {@link Annotation}.
      */
     public static <T> T getInstance(Annotation annotation, Class<T> expectedType,
-                             List<DependencyInjector> dependencyInjectors) {
+                                    List<DependencyInjector> dependencyInjectors) {
         @SuppressWarnings("unchecked")
         final Class<? extends T> type = (Class<? extends T>) invokeValueMethod(annotation);
         for (DependencyInjector dependencyInjector : dependencyInjectors) {

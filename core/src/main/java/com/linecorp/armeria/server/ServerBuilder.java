@@ -1787,7 +1787,7 @@ public final class ServerBuilder {
         final List<DependencyInjectorEntry> dependencyInjectorEntries = dependencyInjectorsWithFallback();
         final List<DependencyInjector> dependencyInjectors =
                 dependencyInjectorEntries.stream()
-                                         .map(e -> e.dependencyInjector())
+                                         .map(DependencyInjectorEntry::dependencyInjector)
                                          .collect(toImmutableList());
 
         final VirtualHost defaultVirtualHost =
