@@ -16,34 +16,54 @@
 
 package com.linecorp.armeria.internal.client;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.AttributeKey;
 
 /**
- * Contains attributes used for armeria client internals.
+ * Contains helper methods used for armeria client internals.
  */
 public final class ClientAttributeUtil {
 
-    private static final AttributeKey<Throwable> UNPROCESSED_THROWABLE_KEY =
-            AttributeKey.valueOf(ClientAttributeUtil.class, "UNPROCESSED_THROWABLE");
+    private static final AttributeKey<Throwable> UNPROCESSED_PENDING_THROWABLE_KEY =
+            AttributeKey.valueOf(ClientAttributeUtil.class, "UNPROCESSED_PENDING_THROWABLE_KEY");
 
     /**
-     * Sets the cause for the specified context.
+     * Sets a pending {@link Throwable} for the specified {@link ClientRequestContext}.
+     *
+     * This throwable will be thrown after all decorators are executed, but before the
+     * actual client execution starts. Note that the {@link Throwable} will be wrapped
+     * by an {@link UnprocessedRequestException}. This attribute will be reset to
+     * {@code null} once the contained {@link Throwable} is thrown.
      */
-    public static void set(ClientRequestContext ctx, Throwable cause) {
-        ctx.setAttr(UNPROCESSED_THROWABLE_KEY, Exceptions.peel(cause));
+    public static void setUnprocessedPendingThrowable(ClientRequestContext ctx, Throwable cause) {
+        requireNonNull(ctx, "ctx");
+        requireNonNull(cause, "cause");
+        ctx.setAttr(UNPROCESSED_PENDING_THROWABLE_KEY, Exceptions.peel(cause));
     }
 
     /**
-     * Retrieves the cause for the specified context.
+     * Retrieves the pending {@link Throwable} for the specified {@link ClientRequestContext}.
      */
     @Nullable
-    public static Throwable throwable(RequestContext ctx) {
-        return ctx.attr(UNPROCESSED_THROWABLE_KEY);
+    public static Throwable unprocessedPendingThrowable(ClientRequestContext ctx) {
+        requireNonNull(ctx, "ctx");
+        return ctx.attr(UNPROCESSED_PENDING_THROWABLE_KEY);
+    }
+
+    /**
+     * Removes the pending {@link Throwable} for the specified {@link ClientRequestContext}.
+     */
+    public static void removeUnprocessedPendingThrowable(ClientRequestContext ctx) {
+        requireNonNull(ctx, "ctx");
+        if (ctx.hasAttr(UNPROCESSED_PENDING_THROWABLE_KEY)) {
+            ctx.setAttr(UNPROCESSED_PENDING_THROWABLE_KEY, null);
+        }
     }
 
     private ClientAttributeUtil() {}

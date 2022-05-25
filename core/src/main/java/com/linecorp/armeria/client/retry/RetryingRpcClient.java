@@ -16,12 +16,14 @@
 package com.linecorp.armeria.client.retry;
 
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
+import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.HttpRequest;
@@ -159,15 +161,25 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
             return;
         }
 
-        final ClientRequestContext derivedCtx = newDerivedContext(ctx, null, req, initialAttempt);
+        final DefaultClientRequestContext derivedCtx = newDerivedContext(ctx, null, req, initialAttempt);
 
         if (!initialAttempt) {
             derivedCtx.mutateAdditionalRequestHeaders(
                     mutator -> mutator.add(ARMERIA_RETRY_COUNT, StringUtil.toString(totalAttempts - 1)));
         }
 
-        final RpcResponse res = executeWithFallback(unwrap(), derivedCtx,
-                                                    (context, cause) -> RpcResponse.ofFailure(cause));
+        final RpcResponse res;
+
+        if (derivedCtx.endpointGroup() != null && derivedCtx.endpoint() == null) {
+            // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
+            res = initContextAndExecuteWithFallback(unwrap(), derivedCtx, derivedCtx.endpointGroup(),
+                                                         RpcResponse::from,
+                                                         (context, cause) -> RpcResponse.ofFailure(cause));
+        } else {
+            res = executeWithFallback(unwrap(), derivedCtx,
+                                      (context, cause) -> RpcResponse.ofFailure(cause));
+        }
+
 
         final RetryConfig<RpcResponse> retryConfig = mapping().get(ctx, req);
         final RetryRuleWithContent<RpcResponse> retryRule =

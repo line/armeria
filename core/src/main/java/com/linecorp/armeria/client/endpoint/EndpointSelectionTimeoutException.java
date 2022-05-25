@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.client.Endpoint;
 
 /**
@@ -31,6 +33,7 @@ public final class EndpointSelectionTimeoutException extends EndpointGroupExcept
      * the {@link EndpointGroup} when thrown.
      */
     public static EndpointSelectionTimeoutException get(EndpointGroup endpointGroup) {
+        requireNonNull(endpointGroup, "endpointGroup");
         return new EndpointSelectionTimeoutException(endpointGroup);
     }
 

@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.endpoint;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
@@ -28,13 +27,9 @@ import org.junit.jupiter.api.Test;
 import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextCaptor;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.retry.RetryRule;
-import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -93,29 +88,6 @@ class AbstractEndpointSelectorTest {
         assertThatThrownBy(() -> WebClient.of(SessionProtocol.HTTP, endpointGroup).get("/").aggregate().join())
                 .hasCauseInstanceOf(UnprocessedRequestException.class)
                 .hasRootCauseInstanceOf(EndpointSelectionTimeoutException.class);
-    }
-
-    @Test
-    void testRetry() {
-        final int maxTotalAttempts = 3;
-
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
-        final WebClient webClient = WebClient
-                .builder(SessionProtocol.HTTP, endpointGroup)
-                .responseTimeout(Duration.ZERO) // since retry can depend on responseTimeout
-                .decorator(RetryingClient.builder(RetryRule.onUnprocessed())
-                                         .maxTotalAttempts(maxTotalAttempts)
-                                         .newDecorator())
-                .build();
-
-        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
-            assertThatThrownBy(() -> webClient.get("/").aggregate().join())
-                    .hasCauseInstanceOf(UnprocessedRequestException.class)
-                    .hasRootCauseInstanceOf(EndpointSelectionTimeoutException.class);
-
-            assertThat(ctxCaptor.size()).isEqualTo(1);
-            assertThat(ctxCaptor.get().log().children()).hasSize(maxTotalAttempts);
-        }
     }
 
     private static EndpointSelector newSelector(EndpointGroup endpointGroup) {
