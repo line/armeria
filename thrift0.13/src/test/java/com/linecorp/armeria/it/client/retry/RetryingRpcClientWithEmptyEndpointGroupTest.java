@@ -17,7 +17,7 @@
 package com.linecorp.armeria.it.client.retry;
 
 import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
-import static java.util.concurrent.CompletableFuture.completedFuture;
+import static com.linecorp.armeria.common.util.UnmodifiableFuture.completedFuture;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
