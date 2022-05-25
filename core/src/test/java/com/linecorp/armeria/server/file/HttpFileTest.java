@@ -22,6 +22,8 @@ import java.net.URL;
 import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnJre;
+import org.junit.jupiter.api.condition.JRE;
 import org.junit.jupiter.api.io.TempDir;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -93,8 +95,11 @@ class HttpFileTest {
     }
 
     @Test
+    // in JDK 8, getting class by getResource returns jar protocol
+    @DisabledOnJre(JRE.JAVA_8)
     void createFromJrtUrl() {
         final URL jarFileUrl = ClassLoader.getSystemClassLoader().getResource("java/lang/Object.class");
+        assertThat(jarFileUrl.getProtocol()).isEqualTo("jrt");
         final HttpFileBuilder builder = HttpFile.builder(jarFileUrl);
         assertThat(builder).isInstanceOf(HttpFileBuilder.ClassPathHttpFileBuilder.class);
     }
@@ -102,6 +107,7 @@ class HttpFileTest {
     @Test
     void createFromJarFileUrl() {
         final URL jarFileUrl = Test.class.getClassLoader().getResource("META-INF/LICENSE.md");
+        assertThat(jarFileUrl.getProtocol()).isEqualTo("jar");
         final HttpFileBuilder builder = HttpFile.builder(jarFileUrl);
         assertThat(builder).isInstanceOf(HttpFileBuilder.ClassPathHttpFileBuilder.class);
     }
