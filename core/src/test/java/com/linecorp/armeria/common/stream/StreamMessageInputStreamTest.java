@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -204,7 +205,7 @@ class StreamMessageInputStreamTest {
     void available() throws Exception {
         final StreamMessage<byte[]> streamMessage = StreamMessage.of(new byte[] { 1, 2, 3, 4, 5 });
         final InputStream inputStream = streamMessage.toInputStream(HttpData::wrap);
-        final byte[] expected = {1, 2, 3, 4};
+        final byte[] expected = { 1, 2, 3, 4 };
         assertThat(inputStream.available()).isZero();
 
         final ByteBuf result = Unpooled.buffer();
@@ -301,6 +302,70 @@ class StreamMessageInputStreamTest {
         final byte[] expected = ImmutableList.of("foo", "bar", "baz")
                                              .stream()
                                              .map(String::getBytes)
+                                             .reduce(Bytes::concat).get();
+
+        final ByteBuf result = Unpooled.buffer();
+        int read;
+        while ((read = inputStream.read()) != -1) {
+            result.writeByte(read);
+        }
+
+        final int readableBytes = result.readableBytes();
+        final byte[] actual = new byte[readableBytes];
+        for (int i = 0; i < readableBytes; i++) {
+            actual[i] = result.readByte();
+        }
+        result.release();
+        assertThat(actual).isEqualTo(expected);
+        assertThat(inputStream.available()).isZero();
+    }
+
+    @Test
+    void httpDataConverter_empty() throws IOException {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        final InputStream inputStream = streamMessage
+                .toInputStream(x -> {
+                    if (x % 2 == 0) {
+                        return HttpData.empty();
+                    }
+                    return HttpData.wrap(x.toString().getBytes());
+                });
+
+        final byte[] expected = ImmutableList.of(1, 3, 5, 7, 9)
+                                             .stream()
+                                             .map(x -> x.toString().getBytes())
+                                             .reduce(Bytes::concat).get();
+
+        final ByteBuf result = Unpooled.buffer();
+        int read;
+        while ((read = inputStream.read()) != -1) {
+            result.writeByte(read);
+        }
+
+        final int readableBytes = result.readableBytes();
+        final byte[] actual = new byte[readableBytes];
+        for (int i = 0; i < readableBytes; i++) {
+            actual[i] = result.readByte();
+        }
+        result.release();
+        assertThat(actual).isEqualTo(expected);
+        assertThat(inputStream.available()).isZero();
+    }
+
+    @Test
+    void httpDataConverter_error_thrown() throws IOException {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        final InputStream inputStream = streamMessage
+                .toInputStream(x -> {
+                    if (x == 6) {
+                        return Exceptions.throwUnsafely(new RuntimeException());
+                    }
+                    return HttpData.wrap(x.toString().getBytes());
+                });
+
+        final byte[] expected = ImmutableList.of(1, 2, 3, 4, 5)
+                                             .stream()
+                                             .map(x -> x.toString().getBytes())
                                              .reduce(Bytes::concat).get();
 
         final ByteBuf result = Unpooled.buffer();

@@ -130,7 +130,12 @@ final class StreamMessageInputStream<T> extends InputStream {
                  return;
             }
             try {
-                byteBufsInputStream.add(httpDataConverter.apply(item).byteBuf());
+                final HttpData result = httpDataConverter.apply(item);
+                if (result.isEmpty()) {
+                    request();
+                    return;
+                }
+                byteBufsInputStream.add(result.byteBuf());
             } catch (Throwable ex) {
                 StreamMessageUtil.closeOrAbort(item, ex);
                 upstream.cancel();
