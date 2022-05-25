@@ -82,7 +82,7 @@ class RetryingRpcClientWithEmptyEndpointGroupTest {
             // ensure that selection timeout occurred (selectAttempts - 1) times
             for (int i = 0; i < selectAttempts - 1; i++) {
                 final RequestLogAccess log = ctxCaptor.get().log().children().get(i);
-                final Throwable responseCause = log.ensureComplete().responseCause();
+                final Throwable responseCause = log.whenComplete().join().responseCause();
                 assert responseCause != null;
                 assertThat(responseCause)
                         .isInstanceOf(UnprocessedRequestException.class)
@@ -91,7 +91,7 @@ class RetryingRpcClientWithEmptyEndpointGroupTest {
 
             // ensure that the last selection succeeded
             final RequestLogAccess log = ctxCaptor.get().log().children().get(selectAttempts - 1);
-            assertThat(log.ensureComplete().responseStatus().code())
+            assertThat(log.whenComplete().join().responseStatus().code())
                     .isEqualTo(200);
         }
     }
