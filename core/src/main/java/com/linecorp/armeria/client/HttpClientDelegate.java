@@ -63,7 +63,6 @@ final class HttpClientDelegate implements HttpClient {
         if (throwable != null) {
             final UnprocessedRequestException cause =
                     UnprocessedRequestException.of(Exceptions.peel(throwable));
-            ClientAttributeUtil.removeUnprocessedPendingThrowable(ctx);
             handleEarlyRequestException(ctx, req, cause);
             return HttpResponse.ofFailure(cause);
         }

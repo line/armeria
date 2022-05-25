@@ -38,8 +38,7 @@ public final class ClientAttributeUtil {
      *
      * This throwable will be thrown after all decorators are executed, but before the
      * actual client execution starts. Note that the {@link Throwable} will be wrapped
-     * by an {@link UnprocessedRequestException}. This attribute will be reset to
-     * {@code null} once the contained {@link Throwable} is thrown.
+     * by an {@link UnprocessedRequestException}.
      */
     public static void setUnprocessedPendingThrowable(ClientRequestContext ctx, Throwable cause) {
         requireNonNull(ctx, "ctx");
