@@ -24,9 +24,7 @@ import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
 import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getAllMethods;
-import static org.reflections.ReflectionUtils.getMethods;
 import static org.reflections.ReflectionUtils.withModifier;
-import static org.reflections.ReflectionUtils.withName;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -61,7 +59,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 
@@ -540,7 +537,7 @@ public final class AnnotatedServiceFactory {
                          .filter(annotation -> HTTP_METHOD_MAP.containsKey(annotation.annotationType()))
                          .forEach(annotation -> {
                              final HttpMethod httpMethod = HTTP_METHOD_MAP.get(annotation.annotationType());
-                             final String value = (String) invokeValueMethod(annotation);
+                             final String value = (String) AnnotatedObjectFactory.invokeValueMethod(annotation);
                              final List<String> patterns = httpMethodPatternMap
                                      .computeIfAbsent(httpMethod, ignored -> new ArrayList<>());
                              if (DefaultValues.isSpecified(value)) {
@@ -556,12 +553,11 @@ public final class AnnotatedServiceFactory {
      */
     private static Function<? super HttpService, ? extends HttpService> decorator(
             Method method, Class<?> clazz, List<DependencyInjector> dependencyInjectors) {
-        final List<DecoratorAndOrder> decorators =
-                DecoratorAnnotationUtil.collectDecorators(clazz, method, dependencyInjectors);
+        final List<DecoratorAndOrder> decorators = DecoratorAnnotationUtil.collectDecorators(clazz, method);
         Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
         for (int i = decorators.size() - 1; i >= 0; i--) {
             final DecoratorAndOrder d = decorators.get(i);
-            decorator = decorator.andThen(d.decorator());
+            decorator = decorator.andThen(d.decorator(dependencyInjectors));
         }
         return decorator;
     }
@@ -577,47 +573,9 @@ public final class AnnotatedServiceFactory {
         final Builder<R> builder = new Builder<>();
         Stream.concat(AnnotationUtil.findAll(method, annotationType).stream(),
                       AnnotationUtil.findAll(clazz, annotationType).stream())
-              .forEach(annotation -> builder.add(getInstance(annotation, resultType, dependencyInjectors)));
+              .forEach(annotation -> builder.add(
+                      AnnotatedObjectFactory.getInstance(annotation, resultType, dependencyInjectors)));
         return builder;
-    }
-
-    /**
-     * Returns a cached instance of the specified {@link Class} which is specified in the given
-     * {@link Annotation}.
-     */
-    static <T> T getInstance(Annotation annotation, Class<T> expectedType,
-                             List<DependencyInjector> dependencyInjectors) {
-        @SuppressWarnings("unchecked")
-        final Class<? extends T> type = (Class<? extends T>) invokeValueMethod(annotation);
-        for (DependencyInjector dependencyInjector : dependencyInjectors) {
-            final T instance = dependencyInjector.getInstance(type);
-            if (instance != null) {
-                if (!expectedType.isInstance(instance)) {
-                    throw new IllegalArgumentException(
-                            "A class specified in @" + annotation.annotationType().getSimpleName() +
-                            " annotation cannot be cast to " + expectedType);
-                }
-                return instance;
-            }
-        }
-
-        throw new IllegalArgumentException("cannot inject the dependency for " + type.getName() +
-                                           ". Use " + DependencyInjector.class.getName() +
-                                           " or add a default constructor to create the instance.");
-    }
-
-    /**
-     * Returns an object which is returned by {@code value()} method of the specified annotation {@code a}.
-     */
-    private static Object invokeValueMethod(Annotation a) {
-        try {
-            final Method method = Iterables.getFirst(getMethods(a.annotationType(), withName("value")), null);
-            assert method != null : "No 'value' method is found from " + a;
-            return method.invoke(a);
-        } catch (Exception e) {
-            throw new IllegalStateException("An annotation @" + a.annotationType().getSimpleName() +
-                                            " must have a 'value' method", e);
-        }
     }
 
     /**

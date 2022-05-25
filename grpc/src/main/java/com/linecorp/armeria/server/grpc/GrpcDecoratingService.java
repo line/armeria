@@ -16,19 +16,28 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.linecorp.armeria.server.grpc.FramedGrpcService.RESOLVED_GRPC_METHOD;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Function;
 
-import org.jetbrains.annotations.Nullable;
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableMap.Builder;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
+import com.linecorp.armeria.server.DependencyInjector;
+import com.linecorp.armeria.server.DependencyInjectorEntry;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 
@@ -42,41 +51,72 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
 
     private final GrpcService delegate;
 
-    /**
-     * A pair of a method path (e.g. '/armeria.grpc.sample.SampleService/UnaryCall') and decorators
-     * that are extracted from `@Decorator` and composite already.
-     */
-    private final Map<String, HttpService> pathToDecorators;
+    private final HandlerRegistry handlerRegistry;
 
-    /**
-     * A pair of a fully qualified name of the method (e.g. 'armeria.grpc.sample.SampleService/UnaryCall')
-     * and decorators that are extracted from `@Decorator` and composite already.
-     */
-    private final Map<String, HttpService> methodToDecorators;
+    @Nullable
+    private Map<ServerMethodDefinition<?, ?>, HttpService> decorated;
 
-    private final boolean lookupMethodFromAttribute;
-
-    GrpcDecoratingService(GrpcService delegate, Map<String, HttpService> pathToDecorators,
-                          Map<String, HttpService> methodToDecorators, boolean lookupMethodFromAttribute) {
+    GrpcDecoratingService(GrpcService delegate, HandlerRegistry handlerRegistry) {
         super(delegate);
         this.delegate = delegate;
-        this.pathToDecorators = pathToDecorators;
-        this.methodToDecorators = methodToDecorators;
-        this.lookupMethodFromAttribute = lookupMethodFromAttribute;
+        this.handlerRegistry = handlerRegistry;
+    }
+
+    @Override
+    public void serviceAdded(ServiceConfig cfg) throws Exception {
+        super.serviceAdded(cfg);
+        final List<DependencyInjector> dependencyInjectors =
+                cfg.server()
+                   .config()
+                   .dependencyInjectors()
+                   .stream()
+                   .map(DependencyInjectorEntry::dependencyInjector)
+                   .collect(toImmutableList());
+
+        final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> registryDecorators =
+                handlerRegistry.decorators();
+
+        final Builder<ServerMethodDefinition<?, ?>, HttpService> builder = ImmutableMap.builder();
+
+        for (Entry<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> entry
+                : registryDecorators.entrySet()) {
+            final List<? extends Function<? super HttpService, ? extends HttpService>> decorators =
+                    entry.getValue()
+                         .stream()
+                         .map(decoratorAndOrder -> decoratorAndOrder.decorator(dependencyInjectors))
+                         .collect(toImmutableList());
+            builder.put(entry.getKey(), applyDecorators(decorators, delegate));
+        }
+        decorated = builder.build();
+    }
+
+    private static HttpService applyDecorators(
+            List<? extends Function<? super HttpService, ? extends HttpService>> decorators,
+            HttpService delegate) {
+        Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
+        for (int i = decorators.size() - 1; i >= 0; i--) {
+            decorator = decorator.andThen(decorators.get(i));
+        }
+        return decorator.apply(delegate);
     }
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        HttpService decoratedService = lookup(ctx);
-        if (decoratedService != null) {
-            return decoratedService.serve(ctx, req);
+        assert decorated != null;
+        final ServerMethodDefinition<?, ?> methodDefinition = methodDefinition(ctx);
+        if (methodDefinition == null) {
+            return delegate.serve(ctx, req);
         }
-        final String path = ctx.mappedPath();
-        decoratedService = pathToDecorators.get(path);
+        final HttpService decoratedService = decorated.get(methodDefinition);
         if (decoratedService != null) {
             return decoratedService.serve(ctx, req);
         }
         return delegate.serve(ctx, req);
+    }
+
+    @VisibleForTesting
+    HandlerRegistry handlerRegistry() {
+        return handlerRegistry;
     }
 
     @Override
@@ -95,6 +135,16 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
     }
 
     @Override
+    public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
+        return delegate.methodDefinition(ctx);
+    }
+
+    @Override
+    public Map<String, ServerMethodDefinition<?, ?>> methods() {
+        return delegate.methods();
+    }
+
+    @Override
     public Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute() {
         return delegate.methodsByRoute();
     }
@@ -102,15 +152,5 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
     @Override
     public Set<SerializationFormat> supportedSerializationFormats() {
         return delegate.supportedSerializationFormats();
-    }
-
-    @Nullable
-    private HttpService lookup(ServiceRequestContext ctx) {
-        final ServerMethodDefinition<?, ?> method = lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD)
-                                                                              : null;
-        if (method == null || method.getMethodDescriptor() == null) {
-            return null;
-        }
-        return methodToDecorators.get(method.getMethodDescriptor().getFullMethodName());
     }
 }

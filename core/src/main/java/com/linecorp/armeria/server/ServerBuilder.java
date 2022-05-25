@@ -203,7 +203,6 @@ public final class ServerBuilder {
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
-    @Nullable
     private final List<DependencyInjectorEntry> dependencyInjectors = new ArrayList<>();
 
     ServerBuilder() {

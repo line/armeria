@@ -505,8 +505,8 @@ final class AnnotatedValueResolver {
 
         final ImmutableList.Builder<RequestObjectResolver> builder = new ImmutableList.Builder<>();
         converters.forEach(c -> builder.add(RequestObjectResolver.of(
-                AnnotatedServiceFactory.getInstance(c, RequestConverterFunction.class,
-                                                    dependencyInjectors))));
+                AnnotatedObjectFactory.getInstance(c, RequestConverterFunction.class,
+                                                   dependencyInjectors))));
         builder.addAll(resolvers);
         return builder.build();
     }
