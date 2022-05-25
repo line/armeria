@@ -20,6 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -382,5 +386,49 @@ class StreamMessageInputStreamTest {
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
+    }
+
+    @Test
+    void maybeRequest_when_not_enough_data() throws IOException {
+        final StreamMessage<String> streamMessage1 = StreamMessage.of("12", "34");
+        final StreamMessage<String> streamMessage2 = spy(StreamMessage.of("56", "78"));
+        final InputStream inputStream = StreamMessage
+                .concat(streamMessage1, streamMessage2)
+                .toInputStream(x -> HttpData.wrap(x.getBytes()));
+
+        final ByteBuf result = Unpooled.buffer();
+        for (int i = 0; i < 2; i++) {
+            result.writeByte(inputStream.read());
+        }
+
+        int readableBytes = result.readableBytes();
+        byte[] actual = new byte[readableBytes];
+        for (int i = 0; i < readableBytes; i++) {
+            actual[i] = result.readByte();
+        }
+        assertThat(actual).isEqualTo(ImmutableList.of("12")
+                                                  .stream()
+                                                  .map(String::getBytes)
+                                                  .reduce(Bytes::concat).get());
+        assertThat(inputStream.available()).isEqualTo(0);
+        verify(streamMessage2, never()).subscribe(any(), any(), any());
+
+        int read;
+        while ((read = inputStream.read()) != -1) {
+            result.writeByte(read);
+        }
+
+        readableBytes = result.readableBytes();
+        actual = new byte[readableBytes];
+        for (int i = 0; i < readableBytes; i++) {
+            actual[i] = result.readByte();
+        }
+        result.release();
+        assertThat(actual).isEqualTo(ImmutableList.of("34", "56", "78")
+                                                  .stream()
+                                                  .map(String::getBytes)
+                                                  .reduce(Bytes::concat).get());
+        assertThat(inputStream.available()).isZero();
+        verify(streamMessage2).subscribe(any(), any(), any());
     }
 }
