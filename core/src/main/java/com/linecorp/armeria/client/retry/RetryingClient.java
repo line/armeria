@@ -286,7 +286,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         final DefaultClientRequestContext derivedCtx;
         try {
-            derivedCtx = (DefaultClientRequestContext) newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
+            derivedCtx = newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
         } catch (Throwable t) {
             handleException(ctx, rootReqDuplicator, future, t, initialAttempt);
             return;
@@ -295,10 +295,12 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         final HttpResponse response;
         if (derivedCtx.endpointGroup() != null && derivedCtx.endpoint() == null) {
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
-            response = initContextAndExecuteWithFallback(unwrap(), derivedCtx, derivedCtx.endpointGroup(), HttpResponse::from,
+            response = initContextAndExecuteWithFallback(unwrap(), derivedCtx, derivedCtx.endpointGroup(),
+                                                         HttpResponse::from,
                                                          (context, cause) -> HttpResponse.ofFailure(cause));
         } else {
-            response = executeWithFallback(unwrap(), derivedCtx, (context, cause) -> HttpResponse.ofFailure(cause));
+            response = executeWithFallback(unwrap(), derivedCtx,
+                                           (context, cause) -> HttpResponse.ofFailure(cause));
         }
 
         final RetryConfig<HttpResponse> config = mapping().get(ctx, duplicateReq);
