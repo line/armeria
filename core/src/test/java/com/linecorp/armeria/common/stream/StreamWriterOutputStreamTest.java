@@ -292,7 +292,9 @@ class StreamWriterOutputStreamTest {
         outputStream.write(1);
         assertThatThrownBy(outputStream::flush).isInstanceOf(RuntimeException.class);
 
-        assertThatCode(outputStream::close).doesNotThrowAnyException();
+        assertThatThrownBy(outputStream::close)
+                .isInstanceOf(IOException.class)
+                .hasMessage("Stream closed");
         assertThat(writer.isOpen()).isFalse();
         assertThat(writer.isComplete()).isTrue();
     }

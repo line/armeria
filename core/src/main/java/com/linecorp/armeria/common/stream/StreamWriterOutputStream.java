@@ -87,7 +87,7 @@ final class StreamWriterOutputStream<T> extends OutputStream {
         if (closed) {
             return;
         }
-        drain();
+        flush();
         writer.close();
         closed = true;
     }
