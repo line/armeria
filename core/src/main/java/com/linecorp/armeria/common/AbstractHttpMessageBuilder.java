@@ -49,7 +49,7 @@ abstract class AbstractHttpMessageBuilder {
     }
 
     @Nullable
-    protected Publisher<? extends HttpData> publisher() {
+    protected final Publisher<? extends HttpData> publisher() {
         return publisher;
     }
 

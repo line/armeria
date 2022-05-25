@@ -50,8 +50,6 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Stopwatch;
 
@@ -624,14 +622,11 @@ class RetryingClientTest {
                              "(?i).*(factory has been closed|not accepting a task).*"));
     }
 
-    private static final Logger logger = LoggerFactory.getLogger(RetryingClientTest.class);
-
     @Test
     void doNotRetryWhenResponseIsAborted() throws Exception {
         final List<Throwable> abortCauses =
                 Arrays.asList(null, new IllegalStateException("abort stream with a specified cause"));
         for (Throwable abortCause : abortCauses) {
-            logger.info("abortCause: " + abortCause);
             final AtomicReference<ClientRequestContext> context = new AtomicReference<>();
             final WebClient client =
                     WebClient.builder(server.httpUri())

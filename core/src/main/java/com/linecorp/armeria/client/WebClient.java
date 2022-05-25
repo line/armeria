@@ -238,7 +238,7 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     default HttpResponse execute(HttpRequest req) {
         final RequestOptions requestOptions;
         if (req instanceof FixedStreamMessage) {
-           requestOptions = RESPONSE_STREAMING_REQUEST_OPTIONS;
+            requestOptions = RESPONSE_STREAMING_REQUEST_OPTIONS;
         } else {
             requestOptions = RequestOptions.of();
         }

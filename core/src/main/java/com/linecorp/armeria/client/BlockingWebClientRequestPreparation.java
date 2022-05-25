@@ -217,6 +217,15 @@ public final class BlockingWebClientRequestPreparation
         return as(AggregatedResponseAs.json(typeRef, mapper));
     }
 
+    /**
+     * Unsupported operation. {@link ExchangeType#UNARY} is only supported for {@link BlockingWebClient}.
+     */
+    @Deprecated
+    @Override
+    public BlockingWebClientRequestPreparation exchangeType(ExchangeType exchangeType) {
+        throw new UnsupportedOperationException(ExchangeType.UNARY + " is only supported");
+    }
+
     @Override
     public BlockingWebClientRequestPreparation requestOptions(RequestOptions requestOptions) {
         delegate.requestOptions(requestOptions);
@@ -437,12 +446,6 @@ public final class BlockingWebClientRequestPreparation
     @Override
     public <V> BlockingWebClientRequestPreparation attr(AttributeKey<V> key, @Nullable V value) {
         delegate.attr(key, value);
-        return this;
-    }
-
-    @Override
-    public BlockingWebClientRequestPreparation exchangeType(ExchangeType exchangeType) {
-        delegate.exchangeType(exchangeType);
         return this;
     }
 }

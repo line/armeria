@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -66,9 +66,9 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     private final long timeoutMillis;
     private final boolean headersOnly;
 
+    // session, id and responseWrapper are assigned in tryInitialize()
     @Nullable
     private HttpSession session;
-    // subscription, id and responseWrapper are assigned in onSubscribe()
     private int id = -1;
     @Nullable
     private HttpResponseWrapper responseWrapper;
