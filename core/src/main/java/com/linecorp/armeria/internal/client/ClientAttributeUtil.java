@@ -30,20 +30,31 @@ import io.netty.util.AttributeKey;
  */
 public final class ClientAttributeUtil {
 
-    private static final AttributeKey<Throwable> UNPROCESSED_PENDING_THROWABLE_KEY =
-            AttributeKey.valueOf(ClientAttributeUtil.class, "UNPROCESSED_PENDING_THROWABLE_KEY");
+    private static final AttributeKey<Throwable> UNPROCESSED_PENDING_THROWABLE =
+            AttributeKey.valueOf(ClientAttributeUtil.class, "UNPROCESSED_PENDING_THROWABLE");
 
     /**
      * Sets a pending {@link Throwable} for the specified {@link ClientRequestContext}.
      *
      * <p>This throwable will be thrown after all decorators are executed, but before the
-     * actual client execution starts. Note that the {@link Throwable} will be wrapped
-     * by an {@link UnprocessedRequestException}.
+     * actual client execution starts. Note that the {@link Throwable} will be peeled using
+     * {@link Exceptions#peel(Throwable)}, and wrapped by an {@link UnprocessedRequestException}.
+     *
+     * <p>For example:<pre>{@code
+     * final RuntimeException e = new RuntimeException();
+     * final WebClient webClient =
+     *         WebClient.builder(SessionProtocol.HTTP, endpointGroup)
+     *                  .contextCustomizer(ctx -> setUnprocessedPendingThrowable(ctx, e))
+     *                  .build();
+     * assertThatThrownBy(() -> webClient.blocking().get("/"))
+     *         .isInstanceOf(UnprocessedRequestException.class)
+     *         .hasCause(e);
+     * }</pre>
      */
     public static void setUnprocessedPendingThrowable(ClientRequestContext ctx, Throwable cause) {
         requireNonNull(ctx, "ctx");
         requireNonNull(cause, "cause");
-        ctx.setAttr(UNPROCESSED_PENDING_THROWABLE_KEY, Exceptions.peel(cause));
+        ctx.setAttr(UNPROCESSED_PENDING_THROWABLE, Exceptions.peel(cause));
     }
 
     /**
@@ -52,7 +63,7 @@ public final class ClientAttributeUtil {
     @Nullable
     public static Throwable unprocessedPendingThrowable(ClientRequestContext ctx) {
         requireNonNull(ctx, "ctx");
-        return ctx.attr(UNPROCESSED_PENDING_THROWABLE_KEY);
+        return ctx.attr(UNPROCESSED_PENDING_THROWABLE);
     }
 
     /**
@@ -61,8 +72,8 @@ public final class ClientAttributeUtil {
     @Nullable
     public static void removeUnprocessedPendingThrowable(ClientRequestContext ctx) {
         requireNonNull(ctx, "ctx");
-        if (ctx.hasAttr(UNPROCESSED_PENDING_THROWABLE_KEY)) {
-            ctx.setAttr(UNPROCESSED_PENDING_THROWABLE_KEY, null);
+        if (ctx.hasAttr(UNPROCESSED_PENDING_THROWABLE)) {
+            ctx.setAttr(UNPROCESSED_PENDING_THROWABLE, null);
         }
     }
 
