@@ -112,6 +112,7 @@ public final class ClientAttributeUtil {
     private static class PendingThrowableContainer {
         final Throwable throwable;
         final ClientRequestContext ctx;
+
         PendingThrowableContainer(Throwable throwable,
                                   ClientRequestContext ctx) {
             this.throwable = throwable;
