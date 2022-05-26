@@ -61,6 +61,12 @@ public final class ClientAttributeUtil {
 
     /**
      * Retrieves the pending {@link Throwable} for the specified {@link ClientRequestContext}.
+     * Note that <strong>only</strong> the attribute set for the specified {@link ClientRequestContext}
+     * is returned.
+     *
+     * <p>For instance, if contextA has this attribute set and contextB is derived from contextA
+     * via {@link ClientRequestContext}, calling this method will return {@code null} for contextB.
+     * This design is made to prevent inadvertent failures when using derived contexts.
      */
     @Nullable
     public static Throwable unprocessedPendingThrowable(ClientRequestContext ctx) {
