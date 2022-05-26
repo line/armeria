@@ -83,7 +83,7 @@ class EurekaEndpointGroupTest {
         final CompletableFuture<List<Endpoint>> endpointsCaptor = new CompletableFuture<>();
         eurekaEndpointGroup.addListener(endpointsCaptor::complete);
 
-        final List<Endpoint> endpoints = endpointsCaptor.join();
+        final List<Endpoint> endpoints = eurekaEndpointGroup.whenReady().join();
         assertThat(endpoints).allMatch(endpoint -> endpoint.attr(EurekaEndpointGroup.INSTANCE_INFO) != null);
         assertThat(endpoints.get(0).attr(EurekaEndpointGroup.INSTANCE_INFO).getAppName()).isEqualTo(
                 "APPLICATION0");
