@@ -36,7 +36,7 @@ public final class ClientAttributeUtil {
     /**
      * Sets a pending {@link Throwable} for the specified {@link ClientRequestContext}.
      *
-     * This throwable will be thrown after all decorators are executed, but before the
+     * <p> This throwable will be thrown after all decorators are executed, but before the
      * actual client execution starts. Note that the {@link Throwable} will be wrapped
      * by an {@link UnprocessedRequestException}.
      */

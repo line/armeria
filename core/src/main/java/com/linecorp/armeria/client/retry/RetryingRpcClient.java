@@ -180,7 +180,6 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
                                       (context, cause) -> RpcResponse.ofFailure(cause));
         }
 
-
         final RetryConfig<RpcResponse> retryConfig = mapping().get(ctx, req);
         final RetryRuleWithContent<RpcResponse> retryRule =
                 retryConfig.needsContentInRule() ?
