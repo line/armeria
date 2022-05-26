@@ -55,8 +55,15 @@ public final class ClientAttributeUtil {
         return ctx.attr(UNPROCESSED_PENDING_THROWABLE_KEY);
     }
 
-    public static <T> boolean notContextTransferrable(AttributeKey<T> key) {
-        return key == UNPROCESSED_PENDING_THROWABLE_KEY;
+    /**
+     * Removes the pending {@link Throwable} for the specified {@link ClientRequestContext}.
+     */
+    @Nullable
+    public static void removeUnprocessedPendingThrowable(ClientRequestContext ctx) {
+        requireNonNull(ctx, "ctx");
+        if (ctx.hasAttr(UNPROCESSED_PENDING_THROWABLE_KEY)) {
+            ctx.setAttr(UNPROCESSED_PENDING_THROWABLE_KEY, null);
+        }
     }
 
     private ClientAttributeUtil() {}

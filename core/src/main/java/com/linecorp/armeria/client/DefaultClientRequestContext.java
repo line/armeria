@@ -62,7 +62,6 @@ import com.linecorp.armeria.common.util.ReleasableHolder;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.client.ClientAttributeUtil;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -489,12 +488,7 @@ public final class DefaultClientRequestContext
         additionalRequestHeaders = ctx.additionalRequestHeaders();
 
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
-            final Entry<AttributeKey<?>, Object> e = i.next();
-            // TODO: make this configurable
-            if (ClientAttributeUtil.notContextTransferrable(e.getKey())) {
-                continue;
-            }
-            addAttr(e);
+            addAttr(i.next());
         }
     }
 

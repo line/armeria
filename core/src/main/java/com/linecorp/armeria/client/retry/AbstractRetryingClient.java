@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.client.ClientAttributeUtil;
 import com.linecorp.armeria.internal.client.ClientUtil;
 
 import io.netty.util.AsciiString;
@@ -257,6 +258,7 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
         final ClientRequestContext derivedContext = ClientUtil.newDerivedContext(
                 ctx, req, rpcReq, initialAttempt);
         assert derivedContext instanceof DefaultClientRequestContext;
+        ClientAttributeUtil.removeUnprocessedPendingThrowable(ctx);
         return (DefaultClientRequestContext) derivedContext;
     }
 
