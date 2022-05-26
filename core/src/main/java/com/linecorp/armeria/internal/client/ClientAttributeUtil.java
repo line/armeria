@@ -19,9 +19,7 @@ package com.linecorp.armeria.internal.client;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.AttributeKey;
 
@@ -35,10 +33,8 @@ public final class ClientAttributeUtil {
 
     /**
      * Sets a pending {@link Throwable} for the specified {@link ClientRequestContext}.
-     *
-     * <p>This throwable will be thrown after all decorators are executed, but before the
-     * actual client execution starts. Note that the {@link Throwable} will be peeled using
-     * {@link Exceptions#peel(Throwable)}, and wrapped by an {@link UnprocessedRequestException}.
+     * This throwable will be thrown after all decorators are executed, but before the
+     * actual client execution starts.
      *
      * <p>For example:<pre>{@code
      * final RuntimeException e = new RuntimeException();
@@ -54,19 +50,25 @@ public final class ClientAttributeUtil {
     public static void setUnprocessedPendingThrowable(ClientRequestContext ctx, Throwable cause) {
         requireNonNull(ctx, "ctx");
         requireNonNull(cause, "cause");
-        final Throwable peeled = Exceptions.peel(cause);
-        final PendingThrowableContainer container = new PendingThrowableContainer(peeled, ctx);
+        final PendingThrowableContainer container = new PendingThrowableContainer(cause, ctx);
         ctx.setAttr(UNPROCESSED_PENDING_THROWABLE, container);
     }
 
     /**
      * Retrieves the pending {@link Throwable} for the specified {@link ClientRequestContext}.
      * Note that <strong>only</strong> the attribute set for the specified {@link ClientRequestContext}
-     * is returned.
+     * is returned. Even though a context contains this attribute, the derived context wouldn't
+     * contain this attribute by default.
      *
-     * <p>For instance, if contextA has this attribute set and contextB is derived from contextA
-     * via {@link ClientRequestContext}, calling this method will return {@code null} for contextB.
-     * This design is made to prevent inadvertent failures when using derived contexts.
+     * <p>For example:<pre>{@code
+     * ClientRequestContext ctx = null;
+     * Throwable t;
+     * final Throwable t1 = unprocessedPendingThrowable(ctx); // null
+     * setUnprocessedPendingThrowable(ctx, t);
+     * final Throwable t2 = unprocessedPendingThrowable(ctx); // t
+     * final ClientRequestContext derived = ctx.newDerivedContext(id, req, rpcReq, endpoint);
+     * final Throwable t3 = unprocessedPendingThrowable(derived); // null
+     * }</pre>
      */
     @Nullable
     public static Throwable unprocessedPendingThrowable(ClientRequestContext ctx) {
@@ -76,6 +78,35 @@ public final class ClientAttributeUtil {
             return null;
         }
         return container.throwable;
+    }
+
+    /**
+     * Transfers the value set by pending {@link Throwable} set by {@code from} to
+     * {@code to}. If {@code from} doesn't contain the attribute, no action will occur.
+     *
+     * <p>Note that the {@link Throwable} is only transferred if {@code from} contains
+     * the attribute as its own.
+     *
+     * <p>For example:<pre>{@code
+     * final Throwable t1 = unprocessedPendingThrowable(ctx); // null
+     * setUnprocessedPendingThrowable(ctx, t);
+     * final Throwable t2 = unprocessedPendingThrowable(ctx); // t
+     * final ClientRequestContext derived = ctx.newDerivedContext(id, req, rpcReq, endpoint);
+     * final Throwable t3 = unprocessedPendingThrowable(derived); // null
+     * transferUnprocessedPendingThrowable(ctx, derived);
+     * final Throwable t4 = unprocessedPendingThrowable(derived); // t
+     * }</pre>
+     */
+    public static void transferUnprocessedPendingThrowable(ClientRequestContext from,
+                                                           ClientRequestContext to) {
+        requireNonNull(from, "from");
+        requireNonNull(to, "to");
+        final Throwable throwable = unprocessedPendingThrowable(from);
+        if (throwable == null) {
+            return;
+        }
+        final PendingThrowableContainer copy = new PendingThrowableContainer(throwable, to);
+        to.setAttr(UNPROCESSED_PENDING_THROWABLE, copy);
     }
 
     private static class PendingThrowableContainer {

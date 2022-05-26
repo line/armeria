@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.internal.client.ClientAttributeUtil;
 import com.linecorp.armeria.internal.client.ClientUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -170,6 +171,11 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         } catch (Throwable t) {
             handleException(ctx, reqDuplicator, responseFuture, t, initialAttempt);
             return;
+        }
+
+        if (initialAttempt) {
+            // If the original context had a selection timeout, propagate the exception for the first attempt.
+            ClientAttributeUtil.transferUnprocessedPendingThrowable(ctx, derivedCtx);
         }
 
         final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
