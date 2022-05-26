@@ -27,7 +27,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -250,14 +249,11 @@ public abstract class AbstractRetryingClient<I extends Request, O extends Respon
      * Creates a new derived {@link ClientRequestContext}, replacing the requests.
      * If {@link ClientRequestContext#endpointGroup()} exists, a new {@link Endpoint} will be selected.
      */
-    protected static DefaultClientRequestContext newDerivedContext(ClientRequestContext ctx,
-                                                                   @Nullable HttpRequest req,
-                                                                   @Nullable RpcRequest rpcReq,
-                                                                   boolean initialAttempt) {
-        final ClientRequestContext derivedContext = ClientUtil.newDerivedContext(
-                ctx, req, rpcReq, initialAttempt);
-        assert derivedContext instanceof DefaultClientRequestContext;
-        return (DefaultClientRequestContext) derivedContext;
+    protected static ClientRequestContext newDerivedContext(ClientRequestContext ctx,
+                                                            @Nullable HttpRequest req,
+                                                            @Nullable RpcRequest rpcReq,
+                                                            boolean initialAttempt) {
+        return ClientUtil.newDerivedContext(ctx, req, rpcReq, initialAttempt);
     }
 
     private static final class State {
