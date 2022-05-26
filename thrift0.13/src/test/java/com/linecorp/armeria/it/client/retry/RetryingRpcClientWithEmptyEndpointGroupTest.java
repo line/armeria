@@ -55,6 +55,37 @@ class RetryingRpcClientWithEmptyEndpointGroupTest {
     };
 
     @Test
+    void testSelectionTimeout() {
+        final int maxTotalAttempts = 3;
+
+        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
+        final RetryConfig<RpcResponse> retryConfig =
+                RetryConfig.builderForRpc(RetryRuleWithContent.onUnprocessed())
+                           .maxTotalAttempts(maxTotalAttempts)
+                           .build();
+        final Iface iface = Clients.builder(Scheme.of(BINARY, SessionProtocol.HTTP), endpointGroup)
+                                   .responseTimeout(Duration.ZERO)
+                                   .rpcDecorator(RetryingRpcClient.builder(retryConfig).newDecorator())
+                                   .build(Iface.class);
+
+        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+            assertThatThrownBy(() -> iface.hello("world"))
+                    .isInstanceOf(UnprocessedRequestException.class)
+                    .hasCauseInstanceOf(EndpointSelectionTimeoutException.class);
+
+            assertThat(ctxCaptor.size()).isEqualTo(1);
+            assertThat(ctxCaptor.get().log().children()).hasSize(maxTotalAttempts);
+            ctxCaptor.get().log().children().forEach(log -> {
+                final Throwable responseCause = log.whenComplete().join().responseCause();
+                assert responseCause != null;
+                assertThat(responseCause)
+                        .isInstanceOf(UnprocessedRequestException.class)
+                        .hasCauseInstanceOf(EndpointSelectionTimeoutException.class);
+            });
+        }
+    }
+
+    @Test
     void testSelectionTimeoutEventuallySucceeds() throws Exception {
         final int maxTotalAttempts = 10;
         final int selectAttempts = 3;
@@ -93,37 +124,6 @@ class RetryingRpcClientWithEmptyEndpointGroupTest {
             final RequestLogAccess log = ctxCaptor.get().log().children().get(selectAttempts - 1);
             assertThat(log.whenComplete().join().responseStatus().code())
                     .isEqualTo(200);
-        }
-    }
-
-    @Test
-    void testSelectionTimeout() {
-        final int maxTotalAttempts = 3;
-
-        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
-        final RetryConfig<RpcResponse> retryConfig =
-                RetryConfig.builderForRpc(RetryRuleWithContent.onUnprocessed())
-                           .maxTotalAttempts(maxTotalAttempts)
-                           .build();
-        final Iface iface = Clients.builder(Scheme.of(BINARY, SessionProtocol.HTTP), endpointGroup)
-                                   .responseTimeout(Duration.ZERO)
-                                   .rpcDecorator(RetryingRpcClient.builder(retryConfig).newDecorator())
-                                   .build(Iface.class);
-
-        try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
-            assertThatThrownBy(() -> iface.hello("world"))
-                    .isInstanceOf(UnprocessedRequestException.class)
-                    .hasCauseInstanceOf(EndpointSelectionTimeoutException.class);
-
-            assertThat(ctxCaptor.size()).isEqualTo(1);
-            assertThat(ctxCaptor.get().log().children()).hasSize(maxTotalAttempts);
-            ctxCaptor.get().log().children().forEach(log -> {
-                final Throwable responseCause = log.ensureComplete().responseCause();
-                assert responseCause != null;
-                assertThat(responseCause)
-                        .isInstanceOf(UnprocessedRequestException.class)
-                        .hasCauseInstanceOf(EndpointSelectionTimeoutException.class);
-            });
         }
     }
 }
