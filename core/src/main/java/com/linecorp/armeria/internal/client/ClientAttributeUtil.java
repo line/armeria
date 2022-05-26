@@ -30,7 +30,7 @@ import io.netty.util.AttributeKey;
  */
 public final class ClientAttributeUtil {
 
-    private static final AttributeKey<Throwable> UNPROCESSED_PENDING_THROWABLE =
+    private static final AttributeKey<PendingThrowableContainer> UNPROCESSED_PENDING_THROWABLE =
             AttributeKey.valueOf(ClientAttributeUtil.class, "UNPROCESSED_PENDING_THROWABLE");
 
     /**
@@ -54,7 +54,9 @@ public final class ClientAttributeUtil {
     public static void setUnprocessedPendingThrowable(ClientRequestContext ctx, Throwable cause) {
         requireNonNull(ctx, "ctx");
         requireNonNull(cause, "cause");
-        ctx.setAttr(UNPROCESSED_PENDING_THROWABLE, Exceptions.peel(cause));
+        final Throwable peeled = Exceptions.peel(cause);
+        final PendingThrowableContainer container = new PendingThrowableContainer(peeled, ctx);
+        ctx.setAttr(UNPROCESSED_PENDING_THROWABLE, container);
     }
 
     /**
@@ -63,17 +65,20 @@ public final class ClientAttributeUtil {
     @Nullable
     public static Throwable unprocessedPendingThrowable(ClientRequestContext ctx) {
         requireNonNull(ctx, "ctx");
-        return ctx.attr(UNPROCESSED_PENDING_THROWABLE);
+        final PendingThrowableContainer container = ctx.attr(UNPROCESSED_PENDING_THROWABLE);
+        if (container == null || container.ctx != ctx) {
+            return null;
+        }
+        return container.throwable;
     }
 
-    /**
-     * Removes the pending {@link Throwable} for the specified {@link ClientRequestContext}.
-     */
-    @Nullable
-    public static void removeUnprocessedPendingThrowable(ClientRequestContext ctx) {
-        requireNonNull(ctx, "ctx");
-        if (ctx.hasAttr(UNPROCESSED_PENDING_THROWABLE)) {
-            ctx.setAttr(UNPROCESSED_PENDING_THROWABLE, null);
+    private static class PendingThrowableContainer {
+        final Throwable throwable;
+        final ClientRequestContext ctx;
+        PendingThrowableContainer(Throwable throwable,
+                                  ClientRequestContext ctx) {
+            this.throwable = throwable;
+            this.ctx = ctx;
         }
     }
 
