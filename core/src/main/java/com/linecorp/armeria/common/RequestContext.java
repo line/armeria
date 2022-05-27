@@ -46,6 +46,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.common.JavaVersionSpecific;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -60,7 +61,7 @@ import io.netty.util.AttributeKey;
  * A server-side {@link Request} has a {@link ServiceRequestContext} and
  * a client-side {@link Request} has a {@link ClientRequestContext}.
  */
-public interface RequestContext {
+public interface RequestContext extends Unwrappable {
 
     /**
      * Returns the context of the {@link Request} that is being handled in the current thread.
