@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.ClientPendingThrowableUtil.copyPendingThrowable;
 import static com.linecorp.armeria.internal.client.ClientPendingThrowableUtil.pendingThrowable;
 import static com.linecorp.armeria.internal.client.ClientPendingThrowableUtil.setPendingThrowable;
-import static com.linecorp.armeria.internal.client.ClientPendingThrowableUtil.copyPendingThrowable;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
