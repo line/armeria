@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -36,7 +37,7 @@ class WriteTimeoutTest {
 
     private static final ClientFactory clientFactory = ClientFactory
             .builder()
-            .option(ClientFactoryOptions.WRITE_BYTES_PER_SEC_LIMIT, 1024L) // write 1 KB / sec
+            .option(ClientFactoryOptions.MAX_WRITE_BYTES_PER_SEC, 1024L) // write 1 KB / sec
             .build();
 
     @RegisterExtension
@@ -44,13 +45,6 @@ class WriteTimeoutTest {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(Route.ofCatchAll(), (ctx, req) -> HttpResponse.of(200));
-        }
-
-        @Override
-        protected void configureWebClient(WebClientBuilder webClientBuilder) throws Exception {
-            webClientBuilder
-                    .writeTimeoutMillis(1)
-                    .factory(clientFactory);
         }
     };
 
@@ -62,10 +56,15 @@ class WriteTimeoutTest {
     @Test
     void testWriteTimeout() {
         final RequestHeadersBuilder headersBuilder = RequestHeaders.builder(HttpMethod.GET, "/");
-        headersBuilder.add("header1", Strings.repeat("a", 512)); // set a header over (2 * 512) bytes
-        assertThatThrownBy(() -> server.webClient()
-                                       .blocking()
-                                       .execute(headersBuilder.build()))
+        headersBuilder.add("header1", Strings.repeat("a", 1100)); // set a header over 1KB
+
+        // using h1c since http2 compresses headers
+        assertThatThrownBy(() -> WebClient.builder(SessionProtocol.H1C, server.httpEndpoint())
+                                          .factory(clientFactory)
+                                          .writeTimeoutMillis(1000)
+                                          .build()
+                                          .blocking()
+                                          .execute(headersBuilder.build(), "content"))
                 .isInstanceOf(WriteTimeoutException.class);
     }
 }

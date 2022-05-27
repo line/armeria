@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
@@ -265,21 +266,23 @@ public final class ClientFactoryOptions
 
     /**
      *  The number of bytes per sec allowed to be read for each channel.
-     *  A value of {@code 0} signifies no limit is applied.
+     *  A value of {@code 0} signifies that no limit is applied.
      */
-    public static final ClientFactoryOption<Long> WRITE_BYTES_PER_SEC_LIMIT =
-            ClientFactoryOption.define("WRITE_BYTES_PER_SEC_LIMIT", 0L, v -> {
-                checkArgument(v >= 0);
+    @UnstableApi
+    public static final ClientFactoryOption<Long> MAX_WRITE_BYTES_PER_SEC =
+            ClientFactoryOption.define("MAX_WRITE_BYTES_PER_SEC", 0L, v -> {
+                checkArgument(v >= 0, "MAX_WRITE_BYTES_PER_SEC %s (expected: >= 0)", v);
                 return v;
             });
 
     /**
      *  The number of bytes per sec allowed to be read for each channel.
-     *  A value of {@code 0} signifies no limit is applied.
+     *  A value of {@code 0} signifies that no limit is applied.
      */
-    public static final ClientFactoryOption<Long> READ_BYTES_PER_SEC_LIMIT =
-            ClientFactoryOption.define("READ_BYTES_PER_SEC_LIMIT", 0L, v -> {
-                checkArgument(v >= 0);
+    @UnstableApi
+    public static final ClientFactoryOption<Long> MAX_READ_BYTES_PER_SEC =
+            ClientFactoryOption.define("MAX_READ_BYTES_PER_SEC", 0L, v -> {
+                checkArgument(v >= 0, "MAX_READ_BYTES_PER_SEC %s (expected: >= 0)", v);
                 return v;
             });
 
@@ -549,17 +552,19 @@ public final class ClientFactoryOptions
 
     /**
      * Returns the number of bytes per sec allowed to be written for each channel.
-     * A value of {@code 0} signifies no limit is applied.
+     * A value of {@code 0} signifies that no limit is applied.
      */
+    @UnstableApi
     public long writeBytesPerSec() {
-        return get(WRITE_BYTES_PER_SEC_LIMIT);
+        return get(MAX_WRITE_BYTES_PER_SEC);
     }
 
     /**
      * Returns the number of bytes per sec allowed to be read for each channel.
-     * A value of {@code 0} signifies no limit is applied.
+     * A value of {@code 0} signifies that no limit is applied.
      */
+    @UnstableApi
     public long readBytesPerSec() {
-        return get(READ_BYTES_PER_SEC_LIMIT);
+        return get(MAX_READ_BYTES_PER_SEC);
     }
 }
