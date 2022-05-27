@@ -18,7 +18,7 @@ package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.internal.client.ClientPendingThrowableUtil.pendingThrowable;
 import static com.linecorp.armeria.internal.client.ClientPendingThrowableUtil.setPendingThrowable;
-import static com.linecorp.armeria.internal.client.ClientPendingThrowableUtil.transferPendingThrowable;
+import static com.linecorp.armeria.internal.client.ClientPendingThrowableUtil.copyPendingThrowable;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -87,7 +87,7 @@ class ClientPendingThrowableUtilTest {
     }
 
     @Test
-    void testPendingThrowableTransferredContext() {
+    void testPendingThrowableCopyContext() {
         final RuntimeException e = new RuntimeException();
         final WebClient webClient =
                 WebClient.builder(SessionProtocol.HTTP, EndpointGroup.of())
@@ -95,7 +95,7 @@ class ClientPendingThrowableUtilTest {
                          .decorator((delegate, ctx, req) -> {
                              final ClientRequestContext derived = ctx.newDerivedContext(
                                      RequestId.random(), req, null, server.httpEndpoint());
-                             transferPendingThrowable(ctx, derived);
+                             copyPendingThrowable(ctx, derived);
                              return delegate.execute(derived, req);
                          })
                          .build();

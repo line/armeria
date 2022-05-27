@@ -174,8 +174,8 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         }
 
         if (initialAttempt) {
-            // If the original context had a selection timeout, propagate the exception for the first attempt.
-            ClientPendingThrowableUtil.transferPendingThrowable(ctx, derivedCtx);
+            // If the original context had a selection timeout, copy the exception for the first attempt.
+            ClientPendingThrowableUtil.copyPendingThrowable(ctx, derivedCtx);
         }
 
         final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,

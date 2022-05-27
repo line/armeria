@@ -108,12 +108,12 @@ public final class ClientPendingThrowableUtil {
      * final Throwable t2 = pendingThrowable(ctx); // t
      * final ClientRequestContext derived = ctx.newDerivedContext(id, req, rpcReq, endpoint);
      * final Throwable t3 = pendingThrowable(derived); // null
-     * transferPendingThrowable(ctx, derived);
+     * copyPendingThrowable(ctx, derived);
      * final Throwable t4 = pendingThrowable(derived); // t
      * }</pre>
      */
-    public static void transferPendingThrowable(ClientRequestContext from,
-                                                ClientRequestContext to) {
+    public static void copyPendingThrowable(ClientRequestContext from,
+                                            ClientRequestContext to) {
         requireNonNull(from, "from");
         requireNonNull(to, "to");
         final Throwable throwable = pendingThrowable(from);
