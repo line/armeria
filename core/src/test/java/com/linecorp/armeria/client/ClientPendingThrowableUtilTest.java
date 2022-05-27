@@ -16,8 +16,9 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.client.ClientPendingThrowableUtil.setPendingThrowable;
 import static com.linecorp.armeria.internal.client.ClientPendingThrowableUtil.pendingThrowable;
+import static com.linecorp.armeria.internal.client.ClientPendingThrowableUtil.setPendingThrowable;
+import static com.linecorp.armeria.internal.client.ClientPendingThrowableUtil.transferPendingThrowable;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -58,7 +59,7 @@ class ClientPendingThrowableUtilTest {
     }
 
     @Test
-    void testUnprocessedPending() {
+    void testPendingThrowable() {
         final RuntimeException e = new RuntimeException();
         final WebClient webClient =
                 WebClient.builder(SessionProtocol.HTTP, EndpointGroup.of())
@@ -71,7 +72,7 @@ class ClientPendingThrowableUtilTest {
     }
 
     @Test
-    void testUnprocessedPendingDerivedContext() {
+    void testPendingThrowableDerivedContext() {
         final RuntimeException e = new RuntimeException();
         final WebClient webClient =
                 WebClient.builder(SessionProtocol.HTTP, EndpointGroup.of())
@@ -83,5 +84,23 @@ class ClientPendingThrowableUtilTest {
                          })
                          .build();
         assertThat(webClient.get("/1").aggregate().join().status().code()).isEqualTo(200);
+    }
+
+    @Test
+    void testPendingThrowableTransferredContext() {
+        final RuntimeException e = new RuntimeException();
+        final WebClient webClient =
+                WebClient.builder(SessionProtocol.HTTP, EndpointGroup.of())
+                         .contextCustomizer(ctx -> setPendingThrowable(ctx, e))
+                         .decorator((delegate, ctx, req) -> {
+                             final ClientRequestContext derived = ctx.newDerivedContext(
+                                     RequestId.random(), req, null, server.httpEndpoint());
+                             transferPendingThrowable(ctx, derived);
+                             return delegate.execute(derived, req);
+                         })
+                         .build();
+        assertThatThrownBy(() -> webClient.blocking().get("/"))
+                .isInstanceOf(UnprocessedRequestException.class)
+                .hasCause(e);
     }
 }
