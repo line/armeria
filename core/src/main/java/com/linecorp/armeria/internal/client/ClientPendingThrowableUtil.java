@@ -20,38 +20,53 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.util.AttributeKey;
 
 /**
- * Contains helper methods used for armeria client internals.
+ * Sets a pending {@link Throwable} for the specified {@link ClientRequestContext}.
+ * This throwable will be thrown after all decorators are executed, but before the
+ * actual client execution starts.
+ *
+ * <p>For example:<pre>{@code
+ * final RuntimeException e = new RuntimeException();
+ * final WebClient webClient =
+ *         WebClient.builder(SessionProtocol.HTTP, endpointGroup)
+ *                  .contextCustomizer(ctx -> setUnprocessedPendingThrowable(ctx, e))
+ *                  .decorator(LoggingClient.newDecorator()) // the request is logged
+ *                  .build();
+ * assertThatThrownBy(() -> webClient.blocking().get("/"))
+ *         .isInstanceOf(UnprocessedRequestException.class)
+ *         .hasCause(e);
+ * }</pre>
  */
-public final class ClientAttributeUtil {
+public final class ClientPendingThrowableUtil {
 
-    private static final AttributeKey<PendingThrowableContainer> UNPROCESSED_PENDING_THROWABLE =
-            AttributeKey.valueOf(ClientAttributeUtil.class, "UNPROCESSED_PENDING_THROWABLE");
+    private static final AttributeKey<PendingThrowableContainer> CLIENT_PENDING_THROWABLE =
+            AttributeKey.valueOf(ClientPendingThrowableUtil.class, "CLIENT_PENDING_THROWABLE");
 
     /**
      * Sets a pending {@link Throwable} for the specified {@link ClientRequestContext}.
-     * This throwable will be thrown after all decorators are executed, but before the
-     * actual client execution starts.
+     * Note that the set throwable will be peeled via {@link Exceptions#peel(Throwable)}
+     * before being set.
      *
      * <p>For example:<pre>{@code
      * final RuntimeException e = new RuntimeException();
-     * final WebClient webClient =
-     *         WebClient.builder(SessionProtocol.HTTP, endpointGroup)
-     *                  .contextCustomizer(ctx -> setUnprocessedPendingThrowable(ctx, e))
-     *                  .build();
-     * assertThatThrownBy(() -> webClient.blocking().get("/"))
-     *         .isInstanceOf(UnprocessedRequestException.class)
-     *         .hasCause(e);
+     * final CompletionException wrapper = new CompletionException(e);
+     * final ClientRequestContext ctx = ...
+     * setPendingThrowable(ctx, wrapper);
+     * final Throwable throwable = pendingThrowable(ctx);
+     * assert throwable != null;
+     * assertThat(throwable).isEqualTo(e);
      * }</pre>
      */
-    public static void setUnprocessedPendingThrowable(ClientRequestContext ctx, Throwable cause) {
+    public static void setPendingThrowable(ClientRequestContext ctx, Throwable cause) {
         requireNonNull(ctx, "ctx");
         requireNonNull(cause, "cause");
+        cause = Exceptions.peel(cause);
         final PendingThrowableContainer container = new PendingThrowableContainer(cause, ctx);
-        ctx.setAttr(UNPROCESSED_PENDING_THROWABLE, container);
+        ctx.setAttr(CLIENT_PENDING_THROWABLE, container);
     }
 
     /**
@@ -63,17 +78,17 @@ public final class ClientAttributeUtil {
      * <p>For example:<pre>{@code
      * ClientRequestContext ctx = null;
      * Throwable t;
-     * final Throwable t1 = unprocessedPendingThrowable(ctx); // null
-     * setUnprocessedPendingThrowable(ctx, t);
-     * final Throwable t2 = unprocessedPendingThrowable(ctx); // t
+     * final Throwable t1 = pendingThrowable(ctx); // null
+     * setPendingThrowable(ctx, t);
+     * final Throwable t2 = pendingThrowable(ctx); // t
      * final ClientRequestContext derived = ctx.newDerivedContext(id, req, rpcReq, endpoint);
-     * final Throwable t3 = unprocessedPendingThrowable(derived); // null
+     * final Throwable t3 = pendingThrowable(derived); // null
      * }</pre>
      */
     @Nullable
-    public static Throwable unprocessedPendingThrowable(ClientRequestContext ctx) {
+    public static Throwable pendingThrowable(ClientRequestContext ctx) {
         requireNonNull(ctx, "ctx");
-        final PendingThrowableContainer container = ctx.attr(UNPROCESSED_PENDING_THROWABLE);
+        final PendingThrowableContainer container = ctx.attr(CLIENT_PENDING_THROWABLE);
         if (container == null || container.ctx != ctx) {
             return null;
         }
@@ -88,25 +103,25 @@ public final class ClientAttributeUtil {
      * the attribute as its own.
      *
      * <p>For example:<pre>{@code
-     * final Throwable t1 = unprocessedPendingThrowable(ctx); // null
-     * setUnprocessedPendingThrowable(ctx, t);
-     * final Throwable t2 = unprocessedPendingThrowable(ctx); // t
+     * final Throwable t1 = pendingThrowable(ctx); // null
+     * setPendingThrowable(ctx, t);
+     * final Throwable t2 = pendingThrowable(ctx); // t
      * final ClientRequestContext derived = ctx.newDerivedContext(id, req, rpcReq, endpoint);
-     * final Throwable t3 = unprocessedPendingThrowable(derived); // null
-     * transferUnprocessedPendingThrowable(ctx, derived);
-     * final Throwable t4 = unprocessedPendingThrowable(derived); // t
+     * final Throwable t3 = pendingThrowable(derived); // null
+     * transferPendingThrowable(ctx, derived);
+     * final Throwable t4 = pendingThrowable(derived); // t
      * }</pre>
      */
-    public static void transferUnprocessedPendingThrowable(ClientRequestContext from,
-                                                           ClientRequestContext to) {
+    public static void transferPendingThrowable(ClientRequestContext from,
+                                                ClientRequestContext to) {
         requireNonNull(from, "from");
         requireNonNull(to, "to");
-        final Throwable throwable = unprocessedPendingThrowable(from);
+        final Throwable throwable = pendingThrowable(from);
         if (throwable == null) {
             return;
         }
         final PendingThrowableContainer copy = new PendingThrowableContainer(throwable, to);
-        to.setAttr(UNPROCESSED_PENDING_THROWABLE, copy);
+        to.setAttr(CLIENT_PENDING_THROWABLE, copy);
     }
 
     private static class PendingThrowableContainer {
@@ -120,5 +135,5 @@ public final class ClientAttributeUtil {
         }
     }
 
-    private ClientAttributeUtil() {}
+    private ClientPendingThrowableUtil() {}
 }

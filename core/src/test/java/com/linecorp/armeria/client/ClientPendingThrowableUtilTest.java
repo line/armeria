@@ -16,21 +16,27 @@
 
 package com.linecorp.armeria.client;
 
-import static com.linecorp.armeria.internal.client.ClientAttributeUtil.setUnprocessedPendingThrowable;
+import static com.linecorp.armeria.internal.client.ClientPendingThrowableUtil.setPendingThrowable;
+import static com.linecorp.armeria.internal.client.ClientPendingThrowableUtil.pendingThrowable;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.concurrent.CompletionException;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.logging.LoggingClient;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class ClientAttributeUtilTest {
+class ClientPendingThrowableUtilTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -41,11 +47,23 @@ class ClientAttributeUtilTest {
     };
 
     @Test
+    void testPeeledException() {
+        final RuntimeException e = new RuntimeException();
+        final CompletionException wrapper = new CompletionException(e);
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        setPendingThrowable(ctx, wrapper);
+        final Throwable throwable = pendingThrowable(ctx);
+        assert throwable != null;
+        assertThat(throwable).isEqualTo(e);
+    }
+
+    @Test
     void testUnprocessedPending() {
         final RuntimeException e = new RuntimeException();
         final WebClient webClient =
                 WebClient.builder(SessionProtocol.HTTP, EndpointGroup.of())
-                         .contextCustomizer(ctx -> setUnprocessedPendingThrowable(ctx, e))
+                         .contextCustomizer(ctx -> setPendingThrowable(ctx, e))
+                         .decorator(LoggingClient.newDecorator())
                          .build();
         assertThatThrownBy(() -> webClient.blocking().get("/"))
                 .isInstanceOf(UnprocessedRequestException.class)
@@ -57,7 +75,7 @@ class ClientAttributeUtilTest {
         final RuntimeException e = new RuntimeException();
         final WebClient webClient =
                 WebClient.builder(SessionProtocol.HTTP, EndpointGroup.of())
-                         .contextCustomizer(ctx -> setUnprocessedPendingThrowable(ctx, e))
+                         .contextCustomizer(ctx -> setPendingThrowable(ctx, e))
                          .decorator((delegate, ctx, req) -> {
                              final ClientRequestContext derived = ctx.newDerivedContext(
                                      RequestId.random(), req, null, server.httpEndpoint());

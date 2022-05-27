@@ -29,7 +29,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.client.ClientAttributeUtil;
+import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 
 /**
  * A skeletal {@link EndpointSelector} implementation. This abstract class implements the
@@ -79,9 +79,9 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
                 executor.schedule(() -> {
                                       final EndpointSelectionTimeoutException ex =
                                               EndpointSelectionTimeoutException.get(endpointGroup);
-                                      ClientAttributeUtil.setUnprocessedPendingThrowable(ctx, ex);
+                                      ClientPendingThrowableUtil.setPendingThrowable(ctx, ex);
                                       // not completed exceptionally so that the throwable
-                                      // can be handled after going through decorators
+                                      // can be handled after executing the attached decorators
                                       listeningFuture.complete(null);
                                   },
                                   timeoutMillis,

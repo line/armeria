@@ -33,9 +33,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
-import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.client.ClientAttributeUtil;
+import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.ProxiedAddresses;
@@ -59,10 +58,9 @@ final class HttpClientDelegate implements HttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
-        final Throwable throwable = ClientAttributeUtil.unprocessedPendingThrowable(ctx);
+        final Throwable throwable = ClientPendingThrowableUtil.pendingThrowable(ctx);
         if (throwable != null) {
-            final UnprocessedRequestException cause =
-                    UnprocessedRequestException.of(Exceptions.peel(throwable));
+            final UnprocessedRequestException cause = UnprocessedRequestException.of(throwable);
             handleEarlyRequestException(ctx, req, cause);
             return HttpResponse.ofFailure(cause);
         }
