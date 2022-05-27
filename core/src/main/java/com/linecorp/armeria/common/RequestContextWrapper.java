@@ -27,6 +27,7 @@ import javax.net.ssl.SSLSession;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -38,7 +39,8 @@ import io.netty.util.AttributeKey;
  *
  * @param <T> the self type
  */
-public abstract class RequestContextWrapper<T extends RequestContext> implements RequestContext {
+public abstract class RequestContextWrapper<T extends RequestContext>
+        extends AbstractUnwrappable<T> implements RequestContext {
 
     private final T delegate;
 
@@ -46,6 +48,7 @@ public abstract class RequestContextWrapper<T extends RequestContext> implements
      * Creates a new instance.
      */
     protected RequestContextWrapper(T delegate) {
+        super(delegate);
         this.delegate = requireNonNull(delegate, "delegate");
     }
 
@@ -212,6 +215,11 @@ public abstract class RequestContextWrapper<T extends RequestContext> implements
     @Override
     public ByteBufAllocator alloc() {
         return delegate().alloc();
+    }
+
+    @Override
+    public T unwrap() {
+        return (T) delegate.unwrap();
     }
 
     @Override

@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class RequestContextWrapperTest {
@@ -52,5 +53,16 @@ class RequestContextWrapperTest {
         // Use reflective comparison to handle added properties automatically.
         assertThat(new WrappedRequestContext(ctx)).usingRecursiveComparison().ignoringFields("delegate")
                                                   .isEqualTo(ctx);
+    }
+
+    @Test
+    void testUnwrapBehavior() {
+        final RequestContext ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
+        final WrappedRequestContext wrapped = new WrappedRequestContext(new WrappedRequestContext(ctx));
+        assertThat(wrapped.unwrap()).isSameAs(ctx);
+
+        final DefaultServiceRequestContext as = wrapped.as(DefaultServiceRequestContext.class);
+        assert as != null;
+        assertThat(as).isSameAs(ctx);
     }
 }
