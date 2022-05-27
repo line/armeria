@@ -166,8 +166,8 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         p.addLast(new FlushConsolidationHandler());
         p.addLast(ReadSuppressingAndChannelDeactivatingHandler.INSTANCE);
 
-        final long writeLimit = clientFactory.writeBytesPerSec();
-        final long readLimit = clientFactory.readBytesPerSec();
+        final long writeLimit = clientFactory.maxWriteBytesPerSec();
+        final long readLimit = clientFactory.maxReadBytesPerSec();
         if (writeLimit != 0 || readLimit != 0) {
             p.addLast(new ChannelTrafficShapingHandler(writeLimit, readLimit));
         }

@@ -265,7 +265,7 @@ public final class ClientFactoryOptions
             });
 
     /**
-     *  The number of bytes per sec allowed to be read for each channel.
+     *  The number of bytes per sec allowed to be written for each channel.
      *  A value of {@code 0} signifies that no limit is applied.
      */
     @UnstableApi
@@ -555,7 +555,7 @@ public final class ClientFactoryOptions
      * A value of {@code 0} signifies that no limit is applied.
      */
     @UnstableApi
-    public long writeBytesPerSec() {
+    public long maxWriteBytesPerSec() {
         return get(MAX_WRITE_BYTES_PER_SEC);
     }
 
@@ -564,7 +564,7 @@ public final class ClientFactoryOptions
      * A value of {@code 0} signifies that no limit is applied.
      */
     @UnstableApi
-    public long readBytesPerSec() {
+    public long maxReadBytesPerSec() {
         return get(MAX_READ_BYTES_PER_SEC);
     }
 }
