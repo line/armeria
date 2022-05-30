@@ -20,13 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.spy;
-import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
@@ -35,7 +32,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.util.Exceptions;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -362,7 +358,7 @@ class StreamMessageInputStreamTest {
         final InputStream inputStream = streamMessage
                 .toInputStream(x -> {
                     if (x == 6) {
-                        return Exceptions.throwUnsafely(new RuntimeException());
+                        throw new RuntimeException();
                     }
                     return HttpData.wrap(x.toString().getBytes());
                 });
@@ -391,7 +387,14 @@ class StreamMessageInputStreamTest {
     @Test
     void maybeRequest_when_not_enough_data() throws IOException {
         final StreamMessage<String> streamMessage1 = StreamMessage.of("12", "34");
-        final StreamMessage<String> streamMessage2 = spy(StreamMessage.of("56", "78"));
+        final DefaultStreamMessage<String> streamMessage2 = new DefaultStreamMessage<>();
+        streamMessage2.write("56");
+        streamMessage2.write("78");
+        final AtomicBoolean consumed = new AtomicBoolean();
+        streamMessage2.whenConsumed().thenRun(() -> {
+            consumed.getAndSet(true);
+            streamMessage2.close();
+        });
         final InputStream inputStream = StreamMessage
                 .concat(streamMessage1, streamMessage2)
                 .toInputStream(x -> HttpData.wrap(x.getBytes()));
@@ -411,7 +414,7 @@ class StreamMessageInputStreamTest {
                                                   .map(String::getBytes)
                                                   .reduce(Bytes::concat).get());
         assertThat(inputStream.available()).isEqualTo(0);
-        verify(streamMessage2, never()).subscribe(any(), any(), any());
+        assertThat(consumed.get()).isFalse();
 
         int read;
         while ((read = inputStream.read()) != -1) {
@@ -429,6 +432,6 @@ class StreamMessageInputStreamTest {
                                                   .map(String::getBytes)
                                                   .reduce(Bytes::concat).get());
         assertThat(inputStream.available()).isZero();
-        verify(streamMessage2).subscribe(any(), any(), any());
+        assertThat(consumed.get()).isTrue();
     }
 }

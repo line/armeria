@@ -138,6 +138,7 @@ final class StreamMessageInputStream<T> extends InputStream {
             try {
                 final HttpData result = httpDataConverter.apply(item);
                 if (result.isEmpty()) {
+                    result.close();
                     request();
                     return;
                 }
