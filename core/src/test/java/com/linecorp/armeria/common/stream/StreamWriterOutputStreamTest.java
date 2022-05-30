@@ -33,7 +33,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.util.Exceptions;
 
 import reactor.test.StepVerifier;
 
@@ -287,7 +286,9 @@ class StreamWriterOutputStreamTest {
     void httpDataConverter_error_thrown() throws IOException {
         final DefaultStreamMessage<Integer> writer = new DefaultStreamMessage<>();
         final OutputStream outputStream = writer
-                .toOutputStream(x -> Exceptions.throwUnsafely(new RuntimeException()));
+                .toOutputStream(x -> {
+                    throw new RuntimeException();
+                });
 
         outputStream.write(1);
         assertThatThrownBy(outputStream::flush).isInstanceOf(RuntimeException.class);
