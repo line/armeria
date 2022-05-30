@@ -40,7 +40,7 @@ class RestClientSuite extends FunSuite with ServerSuite {
         @Path("/rest/{id}")
         def restApi(@Param id: String, content: String): RestResponse = RestResponse(id, content)
       },
-      Array.empty: _*
+      Array.emptyObjectArray: _*
     )
 
     sb.annotatedService(
@@ -68,7 +68,7 @@ class RestClientSuite extends FunSuite with ServerSuite {
           )
         }
       },
-      Array.empty: _*
+      Array.emptyObjectArray: _*
     )
   }
 
@@ -139,4 +139,4 @@ case class ComplexResponse(
     header: String,
     trailer: String,
     cookie: String,
-    content: String);
+    content: String)
