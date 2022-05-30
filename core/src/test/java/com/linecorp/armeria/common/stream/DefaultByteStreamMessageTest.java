@@ -113,7 +113,7 @@ class DefaultByteStreamMessageTest {
         final ByteStreamMessage byteStreamMessage = ByteStreamMessage.of(delegate);
         assertThatThrownBy(() -> byteStreamMessage.skipBytes(0))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("numBytes 0 (expected: > 0)");
+                .hasMessageContaining("numBytes: 0 (expected: > 0)");
     }
 
     @Test
