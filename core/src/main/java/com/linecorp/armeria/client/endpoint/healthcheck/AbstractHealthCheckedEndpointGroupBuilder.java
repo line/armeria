@@ -211,6 +211,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
 
     /**
      * Sets the timeout to wait until a successful {@link Endpoint} selection.
+     * This method is shortcut for {@code selectionTimeout(selectionTimeout, selectionTimeout)}.
      * {@link Duration#ZERO} disables the timeout.
      * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used to wait for the
      * {@linkplain HealthCheckedEndpointGroup#whenReady() initial endpoints}, and
@@ -229,6 +230,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      *                               .selectionTimeout(Duration.ofSeconds(10))
      *                               ...
      *                               .build();
+     * // The selection timeout of `delegate` is added into `endpointGroup`.
      * assert endpointGroup.selectionTimeoutMillis() == 13000;
      * }</pre>
      */
@@ -281,6 +283,7 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
 
     /**
      * Sets the timeout to wait until a successful {@link Endpoint} selection.
+     * This method is shortcut for {@code selectionTimeoutMillis(selectionTimeout, selectionTimeout)}.
      * {@link Duration#ZERO} disables the timeout.
      * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used to wait for the
      * {@linkplain HealthCheckedEndpointGroup#whenReady() initial endpoints}, and
@@ -299,6 +302,8 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      *                               .selectionTimeoutMillis(10000)
      *                               ...
      *                               .build();
+     *
+     * // The selection timeout of `delegate` is added into `endpointGroup`.
      * assert endpointGroup.selectionTimeoutMillis() == 13000;
      * }</pre>
      */

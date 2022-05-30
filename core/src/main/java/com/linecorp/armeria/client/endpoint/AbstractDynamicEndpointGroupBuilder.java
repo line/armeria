@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.time.Duration;
 
 import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -33,14 +32,7 @@ public abstract class AbstractDynamicEndpointGroupBuilder implements DynamicEndp
     private long selectionTimeoutMillis;
 
     /**
-     * Creates a new instance.
-     */
-    protected AbstractDynamicEndpointGroupBuilder() {
-        this(Flags.defaultConnectTimeoutMillis());
-    }
-
-    /**
-     * Creates a new instance with the specified {@code selectionTimeoutMillis}.
+     * Creates a new instance with the default {@code selectionTimeoutMillis}.
      */
     protected AbstractDynamicEndpointGroupBuilder(long selectionTimeoutMillis) {
         checkArgument(selectionTimeoutMillis >= 0, "selectionTimeoutMillis: %s (expected: >= 0)",

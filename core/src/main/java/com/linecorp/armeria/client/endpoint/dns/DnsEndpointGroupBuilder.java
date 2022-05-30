@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.endpoint.dns;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.client.dns.DnsUtil.defaultDnsQueryTimeoutMillis;
 import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
@@ -46,12 +47,13 @@ abstract class DnsEndpointGroupBuilder
     private EventLoop eventLoop;
     private Backoff backoff = Backoff.exponential(1000, 32000).withJitter(0.2);
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
-    private final DnsDynamicEndpointGroupBuilder dnsDynamicEndpointGroupBuilder =
-            new DnsDynamicEndpointGroupBuilder();
+    private final DnsDynamicEndpointGroupBuilder dnsDynamicEndpointGroupBuilder;
 
     DnsEndpointGroupBuilder(String hostname) {
         this.hostname = Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"),
                                                       IDN.ALLOW_UNASSIGNED));
+        // Use the default queryTimeoutMillis(5000) as the default selection timeout.
+        dnsDynamicEndpointGroupBuilder = new DnsDynamicEndpointGroupBuilder(defaultDnsQueryTimeoutMillis());
     }
 
     final String hostname() {
@@ -119,6 +121,11 @@ abstract class DnsEndpointGroupBuilder
         return this;
     }
 
+    /**
+     * Sets the timeout to wait until a successful {@link Endpoint} selection.
+     * {@code 0} disables the timeout.
+     * If unspecified, the default DNS query timeout(5000 ms) is used by default.
+     */
     @Override
     public DnsEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
         dnsDynamicEndpointGroupBuilder.selectionTimeoutMillis(selectionTimeoutMillis);
@@ -150,6 +157,9 @@ abstract class DnsEndpointGroupBuilder
      * AbstractDnsResolverBuilder.
      */
     private static class DnsDynamicEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
+        protected DnsDynamicEndpointGroupBuilder(long selectionTimeoutMillis) {
+            super(selectionTimeoutMillis);
+        }
 
         @Override
         public boolean shouldAllowEmptyEndpoints() {

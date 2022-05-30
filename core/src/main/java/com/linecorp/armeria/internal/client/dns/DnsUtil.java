@@ -121,5 +121,9 @@ public final class DnsUtil {
         return DEFAULT_NDOTS;
     }
 
+    public static long defaultDnsQueryTimeoutMillis() {
+        return 5000; // 5 seconds
+    }
+
     private DnsUtil() {}
 }

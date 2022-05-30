@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -32,7 +33,9 @@ public final class DynamicEndpointGroupBuilder
     @Nullable
     private EndpointSelectionStrategy selectionStrategy;
 
-    DynamicEndpointGroupBuilder() {}
+    DynamicEndpointGroupBuilder() {
+        super(Flags.defaultConnectTimeoutMillis());
+    }
 
     /**
      * Sets the {@link EndpointSelectionStrategy} of the {@link DynamicEndpointGroup}.
