@@ -23,6 +23,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -56,6 +57,9 @@ class ProtobufResponseConverterFunctionTest {
     void responseStreaming_converter() throws NoSuchMethodException {
         final ProtobufResponseConverterFunction converter = new ProtobufResponseConverterFunction();
         for (Method method : ProtobufService.class.getDeclaredMethods()) {
+            if (!Modifier.isPublic(method.getModifiers())) {
+                continue;
+            }
             final Produces annotation = method.getAnnotation(Produces.class);
             final MediaType produceType;
             if (annotation == null) {
@@ -83,6 +87,9 @@ class ProtobufResponseConverterFunctionTest {
     void responseStreaming_exchangeType() throws NoSuchMethodException {
         final ProtobufResponseConverterFunction converter = new ProtobufResponseConverterFunction();
         for (Method method : ProtobufService.class.getDeclaredMethods()) {
+            if (!Modifier.isPublic(method.getModifiers())) {
+                continue;
+            }
             final Produces annotation = method.getAnnotation(Produces.class);
             final MediaType produceType;
             if (annotation == null) {

@@ -64,7 +64,7 @@ public class ResponseStreamingTest {
     void responseStreaming_converter(ResponseConverterFunction converter, Class<?> serviceClass) {
         for (Method method : serviceClass.getDeclaredMethods()) {
             if (!Modifier.isPublic(method.getModifiers())) {
-                return;
+                continue;
             }
             final Produces annotation = method.getAnnotation(Produces.class);
             final MediaType produceType;
