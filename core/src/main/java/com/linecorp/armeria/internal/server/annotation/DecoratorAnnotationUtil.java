@@ -76,14 +76,14 @@ public final class DecoratorAnnotationUtil {
         for (final Annotation annotation : annotations) {
             if (annotation instanceof Decorator) {
                 final Decorator d = (Decorator) annotation;
-                list.add(new DecoratorAndOrder(d, newDecorator(d), d.order()));
+                list.add(new DecoratorAndOrder(d, d, null, d.order()));
                 continue;
             }
 
             if (annotation instanceof Decorators) {
                 final Decorator[] decorators = ((Decorators) annotation).value();
                 for (final Decorator d : decorators) {
-                    list.add(new DecoratorAndOrder(d, newDecorator(d), d.order()));
+                    list.add(new DecoratorAndOrder(d, d, null, d.order()));
                 }
                 continue;
             }
@@ -98,14 +98,15 @@ public final class DecoratorAnnotationUtil {
             try {
                 final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
                                                                     withName("value")), null);
-                assert method != null : "No 'value' method is found from " + annotation;
-                final Annotation[] decorators = (Annotation[]) method.invoke(annotation);
-                for (final Annotation decorator : decorators) {
-                    udd = userDefinedDecorator(decorator);
-                    if (udd == null) {
-                        break;
+                if (method != null) {
+                    final Annotation[] decorators = (Annotation[]) method.invoke(annotation);
+                    for (final Annotation decorator : decorators) {
+                        udd = userDefinedDecorator(decorator);
+                        if (udd == null) {
+                            break;
+                        }
+                        list.add(udd);
                     }
-                    list.add(udd);
                 }
             } catch (Throwable ignore) {
                 // The annotation may be a container of a decorator or may be not, so we just ignore
@@ -115,36 +116,17 @@ public final class DecoratorAnnotationUtil {
     }
 
     /**
-     * Returns a {@link HttpService} which is specified by {@link Decorator} annotations and user-defined
-     * decorator annotations.
-     */
-    public static HttpService applyDecorators(List<DecoratorAndOrder> decorators,
-                                              HttpService delegate) {
-        Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
-        for (int i = decorators.size() - 1; i >= 0; i--) {
-            final DecoratorAndOrder d = decorators.get(i);
-            decorator = decorator.andThen(d.decorator());
-        }
-        return decorator.apply(delegate);
-    }
-
-    /**
      * Returns a decorator with its order if the specified {@code annotation} is one of the user-defined
      * decorator annotation.
      */
     @Nullable
     private static DecoratorAndOrder userDefinedDecorator(Annotation annotation) {
         // User-defined decorator MUST be annotated with @DecoratorFactory annotation.
-        final DecoratorFactory d = AnnotationUtil.findFirstDeclared(annotation.annotationType(),
-                                                                    DecoratorFactory.class);
-        if (d == null) {
+        final DecoratorFactory df = AnnotationUtil.findFirstDeclared(annotation.annotationType(),
+                                                                     DecoratorFactory.class);
+        if (df == null) {
             return null;
         }
-
-        // In case of user-defined decorator, we need to create a new decorator from its factory.
-        @SuppressWarnings("unchecked")
-        final DecoratorFactoryFunction<Annotation> factory = AnnotatedObjectFactory
-                .getInstance(d, DecoratorFactoryFunction.class);
 
         // If the annotation has "order" attribute, we can use it when sorting decorators.
         int order = 0;
@@ -161,16 +143,7 @@ public final class DecoratorAnnotationUtil {
             // A user-defined decorator may not have an 'order' attribute.
             // If it does not exist, '0' is used by default.
         }
-        return new DecoratorAndOrder(annotation, factory.newDecorator(annotation), order);
-    }
-
-    /**
-     * Returns a new decorator which decorates an {@link HttpService} by the specified
-     * {@link Decorator}.
-     */
-    private static Function<? super HttpService, ? extends HttpService> newDecorator(Decorator decorator) {
-        return service -> service.decorate(
-                AnnotatedObjectFactory.getInstance(decorator, DecoratingHttpServiceFunction.class));
+        return new DecoratorAndOrder(annotation, null, df, order);
     }
 
     private DecoratorAnnotationUtil() {}
@@ -179,16 +152,18 @@ public final class DecoratorAnnotationUtil {
      * An internal class to hold a decorator with its order.
      */
     public static final class DecoratorAndOrder {
-        // Keep the specified annotation for testing purpose.
         private final Annotation annotation;
-        private final Function<? super HttpService, ? extends HttpService> decorator;
+        @Nullable
+        private final Decorator decoratorAnnotation;
+        @Nullable
+        private final DecoratorFactory decoratorFactory;
         private final int order;
 
-        private DecoratorAndOrder(Annotation annotation,
-                                  Function<? super HttpService, ? extends HttpService> decorator,
-                                  int order) {
+        private DecoratorAndOrder(Annotation annotation, @Nullable Decorator decoratorAnnotation,
+                                  @Nullable DecoratorFactory decoratorFactory, int order) {
             this.annotation = annotation;
-            this.decorator = decorator;
+            this.decoratorAnnotation = decoratorAnnotation;
+            this.decoratorFactory = decoratorFactory;
             this.order = order;
         }
 
@@ -197,8 +172,28 @@ public final class DecoratorAnnotationUtil {
             return annotation;
         }
 
+        @Nullable
+        @VisibleForTesting
+        public Decorator decoratorAnnotation() {
+            return decoratorAnnotation;
+        }
+
+        @Nullable
+        @VisibleForTesting
+        public DecoratorFactory decoratorFactory() {
+            return decoratorFactory;
+        }
+
         public Function<? super HttpService, ? extends HttpService> decorator() {
-            return decorator;
+            if (decoratorFactory != null) {
+                @SuppressWarnings("unchecked")
+                final DecoratorFactoryFunction<Annotation> factory = AnnotatedObjectFactory
+                        .getInstance(decoratorFactory, DecoratorFactoryFunction.class);
+                return factory.newDecorator(annotation);
+            }
+            assert decoratorAnnotation != null;
+            return service -> service.decorate(AnnotatedObjectFactory.getInstance(
+                    decoratorAnnotation, DecoratingHttpServiceFunction.class));
         }
 
         public int order() {
@@ -207,10 +202,11 @@ public final class DecoratorAnnotationUtil {
 
         @Override
         public String toString() {
-            return MoreObjects.toStringHelper(this)
-                              .add("annotation", annotation())
-                              .add("decorator", decorator())
-                              .add("order", order())
+            return MoreObjects.toStringHelper(this).omitNullValues()
+                              .add("annotation", annotation)
+                              .add("decoratorAnnotation", decoratorAnnotation)
+                              .add("decoratorFactory", decoratorFactory)
+                              .add("order", order)
                               .toString();
         }
     }

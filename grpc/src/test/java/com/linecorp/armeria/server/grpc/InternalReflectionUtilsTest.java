@@ -45,7 +45,6 @@ class InternalReflectionUtilsTest {
                 methods.put(methodName, method);
             }
         }
-        System.out.println(methods);
         assertThat(methods.get("unaryCall").getDeclaringClass()).isEqualTo(AbstractTestServiceImpl.class);
         assertThat(methods.get("emptyCall").getDeclaringClass()).isEqualTo(TestServiceImpl.class);
     }
