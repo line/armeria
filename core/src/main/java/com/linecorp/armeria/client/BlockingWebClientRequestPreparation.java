@@ -218,12 +218,14 @@ public final class BlockingWebClientRequestPreparation
     }
 
     /**
-     * Unsupported operation. {@link ExchangeType#UNARY} is only supported for {@link BlockingWebClient}.
+     * {@link ExchangeType#UNARY} is only supported for {@link BlockingWebClient}.
      */
-    @Deprecated
     @Override
     public BlockingWebClientRequestPreparation exchangeType(ExchangeType exchangeType) {
-        throw new UnsupportedOperationException(ExchangeType.UNARY + " is only supported");
+        if (exchangeType != ExchangeType.UNARY) {
+            throw new IllegalArgumentException(ExchangeType.UNARY + " is only supported");
+        }
+        return this;
     }
 
     @Override

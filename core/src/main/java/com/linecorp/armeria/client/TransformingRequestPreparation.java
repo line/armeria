@@ -60,14 +60,11 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
     }
 
     private ExchangeType exchangeType() {
-        final boolean requestStreaming;
         if (delegate instanceof BlockingWebClientRequestPreparation) {
-            requestStreaming = false;
-        } else if (delegate instanceof WebClientRequestPreparation) {
-            requestStreaming = ((WebClientRequestPreparation) delegate).isRequestStreaming();
-        } else {
-            throw new Error(); // Should never reach here.
+            return ExchangeType.UNARY;
         }
+
+        final boolean requestStreaming = ((WebClientRequestPreparation) delegate).isRequestStreaming();
         final boolean responseStreaming = !responseAs.requiresAggregation();
         return ExchangeType.of(requestStreaming, responseStreaming);
     }
