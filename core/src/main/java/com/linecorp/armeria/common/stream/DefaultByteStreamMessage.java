@@ -31,7 +31,6 @@ import com.google.common.math.IntMath;
 import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.EventLoopGroups;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -43,7 +42,8 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
 
     private int offset;
     private int length = -1;
-    private int bufferSize = -1;
+    private int bufferSize = Integer.MAX_VALUE;
+    private long demand;
 
     @Nullable
     private volatile Throwable abortedCause;
@@ -55,7 +55,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
 
     @Override
     public ByteStreamMessage skipBytes(int numBytes) {
-        checkArgument(numBytes > 0, "numBytes %s (expected: > 0)", numBytes);
+        checkArgument(numBytes > 0, "numBytes: %s (expected: > 0)", numBytes);
         ensureUnsubscribed("numBytes");
         offset = numBytes;
         return this;
@@ -63,7 +63,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
 
     @Override
     public ByteStreamMessage takeBytes(int numBytes) {
-        checkArgument(numBytes > 0, "numBytes %s (expected: > 0)", numBytes);
+        checkArgument(numBytes > 0, "numBytes: %s (expected: > 0)", numBytes);
         ensureUnsubscribed("numBytes");
         length = numBytes;
         return this;
@@ -71,7 +71,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
 
     @Override
     public ByteStreamMessage bufferSize(int numBytes) {
-        checkArgument(numBytes > 0, "numBytes %s (expected: > 0)", numBytes);
+        checkArgument(numBytes > 0, "numBytes: %s (expected: > 0)", numBytes);
         ensureUnsubscribed("numBytes");
         bufferSize = numBytes;
         return this;
@@ -99,7 +99,11 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
 
     @Override
     public long demand() {
-        return delegate.demand();
+        if (needsFiltering()) {
+            return demand;
+        } else {
+            return delegate.demand();
+        }
     }
 
     @Override
@@ -111,17 +115,17 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         subscribed = true;
-        if (offset == 0 && length == -1 && bufferSize == -1) {
-            delegate.subscribe(subscriber, executor, options);
-        } else {
-            int bufferSize = this.bufferSize;
-            if (bufferSize == -1) {
-                bufferSize = PathStreamMessage.DEFAULT_FILE_BUFFER_SIZE;
-            }
+        if (needsFiltering()) {
             delegate.subscribe(
                     new FilteringSubscriber(subscriber, executor, options, offset, length, bufferSize),
                     executor, options);
+        } else {
+            delegate.subscribe(subscriber, executor, options);
         }
+    }
+
+    private boolean needsFiltering() {
+        return offset != 0 || length != -1 || bufferSize != Integer.MAX_VALUE;
     }
 
     @Override
@@ -139,11 +143,6 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
         delegate.abort(cause);
     }
 
-    @Override
-    public EventExecutor defaultSubscriberExecutor() {
-        return EventLoopGroups.directEventLoop();
-    }
-
     private final class FilteringSubscriber implements Subscriber<HttpData>, Subscription {
 
         private final Subscriber<? super HttpData> downstream;
@@ -158,7 +157,6 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
         @Nullable
         private HttpData buffer;
         private int position;
-        private long demand;
         private boolean inOnNext;
         private boolean completed;
         private boolean completing;
@@ -318,8 +316,8 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
                     // `onNext()` can be ignored by the upstream.
                     final Throwable abortedCause = DefaultByteStreamMessage.this.abortedCause;
                     if (abortedCause != null) {
-                        cleanup();
                         completed = true;
+                        cleanup();
                         downstream.onError(abortedCause);
                         return;
                     }

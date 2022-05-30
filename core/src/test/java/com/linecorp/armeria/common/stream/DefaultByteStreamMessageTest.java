@@ -69,6 +69,20 @@ class DefaultByteStreamMessageTest {
     }
 
     @Test
+    void recursion() {
+        final StreamMessage<HttpData> delegate = newStreamMessage();
+        final ByteStreamMessage byteStreamMessage = ByteStreamMessage.of(delegate);
+
+        StepVerifier.create(byteStreamMessage)
+                    .expectNext(HttpData.ofUtf8("1"))
+                    .expectNext(HttpData.ofUtf8("22"))
+                    .expectNext(HttpData.ofUtf8("333"))
+                    .expectNext(HttpData.ofUtf8("4444"))
+                    .expectNext(HttpData.ofUtf8("55555"))
+                    .verifyComplete();
+    }
+
+    @Test
     void bufferSize1() {
         final StreamMessage<HttpData> delegate = newStreamMessage();
         final ByteStreamMessage byteStreamMessage = ByteStreamMessage.of(delegate)
@@ -323,7 +337,7 @@ class DefaultByteStreamMessageTest {
     }
 
     @Test
-    void leakTest_fallthrough() {
+    void leakTest_useHttpDataAsIs() {
         final List<ByteBuf> bufs = IntStream.range(1, 4).mapToObj(n -> {
             return Unpooled.wrappedBuffer(Strings.repeat(String.valueOf(n), n).getBytes());
         }).collect(toImmutableList());

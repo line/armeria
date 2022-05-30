@@ -95,7 +95,7 @@ final class PathStreamMessage implements ByteStreamMessage {
 
     @Override
     public ByteStreamMessage skipBytes(int numBytes) {
-        checkArgument(numBytes > 0, "numBytes %s (expected: > 0)", numBytes);
+        checkArgument(numBytes > 0, "numBytes: %s (expected: > 0)", numBytes);
         ensureUnsubscribed("numBytes");
         offset = numBytes;
         return this;
@@ -103,7 +103,7 @@ final class PathStreamMessage implements ByteStreamMessage {
 
     @Override
     public ByteStreamMessage takeBytes(int numBytes) {
-        checkArgument(numBytes > 0, "numBytes %s (expected: > 0)", numBytes);
+        checkArgument(numBytes > 0, "numBytes: %s (expected: > 0)", numBytes);
         ensureUnsubscribed("numBytes");
         length = numBytes;
         return this;
@@ -111,7 +111,7 @@ final class PathStreamMessage implements ByteStreamMessage {
 
     @Override
     public ByteStreamMessage bufferSize(int numBytes) {
-        checkArgument(numBytes > 0, "numBytes %s (expected: > 0)", numBytes);
+        checkArgument(numBytes > 0, "numBytes: %s (expected: > 0)", numBytes);
         ensureUnsubscribed("numBytes");
         bufferSize = numBytes;
         return this;

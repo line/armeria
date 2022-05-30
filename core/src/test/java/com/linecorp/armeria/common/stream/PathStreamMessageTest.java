@@ -136,13 +136,16 @@ class PathStreamMessageTest {
     void differentPosition(int start, int end, String expected, int bufferSize) {
         expected = expected.replaceAll("\\\\n", "\n");
         final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
-        final ByteStreamMessage publisher =
-                StreamMessage.of(path)
-                             .bufferSize(bufferSize)
-                             .skipBytes(start)
-                             .takeBytes(end - start);
+        final ByteStreamMessage publisher = StreamMessage.of(path).bufferSize(bufferSize);
+        final int length = end - start;
+        if (start > 0) {
+            publisher.skipBytes(start);
+        }
+        if (length > 0) {
+            publisher.takeBytes(length);
+        }
 
-        final int maxChunkSize = Math.min(Ints.saturatedCast(end - start), bufferSize);
+        final int maxChunkSize = Math.min(Ints.saturatedCast(length), bufferSize);
         final StringBuilder stringBuilder = new StringBuilder();
         final AtomicBoolean completed = new AtomicBoolean();
         publisher.subscribe(new Subscriber<HttpData>() {
@@ -172,27 +175,20 @@ class PathStreamMessageTest {
     }
 
     @Test
-    void zeroRange() {
-        final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
-        final ByteStreamMessage publisher = StreamMessage.of(path)
-                                                         .skipBytes(10)
-                                                         .takeBytes(0);
-        // TODO(ikhoon): Fix the assertions
-        assertThat(publisher.isEmpty()).isTrue();
-        assertThat(publisher.collect().join()).isEmpty();
-    }
-
-    @Test
-    void negativeRange() {
+    void nonPositiveNumber() {
         final Path path = Paths.get("src/test/resources/com/linecorp/armeria/common/stream/test.txt");
 
-        assertThatThrownBy(() -> StreamMessage.of(path, 10, 9))
+        assertThatThrownBy(() -> StreamMessage.of(path).skipBytes(0))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("(expected: >= start)");
+                .hasMessageContaining("numBytes: 0 (expected: > 0)");
 
-        assertThatThrownBy(() -> StreamMessage.of(path, 0, -1))
+        assertThatThrownBy(() -> StreamMessage.of(path).takeBytes(0))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("(expected: >= start)");
+                .hasMessageContaining("numBytes: 0 (expected: > 0)");
+
+        assertThatThrownBy(() -> StreamMessage.of(path).bufferSize(0))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("numBytes: 0 (expected: > 0)");
     }
 
     @Test
