@@ -36,6 +36,8 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.Codec;
+import io.grpc.DecompressorRegistry;
 import io.grpc.stub.StreamObserver;
 
 public class GrpcServiceAutoCompressTest {
@@ -75,9 +77,11 @@ public class GrpcServiceAutoCompressTest {
     @Test
     void autoCompressionWithMultipleAcceptEncoding() throws Exception {
         requestLogQueue = new LinkedTransferQueue<>();
+        final DecompressorRegistry decompressorRegistry = DecompressorRegistry.emptyInstance()
+                                                                              .with(new Codec.Gzip(), true)
+                                                                              .with(Codec.Identity.NONE, true);
         final UnitTestServiceBlockingStub client = GrpcClients.builder(autoCompressionServer.httpUri())
-                                                              .addHeader("grpc-accept-encoding",
-                                                                         "gzip,identity")
+                                                              .decompressorRegistry(decompressorRegistry)
                                                               .build(UnitTestServiceBlockingStub.class);
         assertThat(client.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
         final RequestLog log = requestLogQueue.take();

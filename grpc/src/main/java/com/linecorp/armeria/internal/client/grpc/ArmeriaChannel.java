@@ -19,6 +19,7 @@ import static com.linecorp.armeria.internal.client.grpc.GrpcClientUtil.maxInboun
 
 import java.net.URI;
 import java.util.Map;
+import java.util.Set;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientOptions;
@@ -66,7 +67,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     private final SerializationFormat serializationFormat;
     @Nullable
     private final GrpcJsonMarshaller jsonMarshaller;
-    private final String advertisedEncodingsHeader;
+    private String advertisedEncodingsHeader;
     private final Map<MethodDescriptor<?, ?>, String> simpleMethodNames;
 
     ArmeriaChannel(ClientBuilderParams params,
@@ -83,9 +84,6 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         this.serializationFormat = serializationFormat;
         this.jsonMarshaller = jsonMarshaller;
         this.simpleMethodNames = simpleMethodNames;
-
-        advertisedEncodingsHeader = String.join(
-                ",", DecompressorRegistry.getDefaultInstance().getAdvertisedMessageEncodings());
     }
 
     @Override
@@ -107,6 +105,10 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         final boolean unsafeWrapResponseBuffers = options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS);
         final Compressor compressor = options.get(GrpcClientOptions.COMPRESSOR);
         final DecompressorRegistry decompressorRegistry = options.get(GrpcClientOptions.DECOMPRESSOR_REGISTRY);
+        final Set<String> availableEncodings = decompressorRegistry.getAdvertisedMessageEncodings();
+        if (!availableEncodings.isEmpty()) {
+            advertisedEncodingsHeader = String.join(",", availableEncodings);
+        }
 
         final HttpClient client;
 
