@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -192,12 +191,10 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
         this.res = requireNonNull(res, "res");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
-        clientAcceptEncoding =
-                Strings.emptyToNull(clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING));
-        if (autoCompression && clientAcceptEncoding != null) {
-            final List<String> acceptedEncodingsList =
-                    ACCEPT_ENCODING_SPLITTER.splitToList(clientAcceptEncoding);
-            for (final String encoding : acceptedEncodingsList) {
+        clientAcceptEncoding = clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "");
+        if (autoCompression && !clientAcceptEncoding.isEmpty()) {
+            final Iterable<String> acceptedEncodings = ACCEPT_ENCODING_SPLITTER.split(clientAcceptEncoding);
+            for (final String encoding : acceptedEncodings) {
                 if (compressorRegistry.lookupCompressor(encoding) != null) {
                     setCompression(encoding);
                     break;

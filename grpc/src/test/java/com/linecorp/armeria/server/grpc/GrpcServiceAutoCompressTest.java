@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedTransferQueue;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -63,9 +64,13 @@ public class GrpcServiceAutoCompressTest {
 
     private static BlockingQueue<RequestLog> requestLogQueue = new LinkedTransferQueue<>();
 
+    @BeforeEach
+    void setUp() {
+        requestLogQueue = new LinkedTransferQueue<>();
+    }
+
     @Test
     void autoCompression() throws Exception {
-        requestLogQueue = new LinkedTransferQueue<>();
         final UnitTestServiceBlockingStub client = GrpcClients.newClient(autoCompressionServer.httpUri(),
                                                                          UnitTestServiceBlockingStub.class);
         assertThat(client.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
@@ -76,7 +81,6 @@ public class GrpcServiceAutoCompressTest {
 
     @Test
     void autoCompressionWithMultipleAcceptEncoding() throws Exception {
-        requestLogQueue = new LinkedTransferQueue<>();
         final DecompressorRegistry decompressorRegistry = DecompressorRegistry.emptyInstance()
                                                                               .with(new Codec.Gzip(), true)
                                                                               .with(Codec.Identity.NONE, true);

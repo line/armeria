@@ -672,8 +672,8 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Sets whether the gRPC response is compressed automatically when {@code grpc-accept-encoding} is specified
-     * and the encoding is registered in {@link CompressorRegistry}.
+     * Sets whether the gRPC response is compressed automatically when a client sends the
+     * {@code grpc-accept-encoding} header with the encoding registered in the {@link CompressorRegistry}.
      */
     @UnstableApi
     public GrpcServiceBuilder autoCompression(boolean autoCompression) {
