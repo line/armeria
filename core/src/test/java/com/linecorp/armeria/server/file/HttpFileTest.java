@@ -111,4 +111,10 @@ class HttpFileTest {
         final HttpFileBuilder builder = HttpFile.builder(jarFileUrl);
         assertThat(builder).isInstanceOf(HttpFileBuilder.ClassPathHttpFileBuilder.class);
     }
+
+    @Test
+    void createFromJarHttpUrl() throws Exception {
+        final URL jarHttpUrl = new URL("jar:http://www.foo.com/bar/baz.jar!/COM/foo/Quux.class");
+        assertThatThrownBy(() -> HttpFile.builder(jarHttpUrl)).isInstanceOf(IllegalArgumentException.class);
+    }
 }

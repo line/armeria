@@ -199,10 +199,10 @@ public interface HttpFile {
             }
 
             return builder(f.toPath());
-        } else if ("jar".equals(url.getProtocol()) || "jrt".equals(url.getProtocol())) {
+        } else if ("jar".equals(url.getProtocol()) && url.getPath().startsWith("file") || "jrt".equals(url.getProtocol())) {
             return new ClassPathHttpFileBuilder(url);
         }
-        throw new IllegalArgumentException("Not supported URL protocol " + url.getProtocol());
+        throw new IllegalArgumentException("Not supported URL protocol for " + url);
     }
 
     /**
