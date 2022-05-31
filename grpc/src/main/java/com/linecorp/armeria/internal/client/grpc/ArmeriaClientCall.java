@@ -23,6 +23,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Future;
@@ -91,7 +92,8 @@ import io.netty.buffer.ByteBuf;
 final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         implements Subscriber<DeframedMessage>, TransportStatusListener {
 
-    private static final Runnable NO_OP = () -> {};
+    private static final Runnable NO_OP = () -> {
+    };
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaClientCall.class);
 
@@ -118,7 +120,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
     private final boolean unsafeWrapResponseBuffers;
     @Nullable
     private final Executor executor;
-    private final String advertisedEncodingsHeader;
     private final DecompressorRegistry decompressorRegistry;
     private final int maxInboundMessageSizeBytes;
     private final boolean grpcWebText;
@@ -156,8 +157,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             DecompressorRegistry decompressorRegistry,
             SerializationFormat serializationFormat,
             @Nullable GrpcJsonMarshaller jsonMarshaller,
-            boolean unsafeWrapResponseBuffers,
-            String advertisedEncodingsHeader) {
+            boolean unsafeWrapResponseBuffers) {
         this.ctx = ctx;
         this.endpointGroup = endpointGroup;
         this.httpClient = httpClient;
@@ -170,7 +170,6 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         this.decompressorRegistry = decompressorRegistry;
         this.serializationFormat = serializationFormat;
         this.unsafeWrapResponseBuffers = unsafeWrapResponseBuffers;
-        this.advertisedEncodingsHeader = advertisedEncodingsHeader;
         grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);
         this.maxInboundMessageSizeBytes = maxInboundMessageSizeBytes;
         endpointInitialized = endpointGroup instanceof Endpoint || endpointGroup instanceof StaticEndpointGroup;
@@ -451,8 +450,9 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
             newHeaders.set(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
         }
 
-        if (!advertisedEncodingsHeader.isEmpty()) {
-            newHeaders.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, advertisedEncodingsHeader);
+        final Set<String> availableEncodings = decompressorRegistry.getAdvertisedMessageEncodings();
+        if (!availableEncodings.isEmpty()) {
+            newHeaders.add(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, String.join(",", availableEncodings));
         }
 
         if (remainingNanos > 0) {
