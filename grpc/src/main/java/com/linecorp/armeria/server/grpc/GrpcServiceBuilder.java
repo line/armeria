@@ -695,6 +695,7 @@ public final class GrpcServiceBuilder {
      * Sets whether the gRPC response is compressed automatically when {@code grpc-accept-encoding} is specified
      * and the encoding is registered in {@link CompressorRegistry}.
      */
+    @UnstableApi
     public GrpcServiceBuilder autoCompression(boolean autoCompression) {
         this.autoCompression = autoCompression;
         return this;

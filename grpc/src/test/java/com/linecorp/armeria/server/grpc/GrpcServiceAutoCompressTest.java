@@ -27,7 +27,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -65,8 +64,8 @@ public class GrpcServiceAutoCompressTest {
     @Test
     void autoCompression() throws Exception {
         requestLogQueue = new LinkedTransferQueue<>();
-        final UnitTestServiceBlockingStub client = GrpcClients.newClient(autoCompressionServer.httpUri(
-                GrpcSerializationFormats.PROTO).toString(), UnitTestServiceBlockingStub.class);
+        final UnitTestServiceBlockingStub client = GrpcClients.newClient(autoCompressionServer.httpUri(),
+                                                                         UnitTestServiceBlockingStub.class);
         assertThat(client.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
         final RequestLog log = requestLogQueue.take();
         assertThat(log.requestHeaders().get("grpc-accept-encoding")).isEqualTo("gzip");
@@ -76,10 +75,10 @@ public class GrpcServiceAutoCompressTest {
     @Test
     void autoCompressionWithMultipleAcceptEncoding() throws Exception {
         requestLogQueue = new LinkedTransferQueue<>();
-        final UnitTestServiceBlockingStub client =
-                GrpcClients.builder(autoCompressionServer.httpUri(GrpcSerializationFormats.PROTO).toString())
-                           .addHeader("grpc-accept-encoding", "gzip,identity")
-                           .build(UnitTestServiceBlockingStub.class);
+        final UnitTestServiceBlockingStub client = GrpcClients.builder(autoCompressionServer.httpUri())
+                                                              .addHeader("grpc-accept-encoding",
+                                                                         "gzip,identity")
+                                                              .build(UnitTestServiceBlockingStub.class);
         assertThat(client.staticUnaryCall(REQUEST_MESSAGE)).isEqualTo(RESPONSE_MESSAGE);
         final RequestLog log = requestLogQueue.take();
         assertThat(log.requestHeaders().get("grpc-accept-encoding")).isEqualTo("gzip,identity");
