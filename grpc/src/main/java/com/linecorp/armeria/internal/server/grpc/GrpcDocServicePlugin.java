@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.endpointInfoBuilder;
-import static com.linecorp.armeria.internal.server.grpc.GrpcMethodUtil.extractMethodName;
 import static java.util.Objects.requireNonNull;
 
 import java.io.UncheckedIOException;
@@ -602,7 +601,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
             assert service != null;
 
             final MethodDescriptor method =
-                    service.findMethodByName(extractMethodName(grpcMethod.getFullMethodName()));
+                    service.findMethodByName(grpcMethod.getBareMethodName());
             assert method != null;
 
             methods.put(service, method);

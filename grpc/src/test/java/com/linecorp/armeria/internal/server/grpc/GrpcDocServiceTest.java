@@ -17,7 +17,6 @@
 package com.linecorp.armeria.internal.server.grpc;
 
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
-import static com.linecorp.armeria.internal.server.grpc.GrpcMethodUtil.extractMethodName;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -161,7 +160,7 @@ class GrpcDocServiceTest {
                     methodDescriptor,
                     EndpointInfo
                             .builder("*", "/test/armeria.grpc.testing.TestService/" +
-                                          extractMethodName(methodDescriptor.getFullMethodName()))
+                                          methodDescriptor.getBareMethodName())
                             .availableMimeTypes(GrpcSerializationFormats.PROTO.mediaType(),
                                                 GrpcSerializationFormats.JSON.mediaType(),
                                                 GrpcSerializationFormats.PROTO_WEB.mediaType(),
@@ -179,7 +178,7 @@ class GrpcDocServiceTest {
             serviceInfosBuilder.addEndpoint(
                     methodDescriptor,
                     EndpointInfo.builder("*", "/armeria.grpc.testing.ReconnectService/" +
-                                              extractMethodName(methodDescriptor.getFullMethodName()))
+                                              methodDescriptor.getBareMethodName())
                                 .availableFormats(GrpcSerializationFormats.values())
                                 .build());
         });
