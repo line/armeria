@@ -34,6 +34,7 @@ import com.google.common.primitives.Bytes;
 import com.linecorp.armeria.common.HttpData;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -56,11 +57,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
@@ -82,11 +79,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
@@ -111,11 +104,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
@@ -155,11 +144,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertDoesNotThrow(inputStream::close);
@@ -213,11 +198,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(inputStream.read());
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isEqualTo(1);
@@ -250,11 +231,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
@@ -283,11 +260,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
@@ -310,11 +283,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
@@ -342,11 +311,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
@@ -374,11 +339,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
@@ -392,7 +353,7 @@ class StreamMessageInputStreamTest {
         streamMessage2.write("78");
         final AtomicBoolean consumed = new AtomicBoolean();
         streamMessage2.whenConsumed().thenRun(() -> {
-            consumed.getAndSet(true);
+            consumed.set(true);
             streamMessage2.close();
         });
         final InputStream inputStream = StreamMessage
@@ -404,34 +365,27 @@ class StreamMessageInputStreamTest {
             result.writeByte(inputStream.read());
         }
 
-        int readableBytes = result.readableBytes();
-        byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        byte[] actual = ByteBufUtil.getBytes(result);
+        result.clear();
         assertThat(actual).isEqualTo(ImmutableList.of("12")
                                                   .stream()
                                                   .map(String::getBytes)
                                                   .reduce(Bytes::concat).get());
-        assertThat(inputStream.available()).isEqualTo(0);
-        assertThat(consumed.get()).isFalse();
+        assertThat(inputStream.available()).isZero();
+        assertThat(consumed).isFalse();
 
         int read;
         while ((read = inputStream.read()) != -1) {
             result.writeByte(read);
         }
 
-        readableBytes = result.readableBytes();
-        actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(ImmutableList.of("34", "56", "78")
                                                   .stream()
                                                   .map(String::getBytes)
                                                   .reduce(Bytes::concat).get());
         assertThat(inputStream.available()).isZero();
-        assertThat(consumed.get()).isTrue();
+        await().untilTrue(consumed);
     }
 }
