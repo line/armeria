@@ -27,7 +27,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class JsonLogFormatTest {
-    
     @Test
     void formatRequest() {
         final JsonLogFormat logFormat = new JsonLogFormat();
@@ -39,7 +38,6 @@ class JsonLogFormatTest {
         assertThat(requestLog)
                 .matches("^\\{\"startTime\":\".+\",\"length\":\".+\",\"duration\":\".+\"," +
                          "\"scheme\":\".+\",\"name\":\".+\",\"headers\":\".+\"}$");
-
     }
 
     @Test
