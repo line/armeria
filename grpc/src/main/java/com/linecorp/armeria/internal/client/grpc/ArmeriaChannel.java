@@ -67,6 +67,12 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     @Nullable
     private final GrpcJsonMarshaller jsonMarshaller;
     private final Map<MethodDescriptor<?, ?>, String> simpleMethodNames;
+    private final int maxOutboundMessageSizeBytes;
+    private final int maxInboundMessageSizeBytes;
+    private final boolean unsafeWrapResponseBuffers;
+    private final Compressor compressor;
+    private final DecompressorRegistry decompressorRegistry;
+    private final CallCredentials credentials0;
 
     ArmeriaChannel(ClientBuilderParams params,
                    HttpClient httpClient,
@@ -82,6 +88,14 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         this.serializationFormat = serializationFormat;
         this.jsonMarshaller = jsonMarshaller;
         this.simpleMethodNames = simpleMethodNames;
+
+        final ClientOptions options = options();
+        maxOutboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES);
+        maxInboundMessageSizeBytes = maxInboundMessageSizeBytes(options);
+        unsafeWrapResponseBuffers = options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS);
+        compressor = options.get(GrpcClientOptions.COMPRESSOR);
+        decompressorRegistry = options.get(GrpcClientOptions.DECOMPRESSOR_REGISTRY);
+        credentials0 = options.get(GrpcClientOptions.CALL_CREDENTIALS);
     }
 
     @Override
@@ -97,13 +111,6 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
                                RequestLogProperty.RESPONSE_CONTENT);
 
-        final ClientOptions options = options();
-        final int maxOutboundMessageSizeBytes = options.get(GrpcClientOptions.MAX_OUTBOUND_MESSAGE_SIZE_BYTES);
-        final int maxInboundMessageSizeBytes = maxInboundMessageSizeBytes(options);
-        final boolean unsafeWrapResponseBuffers = options.get(GrpcClientOptions.UNSAFE_WRAP_RESPONSE_BUFFERS);
-        final Compressor compressor = options.get(GrpcClientOptions.COMPRESSOR);
-        final DecompressorRegistry decompressorRegistry = options.get(GrpcClientOptions.DECOMPRESSOR_REGISTRY);
-
         final HttpClient client;
 
         CallCredentials credentials = callOptions.getCredentials();
@@ -111,7 +118,6 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
             credentials = null;
         }
         if (credentials == null) {
-            final CallCredentials credentials0 = options.get(GrpcClientOptions.CALL_CREDENTIALS);
             if (credentials0 != NullCallCredentials.INSTANCE) {
                 credentials = credentials0;
             }
