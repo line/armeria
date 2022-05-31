@@ -56,7 +56,7 @@ class WriteTimeoutTest {
     @Test
     void testWriteTimeout() {
         final RequestHeadersBuilder headersBuilder = RequestHeaders.builder(HttpMethod.GET, "/");
-        headersBuilder.add("header1", Strings.repeat("a", 1100)); // set a header over 1KB
+        headersBuilder.add("header1", Strings.repeat("a", 1500)); // set a header over 1KB
 
         // using h1c since http2 compresses headers
         assertThatThrownBy(() -> WebClient.builder(SessionProtocol.H1C, server.httpEndpoint())
