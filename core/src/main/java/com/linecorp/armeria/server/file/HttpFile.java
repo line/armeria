@@ -203,7 +203,7 @@ public interface HttpFile {
             "jrt".equals(url.getProtocol())) {
             return new ClassPathHttpFileBuilder(url);
         }
-        throw new IllegalArgumentException("Not supported URL protocol for " + url);
+        throw new IllegalArgumentException("Unsupported URL: " + url + " (must start with 'file:', 'jar:file' or 'jrt:')");
     }
 
     /**

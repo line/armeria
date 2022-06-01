@@ -91,7 +91,7 @@ class HttpFileTest {
     @Test
     void createFromHttpUrl() throws Exception {
         final URL url = new URL("https://line.me");
-        assertThatThrownBy(() -> HttpFile.builder(url)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> HttpFile.builder(url)).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Unsupported URL: https://line.me (must start with 'file:', 'jar:file' or 'jrt:')");
     }
 
     @Test
@@ -115,6 +115,6 @@ class HttpFileTest {
     @Test
     void createFromJarHttpUrl() throws Exception {
         final URL jarHttpUrl = new URL("jar:http://www.foo.com/bar/baz.jar!/COM/foo/Quux.class");
-        assertThatThrownBy(() -> HttpFile.builder(jarHttpUrl)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> HttpFile.builder(jarHttpUrl)).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("Unsupported URL: jar:http://www.foo.com/bar/baz.jar!/COM/foo/Quux.class (must start with 'file:', 'jar:file' or 'jrt:')");
     }
 }
