@@ -223,26 +223,26 @@ class FlagsTest {
     }
 
     @Test
-    void defaultRequestContextLeakDetection() throws Exception {
-        final Method method = flags.getDeclaredMethod("requestContextLeakDetection");
+    void defaultRequestContextLeakDetectionSampler() throws Exception {
+        final Method method = flags.getDeclaredMethod("requestContextLeakDetectionSampler");
         assertThat(method.invoke(flags))
                 .usingRecursiveComparison()
                 .isEqualTo(Sampler.never());
     }
 
     @Test
-    @SetSystemProperty(key = "com.linecorp.armeria.requestContextLeakDetection", value = "always")
-    void systemPropertyRequestContextLeakDetection() throws Exception {
-        final Method method = flags.getDeclaredMethod("requestContextLeakDetection");
+    @SetSystemProperty(key = "com.linecorp.armeria.requestContextLeakDetectionSampler", value = "always")
+    void systemPropertyRequestContextLeakDetectionSampler() throws Exception {
+        final Method method = flags.getDeclaredMethod("requestContextLeakDetectionSampler");
         assertThat(method.invoke(flags))
                 .usingRecursiveComparison()
                 .isEqualTo(Sampler.always());
     }
 
     @Test
-    @SetSystemProperty(key = "com.linecorp.armeria.requestContextLeakDetection", value = "invalid-spec")
-    void invalidSystemPropertyRequestContextLeakDetection() throws Exception {
-        final Method method = flags.getDeclaredMethod("requestContextLeakDetection");
+    @SetSystemProperty(key = "com.linecorp.armeria.requestContextLeakDetectionSampler", value = "invalid-spec")
+    void invalidSystemPropertyRequestContextLeakDetectionSampler() throws Exception {
+        final Method method = flags.getDeclaredMethod("requestContextLeakDetectionSampler");
         assertThat(method.invoke(flags))
                 .usingRecursiveComparison()
                 .isEqualTo(Sampler.never());

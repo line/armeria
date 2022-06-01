@@ -376,8 +376,8 @@ public final class Flags {
     private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION =
             getValue(FlagsProvider::defaultMultipartUploadsLocation, "defaultMultipartUploadsLocation");
 
-    private static final Sampler<? super RequestContext> REQUEST_CONTEXT_LEAK_DETECTION =
-            getValue(FlagsProvider::requestContextLeakDetection, "requestContextLeakDetection");
+    private static final Sampler<? super RequestContext> REQUEST_CONTEXT_LEAK_DETECTION_SAMPLER =
+            getValue(FlagsProvider::requestContextLeakDetectionSampler, "requestContextLeakDetectionSampler");
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -1308,8 +1308,8 @@ public final class Flags {
      * override the default. This feature is disable if users provide {@link Sampler#never()}.
      * See {@link Sampler#of(String)} for the specification string format.</p>
      */
-    public static Sampler<? super RequestContext> requestContextLeakDetection() {
-        return REQUEST_CONTEXT_LEAK_DETECTION;
+    public static Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
+        return REQUEST_CONTEXT_LEAK_DETECTION_SAMPLER;
     }
 
     @Nullable

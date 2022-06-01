@@ -967,12 +967,12 @@ public interface FlagsProvider {
      * will have an empty stack trace to eliminate the cost of capturing the stack trace.
      *
      * <p>The default value of this flag is {@link Sampler#never()}.
-     * Specify the {@code -Dcom.linecorp.armeria.requestContextLeakDetection=<specification>} JVM option to
+     * Specify the {@code -Dcom.linecorp.armeria.requestContextLeakDetectionSampler=<specification>} JVM option to
      * override the default. This feature is disable if users provide {@link Sampler#never()}.
      * See {@link Sampler#of(String)} for the specification string format.</p>
      */
     @Nullable
-    default Sampler<? super RequestContext> requestContextLeakDetection() {
+    default Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
         return null;
     }
 }

@@ -65,12 +65,12 @@ public final class RequestContextUtil {
 
     static {
         final RequestContextStorageProvider provider = Flags.requestContextStorageProvider();
-        final Sampler<? super RequestContext> leakDetectionConfiguration = Flags.requestContextLeakDetection();
+        final Sampler<? super RequestContext> sampler = Flags.requestContextLeakDetectionSampler();
         try {
-            if (!leakDetectionConfiguration.equals(Sampler.never())) {
+            if (!sampler.equals(Sampler.never())) {
                 requestContextStorage =
                         new LeakTracingRequestContextStorage(provider.newStorage(),
-                                                             leakDetectionConfiguration);
+                                                             sampler);
             } else {
                 requestContextStorage = provider.newStorage();
             }

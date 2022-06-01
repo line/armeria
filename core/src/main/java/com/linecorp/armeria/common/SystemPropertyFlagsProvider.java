@@ -439,8 +439,8 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Sampler<? super RequestContext> requestContextLeakDetection() {
-        final String spec = getNormalized("requestContextLeakDetection");
+    public Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
+        final String spec = getNormalized("requestContextLeakDetectionSampler");
         if (spec == null) {
             return null;
         }

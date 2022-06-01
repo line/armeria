@@ -400,7 +400,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Sampler<? super RequestContext> requestContextLeakDetection() {
+    public Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
         return Sampler.never();
     }
 }
