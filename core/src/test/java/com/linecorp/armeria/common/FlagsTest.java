@@ -227,7 +227,7 @@ class FlagsTest {
         final Method method = flags.getDeclaredMethod("requestContextLeakDetection");
         assertThat(method.invoke(flags))
                 .usingRecursiveComparison()
-                .isEqualTo(LeakDetectionConfiguration.disable());
+                .isEqualTo(Sampler.never());
     }
 
     @Test
@@ -236,7 +236,7 @@ class FlagsTest {
         final Method method = flags.getDeclaredMethod("requestContextLeakDetection");
         assertThat(method.invoke(flags))
                 .usingRecursiveComparison()
-                .isEqualTo(LeakDetectionConfiguration.enable(Sampler.always()));
+                .isEqualTo(Sampler.always());
     }
 
     @Test
@@ -245,7 +245,7 @@ class FlagsTest {
         final Method method = flags.getDeclaredMethod("requestContextLeakDetection");
         assertThat(method.invoke(flags))
                 .usingRecursiveComparison()
-                .isEqualTo(LeakDetectionConfiguration.disable());
+                .isEqualTo(Sampler.never());
     }
 
     @Test

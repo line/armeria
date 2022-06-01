@@ -26,7 +26,7 @@ public final class EnableLeakDetectionFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public LeakDetectionConfiguration requestContextLeakDetection() {
-        return LeakDetectionConfiguration.enable(Sampler.always());
+    public Sampler<? super RequestContext> requestContextLeakDetection() {
+        return Sampler.always();
     }
 }

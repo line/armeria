@@ -962,18 +962,17 @@ public interface FlagsProvider {
     }
 
     /**
-     * Returns the {@link LeakDetectionConfiguration} that determines whether to trace the stack trace of
-     * request context leaks and how frequently to keeps stack trace. A sampled exception will have the stack
-     * trace while the others will have an empty stack trace to eliminate the cost of capturing the stack
-     * trace.
+     * Returns the {@link Sampler} that determines whether to trace the stack trace of request contexts leaks
+     * and how frequently to keeps stack trace. A sampled exception will have the stack trace while the others
+     * will have an empty stack trace to eliminate the cost of capturing the stack trace.
      *
-     * <p>This flag is disabled by default.
+     * <p>The default value of this flag is {@link Sampler#never()}.
      * Specify the {@code -Dcom.linecorp.armeria.requestContextLeakDetection=<specification>} JVM option to
-     * override the default. By providing specification of {@link Sampler}, {@link LeakDetectionConfiguration}
-     * is enable. See {@link Sampler#of(String)} for the specification string format.</p>
+     * override the default. This feature is disable if users provide {@link Sampler#never()}.
+     * See {@link Sampler#of(String)} for the specification string format.</p>
      */
     @Nullable
-    default LeakDetectionConfiguration requestContextLeakDetection() {
+    default Sampler<? super RequestContext> requestContextLeakDetection() {
         return null;
     }
 }

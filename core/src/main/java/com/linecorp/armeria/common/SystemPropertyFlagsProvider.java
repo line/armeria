@@ -439,19 +439,19 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public LeakDetectionConfiguration requestContextLeakDetection() {
+    public Sampler<? super RequestContext> requestContextLeakDetection() {
         final String spec = getNormalized("requestContextLeakDetection");
         if (spec == null) {
             return null;
         }
         if ("true".equals(spec) || "always".equals(spec)) {
-            return LeakDetectionConfiguration.enable(Sampler.always());
+            return Sampler.always();
         }
         if ("false".equals(spec) || "never".equals(spec)) {
-            return LeakDetectionConfiguration.enable(Sampler.never());
+            return Sampler.never();
         }
         try {
-            return LeakDetectionConfiguration.enable(Sampler.of(spec));
+            return Sampler.of(spec);
         } catch (Exception e) {
             // Invalid sampler specification
             throw new IllegalArgumentException("invalid sampler spec: " + spec, e);

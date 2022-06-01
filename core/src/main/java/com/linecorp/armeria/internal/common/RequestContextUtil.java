@@ -33,13 +33,13 @@ import com.google.errorprone.annotations.MustBeClosed;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.LeakDetectionConfiguration;
 import com.linecorp.armeria.common.LeakTracingRequestContextStorage;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestContextStorageProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
 
 import io.netty.channel.ChannelFuture;
@@ -65,12 +65,12 @@ public final class RequestContextUtil {
 
     static {
         final RequestContextStorageProvider provider = Flags.requestContextStorageProvider();
-        final LeakDetectionConfiguration leakDetectionConfiguration = Flags.requestContextLeakDetection();
+        final Sampler<? super RequestContext> leakDetectionConfiguration = Flags.requestContextLeakDetection();
         try {
-            if (leakDetectionConfiguration.isEnable()) {
+            if (!leakDetectionConfiguration.equals(Sampler.never())) {
                 requestContextStorage =
                         new LeakTracingRequestContextStorage(provider.newStorage(),
-                                                             leakDetectionConfiguration.sampler());
+                                                             leakDetectionConfiguration);
             } else {
                 requestContextStorage = provider.newStorage();
             }
