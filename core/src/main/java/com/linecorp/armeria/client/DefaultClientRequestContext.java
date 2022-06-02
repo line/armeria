@@ -115,7 +115,6 @@ public final class DefaultClientRequestContext
     private final ClientOptions options;
     private final RequestLogBuilder log;
     private final CancellationScheduler responseCancellationScheduler;
-    private final ExchangeType exchangeType;
     private long writeTimeoutMillis;
     private long maxResponseLength;
 
@@ -193,7 +192,8 @@ public final class DefaultClientRequestContext
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq, RequestOptions requestOptions,
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros, boolean hasBaseUri) {
-        super(meterRegistry, sessionProtocol, id, method, path, query, req, rpcReq, root);
+        super(meterRegistry, sessionProtocol, id, method, path, query,
+              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING), req, rpcReq, root);
 
         this.eventLoop = eventLoop;
         this.hasBaseUri = hasBaseUri;
@@ -230,7 +230,6 @@ public final class DefaultClientRequestContext
             //noinspection unchecked
             setAttr((AttributeKey<Object>) attr.getKey(), attr.getValue());
         }
-        exchangeType = firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING);
 
         additionalRequestHeaders = options.get(ClientOptions.HEADERS);
 
@@ -464,7 +463,8 @@ public final class DefaultClientRequestContext
                                         @Nullable Endpoint endpoint, @Nullable EndpointGroup endpointGroup,
                                         SessionProtocol sessionProtocol, HttpMethod method,
                                         String path, @Nullable String query, @Nullable String fragment) {
-        super(ctx.meterRegistry(), sessionProtocol, id, method, path, query, req, rpcReq, ctx.root());
+        super(ctx.meterRegistry(), sessionProtocol, id, method, path, query, ctx.exchangeType(),
+              req, rpcReq, ctx.root());
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {
@@ -494,7 +494,6 @@ public final class DefaultClientRequestContext
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
         }
-        this.exchangeType = ctx.exchangeType();
     }
 
     @Nullable
@@ -719,11 +718,6 @@ public final class DefaultClientRequestContext
                 return;
             }
         }
-    }
-
-    @Override
-    public ExchangeType exchangeType() {
-        return exchangeType;
     }
 
     @Override

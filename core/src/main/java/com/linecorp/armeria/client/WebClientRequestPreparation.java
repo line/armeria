@@ -361,6 +361,11 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
         return this;
     }
 
+    @Nullable
+    ExchangeType exchangeType() {
+        return requestOptionsBuilder().exchangeType();
+    }
+
     @Override
     public WebClientRequestPreparation exchangeType(ExchangeType exchangeType) {
         requestOptionsBuilder().exchangeType(exchangeType);

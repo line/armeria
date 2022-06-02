@@ -16,11 +16,18 @@
 
 package com.linecorp.armeria.internal.common.grpc;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.ExchangeType;
 
 import io.grpc.MethodDescriptor.MethodType;
 
 public final class GrpcExchangeTypeUtil {
+
+    private static final Logger logger = LoggerFactory.getLogger(GrpcExchangeTypeUtil.class);
+
+    private static boolean warnedUnknownMethodType;
 
     public static ExchangeType toExchangeType(MethodType methodType) {
         switch (methodType) {
@@ -31,7 +38,12 @@ public final class GrpcExchangeTypeUtil {
             case SERVER_STREAMING:
                 return ExchangeType.RESPONSE_STREAMING;
             case BIDI_STREAMING:
+                return ExchangeType.BIDI_STREAMING;
             default:
+                if (!warnedUnknownMethodType) {
+                    warnedUnknownMethodType = true;
+                    logger.warn("Unknown MethodType: {}; using {}", methodType, ExchangeType.BIDI_STREAMING);
+                }
                 return ExchangeType.BIDI_STREAMING;
         }
     }

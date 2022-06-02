@@ -96,7 +96,8 @@ public interface RequestOptions {
 
     /**
      * Returns the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or
-     * {@link HttpResponse}. If unspecified, {@link ExchangeType#BIDI_STREAMING} used by default.
+     * {@link HttpResponse}. {@link ExchangeType#BIDI_STREAMING} is assumed if this method
+     * returns {@code null}.
      *
      * <p>Note that an {@link HttpRequest} will be aggregated before being written if
      * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set.

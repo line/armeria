@@ -22,6 +22,8 @@ import java.net.URI;
 import java.util.EnumMap;
 import java.util.Map;
 
+import com.google.common.collect.Maps;
+
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
@@ -62,14 +64,14 @@ import io.netty.handler.codec.http.HttpHeaderValues;
  */
 final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable {
 
-    private static final EnumMap<MethodType, RequestOptions> REQUEST_OPTIONS_MAP;
+    private static final Map<MethodType, RequestOptions> REQUEST_OPTIONS_MAP;
 
     static {
         final EnumMap<MethodType, RequestOptions> requestOptionsMap = new EnumMap<>(MethodType.class);
         for (MethodType methodType : MethodType.values()) {
             requestOptionsMap.put(methodType, newRequestOptions(toExchangeType(methodType)));
         }
-        REQUEST_OPTIONS_MAP = requestOptionsMap;
+        REQUEST_OPTIONS_MAP = Maps.immutableEnumMap(requestOptionsMap);
     }
 
     private final ClientBuilderParams params;

@@ -57,6 +57,7 @@ public final class BlockingWebClientRequestPreparation
 
     BlockingWebClientRequestPreparation(WebClientRequestPreparation delegate) {
         this.delegate = delegate;
+        delegate.exchangeType(ExchangeType.UNARY);
     }
 
     /**
@@ -64,7 +65,6 @@ public final class BlockingWebClientRequestPreparation
      */
     @Override
     public AggregatedHttpResponse execute() {
-        delegate.exchangeType(ExchangeType.UNARY);
         return ResponseAs.blocking().as(delegate.execute());
     }
 
@@ -217,14 +217,9 @@ public final class BlockingWebClientRequestPreparation
         return as(AggregatedResponseAs.json(typeRef, mapper));
     }
 
-    /**
-     * {@link ExchangeType#UNARY} is only supported for {@link BlockingWebClient}.
-     */
     @Override
     public BlockingWebClientRequestPreparation exchangeType(ExchangeType exchangeType) {
-        if (exchangeType != ExchangeType.UNARY) {
-            throw new IllegalArgumentException(ExchangeType.UNARY + " is only supported");
-        }
+        delegate.exchangeType(exchangeType);
         return this;
     }
 

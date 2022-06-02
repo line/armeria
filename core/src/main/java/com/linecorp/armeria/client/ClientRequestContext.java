@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
@@ -527,12 +526,12 @@ public interface ClientRequestContext extends RequestContext {
     void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator);
 
     /**
-     * Returns the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or
-     * {@link HttpResponse}.
+     * @inheritDoc
      *
      * <p>Note that an {@link HttpRequest} will be aggregated before being written if
      * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set.
      */
+    @Override
     @UnstableApi
     ExchangeType exchangeType();
 }

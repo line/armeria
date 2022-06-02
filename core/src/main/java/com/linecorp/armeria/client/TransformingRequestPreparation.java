@@ -55,18 +55,22 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
 
     @Override
     public R execute() {
-        exchangeType(exchangeType());
+        maybeSetDefaultExchangeType();
         return responseAs.as(delegate.execute());
     }
 
-    private ExchangeType exchangeType() {
+    private void maybeSetDefaultExchangeType() {
         if (delegate instanceof BlockingWebClientRequestPreparation) {
-            return ExchangeType.UNARY;
+            // ExchangeType.UNARY is specified as the default type
+            return;
         }
 
-        final boolean requestStreaming = ((WebClientRequestPreparation) delegate).isRequestStreaming();
-        final boolean responseStreaming = !responseAs.requiresAggregation();
-        return ExchangeType.of(requestStreaming, responseStreaming);
+        final WebClientRequestPreparation webClientPreparation = (WebClientRequestPreparation) delegate;
+        if (webClientPreparation.exchangeType() == null) {
+            final boolean requestStreaming = webClientPreparation.isRequestStreaming();
+            final boolean responseStreaming = !responseAs.requiresAggregation();
+            exchangeType(ExchangeType.of(requestStreaming, responseStreaming));
+        }
     }
 
     @Override

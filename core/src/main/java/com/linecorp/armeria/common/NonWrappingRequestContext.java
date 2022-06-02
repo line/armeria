@@ -53,6 +53,8 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     private final RequestId id;
     private final HttpMethod method;
     private final String path;
+    private final ExchangeType exchangeType;
+
     @Nullable
     private String decodedPath;
     @Nullable
@@ -74,7 +76,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
      */
     protected NonWrappingRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, HttpMethod method, String path, @Nullable String query,
+            RequestId id, HttpMethod method, String path, @Nullable String query, ExchangeType exchangeType,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             @Nullable RequestContext rootAttributeMap) {
 
@@ -85,6 +87,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
         this.method = requireNonNull(method, "method");
         this.path = requireNonNull(path, "path");
         this.query = query;
+        this.exchangeType = exchangeType;
         this.req = req;
         this.rpcReq = rpcReq;
     }
@@ -186,6 +189,11 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     @Override
     public final String query() {
         return query;
+    }
+
+    @Override
+    public ExchangeType exchangeType() {
+        return exchangeType;
     }
 
     @Override

@@ -79,7 +79,7 @@ class WebClientPreparationExchangeTypeTest {
     }
 
     @Test
-    void responseString() {
+    void responseString_default() {
         assertExchangeType(() -> {
             client.prepare()
                   .post("/")
@@ -87,6 +87,19 @@ class WebClientPreparationExchangeTypeTest {
                   .asString()
                   .execute();
         }).isEqualTo(ExchangeType.UNARY);
+    }
+
+
+    @Test
+    void responseString_custom() {
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/")
+                  .content("foo")
+                  .asString()
+                  .exchangeType(ExchangeType.REQUEST_STREAMING)
+                  .execute();
+        }).isEqualTo(ExchangeType.REQUEST_STREAMING);
     }
 
     @Test
@@ -134,8 +147,32 @@ class WebClientPreparationExchangeTypeTest {
         }).isEqualTo(exchangeType);
     }
 
+    @CsvSource({ "true", "false" })
+    @ParameterizedTest
+    void responseAs_custom(boolean requiresAggregation) {
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/")
+                  .content("foo")
+                  .as(new ResponseAs<HttpResponse, String>() {
+                          @Override
+                          public String as(HttpResponse response) {
+                              return response.aggregate().join().contentUtf8();
+                          }
+
+                          @Override
+                          public boolean requiresAggregation() {
+                              return requiresAggregation;
+                          }
+                      }
+                  )
+                  .exchangeType(ExchangeType.BIDI_STREAMING)
+                  .execute();
+        }).isEqualTo(ExchangeType.BIDI_STREAMING);
+    }
+
     @Test
-    void blocking() {
+    void blocking_default() {
         assertExchangeType(() -> {
             client.blocking()
                   .prepare()
@@ -143,5 +180,17 @@ class WebClientPreparationExchangeTypeTest {
                   .content(MediaType.PLAIN_TEXT, StreamMessage.of(HttpData.ofUtf8("foo")))
                   .execute();
         }).isEqualTo(ExchangeType.UNARY);
+    }
+
+    @Test
+    void blocking_custom() {
+        assertExchangeType(() -> {
+            client.blocking()
+                  .prepare()
+                  .post("/")
+                  .content(MediaType.PLAIN_TEXT, StreamMessage.of(HttpData.ofUtf8("foo")))
+                  .exchangeType(ExchangeType.RESPONSE_STREAMING)
+                  .execute();
+        }).isEqualTo(ExchangeType.RESPONSE_STREAMING);
     }
 }
