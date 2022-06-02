@@ -64,7 +64,7 @@ public final class ThriftProtocolUtil {
         }
 
         if (buf.readableBytes() < 4) {
-            // Delegate readMessageBegin() to handle the malformed message.
+            // Delegate the malformed message to readMessageBegin() to handle it.
             return;
         }
 
@@ -87,7 +87,8 @@ public final class ThriftProtocolUtil {
      * Returns whether the current `libthrift` runtime implementation limits the numbers of bytes to
      * read for `TBinaryProtocol`.
      * Thrift 0.9.x, 0.10.x does not support a correct validation of `readMessageBegin()` for `TBinaryProtocol`.
-     * See: https://github.com/apache/thrift/pull/1398#issuecomment-339360568
+     * See: <a href="https://github.com/apache/thrift/pull/1398#issuecomment-339360568">
+     * THRIFT-4362 check "read length" in readStringBody(int)</a>
      */
     private static boolean supportsMessageLengthLimit(SerializationFormat serializationFormat) {
         if (serializationFormat != ThriftSerializationFormats.BINARY) {

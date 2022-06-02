@@ -24,6 +24,8 @@ import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TJSONProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.text.TTextProtocolFactory;
 import com.linecorp.armeria.internal.common.thrift.DefaultThriftProtocolFactoryProvider;
@@ -56,7 +58,7 @@ public final class ThriftProtocolFactories {
      * Related: <a href="https://issues.apache.org/jira/browse/THRIFT-2572">Add string/collection length limit
      * checks (from C++) to java protocol readers</a>
      *
-     * @deprecated Use {@link #compat(int, int)} instead.
+     * @deprecated Use {@link #compat(int, int)}.
      */
     @Deprecated
     public static final TProtocolFactory COMPACT = compat(0, 0);
@@ -64,7 +66,7 @@ public final class ThriftProtocolFactories {
     /**
      * {@link TProtocolFactory} for the Thrift TJSON protocol.
      *
-     * @deprecated Use {@link #json()} instead.
+     * @deprecated Use {@link #json()}.
      */
     @Deprecated
     public static final TProtocolFactory JSON = new TJSONProtocol.Factory() {
@@ -79,7 +81,7 @@ public final class ThriftProtocolFactories {
     /**
      * {@link TProtocolFactory} for the Thrift TText protocol.
      *
-     * @deprecated Use {@link #text()} instead.
+     * @deprecated Use {@link #text()}.
      */
     @Deprecated
     public static final TProtocolFactory TEXT = TTextProtocolFactory.get();
@@ -87,7 +89,7 @@ public final class ThriftProtocolFactories {
     /**
      * {@link TProtocolFactory} for the Thrift TText protocol with named enums.
      *
-     * @deprecated Use {@link #textNamedEnum()} instead.
+     * @deprecated Use {@link #textNamedEnum()}.
      */
     @Deprecated
     public static final TProtocolFactory TEXT_NAMED_ENUM = TTextProtocolFactory.get(true);
@@ -123,8 +125,11 @@ public final class ThriftProtocolFactories {
 
             @Override
             public String toString() {
-                return "TProtocolFactory(binary, maxStringLength:" + maxStringLength +
-                       ", maxContainerLength: " + maxContainerLength + ')';
+                return MoreObjects.toStringHelper(this)
+                                  .addValue("BINARY")
+                                  .add("maxStringLength", maxStringLength0)
+                                  .add("maxContainerLength", maxContainerLength0)
+                                  .toString();
             }
         };
     }
@@ -148,8 +153,11 @@ public final class ThriftProtocolFactories {
 
             @Override
             public String toString() {
-                return "TProtocolFactory(compact, maxStringLength:" + maxStringLength +
-                       ", maxContainerLength: " + maxContainerLength + ')';
+                return MoreObjects.toStringHelper(this)
+                                  .addValue("COMPACT")
+                                  .add("maxStringLength", maxStringLength0)
+                                  .add("maxContainerLength", maxContainerLength0)
+                                  .toString();
             }
         };
     }

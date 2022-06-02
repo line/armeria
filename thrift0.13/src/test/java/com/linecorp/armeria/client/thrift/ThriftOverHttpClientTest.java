@@ -116,8 +116,8 @@ public class ThriftOverHttpClientTest {
         }
 
         @Override
-        protected @Nullable TProtocolFactory tProtocolFactory(SerializationFormat serializationFormat,
-                                                              int maxStringLength, int maxContainerLength) {
+        protected @Nullable TProtocolFactory protocolFactory(SerializationFormat serializationFormat,
+                                                             int maxStringLength, int maxContainerLength) {
             return new TTupleProtocol.Factory();
         }
     }

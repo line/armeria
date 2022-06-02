@@ -47,8 +47,8 @@ public final class DefaultThriftProtocolFactoryProvider extends ThriftProtocolFa
     }
 
     @Override
-    protected TProtocolFactory tProtocolFactory(SerializationFormat serializationFormat,
-                                                int maxStringLength, int maxContainerLength) {
+    protected TProtocolFactory protocolFactory(SerializationFormat serializationFormat,
+                                               int maxStringLength, int maxContainerLength) {
         requireNonNull(serializationFormat, "serializationFormat");
         if (!serializationFormats().contains(serializationFormat)) {
             return null;

@@ -42,10 +42,10 @@ public final class ThriftClients {
      * the {@code uri}, {@link ThriftSerializationFormats#BINARY} will be used by default.
      *
      * @param uri the URI of the server endpoint
-     * @param clientType the type of the new gRPC client
+     * @param clientType the type of the new Thrift client
      *
      * @throws IllegalArgumentException if the specified {@code uri} is invalid, or the specified
-     *                                  {@code clientType} is an unsupported gRPC client stub.
+     *                                  {@code clientType} is an unsupported Thrift client stub.
      */
     public static <T> T newClient(String uri, Class<T> clientType) {
         return builder(uri).build(clientType);
@@ -59,10 +59,10 @@ public final class ThriftClients {
      * the {@code uri}, {@link ThriftSerializationFormats#BINARY} will be used by default.
      *
      * @param uri the {@link URI} of the server endpoint
-     * @param clientType the type of the new gRPC client
+     * @param clientType the type of the new Thrift client
      *
      * @throws IllegalArgumentException if the specified {@code uri} is invalid, or the specified
-     *                                  {@code clientType} is an unsupported gRPC client stub.
+     *                                  {@code clientType} is an unsupported Thrift client stub.
      */
     public static <T> T newClient(URI uri, Class<T> clientType) {
         return builder(uri).build(clientType);
@@ -77,10 +77,10 @@ public final class ThriftClients {
      *
      * @param scheme the {@link Scheme} represented as a {@link String}
      * @param endpointGroup the server {@link EndpointGroup}
-     * @param clientType the type of the new gRPC client
+     * @param clientType the type of the new Thrift client
      *
      * @throws IllegalArgumentException if the specified {@code scheme} is invalid or the specified
-     *                                  {@code clientType} is an unsupported gRPC client stub.
+     *                                  {@code clientType} is an unsupported Thrift client stub.
      */
     public static <T> T newClient(String scheme, EndpointGroup endpointGroup, Class<T> clientType) {
         return builder(scheme, endpointGroup).build(clientType);
@@ -95,7 +95,7 @@ public final class ThriftClients {
      *
      * @param scheme the {@link Scheme}
      * @param endpointGroup the server {@link EndpointGroup}
-     * @param clientType the type of the new gRPC client
+     * @param clientType the type of the new Thrift client
      *
      * @throws IllegalArgumentException if the specified {@link Scheme} is invalid or the specified
      *                                  {@code clientType} is an unsupported Thrift client stub.
@@ -131,9 +131,9 @@ public final class ThriftClients {
      *
      * @param protocol the {@link SessionProtocol}
      * @param endpointGroup the server {@link EndpointGroup}
-     * @param clientType the type of the new gRPC client
+     * @param clientType the type of the new Thrift client
      *
-     * @throws IllegalArgumentException if the {@code clientType} is an unsupported gRPC client stub.
+     * @throws IllegalArgumentException if the {@code clientType} is an unsupported Thrift client stub.
      */
     public static <T> T newClient(SessionProtocol protocol, EndpointGroup endpointGroup, Class<T> clientType) {
         return builder(protocol, endpointGroup).build(clientType);
@@ -149,7 +149,7 @@ public final class ThriftClients {
      * @param path the path to the endpoint
      * @param clientType the type of the new client
      *
-     * @throws IllegalArgumentException if the {@code clientType} is an unsupported gRPC client stub.
+     * @throws IllegalArgumentException if the {@code clientType} is an unsupported Thrift client stub.
      */
     public static <T> T newClient(SessionProtocol protocol, EndpointGroup endpointGroup, String path,
                                   Class<T> clientType) {
@@ -198,7 +198,7 @@ public final class ThriftClients {
     }
 
     /**
-     * Returns a new {@link ThriftClientBuilder} that builds the gRPC client that connects
+     * Returns a new {@link ThriftClientBuilder} that builds the Thrift client that connects
      * to the specified {@link EndpointGroup} with the specified {@link SessionProtocol} and
      * {@link ThriftSerializationFormats#BINARY}.
      */

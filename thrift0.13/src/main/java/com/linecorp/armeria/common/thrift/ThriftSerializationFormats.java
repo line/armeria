@@ -76,7 +76,7 @@ public final class ThriftSerializationFormats {
         lengthUnlimitedProtocolFactories = protocolFactoryProviders
                 .stream()
                 .flatMap(provider -> provider.serializationFormats().stream().map(format -> {
-                    final TProtocolFactory factory = provider.tProtocolFactory(format, 0, 0);
+                    final TProtocolFactory factory = provider.protocolFactory(format, 0, 0);
                     return factory != null ? Maps.immutableEntry(format, factory) : null;
                 }))
                 .filter(Objects::nonNull)
@@ -123,7 +123,7 @@ public final class ThriftSerializationFormats {
 
         for (ThriftProtocolFactoryProvider provider : protocolFactoryProviders) {
             final TProtocolFactory tProtocolFactory =
-                    provider.tProtocolFactory(serializationFormat, maxStringLength, maxContainerLength);
+                    provider.protocolFactory(serializationFormat, maxStringLength, maxContainerLength);
             if (tProtocolFactory != null) {
                 return tProtocolFactory;
             }

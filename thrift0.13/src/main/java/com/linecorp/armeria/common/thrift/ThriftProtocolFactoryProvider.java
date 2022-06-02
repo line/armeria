@@ -39,14 +39,14 @@ public abstract class ThriftProtocolFactoryProvider {
 
         public Entry(SerializationFormat serializationFormat, TProtocolFactory tProtocolFactory) {
             this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
-            this.tProtocolFactory = requireNonNull(tProtocolFactory, "tProtocolFactory");
+            this.tProtocolFactory = requireNonNull(tProtocolFactory, "protocolFactory");
         }
 
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                               .add("serializationFormat", serializationFormat)
-                              .add("tProtocolFactory", tProtocolFactory)
+                              .add("protocolFactory", tProtocolFactory)
                               .toString();
         }
     }
@@ -61,13 +61,13 @@ public abstract class ThriftProtocolFactoryProvider {
      * {@code maxStringLength} and {@code maxContainerLength}.
      * Returns {@code null} if the {@link SerializationFormat} is unsupported.
      *
-     * @param serializationFormat the serialization that {@link TProtocolFactory} supports.
+     * @param serializationFormat the serialization that the {@link TProtocolFactory} supports.
      * @param maxStringLength the maximum allowed number of bytes to read from the transport for
      *                        variable-length fields (such as strings or binary). {@code 0} means unlimited.
      * @param maxContainerLength the maximum allowed number of bytes to read from the transport for
      *                           containers (maps, sets, lists). {@code 0} means unlimited.
      */
     @Nullable
-    protected abstract TProtocolFactory tProtocolFactory(SerializationFormat serializationFormat,
-                                                         int maxStringLength, int maxContainerLength);
+    protected abstract TProtocolFactory protocolFactory(SerializationFormat serializationFormat,
+                                                        int maxStringLength, int maxContainerLength);
 }
