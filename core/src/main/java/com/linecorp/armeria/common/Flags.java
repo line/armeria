@@ -49,6 +49,7 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -1305,9 +1306,10 @@ public final class Flags {
      *
      * <p>The default value of this flag is {@link Sampler#never()}.
      * Specify the {@code -Dcom.linecorp.armeria.requestContextLeakDetectionSampler=<specification>} JVM option
-     * to override the default. This feature is disabled if users provide the {@link Sampler#never()}.
+     * to override the default. This feature is disabled if {@link Sampler#never()} is specified.
      * See {@link Sampler#of(String)} for the specification string format.</p>
      */
+    @UnstableApi
     public static Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
         return REQUEST_CONTEXT_LEAK_DETECTION_SAMPLER;
     }
