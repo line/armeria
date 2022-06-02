@@ -179,17 +179,37 @@ class UnaryServerCallTest {
     }
 
     @Test
-    void duplicateRequestMessage() {
-        call.onRequestMessage(new DeframedMessage(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true),
+    void duplicateRequestMessage_inputStream() {
+        final ByteBuf buf1 = GrpcTestUtil.requestByteBuf();
+        call.onRequestMessage(new DeframedMessage(new ByteBufInputStream(buf1, true),
                                                   0), true);
-        call.onRequestMessage(new DeframedMessage(new ByteBufInputStream(GrpcTestUtil.requestByteBuf(), true),
+        final ByteBuf buf2 = GrpcTestUtil.requestByteBuf();
+        call.onRequestMessage(new DeframedMessage(new ByteBufInputStream(buf2, true),
                                                   0), true);
         await().untilAsserted(() -> assertThat(call.isCancelled()).isTrue());
         assertThatThrownBy(() -> res.whenComplete().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(StatusException.class)
                 .hasMessageContaining("More than one request messages for unary call");
+        assertThat(buf1.refCnt()).isZero();
+        assertThat(buf2.refCnt()).isZero();
     }
+
+    @Test
+    void duplicateRequestMessage_byteBuf() {
+        final ByteBuf buf1 = GrpcTestUtil.requestByteBuf();
+        call.onRequestMessage(new DeframedMessage(buf1, 0), true);
+        final ByteBuf buf2 = GrpcTestUtil.requestByteBuf();
+        call.onRequestMessage(new DeframedMessage(buf2, 0), true);
+        await().untilAsserted(() -> assertThat(call.isCancelled()).isTrue());
+        assertThatThrownBy(() -> res.whenComplete().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(StatusException.class)
+                .hasMessageContaining("More than one request messages for unary call");
+        assertThat(buf1.refCnt()).isZero();
+        assertThat(buf2.refCnt()).isZero();
+    }
+
 
     @Test
     void deferResponseHeaders() {

@@ -23,6 +23,9 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -52,6 +55,8 @@ import io.grpc.Status;
  * via {@link Listener}, and writing messages passed back to the response.
  */
 final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
+
+    private static final Logger logger = LoggerFactory.getLogger(UnaryServerCall.class);
 
     private final HttpRequest req;
     private final CompletableFuture<HttpResponse> resFuture;
@@ -138,7 +143,8 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             if (object instanceof HttpData) {
                 return requestDeframer.deframe((HttpData) object);
             } else {
-                // invalid request
+                logger.warn("{} An invalid HTTP object is received: {} (expected: {})",
+                            ctx, object, HttpData.class.getName());
                 return requestDeframer.deframe(HttpData.empty());
             }
         } else {

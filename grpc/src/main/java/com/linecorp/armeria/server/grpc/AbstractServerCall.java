@@ -207,15 +207,15 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     final void close(Throwable exception) {
         final Metadata metadata = generateMetadataFromThrowable(exception);
-        close0(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata, exception);
+        close(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata, exception);
     }
 
     @Override
     public final void close(Status status, Metadata metadata) {
-        close0(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata, null);
+        close(GrpcStatus.fromStatusFunction(statusFunction, ctx, status, metadata), metadata, null);
     }
 
-    private void close0(Status status, Metadata metadata, @Nullable Throwable exception) {
+    private void close(Status status, Metadata metadata, @Nullable Throwable exception) {
         if (ctx.eventLoop().inEventLoop()) {
             doClose(status, metadata, exception);
         } else {
@@ -322,8 +322,8 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 }
                 success = true;
             } finally {
-                if (buf != null && !success) {
-                    buf.release();
+                if (!success) {
+                    message.close();
                 }
             }
 
