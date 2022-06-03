@@ -120,13 +120,10 @@ class ArmeriaServerFactory extends AbstractServerFactory {
         final MutableServletContextHandler adminContext = environment.getAdminContext();
         final HealthCheckRegistry healthChecks = environment.healthChecks();
         try {
-            final Method method = AbstractServerFactory.class.getDeclaredMethod("createAdminServlet",
-                                                                                Server.class,
-                                                                                MutableServletContextHandler.class,
-                                                                                MetricRegistry.class,
-                                                                                HealthCheckRegistry.class,
-                                                                                AdminEnvironment.class);
-            logger.debug("createAdminServlet0 resolves to dropwizard2.1 version");
+            final Method method = AbstractServerFactory.class.getDeclaredMethod(
+                "createAdminServlet", Server.class, MutableServletContextHandler.class,
+                MetricRegistry.class, HealthCheckRegistry.class, AdminEnvironment.class);
+            logger.debug("createAdminServlet resolves to Dropwizard v2.1.");
             final AdminEnvironment adminEnvironment = environment.admin();
             return (Handler) method.invoke(this, server, adminContext, metrics, healthChecks, adminEnvironment);
         } catch (NoSuchMethodException e) {
@@ -137,12 +134,10 @@ class ArmeriaServerFactory extends AbstractServerFactory {
 
         try {
             //noinspection JavaReflectionMemberAccess - this is false warning on dropwizard2 module
-            final Method method = AbstractServerFactory.class.getDeclaredMethod("createAdminServlet",
-                                                                                Server.class,
-                                                                                MutableServletContextHandler.class,
-                                                                                MetricRegistry.class,
-                                                                                HealthCheckRegistry.class);
-            logger.debug("createAdminServlet0 resolves to dropwizard1 or 2.0 version");
+            final Method method = AbstractServerFactory.class.getDeclaredMethod(
+                "createAdminServlet", Server.class, MutableServletContextHandler.class,
+                MetricRegistry.class, HealthCheckRegistry.class);
+            logger.debug("createAdminServlet resolves to Dropwizard v1 or v2.0.");
             return (Handler) method.invoke(this, server, adminContext, metrics, healthChecks);
         } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {
             return Exceptions.throwUnsafely(e);
