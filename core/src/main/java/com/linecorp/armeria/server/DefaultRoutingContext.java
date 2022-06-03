@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
@@ -74,6 +75,8 @@ final class DefaultRoutingContext implements RoutingContext {
     private volatile QueryParams queryParams;
     @Nullable
     private HttpStatusException deferredCause;
+    @Nullable
+    private Routed<ServiceConfig> result;
 
     private final int hashCode;
 
@@ -175,6 +178,24 @@ final class DefaultRoutingContext implements RoutingContext {
         return deferredCause;
     }
 
+    @Override
+    public boolean hasResult() {
+        return result != null;
+    }
+
+    @Override
+    public void result(Routed<ServiceConfig> result) {
+        requireNonNull(result, "result");
+        checkState(this.result == null, "result is set already.");
+        this.result = result;
+    }
+
+    @Override
+    public Routed<ServiceConfig> result() {
+        checkState(result != null, "result has not set yet.");
+        return result;
+    }
+
     // For hashing and comparison, we use these properties of the context
     // 0 : VirtualHost
     // 1 : HttpMethod
@@ -182,7 +203,7 @@ final class DefaultRoutingContext implements RoutingContext {
     // 3 : Content-Type
     // 4 : Accept
     //
-    // Note that we don't use query(), params(), header() and routed() for generating hashCode and comparing
+    // Note that we don't use query(), params(), header() and result() for generating hashCode and comparing
     // objects, because this class can be cached in RouteCache class. Using all properties may cause cache
     // misses from RouteCache so it would be better if we choose the properties which can be a cache key.
 
@@ -242,6 +263,9 @@ final class DefaultRoutingContext implements RoutingContext {
                                                  .add("query", routingCtx.query())
                                                  .add("contentType", routingCtx.contentType())
                                                  .add("status", routingCtx.status());
+        if (routingCtx.hasResult()) {
+            helper.add("result", routingCtx.result());
+        }
         if (!routingCtx.acceptTypes().isEmpty()) {
             helper.add("acceptTypes", routingCtx.acceptTypes());
         }

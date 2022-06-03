@@ -68,8 +68,7 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Routed;
-import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
@@ -145,7 +144,7 @@ final class WebOperationService implements HttpService {
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
+    public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
         return ExchangeType.UNARY;
     }
 

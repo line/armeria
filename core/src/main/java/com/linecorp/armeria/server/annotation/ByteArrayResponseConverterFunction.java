@@ -17,7 +17,7 @@ package com.linecorp.armeria.server.annotation;
 
 import static com.linecorp.armeria.internal.server.ResponseConversionUtil.streamingFrom;
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapIoType;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
 
 import java.lang.reflect.Type;
 import java.util.stream.Stream;
@@ -47,7 +47,7 @@ public final class ByteArrayResponseConverterFunction implements ResponseConvert
 
     @Override
     public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
-        final Class<?> clazz = typeToClass(unwrapIoType(returnType));
+        final Class<?> clazz = typeToClass(unwrapAsyncType(returnType));
         if (clazz == null) {
             return null;
         }

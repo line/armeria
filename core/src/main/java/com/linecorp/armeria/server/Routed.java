@@ -44,8 +44,7 @@ public final class Routed<T> {
      * Creates a new {@link Routed} with the specified {@link Route}, {@link RoutingResult} and
      * {@code value}.
      */
-    @UnstableApi
-    public static <T> Routed<T> of(Route route, RoutingResult routingResult, T value) {
+    static <T> Routed<T> of(Route route, RoutingResult routingResult, T value) {
         requireNonNull(route, "route");
         requireNonNull(routingResult, "routingResult");
         requireNonNull(value, "value");

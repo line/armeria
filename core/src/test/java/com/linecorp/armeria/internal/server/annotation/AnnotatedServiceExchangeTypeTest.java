@@ -30,8 +30,6 @@ import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
-import com.linecorp.armeria.server.Routed;
-import com.linecorp.armeria.server.RoutingResult;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Param;
@@ -86,10 +84,7 @@ class AnnotatedServiceExchangeTypeTest {
         }
 
         private static ExchangeType exchangeType(ServiceRequestContext ctx) {
-            return ctx.config().service().exchangeType(
-                    ctx.request().headers(),
-                    Routed.of(ctx.config().route(), RoutingResult.builder().path(ctx.mappedPath()).build(),
-                              ctx.config()));
+            return ctx.config().service().exchangeType(ctx.request().headers(), ctx.routingContext());
         }
     }
 }

@@ -43,9 +43,9 @@ public final class ClassUtil {
     /**
      * Unwraps an enclosing {@link CompletionStage}, {@code reactor.core.publisher.Mono}, or
      * {@code scala.concurrent.Future} and returns the type arguments.
-     * Returns itself the {@link Type} is not enclosed by one of them.
+     * Returns itself if the {@link Type} is not enclosed by one of them.
      */
-    public static Type unwrapIoType(Type type) {
+    public static Type unwrapAsyncType(Type type) {
         if (type instanceof Class) {
             return type;
         }

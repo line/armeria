@@ -40,8 +40,6 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private final boolean keepAlive;
     private final RoutingContext routingContext;
     @Nullable
-    private final Routed<ServiceConfig> routed;
-    @Nullable
     private ServiceRequestContext ctx;
 
     @Nullable
@@ -49,15 +47,13 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private boolean isResponseAborted;
 
     EmptyContentDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
-                                   boolean keepAlive, RoutingContext routingContext,
-                                   @Nullable Routed<ServiceConfig> routed) {
+                                   boolean keepAlive, RoutingContext routingContext) {
         delegate = HttpRequest.of(headers);
         this.eventLoop = eventLoop;
         this.id = id;
         this.streamId = streamId;
         this.keepAlive = keepAlive;
         this.routingContext = routingContext;
-        this.routed = routed;
     }
 
     @Override
@@ -72,7 +68,10 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
 
     @Override
     public Routed<ServiceConfig> route() {
-        return routed;
+        if (routingContext.hasResult()) {
+            return routingContext.result();
+        }
+        return null;
     }
 
     @Override

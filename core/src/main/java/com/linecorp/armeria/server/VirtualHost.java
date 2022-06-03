@@ -383,6 +383,7 @@ public final class VirtualHost {
      */
     public Routed<ServiceConfig> findServiceConfig(RoutingContext routingCtx, boolean useFallbackService) {
         final Routed<ServiceConfig> routed = router.find(requireNonNull(routingCtx, "routingCtx"));
+        routingCtx.result(routed);
         switch (routed.routingResultType()) {
             case MATCHED:
                 return routed;
@@ -406,12 +407,15 @@ public final class VirtualHost {
 
         // Note that we did not implement this fallback mechanism inside a Router implementation like
         // CompositeRouter because we wanted to avoid caching non-existent mappings.
-        return Routed.of(fallbackServiceConfig.route(),
-                         RoutingResult.builder()
-                                      .path(routingCtx.path())
-                                      .query(routingCtx.query())
-                                      .build(),
-                         fallbackServiceConfig);
+        final Routed<ServiceConfig> fallbackRoute =
+                Routed.of(fallbackServiceConfig.route(),
+                          RoutingResult.builder()
+                                       .path(routingCtx.path())
+                                       .query(routingCtx.query())
+                                       .build(),
+                          fallbackServiceConfig);
+        routingCtx.result(fallbackRoute);
+        return fallbackRoute;
     }
 
     ServiceConfig fallbackServiceConfig() {

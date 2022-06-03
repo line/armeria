@@ -30,20 +30,20 @@ interface DecodedHttpRequest extends HttpRequest {
     static DecodedHttpRequest of(boolean endOfStream, EventLoop eventLoop, int id, int streamId,
                                  RequestHeaders headers, boolean keepAlive,
                                  InboundTrafficController inboundTrafficController,
-                                 RoutingContext routingCtx, @Nullable Routed<ServiceConfig> routed) {
-        if (endOfStream || routed == null) {
+                                 RoutingContext routingCtx) {
+        if (endOfStream || !routingCtx.hasResult()) {
             return new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                      routingCtx, routed);
+                                                      routingCtx);
         } else {
-            final ServiceConfig config = routed.value();
+            final ServiceConfig config = routingCtx.result().value();
             final HttpService service = config.service();
-            if (service.exchangeType(headers, routed).isRequestStreaming()) {
+            if (service.exchangeType(headers, routingCtx).isRequestStreaming()) {
                 return new StreamingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
                                                        inboundTrafficController,
-                                                       config.maxRequestLength(), routingCtx, routed);
+                                                       config.maxRequestLength(), routingCtx);
             } else {
                 return new AggregatingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                         config.maxRequestLength(), routingCtx, routed);
+                                                         config.maxRequestLength(), routingCtx);
             }
         }
     }

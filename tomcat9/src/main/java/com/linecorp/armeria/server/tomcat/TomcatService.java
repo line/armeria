@@ -67,8 +67,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.server.servlet.ServletTlsAttributes;
 import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Routed;
-import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AsciiString;
@@ -623,7 +622,7 @@ public abstract class TomcatService implements HttpService {
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
+    public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
         return ExchangeType.RESPONSE_STREAMING;
     }
 }

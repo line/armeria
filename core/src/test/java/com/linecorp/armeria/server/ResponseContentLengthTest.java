@@ -41,7 +41,7 @@ class ResponseContentLengthTest {
         protected void configure(ServerBuilder sb) {
             sb.service("/unary", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
+                public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
                     return ExchangeType.UNARY;
                 }
 
@@ -56,7 +56,7 @@ class ResponseContentLengthTest {
 
             sb.service("/unary-trailers", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
+                public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
                     return ExchangeType.UNARY;
                 }
 
@@ -72,7 +72,7 @@ class ResponseContentLengthTest {
 
             sb.service("/streaming", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
+                public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
                     return ExchangeType.RESPONSE_STREAMING;
                 }
 
@@ -87,7 +87,7 @@ class ResponseContentLengthTest {
 
             sb.service("/streaming-trailers", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
+                public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
                     return ExchangeType.RESPONSE_STREAMING;
                 }
 

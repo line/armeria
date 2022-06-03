@@ -23,7 +23,7 @@ import com.google.common.collect.Iterables
 import com.linecorp.armeria.common.annotation.{Nullable, UnstableApi}
 import com.linecorp.armeria.common.{HttpData, HttpHeaders, HttpResponse, MediaType, ResponseHeaders}
 import com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom
-import com.linecorp.armeria.internal.server.annotation.ClassUtil.{typeToClass, unwrapIoType}
+import com.linecorp.armeria.internal.server.annotation.ClassUtil.{typeToClass, unwrapAsyncType}
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil._
@@ -78,7 +78,7 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
   override def isResponseStreaming(
       returnType: Type,
       @Nullable produceType: MediaType): java.lang.Boolean | Null = {
-    val clazz = typeToClass(unwrapIoType(returnType))
+    val clazz = typeToClass(unwrapAsyncType(returnType))
     if (clazz == null) {
       return null
     }

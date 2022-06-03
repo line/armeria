@@ -17,7 +17,7 @@ package com.linecorp.armeria.server.annotation;
 
 import static com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom;
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapIoType;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
 
 import java.lang.reflect.Type;
 import java.nio.charset.Charset;
@@ -50,7 +50,7 @@ public final class StringResponseConverterFunction implements ResponseConverterF
         if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {
             return false;
         }
-        final Class<?> clazz = typeToClass(unwrapIoType(resultType));
+        final Class<?> clazz = typeToClass(unwrapAsyncType(resultType));
         if (clazz == null) {
             return null;
         }

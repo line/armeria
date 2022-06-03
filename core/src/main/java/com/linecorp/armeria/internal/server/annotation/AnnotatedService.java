@@ -19,7 +19,7 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapIoType;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
@@ -66,8 +66,7 @@ import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.Ag
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
-import com.linecorp.armeria.server.Routed;
-import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
@@ -495,12 +494,13 @@ public final class AnnotatedService implements HttpService {
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Routed<ServiceConfig> routed) {
+    public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
         final boolean isRequestStreaming =
                 AnnotatedValueResolver.aggregationType(aggregationStrategy, headers) != AggregationType.ALL;
         Boolean isResponseStreaming =
                 responseConverter.isResponseStreaming(actualReturnType,
-                                                      routed.routingResult().negotiatedResponseMediaType());
+                                                      routingContext.result().routingResult()
+                                                                    .negotiatedResponseMediaType());
         if (isResponseStreaming == null) {
             isResponseStreaming = true;
         }
@@ -596,7 +596,7 @@ public final class AnnotatedService implements HttpService {
 
         @Override
         public Boolean isResponseStreaming(Type returnType, @Nullable MediaType contentType) {
-            final Class<?> clazz = typeToClass(unwrapIoType(returnType));
+            final Class<?> clazz = typeToClass(unwrapAsyncType(returnType));
             if (clazz == null) {
                 return null;
             }

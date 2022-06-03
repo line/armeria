@@ -243,7 +243,6 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
                 this.routingResult != null ? this.routingResult
                                            : RoutingResult.builder().path(path()).query(query()).build();
         final Route route = Route.builder().path(path()).build();
-        final Routed<ServiceConfig> routed = Routed.of(route, routingResult, serviceCfg);
         final InetAddress clientAddress = server.config().clientAddressMapper().apply(proxiedAddresses)
                                                 .getAddress();
 
@@ -267,7 +266,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         // Build the context with the properties set by a user and the fake objects.
         return new DefaultServiceRequestContext(
                 serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
-                routingResult, routed, req, sslSession(), proxiedAddresses, clientAddress,
+                routingResult, req, sslSession(), proxiedAddresses, clientAddress,
                 requestCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),
