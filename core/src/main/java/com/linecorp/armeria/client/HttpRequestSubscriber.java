@@ -258,7 +258,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     @Override
     public void onComplete() {
         isSubscriptionCompleted = true;
-        cancelTimeout();
 
         if (state != State.DONE) {
             write(HttpData.empty(), true);
