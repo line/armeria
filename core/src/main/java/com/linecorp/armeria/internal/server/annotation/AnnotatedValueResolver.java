@@ -668,7 +668,7 @@ final class AnnotatedValueResolver {
                         final String filename = getName(annotatedElement);
                         return Iterables.getFirst(ctx.aggregatedMultipart().files().get(filename), null);
                     })
-                    .aggregation(AggregationStrategy.FOR_FORM_DATA)
+                    .aggregation(AggregationStrategy.ALWAYS)
                     .build();
         }
 
