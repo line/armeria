@@ -16,23 +16,21 @@
 
 package com.linecorp.armeria.common.multipart;
 
-import java.io.File;
+import java.nio.file.Path;
 import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultMultipartFile implements MultipartFile {
 
     private final String name;
     private final String filename;
-    private final File file;
+    private final Path path;
 
-    DefaultMultipartFile(String name, String filename, File file) {
+    DefaultMultipartFile(String name, String filename, Path path) {
         this.name = name;
         this.filename = filename;
-        this.file = file;
+        this.path = path;
     }
 
     @Override
@@ -46,8 +44,8 @@ final class DefaultMultipartFile implements MultipartFile {
     }
 
     @Override
-    public File file() {
-        return file;
+    public Path path() {
+        return path;
     }
 
     @Override
@@ -61,14 +59,14 @@ final class DefaultMultipartFile implements MultipartFile {
         }
 
         final MultipartFile that = (MultipartFile) o;
-        return Objects.equals(name, that.name()) &&
+        return name.equals(that.name()) &&
                filename.equals(that.filename()) &&
-               file.equals(that.file());
+               path.equals(that.path());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, filename, file);
+        return Objects.hash(name, filename, path);
     }
 
     @Override
@@ -76,7 +74,7 @@ final class DefaultMultipartFile implements MultipartFile {
         return MoreObjects.toStringHelper(this)
                           .add("name", name)
                           .add("filename", filename)
-                          .add("file", file)
+                          .add("path", path)
                           .toString();
     }
 }

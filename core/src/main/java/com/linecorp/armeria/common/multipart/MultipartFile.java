@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.multipart;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
+import java.nio.file.Path;
 
 /**
  * An uploaded file received in a {@link Multipart} request.
@@ -34,9 +35,23 @@ public interface MultipartFile {
      */
     static MultipartFile of(String name, String filename, File file) {
         requireNonNull(name, "name");
-        requireNonNull(file, "file");
         requireNonNull(filename, "filename");
-        return new DefaultMultipartFile(name, filename, file);
+        requireNonNull(file, "file");
+        return of(name, filename, file.toPath());
+    }
+
+    /**
+     * Creates a new {@link MultipartFile}.
+     * @param name the name parameter of the {@code "content-disposition"}
+     * @param filename the filename parameter of the {@code "content-disposition"}
+     *                 header.
+     * @param path the path that stores the {@link BodyPart#content()}.
+     */
+    static MultipartFile of(String name, String filename, Path path) {
+        requireNonNull(name, "name");
+        requireNonNull(filename, "filename");
+        requireNonNull(path, "path");
+        return new DefaultMultipartFile(name, filename, path);
     }
 
     /**
@@ -54,5 +69,12 @@ public interface MultipartFile {
     /**
      * Returns the file that stores the {@link BodyPart#content()}.
      */
-    File file();
+    default File file() {
+        return path().toFile();
+    }
+
+    /**
+     * Returns the path that stores the {@link BodyPart#content()}.
+     */
+    Path path();
 }

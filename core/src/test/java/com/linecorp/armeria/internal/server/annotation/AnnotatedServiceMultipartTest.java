@@ -21,9 +21,7 @@ import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 
 import java.io.File;
 import java.io.IOException;
-import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -42,7 +40,7 @@ import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.server.ServerBuilder;
-import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
@@ -66,6 +64,7 @@ class AnnotatedServiceMultipartTest {
                 BodyPart.of(ContentDisposition.of("form-data", "file1", "foo.txt"), "foo"),
                 BodyPart.of(ContentDisposition.of("form-data", "path1", "bar.txt"), "bar"),
                 BodyPart.of(ContentDisposition.of("form-data", "multipartFile1", "qux.txt"), "qux"),
+                BodyPart.of(ContentDisposition.of("form-data", "multipartFile2", "quz.txt"), "quz"),
                 BodyPart.of(ContentDisposition.of("form-data", "param1"), "armeria")
 
         );
@@ -75,35 +74,37 @@ class AnnotatedServiceMultipartTest {
                 .isEqualTo("{\"file1\":\"foo\"," +
                            "\"path1\":\"bar\"," +
                            "\"multipartFile1\":\"qux.txt_qux\"," +
+                           "\"multipartFile2\":\"quz.txt_quz\"," +
                            "\"param1\":\"armeria\"}");
     }
 
     @Consumes(MediaTypeNames.MULTIPART_FORM_DATA)
     private static class MyAnnotatedService {
+        @Blocking
         @Post
         @Path("/uploadWithFileParam")
         public HttpResponse uploadWithFileParam(@Param File file1, @Param java.nio.file.Path path1,
-                                                @Param MultipartFile multipartFile1,
+                                                MultipartFile multipartFile1,
+                                                @Param MultipartFile multipartFile2,
                                                 @Param String param1) throws IOException {
-            return HttpResponse.from(CompletableFuture.supplyAsync(() -> {
-                try {
-                    final String file1Content = Files.asCharSource(file1, StandardCharsets.UTF_8).read();
-                    final String path1Content = Files.asCharSource(path1.toFile(), StandardCharsets.UTF_8)
-                                                     .read();
-                    final String multipartFile1Content =
-                            Files.asCharSource(multipartFile1.file(), StandardCharsets.UTF_8)
-                                 .read();
-                    final ImmutableMap<String, String> content =
-                            ImmutableMap.of("file1", file1Content,
-                                            "path1", path1Content,
-                                            "multipartFile1",
-                                            multipartFile1.filename() + '_' + multipartFile1Content,
-                                            "param1", param1);
-                    return HttpResponse.ofJson(content);
-                } catch (IOException e) {
-                    throw new UncheckedIOException(e);
-                }
-            }, ServiceRequestContext.current().blockingTaskExecutor()));
+            final String file1Content = Files.asCharSource(file1, StandardCharsets.UTF_8).read();
+            final String path1Content = Files.asCharSource(path1.toFile(), StandardCharsets.UTF_8)
+                                             .read();
+            final String multipartFile1Content =
+                    Files.asCharSource(multipartFile1.file(), StandardCharsets.UTF_8)
+                         .read();
+            final String multipartFile2Content =
+                    Files.asCharSource(multipartFile2.file(), StandardCharsets.UTF_8)
+                         .read();
+            final ImmutableMap<String, String> content =
+                    ImmutableMap.of("file1", file1Content,
+                                    "path1", path1Content,
+                                    "multipartFile1",
+                                    multipartFile1.filename() + '_' + multipartFile1Content,
+                                    "multipartFile2",
+                                    multipartFile2.filename() + '_' + multipartFile2Content,
+                                    "param1", param1);
+            return HttpResponse.ofJson(content);
         }
 
         @Post
@@ -115,7 +116,7 @@ class AnnotatedServiceMultipartTest {
                             final AggregatedBodyPart bodyPart =
                                     aggregated.field(e);
                             String content = bodyPart.contentUtf8();
-                            if ("multipartFile1".equals(e)) {
+                            if (e.startsWith("multipartFile")) {
                                 content = bodyPart.filename() + '_' + content;
                             }
                             return content;

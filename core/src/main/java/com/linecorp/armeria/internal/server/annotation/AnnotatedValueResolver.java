@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.findName;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
@@ -61,6 +62,7 @@ import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.Cookie;
@@ -657,6 +659,16 @@ final class AnnotatedValueResolver {
         if (actual == Multipart.class) {
             return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> Multipart.from(ctx.request()))
+                    .build();
+        }
+
+        if (actual == MultipartFile.class) {
+            return new Builder(annotatedElement, type)
+                    .resolver((unused, ctx) -> {
+                        final String filename = getName(annotatedElement);
+                        return Iterables.getFirst(ctx.aggregatedMultipart().files().get(filename), null);
+                    })
+                    .aggregation(AggregationStrategy.FOR_FORM_DATA)
                     .build();
         }
 
