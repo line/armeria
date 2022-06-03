@@ -268,7 +268,8 @@ public interface Multipart {
     HttpResponse toHttpResponse(ResponseHeaders responseHeaders);
 
     /**
-     * Returns a {@link StreamMessage} that emits the {{@link #bodyParts()}} as a stream of {@link HttpData}.
+     * Returns a {@link ByteStreamMessage} that emits the {{@link #bodyParts()}} as a stream of
+     * {@link HttpData}.
      */
     @CheckReturnValue
     ByteStreamMessage toStreamMessage();

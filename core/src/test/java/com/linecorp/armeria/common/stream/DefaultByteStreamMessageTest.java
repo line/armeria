@@ -159,7 +159,7 @@ class DefaultByteStreamMessageTest {
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate)
                                  .skipBytes(1)
-                                 .takeBytes(1)
+                                 .readBytes(1)
                                  .bufferSize(1);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("2"))
@@ -172,7 +172,7 @@ class DefaultByteStreamMessageTest {
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate)
                                  .skipBytes(1)
-                                 .takeBytes(2)
+                                 .readBytes(2)
                                  .bufferSize(1);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("2"))
@@ -186,7 +186,7 @@ class DefaultByteStreamMessageTest {
         final StreamMessage<HttpData> delegate = newStreamMessage();
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate)
-                                 .takeBytes(2)
+                                 .readBytes(2)
                                  .bufferSize(2);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("1"))
@@ -200,7 +200,7 @@ class DefaultByteStreamMessageTest {
         final StreamMessage<HttpData> delegate = newStreamMessage();
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate)
-                                 .takeBytes(4)
+                                 .readBytes(4)
                                  .bufferSize(2);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("1"))
@@ -217,7 +217,7 @@ class DefaultByteStreamMessageTest {
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate)
                                  .skipBytes(2)
-                                 .takeBytes(4)
+                                 .readBytes(4)
                                  .bufferSize(2);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("2"))
@@ -234,7 +234,7 @@ class DefaultByteStreamMessageTest {
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate)
                                  .skipBytes(2)
-                                 .takeBytes(8)
+                                 .readBytes(8)
                                  .bufferSize(2);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("2"))
@@ -253,7 +253,7 @@ class DefaultByteStreamMessageTest {
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate)
                                  .skipBytes(2)
-                                 .takeBytes(8)
+                                 .readBytes(8)
                                  .bufferSize(4);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("2"))
@@ -270,7 +270,7 @@ class DefaultByteStreamMessageTest {
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate)
                                  .skipBytes(3)
-                                 .takeBytes(8)
+                                 .readBytes(8)
                                  .bufferSize(4);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("333"))
@@ -286,7 +286,7 @@ class DefaultByteStreamMessageTest {
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate)
                                  .skipBytes(4)
-                                 .takeBytes(1)
+                                 .readBytes(1)
                                  .bufferSize(4);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("3"))
@@ -314,6 +314,13 @@ class DefaultByteStreamMessageTest {
         StepVerifier.create(byteStreamMessage)
                     .expectNext(HttpData.ofUtf8("5"))
                     .verifyComplete();
+    }
+
+    @Test
+    void collectBytes() {
+        final StreamMessage<HttpData> delegate = newStreamMessage();
+        final byte[] bytes = ByteStreamMessage.of(delegate).collectBytes().join();
+        assertThat(bytes).isEqualTo("122333444455555".getBytes());
     }
 
     @Test
@@ -395,7 +402,7 @@ class DefaultByteStreamMessageTest {
         final List<HttpData> data =
                 ByteStreamMessage.of(delegate)
                                  .bufferSize(1)
-                                 .takeBytes(4)
+                                 .readBytes(4)
                                  .collect(SubscriptionOption.WITH_POOLED_OBJECTS).join();
         assertThat(data).hasSize(4);
         assertThat(data.stream().map(HttpData::toStringUtf8))

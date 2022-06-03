@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A {@link StreamMessage} that publishes bytes with {@link HttpData}.
@@ -115,19 +116,20 @@ public interface ByteStreamMessage extends StreamMessage<HttpData> {
     ByteStreamMessage skipBytes(int numBytes);
 
     /**
-     * Sets the maximum allowed bytes by this {@link ByteStreamMessage}.
+     * Sets to read up to the {@code numBytes} from this {@link ByteStreamMessage}.
      *
      * <pre>{@code
      * StreamMessage<HttpData> source = StreamMessage.of(HttpData.ofUtf8("12345"),
      *                                                   HttpData.ofUtf8("67890"));
      *
-     * List<HttpData> collected = ByteStreamMessage.of(source).takeBytes(6).collect().join();
+     * List<HttpData> collected = ByteStreamMessage.of(source).readBytes(6).collect().join();
+     * // 6 bytes read from `source`.
      * assert collected.equals(List.of(HttpData.ofUtf8("12345"), HttpData.ofUtf8("6"));
      * }</pre>
      *
      * @throws IllegalArgumentException if the {@code numBytes} is non-positive.
      */
-    ByteStreamMessage takeBytes(int numBytes);
+    ByteStreamMessage readBytes(int numBytes);
 
     /**
      * Sets the maximum allowed bytes for each {@link HttpData} in this {@link ByteStreamMessage}.
@@ -144,4 +146,51 @@ public interface ByteStreamMessage extends StreamMessage<HttpData> {
      * @throws IllegalArgumentException if the {@code numBytes} is non-positive.
      */
     ByteStreamMessage bufferSize(int numBytes);
+
+    /**
+     * Collects the bytes published by this {@link ByteStreamMessage}.
+     * The returned {@link CompletableFuture} will be notified when the elements are fully consumed.
+     *
+     * <pre>{@code
+     * StreamMessage<HttpData> source = StreamMessage.of(HttpData.wrap(new byte[] { 1, 2, 3 }),
+     *                                                   HttpData.wrap(new byte[] { 4, 5, 6 }));
+     *
+     * byte[] collected = ByteStreamMessage.of(source).collectBytes().join();
+     * assert Arrays.equals(collected, new byte[] { 1, 2, 3, 4, 5, 6 });
+     * }</pre>
+     */
+    default CompletableFuture<byte[]> collectBytes() {
+        return collectBytes(defaultSubscriberExecutor());
+    }
+
+    /**
+     * Collects the bytes published by this {@link ByteStreamMessage}.
+     * The returned {@link CompletableFuture} will be notified when the elements are fully consumed.
+     *
+     * <pre>{@code
+     * StreamMessage<HttpData> source = StreamMessage.of(HttpData.wrap(new byte[] { 1, 2, 3 }),
+     *                                                   HttpData.wrap(new byte[] { 4, 5, 6 }));
+     *
+     * byte[] collected = ByteStreamMessage.of(source).collectBytes(executor).join();
+     * assert Arrays.equals(collected, new byte[] { 1, 2, 3, 4, 5, 6 });
+     * }</pre>
+     *
+     * @param executor the executor to collect the {@link HttpData}.
+     */
+    default CompletableFuture<byte[]> collectBytes(EventExecutor executor) {
+        return collect(executor).thenApply(data -> {
+            int totalSize = 0;
+            for (HttpData httpData : data) {
+                totalSize += httpData.length();
+            }
+            final byte[] bytes = new byte[totalSize];
+            int position = 0;
+            for (HttpData httpData : data) {
+                final int length = httpData.length();
+                System.arraycopy(httpData.array(), 0, bytes, position, length);
+                position += length;
+            }
+            return bytes;
+        });
+    }
 }

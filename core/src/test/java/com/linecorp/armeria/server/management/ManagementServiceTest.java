@@ -26,12 +26,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.primitives.Bytes;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentDisposition;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -98,13 +96,9 @@ class ManagementServiceTest {
 
         final byte[] fileHeader = "JAVA PROFILE".getBytes(StandardCharsets.UTF_8);
         final byte[] actual = splitHttpResponse.body()
-                                               .takeBytes(fileHeader.length)
-                                               .collect()
-                                               .join()
-                                               .stream()
-                                               .map(HttpData::array)
-                                               .reduce(Bytes::concat)
-                                               .get();
+                                               .readBytes(fileHeader.length)
+                                               .collectBytes()
+                                               .join();
 
         // Make sure that the returned file has a valid hprof format
         assertThat(Arrays.copyOf(actual, fileHeader.length)).isEqualTo(fileHeader);

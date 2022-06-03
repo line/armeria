@@ -142,7 +142,7 @@ class PathStreamMessageTest {
             publisher.skipBytes(start);
         }
         if (length > 0) {
-            publisher.takeBytes(length);
+            publisher.readBytes(length);
         }
 
         final int maxChunkSize = Math.min(Ints.saturatedCast(length), bufferSize);
@@ -182,7 +182,7 @@ class PathStreamMessageTest {
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("numBytes: 0 (expected: > 0)");
 
-        assertThatThrownBy(() -> StreamMessage.of(path).takeBytes(0))
+        assertThatThrownBy(() -> StreamMessage.of(path).readBytes(0))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("numBytes: 0 (expected: > 0)");
 

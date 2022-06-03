@@ -62,7 +62,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
     }
 
     @Override
-    public ByteStreamMessage takeBytes(int numBytes) {
+    public ByteStreamMessage readBytes(int numBytes) {
         checkArgument(numBytes > 0, "numBytes: %s (expected: > 0)", numBytes);
         ensureUnsubscribed("numBytes");
         length = numBytes;

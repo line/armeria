@@ -41,7 +41,7 @@ public class DefaultByteStreamMessageTckTest extends PublisherVerification<HttpD
                                              .map(i -> HttpData.ofUtf8(String.valueOf(i)));
         return ByteStreamMessage.of(publisher)
                                 .bufferSize(1)
-                                .takeBytes((int) elements);
+                                .readBytes((int) elements);
     }
 
     @Override

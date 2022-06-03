@@ -314,12 +314,12 @@ class DefaultSplitHttpResponseTest {
     }
 
     @Test
-    void takeBytes() {
+    void readBytes() {
         final WebClient client = server.webClient();
         final HttpResponse response = client.get("/?size=200");
         final String string = response.split()
                                       .body()
-                                      .takeBytes(201)
+                                      .readBytes(201)
                                       .collect()
                                       .join()
                                       .stream()
