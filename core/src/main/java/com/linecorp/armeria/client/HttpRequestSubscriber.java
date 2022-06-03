@@ -109,7 +109,6 @@ final class HttpRequestSubscriber extends AbstractHttpRequestHandler implements 
     @Override
     public void onComplete() {
         isSubscriptionCompleted = true;
-        cancelTimeout();
 
         if (state() != State.DONE) {
             writeData(EMPTY_EOS);
