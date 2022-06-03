@@ -228,7 +228,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
          */
         private boolean onNext0(HttpData data) {
             if (position >= end) {
-                // Drop tail bytes. Fully received desired data already.
+                // Drop tail bytes. Fully received the desired data already.
                 data.close();
                 upstream.cancel();
                 return false;
@@ -287,7 +287,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
             if (position < end) {
                 upstream.request(1);
             } else {
-                // Fully received desired data already.
+                // Fully received the desired data already.
                 upstream.cancel();
             }
         }
