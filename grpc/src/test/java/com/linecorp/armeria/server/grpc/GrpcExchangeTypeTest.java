@@ -34,9 +34,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
-import com.linecorp.armeria.server.Routed;
-import com.linecorp.armeria.server.RoutingResult;
-import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.MethodDescriptor;
@@ -52,11 +49,7 @@ class GrpcExchangeTypeTest {
         final GrpcService grpcService = GrpcService.builder()
                                                    .addService(testService)
                                                    .build();
-
-        final Routed<ServiceConfig> routed = Routed.of(ctx.config().route(),
-                                                       RoutingResult.builder().path(ctx.path()).build(),
-                                                       ctx.config());
-        final ExchangeType exchangeType = grpcService.exchangeType(headers, routed);
+        final ExchangeType exchangeType = grpcService.exchangeType(headers, ctx.routingContext());
         assertThat(exchangeType).isEqualTo(expectedExchangeType);
     }
 
@@ -75,11 +68,7 @@ class GrpcExchangeTypeTest {
                               .build();
 
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(framedHeaders));
-        final Routed<ServiceConfig> routed = Routed.of(ctx.config().route(),
-                                                       RoutingResult.builder().path(ctx.path()).build(),
-                                                       ctx.config());
-
-        ExchangeType exchangeType = grpcService.exchangeType(framedHeaders, routed);
+        ExchangeType exchangeType = grpcService.exchangeType(framedHeaders, ctx.routingContext());
         assertThat(exchangeType).isEqualTo(expectedExchangeType);
 
         final RequestHeaders unframedHeaders1 =
@@ -88,11 +77,7 @@ class GrpcExchangeTypeTest {
                               .build();
 
         final ServiceRequestContext unframedCtx1 = ServiceRequestContext.of(HttpRequest.of(unframedHeaders1));
-        final Routed<ServiceConfig> unframedRouted1 =
-                Routed.of(unframedCtx1.config().route(),
-                          RoutingResult.builder().path(unframedCtx1.path()).build(),
-                          ctx.config());
-        exchangeType = grpcService.exchangeType(unframedHeaders1, unframedRouted1);
+        exchangeType = grpcService.exchangeType(unframedHeaders1, unframedCtx1.routingContext());
         assertThat(exchangeType).isEqualTo(ExchangeType.UNARY);
 
         final RequestHeaders unframedHeaders2 =
@@ -100,11 +85,7 @@ class GrpcExchangeTypeTest {
                               .contentType(MediaType.PROTOBUF)
                               .build();
         final ServiceRequestContext unframedCtx2 = ServiceRequestContext.of(HttpRequest.of(unframedHeaders1));
-        final Routed<ServiceConfig> unframedRouted2 =
-                Routed.of(unframedCtx2.config().route(),
-                          RoutingResult.builder().path(unframedCtx2.path()).build(),
-                          ctx.config());
-        exchangeType = grpcService.exchangeType(unframedHeaders2, unframedRouted2);
+        exchangeType = grpcService.exchangeType(unframedHeaders2, unframedCtx2.routingContext());
         assertThat(exchangeType).isEqualTo(ExchangeType.UNARY);
 
         final RequestHeaders unknownContentType =
@@ -112,11 +93,7 @@ class GrpcExchangeTypeTest {
                               .contentType(MediaType.OCTET_STREAM)
                               .build();
         final ServiceRequestContext unknownCtx = ServiceRequestContext.of(HttpRequest.of(unframedHeaders1));
-        final Routed<ServiceConfig> unknownRouted =
-                Routed.of(unknownCtx.config().route(),
-                          RoutingResult.builder().path(unknownCtx.path()).build(),
-                          ctx.config());
-        exchangeType = grpcService.exchangeType(unknownContentType, unknownRouted);
+        exchangeType = grpcService.exchangeType(unknownContentType, unknownCtx.routingContext());
         assertThat(exchangeType).isEqualTo(ExchangeType.BIDI_STREAMING);
     }
 

@@ -30,7 +30,6 @@ import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
-import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -55,7 +54,7 @@ class GrpcServicePathTest {
             sb.decorator((delegate, ctx, req) -> {
                 final GrpcService grpcService0 = ctx.config().service().as(GrpcService.class);
                 final ExchangeType exchangeType =
-                        grpcService0.exchangeType(req.headers(), ((DefaultServiceRequestContext) ctx).routed());
+                        grpcService0.exchangeType(req.headers(), ctx.routingContext());
                 ctx.setAttr(EXCHANGE_TYPE, exchangeType);
                 return delegate.serve(ctx, req);
             });

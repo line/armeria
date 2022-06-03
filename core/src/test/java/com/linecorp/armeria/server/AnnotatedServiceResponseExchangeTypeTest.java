@@ -86,11 +86,8 @@ class AnnotatedServiceResponseExchangeTypeTest {
                 if (produceType != null) {
                     routingResultBuilder.negotiatedResponseMediaType(produceType);
                 }
-                final RoutingResult routingResult = routingResultBuilder.build();
-                final Routed<ServiceConfig> routed =
-                        Routed.of(ctx.config().route(), routingResult, ctx.config());
-
-                final ExchangeType exchangeType = ctx.config().service().exchangeType(req.headers(), routed);
+                final ExchangeType exchangeType =
+                        ctx.config().service().exchangeType(req.headers(), ctx.routingContext());
                 ctx.setAttr(EXCHANGE_TYPE, exchangeType);
                 return delegate.serve(ctx, req);
             });
