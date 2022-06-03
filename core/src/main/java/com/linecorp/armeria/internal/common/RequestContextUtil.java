@@ -67,11 +67,10 @@ public final class RequestContextUtil {
         final RequestContextStorageProvider provider = Flags.requestContextStorageProvider();
         final Sampler<? super RequestContext> sampler = Flags.requestContextLeakDetectionSampler();
         try {
-            if (sampler.equals(Sampler. never())) {
+            if (sampler == Sampler.never()) {
                 requestContextStorage = provider.newStorage();
             } else {
-                requestContextStorage =
-                        new LeakTracingRequestContextStorage(provider.newStorage(), sampler);
+                requestContextStorage = new LeakTracingRequestContextStorage(provider.newStorage(), sampler);
             }
         } catch (Throwable t) {
             throw new IllegalStateException("Failed to create context storage. provider: " + provider, t);

@@ -37,14 +37,14 @@ public final class LeakTracingRequestContextStorage implements RequestContextSto
 
     private final RequestContextStorage delegate;
     private final FastThreadLocal<PendingRequestContextStackTrace> pendingRequestCtx;
-    private final Sampler<Object> sampler;
+    private final Sampler<? super RequestContext> sampler;
 
     /**
      * Creates a new instance.
      * @param delegate the underlying {@link RequestContextStorage} that stores {@link RequestContext}
      */
     public LeakTracingRequestContextStorage(RequestContextStorage delegate) {
-        this(delegate, Flags.verboseExceptionSampler());
+        this(delegate, Flags.requestContextLeakDetectionSampler());
     }
 
     /**
@@ -53,10 +53,10 @@ public final class LeakTracingRequestContextStorage implements RequestContextSto
      * @param sampler the {@link Sampler} that determines whether to retain the stacktrace of the context leaks
      */
     public LeakTracingRequestContextStorage(RequestContextStorage delegate,
-                                            Sampler<?> sampler) {
+                                            Sampler<? super RequestContext> sampler) {
         this.delegate = requireNonNull(delegate, "delegate");
         pendingRequestCtx = new FastThreadLocal<>();
-        this.sampler = (Sampler<Object>) requireNonNull(sampler, "sampler");
+        this.sampler = requireNonNull(sampler, "sampler");
     }
 
     @Nullable
@@ -79,7 +79,7 @@ public final class LeakTracingRequestContextStorage implements RequestContextSto
             }
         }
 
-        if (sampler.isSampled(PendingRequestContextStackTrace.class)) {
+        if (sampler.isSampled(toPush)) {
             pendingRequestCtx.set(new PendingRequestContextStackTrace(toPush, true));
         } else {
             pendingRequestCtx.set(new PendingRequestContextStackTrace(toPush, false));
