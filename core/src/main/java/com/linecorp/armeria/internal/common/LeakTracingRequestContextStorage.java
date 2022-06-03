@@ -14,13 +14,15 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPushingException;
 import static java.lang.Thread.currentThread;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Sampler;
@@ -33,7 +35,7 @@ import io.netty.util.concurrent.FastThreadLocal;
  * information if a {@link RequestContext} is leaked.
  */
 @UnstableApi
-public final class LeakTracingRequestContextStorage implements RequestContextStorage {
+final class LeakTracingRequestContextStorage implements RequestContextStorage {
 
     private final RequestContextStorage delegate;
     private final FastThreadLocal<PendingRequestContextStackTrace> pendingRequestCtx;
@@ -42,17 +44,9 @@ public final class LeakTracingRequestContextStorage implements RequestContextSto
     /**
      * Creates a new instance.
      * @param delegate the underlying {@link RequestContextStorage} that stores {@link RequestContext}
-     */
-    public LeakTracingRequestContextStorage(RequestContextStorage delegate) {
-        this(delegate, Flags.requestContextLeakDetectionSampler());
-    }
-
-    /**
-     * Creates a new instance.
-     * @param delegate the underlying {@link RequestContextStorage} that stores {@link RequestContext}
      * @param sampler the {@link Sampler} that determines whether to retain the stacktrace of the context leaks
      */
-    public LeakTracingRequestContextStorage(RequestContextStorage delegate,
+    LeakTracingRequestContextStorage(RequestContextStorage delegate,
                                             Sampler<? super RequestContext> sampler) {
         this.delegate = requireNonNull(delegate, "delegate");
         pendingRequestCtx = new FastThreadLocal<>();
