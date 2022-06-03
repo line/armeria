@@ -79,7 +79,7 @@ class TraceRequestContextLeakTest {
 
     @Test
     @SuppressWarnings("MustBeClosedChecker")
-    void singleTreadContextLeak() throws InterruptedException {
+    void singleThreadContextLeak() throws InterruptedException {
         final AtomicBoolean isThrown = new AtomicBoolean();
         final AtomicReference<Exception> exception = new AtomicReference<>();
 
