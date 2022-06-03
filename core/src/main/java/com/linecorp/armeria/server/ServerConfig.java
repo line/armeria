@@ -214,7 +214,13 @@ public interface ServerConfig {
 
     /**
      * Returns whether the worker {@link Executor} is shut down when the {@link Server} stops.
+     *
+     * @deprecated This method is not used anymore. The {@code blockingTaskExecutor} is shut down if
+     *             the {@code shutdownOnStop} of
+     *             {@link ServerBuilder#blockingTaskExecutor(ScheduledExecutorService, boolean)}
+     *             is set with {@code true}.
      */
+    @Deprecated
     boolean shutdownBlockingTaskExecutorOnStop();
 
     /**
