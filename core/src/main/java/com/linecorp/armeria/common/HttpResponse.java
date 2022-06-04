@@ -33,6 +33,7 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.common.util.Exceptions;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -937,4 +938,17 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(function, "function");
         return of(new RecoverableStreamMessage<>(this, function, /* allowResuming */ false));
     }
+
+	default HttpResponse recover(Class<? extends Throwable> causeClass,
+								 Function<? super Throwable, ? extends HttpResponse> function) {
+		requireNonNull(causeClass, "causeClass");
+		requireNonNull(function, "function");
+		final StreamMessage<HttpObject> stream = recover(cause -> {
+			if(cause.getClass().equals(causeClass)) {
+				return function.apply(cause);
+			}
+			return Exceptions.throwUnsafely(cause);
+		});
+		return of(stream);
+	}
 }
