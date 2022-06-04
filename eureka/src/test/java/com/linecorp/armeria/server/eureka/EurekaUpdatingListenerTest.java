@@ -227,4 +227,27 @@ class EurekaUpdatingListenerTest {
         assertThat(instanceInfo.getLeaseInfo().getDurationInSecs()).isEqualTo(10);
         application.stop().join();
     }
+
+    @Test
+    void defaultInstanceId() throws IOException {
+        final EurekaUpdatingListener listener =
+                EurekaUpdatingListener.builder(eurekaServer.httpUri())
+                                      .renewalInterval(Duration.ofSeconds(2))
+                                      .leaseDuration(Duration.ofSeconds(10))
+                                      .hostname("myhost")
+                                      .port(1) // misconfigured!
+                                      .appName(APP_NAME)
+                                      .build();
+
+        final Server application = Server.builder()
+                                         .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                         .serverListener(listener)
+                                         .build();
+        application.start().join();
+        await().until(() -> registerContentCaptor.get() != null);
+        final InstanceInfo instanceInfo = mapper.readValue(registerContentCaptor.get().array(),
+                                                           InstanceInfo.class);
+        assertThat(instanceInfo.getInstanceId()).isEqualTo("myhost:" + APP_NAME + ":1");
+        application.stop().join();
+    }
 }
