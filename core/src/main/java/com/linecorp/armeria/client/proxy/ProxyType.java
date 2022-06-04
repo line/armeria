@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.proxy;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * The proxy protocol type.
  */
@@ -55,6 +57,7 @@ public enum ProxyType {
     /**
      * Returns whether this proxy is a forward proxy type.
      */
+    @UnstableApi
     public boolean isForwardProxy() {
         return isForwardProxy;
     }
