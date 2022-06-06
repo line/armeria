@@ -133,6 +133,7 @@ class NullableTypeSupportTest {
 
         class Baz(@Param("a") val a: String, @Param("b") val b: String?)
 
+        // Check for backward-compatibility
         class Baz0(@Param("a") val a: String, @Nullable @Param("b") val b: String?)
 
         class Qux {
@@ -155,6 +156,7 @@ class NullableTypeSupportTest {
             }
         }
 
+        // Check for backward-compatibility
         class Quux0 {
             lateinit var a: String
             var b: String? = null
