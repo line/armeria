@@ -20,9 +20,15 @@ import com.linecorp.armeria.common.HttpResponse;
 
 /**
  * For checking the behavior of {@link Server#closeOnShutdown()}.
+ * This app must output the following text:
+ * <pre>{@code
+ * - Before stopping Server
+ * - Server has been closed.
+ * - After Server stopped
+ * }</pre>
  */
 @SuppressWarnings({ "checkstyle:HideUtilityClassConstructor", "checkstyle:UncommentedMain" })
-final class ServerShutdownHookTest {
+public final class ServerShutdownHookTest {
 
     public static void main(String[] args) {
         final Server server = Server.builder()

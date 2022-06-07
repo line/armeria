@@ -37,7 +37,7 @@ public final class AsyncCloseableShutdownHooks {
     private static final Map<AsyncCloseable, Queue<Runnable>> asyncCloseableOnShutdownTasks =
             new LinkedHashMap<>();
 
-    private static boolean addedToShutdownHook;
+    private static boolean addedShutdownHook;
 
     /**
      *　Adds a {@link Runnable} and a {@link AsyncCloseable} to the JVM shutdown hook.
@@ -50,19 +50,18 @@ public final class AsyncCloseableShutdownHooks {
                 try {
                     whenClosing.run();
                 } catch (Exception e) {
-                    logger.warn("whenClosing failed", e);
+                    logger.warn("Unexpected exception while running a shutdown callback:", e);
                 }
             }
-            asyncCloseable.closeAsync().handle((unused, cause) -> {
-                if (cause != null) {
-                    logger.warn("Unexpected exception while closing a {}.", name, cause);
-                    closeFuture.completeExceptionally(cause);
-                } else {
-                    logger.debug("{} has been closed.", name);
-                    closeFuture.complete(null);
-                }
-                return null;
-            }).join();
+            try {
+                asyncCloseable.close();
+            } catch (Throwable cause) {
+                logger.warn("Unexpected exception while closing a {}.", name, cause);
+                closeFuture.completeExceptionally(cause);
+            } finally {
+                logger.debug("{} has been closed.", name);
+                closeFuture.complete(null);
+            }
         };
         synchronized (asyncCloseableOnShutdownTasks) {
             final Queue<Runnable> onShutdownTasks;
@@ -73,16 +72,20 @@ public final class AsyncCloseableShutdownHooks {
             }
             onShutdownTasks.add(task);
             asyncCloseableOnShutdownTasks.put(asyncCloseable, onShutdownTasks);
-            if (!addedToShutdownHook) {
+            if (!addedShutdownHook) {
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     asyncCloseableOnShutdownTasks.forEach((factory, queue) -> {
-                        while (!queue.isEmpty()) {
+                        for (;;) {
                             final Runnable onShutdown = queue.poll();
-                            onShutdown.run();
+                            if (onShutdown == null) {
+                                break;
+                            } else {
+                                onShutdown.run();
+                            }
                         }
                     });
                 }));
-                addedToShutdownHook = true;
+                addedShutdownHook = true;
             }
         }
     }

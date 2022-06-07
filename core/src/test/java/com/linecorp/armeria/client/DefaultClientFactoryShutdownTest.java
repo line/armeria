@@ -18,9 +18,14 @@ package com.linecorp.armeria.client;
 
 /**
  * For checking the behavior of {@link DefaultClientFactory#closeOnShutdown()}.
+ * This app must output the following text:
+ * <pre>{@code
+ * - ClientFactory has been closed.
+ * - After ClientFactory stopped
+ * }</pre>
  */
 @SuppressWarnings({ "checkstyle:HideUtilityClassConstructor", "checkstyle:UncommentedMain" })
-final class DefaultClientFactoryShutdownTest {
+public final class DefaultClientFactoryShutdownTest {
 
     public static void main(String[] args) {
         final DefaultClientFactory defaultClientFactory = (DefaultClientFactory) ClientFactory.ofDefault();
