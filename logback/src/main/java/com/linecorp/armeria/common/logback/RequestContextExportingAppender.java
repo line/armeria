@@ -29,6 +29,7 @@ import org.slf4j.Marker;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.BuiltInProperty;
@@ -181,8 +182,23 @@ public final class RequestContextExportingAppender
         }
     }
 
+    /**
+     * It is possible that requestContextStorageProvider hasn't been initialized yet
+     * due to static variable circular dependency.
+     * Most notably, this can happen when logs are appended while trying to initialize
+     * Flags#requestContextStorageProvider.
+     */
+    private static boolean isInitialized() {
+        //noinspection ConstantConditions
+        return Flags.requestContextStorageProvider() != null;
+    }
+
     @Override
     protected void append(ILoggingEvent eventObject) {
+        if (!isInitialized()) {
+            return;
+        }
+
         if (exporter == null) {
             exporter = builder.build();
         }
