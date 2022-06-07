@@ -276,25 +276,25 @@ class RecoverableStreamMessageTest {
                 .hasCauseInstanceOf(ClosedStreamException.class);
     }
 
-	@Test
-	void shortcutRecoverableHttpResponse() {
-		final HttpResponse failedResponse = HttpResponse.ofFailure(new IllegalStateException("test exception"));
-		final HttpResponse recovered =
-			failedResponse.recover(IllegalStateException.class, cause -> HttpResponse.of("fallback"));
-		final AggregatedHttpResponse response = recovered.aggregate().join();
-		assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
-		assertThat(response.contentUtf8()).isEqualTo("fallback");
+    @Test
+    void shortcutRecoverableHttpResponse() {
+        final HttpResponse failedResponse = HttpResponse.ofFailure(new IllegalStateException("test exception"));
+        final HttpResponse recovered =
+            failedResponse.recover(IllegalStateException.class, cause -> HttpResponse.of("fallback"));
+        final AggregatedHttpResponse response = recovered.aggregate().join();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("fallback");
 
-		final HttpResponseWriter failedResponse2 = HttpResponse.streaming();
-		failedResponse2.write(ResponseHeaders.of(HttpStatus.OK));
-		final HttpResponse transformed =
-			failedResponse2.mapHeaders(headers -> {
-				throw new IllegalStateException("test exception");
-			});
-		final HttpResponse recovered2 =
-			transformed.recover(IllegalStateException.class, cause -> HttpResponse.of("fallback"));
-		final AggregatedHttpResponse response2 = recovered2.aggregate().join();
-		assertThat(response2.headers().status()).isEqualTo(HttpStatus.OK);
-		assertThat(response.contentUtf8()).isEqualTo("fallback");
-	}
+        final HttpResponseWriter failedResponse2 = HttpResponse.streaming();
+        failedResponse2.write(ResponseHeaders.of(HttpStatus.OK));
+        final HttpResponse transformed =
+            failedResponse2.mapHeaders(headers -> {
+                throw new IllegalStateException("test exception");
+            });
+        final HttpResponse recovered2 =
+            transformed.recover(IllegalStateException.class, cause -> HttpResponse.of("fallback"));
+        final AggregatedHttpResponse response2 = recovered2.aggregate().join();
+        assertThat(response2.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("fallback");
+    }
 }

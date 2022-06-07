@@ -33,7 +33,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Supplier;
 
-import com.linecorp.armeria.common.util.Exceptions;
 import org.reactivestreams.Publisher;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -52,6 +51,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.AbortedHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
@@ -939,16 +939,16 @@ public interface HttpResponse extends Response, HttpMessage {
         return of(new RecoverableStreamMessage<>(this, function, /* allowResuming */ false));
     }
 
-	default HttpResponse recover(Class<? extends Throwable> causeClass,
-								 Function<? super Throwable, ? extends HttpResponse> function) {
-		requireNonNull(causeClass, "causeClass");
-		requireNonNull(function, "function");
-		final StreamMessage<HttpObject> stream = recover(cause -> {
-			if(cause.getClass().equals(causeClass)) {
-				return function.apply(cause);
-			}
-			return Exceptions.throwUnsafely(cause);
-		});
-		return of(stream);
-	}
+    default HttpResponse recover(Class<? extends Throwable> causeClass,
+                                 Function<? super Throwable, ? extends HttpResponse> function) {
+        requireNonNull(causeClass, "causeClass");
+        requireNonNull(function, "function");
+        final StreamMessage<HttpObject> stream = recover(cause -> {
+            if (cause.getClass().equals(causeClass)) {
+                return function.apply(cause);
+            }
+            return Exceptions.throwUnsafely(cause);
+        });
+        return of(stream);
+    }
 }
