@@ -25,8 +25,7 @@ import java.net.URI
 import java.util.Objects.requireNonNull
 
 /**
- * A [[https://restfulapi.net/ REST]] client for Scala.
- * This client is designed to easily exchange RESTful APIs.
+ * A client designed for calling [[https://restfulapi.net/ RESTful APIs]] conveniently.
  */
 @UnstableApi
 trait ScalaRestClient extends ClientBuilderParams with Unwrappable {
@@ -34,7 +33,7 @@ trait ScalaRestClient extends ClientBuilderParams with Unwrappable {
   /**
    * Sets the `path` with `HttpMethod.GET` and returns a fluent request builder.
    * {{{
-   * val restClient: ScalaRestClient = ScalaRestClient()
+   * val restClient: ScalaRestClient = ScalaRestClient("https://rest.example.com")
    * val response: Future[ResponseEntity[Customer]] =
    *   restClient.get("/api/v1/customers/{customerId}")
    *             .pathParam("customerId", "0000001")
@@ -46,7 +45,7 @@ trait ScalaRestClient extends ClientBuilderParams with Unwrappable {
   /**
    * Sets the `path` with `HttpMethod.POST` and returns a fluent request builder.
    * {{{
-   * val restClient: ScalaRestClient = ScalaRestClient()
+   * val restClient: ScalaRestClient = ScalaRestClient("https://rest.example.com")
    * val response: Future[ResponseEntity[Result]] =
    *   restClient.post("/api/v1/customers")
    *             .contentJson(new Customer(...))
@@ -58,7 +57,7 @@ trait ScalaRestClient extends ClientBuilderParams with Unwrappable {
   /**
    * Sets the `path` with `HttpMethod.PUT` and returns a fluent request builder.
    * {{{
-   * val restClient: ScalaRestClient = ScalaRestClient()
+   * val restClient: ScalaRestClient = ScalaRestClient("https://rest.example.com")
    * val response: Future[ResponseEntity[Result]] =
    *   restClient.put("/api/v1/customers")
    *             .contentJson(new Customer(...))
@@ -70,7 +69,7 @@ trait ScalaRestClient extends ClientBuilderParams with Unwrappable {
   /**
    * Sets the `path` with `HttpMethod.PATCH` and returns a fluent request builder.
    * {{{
-   * val restClient: ScalaRestClient = ScalaRestClient()
+   * val restClient: ScalaRestClient = ScalaRestClient("https://rest.example.com")
    * val response: Future[ResponseEntity[Result]] =
    *   restClient.patch("/api/v1/customers")
    *             .contentJson(new Customer(...))
@@ -82,7 +81,7 @@ trait ScalaRestClient extends ClientBuilderParams with Unwrappable {
   /**
    * Sets the `path` an `HttpMethod.DELETE` and returns a fluent request builder.
    * {{{
-   * val restClient: ScalaRestClient = ScalaRestClient()
+   * val restClient: ScalaRestClient = ScalaRestClient("https://rest.example.com")
    * val response: Future[ResponseEntity[Result]] =
    *   restClient.delete("/api/v1/customers")
    *             .contentJson(new Customer(...))
@@ -94,7 +93,7 @@ trait ScalaRestClient extends ClientBuilderParams with Unwrappable {
   /**
    * Sets the `HttpMethod` and the `path` and returns a fluent request builder.
    * {{{
-   * val restClient: ScalaRestClient = ScalaRestClient()
+   * val restClient: ScalaRestClient = ScalaRestClient("https://rest.example.com")
    * val response: Future[ResponseEntity[Customer]] =
    *   restClient.path(HttpMethod.GET, "/api/v1/customers/{customerId}")
    *             .pathParam("customerId", "0000001")
@@ -107,7 +106,7 @@ trait ScalaRestClient extends ClientBuilderParams with Unwrappable {
 /**
  * A [[https://restfulapi.net/ REST]] client for Scala.
  * If you want to create a `ScalaRestClient` with various options, create a `WebClient` first
- * and convert it into a ScalaRestClient} via `WebClient.toScalaRestClient` or `ScalaRestClient(WebClient)`.
+ * and convert it into a `ScalaRestClient` via `WebClient.asScalaRestClient()` or `ScalaRestClient(WebClient)`.
  * {{{
  * val webClient: WebClient =
  *   WebClient.builder("https://api.example.com")
@@ -118,7 +117,7 @@ trait ScalaRestClient extends ClientBuilderParams with Unwrappable {
  *
  * // Use the extension method
  * import com.linecorp.armeria.scala.implicits._
- * val restClient: ScalaRestClient = webClient.toScalaRestClient()
+ * val restClient: ScalaRestClient = webClient.asScalaRestClient()
  *
  * // Or explicitly call the factory method
  * val restClient: ScalaRestClient = ScalaRestClient(webClient)
