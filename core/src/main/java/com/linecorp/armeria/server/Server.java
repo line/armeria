@@ -62,6 +62,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.spotify.futures.CompletableFutures;
 
@@ -656,18 +657,19 @@ public final class Server implements ListenableAsyncCloseable {
         private void finishDoStop(CompletableFuture<Void> future) {
             serverChannels.clear();
 
-            final List<ShutdownSupport> shutdownSupports =
-                    Stream.concat(config.virtualHosts()
-                                        .stream()
-                                        .flatMap(v -> v.shutdownSupports().stream()),
-                                  config.serviceConfigs()
-                                        .stream()
-                                        .flatMap(s -> s.shutdownSupports().stream()))
-                          .collect(toImmutableList());
+            final Builder<ShutdownSupport> builder = ImmutableList.builder();
+            for (VirtualHost virtualHost : config.virtualHosts()) {
+                builder.addAll(virtualHost.shutdownSupports());
+            }
 
-            CompletableFutures.successfulAsList(shutdownSupports.stream()
-                                                                .map(Supplier::get)
-                                                                .collect(toImmutableList()), cause -> null)
+            for (ServiceConfig serviceConfig : config.serviceConfigs()) {
+                builder.addAll(serviceConfig.shutdownSupports());
+            }
+
+            CompletableFutures.successfulAsList(builder.build()
+                                                       .stream()
+                                                       .map(Supplier::get)
+                                                       .collect(toImmutableList()), cause -> null)
                               .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
         }
 
