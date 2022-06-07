@@ -568,11 +568,6 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
-    public boolean shutdownBlockingTaskExecutorOnStop() {
-        return false;
-    }
-
-    @Override
     public MeterRegistry meterRegistry() {
         return meterRegistry;
     }

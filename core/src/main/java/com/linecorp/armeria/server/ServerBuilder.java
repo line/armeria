@@ -467,6 +467,7 @@ public final class ServerBuilder {
      */
     public ServerBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnStop) {
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");
+        // We don't use ShutdownSupport to shutdown with other instances because we shut down workerGroup first.
         shutdownWorkerGroupOnStop = shutdownOnStop;
         return this;
     }

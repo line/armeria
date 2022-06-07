@@ -221,7 +221,9 @@ public interface ServerConfig {
      *             is set with {@code true}.
      */
     @Deprecated
-    boolean shutdownBlockingTaskExecutorOnStop();
+    default boolean shutdownBlockingTaskExecutorOnStop() {
+        return false;
+    }
 
     /**
      * Returns the {@link MeterRegistry} that collects various stats.
