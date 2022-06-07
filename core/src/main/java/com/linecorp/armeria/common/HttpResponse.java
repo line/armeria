@@ -944,10 +944,16 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(causeClass, "causeClass");
         requireNonNull(function, "function");
         final StreamMessage<HttpObject> stream = recover(cause -> {
-            if (cause.getClass().equals(causeClass)) {
-                return function.apply(cause);
+            if (!cause.getClass().isAssignableFrom(causeClass)) {
+                return Exceptions.throwUnsafely(cause);
             }
-            return Exceptions.throwUnsafely(cause);
+            try {
+                final HttpResponse recoveredResponse = function.apply(cause);
+                requireNonNull(recoveredResponse, "recoveredResponse");
+                return recoveredResponse;
+            } catch (Throwable t) {
+                return Exceptions.throwUnsafely(t);
+            }
         });
         return of(stream);
     }

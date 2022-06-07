@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.InstanceOfAssertFactories.ITERABLE;
 import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletionException;
@@ -44,6 +45,7 @@ import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.CompositeException;
 
 import io.netty.util.concurrent.ImmediateEventExecutor;
 
@@ -286,15 +288,42 @@ class RecoverableStreamMessageTest {
         assertThat(response.contentUtf8()).isEqualTo("fallback");
 
         final HttpResponseWriter failedResponse2 = HttpResponse.streaming();
-        failedResponse2.write(ResponseHeaders.of(HttpStatus.OK));
+        failedResponse2.write(ResponseHeaders.of(HttpStatus.NOT_ACCEPTABLE));
         final HttpResponse transformed =
             failedResponse2.mapHeaders(headers -> {
                 throw new IllegalStateException("test exception");
             });
         final HttpResponse recovered2 =
-            transformed.recover(IllegalStateException.class, cause -> HttpResponse.of("fallback"));
+            transformed.recover(IllegalStateException.class, cause -> HttpResponse.of("fallback2"));
         final AggregatedHttpResponse response2 = recovered2.aggregate().join();
         assertThat(response2.headers().status()).isEqualTo(HttpStatus.OK);
-        assertThat(response.contentUtf8()).isEqualTo("fallback");
+        assertThat(response2.contentUtf8()).isEqualTo("fallback2");
+    }
+
+    @Test
+    void shortcutRecoverableHttpResponseHandleException() {
+        final HttpResponse failedResponse =
+            HttpResponse.ofFailure(new IllegalStateException("test exception"));
+        final HttpResponse incorrectRecover =
+            failedResponse.recover(IllegalStateException.class, cause -> null);
+        assertThatThrownBy(() -> incorrectRecover.aggregate().join())
+            .isInstanceOf(CompletionException.class)
+            .hasCauseInstanceOf(CompositeException.class)
+            .extracting("cause")
+            .extracting("exceptions", ITERABLE)
+            .element(0)
+            .isInstanceOf(NullPointerException.class);
+
+        final HttpResponse failedResponse2 =
+            HttpResponse.ofFailure(new IllegalStateException("test exception"));
+        final HttpResponse incorrectRecover2 =
+            failedResponse2.recover(IllegalArgumentException.class, cause -> HttpResponse.of("fallback"));
+        assertThatThrownBy(() -> incorrectRecover2.aggregate().join())
+            .isInstanceOf(CompletionException.class)
+            .hasCauseInstanceOf(CompositeException.class)
+            .extracting("cause")
+            .extracting("exceptions", ITERABLE)
+            .element(0)
+            .isInstanceOf(IllegalStateException.class);
     }
 }
