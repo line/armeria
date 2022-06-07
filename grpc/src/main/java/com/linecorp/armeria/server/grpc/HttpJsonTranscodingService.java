@@ -530,9 +530,17 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     }
 
     @Override
+    public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
+        final TranscodingSpec spec = routeAndSpecs.get(ctx.config().mappedRoute());
+        if (spec != null) {
+            return spec.method;
+        }
+        return super.methodDefinition(ctx);
+    }
+
+    @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final Route mappedRoute = ctx.config().mappedRoute();
-        final TranscodingSpec spec = routeAndSpecs.get(mappedRoute);
+        final TranscodingSpec spec = routeAndSpecs.get(ctx.config().mappedRoute());
         if (spec != null) {
             return serve0(ctx, req, spec);
         }

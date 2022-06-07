@@ -62,6 +62,7 @@ import io.grpc.ServerCall.Listener;
 import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
+import io.grpc.ServerMethodDefinition;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.grpc.stub.StreamObserver;
@@ -278,28 +279,36 @@ class GrpcServiceBuilderTest {
         final GrpcServiceBuilder builder = GrpcService.builder()
                                                       .addService(firstTestService)
                                                       .addService("/foo", secondTestService);
+        final HandlerRegistry handlerRegistry = handlerRegistry(builder);
+        final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators =
+                handlerRegistry.decorators();
 
-        final Map<String, List<DecoratorAndOrder>> pathToDecorators = builder.pathToDecorators();
-        assertThat(pathToDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
-        assertThat(values(pathToDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
+        ServerMethodDefinition<?, ?> methodDefinition = handlerRegistry.methods().get(
+                "armeria.grpc.testing.TestService/UnaryCall");
+        List<DecoratorAndOrder> decoratorAndOrders = decorators.get(methodDefinition);
+        assertThat(values(decoratorAndOrders))
                 .containsExactly(Decorator1.class,
                                  Decorator2.class,
                                  LoggingDecoratorFactoryFunction.class);
-        assertThat(pathToDecorators.containsKey("/foo/EmptyCall")).isTrue();
-        assertThat(values(pathToDecorators.get("/foo/EmptyCall")))
+
+        methodDefinition = handlerRegistry.methods().get("foo/EmptyCall");
+        decoratorAndOrders = decorators.get(methodDefinition);
+        assertThat(values(decoratorAndOrders))
                 .containsExactly(Decorator1.class,
                                  Decorator2.class);
-        assertThat(pathToDecorators.containsKey("/foo/UnaryCall")).isTrue();
-        assertThat(values(pathToDecorators.get("/foo/UnaryCall")))
+
+        methodDefinition = handlerRegistry.methods().get("foo/UnaryCall");
+        decoratorAndOrders = decorators.get(methodDefinition);
+        assertThat(values(decoratorAndOrders))
                 .containsExactly(Decorator1.class,
                                  Decorator3.class);
+    }
 
-        final Map<String, List<DecoratorAndOrder>> methodToDecorators = builder.methodToDecorators();
-        assertThat(methodToDecorators.containsKey("armeria.grpc.testing.TestService/UnaryCall")).isTrue();
-        assertThat(values(methodToDecorators.get("armeria.grpc.testing.TestService/UnaryCall")))
-                .containsExactly(Decorator1.class,
-                                 Decorator2.class,
-                                 LoggingDecoratorFactoryFunction.class);
+    private static HandlerRegistry handlerRegistry(GrpcServiceBuilder builder) {
+        final GrpcService grpcService = builder.build();
+        assertThat(grpcService).isInstanceOf(GrpcDecoratingService.class);
+        final GrpcDecoratingService decoratingService = (GrpcDecoratingService) grpcService;
+        return decoratingService.handlerRegistry();
     }
 
     @Test
@@ -308,14 +317,19 @@ class GrpcServiceBuilderTest {
 
         final GrpcServiceBuilder builder = GrpcService.builder()
                                                       .addService(thirdTestService);
+        final HandlerRegistry handlerRegistry = handlerRegistry(builder);
+        final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators =
+                handlerRegistry.decorators();
 
-        final Map<String, List<DecoratorAndOrder>> pathToDecorators = builder.pathToDecorators();
-        assertThat(pathToDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
-        assertThat(values(pathToDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
+        ServerMethodDefinition<?, ?> methodDefinition = handlerRegistry.methods().get(
+                "armeria.grpc.testing.TestService/UnaryCall");
+        List<DecoratorAndOrder> decoratorAndOrders = decorators.get(methodDefinition);
+        assertThat(values(decoratorAndOrders))
                 .containsExactly(Decorator1.class, Decorator2.class);
 
-        assertThat(pathToDecorators.containsKey("/armeria.grpc.testing.TestService/EmptyCall")).isTrue();
-        assertThat(values(pathToDecorators.get("/armeria.grpc.testing.TestService/EmptyCall")))
+        methodDefinition = handlerRegistry.methods().get("armeria.grpc.testing.TestService/EmptyCall");
+        decoratorAndOrders = decorators.get(methodDefinition);
+        assertThat(values(decoratorAndOrders))
                 .containsExactly(Decorator1.class, Decorator3.class);
     }
 
@@ -326,10 +340,14 @@ class GrpcServiceBuilderTest {
                 .builder()
                 .addService(firstTestService,
                             impl -> ServerInterceptors.intercept(impl, new DummyInterceptor()));
+        final HandlerRegistry handlerRegistry = handlerRegistry(builder);
+        final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators =
+                handlerRegistry.decorators();
 
-        final Map<String, List<DecoratorAndOrder>> pathToDecorators = builder.pathToDecorators();
-        assertThat(pathToDecorators.containsKey("/armeria.grpc.testing.TestService/UnaryCall")).isTrue();
-        assertThat(values(pathToDecorators.get("/armeria.grpc.testing.TestService/UnaryCall")))
+        final ServerMethodDefinition<?, ?> methodDefinition = handlerRegistry.methods().get(
+                "armeria.grpc.testing.TestService/UnaryCall");
+        final List<DecoratorAndOrder> decoratorAndOrders = decorators.get(methodDefinition);
+        assertThat(values(decoratorAndOrders))
                 .containsExactly(Decorator1.class,
                                  Decorator2.class,
                                  LoggingDecoratorFactoryFunction.class);
@@ -462,17 +480,15 @@ class GrpcServiceBuilderTest {
 
     private static List<Class<?>> values(List<DecoratorAndOrder> list) {
         return list.stream()
-                   .map(DecoratorAndOrder::annotation)
-                   .map(annotation -> {
-                       if (annotation instanceof Decorator) {
-                           return ((Decorator) annotation).value();
+                   .map(decorator -> {
+                       final Decorator decoratorAnnotation = decorator.decoratorAnnotation();
+                       if (decoratorAnnotation != null) {
+                           assertThat(decorator.decoratorFactory()).isNull();
+                           return decoratorAnnotation.value();
                        }
-                       final DecoratorFactory factory =
-                               annotation.annotationType().getAnnotation(DecoratorFactory.class);
-                       if (factory != null) {
-                           return factory.value();
-                       }
-                       throw new Error("Should not reach here.");
+                       final DecoratorFactory decoratorFactory = decorator.decoratorFactory();
+                       assertThat(decoratorFactory).isNotNull();
+                       return decoratorFactory.value();
                    })
                    .collect(toImmutableList());
     }

@@ -23,6 +23,8 @@ import java.net.UnknownHostException;
 
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.common.util.OsType;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.testing.webapp.WebAppContainerMutualTlsTest;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -68,11 +70,14 @@ class JettyServiceTlsReverseDnsLookupTest extends WebAppContainerMutualTlsTest {
             // because we enabled `tlsReverseDnsLookup`.
             final String localhostName = InetAddress.getByName("127.0.0.1").getHostName();
 
-            // Make sure reverse-lookup result isn't an IP address.
-            assertThat(!NetUtil.isValidIpV4Address(localhostName) &&
-                       !NetUtil.isValidIpV6Address(localhostName))
-                    .as("Reverse DNS lookup must not return an IP address")
-                    .isTrue();
+            // XXX(ikhoon): Don't know why but Windows returns `127.0.0.1` itself as the resolved hostname.
+            if (SystemInfo.osType() != OsType.WINDOWS) {
+                // Make sure reverse-lookup result isn't an IP address.
+                assertThat(!NetUtil.isValidIpV4Address(localhostName) &&
+                           !NetUtil.isValidIpV6Address(localhostName))
+                        .as("Reverse DNS lookup must not return an IP address")
+                        .isTrue();
+            }
 
             return localhostName;
         } catch (UnknownHostException e) {
