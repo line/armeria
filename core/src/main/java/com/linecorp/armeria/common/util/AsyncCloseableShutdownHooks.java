@@ -55,12 +55,11 @@ public final class AsyncCloseableShutdownHooks {
             }
             try {
                 asyncCloseable.close();
+                logger.debug("{} has been closed.", name);
+                closeFuture.complete(null);
             } catch (Throwable cause) {
                 logger.warn("Unexpected exception while closing a {}.", name, cause);
                 closeFuture.completeExceptionally(cause);
-            } finally {
-                logger.debug("{} has been closed.", name);
-                closeFuture.complete(null);
             }
         };
         synchronized (asyncCloseableOnShutdownTasks) {
