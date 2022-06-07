@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public interface HttpRequestSetters extends RequestMethodSetters, PathAndQueryParamSetters, HttpMessageSetters {
 
     /**
-     * Sets the content as UTF_8 for this request.
+     * Sets the content as UTF-8 for this request.
      */
     @Override
     HttpRequestSetters content(String content);
@@ -53,7 +53,7 @@ public interface HttpRequestSetters extends RequestMethodSetters, PathAndQueryPa
     HttpRequestSetters content(MediaType contentType, String content);
 
     /**
-     * Sets the content as UTF_8 for this request. The {@code content} is formatted by
+     * Sets the content as UTF-8 for this request. The {@code content} is formatted by
      * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
      */
     @Override

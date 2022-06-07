@@ -40,6 +40,8 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
     @Nullable
     private BlockingWebClient blockingWebClient;
+    @Nullable
+    private RestClient restClient;
 
     DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry) {
         super(params, delegate, meterRegistry,
@@ -128,6 +130,14 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
             return blockingWebClient;
         }
         return blockingWebClient = new DefaultBlockingWebClient(this);
+    }
+
+    @Override
+    public RestClient asRestClient() {
+        if (restClient != null) {
+            return restClient;
+        }
+        return restClient = RestClient.of(this);
     }
 
     @Override

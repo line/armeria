@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public interface HttpMessageSetters {
 
     /**
-     * Sets the content as UTF_8 for this message.
+     * Sets the content as UTF-8 for this message.
      */
     HttpMessageSetters content(String content);
 
@@ -49,7 +49,7 @@ public interface HttpMessageSetters {
     HttpMessageSetters content(MediaType contentType, String content);
 
     /**
-     * Sets the content as UTF_8 for this message. The {@code content} is formatted by
+     * Sets the content as UTF-8 for this message. The {@code content} is formatted by
      * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
      */
     @FormatMethod

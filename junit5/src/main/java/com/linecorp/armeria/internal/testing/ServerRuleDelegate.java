@@ -384,7 +384,7 @@ public abstract class ServerRuleDelegate {
      */
     @UnstableApi
     public RestClient restClient() {
-        return webClient().toRestClient();
+        return webClient().asRestClient();
     }
 
     /**
@@ -394,7 +394,7 @@ public abstract class ServerRuleDelegate {
     @UnstableApi
     public RestClient restClient(Consumer<WebClientBuilder> webClientCustomizer) {
         requireNonNull(webClientCustomizer, "webClientCustomizer");
-        return webClient(webClientCustomizer).toRestClient();
+        return webClient(webClientCustomizer).asRestClient();
     }
 
     private void ensureStarted() {

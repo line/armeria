@@ -33,5 +33,5 @@ final class RestClientOps(private val webClient: WebClient) extends AnyVal {
   /**
    * Returns a `ScalaRestClient` that connects to the same `URI` with this `WebClient`.
    */
-  def toScalaRestClient(): ScalaRestClient = ScalaRestClient(webClient)
+  def asScalaRestClient(): ScalaRestClient = ScalaRestClient(webClient)
 }

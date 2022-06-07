@@ -73,7 +73,7 @@ class RestClientSuite extends FunSuite with ServerSuite {
   }
 
   test("should create ScalaRestClient with implicit class") {
-    val restClient = server.webClient().toScalaRestClient()
+    val restClient = server.webClient().asScalaRestClient()
     val future: Future[ResponseEntity[RestResponse]] =
       restClient
         .get("/rest/{id}")
@@ -95,7 +95,7 @@ class RestClientSuite extends FunSuite with ServerSuite {
   }
 
   test("complex input") {
-    val restClient = server.webClient().toScalaRestClient()
+    val restClient = server.webClient().asScalaRestClient()
     val future =
       restClient
         .post("/rest/complex/{id}")

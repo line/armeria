@@ -31,6 +31,8 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 import org.reflections.ReflectionUtils;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
@@ -78,8 +80,6 @@ class RestClientTest {
                                              content);
                     return HttpResponse.ofJson(restResponse);
                 }
-
-                ;
             });
         }
     };
@@ -162,7 +162,7 @@ class RestClientTest {
             return Stream.of(RestClient.of(server.httpUri()),
                              RestClient.of(server.webClient()),
                              RestClient.of("http://127.0.0.1:" + server.httpPort()),
-                             server.webClient().toRestClient(),
+                             server.webClient().asRestClient(),
                              RestClient.builder(server.httpUri())
                                        .decorator(LoggingClient.newDecorator())
                                        .build())
@@ -171,16 +171,17 @@ class RestClientTest {
     }
 
     static final class RestResponse {
-        private String id;
-        private String method;
-        private String query;
-        private String header;
-        private String cookie;
-        private String content;
+        private final String id;
+        private final String method;
+        private final String query;
+        private final String header;
+        private final String cookie;
+        private final String content;
 
-        RestResponse() {}
-
-        RestResponse(String id, String method, String query, String header, String cookie, String content) {
+        @JsonCreator
+        RestResponse(@JsonProperty("id") String id, @JsonProperty("method") String method,
+                     @JsonProperty("query") String query, @JsonProperty("header") String header,
+                     @JsonProperty("cookie") String cookie, @JsonProperty("content") String content) {
             this.id = id;
             this.method = method;
             this.query = query;
@@ -193,48 +194,24 @@ class RestClientTest {
             return id;
         }
 
-        public void setId(String id) {
-            this.id = id;
-        }
-
         public String getMethod() {
             return method;
-        }
-
-        public void setMethod(String method) {
-            this.method = method;
         }
 
         public String getQuery() {
             return query;
         }
 
-        public void setQuery(String query) {
-            this.query = query;
-        }
-
         public String getHeader() {
             return header;
-        }
-
-        public void setHeader(String header) {
-            this.header = header;
         }
 
         public String getCookie() {
             return cookie;
         }
 
-        public void setCookie(String cookie) {
-            this.cookie = cookie;
-        }
-
         public String getContent() {
             return content;
-        }
-
-        public void setContent(String content) {
-            this.content = content;
         }
     }
 }

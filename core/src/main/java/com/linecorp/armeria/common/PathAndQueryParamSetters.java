@@ -22,7 +22,7 @@ import java.util.Map.Entry;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Sets properties for building a path and a query string.
+ * Provides the setters for building a path and a query string.
  */
 @UnstableApi
 public interface PathAndQueryParamSetters {

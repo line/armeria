@@ -36,6 +36,9 @@ public abstract class ThriftProtocolFactoryProvider {
         final SerializationFormat serializationFormat;
         final TProtocolFactory tProtocolFactory;
 
+        /**
+         * Create an {@link Entry} with the specified {@link SerializationFormat} and {@link TProtocolFactory}.
+         */
         public Entry(SerializationFormat serializationFormat, TProtocolFactory tProtocolFactory) {
             this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
             this.tProtocolFactory = requireNonNull(tProtocolFactory, "tProtocolFactory");

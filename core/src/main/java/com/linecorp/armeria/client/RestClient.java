@@ -27,8 +27,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 /**
- * A <a href="https://restfulapi.net/">REST</a> client.
- * This client is designed to easily exchange RESTful APIs.
+ * A client designed for calling <a href="https://restfulapi.net/">RESTful APIs</a>
+ * conveniently.
  */
 @UnstableApi
 public interface RestClient extends ClientBuilderParams, Unwrappable {

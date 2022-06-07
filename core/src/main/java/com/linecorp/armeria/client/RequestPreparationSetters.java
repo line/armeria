@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import io.netty.util.AttributeKey;
 
 /**
- * Sets properties for building an {@link HttpRequest} and {@link RequestOptions}.
+ * provides the setters for building an {@link HttpRequest} and {@link RequestOptions}.
  */
 @UnstableApi
 public interface RequestPreparationSetters extends PathAndQueryParamSetters, HttpMessageSetters,

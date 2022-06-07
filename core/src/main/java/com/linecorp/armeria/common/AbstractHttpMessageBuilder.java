@@ -48,6 +48,9 @@ public abstract class AbstractHttpMessageBuilder implements HttpMessageSetters {
     @Nullable
     private HttpHeadersBuilder httpTrailers;
 
+    /**
+     * Creates a new instance.
+     */
     protected AbstractHttpMessageBuilder() {}
 
     @Nullable

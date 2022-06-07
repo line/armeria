@@ -121,7 +121,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
     }
 
     /**
-     * Sets the content as UTF_8 for this response.
+     * Sets the content as UTF-8 for this response.
      */
     @Override
     public HttpResponseBuilder content(String content) {
@@ -145,7 +145,7 @@ public final class HttpResponseBuilder extends AbstractHttpMessageBuilder {
     }
 
     /**
-     * Sets the content as UTF_8 for this response. The {@code content} is formatted by
+     * Sets the content as UTF-8 for this response. The {@code content} is formatted by
      * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
      */
     @Override
