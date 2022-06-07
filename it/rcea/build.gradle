@@ -2,7 +2,6 @@
 // may affect cyclic dependency resulting in false-negatives.
 // If other tests are added to this module, developers should take care
 // not to load class Flag first prior to logback initialization.
-
 dependencies {
     implementation project(':logback')
 }
