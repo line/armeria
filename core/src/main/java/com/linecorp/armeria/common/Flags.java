@@ -49,11 +49,11 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.common.FlagsLoaded;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -1402,19 +1402,9 @@ public final class Flags {
 
     private Flags() {}
 
-    // These static variables are defined at the end of this file deliberately
-    // to ensure that all static variables beforehand are initialized.
-    private static final boolean INITIALIZED;
-
+    // This static block is defined at the end of this file deliberately
+    // to ensure that all static variables defined beforehand are initialized.
     static {
-        INITIALIZED = true;
-    }
-
-    /**
-     * Returns whether this class has initialized all relevant flags.
-     */
-    @UnstableApi
-    public static boolean initialized() {
-        return INITIALIZED;
+        FlagsLoaded.set();
     }
 }

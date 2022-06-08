@@ -14,17 +14,28 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
-import static org.assertj.core.api.Assertions.assertThatCode;
+import com.linecorp.armeria.common.Flags;
 
-import org.junit.jupiter.api.Test;
+/**
+ * A utility class which determines if all static initializations in {@link Flags}
+ * have been completed.
+ */
+public final class FlagsLoaded {
 
-class CyclicDependencyTest {
+    private static boolean loaded;
 
-    @Test
-    void testFlags() {
-        assertThatCode(Flags::requestContextStorageProvider)
-                .doesNotThrowAnyException();
+    /**
+     * Returns whether all flags defined in {@link Flags} have been loaded.
+     */
+    public static boolean get() {
+        return loaded;
     }
+
+    public static void set() {
+        loaded = true;
+    }
+
+    private FlagsLoaded() {}
 }
