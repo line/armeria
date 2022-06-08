@@ -130,7 +130,6 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private ResponseHeaders responseHeaders;
     @Nullable
     private O firstResponse;
-    @Nullable
     private final String clientAcceptEncoding;
 
     @Nullable
@@ -151,6 +150,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private int pendingRequests;
     private volatile int pendingMessages;
+    private final boolean autoCompression;
 
     ArmeriaServerCall(HttpRequest req,
                       MethodDescriptor<I, O> method,
@@ -192,15 +192,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         this.res = requireNonNull(res, "res");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         clientAcceptEncoding = clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "");
-        if (autoCompression && !clientAcceptEncoding.isEmpty()) {
-            final Iterable<String> acceptedEncodings = ACCEPT_ENCODING_SPLITTER.split(clientAcceptEncoding);
-            for (final String encoding : acceptedEncodings) {
-                if (compressorRegistry.lookupCompressor(encoding) != null) {
-                    setCompression(encoding);
-                    break;
-                }
-            }
-        }
+        this.autoCompression = autoCompression;
         marshaller = new GrpcMessageMarshaller<>(alloc, serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapRequestBuffers);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
@@ -261,15 +253,26 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         checkState(responseHeaders == null, "sendHeaders already called");
         checkState(!closeCalled, "call is closed");
 
-        if (compressor == null || !messageCompression || clientAcceptEncoding == null) {
-            compressor = Codec.Identity.NONE;
-        } else {
+        if (messageCompression && !clientAcceptEncoding.isEmpty()) {
             final List<String> acceptedEncodingsList =
                     ACCEPT_ENCODING_SPLITTER.splitToList(clientAcceptEncoding);
-            if (!acceptedEncodingsList.contains(compressor.getMessageEncoding())) {
-                // resort to using no compression.
+            if (compressor != null) {
+                if (!acceptedEncodingsList.contains(compressor.getMessageEncoding())) {
+                    // resort to using no compression.
+                    compressor = Codec.Identity.NONE;
+                }
+            } else if (autoCompression) {
+                for (final String encoding : acceptedEncodingsList) {
+                    if (compressorRegistry.lookupCompressor(encoding) != null) {
+                        setCompression(encoding);
+                        break;
+                    }
+                }
+            } else {
                 compressor = Codec.Identity.NONE;
             }
+        } else {
+            compressor = Codec.Identity.NONE;
         }
         responseFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
 

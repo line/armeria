@@ -92,8 +92,7 @@ import io.netty.buffer.ByteBuf;
 final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         implements Subscriber<DeframedMessage>, TransportStatusListener {
 
-    private static final Runnable NO_OP = () -> {
-    };
+    private static final Runnable NO_OP = () -> {};
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaClientCall.class);
 
