@@ -373,8 +373,8 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
     /**
      * Registers a JVM shutdown hook that closes this {@link ClientFactory} when the current JVM terminates.
      */
-    default CompletableFuture<Void> closeOnShutdown() {
-        return closeOnShutdown(null);
+    default CompletableFuture<Void> closeOnJvmShutdown() {
+        return closeOnJvmShutdown(null);
     }
 
     /**
@@ -382,5 +382,5 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
      *
      * @param whenClosing the {@link Runnable} will be run before closing this {@link ClientFactory}
      */
-    CompletableFuture<Void> closeOnShutdown(@Nullable Runnable whenClosing);
+    CompletableFuture<Void> closeOnJvmShutdown(@Nullable Runnable whenClosing);
 }

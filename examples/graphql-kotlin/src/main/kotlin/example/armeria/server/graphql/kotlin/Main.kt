@@ -10,7 +10,7 @@ import org.slf4j.LoggerFactory
 
 fun main() {
     val server = newServer(8080)
-    server.closeOnShutdown()
+    server.closeOnJvmShutdown()
     server.start().join()
 }
 

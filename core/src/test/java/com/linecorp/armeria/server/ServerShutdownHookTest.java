@@ -19,7 +19,7 @@ package com.linecorp.armeria.server;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
- * For checking the behavior of {@link Server#closeOnShutdown()}.
+ * For checking the behavior of {@link Server#closeOnJvmShutdown()}.
  * This app must output the following text:
  * <pre>{@code
  * - Before stopping Server
@@ -36,7 +36,7 @@ public final class ServerShutdownHookTest {
                                     .build();
         final Runnable whenClosing = () -> System.out.println("Before stopping Server");
 
-        server.closeOnShutdown(whenClosing).thenRun(() -> {
+        server.closeOnJvmShutdown(whenClosing).thenRun(() -> {
             System.out.println("After Server stopped");
         });
         server.start().join();

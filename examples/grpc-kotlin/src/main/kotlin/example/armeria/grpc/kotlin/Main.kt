@@ -16,7 +16,7 @@ object Main {
     fun main(args: Array<String>) {
         val server = newServer(8080, 8443)
 
-        server.closeOnShutdown()
+        server.closeOnJvmShutdown()
 
         server.start().join()
         server.activePort()?.let {

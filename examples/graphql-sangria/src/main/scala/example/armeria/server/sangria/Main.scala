@@ -10,7 +10,7 @@ object Main {
 
   def main(args: Array[String]): Unit = {
     val server = newServer(8080)
-    server.closeOnShutdown()
+    server.closeOnJvmShutdown()
     server.start.join()
   }
 

@@ -340,7 +340,7 @@ final class HttpClientFactory implements ClientFactory {
 
     private void closeAsync(CompletableFuture<?> future) {
         final List<CompletableFuture<?>> dependencies = new ArrayList<>(pools.size());
-        for (final Iterator<HttpChannelPool> i = pools.values().iterator(); i.hasNext();) {
+        for (final Iterator<HttpChannelPool> i = pools.values().iterator();i.hasNext();) {
             dependencies.add(i.next().closeAsync());
             i.remove();
         }
@@ -388,7 +388,7 @@ final class HttpClientFactory implements ClientFactory {
      * @param whenClosing the {@link Runnable} will be run before closing this {@link HttpClientFactory}
      */
     @Override
-    public CompletableFuture<Void> closeOnShutdown(@Nullable Runnable whenClosing) {
+    public CompletableFuture<Void> closeOnJvmShutdown(@Nullable Runnable whenClosing) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
         AsyncCloseableShutdownHooks.addClosingTask(whenClosing, this, future, "HttpClientFactory");
         return future;

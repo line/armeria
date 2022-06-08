@@ -41,8 +41,8 @@ fun main() {
         .serviceUnder("/", MainService(backendClient))
         .build()
 
-    backend.closeOnShutdown()
-    frontend.closeOnShutdown()
+    backend.closeOnJvmShutdown()
+    frontend.closeOnJvmShutdown()
 
     backend.start().join()
     frontend.start().join()

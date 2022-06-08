@@ -30,7 +30,7 @@ public final class Main {
 
         final Server proxyServer = newProxyServer(8080, 8443);
 
-        proxyServer.closeOnShutdown(() -> {
+        proxyServer.closeOnJvmShutdown(() -> {
             backend1.stop().join();
             backend2.stop().join();
             backend3.stop().join();

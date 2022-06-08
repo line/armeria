@@ -32,7 +32,7 @@ object Main {
 
   def main(args: Array[String]): Unit = {
     val server = newServer(8080, 8443)
-    server.closeOnShutdown()
+    server.closeOnJvmShutdown()
     server.start().join()
     logger.info(
       "Server has been started. Serving DocService at http://127.0.0.1:{}/docs",

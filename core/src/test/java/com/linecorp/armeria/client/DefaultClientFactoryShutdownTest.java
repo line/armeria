@@ -17,7 +17,7 @@
 package com.linecorp.armeria.client;
 
 /**
- * For checking the behavior of {@link DefaultClientFactory#closeOnShutdown()}.
+ * For checking the behavior of {@link DefaultClientFactory#closeOnJvmShutdown()}.
  * This app must output the following text:
  * <pre>{@code
  * - ClientFactory has been closed.
@@ -29,7 +29,7 @@ public final class DefaultClientFactoryShutdownTest {
 
     public static void main(String[] args) {
         final DefaultClientFactory defaultClientFactory = (DefaultClientFactory) ClientFactory.ofDefault();
-        defaultClientFactory.closeOnShutdown().thenRun(() -> {
+        defaultClientFactory.closeOnJvmShutdown().thenRun(() -> {
             System.out.println("After ClientFactory stopped");
         });
     }

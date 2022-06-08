@@ -14,7 +14,7 @@ public final class Main {
     public static void main(String[] args) throws Exception {
         final Server server = newServer(8080);
 
-        server.closeOnShutdown();
+        server.closeOnJvmShutdown();
 
         server.start().join();
 

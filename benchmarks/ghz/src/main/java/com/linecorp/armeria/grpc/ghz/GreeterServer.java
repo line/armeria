@@ -61,7 +61,7 @@ final class GreeterServer {
         server.start().join();
         final Version armeria = Version.get("armeria");
         System.err.println(armeria + " Server started, listening on " + port);
-        server.closeOnShutdown(() -> {
+        server.closeOnJvmShutdown(() -> {
             // Use stderr here since the logger may have been
             // reset by its JVM shutdown hook.
             System.err.println("*** shutting down gRPC server since JVM is shutting down");

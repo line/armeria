@@ -277,7 +277,7 @@ final class DefaultClientFactory implements ClientFactory {
      * @param whenClosing the {@link Runnable} will be run before closing this {@link ClientFactory}
      */
     @Override
-    public CompletableFuture<Void> closeOnShutdown(@Nullable Runnable whenClosing) {
+    public CompletableFuture<Void> closeOnJvmShutdown(@Nullable Runnable whenClosing) {
         final CompletableFuture<Void> future = new CompletableFuture<>();
         AsyncCloseableShutdownHooks.addClosingTask(whenClosing, this, future, "ClientFactory");
         return future;

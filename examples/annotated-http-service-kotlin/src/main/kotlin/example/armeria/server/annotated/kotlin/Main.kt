@@ -14,7 +14,7 @@ fun main() {
     val server = newServer(8080)
     // To append a coroutine name to a thread name
     System.setProperty("kotlinx.coroutines.debug", "on")
-    server.closeOnShutdown()
+    server.closeOnJvmShutdown()
 
     server.start().join()
     log.info("Doc service at http://127.0.0.1:8080/docs")

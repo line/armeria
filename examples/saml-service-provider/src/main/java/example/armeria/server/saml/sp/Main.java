@@ -101,7 +101,7 @@ public class Main {
                       .service(ssp.newSamlService())
                       .build();
 
-        server.closeOnShutdown();
+        server.closeOnJvmShutdown();
 
         server.start().join();
         logger.info("Server has been started.");

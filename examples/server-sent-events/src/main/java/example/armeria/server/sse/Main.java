@@ -30,7 +30,7 @@ public final class Main {
                                         Duration.ofSeconds(1), Long.MAX_VALUE,
                                         () -> Long.toHexString(random.nextLong()));
 
-        server.closeOnShutdown();
+        server.closeOnJvmShutdown();
 
         server.start().join();
         logger.info("Server has been started.");
