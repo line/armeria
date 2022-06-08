@@ -286,13 +286,14 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         final DefaultClientRequestContext derivedCtx;
         try {
-            derivedCtx = newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt)
-                    .as(DefaultClientRequestContext.class);
+            final ClientRequestContext derived = newDerivedContext(
+                    ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
+            assert derived instanceof DefaultClientRequestContext;
+            derivedCtx = (DefaultClientRequestContext) derived;
         } catch (Throwable t) {
             handleException(ctx, rootReqDuplicator, future, t, initialAttempt);
             return;
         }
-        assert derivedCtx != null;
 
         final HttpResponse response;
         if (derivedCtx.endpointGroup() != null && derivedCtx.endpoint() == null) {
