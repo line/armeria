@@ -434,7 +434,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (cause instanceof ProxyConnectException) {
             final SessionProtocol protocol = this.protocol != null ? this.protocol : desiredProtocol;
             final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
-            channelPool.invokeProxyConnectFailed(protocol, poolKey, wrapped);
+            channelPool.maybeHandleProxyFailure(protocol, poolKey, wrapped);
             sessionPromise.tryFailure(wrapped);
             return;
         }

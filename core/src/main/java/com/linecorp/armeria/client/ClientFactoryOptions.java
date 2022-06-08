@@ -20,6 +20,7 @@ import static com.linecorp.armeria.client.ClientFactoryBuilder.MIN_MAX_CONNECTIO
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -40,6 +41,7 @@ import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -265,26 +267,17 @@ public final class ClientFactoryOptions
             });
 
     /**
-     *  The number of bytes per sec allowed to be written for each channel.
-     *  A value of {@code 0} signifies that no limit is applied.
+     * This consumer lets users customize the behavior of Netty's {@link ChannelPipeline}.
+     * This customizer is run right before {@link ChannelPipeline#connect(SocketAddress)}
+     * is invoked by armeria. This customizer is no-op by default.
+     *
+     * <p>Note that this customizer usage of this customizer is an advanced
+     * feature, and may produce unintentional side effects. It is encouraged to
+     * consult with maintainers before using this feature seriously.
      */
     @UnstableApi
-    public static final ClientFactoryOption<Long> MAX_WRITE_BYTES_PER_SEC =
-            ClientFactoryOption.define("MAX_WRITE_BYTES_PER_SEC", 0L, v -> {
-                checkArgument(v >= 0, "MAX_WRITE_BYTES_PER_SEC %s (expected: >= 0)", v);
-                return v;
-            });
-
-    /**
-     *  The number of bytes per sec allowed to be read for each channel.
-     *  A value of {@code 0} signifies that no limit is applied.
-     */
-    @UnstableApi
-    public static final ClientFactoryOption<Long> MAX_READ_BYTES_PER_SEC =
-            ClientFactoryOption.define("MAX_READ_BYTES_PER_SEC", 0L, v -> {
-                checkArgument(v >= 0, "MAX_READ_BYTES_PER_SEC %s (expected: >= 0)", v);
-                return v;
-            });
+    public static final ClientFactoryOption<Consumer<? super ChannelPipeline>> CHANNEL_PIPELINE_CUSTOMIZER =
+            ClientFactoryOption.define("CHANNEL_PIPELINE_CUSTOMIZER", v -> { /* no-op */ });
 
     private static final ClientFactoryOptions EMPTY = new ClientFactoryOptions(ImmutableList.of());
 
@@ -551,20 +544,11 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the number of bytes per sec allowed to be written for each channel.
-     * A value of {@code 0} signifies that no limit is applied.
+     * Returns the {@link ChannelPipeline} customizer set. This consumer is no-op
+     * by default.
      */
     @UnstableApi
-    public long maxWriteBytesPerSec() {
-        return get(MAX_WRITE_BYTES_PER_SEC);
-    }
-
-    /**
-     * Returns the number of bytes per sec allowed to be read for each channel.
-     * A value of {@code 0} signifies that no limit is applied.
-     */
-    @UnstableApi
-    public long maxReadBytesPerSec() {
-        return get(MAX_READ_BYTES_PER_SEC);
+    public Consumer<? super ChannelPipeline> channelPipelineCustomizer() {
+        return get(CHANNEL_PIPELINE_CUSTOMIZER);
     }
 }

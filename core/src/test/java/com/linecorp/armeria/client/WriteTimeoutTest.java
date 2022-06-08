@@ -33,11 +33,15 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.netty.handler.traffic.ChannelTrafficShapingHandler;
+
 class WriteTimeoutTest {
 
     private static final ClientFactory clientFactory = ClientFactory
             .builder()
-            .option(ClientFactoryOptions.MAX_WRITE_BYTES_PER_SEC, 1024L) // write 1 KB / sec
+            .option(ClientFactoryOptions.CHANNEL_PIPELINE_CUSTOMIZER, pipeline -> {
+                pipeline.addLast(new ChannelTrafficShapingHandler(1024, 0)); // write 1 KB / sec
+            })
             .build();
 
     @RegisterExtension
