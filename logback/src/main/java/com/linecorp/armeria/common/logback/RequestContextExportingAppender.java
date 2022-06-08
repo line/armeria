@@ -189,8 +189,7 @@ public final class RequestContextExportingAppender
      * Flags#requestContextStorageProvider.
      */
     private static boolean isInitialized() {
-        //noinspection ConstantConditions
-        return Flags.requestContextStorageProvider() != null;
+        return Flags.initialized();
     }
 
     @Override

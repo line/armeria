@@ -49,6 +49,7 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -1400,4 +1401,19 @@ public final class Flags {
     }
 
     private Flags() {}
+
+    // These static variables are defined at the end of this file deliberately
+    // to ensure that all static variables beforehand are initialized.
+    private static final boolean INITIALIZED;
+    static {
+        INITIALIZED = true;
+    }
+
+    /**
+     * Returns whether this class has initialized all relevant flags.
+     */
+    @UnstableApi
+    public static boolean initialized() {
+        return INITIALIZED;
+    }
 }
