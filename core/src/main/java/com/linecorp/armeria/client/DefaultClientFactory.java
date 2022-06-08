@@ -271,11 +271,6 @@ final class DefaultClientFactory implements ClientFactory {
         closeable.close();
     }
 
-    /**
-     * Registers a JVM shutdown hook that closes this {@link ClientFactory} when the current JVM terminates.
-     *
-     * @param whenClosing the {@link Runnable} will be run before closing this {@link ClientFactory}
-     */
     @Override
     public CompletableFuture<Void> closeOnJvmShutdown(@Nullable Runnable whenClosing) {
         return AsyncCloseableShutdownHooks.addClosingTask(whenClosing, this, getClass().getSimpleName());
