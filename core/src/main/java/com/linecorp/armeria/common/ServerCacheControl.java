@@ -45,6 +45,7 @@ public final class ServerCacheControl extends CacheControl {
      * {@code "no-cache, no-store, must-revalidate"}.
      */
     public static final ServerCacheControl DISABLED = builder().noCache()
+                                                               .maxAgeSeconds(0)
                                                                .noStore()
                                                                .mustRevalidate()
                                                                .build();
@@ -53,6 +54,7 @@ public final class ServerCacheControl extends CacheControl {
      * {@code "no-cache, must-revalidate"}.
      */
     public static final ServerCacheControl REVALIDATED = builder().noCache()
+                                                                  .maxAgeSeconds(0)
                                                                   .mustRevalidate()
                                                                   .build();
 
