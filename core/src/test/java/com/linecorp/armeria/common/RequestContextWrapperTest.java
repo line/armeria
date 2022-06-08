@@ -58,12 +58,10 @@ class RequestContextWrapperTest {
     @Test
     void testUnwrapBehavior() {
         final RequestContext ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
-        final WrappedRequestContext wrapped1 = new WrappedRequestContext(ctx);
-        final WrappedRequestContext wrapped2 = new WrappedRequestContext(wrapped1);
-        assertThat(wrapped2.unwrap()).isSameAs(wrapped1);
-        assertThat(wrapped1.unwrap()).isSameAs(ctx);
+        final WrappedRequestContext wrapped = new WrappedRequestContext(new WrappedRequestContext(ctx));
+        assertThat(wrapped.unwrap()).isSameAs(ctx);
 
-        final DefaultServiceRequestContext as = wrapped2.as(DefaultServiceRequestContext.class);
+        final DefaultServiceRequestContext as = wrapped.as(DefaultServiceRequestContext.class);
         assert as != null;
         assertThat(as).isSameAs(ctx);
     }
