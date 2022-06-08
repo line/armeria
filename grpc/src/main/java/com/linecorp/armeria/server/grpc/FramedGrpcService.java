@@ -35,6 +35,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
@@ -130,10 +131,9 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     private final GrpcHealthCheckService grpcHealthCheckService;
 
     private int maxRequestMessageLength;
-    private boolean lookupMethodFromAttribute;
+    private final boolean lookupMethodFromAttribute;
 
     FramedGrpcService(HandlerRegistry registry,
-                      Set<Route> routes,
                       DecompressorRegistry decompressorRegistry,
                       CompressorRegistry compressorRegistry,
                       Set<SerializationFormat> supportedSerializationFormats,
@@ -147,7 +147,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean lookupMethodFromAttribute,
                       @Nullable GrpcHealthCheckService grpcHealthCheckService) {
         this.registry = requireNonNull(registry, "registry");
-        this.routes = requireNonNull(routes, "routes");
+        routes = ImmutableSet.copyOf(registry.methodsByRoute().keySet());
         exchangeTypes = registry.methods().entrySet().stream()
                                 .collect(toImmutableMap(e -> '/' + e.getKey(),
                                                         e -> toExchangeType(e.getValue())));
@@ -215,24 +215,15 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
         ctx.logBuilder().serializationFormat(serializationFormat);
 
-        ServerMethodDefinition<?, ?> method = lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
+        final ServerMethodDefinition<?, ?> method = methodDefinition(ctx);
         if (method == null) {
-            final String methodName = GrpcRequestUtil.determineMethod(ctx);
-            if (methodName == null) {
-                return HttpResponse.of(HttpStatus.BAD_REQUEST,
-                                       MediaType.PLAIN_TEXT_UTF_8,
-                                       "Invalid path.");
-            }
-
-            method = registry.lookupMethod(methodName);
-            if (method == null) {
-                return HttpResponse.of(
-                        (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
-                                ctx,
-                                defaultHeaders.get(serializationFormat).toBuilder(),
-                                Status.UNIMPLEMENTED.withDescription("Method not found: " + methodName),
-                                new Metadata()));
-            }
+            return HttpResponse.of(
+                    (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
+                            ctx,
+                            defaultHeaders.get(serializationFormat).toBuilder(),
+                            Status.UNIMPLEMENTED.withDescription(
+                                    "Method not found: " + ctx.config().route().patternString()),
+                            new Metadata()));
         }
 
         if (useClientTimeoutHeader) {
@@ -351,6 +342,17 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         }
     }
 
+    @Override
+    public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
+        // method could be set in HttpJsonTranscodingService.
+        final ServerMethodDefinition<?, ?> method =
+                lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
+        if (method != null) {
+            return method;
+        }
+        return GrpcService.super.methodDefinition(ctx);
+    }
+
     private static Server newDummyServer(Map<String, ServerServiceDefinition> grpcServices) {
         return new Server() {
             @Override
@@ -423,9 +425,12 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     @Override
     public Map<String, ServerMethodDefinition<?, ?>> methods() {
-        final Map<String, ServerMethodDefinition<?, ?>> methods = registry.methods();
-        assert methods instanceof ImmutableMap;
-        return methods;
+        return registry.methods();
+    }
+
+    @Override
+    public Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute() {
+        return registry.methodsByRoute();
     }
 
     @Override

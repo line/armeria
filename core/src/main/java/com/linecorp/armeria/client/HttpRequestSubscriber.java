@@ -47,6 +47,7 @@ import com.linecorp.armeria.unsafe.PooledObjects;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
+import io.netty.channel.ChannelPromise;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.proxy.ProxyConnectException;
 
@@ -201,8 +202,11 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
 
         final RequestHeaders merged = mergeRequestHeaders(firstHeaders, ctx.additionalRequestHeaders());
         logBuilder.requestHeaders(merged);
-        final ChannelFuture future = encoder.writeHeaders(id, streamId(), merged, isEmpty);
-        future.addListener(this);
+        final ChannelPromise promise = ch.newPromise();
+        // Attach a listener first to make the listener early handle a cause raised while writing headers
+        // before any other callbacks like `onStreamClosed()` are invoked.
+        promise.addListener(this);
+        encoder.writeHeaders(id, streamId(), merged, isEmpty, promise);
         ch.flush();
     }
 
@@ -254,7 +258,6 @@ final class HttpRequestSubscriber implements Subscriber<HttpObject>, ChannelFutu
     @Override
     public void onComplete() {
         isSubscriptionCompleted = true;
-        cancelTimeout();
 
         if (state != State.DONE) {
             write(HttpData.empty(), true);

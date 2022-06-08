@@ -3,6 +3,9 @@ on:
   schedule:
     - cron: '0 10 * * *'
 
+env:
+  LC_ALL: "en_US.UTF-8"
+
 jobs:
   update-psl:
     if: github.repository == 'line/armeria'
@@ -14,7 +17,7 @@ jobs:
         name: Set up JDK 17
         uses: actions/setup-java@v2
         with:
-          distribution: 'adopt'
+          distribution: 'temurin'
           java-version: '17'
 
       - name: Restore Gradle Cache

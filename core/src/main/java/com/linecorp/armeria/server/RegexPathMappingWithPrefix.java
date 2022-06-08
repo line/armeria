@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.RouteUtil.PREFIX;
 import static java.util.Objects.requireNonNull;
 
@@ -52,6 +53,11 @@ final class RegexPathMappingWithPrefix extends AbstractPathMapping {
         pathPattern = normalizedPathPrefix + patternString;
     }
 
+    @Override
+    PathMapping doWithPrefix(String prefix) {
+        return new RegexPathMappingWithPrefix(concatPaths(prefix, pathPrefix), mapping);
+    }
+
     @Nullable
     @Override
     RoutingResultBuilder doApply(RoutingContext routingCtx) {
@@ -60,14 +66,7 @@ final class RegexPathMappingWithPrefix extends AbstractPathMapping {
             return null;
         }
 
-        final RoutingResultBuilder builder =
-                mapping.apply(routingCtx.overridePath(path.substring(pathPrefix.length() - 1)));
-        if (builder != null) {
-            // Replace the path.
-            builder.path(path);
-        }
-
-        return builder;
+        return mapping.apply(routingCtx.overridePath(path.substring(pathPrefix.length() - 1)));
     }
 
     @Override
