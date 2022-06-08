@@ -200,7 +200,7 @@ public interface HttpFile {
 
             return builder(f.toPath());
         } else if ("jar".equals(url.getProtocol()) && url.getPath().startsWith("file:") ||
-            "jrt".equals(url.getProtocol())) {
+                   "jrt".equals(url.getProtocol())) {
             return new ClassPathHttpFileBuilder(url);
         }
         throw new IllegalArgumentException("Unsupported URL: " + url +
