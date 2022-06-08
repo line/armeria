@@ -16,30 +16,39 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An {@link EndpointGroupException} raised when an {@link EndpointGroup} fails to resolve
  * an {@link Endpoint} within a configured selection timeout.
  */
+@UnstableApi
 public final class EndpointSelectionTimeoutException extends EndpointGroupException {
 
     private static final long serialVersionUID = -3079582212067997365L;
+
+    private static final EndpointSelectionTimeoutException INSTANCE =
+            new EndpointSelectionTimeoutException();
 
     /**
      * Returns an {@link EndpointSelectionTimeoutException} which prints a message about
      * the {@link EndpointGroup} when thrown.
      */
-    public static EndpointSelectionTimeoutException get(EndpointGroup endpointGroup) {
+    public static EndpointSelectionTimeoutException get(EndpointGroup endpointGroup,
+                                                        long selectionTimeoutMillis) {
         requireNonNull(endpointGroup, "endpointGroup");
-        return new EndpointSelectionTimeoutException(endpointGroup);
+        checkArgument(selectionTimeoutMillis >= 0, "selectionTimeoutMillis: %s (expected: >= 0)",
+                      selectionTimeoutMillis);
+        return new EndpointSelectionTimeoutException(endpointGroup, selectionTimeoutMillis);
     }
 
     private EndpointSelectionTimeoutException() {}
 
-    private EndpointSelectionTimeoutException(EndpointGroup endpointGroup) {
-        super("Timed out selecting an endpoint: " + endpointGroup);
+    private EndpointSelectionTimeoutException(EndpointGroup endpointGroup, long selectionTimeoutMillis) {
+        super("Failed to select within " + selectionTimeoutMillis + "(ms) an endpoint from: " + endpointGroup);
     }
 }

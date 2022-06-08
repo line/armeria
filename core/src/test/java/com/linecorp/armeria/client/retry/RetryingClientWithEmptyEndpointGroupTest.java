@@ -33,22 +33,28 @@ import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionTimeoutException;
+import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.internal.testing.CountDownEmptyEndpointStrategy;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class RetryingClientWithEmptyEndpointGroupTest {
+
+    private static final String CUSTOM_HEADER = "custom-header";
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/1", (ctx, req) -> HttpResponse.of(200));
+            sb.service("/1", (ctx, req) -> HttpResponse.of(200))
+              .decorator(LoggingService.builder().successfulResponseLogLevel(LogLevel.INFO).newDecorator());
         }
     };
 
@@ -91,6 +97,7 @@ class RetryingClientWithEmptyEndpointGroupTest {
                 .decorator(RetryingClient.builder(RetryRule.onUnprocessed())
                                          .maxTotalAttempts(maxTotalAttempts)
                                          .newDecorator())
+                .decorator(LoggingClient.builder().successfulResponseLogLevel(LogLevel.INFO).newDecorator())
                 .build();
 
         try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
@@ -121,7 +128,9 @@ class RetryingClientWithEmptyEndpointGroupTest {
 
         final WebClient webClient = WebClient
                 .builder(SessionProtocol.HTTP, endpointGroup)
+                .contextCustomizer(ctx -> ctx.addAdditionalRequestHeader(CUSTOM_HEADER, "asdf"))
                 .responseTimeout(Duration.ZERO) // since retry can depend on responseTimeout
+                .decorator(LoggingClient.builder().requestLogLevel(LogLevel.INFO).newDecorator())
                 .decorator(RetryingClient.builder(RetryRule.onUnprocessed())
                                          .maxTotalAttempts(maxTotalAttempts)
                                          .newDecorator())
@@ -148,6 +157,9 @@ class RetryingClientWithEmptyEndpointGroupTest {
             final RequestLogAccess log = ctxCaptor.get().log().children().get(selectAttempts - 1);
             assertThat(log.whenComplete().join().responseStatus().code())
                     .isEqualTo(200);
+
+            // context customizer should be run only once
+            assertThat(log.whenRequestComplete().join().requestHeaders().getAll(CUSTOM_HEADER)).hasSize(1);
         }
     }
 

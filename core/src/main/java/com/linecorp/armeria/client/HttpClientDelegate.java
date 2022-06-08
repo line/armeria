@@ -64,6 +64,7 @@ final class HttpClientDelegate implements HttpClient {
             handleEarlyRequestException(ctx, req, cause);
             return HttpResponse.ofFailure(cause);
         }
+
         final Endpoint endpoint = ctx.endpoint();
         if (endpoint == null) {
             // It is possible that we reach here even when `EndpointGroup` is not empty,

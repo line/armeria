@@ -46,6 +46,8 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class RetryingRpcClientWithEmptyEndpointGroupTest {
 
+    private static final String CUSTOM_HEADER = "custom-header";
+
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
@@ -100,6 +102,7 @@ class RetryingRpcClientWithEmptyEndpointGroupTest {
                            .build();
         final Iface iface = Clients.builder(Scheme.of(BINARY, SessionProtocol.HTTP), endpointGroup, "/thrift")
                                    .responseTimeout(Duration.ZERO)
+                                   .contextCustomizer(ctx -> ctx.addAdditionalRequestHeader(CUSTOM_HEADER, "asdf"))
                                    .rpcDecorator(RetryingRpcClient.builder(retryConfig).newDecorator())
                                    .build(Iface.class);
 
@@ -124,6 +127,9 @@ class RetryingRpcClientWithEmptyEndpointGroupTest {
             final RequestLogAccess log = ctxCaptor.get().log().children().get(selectAttempts - 1);
             assertThat(log.whenComplete().join().responseStatus().code())
                     .isEqualTo(200);
+
+            // context customizer should be run only once
+            assertThat(log.whenRequestComplete().join().requestHeaders().getAll(CUSTOM_HEADER)).hasSize(1);
         }
     }
 }

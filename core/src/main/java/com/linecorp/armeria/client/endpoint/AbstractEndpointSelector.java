@@ -78,9 +78,10 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
         final ScheduledFuture<?> timeoutFuture =
                 executor.schedule(() -> {
                                       final EndpointSelectionTimeoutException ex =
-                                              EndpointSelectionTimeoutException.get(endpointGroup);
+                                              EndpointSelectionTimeoutException.get(endpointGroup,
+                                                                                    timeoutMillis);
                                       ClientPendingThrowableUtil.setPendingThrowable(ctx, ex);
-                                      // not completed exceptionally so that the throwable
+                                      // Don't completed exceptionally so that the throwable
                                       // can be handled after executing the attached decorators
                                       listeningFuture.complete(null);
                                   },
