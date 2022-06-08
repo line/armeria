@@ -1405,6 +1405,7 @@ public final class Flags {
     // These static variables are defined at the end of this file deliberately
     // to ensure that all static variables beforehand are initialized.
     private static final boolean INITIALIZED;
+
     static {
         INITIALIZED = true;
     }
