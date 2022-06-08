@@ -487,7 +487,7 @@ public final class Server implements ListenableAsyncCloseable {
      * @param whenClosing the {@link Runnable} will be run before closing this {@link Server}
      */
     public CompletableFuture<Void> closeOnJvmShutdown(@Nullable Runnable whenClosing) {
-        return ShutdownHooks.addClosingTask(whenClosing, this, getClass().getSimpleName());
+        return ShutdownHooks.addClosingTask(this, whenClosing, getClass().getSimpleName());
     }
 
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {

@@ -47,10 +47,25 @@ public final class ShutdownHooks {
     private static boolean addedShutdownHook;
 
     /**
-     *　Adds a {@link Runnable} and a {@link AutoCloseable} to the JVM shutdown hook.
+     *　Adds an {@link AutoCloseable} to the JVM shutdown hook.
+     */
+    public static CompletableFuture<Void> addClosingTask(AutoCloseable asyncCloseable) {
+        return addClosingTask(asyncCloseable, null, asyncCloseable.getClass().getSimpleName());
+    }
+
+    /**
+     *　Adds an {@link AutoCloseable}  and a {@link Runnable} to the JVM shutdown hook.
      */
     public static CompletableFuture<Void> addClosingTask(
-            @Nullable Runnable whenClosing, AutoCloseable asyncCloseable, String name) {
+            AutoCloseable asyncCloseable, @Nullable Runnable whenClosing) {
+        return addClosingTask(asyncCloseable, whenClosing, asyncCloseable.getClass().getSimpleName());
+    }
+
+    /**
+     *　Adds an {@link AutoCloseable}  and a {@link Runnable} to the JVM shutdown hook.
+     */
+    public static CompletableFuture<Void> addClosingTask(
+            AutoCloseable asyncCloseable, @Nullable Runnable whenClosing, String name) {
         final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
         final Runnable task = () -> {
             if (whenClosing != null) {

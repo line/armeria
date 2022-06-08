@@ -340,7 +340,7 @@ final class HttpClientFactory implements ClientFactory {
 
     private void closeAsync(CompletableFuture<?> future) {
         final List<CompletableFuture<?>> dependencies = new ArrayList<>(pools.size());
-        for (final Iterator<HttpChannelPool> i = pools.values().iterator(); i.hasNext(); ) {
+        for (final Iterator<HttpChannelPool> i = pools.values().iterator(); i.hasNext();) {
             dependencies.add(i.next().closeAsync());
             i.remove();
         }
@@ -384,7 +384,7 @@ final class HttpClientFactory implements ClientFactory {
 
     @Override
     public CompletableFuture<Void> closeOnJvmShutdown(@Nullable Runnable whenClosing) {
-        return ShutdownHooks.addClosingTask(whenClosing, this, getClass().getSimpleName());
+        return ShutdownHooks.addClosingTask(this, whenClosing, getClass().getSimpleName());
     }
 
     HttpChannelPool pool(EventLoop eventLoop) {
