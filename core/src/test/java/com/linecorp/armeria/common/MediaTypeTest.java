@@ -581,4 +581,13 @@ public class MediaTypeTest {
                          .withParameter("something-else", "crazy with spaces")
                          .toString());
     }
+
+    @Test
+    public void wellDefinedUpstreamMediaTypes() {
+        getConstants().forEach(upstreamMediaType -> {
+            // If upstreamMediaType is "well-known" in armeria, the same instance will be returned
+            assertThat(MediaType.parse(upstreamMediaType.toString()))
+                    .isSameAs(MediaType.parse(upstreamMediaType.toString()));
+        });
+    }
 }
