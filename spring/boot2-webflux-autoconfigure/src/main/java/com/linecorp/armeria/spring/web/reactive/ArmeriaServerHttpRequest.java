@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
+import static com.linecorp.armeria.spring.web.reactive.ArmeriaHttpHeadersUtil.fromArmeriaHttpHeaders;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -26,7 +27,6 @@ import javax.net.ssl.SSLSession;
 
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpCookie;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.AbstractServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.SslInfo;
@@ -76,12 +76,6 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
         return URI.create(scheme + "://" + authority + req.path());
     }
 
-    private static HttpHeaders fromArmeriaHttpHeaders(com.linecorp.armeria.common.HttpHeaders httpHeaders) {
-        final HttpHeaders newHttpHeaders = new HttpHeaders();
-        httpHeaders.forEach(entry -> newHttpHeaders.add(entry.getKey().toString(), entry.getValue()));
-        return newHttpHeaders;
-    }
-
     @Override
     protected MultiValueMap<String, HttpCookie> initCookies() {
         final MultiValueMap<String, HttpCookie> cookies = new LinkedMultiValueMap<>();
@@ -120,6 +114,11 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
     @Override
     public Flux<DataBuffer> getBody() {
         return body;
+    }
+
+    @Override
+    public InetSocketAddress getLocalAddress() {
+        return ctx.localAddress();
     }
 
     @Override
