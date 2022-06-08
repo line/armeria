@@ -69,7 +69,7 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.util.AsyncCloseableShutdownHooks;
+import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
@@ -487,7 +487,7 @@ public final class Server implements ListenableAsyncCloseable {
      * @param whenClosing the {@link Runnable} will be run before closing this {@link Server}
      */
     public CompletableFuture<Void> closeOnJvmShutdown(@Nullable Runnable whenClosing) {
-        return AsyncCloseableShutdownHooks.addClosingTask(whenClosing, this, getClass().getSimpleName());
+        return ShutdownHooks.addClosingTask(whenClosing, this, getClass().getSimpleName());
     }
 
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {

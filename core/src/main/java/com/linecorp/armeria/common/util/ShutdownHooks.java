@@ -27,15 +27,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A utility class for adding a task with closing a {@link AsyncCloseable} on shutdown.
+ * A utility class for adding a task with closing a {@link AutoCloseable} on shutdown.
  */
-public final class AsyncCloseableShutdownHooks {
+@UnstableApi
+public final class ShutdownHooks {
 
-    private static final Logger logger = LoggerFactory.getLogger(AsyncCloseableShutdownHooks.class);
+    private static final Logger logger = LoggerFactory.getLogger(ShutdownHooks.class);
 
-    private static final Map<AsyncCloseable, Queue<Runnable>> asyncCloseableOnShutdownTasks =
+    private static final Map<AutoCloseable, Queue<Runnable>> asyncCloseableOnShutdownTasks =
             new LinkedHashMap<>();
 
     private static final ThreadFactory THREAD_FACTORY = ThreadFactories
@@ -45,10 +47,10 @@ public final class AsyncCloseableShutdownHooks {
     private static boolean addedShutdownHook;
 
     /**
-     *　Adds a {@link Runnable} and a {@link AsyncCloseable} to the JVM shutdown hook.
+     *　Adds a {@link Runnable} and a {@link AutoCloseable} to the JVM shutdown hook.
      */
     public static CompletableFuture<Void> addClosingTask(
-            @Nullable Runnable whenClosing, AsyncCloseable asyncCloseable, String name) {
+            @Nullable Runnable whenClosing, AutoCloseable asyncCloseable, String name) {
         final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
         final Runnable task = () -> {
             if (whenClosing != null) {
@@ -95,5 +97,5 @@ public final class AsyncCloseableShutdownHooks {
         return closeFuture;
     }
 
-    private AsyncCloseableShutdownHooks() {}
+    private ShutdownHooks() {}
 }

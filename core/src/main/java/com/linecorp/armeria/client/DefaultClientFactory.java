@@ -39,7 +39,7 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.AsyncCloseableShutdownHooks;
+import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
 
@@ -273,7 +273,7 @@ final class DefaultClientFactory implements ClientFactory {
 
     @Override
     public CompletableFuture<Void> closeOnJvmShutdown(@Nullable Runnable whenClosing) {
-        return AsyncCloseableShutdownHooks.addClosingTask(whenClosing, this, getClass().getSimpleName());
+        return ShutdownHooks.addClosingTask(whenClosing, this, getClass().getSimpleName());
     }
 
     private boolean checkDefault() {
