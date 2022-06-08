@@ -389,9 +389,7 @@ final class HttpClientFactory implements ClientFactory {
      */
     @Override
     public CompletableFuture<Void> closeOnJvmShutdown(@Nullable Runnable whenClosing) {
-        final CompletableFuture<Void> future = new CompletableFuture<>();
-        AsyncCloseableShutdownHooks.addClosingTask(whenClosing, this, future, "HttpClientFactory");
-        return future;
+        return AsyncCloseableShutdownHooks.addClosingTask(whenClosing, this, getClass().getSimpleName());
     }
 
     HttpChannelPool pool(EventLoop eventLoop) {

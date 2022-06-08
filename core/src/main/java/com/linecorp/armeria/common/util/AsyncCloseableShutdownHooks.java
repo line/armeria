@@ -21,6 +21,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ThreadFactory;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -37,14 +38,18 @@ public final class AsyncCloseableShutdownHooks {
     private static final Map<AsyncCloseable, Queue<Runnable>> asyncCloseableOnShutdownTasks =
             new LinkedHashMap<>();
 
+    private static final ThreadFactory THREAD_FACTORY = ThreadFactories
+            .builder("armeria-shutdown-hook")
+            .build();
+
     private static boolean addedShutdownHook;
 
     /**
      *　Adds a {@link Runnable} and a {@link AsyncCloseable} to the JVM shutdown hook.
      */
-    public static void addClosingTask(@Nullable Runnable whenClosing,
-                                      AsyncCloseable asyncCloseable,
-                                      CompletableFuture<Void> closeFuture, String name) {
+    public static CompletableFuture<Void> addClosingTask(
+            @Nullable Runnable whenClosing, AsyncCloseable asyncCloseable, String name) {
+        final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
         final Runnable task = () -> {
             if (whenClosing != null) {
                 try {
@@ -72,7 +77,7 @@ public final class AsyncCloseableShutdownHooks {
             onShutdownTasks.add(task);
             asyncCloseableOnShutdownTasks.put(asyncCloseable, onShutdownTasks);
             if (!addedShutdownHook) {
-                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(() -> {
                     asyncCloseableOnShutdownTasks.forEach((factory, queue) -> {
                         for (;;) {
                             final Runnable onShutdown = queue.poll();
@@ -87,6 +92,7 @@ public final class AsyncCloseableShutdownHooks {
                 addedShutdownHook = true;
             }
         }
+        return closeFuture;
     }
 
     private AsyncCloseableShutdownHooks() {}
