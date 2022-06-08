@@ -939,8 +939,8 @@ public interface HttpResponse extends Response, HttpMessage {
         return of(new RecoverableStreamMessage<>(this, function, /* allowResuming */ false));
     }
 
-    default HttpResponse recover(Class<? extends Throwable> causeClass,
-                                 Function<? super Throwable, ? extends HttpResponse> function) {
+    default <T extends Throwable> HttpResponse recover(Class<T> causeClass,
+                                                       Function<? super T, ? extends HttpResponse> function) {
         requireNonNull(causeClass, "causeClass");
         requireNonNull(function, "function");
         final StreamMessage<HttpObject> stream = recover(cause -> {
@@ -948,7 +948,7 @@ public interface HttpResponse extends Response, HttpMessage {
                 return Exceptions.throwUnsafely(cause);
             }
             try {
-                final HttpResponse recoveredResponse = function.apply(cause);
+                final HttpResponse recoveredResponse = function.apply((T) cause);
                 requireNonNull(recoveredResponse, "recoveredResponse");
                 return recoveredResponse;
             } catch (Throwable t) {
