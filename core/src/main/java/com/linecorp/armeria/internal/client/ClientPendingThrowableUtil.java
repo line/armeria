@@ -33,7 +33,7 @@ import io.netty.util.AttributeKey;
  * final RuntimeException e = new RuntimeException();
  * final WebClient webClient =
  *         WebClient.builder(SessionProtocol.HTTP, endpointGroup)
- *                  .contextCustomizer(ctx -> setUnprocessedPendingThrowable(ctx, e))
+ *                  .contextCustomizer(ctx -> setPendingThrowable(ctx, e))
  *                  .decorator(LoggingClient.newDecorator()) // the request is logged
  *                  .build();
  * assertThatThrownBy(() -> webClient.blocking().get("/"))
@@ -43,12 +43,12 @@ import io.netty.util.AttributeKey;
  */
 public final class ClientPendingThrowableUtil {
 
-    private static final AttributeKey<PendingThrowableContainer> CLIENT_PENDING_THROWABLE =
+    private static final AttributeKey<Throwable> CLIENT_PENDING_THROWABLE =
             AttributeKey.valueOf(ClientPendingThrowableUtil.class, "CLIENT_PENDING_THROWABLE");
 
     /**
      * Sets a pending {@link Throwable} for the specified {@link ClientRequestContext}.
-     * Note that the set throwable will be peeled via {@link Exceptions#peel(Throwable)}
+     * Note that the throwable will be peeled via {@link Exceptions#peel(Throwable)}
      * before being set.
      *
      * <p>For example:<pre>{@code
@@ -65,15 +65,14 @@ public final class ClientPendingThrowableUtil {
         requireNonNull(ctx, "ctx");
         requireNonNull(cause, "cause");
         cause = Exceptions.peel(cause);
-        final PendingThrowableContainer container = new PendingThrowableContainer(cause, ctx);
-        ctx.setAttr(CLIENT_PENDING_THROWABLE, container);
+        ctx.setAttr(CLIENT_PENDING_THROWABLE, cause);
     }
 
     /**
      * Retrieves the pending {@link Throwable} for the specified {@link ClientRequestContext}.
-     * Note that <strong>only</strong> the attribute set for the specified {@link ClientRequestContext}
-     * is returned. Even though a context contains this attribute, the derived context wouldn't
-     * contain this attribute by default.
+     * Note that the derived context will also contain this attribute by default, and can fail
+     * requests immediately. The pending {@link Throwable} can be removed by
+     * {@link #removePendingThrowable(ClientRequestContext)}.
      *
      * <p>For example:<pre>{@code
      * ClientRequestContext ctx = null;
@@ -82,57 +81,32 @@ public final class ClientPendingThrowableUtil {
      * setPendingThrowable(ctx, t);
      * final Throwable t2 = pendingThrowable(ctx); // t
      * final ClientRequestContext derived = ctx.newDerivedContext(id, req, rpcReq, endpoint);
-     * final Throwable t3 = pendingThrowable(derived); // null
+     * final Throwable t3 = pendingThrowable(derived); // t
      * }</pre>
      */
     @Nullable
     public static Throwable pendingThrowable(ClientRequestContext ctx) {
         requireNonNull(ctx, "ctx");
-        final PendingThrowableContainer container = ctx.attr(CLIENT_PENDING_THROWABLE);
-        if (container == null || container.ctx != ctx) {
-            return null;
-        }
-        return container.throwable;
+        return ctx.attr(CLIENT_PENDING_THROWABLE);
     }
 
     /**
-     * Transfers the value set by pending {@link Throwable} set by {@code from} to
-     * {@code to}. If {@code from} doesn't contain the attribute, no action will occur.
-     *
-     * <p>Note that the {@link Throwable} is only transferred if {@code from} contains
-     * the attribute as its own.
+     * Removes the pending throwable set by {@link #setPendingThrowable(ClientRequestContext, Throwable)}.
      *
      * <p>For example:<pre>{@code
-     * final Throwable t1 = pendingThrowable(ctx); // null
-     * setPendingThrowable(ctx, t);
-     * final Throwable t2 = pendingThrowable(ctx); // t
-     * final ClientRequestContext derived = ctx.newDerivedContext(id, req, rpcReq, endpoint);
-     * final Throwable t3 = pendingThrowable(derived); // null
-     * copyPendingThrowable(ctx, derived);
-     * final Throwable t4 = pendingThrowable(derived); // t
+     * final Throwable throwable = pendingThrowable(ctx);
+     * assert throwable != null;
+     * assertThat(throwable).isEqualTo(e);
+     * removePendingThrowable(ctx);
+     * assertThat(pendingThrowable(ctx)).isNull();
      * }</pre>
      */
-    public static void copyPendingThrowable(ClientRequestContext from,
-                                            ClientRequestContext to) {
-        requireNonNull(from, "from");
-        requireNonNull(to, "to");
-        final Throwable throwable = pendingThrowable(from);
-        if (throwable == null) {
+    public static void removePendingThrowable(ClientRequestContext ctx) {
+        requireNonNull(ctx, "ctx");
+        if (!ctx.hasAttr(CLIENT_PENDING_THROWABLE)) {
             return;
         }
-        final PendingThrowableContainer copy = new PendingThrowableContainer(throwable, to);
-        to.setAttr(CLIENT_PENDING_THROWABLE, copy);
-    }
-
-    private static class PendingThrowableContainer {
-        final Throwable throwable;
-        final ClientRequestContext ctx;
-
-        PendingThrowableContainer(Throwable throwable,
-                                  ClientRequestContext ctx) {
-            this.throwable = throwable;
-            this.ctx = ctx;
-        }
+        ctx.setAttr(CLIENT_PENDING_THROWABLE, null);
     }
 
     private ClientPendingThrowableUtil() {}

@@ -102,7 +102,8 @@ class RetryingRpcClientWithEmptyEndpointGroupTest {
                            .build();
         final Iface iface = Clients.builder(Scheme.of(BINARY, SessionProtocol.HTTP), endpointGroup, "/thrift")
                                    .responseTimeout(Duration.ZERO)
-                                   .contextCustomizer(ctx -> ctx.addAdditionalRequestHeader(CUSTOM_HEADER, "asdf"))
+                                   .contextCustomizer(ctx -> ctx
+                                           .addAdditionalRequestHeader(CUSTOM_HEADER, "asdf"))
                                    .rpcDecorator(RetryingRpcClient.builder(retryConfig).newDecorator())
                                    .build(Iface.class);
 

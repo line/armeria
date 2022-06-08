@@ -26,10 +26,12 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.common.util.StringUtil;
 
 /**
@@ -161,9 +163,7 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
             return;
         }
 
-        final ClientRequestContext derived = newDerivedContext(ctx, null, req, initialAttempt);
-        assert derived instanceof DefaultClientRequestContext;
-        final DefaultClientRequestContext derivedCtx = (DefaultClientRequestContext) derived;
+        final ClientRequestContext derivedCtx = newDerivedContext(ctx, null, req, initialAttempt);
 
         if (!initialAttempt) {
             derivedCtx.mutateAdditionalRequestHeaders(
@@ -172,11 +172,15 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
 
         final RpcResponse res;
 
-        if (derivedCtx.endpointGroup() != null && derivedCtx.endpoint() == null) {
+        final EndpointGroup endpointGroup = derivedCtx.endpointGroup();
+        if (!initialAttempt && derivedCtx instanceof DefaultClientRequestContext &&
+            endpointGroup != null && derivedCtx.endpoint() == null) {
+            // clear the pending throwable to retry endpoint selection
+            ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
-            res = initContextAndExecuteWithFallback(unwrap(), derivedCtx, derivedCtx.endpointGroup(),
-                                                         RpcResponse::from,
-                                                         (context, cause) -> RpcResponse.ofFailure(cause));
+            final DefaultClientRequestContext casted = (DefaultClientRequestContext) derivedCtx;
+            res = initContextAndExecuteWithFallback(unwrap(), casted, endpointGroup, RpcResponse::from,
+                                                    (context, cause) -> RpcResponse.ofFailure(cause));
         } else {
             res = executeWithFallback(unwrap(), derivedCtx,
                                       (context, cause) -> RpcResponse.ofFailure(cause));

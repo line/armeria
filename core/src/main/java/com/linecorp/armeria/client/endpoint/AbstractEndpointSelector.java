@@ -81,7 +81,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
                                               EndpointSelectionTimeoutException.get(endpointGroup,
                                                                                     timeoutMillis);
                                       ClientPendingThrowableUtil.setPendingThrowable(ctx, ex);
-                                      // Don't completed exceptionally so that the throwable
+                                      // Don't complete exceptionally so that the throwable
                                       // can be handled after executing the attached decorators
                                       listeningFuture.complete(null);
                                   },

@@ -60,7 +60,7 @@ public final class CountDownEmptyEndpointStrategy implements EndpointSelectionSt
             public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
                                                       ScheduledExecutorService executor,
                                                       long timeoutMillis) {
-                if (selectCounter.decrementAndGet() < 0) {
+                if (selectCounter.decrementAndGet() <= 0) {
                     return selectBehavior.apply(ctx);
                 }
                 return delegate.select(ctx, executor, timeoutMillis);

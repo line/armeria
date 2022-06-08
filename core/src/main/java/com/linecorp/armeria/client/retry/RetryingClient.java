@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -46,6 +47,7 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 import io.netty.handler.codec.DateFormatter;
@@ -284,22 +286,23 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             duplicateReq = rootReqDuplicator.duplicate(newHeaders.build());
         }
 
-        final DefaultClientRequestContext derivedCtx;
+        final ClientRequestContext derivedCtx;
         try {
-            final ClientRequestContext derived = newDerivedContext(
-                    ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
-            assert derived instanceof DefaultClientRequestContext;
-            derivedCtx = (DefaultClientRequestContext) derived;
+            derivedCtx = newDerivedContext(ctx, duplicateReq, ctx.rpcRequest(), initialAttempt);
         } catch (Throwable t) {
             handleException(ctx, rootReqDuplicator, future, t, initialAttempt);
             return;
         }
 
         final HttpResponse response;
-        if (derivedCtx.endpointGroup() != null && derivedCtx.endpoint() == null) {
+        final EndpointGroup endpointGroup = derivedCtx.endpointGroup();
+        if (!initialAttempt && derivedCtx instanceof DefaultClientRequestContext &&
+            endpointGroup != null && derivedCtx.endpoint() == null) {
+            // clear the pending throwable to retry endpoint selection
+            ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
-            response = initContextAndExecuteWithFallback(unwrap(), derivedCtx, derivedCtx.endpointGroup(),
-                                                         HttpResponse::from,
+            final DefaultClientRequestContext casted = (DefaultClientRequestContext) derivedCtx;
+            response = initContextAndExecuteWithFallback(unwrap(), casted, endpointGroup, HttpResponse::from,
                                                          (context, cause) -> HttpResponse.ofFailure(cause));
         } else {
             response = executeWithFallback(unwrap(), derivedCtx,
