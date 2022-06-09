@@ -153,6 +153,10 @@ public final class ByteBufsInputStream extends InputStream {
             buffer.release();
             throw new IllegalStateException("Already closed");
         }
+        if (!buffer.isReadable()) {
+            buffer.release();
+            return;
+        }
         if (!buffers.add(buffer)) {
             throw new IllegalStateException("Unable to add new buffer");
         }
