@@ -124,7 +124,7 @@ jobs:
           -PtestJavaVersion=${{ matrix.java }} \
           -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-17.outputs.path }},${{ steps.setup-jdk.outputs.path }}
           
-          SUMMARY_FILE = "build/failed-tests-summary.txt"
+          SUMMARY_FILE = "build/failed-tests-result.txt"
           if test -f "$SUMMARY_FILE"; then
             echo '### 🔴 Failed tests (${{ matrix.on }}, Java ${{ matrix.java }})\n' >> $GITHUB_STEP_SUMMARY
             cat $SUMMARY_FILE >> $GITHUB_STEP_SUMMARY
@@ -258,9 +258,9 @@ jobs:
       - name: Summarize the failed tests
         if: failure()
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=1 -PnoWeb -PnoLint summarizeFailedTests \
+          ./gradlew --no-daemon --stacktrace --max-workers=1 -PnoWeb -PnoLint reportFailedTests \
           
-          SUMMARY_FILE = "build/failed-tests-summary.txt"
+          SUMMARY_FILE = "build/failed-tests-result.txt"
           if test -f "$SUMMARY_FILE"; then
             echo '### 🔴 Failed tests (${{ matrix.on }}, Java ${{ matrix.java }})\n' >> $GITHUB_STEP_SUMMARY
             cat $SUMMARY_FILE >> $GITHUB_STEP_SUMMARY

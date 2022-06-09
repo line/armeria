@@ -240,7 +240,7 @@ tasks.closeAndReleaseStagingRepository.doFirst {
 task reportFailedTests(type: TestsReportTask)
 
 /**
- * Summarizes the failed tests and reports as a file with Markdown syntax.
+ * Summarizes the failed tests and reports as a file with the Markdown syntax.
  */
 class TestsReportTask extends DefaultTask {
     @OutputFile
