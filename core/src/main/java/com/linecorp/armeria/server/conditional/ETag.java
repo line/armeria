@@ -135,7 +135,7 @@ public final class ETag {
 
     /**
      * Splits the If-Not-Modified header into multiple Entity Tags.
-     * Format is according to RFC2732
+     * Format is according to RFC7232
      * <pre>
      *  If-Match = "*" / 1#entity-tag
      *  If-None-Match = "*" / 1#entity-tag

@@ -72,15 +72,15 @@ class ConditionalRequestUtilTest {
     @Test
     void testIfMatch() {
         assertThat(ConditionalRequestUtil.ifMatch("W/\"1\"", new ETag("1", true)))
-                .isSameAs(ETagResponse.PERFORM_METHOD);
-        assertThat(ConditionalRequestUtil.ifMatch("*", new ETag("1", true)))
+                .isSameAs(ETagResponse.SKIP_METHOD_PRECONDITION_FAILED);
+        assertThat(ConditionalRequestUtil.ifMatch("*", new ETag("1", false)))
                 .isSameAs(ETagResponse.PERFORM_METHOD);
         assertThat(ConditionalRequestUtil.ifMatch("*", null))
                 .isSameAs(ETagResponse.SKIP_METHOD_PRECONDITION_FAILED);
         assertThat(ConditionalRequestUtil.ifMatch("\"1\"", new ETag("1", true)))
-                .isSameAs(ETagResponse.PERFORM_METHOD);
-        assertThat(ConditionalRequestUtil.ifMatch("\"1\"", new ETag("1", false)))
                 .isSameAs(ETagResponse.SKIP_METHOD_PRECONDITION_FAILED);
+        assertThat(ConditionalRequestUtil.ifMatch("\"1\"", new ETag("1", false)))
+                .isSameAs(ETagResponse.PERFORM_METHOD);
     }
 
     @Test

@@ -83,9 +83,9 @@ public final class ConditionalRequestUtil {
         }
         // If-Match requires strong match which can never match weak tags
         if (strongComparison(requestETags, dataETag)) {
-            return SKIP_METHOD_PRECONDITION_FAILED;
+            return PERFORM_METHOD;
         }
-        return PERFORM_METHOD;
+        return SKIP_METHOD_PRECONDITION_FAILED;
     }
 
     /**
@@ -144,7 +144,7 @@ public final class ConditionalRequestUtil {
     }
 
     /**
-     * Processes a request doing If-Match, If-None-Match and If-Modified-Since.
+     * Processes a request doing If-Match, If-None-Match, If-Unmodified-Since and If-Modified-Since.
      * @param reqHeaders The RequestHeaders object of the request.
      * @param dataETag The ETag of the current data. If the resource doesn't exists, this is null.
      *      This is mostly used to make sure PUT operations don't overwrite existing data.
@@ -165,7 +165,7 @@ public final class ConditionalRequestUtil {
                 return SKIP_METHOD_NOT_MODIFIED;
             } else {
                 // Handle 'if-modified-since' header, only if 'if-none-match' does not exist.
-                // ie return here, because if-modified-since is definitive.
+                // ie return here, because If-None-Match is definitive.
                 return PERFORM_METHOD;
             }
         }
@@ -175,8 +175,7 @@ public final class ConditionalRequestUtil {
                 final Long ifModifiedSince = reqHeaders.getTimeMillis(HttpHeaderNames.IF_MODIFIED_SINCE);
                 if (ifModifiedSince != null) {
                     @SuppressWarnings("UnstableApiUsage")
-                    final long ifModifiedSinceMillis = LongMath.saturatedAdd(ifModifiedSince, 999);
-                    if (dataLastModified <= ifModifiedSinceMillis) {
+                    if (dataLastModified / 1000 <= ifModifiedSince / 1000) {
                         return SKIP_METHOD_NOT_MODIFIED;
                     }
                 }
@@ -186,10 +185,7 @@ public final class ConditionalRequestUtil {
             try {
                 final Long ifUnmodifiedSince = reqHeaders.getTimeMillis(HttpHeaderNames.IF_UNMODIFIED_SINCE);
                 if (ifUnmodifiedSince != null) {
-                    @SuppressWarnings("UnstableApiUsage")
-                    // TODO Reviewers, is this correct?
-                    final long ifModifiedSinceMillis = LongMath.saturatedSubtract(ifUnmodifiedSince, 999);
-                    if (dataLastModified >= ifModifiedSinceMillis) {
+                    if (dataLastModified / 1000 >= ifModifiedSince / 1000) {
                         return SKIP_METHOD_NOT_MODIFIED;
                     }
                 }
