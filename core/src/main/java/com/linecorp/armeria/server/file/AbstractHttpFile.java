@@ -23,9 +23,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 
-import com.google.common.base.Splitter;
-import com.google.common.math.LongMath;
-
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -38,6 +35,9 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.conditional.ConditionalRequestUtil;
+import com.linecorp.armeria.server.conditional.ETag;
+import com.linecorp.armeria.server.conditional.ETagResponse;
 
 import io.netty.buffer.ByteBufAllocator;
 
@@ -45,8 +45,6 @@ import io.netty.buffer.ByteBufAllocator;
  * A skeletal {@link HttpFile} implementation.
  */
 public abstract class AbstractHttpFile implements HttpFile {
-
-    private static final Splitter etagSplitter = Splitter.on(',').trimResults().omitEmptyStrings();
 
     @Nullable
     private final MediaType contentType;
@@ -258,31 +256,26 @@ public abstract class AbstractHttpFile implements HttpFile {
                 // See https://datatracker.ietf.org/doc/html/rfc7232#section-6 for more information
                 // about how conditional requests are handled.
 
-                // Handle 'if-none-match' header.
+                // Handle 'if-none-match', 'if-match' and 'if-modified-since' header.
+                // 'if-match' will probably never be used for GET/HEAD requests
+                final String entityTag = generateEntityTag(attrs);
                 final RequestHeaders reqHeaders = req.headers();
-                final String etag = generateEntityTag(attrs);
-                final String ifNoneMatch = reqHeaders.get(HttpHeaderNames.IF_NONE_MATCH);
-                if (etag != null && ifNoneMatch != null) {
-                    if ("*".equals(ifNoneMatch) || entityTagMatches(etag, ifNoneMatch)) {
-                        return newNotModified(attrs, etag);
-                    }
-                }
 
-                // Handle 'if-modified-since' header, only if 'if-none-match' does not exist.
-                if (ifNoneMatch == null) {
-                    try {
-                        final Long ifModifiedSince =
-                                reqHeaders.getTimeMillis(HttpHeaderNames.IF_MODIFIED_SINCE);
-                        if (ifModifiedSince != null) {
-                            // HTTP-date does not have subsecond-precision; add 999ms to it.
-                            final long ifModifiedSinceMillis = LongMath.saturatedAdd(ifModifiedSince, 999);
-                            if (attrs.lastModifiedMillis() <= ifModifiedSinceMillis) {
-                                return newNotModified(attrs, etag);
-                            }
-                        }
-                    } catch (Exception ignore) {
-                        // Malformed date.
-                    }
+                final ETag eTag;
+                if (entityTag != null) {
+                    // Our checksums cannot be assumed to be strong, and only
+                    // If-Match (which makes little sense for GET/HEAD)
+                    // uses strong comparison.
+                    eTag = new ETag(entityTag, true);
+                } else {
+                    eTag = null;
+                }
+                final ETagResponse eTagResponse =
+                        ConditionalRequestUtil.conditionalRequest(reqHeaders,
+                                                                  eTag,
+                                                                  attrs.lastModifiedMillis());
+                if (eTagResponse != ETagResponse.PERFORM_METHOD) {
+                    return newNotModified(attrs, entityTag);
                 }
 
                 // Precondition did not match. Handle as usual.
@@ -307,44 +300,6 @@ public abstract class AbstractHttpFile implements HttpFile {
                 return HttpResponse.of(HttpStatus.NOT_FOUND);
             }));
         };
-    }
-
-    private static boolean entityTagMatches(String entityTag, String ifNoneMatch) {
-        for (String candidate : etagSplitter.split(ifNoneMatch)) {
-            final String candidateETag = extractEntityTag(candidate);
-            if (entityTag.equals(candidateETag)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static String extractEntityTag(String value) {
-        int i = 0;
-        int etagStart = -1;
-        int etagEnd = -1;
-        for (; i < value.length(); i++) {
-            if (value.charAt(i) == '\"') {
-                etagStart = i + 1;
-                i++;
-                break;
-            }
-        }
-
-        if (etagStart < 0) {
-            // Not surrounded by double quotes.
-            return value;
-        }
-
-        for (; i < value.length(); i++) {
-            if (value.charAt(i) == '\"') {
-                etagEnd = i;
-                break;
-            }
-        }
-
-        return etagEnd > 0 ? value.substring(etagStart, etagEnd) : value.substring(etagStart);
     }
 
     private HttpResponse newNotModified(HttpFileAttributes attrs, @Nullable String etag) {
