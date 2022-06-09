@@ -126,7 +126,7 @@ jobs:
           
           SUMMARY_FILE="build/failed-tests-result.txt"
           if test -f "$SUMMARY_FILE"; then
-            echo '### 🔴 Failed tests (${{ matrix.on }}, Java ${{ matrix.java }})\n' >> $GITHUB_STEP_SUMMARY
+            echo '### 🔴 Failed tests' >> $GITHUB_STEP_SUMMARY
             cat $SUMMARY_FILE >> $GITHUB_STEP_SUMMARY
           fi
         shell: bash
@@ -262,7 +262,7 @@ jobs:
           
           SUMMARY_FILE="build/failed-tests-result.txt"
           if test -f "$SUMMARY_FILE"; then
-            echo '### 🔴 Failed tests (${{ matrix.on }}, Java ${{ matrix.java }})\n' >> $GITHUB_STEP_SUMMARY
+            echo '#### 🔴 Failed tests' >> $GITHUB_STEP_SUMMARY
             cat $SUMMARY_FILE >> $GITHUB_STEP_SUMMARY
           fi
         shell: bash
