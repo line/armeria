@@ -75,13 +75,16 @@ public final class ClientPendingThrowableUtil {
      * {@link #removePendingThrowable(ClientRequestContext)}.
      *
      * <p>For example:<pre>{@code
-     * ClientRequestContext ctx = null;
-     * Throwable t;
-     * final Throwable t1 = pendingThrowable(ctx); // null
+     * ClientRequestContext ctx = ...;
+     * Throwable t = ...;
+     * final Throwable t1 = pendingThrowable(ctx);
+     * assert t1 == null;
      * setPendingThrowable(ctx, t);
-     * final Throwable t2 = pendingThrowable(ctx); // t
+     * final Throwable t2 = pendingThrowable(ctx);
+     * assert t2 == t;
      * final ClientRequestContext derived = ctx.newDerivedContext(id, req, rpcReq, endpoint);
-     * final Throwable t3 = pendingThrowable(derived); // t
+     * final Throwable t3 = pendingThrowable(derived);
+     * assert t3 == t;
      * }</pre>
      */
     @Nullable

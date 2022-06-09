@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -43,7 +44,8 @@ public final class EndpointSelectionTimeoutException extends EndpointGroupExcept
         requireNonNull(endpointGroup, "endpointGroup");
         checkArgument(selectionTimeoutMillis >= 0, "selectionTimeoutMillis: %s (expected: >= 0)",
                       selectionTimeoutMillis);
-        return new EndpointSelectionTimeoutException(endpointGroup, selectionTimeoutMillis);
+        return Flags.verboseExceptionSampler().isSampled(EndpointSelectionTimeoutException.class) ?
+               new EndpointSelectionTimeoutException(endpointGroup, selectionTimeoutMillis) : INSTANCE;
     }
 
     private EndpointSelectionTimeoutException() {}
