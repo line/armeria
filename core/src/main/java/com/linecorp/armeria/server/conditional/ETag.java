@@ -38,17 +38,17 @@ public final class ETag {
 
     private static final Pattern ETAG_REGEX = Pattern.compile("(W/|)\"([^\"]*)\"");
 
-    private final String eTag;
+    private final String opaqueTag;
     private final boolean weak;
 
     /**
      * Create an Entity tag instance.
-     * @param eTag The data.
+     * @param opaqueTag The data.
      * @param weak The weak state.
      */
-    public ETag(String eTag, boolean weak) {
-        Preconditions.checkArgument(validateEtag(eTag), "Invalid ETag: '%s'", eTag);
-        this.eTag = eTag;
+    public ETag(String opaqueTag, boolean weak) {
+        Preconditions.checkArgument(validateEtag(opaqueTag), "Invalid opaque tag: '%s'", opaqueTag);
+        this.opaqueTag = opaqueTag;
         this.weak = weak;
     }
 
@@ -66,12 +66,12 @@ public final class ETag {
             return false;
         }
         final ETag eTag = (ETag) o;
-        return weak == eTag.weak && Objects.equal(this.eTag, eTag.eTag);
+        return weak == eTag.weak && Objects.equal(this.opaqueTag, eTag.opaqueTag);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(eTag, weak);
+        return Objects.hashCode(opaqueTag, weak);
     }
 
     /**
@@ -79,7 +79,7 @@ public final class ETag {
      * @return the Entity Tag.
      */
     public String getETag() {
-        return eTag;
+        return opaqueTag;
     }
 
     /**
@@ -109,7 +109,7 @@ public final class ETag {
         }
         return builder
                 .append('\"')
-                .append(eTag)
+                .append(opaqueTag)
                 .append('\"')
                 .toString();
     }
