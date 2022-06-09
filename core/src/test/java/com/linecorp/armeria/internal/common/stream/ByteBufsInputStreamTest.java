@@ -53,7 +53,6 @@ class ByteBufsInputStreamTest {
         final ImmutableList.Builder<String> resultBuilder = ImmutableList.builder();
         while (scanner.hasNext()) {
             final String s = scanner.next();
-            System.out.println(s);
             resultBuilder.add(s);
         }
         final List<String> resultStrings = resultBuilder.build();
@@ -80,7 +79,6 @@ class ByteBufsInputStreamTest {
         final ImmutableList.Builder<String> resultBuilder = ImmutableList.builder();
         while (scanner.hasNext()) {
             final String s = scanner.next();
-            System.out.println(s);
             resultBuilder.add(s);
         }
 
@@ -116,7 +114,6 @@ class ByteBufsInputStreamTest {
         final ImmutableList.Builder<String> resultBuilder = ImmutableList.builder();
         while (scanner.hasNext()) {
             final String s = scanner.next();
-            System.out.println(s);
             resultBuilder.add(s);
         }
 
@@ -231,7 +228,6 @@ class ByteBufsInputStreamTest {
             final ImmutableList.Builder<String> resultBuilder = ImmutableList.builder();
             while (scanner.hasNext()) {
                 final String s = scanner.next();
-                System.out.println(s);
                 resultBuilder.add(s);
             }
             return resultBuilder.build();

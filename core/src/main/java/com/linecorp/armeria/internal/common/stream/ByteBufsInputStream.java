@@ -158,6 +158,7 @@ public final class ByteBufsInputStream extends InputStream {
             return;
         }
         if (!buffers.add(buffer)) {
+            buffer.release();
             throw new IllegalStateException("Unable to add new buffer");
         }
     }
