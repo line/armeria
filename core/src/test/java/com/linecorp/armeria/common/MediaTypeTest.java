@@ -599,6 +599,7 @@ public class MediaTypeTest {
         getConstants(com.google.common.net.MediaType.class).forEach(upstreamMediaType -> {
             // If upstreamMediaType is "well-known" in armeria, the same instance will be returned
             assertThat(MediaType.parse(upstreamMediaType.toString()))
+                    .as("MediaType not well-defined for (%s)", upstreamMediaType.toString())
                     .isSameAs(MediaType.parse(upstreamMediaType.toString()));
         });
     }
