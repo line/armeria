@@ -142,6 +142,18 @@ public class MediaTypeTest {
         });
     }
 
+    // reflection
+    @SuppressWarnings("Guava")
+    private static <T> FluentIterable<T> getConstants(Class<T> clazz) {
+        return getConstantFields(clazz).transform(input -> {
+            try {
+                return (T) input.get(null);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
     @Test
     public void testCreate_invalidType() {
         try {
@@ -584,7 +596,7 @@ public class MediaTypeTest {
 
     @Test
     public void wellDefinedUpstreamMediaTypes() {
-        getConstants().forEach(upstreamMediaType -> {
+        getConstants(com.google.common.net.MediaType.class).forEach(upstreamMediaType -> {
             // If upstreamMediaType is "well-known" in armeria, the same instance will be returned
             assertThat(MediaType.parse(upstreamMediaType.toString()))
                     .isSameAs(MediaType.parse(upstreamMediaType.toString()));
