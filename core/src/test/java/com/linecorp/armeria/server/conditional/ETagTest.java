@@ -53,7 +53,7 @@ class ETagTest {
     @Test
     void asteriskParsing() {
         AssertionsForClassTypes.assertThat(ETag.parseHeader(null))
-                               .isEqualTo(ImmutableList.of());
+                               .isNull();
         AssertionsForClassTypes.assertThat(ETag.parseHeader("*"))
                                .isSameAs(ETag.ASTERISK_ETAG);
         AssertionsForClassTypes.assertThat(ETag.parseHeader("\"*\""))

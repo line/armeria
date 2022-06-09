@@ -25,7 +25,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -174,7 +173,6 @@ public final class ConditionalRequestUtil {
             try {
                 final Long ifModifiedSince = reqHeaders.getTimeMillis(HttpHeaderNames.IF_MODIFIED_SINCE);
                 if (ifModifiedSince != null) {
-                    @SuppressWarnings("UnstableApiUsage")
                     if (dataLastModified / 1000 <= ifModifiedSince / 1000) {
                         return SKIP_METHOD_NOT_MODIFIED;
                     }
@@ -185,7 +183,7 @@ public final class ConditionalRequestUtil {
             try {
                 final Long ifUnmodifiedSince = reqHeaders.getTimeMillis(HttpHeaderNames.IF_UNMODIFIED_SINCE);
                 if (ifUnmodifiedSince != null) {
-                    if (dataLastModified / 1000 >= ifModifiedSince / 1000) {
+                    if (dataLastModified / 1000 >= ifUnmodifiedSince / 1000) {
                         return SKIP_METHOD_NOT_MODIFIED;
                     }
                 }

@@ -151,7 +151,7 @@ public final class ETag {
     @Nullable
     public static List<ETag> parseHeader(@Nullable String header) {
         if (header == null) {
-            return ImmutableList.of();
+            return null;
         }
         if ("*".equals(header)) {
             return ETag.ASTERISK_ETAG;

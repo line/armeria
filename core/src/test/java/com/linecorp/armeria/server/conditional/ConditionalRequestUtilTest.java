@@ -22,6 +22,9 @@ import static com.linecorp.armeria.common.HttpHeaderNames.IF_NONE_MATCH;
 import static com.linecorp.armeria.server.conditional.ConditionalRequestUtil.conditionalRequest;
 import static com.linecorp.armeria.server.conditional.ConditionalRequestUtil.strongComparison;
 import static com.linecorp.armeria.server.conditional.ConditionalRequestUtil.weakComparison;
+import static com.linecorp.armeria.server.conditional.ETagResponse.PERFORM_METHOD;
+import static com.linecorp.armeria.server.conditional.ETagResponse.SKIP_METHOD_NOT_MODIFIED;
+import static com.linecorp.armeria.server.conditional.ETagResponse.SKIP_METHOD_PRECONDITION_FAILED;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Instant;
@@ -72,29 +75,29 @@ class ConditionalRequestUtilTest {
     @Test
     void testIfMatch() {
         assertThat(ConditionalRequestUtil.ifMatch("W/\"1\"", new ETag("1", true)))
-                .isSameAs(ETagResponse.SKIP_METHOD_PRECONDITION_FAILED);
+                .isSameAs(SKIP_METHOD_PRECONDITION_FAILED);
         assertThat(ConditionalRequestUtil.ifMatch("*", new ETag("1", false)))
-                .isSameAs(ETagResponse.PERFORM_METHOD);
+                .isSameAs(PERFORM_METHOD);
         assertThat(ConditionalRequestUtil.ifMatch("*", null))
-                .isSameAs(ETagResponse.SKIP_METHOD_PRECONDITION_FAILED);
+                .isSameAs(SKIP_METHOD_PRECONDITION_FAILED);
         assertThat(ConditionalRequestUtil.ifMatch("\"1\"", new ETag("1", true)))
-                .isSameAs(ETagResponse.SKIP_METHOD_PRECONDITION_FAILED);
+                .isSameAs(SKIP_METHOD_PRECONDITION_FAILED);
         assertThat(ConditionalRequestUtil.ifMatch("\"1\"", new ETag("1", false)))
-                .isSameAs(ETagResponse.PERFORM_METHOD);
+                .isSameAs(PERFORM_METHOD);
     }
 
     @Test
     void testIfNoneMatch() {
         assertThat(ConditionalRequestUtil.ifNoneMatch("W/\"1\"", new ETag("1", true)))
-                .isSameAs(ETagResponse.SKIP_METHOD_NOT_MODIFIED);
+                .isSameAs(SKIP_METHOD_NOT_MODIFIED);
         assertThat(ConditionalRequestUtil.ifNoneMatch("*", new ETag("1", true)))
-                .isSameAs(ETagResponse.SKIP_METHOD_NOT_MODIFIED);
+                .isSameAs(SKIP_METHOD_NOT_MODIFIED);
         assertThat(ConditionalRequestUtil.ifNoneMatch("*", null))
-                .isSameAs(ETagResponse.PERFORM_METHOD);
+                .isSameAs(PERFORM_METHOD);
         assertThat(ConditionalRequestUtil.ifNoneMatch("\"1\"", new ETag("1", true)))
-                .isSameAs(ETagResponse.SKIP_METHOD_NOT_MODIFIED);
+                .isSameAs(SKIP_METHOD_NOT_MODIFIED);
         assertThat(ConditionalRequestUtil.ifNoneMatch("\"1\"", new ETag("1", false)))
-                .isSameAs(ETagResponse.SKIP_METHOD_NOT_MODIFIED);
+                .isSameAs(SKIP_METHOD_NOT_MODIFIED);
     }
 
     /**
@@ -108,23 +111,23 @@ class ConditionalRequestUtilTest {
                               .addTimeMillis(IF_MODIFIED_SINCE, LONG_TIME_AGO)
                               .build();
         assertThat(conditionalRequest(reqHeaders, new ETag("foobar", true), NOT_SO_LONG_TIME_AGO))
-                .isSameAs(ETagResponse.SKIP_METHOD_NOT_MODIFIED);
+                .isSameAs(SKIP_METHOD_NOT_MODIFIED);
         assertThat(conditionalRequest(reqHeaders, new ETag("foo", true), LONG_TIME_AGO))
-                .isSameAs(ETagResponse.PERFORM_METHOD);
+                .isSameAs(PERFORM_METHOD);
 
         final RequestHeaders reqHeaders2 =
                 RequestHeaders.builder(HttpMethod.GET, "/")
                               .addTimeMillis(IF_MODIFIED_SINCE, LONG_TIME_AGO)
                               .build();
         assertThat(conditionalRequest(reqHeaders2, new ETag("foobar", true), NOT_SO_LONG_TIME_AGO))
-                .isSameAs(ETagResponse.PERFORM_METHOD);
+                .isSameAs(PERFORM_METHOD);
         assertThat(conditionalRequest(reqHeaders2, new ETag("foo", true), LONG_TIME_AGO))
-                .isSameAs(ETagResponse.SKIP_METHOD_NOT_MODIFIED);
+                .isSameAs(SKIP_METHOD_NOT_MODIFIED);
     }
 
     /**
-     * I'm not sure about the evaluation order. They are really not meant to be used for even
-     * the same methods, even less in the same request, so this is the less well defined part of
+     * Unsure about the evaluation order. They are really not meant to be used for even
+     * the same methods, even less in the same request, so this is the less well-defined part of
      * the RFC. They do however both state that the method MUST NOT be performed when they respectively
      * evaluate to false (SKIP_METHOD_XXXXX).
      */
@@ -133,13 +136,18 @@ class ConditionalRequestUtilTest {
         final RequestHeaders reqHeaders =
                 RequestHeaders.builder(HttpMethod.GET, "/")
                               .add(IF_NONE_MATCH, "\"foobar\"")
-                              .add(IF_MATCH, "\"foobar\"")
+                              .add(IF_MATCH, "\"foo\"")
                               .addTimeMillis(IF_MODIFIED_SINCE, LONG_TIME_AGO)
                               .build();
 
-        assertThat(conditionalRequest(reqHeaders, new ETag("foobar", true), NOT_SO_LONG_TIME_AGO))
-                .isSameAs(ETagResponse.SKIP_METHOD_NOT_MODIFIED);
-        assertThat(conditionalRequest(reqHeaders, new ETag("foo", true), LONG_TIME_AGO))
-                .isSameAs(ETagResponse.PERFORM_METHOD);
+        assertThat(conditionalRequest(reqHeaders, new ETag("foobar", false), NOT_SO_LONG_TIME_AGO))
+                .isSameAs(SKIP_METHOD_PRECONDITION_FAILED);
+        assertThat(conditionalRequest(reqHeaders, new ETag("foo", false), LONG_TIME_AGO))
+                .isSameAs(PERFORM_METHOD);
+
+        // Either of these are acceptable. It really depends on the evaluation-order between
+        // If-Match and If-None-Match.
+        assertThat(conditionalRequest(reqHeaders, new ETag("fxx", false), LONG_TIME_AGO))
+                .isIn(SKIP_METHOD_PRECONDITION_FAILED, SKIP_METHOD_NOT_MODIFIED);
     }
 }
