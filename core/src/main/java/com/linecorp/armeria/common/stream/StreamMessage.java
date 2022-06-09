@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.DecodedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.EmptyFixedStreamMessage;
@@ -770,6 +771,25 @@ public interface StreamMessage<T> extends Publisher<T> {
             Function<? super Throwable, ? extends StreamMessage<T>> function) {
         requireNonNull(function, "function");
         return new RecoverableStreamMessage<>(this, function, /* allowResuming */ true);
+    }
+
+    default <E extends Throwable> StreamMessage<T> recoverAndResume(Class<E> causeClass,
+            Function<? super E, ? extends StreamMessage<T>> function) {
+        requireNonNull(causeClass, "causeClass");
+        requireNonNull(function, "function");
+        final StreamMessage<T> stream = recoverAndResume(cause -> {
+            if (!cause.getClass().isAssignableFrom(causeClass)) {
+                return Exceptions.throwUnsafely(cause);
+            }
+            try {
+                final StreamMessage<T> recoveredStreamMessage = function.apply((E) cause);
+                requireNonNull(recoveredStreamMessage, "recoveredStreamMessage");
+                return recoveredStreamMessage;
+            } catch (Throwable t) {
+                return Exceptions.throwUnsafely(cause);
+            }
+        });
+        return of(stream);
     }
 
     /**

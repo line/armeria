@@ -76,6 +76,37 @@ class RecoverableStreamMessageTest {
         assertThat(recoverable.collect().join()).contains(1, 2, 3, 4, 5, 6);
     }
 
+    @Test
+    void recoverStreamMessageShortcut() {
+        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        final StreamMessage<Integer> recoverable =
+            stream.recoverAndResume(IllegalStateException.class, cause -> StreamMessage.of(5, 6, 7));
+        stream.write(1);
+        stream.write(2);
+        stream.write(3);
+        stream.write(4);
+        stream.close(new IllegalStateException("test exception"));
+        assertThat(recoverable.collect().join()).contains(1, 2, 3, 4, 5, 6, 7);
+    }
+
+    @Test
+    void thrownTypeMismatchRecoverStreamMessageShortcut() {
+        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        final StreamMessage<Integer> recoverable =
+            stream.recoverAndResume(IllegalStateException.class, cause -> null);
+        stream.write(1);
+        stream.write(2);
+        stream.write(3);
+        stream.close(ClosedStreamException.get());
+        assertThatThrownBy(() -> recoverable.collect().join())
+            .isInstanceOf(CompletionException.class)
+            .hasCauseInstanceOf(CompositeException.class)
+            .extracting("cause")
+            .extracting("exceptions", ITERABLE)
+            .element(0)
+            .isInstanceOf(ClosedStreamException.class);
+    }
+
     @CsvSource({ "true", "false" })
     @ParameterizedTest
     void shouldNotResumeOnAbortion(boolean abort) {
