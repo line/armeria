@@ -393,12 +393,12 @@ public final class MediaType {
     public static final MediaType APPLE_PASSBOOK =
             createConstant(APPLICATION_TYPE, "vnd.apple.pkpass");
 
-//    /**
-//     * <a href="http://en.wikipedia.org/wiki/Embedded_OpenType">Embedded OpenType</a> fonts. This is
-//     * <a href="http://www.iana.org/assignments/media-types/application/vnd.ms-fontobject">registered
-//     * </a> with the IANA.
-//     */
-//    public static final MediaType EOT = createConstant(APPLICATION_TYPE, "vnd.ms-fontobject");
+    /**
+     * <a href="http://en.wikipedia.org/wiki/Embedded_OpenType">Embedded OpenType</a> fonts. This is
+     * <a href="http://www.iana.org/assignments/media-types/application/vnd.ms-fontobject">registered
+     * </a> with the IANA.
+     */
+    public static final MediaType EOT = createConstant(APPLICATION_TYPE, "vnd.ms-fontobject");
 
     /**
      * As described in the <a href="http://idpf.org/epub">International Digital Publishing Forum</a>

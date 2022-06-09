@@ -60,7 +60,7 @@ enum DefaultMediaTypeResolver implements MediaTypeResolver {
         add(map, MediaType.create("application", "x-font-ttf"), "ttc", "ttf");
         add(map, MediaType.WOFF, "woff");
         add(map, MediaType.WOFF2, "woff2");
-//        add(map, MediaType.EOT, "eot");
+        add(map, MediaType.EOT, "eot");
         add(map, MediaType.create("font", "opentype"), "otf");
 
         // JavaScript, XML, etc
