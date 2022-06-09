@@ -1078,5 +1078,25 @@ public final class ArmeriaHttpUtil {
                "close".equalsIgnoreCase(httpResponse.headers().get(HttpHeaderNames.CONNECTION));
     }
 
+    /**
+     * Copies header value pairs of the specified {@linkplain HttpHeaders Armeria headers} to the
+     * {@link BiConsumer} excluding HTTP/2 pseudo headers that starts with ':'. This also converts
+     * {@link HttpHeaderNames#AUTHORITY} header to {@link HttpHeaderNames#HOST} header if
+     * the {@linkplain HttpHeaders Armeria headers} does not have one.
+     */
+    public static void toHttp1Headers(HttpHeaders armeriaHeaders,
+                                      BiConsumer<AsciiString, String> outputHeaders) {
+        for (Entry<AsciiString, String> e : armeriaHeaders) {
+            final AsciiString k = e.getKey();
+            final String v = e.getValue();
+            if (k.charAt(0) != ':') {
+                outputHeaders.accept(k, v);
+            } else if (HttpHeaderNames.AUTHORITY.equals(k) && !armeriaHeaders.contains(HttpHeaderNames.HOST)) {
+                // Convert `:authority` to `host`.
+                outputHeaders.accept(HttpHeaderNames.HOST, v);
+            }
+        }
+    }
+
     private ArmeriaHttpUtil() {}
 }

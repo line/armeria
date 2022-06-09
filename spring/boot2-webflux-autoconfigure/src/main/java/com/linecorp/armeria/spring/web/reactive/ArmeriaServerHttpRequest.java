@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
-import static com.linecorp.armeria.spring.web.reactive.ArmeriaHttpHeadersUtil.fromArmeriaHttpHeaders;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toHttp1Headers;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -27,6 +27,7 @@ import javax.net.ssl.SSLSession;
 
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.http.HttpCookie;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.server.reactive.AbstractServerHttpRequest;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.http.server.reactive.SslInfo;
@@ -38,6 +39,7 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -57,7 +59,7 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
     ArmeriaServerHttpRequest(ServiceRequestContext ctx,
                              HttpRequest req,
                              DataBufferFactoryWrapper<?> factoryWrapper) {
-        super(uri(req), null, fromArmeriaHttpHeaders(req.headers()));
+        super(uri(req), null, springHeaders(req.headers()));
         this.ctx = requireNonNull(ctx, "ctx");
         this.req = req;
 
@@ -65,6 +67,12 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
                    // Guarantee that the context is accessible from a controller method
                    // when a user specify @RequestBody in order to convert a request body into an object.
                    .publishOn(Schedulers.fromExecutor(ctx.eventLoop()));
+    }
+
+    private static HttpHeaders springHeaders(RequestHeaders headers) {
+        final HttpHeaders springHeaders = new HttpHeaders();
+        toHttp1Headers(headers, (key, value) -> springHeaders.add(key.toString(), value));
+        return springHeaders;
     }
 
     private static URI uri(HttpRequest req) {

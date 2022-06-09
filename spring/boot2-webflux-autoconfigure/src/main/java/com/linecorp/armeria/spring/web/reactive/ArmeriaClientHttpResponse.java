@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.spring.web.reactive;
 
-import static com.linecorp.armeria.spring.web.reactive.ArmeriaHttpHeadersUtil.fromArmeriaHttpHeaders;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toHttp1Headers;
 import static java.util.Objects.requireNonNull;
 
 import org.springframework.core.io.buffer.DataBuffer;
@@ -93,7 +93,8 @@ final class ArmeriaClientHttpResponse implements ClientHttpResponse {
         if (httpHeaders != null) {
             return httpHeaders;
         }
-        this.httpHeaders = fromArmeriaHttpHeaders(headers);
+        this.httpHeaders = new HttpHeaders();
+        toHttp1Headers(headers, (header, value) -> this.httpHeaders.add(header.toString(), value));
         return this.httpHeaders;
     }
 
