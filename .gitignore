@@ -12,7 +12,7 @@
 /reports
 /site/public
 /site/.cache
-/summarized-failed-tests.txt
+/failed-tests-result.txt
 
 # Package Files #
 *.jar
