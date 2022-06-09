@@ -117,7 +117,7 @@ jobs:
       - name: Summarize the failed tests
         if: failure()
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=1 summarizeFailedTests \
+          ./gradlew --no-daemon --stacktrace --max-workers=1 reportFailedTests \
           -PnoLint \
           -PflakyTests=false \
           -PbuildJdkVersion=17 \
