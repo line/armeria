@@ -19,7 +19,7 @@ env:
 
 jobs:
   build:
-#    if: github.repository == 'line/armeria'
+    if: github.repository == 'line/armeria'
     runs-on: ${{ matrix.on }}
     timeout-minutes: 80
     strategy:
@@ -192,7 +192,7 @@ jobs:
         shell: bash
 
   site:
-#    if: github.repository == 'line/armeria'
+    if: github.repository == 'line/armeria'
     # ubuntu-latest is preferred for site job.
     # node_modules need complicated dependencies that are difficult to install on self-hosted runners.
     runs-on: ubuntu-latest
