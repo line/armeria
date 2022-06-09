@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -31,14 +33,17 @@ public interface ConcurrentAttributes extends AttributesGetters, AttributesSette
      * Returns a new empty {@link ConcurrentAttributes}.
      */
     static ConcurrentAttributes of() {
-        return of(null);
+        return new DefaultConcurrentAttributes(null);
     }
 
     /**
      * Returns a new {@link ConcurrentAttributes} with the specified parent {@link AttributesGetters}.
      * The parent {@link AttributesGetters} can be accessed via {@link #attr(AttributeKey)} or {@link #attrs()}.
+     *
+     * <p>Note that any mutations in {@link ConcurrentAttributes} won't modify the attributes in the parent.
      */
-    static ConcurrentAttributes of(@Nullable AttributesGetters parent) {
+    static ConcurrentAttributes fromParent(AttributesGetters parent) {
+        requireNonNull(parent, "parent");
         return new DefaultConcurrentAttributes(parent);
     }
 

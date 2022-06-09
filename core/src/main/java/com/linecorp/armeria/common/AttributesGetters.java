@@ -92,9 +92,9 @@ public interface AttributesGetters {
     /**
      * Returns the {@link #parent()} which was specified when creating this {@link AttributesGetters}.
      *
-     * @see Attributes#of(AttributesGetters)
+     * @see Attributes#fromParent(AttributesGetters)
      * @see Attributes#builder(AttributesGetters)
-     * @see ConcurrentAttributes#of(AttributesGetters)
+     * @see ConcurrentAttributes#fromParent(AttributesGetters)
      */
     @Nullable
     AttributesGetters parent();

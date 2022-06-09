@@ -139,7 +139,7 @@ class DefaultConcurrentAttributesTest {
     void hasAttributeInRoot() {
         final DefaultServiceRequestContext root =
                 (DefaultServiceRequestContext) ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final ConcurrentAttributes child = ConcurrentAttributes.of(root.attributes());
+        final ConcurrentAttributes child = ConcurrentAttributes.fromParent(root.attributes());
 
         // root: [foo], child: []
         final AttributeKey<String> foo = AttributeKey.valueOf("foo");
@@ -172,7 +172,7 @@ class DefaultConcurrentAttributesTest {
     void hasNoAttributeInRoot() {
         final DefaultServiceRequestContext root =
                 (DefaultServiceRequestContext) ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final ConcurrentAttributes child = ConcurrentAttributes.of(root.attributes());
+        final ConcurrentAttributes child = ConcurrentAttributes.fromParent(root.attributes());
 
         final AttributeKey<String> foo = AttributeKey.valueOf("foo");
         // root: [], child: [foo]
@@ -198,7 +198,7 @@ class DefaultConcurrentAttributesTest {
     void attrsWithRoot() {
         final DefaultServiceRequestContext root =
                 (DefaultServiceRequestContext) ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final ConcurrentAttributes child = ConcurrentAttributes.of(root.attributes());
+        final ConcurrentAttributes child = ConcurrentAttributes.fromParent(root.attributes());
 
         final AttributeKey<String> foo = AttributeKey.valueOf("foo");
         // root: [foo], child: []
