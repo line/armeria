@@ -773,6 +773,33 @@ public interface StreamMessage<T> extends Publisher<T> {
         return new RecoverableStreamMessage<>(this, function, /* allowResuming */ true);
     }
 
+    /**
+     * Recovers failed {@link StreamMessage} for the specified {@link Throwable} and resumes by subscribing
+     * to a returned fallback {@link StreamMessage} when any error occurs.
+     *
+     * <p>Example:<pre>{@code
+     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * stream.write(1);
+     * stream.write(2);
+     * stream.close(new IllegalStateException("Oops..."));
+     * StreamMessage<Integer> resumed =
+     *     stream.recoverAndResume(IllegalStateException.class, cause -> StreamMessage.of(3, 4));
+     *
+     * assert resumed.collect().join().equals(List.of(1, 2, 3, 4));
+     *
+     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * stream.write(1);
+     * stream.write(2);
+     * stream.close(ClosedStreamException.get());
+     * // If the exception type does not match
+     * StreamMessage<Integer> misMatchRecovered =
+     *     stream.recoverAndResume(IllegalStateException.class, cause -> StreamMessage.of(3, 4));
+     *
+     * // In this case, CompletionException is returned. (can't recover exception)
+     * misMatchRecovered.collect().join();
+     * }</pre>
+     * */
+    @UnstableApi
     default <E extends Throwable> StreamMessage<T> recoverAndResume(Class<E> causeClass,
             Function<? super E, ? extends StreamMessage<T>> function) {
         requireNonNull(causeClass, "causeClass");

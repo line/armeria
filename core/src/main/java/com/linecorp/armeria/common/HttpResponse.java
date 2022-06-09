@@ -939,6 +939,39 @@ public interface HttpResponse extends Response, HttpMessage {
         return of(new RecoverableStreamMessage<>(this, function, /* allowResuming */ false));
     }
 
+    /**
+     * Recovers an {@link HttpResponse} exception to the specified {@link Throwable} class.
+     * when any error occurs before a {@link ResponseHeaders} is written.
+     * Note that the failed {@link HttpResponse} cannot be recovered from an error if
+     * a {@link ResponseHeaders} was written already
+     *
+     * <p>Example:<pre>{@code
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Oops..."));
+     * // The failed HttpResponse will be recovered by the fallback function.
+     * HttpResponse recovered =
+     *     response.recover(IllegalStateException.class, cause -> HttpResponse.of("Fallback"));
+     * assert recovered.aggregate().join().contentUtf8().equals("Fallback");
+     *
+     * // As HTTP headers and body were written already before an error occurred,
+     * // the fallback function could not be applied for the failed HttpResponse.
+     * HttpResponseWriter response = HttpResponse.streaming();
+     * response.write(ResponseHeaders.of(HttpStatus.OK));
+     * response.write(HttpData.ofUtf8("Hello"));
+     * response.close(new IllegalStateException("Oops..."));
+     * HttpResponse notRecovered =
+     *     response.recover(IllegalStateException.class, cause -> HttpResponse.of("Fallback"));
+     * // The IllegalStateException will be raised even though a fallback function was added.
+     * notRecovered.aggregate().join();
+     *
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Oops..."));
+     * // If the exception type does not match
+     * HttpResponse misMatchRecovered =
+     *     response.recover(IllegalArgumentException.class, cause -> HttpResponse.of("Fallback"));
+     * // In this case, CompletionException is returned. (can't recover exception)
+     * misMatchRecovered.aggregate().join();
+     * }</pre>
+     * */
+    @UnstableApi
     default <T extends Throwable> HttpResponse recover(Class<T> causeClass,
                                                        Function<? super T, ? extends HttpResponse> function) {
         requireNonNull(causeClass, "causeClass");
