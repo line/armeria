@@ -104,8 +104,9 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
             return HttpResponse.from(FileAggregatedMultipart.aggregateMultipart(ctx, request)
                                                             .thenApply(multipart -> {
                 try {
-                    final String operationsParam = toStringFromMultipartParam("operations", multipart.params());
-                    final String mapParam = toStringFromMultipartParam("map", multipart.params());
+                    final ListMultimap<String, String> multipartParams = multipart.params();
+                    final String operationsParam = getValueFromMultipartParam("operations", multipartParams);
+                    final String mapParam = getValueFromMultipartParam("map", multipartParams);
 
                     final Map<String, Object> operation = parseJsonString(operationsParam, JSON_MAP);
                     final Map<String, List<String>> map = parseJsonString(mapParam, MAP_PARAM);
@@ -135,10 +136,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                     return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
                                            "Failed to parse a JSON document");
                 } catch (IllegalArgumentException ex) {
-                    final HttpResponse response = HttpResponse.of(HttpStatus.BAD_REQUEST,
-                                                                  MediaType.PLAIN_TEXT, ex.getMessage());
-                    final HttpResponseException cause = HttpResponseException.of(response, ex);
-                    return HttpResponse.ofFailure(cause);
+                    return ofFailureThrownIllegalArgumentException(ex);
                 } catch (Exception ex) {
                     return HttpResponse.ofFailure(ex);
                 }
@@ -173,10 +171,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                         return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
                                                "Failed to parse a JSON document: " + body);
                     } catch (IllegalArgumentException ex) {
-                        final HttpResponse response = HttpResponse.of(HttpStatus.BAD_REQUEST,
-                                                                      MediaType.PLAIN_TEXT, ex.getMessage());
-                        final HttpResponseException cause = HttpResponseException.of(response, ex);
-                        return HttpResponse.ofFailure(cause);
+                        return ofFailureThrownIllegalArgumentException(ex);
                     } catch (Exception ex) {
                         return HttpResponse.ofFailure(ex);
                     }
@@ -223,7 +218,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         return parseJsonString(value, JSON_MAP);
     }
 
-    private static String toStringFromMultipartParam(String name, ListMultimap<String, String> params) {
+    private static String getValueFromMultipartParam(String name, ListMultimap<String, String> params) {
         final List<String> list = params.get(name);
         if (list.isEmpty()) {
             throw new IllegalArgumentException("Missing request BodyPart[name=" + name + ']');
@@ -279,5 +274,14 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                                MediaType.PLAIN_TEXT,
                                "Unsupported media type. Only JSON compatible types and " +
                                "application/graphql are supported.");
+    }
+
+    private static HttpResponse ofFailureThrownIllegalArgumentException(IllegalArgumentException ex) {
+        final String message = ex.getMessage() == null ? HttpStatus.BAD_REQUEST.reasonPhrase()
+                                                       : ex.getMessage();
+        final HttpResponse response = HttpResponse.of(HttpStatus.BAD_REQUEST,
+                                                      MediaType.PLAIN_TEXT, message);
+        final HttpResponseException cause = HttpResponseException.of(response, ex);
+        return HttpResponse.ofFailure(cause);
     }
 }

@@ -61,6 +61,7 @@ final class MultipartVariableMapper {
          return location.get(target);
       }
    };
+
    private static final Mapper<List<Object>> LIST_MAPPER = new Mapper<List<Object>>() {
       @Override
       public Object set(List<Object> location, String target, Path path) {

@@ -42,8 +42,6 @@ final class PathScalar {
             public Path parseValue(Object input) throws CoercingParseValueException {
                 if (input instanceof Path) {
                     return (Path) input;
-                } else if (input == null) {
-                    return null;
                 } else {
                     throw new CoercingParseValueException(String.format("Expected type '%s' but was '%s'",
                                                                         Path.class, input.getClass()));
