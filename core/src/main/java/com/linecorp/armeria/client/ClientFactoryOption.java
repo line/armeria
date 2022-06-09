@@ -60,23 +60,6 @@ public final class ClientFactoryOption<T>
     }
 
     /**
-     * Defines a new {@link ClientFactoryOption} of the specified name, default value and validator.
-     *
-     * @param name the name of the option.
-     * @param defaultValue the default value of the option, which will be used when unspecified.
-     * @param validator the {@link Function} which is used for validating and normalizing an option value.
-     *
-     * @throws IllegalStateException if an option with the specified name exists already.
-     */
-    public static <T> ClientFactoryOption<T> define(
-            String name,
-            T defaultValue,
-            Function<T, T> validator) {
-        return define(ClientFactoryOption.class, name, defaultValue,
-                      ClientFactoryOption::new, validator, (oldValue, newValue) -> newValue);
-    }
-
-    /**
      * Defines a new {@link ClientFactoryOption} of the specified name, default value and merge function.
      *
      * @param name the name of the option.
