@@ -1080,22 +1080,28 @@ public final class ArmeriaHttpUtil {
 
     /**
      * Copies header value pairs of the specified {@linkplain HttpHeaders Armeria headers} to the
-     * {@link BiConsumer} excluding HTTP/2 pseudo headers that starts with ':'. This also converts
+     * {@link TriConsumer} excluding HTTP/2 pseudo headers that starts with ':'. This also converts
      * {@link HttpHeaderNames#AUTHORITY} header to {@link HttpHeaderNames#HOST} header if
      * the {@linkplain HttpHeaders Armeria headers} does not have one.
      */
-    public static void toHttp1Headers(HttpHeaders armeriaHeaders,
-                                      BiConsumer<AsciiString, String> outputHeaders) {
+    public static <T> void toHttp1Headers(HttpHeaders armeriaHeaders, T output,
+                                          TriConsumer<T, AsciiString, String> writer) {
         for (Entry<AsciiString, String> e : armeriaHeaders) {
             final AsciiString k = e.getKey();
             final String v = e.getValue();
             if (k.charAt(0) != ':') {
-                outputHeaders.accept(k, v);
+                writer.accept(output, k, v);
             } else if (HttpHeaderNames.AUTHORITY.equals(k) && !armeriaHeaders.contains(HttpHeaderNames.HOST)) {
                 // Convert `:authority` to `host`.
-                outputHeaders.accept(HttpHeaderNames.HOST, v);
+                writer.accept(output, HttpHeaderNames.HOST, v);
             }
         }
+    }
+
+    // TODO(minwoox): Will provide this interface to public API
+    @FunctionalInterface
+    public interface TriConsumer<T, U, V> {
+        void accept(T t, U u, V v);
     }
 
     private ArmeriaHttpUtil() {}

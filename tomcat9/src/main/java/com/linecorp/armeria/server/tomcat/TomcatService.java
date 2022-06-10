@@ -528,7 +528,8 @@ public abstract class TomcatService implements HttpService {
         if (headers.isEmpty()) {
             return;
         }
-        toHttp1Headers(headers, (key, value) -> cHeaders.addValue(key.toString()).setString(value));
+        toHttp1Headers(headers, cHeaders,
+                       (output, key, value) -> output.addValue(key.toString()).setString(value));
     }
 
     private static ResponseHeaders convertResponse(Response coyoteRes) {

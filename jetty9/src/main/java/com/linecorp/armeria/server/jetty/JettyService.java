@@ -375,7 +375,7 @@ public final class JettyService implements HttpService {
 
         // Convert HttpHeaders to HttpFields
         final HttpFields jHeaders = new HttpFields(aHeaders.size());
-        toHttp1Headers(aHeaders, (key, value) -> jHeaders.add(key.toString(), value));
+        toHttp1Headers(aHeaders, jHeaders, (output, key, value) -> output.add(key.toString(), value));
 
         return new MetaData.Request(aHeaders.get(HttpHeaderNames.METHOD), uri,
                                     ctx.sessionProtocol().isMultiplex() ? HttpVersion.HTTP_2

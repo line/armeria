@@ -71,7 +71,7 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
 
     private static HttpHeaders springHeaders(RequestHeaders headers) {
         final HttpHeaders springHeaders = new HttpHeaders();
-        toHttp1Headers(headers, (key, value) -> springHeaders.add(key.toString(), value));
+        toHttp1Headers(headers, springHeaders, (output, key, value) -> output.add(key.toString(), value));
         return springHeaders;
     }
 

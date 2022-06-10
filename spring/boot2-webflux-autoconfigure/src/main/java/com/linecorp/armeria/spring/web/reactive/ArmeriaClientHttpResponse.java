@@ -94,7 +94,8 @@ final class ArmeriaClientHttpResponse implements ClientHttpResponse {
             return httpHeaders;
         }
         this.httpHeaders = new HttpHeaders();
-        toHttp1Headers(headers, (header, value) -> this.httpHeaders.add(header.toString(), value));
+        toHttp1Headers(headers, this.httpHeaders,
+                       (output, header, value) -> output.add(header.toString(), value));
         return this.httpHeaders;
     }
 
