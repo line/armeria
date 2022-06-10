@@ -170,26 +170,39 @@ public final class ConditionalRequestUtil {
         }
 
         if (dataLastModified != null) {
-            try {
-                final Long ifModifiedSince = reqHeaders.getTimeMillis(HttpHeaderNames.IF_MODIFIED_SINCE);
-                if (ifModifiedSince != null) {
-                    if (dataLastModified / 1000 <= ifModifiedSince / 1000) {
-                        return SKIP_METHOD_NOT_MODIFIED;
-                    }
-                }
-            } catch (Exception e) {
-                // Malformed date.
+            ETagResponse ifModifiedSinceResponse = ifModifiedSince(reqHeaders, dataLastModified);
+            if (ifModifiedSinceResponse != PERFORM_METHOD) {
+                return ifModifiedSinceResponse;
             }
-            try {
-                final Long ifUnmodifiedSince = reqHeaders.getTimeMillis(HttpHeaderNames.IF_UNMODIFIED_SINCE);
-                if (ifUnmodifiedSince != null) {
-                    if (dataLastModified / 1000 >= ifUnmodifiedSince / 1000) {
-                        return SKIP_METHOD_NOT_MODIFIED;
-                    }
+            return ifUnmodifiedSince(reqHeaders, dataLastModified);
+        }
+        return PERFORM_METHOD;
+    }
+
+    public static ETagResponse ifUnmodifiedSince(RequestHeaders reqHeaders, Long dataLastModified) {
+        try {
+            final Long ifUnmodifiedSince = reqHeaders.getTimeMillis(HttpHeaderNames.IF_UNMODIFIED_SINCE);
+            if (ifUnmodifiedSince != null) {
+                if (dataLastModified / 1000 >= ifUnmodifiedSince / 1000) {
+                    return SKIP_METHOD_NOT_MODIFIED;
                 }
-            } catch (Exception e) {
-                // Malformed date.
             }
+        } catch (Exception e) {
+            // Malformed date.
+        }
+        return PERFORM_METHOD;
+    }
+
+    public static ETagResponse ifModifiedSince(RequestHeaders reqHeaders, Long dataLastModified) {
+        try {
+            final Long ifModifiedSince = reqHeaders.getTimeMillis(HttpHeaderNames.IF_MODIFIED_SINCE);
+            if (ifModifiedSince != null) {
+                if (dataLastModified / 1000 <= ifModifiedSince / 1000) {
+                    return SKIP_METHOD_NOT_MODIFIED;
+                }
+            }
+        } catch (Exception e) {
+            // Malformed date.
         }
         return PERFORM_METHOD;
     }

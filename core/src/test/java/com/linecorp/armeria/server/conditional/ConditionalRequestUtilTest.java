@@ -37,8 +37,9 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
 
 class ConditionalRequestUtilTest {
-    private static final Long LONG_TIME_AGO = Instant.parse("2007-12-03T10:15:30.00Z").toEpochMilli();
-    private static final Long NOT_SO_LONG_TIME_AGO = Instant.parse("2008-12-03T10:15:30.00Z").toEpochMilli();
+    private static final Long NOW = Instant.parse("1994-10-29T19:43:31.00Z").toEpochMilli();
+    private static final Long LONG_TIME_AGO = Instant.parse("1994-10-29T16:43:31.00Z").toEpochMilli();
+    private static final Long FUTURE = Instant.parse("2008-12-03T10:15:30.00Z").toEpochMilli();
 
     /*
      * Comparison table:
@@ -110,7 +111,7 @@ class ConditionalRequestUtilTest {
                               .add(IF_NONE_MATCH, "\"foobar\"")
                               .addTimeMillis(IF_MODIFIED_SINCE, LONG_TIME_AGO)
                               .build();
-        assertThat(conditionalRequest(reqHeaders, new ETag("foobar", true), NOT_SO_LONG_TIME_AGO))
+        assertThat(conditionalRequest(reqHeaders, new ETag("foobar", true), NOW))
                 .isSameAs(SKIP_METHOD_NOT_MODIFIED);
         assertThat(conditionalRequest(reqHeaders, new ETag("foo", true), LONG_TIME_AGO))
                 .isSameAs(PERFORM_METHOD);
@@ -119,7 +120,7 @@ class ConditionalRequestUtilTest {
                 RequestHeaders.builder(HttpMethod.GET, "/")
                               .addTimeMillis(IF_MODIFIED_SINCE, LONG_TIME_AGO)
                               .build();
-        assertThat(conditionalRequest(reqHeaders2, new ETag("foobar", true), NOT_SO_LONG_TIME_AGO))
+        assertThat(conditionalRequest(reqHeaders2, new ETag("foobar", true), NOW))
                 .isSameAs(PERFORM_METHOD);
         assertThat(conditionalRequest(reqHeaders2, new ETag("foo", true), LONG_TIME_AGO))
                 .isSameAs(SKIP_METHOD_NOT_MODIFIED);
@@ -137,17 +138,17 @@ class ConditionalRequestUtilTest {
                 RequestHeaders.builder(HttpMethod.GET, "/")
                               .add(IF_NONE_MATCH, "\"foobar\"")
                               .add(IF_MATCH, "\"foo\"")
-                              .addTimeMillis(IF_MODIFIED_SINCE, LONG_TIME_AGO)
+                              .addTimeMillis(IF_MODIFIED_SINCE, NOW)
                               .build();
 
-        assertThat(conditionalRequest(reqHeaders, new ETag("foobar", false), NOT_SO_LONG_TIME_AGO))
+        assertThat(conditionalRequest(reqHeaders, new ETag("foobar", false), FUTURE))
                 .isSameAs(SKIP_METHOD_PRECONDITION_FAILED);
-        assertThat(conditionalRequest(reqHeaders, new ETag("foo", false), LONG_TIME_AGO))
+        assertThat(conditionalRequest(reqHeaders, new ETag("foo", false), NOW))
                 .isSameAs(PERFORM_METHOD);
 
         // Either of these are acceptable. It really depends on the evaluation-order between
         // If-Match and If-None-Match.
-        assertThat(conditionalRequest(reqHeaders, new ETag("fxx", false), LONG_TIME_AGO))
+        assertThat(conditionalRequest(reqHeaders, new ETag("fxx", false), NOW))
                 .isIn(SKIP_METHOD_PRECONDITION_FAILED, SKIP_METHOD_NOT_MODIFIED);
     }
 }
