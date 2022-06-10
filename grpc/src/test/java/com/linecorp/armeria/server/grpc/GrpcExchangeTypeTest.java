@@ -49,7 +49,7 @@ class GrpcExchangeTypeTest {
         final GrpcService grpcService = GrpcService.builder()
                                                    .addService(testService)
                                                    .build();
-        final ExchangeType exchangeType = grpcService.exchangeType(headers, ctx.routingContext());
+        final ExchangeType exchangeType = grpcService.exchangeType(ctx.routingContext());
         assertThat(exchangeType).isEqualTo(expectedExchangeType);
     }
 
@@ -68,7 +68,7 @@ class GrpcExchangeTypeTest {
                               .build();
 
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(framedHeaders));
-        ExchangeType exchangeType = grpcService.exchangeType(framedHeaders, ctx.routingContext());
+        ExchangeType exchangeType = grpcService.exchangeType(ctx.routingContext());
         assertThat(exchangeType).isEqualTo(expectedExchangeType);
 
         final RequestHeaders unframedHeaders1 =
@@ -77,23 +77,23 @@ class GrpcExchangeTypeTest {
                               .build();
 
         final ServiceRequestContext unframedCtx1 = ServiceRequestContext.of(HttpRequest.of(unframedHeaders1));
-        exchangeType = grpcService.exchangeType(unframedHeaders1, unframedCtx1.routingContext());
+        exchangeType = grpcService.exchangeType(unframedCtx1.routingContext());
         assertThat(exchangeType).isEqualTo(ExchangeType.UNARY);
 
         final RequestHeaders unframedHeaders2 =
                 RequestHeaders.builder(HttpMethod.POST, '/' + method.getFullMethodName())
                               .contentType(MediaType.PROTOBUF)
                               .build();
-        final ServiceRequestContext unframedCtx2 = ServiceRequestContext.of(HttpRequest.of(unframedHeaders1));
-        exchangeType = grpcService.exchangeType(unframedHeaders2, unframedCtx2.routingContext());
+        final ServiceRequestContext unframedCtx2 = ServiceRequestContext.of(HttpRequest.of(unframedHeaders2));
+        exchangeType = grpcService.exchangeType(unframedCtx2.routingContext());
         assertThat(exchangeType).isEqualTo(ExchangeType.UNARY);
 
         final RequestHeaders unknownContentType =
                 RequestHeaders.builder(HttpMethod.POST, '/' + method.getFullMethodName())
                               .contentType(MediaType.OCTET_STREAM)
                               .build();
-        final ServiceRequestContext unknownCtx = ServiceRequestContext.of(HttpRequest.of(unframedHeaders1));
-        exchangeType = grpcService.exchangeType(unknownContentType, unknownCtx.routingContext());
+        final ServiceRequestContext unknownCtx = ServiceRequestContext.of(HttpRequest.of(unknownContentType));
+        exchangeType = grpcService.exchangeType(unknownCtx.routingContext());
         assertThat(exchangeType).isEqualTo(ExchangeType.BIDI_STREAMING);
     }
 

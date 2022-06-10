@@ -243,6 +243,8 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
                 this.routingResult != null ? this.routingResult
                                            : RoutingResult.builder().path(path()).query(query()).build();
         final Route route = Route.builder().path(path()).build();
+        final Routed<ServiceConfig> routed = Routed.of(route, routingResult, serviceCfg);
+        routingCtx.setResult(routed);
         final InetAddress clientAddress = server.config().clientAddressMapper().apply(proxiedAddresses)
                                                 .getAddress();
 

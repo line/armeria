@@ -54,7 +54,7 @@ class GrpcServicePathTest {
             sb.decorator((delegate, ctx, req) -> {
                 final GrpcService grpcService0 = ctx.config().service().as(GrpcService.class);
                 final ExchangeType exchangeType =
-                        grpcService0.exchangeType(req.headers(), ctx.routingContext());
+                        grpcService0.exchangeType(ctx.routingContext());
                 ctx.setAttr(EXCHANGE_TYPE, exchangeType);
                 return delegate.serve(ctx, req);
             });

@@ -389,7 +389,7 @@ public final class VirtualHost {
                 return routed;
             case NOT_MATCHED:
                 if (!useFallbackService) {
-                    routingCtx.setResult(routed);
+                    // A result is set when a fallback service is used.
                     return routed;
                 }
                 break;
