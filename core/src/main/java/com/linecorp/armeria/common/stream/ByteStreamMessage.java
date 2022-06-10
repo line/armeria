@@ -30,7 +30,6 @@ import org.reactivestreams.Publisher;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -96,56 +95,22 @@ public interface ByteStreamMessage extends StreamMessage<HttpData> {
     }
 
     /**
-     * Sets the specified {@link ByteBufAllocator} to this {@link ByteStreamMessage}.
-     * @return {@code this}
-     */
-    ByteStreamMessage alloc(ByteBufAllocator alloc);
-
-    /**
-     * Skips the specified bytes in this {@link ByteStreamMessage}.
+     * Sets the specified range of bytes to read from this {@link ByteStreamMessage}.
      * <pre>{@code
      * StreamMessage<HttpData> source = StreamMessage.of(HttpData.ofUtf8("12345"),
-     *                                                   HttpData.ofUtf8("67890"));
+     *                                                   HttpData.ofUtf8("67890"),
+     *                                                   HttpData.ofUtf8("12345"));
      *
-     * List<HttpData> collected = ByteStreamMessage.of(source).skipBytes(4).collect().join();
-     * assert collected.equals(List.of(HttpData.ofUtf8("5"), HttpData.ofUtf8("67890"));
+     * // Read 8 bytes from the index 4
+     * List<HttpData> collected = ByteStreamMessage.of(source).range(4, 8).collect().join();
+     * assert collected.equals(List.of(HttpData.ofUtf8("5"),
+     *                                 HttpData.ofUtf8("67890"),
+     *                                 HttpData.ofUtf8("11"));
      * }</pre>
      *
-     * @throws IllegalArgumentException if the {@code numBytes} is non-positive.
+     * @throws IllegalArgumentException if the {@code offset} is negative or the {@code length} is non-positive.
      */
-    ByteStreamMessage skipBytes(int numBytes);
-
-    /**
-     * Sets to read up to the {@code numBytes} from this {@link ByteStreamMessage}.
-     *
-     * <pre>{@code
-     * StreamMessage<HttpData> source = StreamMessage.of(HttpData.ofUtf8("12345"),
-     *                                                   HttpData.ofUtf8("67890"));
-     *
-     * List<HttpData> collected = ByteStreamMessage.of(source).readBytes(6).collect().join();
-     * // 6 bytes read from `source`.
-     * assert collected.equals(List.of(HttpData.ofUtf8("12345"), HttpData.ofUtf8("6"));
-     * }</pre>
-     *
-     * @throws IllegalArgumentException if the {@code numBytes} is non-positive.
-     */
-    ByteStreamMessage readBytes(int numBytes);
-
-    /**
-     * Sets the maximum allowed bytes for each {@link HttpData} in this {@link ByteStreamMessage}.
-     *
-     * <pre>{@code
-     * StreamMessage<HttpData> source = StreamMessage.of(HttpData.ofUtf8("12345"),
-     *                                                   HttpData.ofUtf8("67890"));
-     *
-     * List<HttpData> collected = ByteStreamMessage.of(source).bufferSize(3).collect().join();
-     * assert collected.equals(List.of(HttpData.ofUtf8("123"), HttpData.ofUtf8("456"),
-     *                                 HttpData.ofUtf8("789"), HttpData.ofUtf8("0")));
-     * }</pre>
-     *
-     * @throws IllegalArgumentException if the {@code numBytes} is non-positive.
-     */
-    ByteStreamMessage bufferSize(int numBytes);
+    ByteStreamMessage range(int offset, int length);
 
     /**
      * Collects the bytes published by this {@link ByteStreamMessage}.

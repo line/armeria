@@ -22,7 +22,6 @@ import static org.awaitility.Awaitility.await;
 import static org.hamcrest.Matchers.instanceOf;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
@@ -304,7 +303,7 @@ class DefaultSplitHttpResponseTest {
         final HttpResponse response = client.get("/?size=200");
         final String string = response.split()
                                       .body()
-                                      .skipBytes(199)
+                                      .range(199, Integer.MAX_VALUE)
                                       .collect()
                                       .join()
                                       .stream()
@@ -319,31 +318,12 @@ class DefaultSplitHttpResponseTest {
         final HttpResponse response = client.get("/?size=200");
         final String string = response.split()
                                       .body()
-                                      .readBytes(201)
+                                      .range(0, 201)
                                       .collect()
                                       .join()
                                       .stream()
                                       .map(HttpData::toStringUtf8)
                                       .reduce("", (x, y) -> x + y);
         assertThat(string).isEqualTo(Strings.repeat("a", 200) + Strings.repeat("b", 1));
-    }
-
-    @Test
-    void bufferSize() {
-        final WebClient client = server.webClient();
-        final HttpResponse response = client.get("/?size=200");
-        final List<HttpData> httpData = response.split()
-                                                .body()
-                                                .bufferSize(100)
-                                                .collect()
-                                                .join();
-        for (HttpData data : httpData) {
-            assertThat(data.length()).isLessThanOrEqualTo(100);
-        }
-
-        final String string = httpData.stream()
-                                      .map(HttpData::toStringUtf8)
-                                      .reduce("", (x, y) -> x + y);
-        assertThat(string).isEqualTo(Strings.repeat("a", 200) + Strings.repeat("b", 200));
     }
 }

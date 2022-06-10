@@ -69,9 +69,9 @@ final class PathStreamMessage implements ByteStreamMessage {
     private final Path path;
     @Nullable
     private final ExecutorService blockingTaskExecutor;
+    private final ByteBufAllocator alloc;
+    private final int bufferSize;
 
-    private ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
-    private int bufferSize = DEFAULT_FILE_BUFFER_SIZE;
     private long offset;
     private long length = Long.MAX_VALUE;
 
@@ -80,45 +80,23 @@ final class PathStreamMessage implements ByteStreamMessage {
     @Nullable
     private volatile PathSubscription pathSubscription;
 
-    PathStreamMessage(Path path, @Nullable ExecutorService blockingTaskExecutor) {
+    PathStreamMessage(Path path, @Nullable ExecutorService blockingTaskExecutor, ByteBufAllocator alloc,
+                      int bufferSize) {
         this.path = requireNonNull(path, "path");
         this.blockingTaskExecutor = blockingTaskExecutor;
-    }
-
-    @Override
-    public ByteStreamMessage alloc(ByteBufAllocator alloc) {
-        requireNonNull(alloc, "alloc");
-        ensureUnsubscribed("alloc");
         this.alloc = alloc;
-        return this;
+        this.bufferSize = bufferSize;
     }
 
     @Override
-    public ByteStreamMessage skipBytes(int numBytes) {
-        checkArgument(numBytes > 0, "numBytes: %s (expected: > 0)", numBytes);
-        ensureUnsubscribed("numBytes");
-        offset = numBytes;
+    public ByteStreamMessage range(int offset, int length) {
+        checkArgument(offset >= 0, "offset: %s (expected: >= 0)", offset);
+        checkArgument(length > 0, "length: %s (expected: > 0)", length);
+        checkState(subscribed == 0, "cannot specify range(%s, %s) after this %s is subscribed", offset, length,
+                   PathStreamMessage.class);
+        this.offset = offset;
+        this.length = length;
         return this;
-    }
-
-    @Override
-    public ByteStreamMessage readBytes(int numBytes) {
-        checkArgument(numBytes > 0, "numBytes: %s (expected: > 0)", numBytes);
-        ensureUnsubscribed("numBytes");
-        length = numBytes;
-        return this;
-    }
-
-    @Override
-    public ByteStreamMessage bufferSize(int numBytes) {
-        checkArgument(numBytes > 0, "numBytes: %s (expected: > 0)", numBytes);
-        ensureUnsubscribed("numBytes");
-        bufferSize = numBytes;
-        return this;
-    }
-
-    private void ensureUnsubscribed(String name) {
-        checkState(subscribed == 0, "cannot specify %s after this StreamMessage is subscribed", name);
     }
 
     @Override

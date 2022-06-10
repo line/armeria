@@ -39,9 +39,7 @@ public class DefaultByteStreamMessageTckTest extends PublisherVerification<HttpD
         }
         final Flux<HttpData> publisher = Flux.range(0, (int) elements)
                                              .map(i -> HttpData.ofUtf8(String.valueOf(i)));
-        return ByteStreamMessage.of(publisher)
-                                .bufferSize(1)
-                                .readBytes((int) elements);
+        return ByteStreamMessage.of(publisher);
     }
 
     @Override

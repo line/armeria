@@ -54,22 +54,7 @@ class DefaultByteStreamMessageTest {
     }
 
     @Test
-    void bufferSize5() {
-        final StreamMessage<HttpData> delegate = newStreamMessage();
-        final ByteStreamMessage byteStreamMessage = ByteStreamMessage.of(delegate)
-                                                                     .bufferSize(5);
-
-        StepVerifier.create(byteStreamMessage)
-                    .expectNext(HttpData.ofUtf8("1"))
-                    .expectNext(HttpData.ofUtf8("22"))
-                    .expectNext(HttpData.ofUtf8("333"))
-                    .expectNext(HttpData.ofUtf8("4444"))
-                    .expectNext(HttpData.ofUtf8("55555"))
-                    .verifyComplete();
-    }
-
-    @Test
-    void recursion() {
+    void readAll() {
         final StreamMessage<HttpData> delegate = newStreamMessage();
         final ByteStreamMessage byteStreamMessage = ByteStreamMessage.of(delegate);
 
@@ -83,43 +68,18 @@ class DefaultByteStreamMessageTest {
     }
 
     @Test
-    void bufferSize1() {
-        final StreamMessage<HttpData> delegate = newStreamMessage();
-        final ByteStreamMessage byteStreamMessage = ByteStreamMessage.of(delegate)
-                                                                     .bufferSize(1);
-
-        StepVerifier.create(byteStreamMessage)
-                    .expectNext(HttpData.ofUtf8("1"))
-                    .expectNext(HttpData.ofUtf8("2"))
-                    .expectNext(HttpData.ofUtf8("2"))
-                    .expectNext(HttpData.ofUtf8("3"))
-                    .expectNext(HttpData.ofUtf8("3"))
-                    .expectNext(HttpData.ofUtf8("3"))
-                    .expectNext(HttpData.ofUtf8("4"))
-                    .expectNext(HttpData.ofUtf8("4"))
-                    .expectNext(HttpData.ofUtf8("4"))
-                    .expectNext(HttpData.ofUtf8("4"))
-                    .expectNext(HttpData.ofUtf8("5"))
-                    .expectNext(HttpData.ofUtf8("5"))
-                    .expectNext(HttpData.ofUtf8("5"))
-                    .expectNext(HttpData.ofUtf8("5"))
-                    .expectNext(HttpData.ofUtf8("5"))
-                    .verifyComplete();
-    }
-
-    @Test
-    void skip0() {
+    void zeroLength() {
         final StreamMessage<HttpData> delegate = newStreamMessage();
         final ByteStreamMessage byteStreamMessage = ByteStreamMessage.of(delegate);
-        assertThatThrownBy(() -> byteStreamMessage.skipBytes(0))
+        assertThatThrownBy(() -> byteStreamMessage.range(0, 0))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("numBytes: 0 (expected: > 0)");
+                .hasMessageContaining("length: 0 (expected: > 0)");
     }
 
     @Test
     void skip1() {
         final StreamMessage<HttpData> delegate = newStreamMessage();
-        final ByteStreamMessage byteStreamMessage = ByteStreamMessage.of(delegate).skipBytes(1);
+        final ByteStreamMessage byteStreamMessage = ByteStreamMessage.of(delegate).range(1, Integer.MAX_VALUE);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("22"))
                     .thenRequest(2)
@@ -130,64 +90,31 @@ class DefaultByteStreamMessageTest {
     }
 
     @Test
-    void skip1_bufferSize1() {
-        final StreamMessage<HttpData> delegate = newStreamMessage();
-        final ByteStreamMessage byteStreamMessage = ByteStreamMessage.of(delegate).skipBytes(1).bufferSize(1);
-        StepVerifier.create(byteStreamMessage, 1)
-                    .expectNext(HttpData.ofUtf8("2"))
-                    .thenRequest(2)
-                    .expectNext(HttpData.ofUtf8("2"), HttpData.ofUtf8("3"))
-                    .thenRequest(1)
-                    .expectNext(HttpData.ofUtf8("3"))
-                    .thenRequest(Long.MAX_VALUE)
-                    .expectNext(HttpData.ofUtf8("3"))
-                    .expectNext(HttpData.ofUtf8("4"))
-                    .expectNext(HttpData.ofUtf8("4"))
-                    .expectNext(HttpData.ofUtf8("4"))
-                    .expectNext(HttpData.ofUtf8("4"))
-                    .expectNext(HttpData.ofUtf8("5"))
-                    .expectNext(HttpData.ofUtf8("5"))
-                    .expectNext(HttpData.ofUtf8("5"))
-                    .expectNext(HttpData.ofUtf8("5"))
-                    .expectNext(HttpData.ofUtf8("5"))
-                    .verifyComplete();
-    }
-
-    @Test
-    void skip1_bufferSize1_take1() {
+    void skip1_take1() {
         final StreamMessage<HttpData> delegate = newStreamMessage();
         final ByteStreamMessage byteStreamMessage =
-                ByteStreamMessage.of(delegate)
-                                 .skipBytes(1)
-                                 .readBytes(1)
-                                 .bufferSize(1);
+                ByteStreamMessage.of(delegate).range(1, 1);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("2"))
                     .verifyComplete();
     }
 
     @Test
-    void skip1_bufferSize1_take2() {
+    void skip1_take2() {
         final StreamMessage<HttpData> delegate = newStreamMessage();
         final ByteStreamMessage byteStreamMessage =
-                ByteStreamMessage.of(delegate)
-                                 .skipBytes(1)
-                                 .readBytes(2)
-                                 .bufferSize(1);
+                ByteStreamMessage.of(delegate).range(1, 2);
         StepVerifier.create(byteStreamMessage, 1)
-                    .expectNext(HttpData.ofUtf8("2"))
-                    .thenRequest(2)
-                    .expectNext(HttpData.ofUtf8("2"))
+                    .expectNext(HttpData.ofUtf8("22"))
                     .verifyComplete();
     }
 
     @Test
-    void skip0_bufferSize2_take2() {
+    void skip0_take2() {
         final StreamMessage<HttpData> delegate = newStreamMessage();
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate)
-                                 .readBytes(2)
-                                 .bufferSize(2);
+                                 .range(0, 2);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("1"))
                     .thenRequest(1)
@@ -196,12 +123,11 @@ class DefaultByteStreamMessageTest {
     }
 
     @Test
-    void skip0_bufferSize2_take4() {
+    void skip0_take4() {
         final StreamMessage<HttpData> delegate = newStreamMessage();
         final ByteStreamMessage byteStreamMessage =
                 ByteStreamMessage.of(delegate)
-                                 .readBytes(4)
-                                 .bufferSize(2);
+                                 .range(0, 4);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("1"))
                     .thenRequest(1)
@@ -212,66 +138,36 @@ class DefaultByteStreamMessageTest {
     }
 
     @Test
-    void skip2_bufferSize2_take4() {
+    void skip2_take4() {
         final StreamMessage<HttpData> delegate = newStreamMessage();
         final ByteStreamMessage byteStreamMessage =
-                ByteStreamMessage.of(delegate)
-                                 .skipBytes(2)
-                                 .readBytes(4)
-                                 .bufferSize(2);
-        StepVerifier.create(byteStreamMessage, 1)
-                    .expectNext(HttpData.ofUtf8("2"))
-                    .thenRequest(1)
-                    .expectNext(HttpData.ofUtf8("33"))
-                    .thenRequest(1)
-                    .expectNext(HttpData.ofUtf8("3"))
-                    .verifyComplete();
-    }
-
-    @Test
-    void skip2_bufferSize2_take8() {
-        final StreamMessage<HttpData> delegate = newStreamMessage();
-        final ByteStreamMessage byteStreamMessage =
-                ByteStreamMessage.of(delegate)
-                                 .skipBytes(2)
-                                 .readBytes(8)
-                                 .bufferSize(2);
-        StepVerifier.create(byteStreamMessage, 1)
-                    .expectNext(HttpData.ofUtf8("2"))
-                    .thenRequest(1)
-                    .expectNext(HttpData.ofUtf8("33"))
-                    .thenRequest(Long.MAX_VALUE)
-                    .expectNext(HttpData.ofUtf8("3"))
-                    .expectNext(HttpData.ofUtf8("44"))
-                    .expectNext(HttpData.ofUtf8("44"))
-                    .verifyComplete();
-    }
-
-    @Test
-    void skip2_bufferSize4_take8() {
-        final StreamMessage<HttpData> delegate = newStreamMessage();
-        final ByteStreamMessage byteStreamMessage =
-                ByteStreamMessage.of(delegate)
-                                 .skipBytes(2)
-                                 .readBytes(8)
-                                 .bufferSize(4);
+                ByteStreamMessage.of(delegate).range(2, 4);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("2"))
                     .thenRequest(1)
                     .expectNext(HttpData.ofUtf8("333"))
+                    .verifyComplete();
+    }
+
+    @Test
+    void skip2_take8() {
+        final StreamMessage<HttpData> delegate = newStreamMessage();
+        final ByteStreamMessage byteStreamMessage =
+                ByteStreamMessage.of(delegate).range(2, 8);
+        StepVerifier.create(byteStreamMessage, 1)
+                    .expectNext(HttpData.ofUtf8("2"))
                     .thenRequest(1)
+                    .expectNext(HttpData.ofUtf8("333"))
+                    .thenRequest(Long.MAX_VALUE)
                     .expectNext(HttpData.ofUtf8("4444"))
                     .verifyComplete();
     }
 
     @Test
-    void skip3_bufferSize4_take8() {
+    void skip3_take8() {
         final StreamMessage<HttpData> delegate = newStreamMessage();
         final ByteStreamMessage byteStreamMessage =
-                ByteStreamMessage.of(delegate)
-                                 .skipBytes(3)
-                                 .readBytes(8)
-                                 .bufferSize(4);
+                ByteStreamMessage.of(delegate).range(3, 8);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("333"))
                     .thenRequest(2)
@@ -281,13 +177,10 @@ class DefaultByteStreamMessageTest {
     }
 
     @Test
-    void skip4_bufferSize4_take1() {
+    void skip4_take1() {
         final StreamMessage<HttpData> delegate = newStreamMessage();
         final ByteStreamMessage byteStreamMessage =
-                ByteStreamMessage.of(delegate)
-                                 .skipBytes(4)
-                                 .readBytes(1)
-                                 .bufferSize(4);
+                ByteStreamMessage.of(delegate).range(4, 1);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("3"))
                     .verifyComplete();
@@ -297,8 +190,7 @@ class DefaultByteStreamMessageTest {
     void skipAll() {
         final StreamMessage<HttpData> delegate = newStreamMessage();
         final ByteStreamMessage byteStreamMessage =
-                ByteStreamMessage.of(delegate)
-                                 .skipBytes(15);
+                ByteStreamMessage.of(delegate).range(15, Integer.MAX_VALUE);
 
         StepVerifier.create(byteStreamMessage)
                     .verifyComplete();
@@ -308,8 +200,7 @@ class DefaultByteStreamMessageTest {
     void skipMost() {
         final StreamMessage<HttpData> delegate = newStreamMessage();
         final ByteStreamMessage byteStreamMessage =
-                ByteStreamMessage.of(delegate)
-                                 .skipBytes(14);
+                ByteStreamMessage.of(delegate).range(14, Integer.MAX_VALUE);
 
         StepVerifier.create(byteStreamMessage)
                     .expectNext(HttpData.ofUtf8("5"))
@@ -354,7 +245,6 @@ class DefaultByteStreamMessageTest {
                                                                   HttpData.wrap(bufs.get(2)));
         final List<HttpData> data =
                 ByteStreamMessage.of(delegate)
-                                 .bufferSize(10)
                                  .collect(SubscriptionOption.WITH_POOLED_OBJECTS).join();
         for (int i = 0; i < data.size(); i++) {
             final HttpData httpData = data.get(i);
@@ -364,32 +254,6 @@ class DefaultByteStreamMessageTest {
             assertThat(byteBuf.refCnt()).isZero();
         }
     }
-
-    @Test
-    void leakTest_resize() {
-        final List<ByteBuf> bufs = IntStream.range(1, 4).mapToObj(n -> {
-            return Unpooled.wrappedBuffer(Strings.repeat(String.valueOf(n), n).getBytes());
-        }).collect(toImmutableList());
-
-        final StreamMessage<HttpData> delegate = StreamMessage.of(HttpData.wrap(bufs.get(0)),
-                                                                  HttpData.wrap(bufs.get(1)),
-                                                                  HttpData.wrap(bufs.get(2)));
-        final List<HttpData> data =
-                ByteStreamMessage.of(delegate)
-                                 .bufferSize(1)
-                                 .collect(SubscriptionOption.WITH_POOLED_OBJECTS).join();
-        assertThat(data).hasSize(6);
-        assertThat(data.stream().map(HttpData::toStringUtf8))
-                .containsExactly("1", "2", "2", "3", "3", "3");
-        for (int i = 0; i < data.size(); i++) {
-            final HttpData httpData = data.get(i);
-            httpData.close();
-        }
-        for (final ByteBuf buf : bufs) {
-            assertThat(buf.refCnt()).isZero();
-        }
-    }
-
     @Test
     void leakTest_drop() {
         final List<ByteBuf> bufs = IntStream.range(1, 4).mapToObj(n -> {
@@ -401,12 +265,11 @@ class DefaultByteStreamMessageTest {
                                                                   HttpData.wrap(bufs.get(2)));
         final List<HttpData> data =
                 ByteStreamMessage.of(delegate)
-                                 .bufferSize(1)
-                                 .readBytes(4)
+                                 .range(0, 4)
                                  .collect(SubscriptionOption.WITH_POOLED_OBJECTS).join();
-        assertThat(data).hasSize(4);
+        assertThat(data).hasSize(3);
         assertThat(data.stream().map(HttpData::toStringUtf8))
-                .containsExactly("1", "2", "2", "3");
+                .containsExactly("1", "22", "3");
         for (int i = 0; i < data.size(); i++) {
             final HttpData httpData = data.get(i);
             httpData.close();
@@ -418,10 +281,13 @@ class DefaultByteStreamMessageTest {
 
     @Test
     void abortWhileHandlingBuffer() {
-        final ByteBuf byteBuf = Unpooled.wrappedBuffer("ABC".getBytes());
-        final StreamMessage<HttpData> delegate = StreamMessage.of(HttpData.wrap(byteBuf));
-        final ByteStreamMessage streamMessage = ByteStreamMessage.of(delegate)
-                                                                 .bufferSize(1);
+        final ByteBuf byteBuf1 = Unpooled.wrappedBuffer("A".getBytes());
+        final ByteBuf byteBuf2 = Unpooled.wrappedBuffer("B".getBytes());
+        final ByteBuf byteBuf3 = Unpooled.wrappedBuffer("C".getBytes());
+        final StreamMessage<HttpData> delegate = StreamMessage.of(HttpData.wrap(byteBuf1),
+                                                                  HttpData.wrap(byteBuf2),
+                                                                  HttpData.wrap(byteBuf3));
+        final ByteStreamMessage streamMessage = ByteStreamMessage.of(delegate);
 
         final AnticipatedException abortCause = new AnticipatedException("abort!");
         final AtomicReference<Throwable> abortCauseRef = new AtomicReference<>();
@@ -453,15 +319,20 @@ class DefaultByteStreamMessageTest {
                     .isInstanceOf(AnticipatedException.class)
                     .hasMessageContaining("abort!");
         });
-        assertThat(byteBuf.refCnt()).isZero();
+        assertThat(byteBuf1.refCnt()).isZero();
+        assertThat(byteBuf2.refCnt()).isZero();
+        assertThat(byteBuf3.refCnt()).isZero();
     }
 
     @Test
     void cancelWhileHandlingBuffer() {
-        final ByteBuf byteBuf = Unpooled.wrappedBuffer("ABC".getBytes());
-        final StreamMessage<HttpData> delegate = StreamMessage.of(HttpData.wrap(byteBuf));
-        final ByteStreamMessage streamMessage = ByteStreamMessage.of(delegate)
-                                                                 .bufferSize(1);
+        final ByteBuf byteBuf1 = Unpooled.wrappedBuffer("A".getBytes());
+        final ByteBuf byteBuf2 = Unpooled.wrappedBuffer("B".getBytes());
+        final ByteBuf byteBuf3 = Unpooled.wrappedBuffer("C".getBytes());
+        final StreamMessage<HttpData> delegate = StreamMessage.of(HttpData.wrap(byteBuf1),
+                                                                  HttpData.wrap(byteBuf2),
+                                                                  HttpData.wrap(byteBuf3));
+        final ByteStreamMessage streamMessage = ByteStreamMessage.of(delegate);
 
         final AtomicReference<Throwable> abortCauseRef = new AtomicReference<>();
         streamMessage.subscribe(new Subscriber<HttpData>() {
@@ -495,15 +366,20 @@ class DefaultByteStreamMessageTest {
             assertThat(abortCauseRef.get())
                     .isInstanceOf(CancelledSubscriptionException.class);
         });
-        assertThat(byteBuf.refCnt()).isZero();
+        assertThat(byteBuf1.refCnt()).isZero();
+        assertThat(byteBuf2.refCnt()).isZero();
+        assertThat(byteBuf3.refCnt()).isZero();
     }
 
     @Test
     void shouldHandleBufferRemainingAfterOnComplete() throws InterruptedException {
-        final ByteBuf byteBuf = Unpooled.wrappedBuffer("ABC".getBytes());
-        final StreamMessage<HttpData> delegate = StreamMessage.of(HttpData.wrap(byteBuf));
-        final ByteStreamMessage streamMessage = ByteStreamMessage.of(delegate)
-                                                                 .bufferSize(1);
+        final ByteBuf byteBuf1 = Unpooled.wrappedBuffer("A".getBytes());
+        final ByteBuf byteBuf2 = Unpooled.wrappedBuffer("B".getBytes());
+        final ByteBuf byteBuf3 = Unpooled.wrappedBuffer("C".getBytes());
+        final StreamMessage<HttpData> delegate = StreamMessage.of(HttpData.wrap(byteBuf1),
+                                                                  HttpData.wrap(byteBuf2),
+                                                                  HttpData.wrap(byteBuf3));
+        final ByteStreamMessage streamMessage = ByteStreamMessage.of(delegate);
 
         final LinkedTransferQueue<HttpData> queue = new LinkedTransferQueue<>();
         EventLoopGroups.warmUp(CommonPools.workerGroup());
@@ -551,7 +427,9 @@ class DefaultByteStreamMessageTest {
         assertThat(httpData).isEqualTo(HttpData.ofUtf8("completed"));
         httpData.close();
 
-        assertThat(byteBuf.refCnt()).isZero();
+        assertThat(byteBuf1.refCnt()).isZero();
+        assertThat(byteBuf2.refCnt()).isZero();
+        assertThat(byteBuf3.refCnt()).isZero();
     }
 
     private static StreamMessage<HttpData> newStreamMessage() {

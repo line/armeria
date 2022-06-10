@@ -96,7 +96,7 @@ class ManagementServiceTest {
 
         final byte[] fileHeader = "JAVA PROFILE".getBytes(StandardCharsets.UTF_8);
         final byte[] actual = splitHttpResponse.body()
-                                               .readBytes(fileHeader.length)
+                                               .range(0, fileHeader.length)
                                                .collectBytes()
                                                .join();
 

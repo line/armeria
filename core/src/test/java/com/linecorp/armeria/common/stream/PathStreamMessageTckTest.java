@@ -62,7 +62,7 @@ public class PathStreamMessageTckTest extends StreamMessageVerification<HttpData
                 bytes[i] = '0';
             }
             Files.write(path, bytes);
-            return StreamMessage.of(path).bufferSize(1);
+            return StreamMessage.builder(path).bufferSize(1).build();
         } catch (IOException e) {
             return Exceptions.throwUnsafely(e);
         }
@@ -70,8 +70,9 @@ public class PathStreamMessageTckTest extends StreamMessageVerification<HttpData
 
     @Override
     public StreamMessage<HttpData> createFailedPublisher() {
-        return StreamMessage.of(Paths.get("/unknown/" + UUID.randomUUID()))
-                            .bufferSize(1);
+        return StreamMessage.builder(Paths.get("/unknown/" + UUID.randomUUID()))
+                            .bufferSize(1)
+                            .build();
     }
 
     @Override

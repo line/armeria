@@ -102,6 +102,7 @@ import io.netty.util.concurrent.EventExecutor;
  *
  * @param <T> the type of element signaled
  */
+@SuppressWarnings("OverloadMethodsDeclarationOrder")
 public interface StreamMessage<T> extends Publisher<T> {
     /**
      * Creates a new {@link StreamMessage} that will publish no objects, just a close event.
@@ -199,7 +200,16 @@ public interface StreamMessage<T> extends Publisher<T> {
      */
     static ByteStreamMessage of(Path path) {
         requireNonNull(path, "path");
-        return of(path, null);
+        return builder(path).build();
+    }
+
+    /**
+     * Returns a new {@link PathStreamMessageBuilder} with the specified {@link Path}.
+     */
+    @UnstableApi
+    static PathStreamMessageBuilder builder(Path path) {
+        requireNonNull(path, "path");
+        return new PathStreamMessageBuilder(path);
     }
 
     /**
@@ -210,9 +220,16 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * @param path the path of the file
      * @param executor the {@link ExecutorService} which performs blocking IO read
+     *
+     * @deprecated Use {@link #builder(Path)} with {@link PathStreamMessageBuilder#executor(ExecutorService)}.
      */
+    @Deprecated
     static ByteStreamMessage of(Path path, @Nullable ExecutorService executor) {
-        return new PathStreamMessage(path, executor);
+        if (executor == null) {
+            return builder(path).build();
+        } else {
+            return builder(path).executor(executor).build();
+        }
     }
 
     /**
@@ -224,11 +241,11 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param path the path of the file
      * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
      *
-     * @deprecated Use {@link #of(Path)} with {@link ByteStreamMessage#bufferSize(int)}
+     * @deprecated Use {@link #builder(Path)} with {@link PathStreamMessageBuilder#bufferSize(int)}
      */
     @Deprecated
     static ByteStreamMessage of(Path path, int bufferSize) {
-        return of(path).bufferSize(bufferSize);
+        return builder(path).bufferSize(bufferSize).build();
     }
 
     /**
@@ -241,15 +258,15 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer
      * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
      *
-     * @deprecated Use {@link #of(Path)} with {@link ByteStreamMessage#alloc(ByteBufAllocator)} and
-     *             {@link ByteStreamMessage#bufferSize(int)}.
+     * @deprecated Use {@link #builder(Path)} with {@link PathStreamMessageBuilder#alloc(ByteBufAllocator)} and
+     *             {@link PathStreamMessageBuilder#bufferSize(int)}.
      */
     @Deprecated
     static ByteStreamMessage of(Path path, ByteBufAllocator alloc, int bufferSize) {
         requireNonNull(path, "path");
         requireNonNull(alloc, "alloc");
         checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
-        return of(path).alloc(alloc).bufferSize(bufferSize);
+        return builder(path).alloc(alloc).bufferSize(bufferSize).build();
     }
 
     /**
@@ -263,17 +280,21 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer
      * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
      *
-     * @deprecated Use {@link #of(Path, ExecutorService)} with
-     *             {@link ByteStreamMessage#alloc(ByteBufAllocator)} and
-     *             {@link ByteStreamMessage#bufferSize(int)}
+     * @deprecated Use {@link #builder(Path)} with
+     *             {@link PathStreamMessageBuilder#executor(ExecutorService)},
+     *             {@link PathStreamMessageBuilder#alloc(ByteBufAllocator)} and
+     *             {@link PathStreamMessageBuilder#bufferSize(int)}
      */
     @Deprecated
     static ByteStreamMessage of(Path path, @Nullable ExecutorService executor, ByteBufAllocator alloc,
                                 int bufferSize) {
         requireNonNull(path, "path");
         requireNonNull(alloc, "alloc");
-        checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
-        return of(path, executor).alloc(alloc).bufferSize(bufferSize);
+        final PathStreamMessageBuilder builder = builder(path);
+        if (executor != null) {
+            builder.executor(executor);
+        }
+        return builder.alloc(alloc).bufferSize(bufferSize).build();
     }
 
     /**

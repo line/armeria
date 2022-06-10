@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 final class DefaultByteStreamMessage implements ByteStreamMessage {
@@ -42,7 +41,6 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
 
     private int offset;
     private int length = -1;
-    private int bufferSize = Integer.MAX_VALUE;
     private long demand;
 
     @Nullable
@@ -54,37 +52,14 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
     }
 
     @Override
-    public ByteStreamMessage skipBytes(int numBytes) {
-        checkArgument(numBytes > 0, "numBytes: %s (expected: > 0)", numBytes);
-        ensureUnsubscribed("numBytes");
-        offset = numBytes;
+    public ByteStreamMessage range(int offset, int length) {
+        checkArgument(offset >= 0, "offset: %s (expected: >= 0)", offset);
+        checkArgument(length > 0, "length: %s (expected: > 0)", length);
+        checkState(!subscribed, "cannot specify range(%s, %s) after this %s is subscribed", offset, length,
+                   DefaultByteStreamMessage.class);
+        this.offset = offset;
+        this.length = length;
         return this;
-    }
-
-    @Override
-    public ByteStreamMessage readBytes(int numBytes) {
-        checkArgument(numBytes > 0, "numBytes: %s (expected: > 0)", numBytes);
-        ensureUnsubscribed("numBytes");
-        length = numBytes;
-        return this;
-    }
-
-    @Override
-    public ByteStreamMessage bufferSize(int numBytes) {
-        checkArgument(numBytes > 0, "numBytes: %s (expected: > 0)", numBytes);
-        ensureUnsubscribed("numBytes");
-        bufferSize = numBytes;
-        return this;
-    }
-
-    @Override
-    public ByteStreamMessage alloc(ByteBufAllocator alloc) {
-        // ByteBufAllocator is not used for this StreamMessage.
-        return this;
-    }
-
-    private void ensureUnsubscribed(String name) {
-        checkState(!subscribed, "cannot specify %s after this StreamMessage is subscribed", name);
     }
 
     @Override
@@ -117,7 +92,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
         subscribed = true;
         if (needsFiltering()) {
             delegate.subscribe(
-                    new FilteringSubscriber(subscriber, executor, options, offset, length, bufferSize),
+                    new FilteringSubscriber(subscriber, executor, options, offset, length),
                     executor, options);
         } else {
             delegate.subscribe(subscriber, executor, options);
@@ -125,7 +100,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
     }
 
     private boolean needsFiltering() {
-        return offset != 0 || length != -1 || bufferSize != Integer.MAX_VALUE;
+        return offset != 0 || length != -1;
     }
 
     @Override
@@ -148,7 +123,6 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
         private final Subscriber<? super HttpData> downstream;
         private final int offset;
         private final int end;
-        private final int bufferSize;
         private final EventExecutor executor;
         private final boolean notifyCancellation;
 
@@ -162,8 +136,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
         private boolean completing;
 
         FilteringSubscriber(Subscriber<? super HttpData> downstream,
-                            EventExecutor executor, SubscriptionOption[] options, int offset, int length,
-                            int bufferSize) {
+                            EventExecutor executor, SubscriptionOption[] options, int offset, int length) {
             this.downstream = downstream;
             this.executor = executor;
             notifyCancellation = containsNotifyCancellation(options);
@@ -173,7 +146,6 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
             } else {
                 end = IntMath.saturatedAdd(offset, length);
             }
-            this.bufferSize = bufferSize;
         }
 
         @Override
@@ -247,13 +219,13 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
                 return false;
             }
 
-            if (dataSize <= bufferSize && skipBytes == 0 && dropBytes == 0) {
+            if (skipBytes == 0 && dropBytes == 0) {
                 // Use the data as is.
                 position += dataSize;
                 downstream.onNext(data);
             } else {
                 try {
-                    final int slicedDataSize = Math.min(bufferSize, dataSize - skipBytes - dropBytes);
+                    final int slicedDataSize = dataSize - skipBytes - dropBytes;
                     final HttpData slicedData = retainedSlice(data, skipBytes, slicedDataSize);
                     final int nextOffset = skipBytes + slicedDataSize;
 
