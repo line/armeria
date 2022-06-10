@@ -107,7 +107,12 @@ public interface ServerConfig {
 
     /**
      * Returns whether the worker {@link EventLoopGroup} is shut down when the {@link Server} stops.
+     *
+     * @deprecated This method will be hidden from public API. The {@link EventLoopGroup} is shut down if
+     *             the {@code shutdownOnStop} of
+     *             {@link ServerBuilder#workerGroup(EventLoopGroup, boolean)} is set to {@code true}.
      */
+    @Deprecated
     boolean shutdownWorkerGroupOnStop();
 
     /**
@@ -218,7 +223,7 @@ public interface ServerConfig {
      * @deprecated This method is not used anymore. The {@code blockingTaskExecutor} is shut down if
      *             the {@code shutdownOnStop} of
      *             {@link ServerBuilder#blockingTaskExecutor(ScheduledExecutorService, boolean)}
-     *             is set with {@code true}.
+     *             is set to {@code true}.
      */
     @Deprecated
     default boolean shutdownBlockingTaskExecutorOnStop() {

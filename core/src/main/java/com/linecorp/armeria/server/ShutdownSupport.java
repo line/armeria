@@ -21,12 +21,11 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
-interface ShutdownSupport extends Supplier<CompletableFuture<Void>> {
+interface ShutdownSupport {
 
     static ShutdownSupport of(AccessLogWriter accessLogWriter) {
         requireNonNull(accessLogWriter, "accessLogWriter");
@@ -66,4 +65,6 @@ interface ShutdownSupport extends Supplier<CompletableFuture<Void>> {
             return UnmodifiableFuture.completedFuture(null);
         };
     }
+
+    CompletableFuture<Void> shutdown();
 }

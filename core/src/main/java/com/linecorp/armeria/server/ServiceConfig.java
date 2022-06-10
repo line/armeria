@@ -323,7 +323,7 @@ public final class ServiceConfig {
      * @deprecated This method is not used anymore. The {@link AccessLogWriter} is shut down if
      *             the {@code shutdownOnStop} of
      *             {@link ServiceBindingBuilder#accessLogWriter(AccessLogWriter, boolean)}
-     *             is set with {@code true}.
+     *             is set to {@code true}.
      */
     @Deprecated
     public boolean shutdownAccessLogWriterOnStop() {
@@ -364,7 +364,7 @@ public final class ServiceConfig {
      * @deprecated This method is not used anymore. The {@code blockingTaskExecutor} is shut down if
      *             the {@code shutdownOnStop} of
      *             {@link ServiceBindingBuilder#blockingTaskExecutor(ScheduledExecutorService, boolean)}
-     *             is set with {@code true}.
+     *             is set to {@code true}.
      */
     @Deprecated
     public boolean shutdownBlockingTaskExecutorOnStop() {

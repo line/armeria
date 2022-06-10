@@ -48,7 +48,6 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
@@ -667,7 +666,7 @@ public final class Server implements ListenableAsyncCloseable {
 
             CompletableFutures.successfulAsList(builder.build()
                                                        .stream()
-                                                       .map(Supplier::get)
+                                                       .map(ShutdownSupport::shutdown)
                                                        .collect(toImmutableList()), cause -> null)
                               .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
         }
