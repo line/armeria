@@ -22,7 +22,7 @@ import java.io.File;
 import java.nio.file.Path;
 
 /**
- * An uploaded file received in a {@link Multipart} request.
+ * A file uploaded from a {@link Multipart} request.
  */
 public interface MultipartFile {
 
