@@ -90,6 +90,19 @@ class RecoverableStreamMessageTest {
     }
 
     @Test
+    void recoverStreamMessagesShortcutHandleSubClassExceptions() {
+        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        final StreamMessage<Integer> recoverable =
+                stream.recoverAndResume(RuntimeException.class, cause -> StreamMessage.of(5, 6, 7));
+        stream.write(1);
+        stream.write(2);
+        stream.write(3);
+        stream.write(4);
+        stream.close(new IllegalStateException("test exception"));
+        assertThat(recoverable.collect().join()).contains(1, 2, 3, 4, 5, 6, 7);
+    }
+
+    @Test
     void thrownTypeMismatchRecoverStreamMessageShortcut() {
         final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
         final StreamMessage<Integer> recoverable =
@@ -326,6 +339,28 @@ class RecoverableStreamMessageTest {
             });
         final HttpResponse recovered2 =
             transformed.recover(IllegalStateException.class, cause -> HttpResponse.of("fallback2"));
+        final AggregatedHttpResponse response2 = recovered2.aggregate().join();
+        assertThat(response2.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response2.contentUtf8()).isEqualTo("fallback2");
+    }
+
+    @Test
+    void recoverHttpResponseShortcutHandleSubClassExceptions() {
+        final HttpResponse failedResponse = HttpResponse.ofFailure(new IllegalStateException("test exception"));
+        final HttpResponse recovered =
+            failedResponse.recover(RuntimeException.class, cause -> HttpResponse.of("fallback"));
+        final AggregatedHttpResponse response = recovered.aggregate().join();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("fallback");
+
+        final HttpResponseWriter failedResponse2 = HttpResponse.streaming();
+        failedResponse2.write(ResponseHeaders.of(HttpStatus.NOT_MODIFIED));
+        final HttpResponse transformed =
+        failedResponse2.mapHeaders(headers -> {
+            throw new IllegalStateException("test exception");
+        });
+        final HttpResponse recovered2 =
+        transformed.recover(Throwable.class, cause -> HttpResponse.of("fallback2"));
         final AggregatedHttpResponse response2 = recovered2.aggregate().join();
         assertThat(response2.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(response2.contentUtf8()).isEqualTo("fallback2");

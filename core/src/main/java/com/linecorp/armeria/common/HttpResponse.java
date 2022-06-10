@@ -976,7 +976,7 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(causeClass, "causeClass");
         requireNonNull(function, "function");
         final StreamMessage<HttpObject> stream = recover(cause -> {
-            if (!cause.getClass().isAssignableFrom(causeClass)) {
+            if (!causeClass.isAssignableFrom(cause.getClass())) {
                 return Exceptions.throwUnsafely(cause);
             }
             try {

@@ -805,7 +805,7 @@ public interface StreamMessage<T> extends Publisher<T> {
         requireNonNull(causeClass, "causeClass");
         requireNonNull(function, "function");
         final StreamMessage<T> stream = recoverAndResume(cause -> {
-            if (!cause.getClass().isAssignableFrom(causeClass)) {
+            if (!causeClass.isAssignableFrom(cause.getClass())) {
                 return Exceptions.throwUnsafely(cause);
             }
             try {
