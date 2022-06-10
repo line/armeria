@@ -18,6 +18,8 @@ package com.linecorp.armeria.common.logging;
 
 import java.util.function.BiFunction;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -26,20 +28,28 @@ import com.linecorp.armeria.common.annotation.Nullable;
 /**
  * A formatter that convert {@link RequestLog} into {@link String log message} using {@link LogSanitizers}.
  */
-public interface LogFormat {
+public interface LogFormatter {
 
     /**
-     * Returns {@link DefaultTextLogFormat}.
+     * Returns {@link DefaultTextLogFormatter}.
      */
-    static LogFormat ofText() {
-        return new DefaultTextLogFormat();
+    static LogFormatter ofText() {
+        return DefaultTextLogFormatter.DEFAULT_INSTANCE;
     }
 
     /**
-     * Returns {@link JsonLogFormat} that convert {@link RequestLog} into json format log message.
+     * Returns {@link JsonLogFormatter} that convert {@link RequestLog} into json format log message.
      */
-    static LogFormat ofJson() {
-        return new JsonLogFormat();
+    static LogFormatter ofJson() {
+        return JsonLogFormatter.DEFAULT_INSTANCE;
+    }
+
+    /**
+     * Returns a newly created {@link JsonLogFormatter} that convert {@link RequestLog} into
+     * json format log message by using specified {@link ObjectMapper}.
+     */
+    static LogFormatter ofJson(ObjectMapper objectMapper) {
+        return new JsonLogFormatter(objectMapper);
     }
 
     /**

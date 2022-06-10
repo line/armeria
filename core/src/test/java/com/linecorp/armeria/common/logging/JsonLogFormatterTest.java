@@ -26,15 +26,15 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-class JsonLogFormatTest {
+class JsonLogFormatterTest {
     @Test
     void formatRequest() {
-        final JsonLogFormat logFormat = new JsonLogFormat();
+        final LogFormatter logFormatter = LogFormatter.ofJson();
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/format"));
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endRequest();
         final LogSanitizers<RequestHeaders> requestHeadersLogSanitizers = LogSanitizers.of();
-        final String requestLog = logFormat.formatRequest(log, requestHeadersLogSanitizers);
+        final String requestLog = logFormatter.formatRequest(log, requestHeadersLogSanitizers);
         assertThat(requestLog)
                 .matches("^\\{\"startTime\":\".+\",\"length\":\".+\",\"duration\":\".+\"," +
                          "\"scheme\":\".+\",\"name\":\".+\",\"headers\":\".+\"}$");
@@ -42,12 +42,12 @@ class JsonLogFormatTest {
 
     @Test
     void formatResponse() {
-        final JsonLogFormat logFormat = new JsonLogFormat();
+        final LogFormatter logFormatter = LogFormatter.ofJson();
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/format"));
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endResponse();
         final LogSanitizers<ResponseHeaders> responseHeadersLogSanitizers = LogSanitizers.of();
-        final String responseLog = logFormat.formatResponse(log, responseHeadersLogSanitizers);
+        final String responseLog = logFormatter.formatResponse(log, responseHeadersLogSanitizers);
         assertThat(responseLog)
                 .matches("^\\{\"startTime\":\".+\",\"length\":\".+\",\"duration\":\".+\"," +
                          "\"totalDuration\":\".+\",\"headers\":\".+\"}$");

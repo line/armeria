@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.LogFormat;
+import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
@@ -76,7 +76,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
             responseCauseSanitizer;
 
     private final Sampler<? super RequestLog> sampler;
-    private final LogFormat logFormat;
+    private final LogFormatter logFormatter;
 
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
@@ -103,7 +103,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
                     ? extends @Nullable Object> responseCauseSanitizer,
             Sampler<? super ClientRequestContext> successSampler,
             Sampler<? super ClientRequestContext> failureSampler,
-            LogFormat logFormat) {
+            LogFormatter logFormatter) {
 
         super(requireNonNull(delegate, "delegate"));
 
@@ -119,7 +119,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
-        this.logFormat = requireNonNull(logFormat, "logFormat");
+        this.logFormatter = requireNonNull(logFormatter, "logFormatter");
         requireNonNull(successSampler, "successSampler");
         requireNonNull(failureSampler, "failureSampler");
         sampler = requestLog -> {
@@ -149,7 +149,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
                        requestHeadersSanitizer,
                        requestContentSanitizer,
                        requestTrailersSanitizer,
-                       logFormat);
+                       logFormatter);
         }
     }
 
@@ -166,7 +166,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
                         responseContentSanitizer,
                         responseTrailersSanitizer,
                         responseCauseSanitizer,
-                        logFormat);
+                        logFormatter);
         }
     }
 }

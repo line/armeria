@@ -274,7 +274,7 @@ public interface RequestOnlyLog extends RequestLogAccess {
      */
     default String toStringRequestOnly() {
         return toStringRequestOnly(Functions.second(), Functions.second(), Functions.second(),
-                                   LogFormat.ofText());
+                                   LogFormatter.ofText());
     }
 
     /**
@@ -287,15 +287,15 @@ public interface RequestOnlyLog extends RequestLogAccess {
      *                         the {@link BiFunction} is what is actually logged as headers.
      * @param contentSanitizer a {@link BiFunction} for sanitizing request content for logging. The result of
      *                         the {@link BiFunction} is what is actually logged as content.
-     * @param logFormat a {@link LogFormat} for formatting messages.
+     * @param logFormatter a {@link LogFormatter} for formatting messages.
      */
     default String toStringRequestOnly(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> headersSanitizer,
             BiFunction<? super RequestContext, Object,
                     ? extends @Nullable Object> contentSanitizer,
-            LogFormat logFormat) {
-        return toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer, logFormat);
+            LogFormatter logFormatter) {
+        return toStringRequestOnly(headersSanitizer, contentSanitizer, headersSanitizer, logFormatter);
     }
 
     /**
@@ -307,7 +307,7 @@ public interface RequestOnlyLog extends RequestLogAccess {
      *                         the {@link BiFunction} is what is actually logged as content.
      * @param trailersSanitizer a {@link BiFunction} for sanitizing HTTP trailers for logging. The result of
      *                          the {@link BiFunction} is what is actually logged as trailers.
-     * @param logFormat a {@link LogFormat} for formatting messages.
+     * @param logFormatter a {@link LogFormatter} for formatting messages.
      */
     String toStringRequestOnly(
             BiFunction<? super RequestContext, ? super RequestHeaders,
@@ -316,5 +316,5 @@ public interface RequestOnlyLog extends RequestLogAccess {
                     ? extends @Nullable Object> contentSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> trailersSanitizer,
-            LogFormat logFormat);
+            LogFormatter logFormatter);
 }

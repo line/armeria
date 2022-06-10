@@ -29,7 +29,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.LogFormat;
+import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.LoggingDecoratorBuilder;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -135,7 +135,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
                                   responseCauseSanitizer(),
                                   successSampler,
                                   failureSampler,
-                                  logFormat());
+                                  logFormatter());
     }
 
     /**
@@ -270,7 +270,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     }
 
     @Override
-    public LoggingServiceBuilder logFormat(LogFormat logFormat) {
-        return (LoggingServiceBuilder) super.logFormat(logFormat);
+    public LoggingServiceBuilder logFormatter(LogFormatter logFormatter) {
+        return (LoggingServiceBuilder) super.logFormatter(logFormatter);
     }
 }

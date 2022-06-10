@@ -487,13 +487,13 @@ class DefaultRequestLogTest {
         // Cache must be invalidated when sanitizers change.
         final String a = log.toStringRequestOnly();
         final String b = log.toStringRequestOnly(headersSanitizer, contentSanitizer, trailersSanitizer,
-                                                 LogFormat.ofText());
+                                                 LogFormatter.ofText());
         assertThat(b).isNotEqualTo(a)
                      .contains("sanitized_headers", "sanitized_content", "sanitized_trailers");
 
         // Must be cached when sanitizers were not changed.
         final String c = log.toStringRequestOnly(headersSanitizer, contentSanitizer, trailersSanitizer,
-                                                 LogFormat.ofText());
+                                                 LogFormatter.ofText());
         assertThat(c).isSameAs(b);
 
         // Must not contain the secret.
@@ -531,13 +531,13 @@ class DefaultRequestLogTest {
         // Cache must be invalidated when sanitizers change.
         final String a = log.toStringResponseOnly();
         final String b = log.toStringResponseOnly(headersSanitizer, contentSanitizer, trailersSanitizer,
-                                                  LogFormat.ofText());
+                                                  LogFormatter.ofText());
         assertThat(b).isNotEqualTo(a)
                      .contains("sanitized_headers", "sanitized_content", "sanitized_trailers");
 
         // Must be cached when sanitizers were not changed.
         final String c = log.toStringResponseOnly(headersSanitizer, contentSanitizer, trailersSanitizer,
-                                                  LogFormat.ofText());
+                                                  LogFormatter.ofText());
         assertThat(c).isSameAs(b);
 
         // Must not contain the secret.

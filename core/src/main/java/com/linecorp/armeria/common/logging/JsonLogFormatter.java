@@ -18,18 +18,40 @@ package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
+import java.io.IOException;
+import java.io.StringWriter;
 import java.util.Set;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.util.TextFormatter;
-import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
- * A formatter that convert {@link RequestLog} into text message.
+ * A formatter that convert {@link RequestLog} into json format message.
  */
-public class DefaultTextLogFormat implements LogFormat {
+final class JsonLogFormatter implements LogFormatter {
+
+    static final JsonLogFormatter DEFAULT_INSTANCE = new JsonLogFormatter();
+
+    private static final Logger logger = LoggerFactory.getLogger(JsonLogFormatter.class);
+
+    private final ObjectMapper objectMapper;
+
+    JsonLogFormatter() {
+        this(JacksonUtil.newDefaultObjectMapper());
+    }
+
+    JsonLogFormatter(ObjectMapper objectMapper) {
+        this.objectMapper = requireNonNull(objectMapper, "objectMapper");
+    }
 
     @Override
     public String formatRequest(RequestLog log, LogSanitizers<RequestHeaders> sanitizers) {
@@ -69,55 +91,58 @@ public class DefaultTextLogFormat implements LogFormat {
             sanitizedTrailers = null;
         }
 
-        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
-            final StringBuilder buf = tempThreadLocals.stringBuilder();
-            buf.append("{startTime=");
-            TextFormatter.appendEpochMicros(buf, log.requestStartTimeMicros());
+        try {
+            final StringWriter writer = new StringWriter(512);
+            final JsonGenerator gen = objectMapper.createGenerator(writer);
+            gen.writeStartObject();
+            gen.writeStringField("startTime",
+                                 TextFormatter.epochMicros(log.requestStartTimeMicros()).toString());
 
             if (availableProperties.contains(RequestLogProperty.REQUEST_LENGTH)) {
-                buf.append(", length=");
-                TextFormatter.appendSize(buf, log.requestLength());
+                gen.writeStringField("length", TextFormatter.size(log.requestLength()).toString());
             }
 
             if (availableProperties.contains(RequestLogProperty.REQUEST_END_TIME)) {
-                buf.append(", duration=");
-                TextFormatter.appendElapsed(buf, log.requestDurationNanos());
+                gen.writeStringField("duration", TextFormatter.elapsed(log.requestDurationNanos()).toString());
             }
 
             if (requestCauseString != null) {
-                buf.append(", cause=").append(requestCauseString);
+                gen.writeStringField("cause", requestCauseString);
             }
 
-            buf.append(", scheme=");
             if (log.scheme() != null) {
-                buf.append(log.scheme().uriText());
+                gen.writeStringField("scheme", log.scheme().uriText());
             } else {
-                buf.append(SerializationFormat.UNKNOWN.uriText())
-                   .append('+')
-                   .append(log.sessionProtocol() != null ? log.sessionProtocol().uriText() : "unknown");
+                gen.writeStringField("scheme",
+                                     SerializationFormat.UNKNOWN.uriText() + '+' + log.sessionProtocol()
+                                     != null ?
+                                     log.sessionProtocol().uriText() : "unknown");
             }
 
             if (log.name() != null) {
-                buf.append(", name=").append(log.name());
+                gen.writeStringField("name", log.name());
             }
 
             if (sanitizedHeaders != null) {
-                buf.append(", headers=").append(sanitizedHeaders);
+                gen.writeStringField("headers", sanitizedHeaders);
             }
 
             if (sanitizedContent != null) {
-                buf.append(", content=").append(sanitizedContent);
+                gen.writeStringField("content", sanitizedContent);
             } else if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
                        log.requestContentPreview() != null) {
-                buf.append(", contentPreview=").append(log.requestContentPreview());
+                gen.writeStringField("contentPreview", log.requestContentPreview());
             }
 
             if (sanitizedTrailers != null) {
-                buf.append(", trailers=").append(sanitizedTrailers);
+                gen.writeStringField("trailers", sanitizedTrailers);
             }
-            buf.append('}');
-
-            return buf.toString();
+            gen.writeEndObject();
+            gen.close();
+            return writer.toString();
+        } catch (IOException e) {
+            logger.warn("Unexpected exception while formatting a request log", e);
+            return "";
         }
     }
 
@@ -160,51 +185,52 @@ public class DefaultTextLogFormat implements LogFormat {
             sanitizedTrailers = null;
         }
 
-        try (TemporaryThreadLocals tempThreadLocals = TemporaryThreadLocals.acquire()) {
-            final StringBuilder buf = tempThreadLocals.stringBuilder();
-            buf.append("{startTime=");
-            TextFormatter.appendEpochMicros(buf, log.responseStartTimeMicros());
+        try {
+            final StringWriter writer = new StringWriter(512);
+            final JsonGenerator gen = objectMapper.createGenerator(writer);
+            gen.writeStartObject();
+            gen.writeStringField("startTime",
+                                 TextFormatter.epochMicros(log.responseStartTimeMicros()).toString());
 
             if (availableProperties.contains(RequestLogProperty.RESPONSE_LENGTH)) {
-                buf.append(", length=");
-                TextFormatter.appendSize(buf, log.responseLength());
+                gen.writeStringField("length", TextFormatter.size(log.responseLength()).toString());
             }
 
             if (availableProperties.contains(RequestLogProperty.RESPONSE_END_TIME)) {
-                buf.append(", duration=");
-                TextFormatter.appendElapsed(buf, log.responseDurationNanos());
-                buf.append(", totalDuration=");
-                TextFormatter.appendElapsed(buf, log.totalDurationNanos());
+                gen.writeStringField("duration", TextFormatter.elapsed(log.responseDurationNanos()).toString());
+                gen.writeStringField("totalDuration",
+                                     TextFormatter.elapsed(log.totalDurationNanos()).toString());
             }
 
             if (responseCauseString != null) {
-                buf.append(", cause=").append(responseCauseString);
+                gen.writeStringField("cause", responseCauseString);
             }
 
             if (sanitizedHeaders != null) {
-                buf.append(", headers=").append(sanitizedHeaders);
+                gen.writeStringField("headers", sanitizedHeaders);
             }
 
             if (sanitizedContent != null) {
-                buf.append(", content=").append(sanitizedContent);
+                gen.writeStringField("content", sanitizedContent);
             } else if (log.responseContentPreview() != null) {
-                buf.append(", contentPreview=").append(log.responseContentPreview());
+                gen.writeStringField("contentPreview", log.responseContentPreview());
             }
 
             if (sanitizedTrailers != null) {
-                buf.append(", trailers=").append(sanitizedTrailers);
+                gen.writeStringField("trailers", sanitizedTrailers);
             }
-            buf.append('}');
 
             final int numChildren = log.children() != null ? log.children().size() : 0;
             if (numChildren > 1) {
                 // Append only when there were retries which the numChildren is greater than 1.
-                buf.append(", {totalAttempts=");
-                buf.append(numChildren);
-                buf.append('}');
+                gen.writeStringField("totalAttempts", String.valueOf(numChildren));
             }
-
-            return buf.toString();
+            gen.writeEndObject();
+            gen.close();
+            return writer.toString();
+        } catch (IOException e) {
+            logger.warn("Unexpected exception while formatting a response log", e);
+            return "";
         }
     }
 }

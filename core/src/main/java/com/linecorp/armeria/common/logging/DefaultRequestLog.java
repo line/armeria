@@ -34,6 +34,7 @@ import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -1408,7 +1409,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         buf.append(System.lineSeparator())
            .append("Children:");
 
-        for (int i = 0; i < numChildren; i++) {
+        for (int i = 0;i < numChildren;i++) {
             buf.append(System.lineSeparator());
             buf.append('\t');
             buf.append(children.get(i));
@@ -1432,7 +1433,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                     ? extends @Nullable Object> contentSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> trailersSanitizer,
-            LogFormat logFormat) {
+            LogFormatter logFormatter) {
 
         requireNonNull(headersSanitizer, "headersSanitizer");
         requireNonNull(contentSanitizer, "contentSanitizer");
@@ -1450,7 +1451,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         final LogSanitizers<RequestHeaders> logSanitizers = new LogSanitizers<>(
                 headersSanitizer, contentSanitizer, trailersSanitizer);
-        requestStr = logFormat.formatRequest(this, logSanitizers);
+        requestStr = logFormatter.formatRequest(this, logSanitizers);
         requestStrHeadersSanitizer = headersSanitizer;
         requestStrContentSanitizer = contentSanitizer;
         requestStrTrailersSanitizer = trailersSanitizer;
@@ -1467,7 +1468,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                     ? extends @Nullable Object> contentSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> trailersSanitizer,
-            LogFormat logFormat) {
+            LogFormatter logFormatter) {
 
         requireNonNull(headersSanitizer, "headersSanitizer");
         requireNonNull(contentSanitizer, "contentSanitizer");
@@ -1486,7 +1487,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         final LogSanitizers<ResponseHeaders> logSanitizers = new LogSanitizers<>(
                 headersSanitizer,
                 contentSanitizer, trailersSanitizer);
-        responseStr = logFormat.formatResponse(this, logSanitizers);
+        responseStr = logFormatter.formatResponse(this, logSanitizers);
         responseStrHeadersSanitizer = headersSanitizer;
         responseStrContentSanitizer = contentSanitizer;
         responseStrTrailersSanitizer = trailersSanitizer;
@@ -1665,9 +1666,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public Set<RequestLogProperty> availableProperties() {
-            return Arrays.stream(RequestLogProperty.values())
-                         .filter(this::isAvailable)
-                         .collect(Collectors.toSet());
+            return Sets.immutableEnumSet(Arrays.stream(RequestLogProperty.values())
+                                               .filter(this::isAvailable)
+                                               .collect(Collectors.toSet()));
         }
 
         @Override
@@ -1794,10 +1795,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                         ? extends @Nullable Object> contentSanitizer,
                 BiFunction<? super RequestContext, ? super HttpHeaders,
                         ? extends @Nullable Object> trailersSanitizer,
-                LogFormat logFormat) {
+                LogFormatter logFormatter) {
 
             return DefaultRequestLog.this.toStringRequestOnly(
-                    headersSanitizer, contentSanitizer, trailersSanitizer, logFormat);
+                    headersSanitizer, contentSanitizer, trailersSanitizer, logFormatter);
         }
 
         @Override
@@ -1873,10 +1874,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                         ? extends @Nullable Object> contentSanitizer,
                 BiFunction<? super RequestContext, ? super HttpHeaders,
                         ? extends @Nullable Object> trailersSanitizer,
-                LogFormat logFormat) {
+                LogFormatter logFormatter) {
 
             return DefaultRequestLog.this.toStringResponseOnly(headersSanitizer, contentSanitizer,
-                                                               trailersSanitizer, logFormat);
+                                                               trailersSanitizer, logFormatter);
         }
 
         @Override

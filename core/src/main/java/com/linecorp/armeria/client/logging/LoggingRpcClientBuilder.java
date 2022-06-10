@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.LogFormat;
+import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
@@ -63,7 +63,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
                                     responseCauseSanitizer(),
                                     successSampler(),
                                     failureSampler(),
-                                    logFormat());
+                                    logFormatter());
     }
 
     /**
@@ -229,7 +229,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
     }
 
     @Override
-    public LoggingRpcClientBuilder logFormat(LogFormat logFormat) {
-        return (LoggingRpcClientBuilder) super.logFormat(logFormat);
+    public LoggingRpcClientBuilder logFormatter(LogFormatter logFormatter) {
+        return (LoggingRpcClientBuilder) super.logFormatter(logFormatter);
     }
 }
