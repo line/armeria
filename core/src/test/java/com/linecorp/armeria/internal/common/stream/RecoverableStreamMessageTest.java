@@ -114,7 +114,7 @@ class RecoverableStreamMessageTest {
         assertThatThrownBy(() -> recoverable.collect().join())
             .isInstanceOf(CompletionException.class)
             .hasCauseInstanceOf(CompositeException.class)
-            .extracting("cause")
+            .getCause()
             .extracting("exceptions", ITERABLE)
             .element(0)
             .isInstanceOf(ClosedStreamException.class);
@@ -375,7 +375,7 @@ class RecoverableStreamMessageTest {
         assertThatThrownBy(() -> incorrectRecover.aggregate().join())
             .isInstanceOf(CompletionException.class)
             .hasCauseInstanceOf(CompositeException.class)
-            .extracting("cause")
+            .getCause()
             .extracting("exceptions", ITERABLE)
             .element(0)
             .isInstanceOf(NullPointerException.class);
@@ -387,7 +387,7 @@ class RecoverableStreamMessageTest {
         assertThatThrownBy(() -> incorrectRecover2.aggregate().join())
             .isInstanceOf(CompletionException.class)
             .hasCauseInstanceOf(CompositeException.class)
-            .extracting("cause")
+            .getCause()
             .extracting("exceptions", ITERABLE)
             .element(0)
             .isInstanceOf(IllegalStateException.class);
