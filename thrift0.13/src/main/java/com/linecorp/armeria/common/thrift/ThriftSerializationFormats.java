@@ -113,19 +113,19 @@ public final class ThriftSerializationFormats {
                                                    int maxContainerLength) {
         requireNonNull(serializationFormat, "serializationFormat");
         if (maxStringLength == 0 && maxContainerLength == 0) {
-            final TProtocolFactory tProtocolFactory = lengthUnlimitedProtocolFactories.get(serializationFormat);
-            if (tProtocolFactory != null) {
-                return tProtocolFactory;
+            final TProtocolFactory protocolFactory = lengthUnlimitedProtocolFactories.get(serializationFormat);
+            if (protocolFactory != null) {
+                return protocolFactory;
             } else {
                 throw newUnsupportedFormatException(serializationFormat);
             }
         }
 
         for (ThriftProtocolFactoryProvider provider : protocolFactoryProviders) {
-            final TProtocolFactory tProtocolFactory =
+            final TProtocolFactory protocolFactory =
                     provider.protocolFactory(serializationFormat, maxStringLength, maxContainerLength);
-            if (tProtocolFactory != null) {
-                return tProtocolFactory;
+            if (protocolFactory != null) {
+                return protocolFactory;
             }
         }
         throw newUnsupportedFormatException(serializationFormat);

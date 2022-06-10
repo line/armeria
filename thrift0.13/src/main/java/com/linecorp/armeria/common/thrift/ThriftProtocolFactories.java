@@ -58,10 +58,10 @@ public final class ThriftProtocolFactories {
      * Related: <a href="https://issues.apache.org/jira/browse/THRIFT-2572">Add string/collection length limit
      * checks (from C++) to java protocol readers</a>
      *
-     * @deprecated Use {@link #compat(int, int)}.
+     * @deprecated Use {@link #compact(int, int)}.
      */
     @Deprecated
-    public static final TProtocolFactory COMPACT = compat(0, 0);
+    public static final TProtocolFactory COMPACT = compact(0, 0);
 
     /**
      * {@link TProtocolFactory} for the Thrift TJSON protocol.
@@ -120,6 +120,8 @@ public final class ThriftProtocolFactories {
         final int maxStringLength0 = maxStringLength == 0 ? -1 : maxStringLength;
         final int maxContainerLength0 = maxContainerLength == 0 ? -1 : maxContainerLength;
 
+        // Thrift 0.9.x does not a constructor taking only maxStringLength and maxContainerLength.
+        // https://github.com/apache/thrift/blob/0.9.3/lib/java/src/org/apache/thrift/protocol/TBinaryProtocol.java#L68-L77
         return new TBinaryProtocol.Factory(false, true, maxStringLength0, maxContainerLength0) {
             private static final long serialVersionUID = -9020693963961565748L;
 
@@ -142,7 +144,7 @@ public final class ThriftProtocolFactories {
      * @param maxContainerLength the maximum allowed number of bytes to read from the transport for
      *                           containers (maps, sets, lists). {@code 0} means unlimited.
      */
-    public static TProtocolFactory compat(int maxStringLength, int maxContainerLength) {
+    public static TProtocolFactory compact(int maxStringLength, int maxContainerLength) {
         checkArgument(maxStringLength >= 0, "maxStringLength: %s (expected: >= 0)", maxStringLength);
         checkArgument(maxContainerLength >= 0, "maxContainerLength: %s (expected: >= 0)", maxContainerLength);
         final int maxStringLength0 = maxStringLength == 0 ? -1 : maxStringLength;

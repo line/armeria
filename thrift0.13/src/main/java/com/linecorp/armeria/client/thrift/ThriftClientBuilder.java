@@ -164,8 +164,7 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     /**
-     * Sets the maximum allowed number of bytes to read from the transport for
-     * containers (maps, sets, lists).
+     * Sets the maximum allowed size of containers to read from the transport for maps, sets and lists.
      * If unspecified, the value of {@link ClientOptions#maxResponseLength()} will be used instead.
      *
      * <p>Note that this option is only valid for {@link TBinaryProtocol} and {@link TCompactProtocol}.

@@ -57,7 +57,7 @@ public final class DefaultThriftProtocolFactoryProvider extends ThriftProtocolFa
         if (serializationFormat == ThriftSerializationFormats.BINARY) {
             return ThriftProtocolFactories.binary(maxStringLength, maxContainerLength);
         } else if (serializationFormat == ThriftSerializationFormats.COMPACT) {
-            return ThriftProtocolFactories.compat(maxStringLength, maxContainerLength);
+            return ThriftProtocolFactories.compact(maxStringLength, maxContainerLength);
         } else if (serializationFormat == ThriftSerializationFormats.JSON) {
             return ThriftProtocolFactories.json();
         } else if (serializationFormat == ThriftSerializationFormats.TEXT) {

@@ -78,6 +78,9 @@ public final class ThriftProtocolUtil {
         }
 
         if (length > maxStringLength) {
+            // Follow the error format of the upstream so that users get the same error regardless of
+            // Thrift versions.
+            // https://github.com/apache/thrift/blob/5b158389b01d028e98e59f0ea41c01d625a84242/lib/java/src/main/java/org/apache/thrift/protocol/TBinaryProtocol.java#L442
             throw new TProtocolException(TProtocolException.SIZE_LIMIT,
                                          "Length exceeded max allowed: " + length);
         }

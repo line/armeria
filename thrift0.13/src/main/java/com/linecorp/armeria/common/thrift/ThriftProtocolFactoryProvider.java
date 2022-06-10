@@ -35,18 +35,18 @@ public abstract class ThriftProtocolFactoryProvider {
      */
     protected static final class Entry {
         final SerializationFormat serializationFormat;
-        final TProtocolFactory tProtocolFactory;
+        final TProtocolFactory protocolFactory;
 
-        public Entry(SerializationFormat serializationFormat, TProtocolFactory tProtocolFactory) {
+        public Entry(SerializationFormat serializationFormat, TProtocolFactory protocolFactory) {
             this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
-            this.tProtocolFactory = requireNonNull(tProtocolFactory, "protocolFactory");
+            this.protocolFactory = requireNonNull(protocolFactory, "protocolFactory");
         }
 
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                               .add("serializationFormat", serializationFormat)
-                              .add("protocolFactory", tProtocolFactory)
+                              .add("protocolFactory", protocolFactory)
                               .toString();
         }
     }
@@ -61,7 +61,7 @@ public abstract class ThriftProtocolFactoryProvider {
      * {@code maxStringLength} and {@code maxContainerLength}.
      * Returns {@code null} if the {@link SerializationFormat} is unsupported.
      *
-     * @param serializationFormat the serialization that the {@link TProtocolFactory} supports.
+     * @param serializationFormat the serialization format that the {@link TProtocolFactory} supports.
      * @param maxStringLength the maximum allowed number of bytes to read from the transport for
      *                        variable-length fields (such as strings or binary). {@code 0} means unlimited.
      * @param maxContainerLength the maximum allowed number of bytes to read from the transport for
