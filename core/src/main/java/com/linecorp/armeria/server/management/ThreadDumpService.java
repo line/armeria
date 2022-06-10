@@ -26,7 +26,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -54,7 +53,7 @@ enum ThreadDumpService implements HttpService {
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
+    public ExchangeType exchangeType(RoutingContext routingContext) {
         return ExchangeType.UNARY;
     }
 }

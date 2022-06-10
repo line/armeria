@@ -24,7 +24,6 @@ import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -62,14 +61,14 @@ public interface HttpService extends Service<HttpRequest, HttpResponse> {
     }
 
     /**
-     * Determines an {@link ExchangeType} for this {@link HttpService} from the given {@link RequestHeaders}
-     * and {@link RoutingContext}. By default, {@link ExchangeType#BIDI_STREAMING} is set.
+     * Determines an {@link ExchangeType} for this {@link HttpService} from the given {@link RoutingContext}.
+     * By default, {@link ExchangeType#BIDI_STREAMING} is set.
      *
      * <p>Note that an {@link HttpRequest} will be aggregated before serving the {@link HttpService} if
      * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set.
      */
     @UnstableApi
-    default ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
+    default ExchangeType exchangeType(RoutingContext routingContext) {
         return ExchangeType.BIDI_STREAMING;
     }
 }

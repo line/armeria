@@ -37,7 +37,7 @@ interface DecodedHttpRequest extends HttpRequest {
         } else {
             final ServiceConfig config = routingCtx.result().value();
             final HttpService service = config.service();
-            if (service.exchangeType(headers, routingCtx).isRequestStreaming()) {
+            if (service.exchangeType(routingCtx).isRequestStreaming()) {
                 return new StreamingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
                                                        inboundTrafficController,
                                                        config.maxRequestLength(), routingCtx);

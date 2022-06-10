@@ -90,4 +90,27 @@ class CompositeResponseConverterFunctionTest {
         responseStreaming = converter.isResponseStreaming(null, null);
         assertThat(responseStreaming).isFalse();
     }
+
+    @Test
+    void composeResponseStreaming_nonMatching() {
+        final ResponseConverterFunction nullConverter = new ResponseConverterFunction() {
+
+            @Override
+            public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
+                return null;
+            }
+
+            @Override
+            public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
+                                                @Nullable Object result, HttpHeaders trailers)
+                    throws Exception {
+                return null;
+            }
+        };
+
+        final CompositeResponseConverterFunction converter = new CompositeResponseConverterFunction(
+                ImmutableList.of(nullConverter, nullConverter, nullConverter));
+        final Boolean responseStreaming = converter.isResponseStreaming(null, null);
+        assertThat(responseStreaming).isNull();
+    }
 }

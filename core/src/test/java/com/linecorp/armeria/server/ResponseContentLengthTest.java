@@ -29,7 +29,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -41,7 +40,7 @@ class ResponseContentLengthTest {
         protected void configure(ServerBuilder sb) {
             sb.service("/unary", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
+                public ExchangeType exchangeType(RoutingContext routingContext) {
                     return ExchangeType.UNARY;
                 }
 
@@ -56,7 +55,7 @@ class ResponseContentLengthTest {
 
             sb.service("/unary-trailers", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
+                public ExchangeType exchangeType(RoutingContext routingContext) {
                     return ExchangeType.UNARY;
                 }
 
@@ -72,7 +71,7 @@ class ResponseContentLengthTest {
 
             sb.service("/streaming", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
+                public ExchangeType exchangeType(RoutingContext routingContext) {
                     return ExchangeType.RESPONSE_STREAMING;
                 }
 
@@ -87,7 +86,7 @@ class ResponseContentLengthTest {
 
             sb.service("/streaming-trailers", new HttpService() {
                 @Override
-                public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
+                public ExchangeType exchangeType(RoutingContext routingContext) {
                     return ExchangeType.RESPONSE_STREAMING;
                 }
 

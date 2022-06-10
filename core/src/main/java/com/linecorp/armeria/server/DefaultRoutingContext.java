@@ -184,7 +184,7 @@ final class DefaultRoutingContext implements RoutingContext {
     }
 
     @Override
-    public void result(Routed<ServiceConfig> result) {
+    public void setResult(Routed<ServiceConfig> result) {
         requireNonNull(result, "result");
         checkState(this.result == null, "result is set already.");
         this.result = result;

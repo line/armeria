@@ -46,7 +46,7 @@ class ClassUtilTest {
 
     @CsvSource({"future", "mono"})
     @ParameterizedTest
-    void shouldUnwrapIoType(String methodName) throws NoSuchMethodException {
+    void shouldUnwrapAsyncType(String methodName) throws NoSuchMethodException {
         final Method method = ClassUtilTest.class.getDeclaredMethod(methodName);
         final Type returnType = method.getGenericReturnType();
         final Type type = ClassUtil.unwrapAsyncType(returnType);

@@ -62,7 +62,6 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -144,7 +143,7 @@ final class WebOperationService implements HttpService {
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
+    public ExchangeType exchangeType(RoutingContext routingContext) {
         return ExchangeType.UNARY;
     }
 

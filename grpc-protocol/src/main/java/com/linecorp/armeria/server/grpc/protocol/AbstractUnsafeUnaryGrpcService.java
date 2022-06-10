@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -106,7 +105,7 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
+    public ExchangeType exchangeType(RoutingContext routingContext) {
         return ExchangeType.UNARY;
     }
 

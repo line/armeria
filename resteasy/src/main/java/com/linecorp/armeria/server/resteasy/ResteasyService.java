@@ -169,7 +169,7 @@ public final class ResteasyService<T> implements HttpService {
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
+    public ExchangeType exchangeType(RoutingContext routingContext) {
         return ExchangeType.RESPONSE_STREAMING;
     }
 

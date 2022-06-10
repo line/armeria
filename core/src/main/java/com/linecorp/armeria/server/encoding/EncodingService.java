@@ -73,7 +73,7 @@ public final class EncodingService extends SimpleDecoratingHttpService {
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
+    public ExchangeType exchangeType(RoutingContext routingContext) {
         // Avoid aggregation to preserve the compressed chunks.
         return ExchangeType.BIDI_STREAMING;
     }

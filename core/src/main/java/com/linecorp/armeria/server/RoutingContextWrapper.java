@@ -120,8 +120,8 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
-    public void result(Routed<ServiceConfig> routed) {
-        delegate.result(routed);
+    public void setResult(Routed<ServiceConfig> result) {
+        delegate.setResult(result);
     }
 
     @Override

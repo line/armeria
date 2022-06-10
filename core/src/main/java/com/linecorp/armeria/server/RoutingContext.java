@@ -151,10 +151,14 @@ public interface RoutingContext {
     /**
      * Sets the {@linkplain Routed routing result} to this {@link RoutingContext}.
      *
+     * <p>Note that the result is automatically set when this {@link RoutingContext} finds a matched
+     * {@link ServiceConfig} from a {@link Router}. Don't set a {@code result} manually unless you really
+     * intend it.
+     *
      * @throws IllegalStateException if a {@link Routed} is set already.
      */
     @UnstableApi
-    void result(Routed<ServiceConfig> routed);
+    void setResult(Routed<ServiceConfig> result);
 
     /**
      * Returns the {@linkplain Routed routing result} of this {@link RoutingContext}.

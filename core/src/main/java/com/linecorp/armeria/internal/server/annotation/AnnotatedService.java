@@ -53,7 +53,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -494,13 +493,14 @@ public final class AnnotatedService implements HttpService {
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
+    public ExchangeType exchangeType(RoutingContext routingContext) {
         final boolean isRequestStreaming =
-                AnnotatedValueResolver.aggregationType(aggregationStrategy, headers) != AggregationType.ALL;
+                AnnotatedValueResolver.aggregationType(aggregationStrategy,
+                                                       routingContext.headers()) != AggregationType.ALL;
         Boolean isResponseStreaming =
-                responseConverter.isResponseStreaming(actualReturnType,
-                                                      routingContext.result().routingResult()
-                                                                    .negotiatedResponseMediaType());
+                responseConverter.isResponseStreaming(
+                        actualReturnType, routingContext.result().routingResult()
+                                                        .negotiatedResponseMediaType());
         if (isResponseStreaming == null) {
             isResponseStreaming = true;
         }

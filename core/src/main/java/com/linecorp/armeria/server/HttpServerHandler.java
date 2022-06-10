@@ -433,7 +433,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             req.setResponse(res);
 
             assert responseEncoder != null;
-            if (service.exchangeType(headers, routingCtx).isResponseStreaming()) {
+            if (service.exchangeType(routingCtx).isResponseStreaming()) {
                 final HttpResponseSubscriber resSubscriber =
                         new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
                 res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);

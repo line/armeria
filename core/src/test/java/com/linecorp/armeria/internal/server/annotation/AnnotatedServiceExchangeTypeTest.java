@@ -84,7 +84,7 @@ class AnnotatedServiceExchangeTypeTest {
         }
 
         private static ExchangeType exchangeType(ServiceRequestContext ctx) {
-            return ctx.config().service().exchangeType(ctx.request().headers(), ctx.routingContext());
+            return ctx.config().service().exchangeType(ctx.routingContext());
         }
     }
 }

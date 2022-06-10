@@ -84,15 +84,15 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, RoutingContext routingContext) {
-        final MediaType contentType = headers.contentType();
+    public ExchangeType exchangeType(RoutingContext routingContext) {
+        final MediaType contentType = routingContext.headers().contentType();
         if (contentType == null) {
             return ExchangeType.BIDI_STREAMING;
         }
 
         for (SerializationFormat format : GrpcSerializationFormats.values()) {
             if (format.isAccepted(contentType)) {
-                return ((HttpService) unwrap()).exchangeType(headers, routingContext);
+                return ((HttpService) unwrap()).exchangeType(routingContext);
             }
         }
 
