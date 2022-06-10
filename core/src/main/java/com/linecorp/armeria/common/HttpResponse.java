@@ -940,10 +940,9 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
-     * Recovers an {@link HttpResponse} exception to the specified {@link Throwable} class.
-     * when any error occurs before a {@link ResponseHeaders} is written.
-     * Note that the failed {@link HttpResponse} cannot be recovered from an error if
-     * a {@link ResponseHeaders} was written already
+     * Recovers a failed {@link HttpResponse} by switching to a returned fallback {@link HttpResponse}
+     * when the thrown {@link Throwable} is the same type or a subtype of the
+     * specified {@code causeClass}.
      *
      * <p>Example:<pre>{@code
      * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Oops..."));

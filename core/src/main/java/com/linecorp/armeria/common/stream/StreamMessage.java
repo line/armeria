@@ -774,7 +774,7 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
-     * Recovers failed {@link StreamMessage} for the specified {@link Throwable} and resumes by subscribing
+     * Recovers a failed {@link StreamMessage} for the specified {@link Throwable} and resumes by subscribing
      * to a returned fallback {@link StreamMessage} when any error occurs.
      *
      * <p>Example:<pre>{@code
