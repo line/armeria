@@ -48,6 +48,16 @@ Server.builder()
       .build();
 ```
 
+If you use gRPC services with armeria-spring-boot, you can collect the metrics
+by registering <type://GrpcMeterIdPrefixFunction> as a bean
+
+```java
+@Bean
+public MeterIdPrefixFunction myMeterIdPrefixFunction() {
+    return GrpcMeterIdPrefixFunction.of("grpc.service");
+}
+```
+
 In cases where more sophisticated filtering and/or mangling of the generated metrics are required,
 you can use the <type://ServerBuilder#meterRegistry(MeterRegistry)> method like this:
 
