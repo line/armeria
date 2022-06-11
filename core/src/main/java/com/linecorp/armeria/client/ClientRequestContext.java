@@ -526,7 +526,7 @@ public interface ClientRequestContext extends RequestContext {
     void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator);
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      *
      * <p>Note that an {@link HttpRequest} will be aggregated before being written if
      * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set.

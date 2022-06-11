@@ -102,8 +102,8 @@ interface RequestOptionsSetters {
      *     client.prepare()
      *           .post("/api/v1/items")
      *           .content(MediaType.JSON_LINES, StreamMessage.of(...)) // A streaming request type.
-     *           .asFile(Path.get("/path/to/destination")              // A streaming response type.
-     *           .execute()
+     *           .asFile(Path.get("/path/to/destination"))             // A streaming response type.
+     *           .execute();
      *     assert captor.get().exchangeType() == ExchangeType.BIDI_STREAMING;
      * }
      * }</pre>
@@ -113,17 +113,19 @@ interface RequestOptionsSetters {
      * {@link ExchangeType#UNARY} is only supported.
      * <pre>{@code
      * try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-     *     AggregatedHttpResponse response = client.blocking().get("/api/v1/items")
+     *     AggregatedHttpResponse response = client.blocking().get("/api/v1/items");
      *     assert captor.get().exchangeType() == ExchangeType.UNARY;
      * }
      * }</pre>
      *
      * <h3>gRPC clients</h3>
-     * As {@link ExchangeType} is automatically inferred from the {@code io.grpc.MethodDescriptor.MethodType}.
+     * An {@link ExchangeType} is automatically inferred from the {@code io.grpc.MethodDescriptor.MethodType}.
+     * <pre>{@code
      * try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
      *     Response response = grpcClient.unaryCall(...);
      *     assert captor.get().exchangeType() == ExchangeType.UNARY;
      * }
+     * }</pre>
      *
      * <h3>Thrift clients</h3>
      * Thrift protocols do not support streaming. {@link ExchangeType#UNARY} is only supported.

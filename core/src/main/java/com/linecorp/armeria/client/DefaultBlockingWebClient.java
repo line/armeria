@@ -36,11 +36,11 @@ final class DefaultBlockingWebClient implements BlockingWebClient {
 
     @Override
     public AggregatedHttpResponse execute(HttpRequest req, RequestOptions options) {
-        final RequestOptionsBuilder requestOptionsBuilder = options.toBuilder();
-        if (requestOptionsBuilder.exchangeType() == null) {
-            requestOptionsBuilder.exchangeType(ExchangeType.UNARY);
+        if (options.exchangeType() == null) {
+            options = options.toBuilder()
+                             .exchangeType(ExchangeType.UNARY)
+                             .build();
         }
-        options = requestOptionsBuilder.build();
         return ResponseAs.blocking().as(delegate.execute(req, options));
     }
 

@@ -48,6 +48,9 @@ abstract class AbstractHttpMessageBuilder {
         return content;
     }
 
+    /**
+     * Returns the {@link Publisher} that was set by {@link #content(MediaType, Publisher)}.
+     */
     @Nullable
     protected final Publisher<? extends HttpData> publisher() {
         return publisher;

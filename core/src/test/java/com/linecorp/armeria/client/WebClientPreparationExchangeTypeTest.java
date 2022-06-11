@@ -89,7 +89,6 @@ class WebClientPreparationExchangeTypeTest {
         }).isEqualTo(ExchangeType.UNARY);
     }
 
-
     @Test
     void responseString_custom() {
         assertExchangeType(() -> {

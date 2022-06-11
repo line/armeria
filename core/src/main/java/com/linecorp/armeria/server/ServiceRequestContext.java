@@ -632,7 +632,7 @@ public interface ServiceRequestContext extends RequestContext {
     CompletableFuture<Void> initiateConnectionShutdown();
 
     /**
-     * @inheritDoc
+     * {@inheritDoc}
      *
      * <p>Note that an {@link HttpRequest} will be aggregated before serving the {@link HttpService} if
      * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set.
