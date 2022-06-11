@@ -12,7 +12,6 @@
 /reports
 /site/public
 /site/.cache
-/failed-tests-result.txt
 
 # Package Files #
 *.jar

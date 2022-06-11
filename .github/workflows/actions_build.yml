@@ -258,7 +258,7 @@ jobs:
       - name: Summarize the failed tests
         if: failure()
         run: |
-          ./gradlew --no-daemon --stacktrace --max-workers=1 -PnoWeb -PnoLint reportFailedTests \
+          ./gradlew --no-daemon --stacktrace --max-workers=1 -PnoWeb -PnoLint reportFailedTests
           
           SUMMARY_FILE="build/failed-tests-result.txt"
           if test -f "$SUMMARY_FILE"; then

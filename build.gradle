@@ -298,8 +298,8 @@ class TestsReportTask extends DefaultTask {
                 String ghSearchLink = "https://github.com/line/armeria/issues?q=$ghSearchQuery"
                 writer.print("- $it.method - [Search similar issues]($ghSearchLink) | ")
                 writer.println("[Create an issue?]($ghIssueLink)")
-                writer.println("  ```")
 
+                writer.println("  ```")
                 List<String> lines = detail.split("\n") as List
                 def summary = lines.take(8)
                 summary.each { line -> writer.println("  $line") }
