@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.concurrent.Executors;
 
@@ -28,10 +27,8 @@ import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
-import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -39,10 +36,10 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.grpc.Codec;
 import io.grpc.Codec.Gzip;
 import io.grpc.Codec.Identity;
 import io.grpc.DecompressorRegistry;
-import io.grpc.StatusRuntimeException;
 
 class GrpcClientCompressionTest {
 
@@ -85,28 +82,27 @@ class GrpcClientCompressionTest {
     void decompressionRegistry() throws InterruptedException {
         final TestServiceBlockingStub stub = GrpcClients.builder(server.httpUri())
                                                         .decompressorRegistry(
-                                                                DecompressorRegistry.emptyInstance())
+                                                                DecompressorRegistry.emptyInstance()
+                                                                                    .with(Codec.Identity.NONE,
+                                                                                          true))
                                                         .build(TestServiceBlockingStub.class);
 
         final Payload payload = Payload.newBuilder().setBody(ByteString.copyFromUtf8("Hello")).build();
-        assertThatThrownBy(() -> {
-            stub.unaryCall(SimpleRequest.newBuilder().setPayload(payload)
-                                        // Unsupported compression type
-                                        .setResponseCompression(CompressionType.GZIP)
-                                        .build());
-        }).isInstanceOf(StatusRuntimeException.class)
-          .hasMessageContaining("Can't find decompressor for gzip");
+        stub.unaryCall(SimpleRequest.newBuilder().setPayload(payload).build());
+        ServiceRequestContext ctx = server.requestContextCaptor().take();
+        RequestLog log = ctx.log().whenComplete().join();
+        String encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
+        assertThat(encoding).isEqualTo("identity");
 
         final TestServiceBlockingStub decompressingStub = GrpcClients.builder(server.httpUri())
                                                                      // Use the default DecompressorRegistry
                                                                      .build(TestServiceBlockingStub.class);
 
         final Payload payload0 = Payload.newBuilder().setBody(ByteString.copyFromUtf8("Hello")).build();
-        final SimpleResponse response =
-                decompressingStub.unaryCall(SimpleRequest.newBuilder().setPayload(payload0)
-                                                         .setResponseCompression(CompressionType.GZIP)
-                                                         .setResponseSize(100)
-                                                         .build());
-        assertThat(response.getPayload().getBody().toStringUtf8()).hasSize(100);
+        decompressingStub.unaryCall(SimpleRequest.newBuilder().setPayload(payload0).build());
+        ctx = server.requestContextCaptor().take();
+        log = ctx.log().whenComplete().join();
+        encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
+        assertThat(encoding).isEqualTo("gzip");
     }
 }
