@@ -107,7 +107,6 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private final SerializationFormat serializationFormat;
     private final GrpcMessageMarshaller<I, O> marshaller;
     private final boolean unsafeWrapRequestBuffers;
-    @Nullable
     private final String clientAcceptEncoding;
     private final boolean autoCompression;
 
@@ -476,6 +475,8 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                     }
                 }
             }
+        } else {
+            compressor = Codec.Identity.NONE;
         }
         if (compressor == null) {
             compressor = Codec.Identity.NONE;
