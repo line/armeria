@@ -798,7 +798,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * // In this case, CompletionException is returned. (can't recover exception)
      * misMatchRecovered.collect().join();
      * }</pre>
-     * */
+     */
     @UnstableApi
     default <E extends Throwable> StreamMessage<T> recoverAndResume(Class<E> causeClass,
             Function<? super E, ? extends StreamMessage<T>> function) {

@@ -969,7 +969,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * // In this case, CompletionException is returned. (can't recover exception)
      * misMatchRecovered.aggregate().join();
      * }</pre>
-     * */
+     */
     @UnstableApi
     default <T extends Throwable> HttpResponse recover(Class<T> causeClass,
                                                        Function<? super T, ? extends HttpResponse> function) {
