@@ -30,7 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpData;
@@ -110,6 +109,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     private final boolean unsafeWrapRequestBuffers;
     @Nullable
     private final String clientAcceptEncoding;
+    private final boolean autoCompression;
 
     @Nullable
     private final Executor blockingExecutor;
@@ -150,7 +150,8 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                        boolean unsafeWrapRequestBuffers,
                        boolean useBlockingTaskExecutor,
                        ResponseHeaders defaultHeaders,
-                       @Nullable GrpcStatusFunction statusFunction) {
+                       @Nullable GrpcStatusFunction statusFunction,
+                       boolean autoCompression) {
         requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
         this.simpleMethodName = requireNonNull(simpleMethodName, "simpleMethodName");
@@ -166,7 +167,8 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
         this.res = requireNonNull(res, "res");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
-        clientAcceptEncoding = Strings.emptyToNull(req.headers().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING));
+        clientAcceptEncoding = req.headers().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "");
+        this.autoCompression = autoCompression;
         marshaller = new GrpcMessageMarshaller<>(alloc, serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapRequestBuffers);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
@@ -456,17 +458,32 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         checkState(responseHeaders == null, "sendHeaders already called");
         checkState(!closeCalled, "call is closed");
 
-        if (compressor == null || !messageCompression || clientAcceptEncoding == null) {
-            compressor = Codec.Identity.NONE;
-        } else {
-            final List<String> acceptedEncodingsList =
+        final Compressor oldCompressor = compressor;
+        if (messageCompression && !clientAcceptEncoding.isEmpty()) {
+            final List<String> acceptedEncodings =
                     ACCEPT_ENCODING_SPLITTER.splitToList(clientAcceptEncoding);
-            if (!acceptedEncodingsList.contains(compressor.getMessageEncoding())) {
-                // resort to using no compression.
-                compressor = Codec.Identity.NONE;
+            if (compressor != null) {
+                if (!acceptedEncodings.contains(compressor.getMessageEncoding())) {
+                    // resort to using no compression.
+                    compressor = Codec.Identity.NONE;
+                }
+            } else if (autoCompression) {
+                for (final String encoding : acceptedEncodings) {
+                    final Compressor compressor0 = compressorRegistry.lookupCompressor(encoding);
+                    if (compressor0 != null) {
+                        compressor = compressor0;
+                        break;
+                    }
+                }
             }
         }
-        responseFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
+        if (compressor == null) {
+            compressor = Codec.Identity.NONE;
+        }
+        if (oldCompressor != compressor) {
+            // Update the old compressor to new one.
+            responseFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
+        }
 
         ResponseHeaders headers = defaultResponseHeaders;
 
@@ -539,7 +556,8 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     private static Metadata generateMetadataFromThrowable(Throwable exception) {
-        @Nullable final Metadata metadata = Status.trailersFromThrowable(exception);
+        @Nullable
+        final Metadata metadata = Status.trailersFromThrowable(exception);
         return metadata != null ? metadata : new Metadata();
     }
 

@@ -297,7 +297,8 @@ class StreamingServerCallTest {
                         ResponseHeaders.builder(HttpStatus.OK)
                                        .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                        .build(),
-                        /* exceptionMappings */ null);
+                        /* exceptionMappings */ null,
+                        false);
 
         final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
         final List<HttpObject> received = new ArrayList<>();
@@ -365,6 +366,7 @@ class StreamingServerCallTest {
                 ResponseHeaders.builder(HttpStatus.OK)
                                .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                .build(),
-                /* exceptionMappings */ null);
+                /* exceptionMappings */ null,
+                false);
     }
 }

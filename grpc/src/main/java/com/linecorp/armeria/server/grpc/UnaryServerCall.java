@@ -68,26 +68,17 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
     private O responseMessage;
     private boolean deframingStarted;
 
-    UnaryServerCall(HttpRequest req,
-                    MethodDescriptor<I, O> method,
-                    String simpleMethodName,
-                    CompressorRegistry compressorRegistry,
-                    DecompressorRegistry decompressorRegistry,
-                    // TODO(ikhoon): Add CompletableFuture<HttpResponse>
-                    HttpResponse res,
-                    CompletableFuture<HttpResponse> resFuture,
-                    int maxRequestMessageLength,
-                    int maxResponseMessageLength,
-                    ServiceRequestContext ctx,
-                    SerializationFormat serializationFormat,
-                    @Nullable GrpcJsonMarshaller jsonMarshaller,
-                    boolean unsafeWrapRequestBuffers,
-                    boolean useBlockingTaskExecutor,
-                    ResponseHeaders defaultHeaders,
-                    @Nullable GrpcStatusFunction statusFunction) {
+    UnaryServerCall(HttpRequest req, MethodDescriptor<I, O> method, String simpleMethodName,
+                    CompressorRegistry compressorRegistry, DecompressorRegistry decompressorRegistry,
+                    HttpResponse res, CompletableFuture<HttpResponse> resFuture,
+                    int maxRequestMessageLength, int maxResponseMessageLength,
+                    ServiceRequestContext ctx, SerializationFormat serializationFormat,
+                    @Nullable GrpcJsonMarshaller jsonMarshaller, boolean unsafeWrapRequestBuffers,
+                    boolean useBlockingTaskExecutor, ResponseHeaders defaultHeaders,
+                    @Nullable GrpcStatusFunction statusFunction, boolean autoCompress) {
         super(req, method, simpleMethodName, compressorRegistry, decompressorRegistry, res,
               maxResponseMessageLength, ctx, serializationFormat, jsonMarshaller, unsafeWrapRequestBuffers,
-              useBlockingTaskExecutor, defaultHeaders, statusFunction);
+              useBlockingTaskExecutor, defaultHeaders, statusFunction, autoCompress);
         requireNonNull(req, "req");
         this.ctx = requireNonNull(ctx, "ctx");
         final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);

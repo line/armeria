@@ -65,8 +65,8 @@ import io.netty.channel.EventLoopGroup;
  *     excluded-user-agents: some-user-agent, another-user-agent
  *     min-response-size: 1KB
  *   internal-services:
- *     - port: 18080
- *     - include: docs, health, metrics
+ *     port: 18080
+ *     include: docs, health, metrics
  * }</pre>
  */
 @ConfigurationProperties(prefix = "armeria")

@@ -73,12 +73,12 @@ public final class ContentPreviewingUtil {
             @Nullable String produced = null;
             try {
                 produced = requestContentPreviewer.produce();
+                if (produced != null) {
+                    produced = sanitize(contentSanitizer, ctx, produced);
+                }
             } catch (Exception e) {
                 logger.warn("Unexpected exception while producing the request content preview. " +
                             "previewer: {}", requestContentPreviewer, e);
-            }
-            if (produced != null) {
-                produced = sanitize(contentSanitizer, ctx, produced);
             }
             logBuilder.requestContentPreview(produced);
             return null;
@@ -118,12 +118,12 @@ public final class ContentPreviewingUtil {
                     @Nullable String produced = null;
                     try {
                         produced = responseContentPreviewer.produce();
+                        if (produced != null) {
+                            produced = sanitize(contentSanitizer, ctx, produced);
+                        }
                     } catch (Exception e) {
                         logger.warn("Unexpected exception while producing the response content preview. " +
                                     "previewer: {}", responseContentPreviewer, e);
-                    }
-                    if (produced != null) {
-                        produced = sanitize(contentSanitizer, ctx, produced);
                     }
                     ctx.logBuilder().responseContentPreview(produced);
                 } else {

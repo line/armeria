@@ -73,28 +73,19 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     private Subscription upstream;
 
     // state
-    private boolean deframingStarted;
     private int pendingRequests;
     private volatile int pendingMessages;
 
-    StreamingServerCall(HttpRequest req,
-                        MethodDescriptor<I, O> method,
-                        String simpleMethodName,
-                        CompressorRegistry compressorRegistry,
-                        DecompressorRegistry decompressorRegistry,
-                        HttpResponseWriter res,
-                        int maxRequestMessageLength,
-                        int maxResponseMessageLength,
-                        ServiceRequestContext ctx,
-                        SerializationFormat serializationFormat,
-                        @Nullable GrpcJsonMarshaller jsonMarshaller,
-                        boolean unsafeWrapRequestBuffers,
-                        boolean useBlockingTaskExecutor,
-                        ResponseHeaders defaultHeaders,
-                        @Nullable GrpcStatusFunction statusFunction) {
+    StreamingServerCall(HttpRequest req, MethodDescriptor<I, O> method, String simpleMethodName,
+                        CompressorRegistry compressorRegistry, DecompressorRegistry decompressorRegistry,
+                        HttpResponseWriter res, int maxRequestMessageLength, int maxResponseMessageLength,
+                        ServiceRequestContext ctx, SerializationFormat serializationFormat,
+                        @Nullable GrpcJsonMarshaller jsonMarshaller, boolean unsafeWrapRequestBuffers,
+                        boolean useBlockingTaskExecutor, ResponseHeaders defaultHeaders,
+                        @Nullable GrpcStatusFunction statusFunction, boolean autoCompress) {
         super(req, method, simpleMethodName, compressorRegistry, decompressorRegistry, res,
               maxResponseMessageLength, ctx, serializationFormat, jsonMarshaller, unsafeWrapRequestBuffers,
-              useBlockingTaskExecutor, defaultHeaders, statusFunction);
+              useBlockingTaskExecutor, defaultHeaders, statusFunction, autoCompress);
         requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");

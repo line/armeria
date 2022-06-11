@@ -210,7 +210,6 @@ class UnaryServerCallTest {
         assertThat(buf2.refCnt()).isZero();
     }
 
-
     @Test
     void deferResponseHeaders() {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
@@ -333,7 +332,7 @@ class UnaryServerCallTest {
                         ResponseHeaders.builder(HttpStatus.OK)
                                        .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                        .build(),
-                        /* exceptionMappings */ null);
+                        /* exceptionMappings */ null, /* autoCompress */ false);
 
         final AtomicReference<SimpleRequest> requestCaptor = new AtomicReference<>();
         final AtomicBoolean completed = new AtomicBoolean();
@@ -376,6 +375,6 @@ class UnaryServerCallTest {
                 ResponseHeaders.builder(HttpStatus.OK)
                                .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                .build(),
-                /* exceptionMappings */ null);
+                /* exceptionMappings */ null, /* autoCompress */ false);
     }
 }
