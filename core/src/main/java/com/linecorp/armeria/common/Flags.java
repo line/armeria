@@ -113,10 +113,6 @@ public final class Flags {
     static {
         final String strSpec = getNormalized("verboseExceptions",
                                              DefaultFlagsProvider.VERBOSE_EXCEPTION_SAMPLER_SPEC, val -> {
-                    if ("true".equals(val) || "false".equals(val)) {
-                        return true;
-                    }
-
                     try {
                         Sampler.of(val);
                         return true;

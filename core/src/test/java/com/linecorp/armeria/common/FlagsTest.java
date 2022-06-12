@@ -210,7 +210,7 @@ class FlagsTest {
         final Method method = flags.getDeclaredMethod("verboseExceptionSampler");
         assertThat(method.invoke(flags))
                 .usingRecursiveComparison()
-                .isEqualTo(Sampler.always());
+                .isEqualTo(new ExceptionSampler("true"));
     }
 
     @Test
