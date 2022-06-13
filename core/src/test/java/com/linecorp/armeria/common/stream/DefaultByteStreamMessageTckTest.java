@@ -16,14 +16,14 @@
 
 package com.linecorp.armeria.common.stream;
 
+import java.util.stream.IntStream;
+
 import org.reactivestreams.Publisher;
 import org.reactivestreams.tck.PublisherVerification;
 import org.reactivestreams.tck.TestEnvironment;
 import org.testng.annotations.Test;
 
 import com.linecorp.armeria.common.HttpData;
-
-import reactor.core.publisher.Flux;
 
 @Test
 public class DefaultByteStreamMessageTckTest extends PublisherVerification<HttpData> {
@@ -37,9 +37,11 @@ public class DefaultByteStreamMessageTckTest extends PublisherVerification<HttpD
         if (elements == 0) {
             return ByteStreamMessage.of(StreamMessage.of());
         }
-        final Flux<HttpData> publisher = Flux.range(0, (int) elements)
-                                             .map(i -> HttpData.ofUtf8(String.valueOf(i)));
-        return ByteStreamMessage.of(publisher);
+        final StreamMessage<HttpData> message = StreamMessage.of(IntStream.range(0, (int) elements)
+                                                                          .mapToObj(i -> HttpData.ofUtf8(
+                                                                                  String.valueOf(i)))
+                                                                          .toArray(HttpData[]::new));
+        return ByteStreamMessage.of(message);
     }
 
     @Override
@@ -49,6 +51,6 @@ public class DefaultByteStreamMessageTckTest extends PublisherVerification<HttpD
 
     @Override
     public long maxElementsFromPublisher() {
-        return Integer.MAX_VALUE;
+        return 1024;
     }
 }
