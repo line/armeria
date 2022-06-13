@@ -1128,12 +1128,23 @@ final class AnnotatedValueResolver {
             checkArgument(resolver != null, "'resolver' should be specified");
 
             final boolean isOptional = type == Optional.class;
-            final boolean isNullable = isNullable();
+            final boolean isAnnotatedNullable = isAnnotatedNullable(typeElement);
+            final boolean isMarkedNullable = KotlinUtil.isMarkedNullable(typeElement);
+            final boolean isNullable = isAnnotatedNullable || isMarkedNullable;
             final Type originalParameterizedType = parameterizedTypeOf(typeElement);
             final Type unwrappedParameterizedType = isOptional ? unwrapOptional(originalParameterizedType)
                                                                : originalParameterizedType;
+
+            // Used only for warning message.
+            final String nullableRepresentation =
+                    isMarkedNullable && !isAnnotatedNullable ? "?(Kotlin nullable type)"
+                                                             : "@Nullable";
+
+            if (isAnnotatedNullable && isMarkedNullable) {
+                warnRedundantUse("@Nullable", "?(Kotlin nullable type)");
+            }
             if (isOptional && isNullable) {
-                warnRedundantUse("Optional", "@Nullable");
+                warnRedundantUse("Optional", nullableRepresentation);
             }
 
             final boolean shouldExist;
@@ -1146,7 +1157,7 @@ final class AnnotatedValueResolver {
                     if (isOptional) {
                         warnRedundantUse("@Default", "Optional");
                     } else if (isNullable) {
-                        warnRedundantUse("@Default", "@Nullable");
+                        warnRedundantUse("@Default", nullableRepresentation);
                     }
 
                     shouldExist = false;
@@ -1175,7 +1186,7 @@ final class AnnotatedValueResolver {
                 if (isOptional) {
                     warnRedundantUse("a path variable", "Optional");
                 } else {
-                    warnRedundantUse("a path variable", "@Nullable");
+                    warnRedundantUse("a path variable", nullableRepresentation);
                 }
             }
 
@@ -1248,16 +1259,6 @@ final class AnnotatedValueResolver {
             logger.warn(buf.toString());
         }
 
-        private boolean isNullable() {
-            for (Annotation a : annotatedElement.getAnnotations()) {
-                final String annotationTypeName = a.annotationType().getName();
-                if (annotationTypeName.endsWith(".Nullable")) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         @Nullable
         private Class<?> getContainerType(Type parameterizedType) {
             final Class<?> rawType = toRawType(parameterizedType);
@@ -1313,6 +1314,16 @@ final class AnnotatedValueResolver {
                         "Unsupported or invalid parameter type: " + parameterizedType, cause);
             }
             return toRawType(elementType);
+        }
+
+        private static boolean isAnnotatedNullable(AnnotatedElement annotatedElement) {
+            for (Annotation a : annotatedElement.getAnnotations()) {
+                final String annotationTypeName = a.annotationType().getName();
+                if (annotationTypeName.endsWith(".Nullable")) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Nullable

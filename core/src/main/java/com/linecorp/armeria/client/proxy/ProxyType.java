@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.proxy;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * The proxy protocol type.
  */
@@ -24,25 +26,39 @@ public enum ProxyType {
     /**
      * Proxy is absent.
      */
-    DIRECT,
+    DIRECT(false),
 
     /**
      * SOCKS4 proxy protocol.
      */
-    SOCKS4,
+    SOCKS4(true),
 
     /**
      * SOCKS5 proxy protocol.
      */
-    SOCKS5,
+    SOCKS5(true),
 
     /**
      * CONNECT proxy protocol.
      */
-    CONNECT,
+    CONNECT(true),
 
     /**
      * HAPROXY protocol.
      */
-    HAPROXY
+    HAPROXY(false);
+
+    private final boolean isForwardProxy;
+
+    ProxyType(boolean isForwardProxy) {
+        this.isForwardProxy = isForwardProxy;
+    }
+
+    /**
+     * Returns whether this proxy is a forward proxy type.
+     */
+    @UnstableApi
+    public boolean isForwardProxy() {
+        return isForwardProxy;
+    }
 }
