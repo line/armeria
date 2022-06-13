@@ -269,7 +269,7 @@ public final class ClientFactoryOptions
     /**
      * This consumer lets users customize the behavior of Netty's {@link ChannelPipeline}.
      * This customizer is run right before {@link ChannelPipeline#connect(SocketAddress)}
-     * is invoked by armeria. This customizer is no-op by default.
+     * is invoked by Armeria. This customizer is no-op by default.
      *
      * <p>Note that this customizer usage of this customizer is an advanced
      * feature, and may produce unintentional side effects. It is encouraged to
