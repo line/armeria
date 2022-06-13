@@ -37,10 +37,10 @@ public class DefaultByteStreamMessageTckTest extends PublisherVerification<HttpD
         if (elements == 0) {
             return ByteStreamMessage.of(StreamMessage.of());
         }
-        final StreamMessage<HttpData> message = StreamMessage.of(IntStream.range(0, (int) elements)
-                                                                          .mapToObj(i -> HttpData.ofUtf8(
-                                                                                  String.valueOf(i)))
-                                                                          .toArray(HttpData[]::new));
+        final StreamMessage<HttpData> message = StreamMessage.of(
+                IntStream.range(0, (int) elements)
+                         .mapToObj(i -> HttpData.ofUtf8(String.valueOf(i)))
+                         .toArray(HttpData[]::new));
         return ByteStreamMessage.of(message);
     }
 
@@ -51,6 +51,7 @@ public class DefaultByteStreamMessageTckTest extends PublisherVerification<HttpD
 
     @Override
     public long maxElementsFromPublisher() {
+        // Cannot handle a huge array with a fix StreamMessage that holds all elements as an array.
         return 1024;
     }
 }
