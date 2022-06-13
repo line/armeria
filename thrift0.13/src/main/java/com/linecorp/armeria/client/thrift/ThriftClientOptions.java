@@ -35,8 +35,7 @@ public final class ThriftClientOptions {
             ClientOption.define("THRIFT_MAX_STRING_LENGTH", -1);
 
     /**
-     * Sets the maximum allowed number of bytes to read from the transport for
-     * containers (maps, sets, lists).
+     * The maximum allowed number of containers to read from the transport for maps, sets and lists.
      * If unspecified, the value of {@link ClientOptions#maxResponseLength()} will be used instead.
      */
     public static final ClientOption<Integer> MAX_RESPONSE_CONTAINER_LENGTH =

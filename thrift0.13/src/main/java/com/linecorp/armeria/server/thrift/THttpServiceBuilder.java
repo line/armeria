@@ -176,8 +176,7 @@ public final class THttpServiceBuilder {
     }
 
     /**
-     * Sets the maximum allowed number of bytes to read from the transport for
-     * containers (maps, sets, lists).
+     * Sets the maximum allowed number of containers to read from the transport for maps, sets and lists.
      * If unspecified, the default value of {@link ServerBuilder#maxRequestLength(long)} will be used.
      *
      * <p>Note that this options is only valid for {@link TBinaryProtocol} and {@link TCompactProtocol}.
