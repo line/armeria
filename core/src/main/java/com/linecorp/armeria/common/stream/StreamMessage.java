@@ -793,11 +793,11 @@ public interface StreamMessage<T> extends Publisher<T> {
      * stream.write(2);
      * stream.close(ClosedStreamException.get());
      * // If the exception type does not match
-     * StreamMessage<Integer> misMatchRecovered =
+     * StreamMessage<Integer> mismatchRecovered =
      *     stream.recoverAndResume(IllegalStateException.class, cause -> StreamMessage.of(3, 4));
      *
      * // In this case, CompletionException is thrown. (can't recover exception)
-     * misMatchRecovered.collect().join();
+     * mismatchRecovered.collect().join();
      * }</pre>
      */
     @UnstableApi

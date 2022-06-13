@@ -964,10 +964,10 @@ public interface HttpResponse extends Response, HttpMessage {
      *
      * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Oops..."));
      * // If the exception type does not match
-     * HttpResponse misMatchRecovered =
+     * HttpResponse mismatchRecovered =
      *     response.recover(IllegalArgumentException.class, cause -> HttpResponse.of("Fallback"));
      * // In this case, CompletionException is thrown. (can't recover exception)
-     * misMatchRecovered.aggregate().join();
+     * mismatchRecovered.aggregate().join();
      * }</pre>
      */
     @UnstableApi
