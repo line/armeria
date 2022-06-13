@@ -106,8 +106,7 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link LogLevel} to use when the request processing failure occurs by specified
-     * {@link Throwable} and logging requests.
+     * Sets the {@link LogLevel} to use when the response fails with the specified {@link Throwable}.
      */
     public LoggingDecoratorBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
         requireNonNull(clazz, "clazz");
