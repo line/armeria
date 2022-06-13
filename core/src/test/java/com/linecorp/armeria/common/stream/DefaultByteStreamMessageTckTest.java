@@ -51,7 +51,7 @@ public class DefaultByteStreamMessageTckTest extends PublisherVerification<HttpD
 
     @Override
     public long maxElementsFromPublisher() {
-        // Cannot handle a huge array with a fix StreamMessage that holds all elements as an array.
+        // Cannot handle a huge array with a fixed StreamMessage that holds all elements as an array.
         return 1024;
     }
 }
