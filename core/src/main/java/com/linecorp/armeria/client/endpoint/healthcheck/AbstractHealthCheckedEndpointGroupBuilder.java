@@ -227,11 +227,16 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      *                                                           .build();
      * HealthCheckedEndpointGroup endpointGroup =
      *     HealthCheckedEndpointGroup.builder(delegate, "/health")
+     *                               // Sets the same timeout to both initialSelectionTimeout
+     *                               // and selectionTimeout
      *                               .selectionTimeout(Duration.ofSeconds(10))
      *                               ...
      *                               .build();
      * // The selection timeout of `delegate` is added into `endpointGroup`.
-     * assert endpointGroup.selectionTimeoutMillis() == 13000;
+     * assert endpointGroup.selectionTimeoutMillis() == 13000; // 10000 (health) + 3000 (dns)
+     * endpointGroup.whenReady.join();
+     * // The selection timeout won't be changed even after the endpoint initialization.
+     * assert endpointGroup.selectionTimeoutMillis() == 13000; // 10000 (health) + 3000 (dns)
      * }</pre>
      */
     @UnstableApi
@@ -254,14 +259,14 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      *                                                           .build();
      * HealthCheckedEndpointGroup endpointGroup =
      *     HealthCheckedEndpointGroup.builder(delegate, "/health")
-     *                               .selectionTimeout(Duration.ofSeconds(10), Duration.ofSeconds(3))
+     *                               .selectionTimeout(Duration.ofSeconds(10), Duration.ofSeconds(5))
      *                               ...
      *                               .build();
-     * assert endpointGroup.selectionTimeoutMillis() == 13000;
+     * assert endpointGroup.selectionTimeoutMillis() == 13000; // 10000 (health) + 3000 (dns)
      *
      * // Wait for the initial endpoints.
      * endpointGroup.whenReady().join();
-     * assert endpointGroup.selectionTimeoutMillis() == 6000;
+     * assert endpointGroup.selectionTimeoutMillis() == 8000; // 5000 (health) + 3000 (dns)
      * }</pre>
      *
      * @param initialSelectionTimeout the initial selection timeout to wait for the
@@ -299,12 +304,17 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      *                                                           .build();
      * HealthCheckedEndpointGroup endpointGroup =
      *     HealthCheckedEndpointGroup.builder(delegate, "/health")
+     *                               // Sets the same timeout to both initialSelectionTimeoutMills
+     *                               // and selectionTimeoutMillis
      *                               .selectionTimeoutMillis(10000)
      *                               ...
      *                               .build();
      *
      * // The selection timeout of `delegate` is added into `endpointGroup`.
-     * assert endpointGroup.selectionTimeoutMillis() == 13000;
+     * assert endpointGroup.selectionTimeoutMillis() == 13000; // 10000 (health) + 3000 (dns)
+     * endpointGroup.whenReady.join();
+     * // The selection timeout won't be changed even after the endpoint initialization.
+     * assert endpointGroup.selectionTimeoutMillis() == 13000; // 10000 (health) + 3000 (dns)
      * }</pre>
      */
     @UnstableApi
@@ -327,14 +337,14 @@ public abstract class AbstractHealthCheckedEndpointGroupBuilder extends Abstract
      *                                                           .build();
      * HealthCheckedEndpointGroup endpointGroup =
      *     HealthCheckedEndpointGroup.builder(delegate, "/health")
-     *                               .selectionTimeoutMillis(10000, 3000)
+     *                               .selectionTimeoutMillis(10000, 5000)
      *                               ...
      *                               .build();
-     * assert endpointGroup.selectionTimeoutMillis() == 13000;
+     * assert endpointGroup.selectionTimeoutMillis() == 13000; // 10000 (health) + 3000 (dns)
      *
      * // Wait for the initial endpoints.
      * endpointGroup.whenReady().join();
-     * assert endpointGroup.selectionTimeoutMillis() == 6000;
+     * assert endpointGroup.selectionTimeoutMillis() == 8000;  // 5000 (health) + 3000 (dns)
      * }</pre>
      *
      * @param initialSelectionTimeoutMillis the initial selection timeout to wait for the

@@ -40,6 +40,8 @@ public final class DnsUtil {
 
     private static final List<String> DEFAULT_SEARCH_DOMAINS;
     private static final int DEFAULT_NDOTS;
+    // Leave it public to inline the value with Javadoc {@value ..} tag.
+    public static final int DEFAULT_DNS_QUERY_TIMEOUT_MILLIS = 5000; // 5 seconds
 
     private static final Logger logger = LoggerFactory.getLogger(DnsUtil.class);
 
@@ -122,7 +124,7 @@ public final class DnsUtil {
     }
 
     public static long defaultDnsQueryTimeoutMillis() {
-        return 5000; // 5 seconds
+        return DEFAULT_DNS_QUERY_TIMEOUT_MILLIS;
     }
 
     private DnsUtil() {}

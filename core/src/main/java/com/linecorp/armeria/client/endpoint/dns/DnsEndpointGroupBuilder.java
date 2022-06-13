@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
+import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
 import io.netty.channel.EventLoop;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
@@ -124,7 +125,8 @@ abstract class DnsEndpointGroupBuilder
     /**
      * Sets the timeout to wait until a successful {@link Endpoint} selection.
      * {@code 0} disables the timeout.
-     * If unspecified, the default DNS query timeout(5000 ms) is used by default.
+     * If unspecified, the default DNS query timeout ({@link DnsUtil#DEFAULT_DNS_QUERY_TIMEOUT_MILLIS} ms) is
+     * used by default.
      */
     @Override
     public DnsEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {

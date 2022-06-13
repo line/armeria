@@ -32,7 +32,7 @@ public abstract class AbstractDynamicEndpointGroupBuilder implements DynamicEndp
     private long selectionTimeoutMillis;
 
     /**
-     * Creates a new instance with the default {@code selectionTimeoutMillis}.
+     * Creates a new instance with the specified default {@code selectionTimeoutMillis}.
      */
     protected AbstractDynamicEndpointGroupBuilder(long selectionTimeoutMillis) {
         checkArgument(selectionTimeoutMillis >= 0, "selectionTimeoutMillis: %s (expected: >= 0)",
@@ -77,6 +77,8 @@ public abstract class AbstractDynamicEndpointGroupBuilder implements DynamicEndp
     /**
      * Returns the timeout to wait until a successful {@link Endpoint} selection.
      */
+    // Intentionally leave as a non-final method so that some sub-builder classes override the visibility as
+    // a workaround of multiple inheritance
     protected long selectionTimeoutMillis() {
         return selectionTimeoutMillis;
     }

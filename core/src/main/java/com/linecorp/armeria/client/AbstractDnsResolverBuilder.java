@@ -104,7 +104,7 @@ public abstract class AbstractDnsResolverBuilder {
     /**
      * Sets the timeout of the DNS query performed by this resolver.
      * {@code 0} disables the timeout.
-     * If unspecified, 5000 ms will be used.
+     * If unspecified, {@value DnsUtil#DEFAULT_DNS_QUERY_TIMEOUT_MILLIS} ms will be used.
      */
     public AbstractDnsResolverBuilder queryTimeout(Duration queryTimeout) {
         requireNonNull(queryTimeout, "queryTimeout");
@@ -122,7 +122,7 @@ public abstract class AbstractDnsResolverBuilder {
     /**
      * Sets the timeout of the DNS query performed by this resolver in milliseconds.
      * {@code 0} disables the timeout.
-     * If unspecified, 5000 ms will be used.
+     * If unspecified, {@value DnsUtil#DEFAULT_DNS_QUERY_TIMEOUT_MILLIS} ms will be used.
      */
     public AbstractDnsResolverBuilder queryTimeoutMillis(long queryTimeoutMillis) {
         checkArgument(queryTimeoutMillis >= 0, "queryTimeoutMillis: %s (expected: >= 0)", queryTimeoutMillis);

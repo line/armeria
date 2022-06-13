@@ -43,12 +43,12 @@ class HealthCheckedEndpointGroupSelectionTimeoutTest {
         try (MockEndpointGroup delegate = new MockEndpointGroup(3000);
              HealthCheckedEndpointGroup endpointGroup =
                      HealthCheckedEndpointGroup.builder(delegate, "/health")
-                                               .selectionTimeout(Duration.ofSeconds(10), Duration.ofSeconds(3))
+                                               .selectionTimeout(Duration.ofSeconds(10), Duration.ofSeconds(5))
                                                .build()) {
             assertThat(endpointGroup.selectionTimeoutMillis()).isEqualTo(13000);
             delegate.set(server.httpEndpoint());
             endpointGroup.whenReady().join();
-            assertThat(endpointGroup.selectionTimeoutMillis()).isEqualTo(6000);
+            assertThat(endpointGroup.selectionTimeoutMillis()).isEqualTo(8000);
         }
     }
 }

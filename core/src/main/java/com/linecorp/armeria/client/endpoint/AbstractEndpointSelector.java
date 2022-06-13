@@ -116,7 +116,7 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
     }
 
     @VisibleForTesting
-    class ListeningFuture extends CompletableFuture<Endpoint> implements Consumer<List<Endpoint>> {
+    final class ListeningFuture extends CompletableFuture<Endpoint> implements Consumer<List<Endpoint>> {
         private final ClientRequestContext ctx;
         private final Executor executor;
         @Nullable
