@@ -179,7 +179,7 @@ final class DefaultUnframedGrpcErrorHandler {
     }
 
     /**
-     * Returns a plain text response.
+     * Returns a plaintext response.
      *
      * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
      *                              to an {@link HttpStatus} code.
