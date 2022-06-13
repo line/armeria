@@ -774,8 +774,9 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
-     * Recovers a failed {@link StreamMessage} for the specified {@link Throwable} and resumes by subscribing
-     * to a returned fallback {@link StreamMessage} when any error occurs.
+     * Recovers a failed {@link StreamMessage} and resumes by subscribing to a returned fallback
+     * {@link StreamMessage} when the thrown {@link Throwable} is the same type or a subtype of the
+     * specified {@code causeClass}.
      *
      * <p>Example:<pre>{@code
      * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
@@ -795,7 +796,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * StreamMessage<Integer> misMatchRecovered =
      *     stream.recoverAndResume(IllegalStateException.class, cause -> StreamMessage.of(3, 4));
      *
-     * // In this case, CompletionException is returned. (can't recover exception)
+     * // In this case, CompletionException is thrown. (can't recover exception)
      * misMatchRecovered.collect().join();
      * }</pre>
      */
@@ -804,7 +805,7 @@ public interface StreamMessage<T> extends Publisher<T> {
             Function<? super E, ? extends StreamMessage<T>> function) {
         requireNonNull(causeClass, "causeClass");
         requireNonNull(function, "function");
-        final StreamMessage<T> stream = recoverAndResume(cause -> {
+        return recoverAndResume(cause -> {
             if (!causeClass.isAssignableFrom(cause.getClass())) {
                 return Exceptions.throwUnsafely(cause);
             }
@@ -816,7 +817,6 @@ public interface StreamMessage<T> extends Publisher<T> {
                 return Exceptions.throwUnsafely(cause);
             }
         });
-        return of(stream);
     }
 
     /**

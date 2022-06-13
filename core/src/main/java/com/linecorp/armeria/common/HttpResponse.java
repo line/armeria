@@ -966,7 +966,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * // If the exception type does not match
      * HttpResponse misMatchRecovered =
      *     response.recover(IllegalArgumentException.class, cause -> HttpResponse.of("Fallback"));
-     * // In this case, CompletionException is returned. (can't recover exception)
+     * // In this case, CompletionException is thrown. (can't recover exception)
      * misMatchRecovered.aggregate().join();
      * }</pre>
      */
@@ -975,7 +975,7 @@ public interface HttpResponse extends Response, HttpMessage {
                                                        Function<? super T, ? extends HttpResponse> function) {
         requireNonNull(causeClass, "causeClass");
         requireNonNull(function, "function");
-        final StreamMessage<HttpObject> stream = recover(cause -> {
+        return recover(cause -> {
             if (!causeClass.isAssignableFrom(cause.getClass())) {
                 return Exceptions.throwUnsafely(cause);
             }
@@ -987,6 +987,5 @@ public interface HttpResponse extends Response, HttpMessage {
                 return Exceptions.throwUnsafely(t);
             }
         });
-        return of(stream);
     }
 }
