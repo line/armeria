@@ -169,8 +169,7 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link LogLevel} to use when the response processing failure occurs by specified
-     * {@link Throwable} and logging responses.
+     * Sets the {@link LogLevel} to use when the response fails with the specified {@link Throwable}.
      */
     @UnstableApi
     public LoggingDecoratorBuilder responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
