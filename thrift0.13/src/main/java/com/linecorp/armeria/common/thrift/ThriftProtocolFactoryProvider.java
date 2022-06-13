@@ -64,8 +64,8 @@ public abstract class ThriftProtocolFactoryProvider {
      * @param serializationFormat the serialization format that the {@link TProtocolFactory} supports.
      * @param maxStringLength the maximum allowed number of bytes to read from the transport for
      *                        variable-length fields (such as strings or binary). {@code 0} means unlimited.
-     * @param maxContainerLength the maximum allowed number of bytes to read from the transport for
-     *                           containers (maps, sets, lists). {@code 0} means unlimited.
+     * @param maxContainerLength the maximum allowed number of containers to read from the transport for
+     *                           maps, sets and lists. {@code 0} means unlimited.
      */
     @Nullable
     protected abstract TProtocolFactory protocolFactory(SerializationFormat serializationFormat,

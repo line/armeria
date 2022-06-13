@@ -111,8 +111,8 @@ public final class ThriftProtocolFactories {
      *
      * @param maxStringLength the maximum allowed number of bytes to read from the transport for
      *                        variable-length fields (such as strings or binary). {@code 0} means unlimited.
-     * @param maxContainerLength the maximum allowed number of bytes to read from the transport for
-     *                           containers (maps, sets, lists). {@code 0} means unlimited.
+     * @param maxContainerLength the maximum allowed number of containers to read from the transport for
+     *                           maps, sets and lists. {@code 0} means unlimited.
      */
     public static TProtocolFactory binary(int maxStringLength, int maxContainerLength) {
         checkArgument(maxStringLength >= 0, "maxStringLength: %s (expected: >= 0)", maxStringLength);
@@ -141,8 +141,8 @@ public final class ThriftProtocolFactories {
      *
      * @param maxStringLength the maximum allowed number of bytes to read from the transport for
      *                        variable-length fields (such as strings or binary). {@code 0} means unlimited.
-     * @param maxContainerLength the maximum allowed number of bytes to read from the transport for
-     *                           containers (maps, sets, lists). {@code 0} means unlimited.
+     * @param maxContainerLength the maximum allowed number of containers to read from the transport for
+     *                           maps, sets and lists. {@code 0} means unlimited.
      */
     public static TProtocolFactory compact(int maxStringLength, int maxContainerLength) {
         checkArgument(maxStringLength >= 0, "maxStringLength: %s (expected: >= 0)", maxStringLength);
