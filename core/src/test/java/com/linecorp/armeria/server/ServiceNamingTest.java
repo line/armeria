@@ -38,8 +38,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), HealthCheckService.builder().build(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
@@ -52,8 +52,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new NestedClass(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
@@ -67,8 +67,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
@@ -81,8 +81,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$$$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
@@ -95,8 +95,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new $$$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
@@ -109,8 +109,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), HealthCheckService.builder().build(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
@@ -123,8 +123,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new NestedClass(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
@@ -138,8 +138,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
@@ -152,8 +152,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$$$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
@@ -166,8 +166,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new $$$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
@@ -180,8 +180,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), HealthCheckService.builder().build(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
@@ -194,8 +194,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new NestedClass(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
@@ -209,8 +209,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
@@ -224,8 +224,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$$$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
@@ -239,8 +239,8 @@ class ServiceNamingTest {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
                 new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new $$$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(),
-                                  CommonPools.blockingTaskExecutor(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
                                   Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
