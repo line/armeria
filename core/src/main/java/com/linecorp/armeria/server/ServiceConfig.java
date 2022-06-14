@@ -107,7 +107,7 @@ public final class ServiceConfig {
         this.service = requireNonNull(service, "service");
         this.defaultLogName = defaultLogName;
         this.defaultServiceName = defaultServiceName;
-        this.defaultServiceNaming = defaultServiceNaming;
+        this.defaultServiceNaming = requireNonNull(defaultServiceNaming, "defaultServiceNaming");
         this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
         this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
         this.verboseResponses = verboseResponses;
@@ -115,7 +115,7 @@ public final class ServiceConfig {
         this.transientServiceOptions = requireNonNull(transientServiceOptions, "transientServiceOptions");
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         this.successFunction = requireNonNull(successFunction, "successFunction");
-        this.multipartUploadsLocation = multipartUploadsLocation;
+        this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
