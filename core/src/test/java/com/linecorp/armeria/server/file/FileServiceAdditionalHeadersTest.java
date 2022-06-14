@@ -53,6 +53,6 @@ public class FileServiceAdditionalHeadersTest {
         assertThat(res.headers().getAll(HttpHeaderNames.of("foo"))).containsExactly("1", "2");
         assertThat(res.headers().getAll(HttpHeaderNames.of("bar"))).containsExactly("3");
         assertThat(res.headers().getAll(HttpHeaderNames.CACHE_CONTROL))
-                .containsExactly("no-cache, must-revalidate");
+                .containsExactly("no-cache, max-age=0, must-revalidate");
     }
 }
