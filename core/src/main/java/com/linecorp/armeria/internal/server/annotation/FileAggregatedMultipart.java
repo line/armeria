@@ -30,6 +30,7 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
 
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
@@ -60,6 +61,7 @@ final class FileAggregatedMultipart {
         final Path destination = ctx.config().multipartUploadsLocation();
         return Multipart.from(req).collect(bodyPart -> {
             final String name = bodyPart.name();
+            assert name != null;
             final String filename = bodyPart.filename();
             final EventLoop eventLoop = ctx.eventLoop();
 
@@ -67,16 +69,18 @@ final class FileAggregatedMultipart {
                 final Path incompleteDir = destination.resolve("incomplete");
                 final ScheduledExecutorService executor = ctx.blockingTaskExecutor().withoutContext();
 
-                return resolveTmpFile(incompleteDir, filename, executor).thenComposeAsync(path -> {
-                    return bodyPart.writeTo(path).thenCompose(ignore -> {
+                return resolveTmpFile(incompleteDir, filename, executor).thenCompose(path -> {
+                    return bodyPart.writeTo(path, eventLoop, executor).thenCompose(ignore -> {
                         final Path completeDir = destination.resolve("complete");
                         return moveFile(path, completeDir, executor);
                     }).thenApply(completePath -> MultipartFile.of(name, filename, completePath.toFile()));
-                }, eventLoop);
+                });
             }
 
-            return bodyPart.aggregate(eventLoop).thenApply(aggregatedBodyPart -> {
-                return Maps.<String, Object>immutableEntry(name, aggregatedBodyPart.contentUtf8());
+            return bodyPart.aggregateWithPooledObjects(eventLoop, ctx.alloc()).thenApply(aggregatedBodyPart -> {
+                try (HttpData httpData = aggregatedBodyPart.content()) {
+                    return Maps.<String, Object>immutableEntry(name, httpData.toStringUtf8());
+                }
             });
         }).thenApply(results -> {
             final ImmutableListMultimap.Builder<String, String> params = ImmutableListMultimap.builder();

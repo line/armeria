@@ -23,6 +23,9 @@ import java.nio.file.Path;
 
 /**
  * A file uploaded from a {@link Multipart} request.
+ *
+ * @see <a href="https://datatracker.ietf.org/doc/html/rfc7578#section-4.2">
+ *      Content-Disposition Header Field for Each Part</a>
  */
 public interface MultipartFile {
 
