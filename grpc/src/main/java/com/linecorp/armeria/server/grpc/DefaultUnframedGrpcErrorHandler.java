@@ -140,7 +140,7 @@ final class DefaultUnframedGrpcErrorHandler {
             if (grpcMediaType != null && grpcMediaType.isJson()) {
                 return ofJson(mappingFunction).handle(ctx, status, response);
             } else {
-                return ofPlainText(mappingFunction).handle(ctx, status, response);
+                return ofPlaintext(mappingFunction).handle(ctx, status, response);
             }
         };
     }
@@ -184,7 +184,7 @@ final class DefaultUnframedGrpcErrorHandler {
      * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
      *                              to an {@link HttpStatus} code.
      */
-    static UnframedGrpcErrorHandler ofPlainText(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+    static UnframedGrpcErrorHandler ofPlaintext(UnframedGrpcStatusMappingFunction statusMappingFunction) {
         final UnframedGrpcStatusMappingFunction mappingFunction
                 = ofStatusMappingFunction(statusMappingFunction);
         return (ctx, status, response) -> {
@@ -262,7 +262,7 @@ final class DefaultUnframedGrpcErrorHandler {
                     try {
                         messageBuilder.put("details", convertErrorDetailToJsonNode(rpcStatus.getDetailsList()));
                     } catch (IOException e) {
-                        logger.warn("error happens when convert error converting rpc status {} to strings",
+                        logger.warn("Unexpected exception while converting RPC status {} to strings",
                                     rpcStatus);
                     }
                 }

@@ -69,7 +69,7 @@ public interface UnframedGrpcErrorHandler {
      * Returns a plain text response.
      */
     static UnframedGrpcErrorHandler ofPlainText() {
-        return DefaultUnframedGrpcErrorHandler.ofPlainText(UnframedGrpcStatusMappingFunction.of());
+        return DefaultUnframedGrpcErrorHandler.ofPlaintext(UnframedGrpcStatusMappingFunction.of());
     }
 
     /**
@@ -79,7 +79,7 @@ public interface UnframedGrpcErrorHandler {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler ofPlainText(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        return DefaultUnframedGrpcErrorHandler.ofPlainText(statusMappingFunction);
+        return DefaultUnframedGrpcErrorHandler.ofPlaintext(statusMappingFunction);
     }
 
     /**
