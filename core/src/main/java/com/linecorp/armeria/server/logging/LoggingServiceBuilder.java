@@ -160,6 +160,11 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
         return (LoggingServiceBuilder) super.requestLogLevel(requestLogLevel);
     }
 
+    @Override
+    public LoggingServiceBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
+        return (LoggingServiceBuilder) super.requestLogLevel(clazz, requestLogLevel);
+    }
+
     @Deprecated
     @Override
     public LoggingServiceBuilder requestLogLevelMapper(
@@ -180,6 +185,11 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
     @Override
     public LoggingServiceBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
         return (LoggingServiceBuilder) super.responseLogLevel(statusClass, logLevel);
+    }
+
+    @Override
+    public LoggingServiceBuilder responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
+        return (LoggingServiceBuilder) super.responseLogLevel(clazz, logLevel);
     }
 
     @Override
