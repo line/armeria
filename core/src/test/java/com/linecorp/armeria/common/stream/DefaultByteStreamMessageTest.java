@@ -254,6 +254,7 @@ class DefaultByteStreamMessageTest {
             assertThat(byteBuf.refCnt()).isZero();
         }
     }
+
     @Test
     void leakTest_drop() {
         final List<ByteBuf> bufs = IntStream.range(1, 4).mapToObj(n -> {
