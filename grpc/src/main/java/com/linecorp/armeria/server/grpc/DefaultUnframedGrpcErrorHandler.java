@@ -248,7 +248,6 @@ final class DefaultUnframedGrpcErrorHandler {
                                                                            grpcCode.value())
                                                                    .build();
             final ImmutableMap.Builder<String, Object> messageBuilder = ImmutableMap.builder();
-            messageBuilder.put("code", httpStatus.code());
             messageBuilder.put("status", grpcCode.name());
             if (grpcMessage != null) {
                 messageBuilder.put("message", grpcMessage);
@@ -266,6 +265,7 @@ final class DefaultUnframedGrpcErrorHandler {
                 }
                 if (rpcStatus != null) {
                     try {
+                        messageBuilder.put("code", rpcStatus.getCode());
                         messageBuilder.put("details", convertErrorDetailToJsonNode(rpcStatus.getDetailsList()));
                     } catch (IOException e) {
                         logger.warn("Unexpected exception while converting RPC status {} to strings",
