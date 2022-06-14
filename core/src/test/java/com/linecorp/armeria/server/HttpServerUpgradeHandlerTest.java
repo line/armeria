@@ -33,7 +33,6 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.common.HttpStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
@@ -41,7 +40,6 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.net.Socket;
-import java.net.SocketTimeoutException;
 import java.nio.charset.StandardCharsets;
 
 import org.junit.jupiter.api.Test;
@@ -237,7 +235,7 @@ class HttpServerUpgradeHandlerTest {
             in.readLine();
 
             assertThat(in.readLine()).isEqualTo("Invalid HTTP2-Settings header");
-            assertThatThrownBy(in::read).isInstanceOf(SocketTimeoutException.class);
+            assertThat(in.read()).isEqualTo(-1);
         }
     }
 }

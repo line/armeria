@@ -30,6 +30,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.netty.channel.ChannelFutureListener.CLOSE;
 import static io.netty.channel.ChannelFutureListener.CLOSE_ON_FAILURE;
 import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
@@ -289,7 +290,7 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
         // Prepare and send the upgrade response. Wait for this write to complete before upgrading,
         // since we need the old codec in-place to properly encode the response.
         if (!upgradeCodec.prepareUpgradeResponse(ctx, request)) {
-            ctx.writeAndFlush(INVALID_SETTINGS_HEADER_RESPONSE.retain()).addListener(CLOSE_ON_FAILURE);
+            ctx.writeAndFlush(INVALID_SETTINGS_HEADER_RESPONSE.retain()).addListener(CLOSE);
             handlingInvalidSettingsHeader = true;
             return false;
         }
