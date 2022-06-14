@@ -1409,7 +1409,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         buf.append(System.lineSeparator())
            .append("Children:");
 
-        for (int i = 0;i < numChildren;i++) {
+        for (int i = 0; i < numChildren; i++) {
             buf.append(System.lineSeparator());
             buf.append('\t');
             buf.append(children.get(i));
