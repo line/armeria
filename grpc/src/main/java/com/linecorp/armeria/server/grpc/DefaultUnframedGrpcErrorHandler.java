@@ -255,7 +255,7 @@ final class DefaultUnframedGrpcErrorHandler {
                 try {
                     rpcStatus = decodeGrpcStatusDetailsBin(grpcStatusDetailsBin);
                 } catch (InvalidProtocolBufferException e) {
-                    logger.warn("invalid protobuf exception happens when decode grpc-status-details-bin {}",
+                    logger.warn("Unexpected exception while decoding grpc-status-details-bin: {}",
                                 grpcStatusDetailsBin);
                 }
                 if (rpcStatus != null) {
