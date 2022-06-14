@@ -60,9 +60,7 @@ final class HttpClientDelegate implements HttpClient {
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final Throwable throwable = ClientPendingThrowableUtil.pendingThrowable(ctx);
         if (throwable != null) {
-            final UnprocessedRequestException cause = UnprocessedRequestException.of(throwable);
-            handleEarlyRequestException(ctx, req, cause);
-            return HttpResponse.ofFailure(cause);
+            return earlyFailedResponse(throwable, ctx, req);
         }
 
         final Endpoint endpoint = ctx.endpoint();
@@ -77,17 +75,11 @@ final class HttpClientDelegate implements HttpClient {
             // and response created here will be exposed only when `EndpointGroup.select()` returned `null`.
             //
             // See `DefaultClientRequestContext.init()` for more information.
-            final UnprocessedRequestException cause =
-                    UnprocessedRequestException.of(EmptyEndpointGroupException.get(ctx.endpointGroup()));
-            handleEarlyRequestException(ctx, req, cause);
-            return HttpResponse.ofFailure(cause);
+            return earlyFailedResponse(EmptyEndpointGroupException.get(ctx.endpointGroup()), ctx, req);
         }
 
         if (!isValidPath(req)) {
-            final UnprocessedRequestException cause = UnprocessedRequestException.of(
-                    new IllegalArgumentException("invalid path: " + req.path()));
-            handleEarlyRequestException(ctx, req, cause);
-            return HttpResponse.ofFailure(cause);
+            return earlyFailedResponse(new IllegalArgumentException("invalid path: " + req.path()), ctx, req);
         }
 
         final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol().defaultPort());
@@ -227,6 +219,12 @@ final class HttpClientDelegate implements HttpClient {
 
     private static boolean isValidPath(HttpRequest req) {
         return PathAndQuery.parse(req.path()) != null;
+    }
+
+    private static HttpResponse earlyFailedResponse(Throwable t, ClientRequestContext ctx, HttpRequest req) {
+        final UnprocessedRequestException cause = UnprocessedRequestException.of(t);
+        handleEarlyRequestException(ctx, req, cause);
+        return HttpResponse.ofFailure(cause);
     }
 
     private static void handleEarlyRequestException(ClientRequestContext ctx,

@@ -54,7 +54,6 @@ class ClientPendingThrowableUtilTest {
         final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         setPendingThrowable(ctx, wrapper);
         final Throwable throwable = pendingThrowable(ctx);
-        assert throwable != null;
         assertThat(throwable).isEqualTo(e);
         removePendingThrowable(ctx);
         assertThat(pendingThrowable(ctx)).isNull();

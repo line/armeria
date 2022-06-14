@@ -109,7 +109,6 @@ class RetryingClientWithEmptyEndpointGroupTest {
             assertThat(ctxCaptor.get().log().children()).hasSize(maxTotalAttempts);
             ctxCaptor.get().log().children().forEach(log -> {
                 final Throwable responseCause = log.whenComplete().join().responseCause();
-                assert responseCause != null;
                 assertThat(responseCause)
                         .isInstanceOf(UnprocessedRequestException.class)
                         .hasCauseInstanceOf(EndpointSelectionTimeoutException.class);
@@ -147,7 +146,6 @@ class RetryingClientWithEmptyEndpointGroupTest {
             for (int i = 0; i < selectAttempts - 1; i++) {
                 final RequestLogAccess log = ctxCaptor.get().log().children().get(i);
                 final Throwable responseCause = log.whenComplete().join().responseCause();
-                assert responseCause != null;
                 assertThat(responseCause)
                         .isInstanceOf(UnprocessedRequestException.class)
                         .hasCauseInstanceOf(EndpointSelectionTimeoutException.class);
