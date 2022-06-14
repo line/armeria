@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.Any;
@@ -90,10 +91,14 @@ final class DefaultUnframedGrpcErrorHandler {
      */
     private static UnframedGrpcStatusMappingFunction ofStatusMappingFunction(
             UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        return requireNonNull(statusMappingFunction, "statusMappingFunction")
-                .orElse(UnframedGrpcStatusMappingFunction.of());
+        requireNonNull(statusMappingFunction, "statusMappingFunction");
+        if (statusMappingFunction == UnframedGrpcStatusMappingFunction.of()) {
+            return statusMappingFunction;
+        }
+        return statusMappingFunction.orElse(UnframedGrpcStatusMappingFunction.of());
     }
 
+    @VisibleForTesting
     static JsonNode convertErrorDetailToJsonNode(List<Any> details)
             throws IOException {
         final StringWriter jsonObjectWriter = new StringWriter();
@@ -108,6 +113,7 @@ final class DefaultUnframedGrpcErrorHandler {
         }
     }
 
+    @VisibleForTesting
     static com.google.rpc.Status decodeGrpcStatusDetailsBin(String grpcStatusDetailsBin)
             throws InvalidProtocolBufferException {
         final byte[] result = Base64.getDecoder().decode(grpcStatusDetailsBin);
@@ -217,7 +223,7 @@ final class DefaultUnframedGrpcErrorHandler {
 
     /**
      * Returns a rich error JSON response based on Google APIs.
-     * Please refer <a href="https://cloud.google.com/apis/design/errors#error_model">Google error model</a>
+     * Please refer to <a href="https://cloud.google.com/apis/design/errors#error_model">Google error model</a>
      * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
      *                              to an {@link HttpStatus} code.
      */
@@ -255,7 +261,7 @@ final class DefaultUnframedGrpcErrorHandler {
                 try {
                     rpcStatus = decodeGrpcStatusDetailsBin(grpcStatusDetailsBin);
                 } catch (InvalidProtocolBufferException e) {
-                    logger.warn("invalid protobuf exception happens when decode grpc-status-details-bin {}",
+                    logger.warn("Unexpected exception while decoding grpc-status-details-bin: {}",
                                 grpcStatusDetailsBin);
                 }
                 if (rpcStatus != null) {
