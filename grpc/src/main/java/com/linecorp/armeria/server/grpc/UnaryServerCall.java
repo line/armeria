@@ -94,13 +94,13 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
     @Override
     public void request(int numMessages) {
         if (ctx.eventLoop().inEventLoop()) {
-            request0();
+            request();
         } else {
-            ctx.eventLoop().execute(this::request0);
+            ctx.eventLoop().execute(this::request);
         }
     }
 
-    private void request0() {
+    private void request() {
         if (listener() == null) {
             return;
         }
@@ -122,6 +122,8 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             try {
                 onRequestMessage(deframe(objects), true);
             } catch (Exception ex) {
+                // An exception could be raised when the deframer detects malformed data which is released by
+                // the try-with-resource block. So `objects` don't need to be released here.
                 onError(ex);
             }
             return null;
@@ -201,9 +203,10 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             // Set responseContent before closing stream to use responseCause in error handling
             ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, responseMessage), null);
             resFuture.complete(response);
-            closeListener(status, completed, false);
         } catch (Exception ex) {
             resFuture.completeExceptionally(ex);
+        } finally {
+            closeListener(status, completed, false);
         }
     }
 

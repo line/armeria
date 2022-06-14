@@ -257,34 +257,21 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
                                RequestLogProperty.RESPONSE_CONTENT);
 
-        final ServerCall<?, ?> call;
         final HttpResponse res;
         if (method.getMethodDescriptor().getType() == MethodType.UNARY) {
             final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
             res = HttpResponse.from(resFuture);
-            call = startCall(registry.simpleMethodName(method.getMethodDescriptor()), method, ctx, req, res,
-                             resFuture, serializationFormat);
+            startCall(registry.simpleMethodName(method.getMethodDescriptor()), method, ctx, req, res,
+                      resFuture, serializationFormat);
         } else {
             res = HttpResponse.streaming();
-            call = startCall(
-                    registry.simpleMethodName(method.getMethodDescriptor()), method, ctx, req, res, null,
-                    serializationFormat);
-        }
-        if (call != null) {
-            ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-                Status status = Status.CANCELLED.withCause(cancellationCause);
-                if (cancellationCause instanceof RequestTimeoutException) {
-                    status = status.withDescription("Request timed out");
-                }
-                call.close(status, new Metadata());
-                return null;
-            });
+            startCall(registry.simpleMethodName(method.getMethodDescriptor()), method, ctx, req, res, null,
+                      serializationFormat);
         }
         return res;
     }
 
-    @Nullable
-    private <I, O> ServerCall<I, O> startCall(
+    private <I, O> void startCall(
             String simpleMethodName,
             ServerMethodDefinition<I, O> methodDef,
             ServiceRequestContext ctx,
@@ -306,7 +293,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             logger.warn(
                     "Exception thrown from streaming request stub method before processing any request data" +
                     " - this is likely a bug in the stub implementation.", t);
-            return null;
+            return;
         }
         if (listener == null) {
             // This will never happen for normal generated stubs but could conceivably happen for manually
@@ -314,9 +301,17 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             throw new NullPointerException(
                     "startCall() returned a null listener for method " + methodDescriptor.getFullMethodName());
         }
+
         call.setListener(listener);
         call.startDeframing();
-        return call;
+        ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
+            Status status = Status.CANCELLED.withCause(cancellationCause);
+            if (cancellationCause instanceof RequestTimeoutException) {
+                status = status.withDescription("Request timed out");
+            }
+            call.close(status, new Metadata());
+            return null;
+        });
     }
 
     private <I, O> AbstractServerCall<I, O> newServerCall(
