@@ -65,8 +65,8 @@ final class DefaultTextLogFormatter implements LogFormatter {
         }
 
         final String sanitizedTrailers;
-        if (availableProperties.contains(RequestLogProperty.REQUEST_TRAILERS)
-            && !log.requestTrailers().isEmpty()) {
+        if (availableProperties.contains(RequestLogProperty.REQUEST_TRAILERS) &&
+            !log.requestTrailers().isEmpty()) {
             sanitizedTrailers = sanitize(log, sanitizers.trailersSanitizer(), log.requestTrailers());
         } else {
             sanitizedTrailers = null;
@@ -94,7 +94,7 @@ final class DefaultTextLogFormatter implements LogFormatter {
             buf.append(", scheme=");
             if (availableProperties.contains(RequestLogProperty.SCHEME) && log.scheme() != null) {
                 buf.append(log.scheme().uriText());
-            } else {
+            } else if (availableProperties.contains(RequestLogProperty.SESSION)) {
                 buf.append(SerializationFormat.UNKNOWN.uriText())
                    .append('+')
                    .append(log.sessionProtocol() != null ? log.sessionProtocol().uriText() : "unknown");
@@ -142,8 +142,8 @@ final class DefaultTextLogFormatter implements LogFormatter {
         }
 
         final String sanitizedHeaders;
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_HEADERS)
-            && log.responseHeaders() != null) {
+        if (availableProperties.contains(RequestLogProperty.RESPONSE_HEADERS) &&
+            log.responseHeaders() != null) {
             sanitizedHeaders = sanitize(log, sanitizers.headersSanitizer(), log.responseHeaders());
         } else {
             sanitizedHeaders = null;
@@ -158,8 +158,8 @@ final class DefaultTextLogFormatter implements LogFormatter {
         }
 
         final String sanitizedTrailers;
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_TRAILERS)
-            && !log.responseTrailers().isEmpty()) {
+        if (availableProperties.contains(RequestLogProperty.RESPONSE_TRAILERS) &&
+            !log.responseTrailers().isEmpty()) {
             sanitizedTrailers = sanitize(log, sanitizers.trailersSanitizer(), log.responseTrailers());
         } else {
             sanitizedTrailers = null;
@@ -192,7 +192,8 @@ final class DefaultTextLogFormatter implements LogFormatter {
 
             if (sanitizedContent != null) {
                 buf.append(", content=").append(sanitizedContent);
-            } else if (log.responseContentPreview() != null) {
+            } else if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT_PREVIEW) &&
+                       log.responseContentPreview() != null) {
                 buf.append(", contentPreview=").append(log.responseContentPreview());
             }
 
