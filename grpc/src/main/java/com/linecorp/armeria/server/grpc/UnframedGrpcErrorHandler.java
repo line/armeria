@@ -49,7 +49,7 @@ public interface UnframedGrpcErrorHandler {
     }
 
     /**
-     * Returns a json response.
+     * Returns a JSON response.
      */
     static UnframedGrpcErrorHandler ofJson() {
         return DefaultUnframedGrpcErrorHandler.ofJson(UnframedGrpcStatusMappingFunction.of());
