@@ -64,6 +64,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.Status;
 import io.grpc.Status.Code;
+import io.netty.buffer.ByteBuf;
 
 final class DefaultUnframedGrpcErrorHandler {
 
@@ -232,6 +233,7 @@ final class DefaultUnframedGrpcErrorHandler {
                 requireNonNull(statusMappingFunction, "statusMappingFunction")
                         .orElse(UnframedGrpcStatusMappingFunction.of());
         return (ctx, status, response) -> {
+            final ByteBuf buffer = ctx.alloc().buffer();
             final Code grpcCode = status.getCode();
             @Nullable
             final String grpcMessage = status.getDescription();
@@ -248,6 +250,7 @@ final class DefaultUnframedGrpcErrorHandler {
                                                                            grpcCode.value())
                                                                    .build();
             final ImmutableMap.Builder<String, Object> messageBuilder = ImmutableMap.builder();
+            messageBuilder.put("code", httpStatus.code());
             messageBuilder.put("status", grpcCode.name());
             if (grpcMessage != null) {
                 messageBuilder.put("message", grpcMessage);
@@ -265,7 +268,6 @@ final class DefaultUnframedGrpcErrorHandler {
                 }
                 if (rpcStatus != null) {
                     try {
-                        messageBuilder.put("code", rpcStatus.getCode());
                         messageBuilder.put("details", convertErrorDetailToJsonNode(rpcStatus.getDetailsList()));
                     } catch (IOException e) {
                         logger.warn("Unexpected exception while converting RPC status {} to strings",
