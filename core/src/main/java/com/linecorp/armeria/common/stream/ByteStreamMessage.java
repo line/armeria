@@ -105,7 +105,7 @@ public interface ByteStreamMessage extends StreamMessage<HttpData> {
      * List<HttpData> collected = ByteStreamMessage.of(source).range(4, 8).collect().join();
      * assert collected.equals(List.of(HttpData.ofUtf8("5"),
      *                                 HttpData.ofUtf8("67890"),
-     *                                 HttpData.ofUtf8("11"));
+     *                                 HttpData.ofUtf8("12")));
      * }</pre>
      *
      * @throws IllegalArgumentException if the {@code offset} is negative or the {@code length} is non-positive.
