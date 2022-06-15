@@ -19,7 +19,6 @@ package com.linecorp.armeria.common.stream;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.nio.file.Path;
 import java.util.concurrent.ExecutorService;
 
 import com.linecorp.armeria.common.HttpData;
@@ -43,7 +42,7 @@ abstract class AbstractByteStreamMessageBuilder {
     }
 
     /**
-     * Sets the specified {@link ExecutorService} that performs blocking IO read the specified {@link Path}.
+     * Sets the specified {@link ExecutorService} that performs blocking IO read operations.
      */
     AbstractByteStreamMessageBuilder executor(ExecutorService executor) {
         requireNonNull(executor, "executor");
@@ -56,7 +55,7 @@ abstract class AbstractByteStreamMessageBuilder {
     }
 
     /**
-     * Sets the specified {@link ByteBufAllocator} to this {@link PathStreamMessageBuilder}.
+     * Sets the specified {@link ByteBufAllocator}.
      * If unspecified, {@link ByteBufAllocator#DEFAULT} is used by default.
      */
     AbstractByteStreamMessageBuilder alloc(ByteBufAllocator alloc) {
@@ -70,7 +69,7 @@ abstract class AbstractByteStreamMessageBuilder {
     }
 
     /**
-     * Sets the buffer size used to create a buffer used to read data from the {@link Path}.
+     * Sets the buffer size used to create a buffer used to read data from the source.
      * The newly created {@link StreamMessage} will emit {@link HttpData}s chunked to
      * size less than or equal to the buffer size.
      * If unspecified, {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE} is used by default.
