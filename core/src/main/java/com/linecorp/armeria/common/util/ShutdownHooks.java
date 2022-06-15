@@ -62,7 +62,7 @@ public final class ShutdownHooks {
     }
 
     /**
-     *　Adds an {@link AutoCloseable}  and a {@link Runnable} to the JVM shutdown hook.
+     *　Adds an {@link AutoCloseable} and a {@link Runnable} to the JVM shutdown hook.
      */
     public static CompletableFuture<Void> addClosingTask(
             AutoCloseable asyncCloseable, @Nullable Runnable whenClosing, String name) {
