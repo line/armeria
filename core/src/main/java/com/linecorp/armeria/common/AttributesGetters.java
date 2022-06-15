@@ -76,6 +76,28 @@ public interface AttributesGetters {
      * Returns the {@link Iterator} of all {@link Entry}s this {@link AttributesGetters} contains.
      *
      * <p>Unlike {@link #attrs()}, this does not iterate {@link #parent()}}.</p>
+     * For example:
+     * <pre>{@code
+     * static final AttributeKey<String> USER_ID = AttributeKey.valueOf("USER_ID");
+     * static final AttributeKey<String> SECRET_TOKEN = AttributeKey.valueOf("SECRET_TOKEN");
+     * static final AttributeKey<String> TRACE_ID = AttributeKey.valueOf("TRACE_ID");
+     *
+     * Attributes parent = Attributes.of(USER_ID, "Meri Kim",
+     *                                   SECRET_TOKEN, "secret-1");
+     *
+     * Attributes child = Attributes.builder(parent)
+     *                              .set(SECRET_TOKEN, "secret-2")
+     *                              .set(TRACE_ID, "trace-1)
+     *                              .build();
+     *
+     * Iterator<Entry<AttributeKey<?>, Object>> attrs = child.ownAttrs();
+     * assert Iterables.size(attrs) == 2;
+     * assert Streams.stream(child.attrs())
+     *               .map(Entry::getValue)
+     *               .sorted()
+     *               .collect(Collectors.toList())
+     *               .equals(List.of("secret-2", "trace-1"));
+     * }</pre>
      *
      * @see #attrs()
      */
@@ -85,7 +107,30 @@ public interface AttributesGetters {
      * Returns the {@link Iterator} of all {@link Entry}s this {@link AttributesGetters} contains.
      *
      * <p>The {@link Iterator} returned by this method will also yield the {@link Entry}s from the
-     * {@link #parent()}} except those whose {@link AttributeKey} exist already in this context, e.g.
+     * {@link #parent()}} except those whose {@link AttributeKey} exist already in this context.
+     * For example:
+     * <pre>{@code
+     * static final AttributeKey<String> USER_ID = AttributeKey.valueOf("USER_ID");
+     * static final AttributeKey<String> SECRET_TOKEN = AttributeKey.valueOf("SECRET_TOKEN");
+     * static final AttributeKey<String> TRACE_ID = AttributeKey.valueOf("TRACE_ID");
+     *
+     * Attributes parent = Attributes.of(USER_ID, "Meri Kim",
+     *                                   SECRET_TOKEN, "secret-1");
+     *
+     * Attributes child = Attributes.builder(parent)
+     *                              .set(SECRET_TOKEN, "secret-2")
+     *                              .set(TRACE_ID, "trace-1)
+     *                              .build();
+     *
+     * Iterator<Entry<AttributeKey<?>, Object>> attrs = child.attrs();
+     * assert Iterables.size(attrs) == 3;
+     * assert Streams.stream(child.attrs())
+     *               .map(Entry::getValue)
+     *               .sorted()
+     *               .collect(Collectors.toList())
+     *               // "secret-1" is overridden by "secret-2"
+     *               .equals(List.of("Meri Kim", "secret-2", "trace-1"));
+     * }</pre>
      */
     Iterator<Entry<AttributeKey<?>, Object>> attrs();
 
@@ -106,6 +151,24 @@ public interface AttributesGetters {
 
     /**
      * Returns the number of {@link AttributeKey}-value mappings in this {@link AttributesGetters}.
+     *
+     * <p>If the same {@link AttributeKey} is both in the {@link #parent()} and the child {@link Attributes},
+     * only the {@link AttributeKey}-value mapping in the child will be counted.
+     * <pre>{@code
+     * static final AttributeKey<String> USER_ID = AttributeKey.valueOf("USER_ID");
+     * static final AttributeKey<String> SECRET_TOKEN = AttributeKey.valueOf("SECRET_TOKEN");
+     * static final AttributeKey<String> TRACE_ID = AttributeKey.valueOf("TRACE_ID");
+     *
+     * Attributes parent = Attributes.of(USER_ID, "Meri Kim",
+     *                                   SECRET_TOKEN, "secret-1");
+     * assert parent.size() == 2;
+     *
+     * Attributes child = Attributes.builder(parent)
+     *                              .set(SECRET_TOKEN, "secret-2")
+     *                              .set(TRACE_ID, "trace-1)
+     *                              .build();
+     * assert child.size() == 3;
+     * }</pre>
      */
     int size();
 }

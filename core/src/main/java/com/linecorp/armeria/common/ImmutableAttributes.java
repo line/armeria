@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.ImmutableAttributesBuilder.NULL_VALUE;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.Iterator;
@@ -72,6 +73,7 @@ class ImmutableAttributes implements Attributes {
     @Nullable
     @Override
     public <T> T attr(AttributeKey<T> key) {
+        requireNonNull(key, "key");
         final T value = ownAttr0(key);
         if (value != null) {
             return value == NULL_VALUE ? null : value;

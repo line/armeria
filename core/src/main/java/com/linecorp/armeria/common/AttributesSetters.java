@@ -44,7 +44,7 @@ public interface AttributesSetters {
      *
      * Attributes child = Attributes.builder(attributes)
      *                              .set(SECRET_TOKEN, null)
-     *                              .set(TRACE_ID, "trace-2)
+     *                              .set(TRACE_ID, "trace-2")
      *                              .build();
      *
      * // Any mutations in the child do not modify the value in the parent.
@@ -92,7 +92,7 @@ public interface AttributesSetters {
      * // Removes the value of the original attribute.
      * assert newAttributes.attr(SECRET_TOKEN) == null;
      * // Overrides the value of the original attribute.
-     * assert child.attr(TRACE_ID).equals("trace-2");
+     * assert newAttributes.attr(TRACE_ID).equals("trace-2");
      * }</pre>
      *
      * @return the previous value associated with the {@link AttributeKey},
