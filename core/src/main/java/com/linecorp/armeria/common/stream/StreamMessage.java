@@ -219,26 +219,6 @@ public interface StreamMessage<T> extends Publisher<T> {
      * size less than or equal to {@code bufferSize}.
      *
      * @param path the path of the file
-     * @param executor the {@link ExecutorService} which performs blocking IO read
-     *
-     * @deprecated Use {@link #builder(Path)} with {@link PathStreamMessageBuilder#executor(ExecutorService)}.
-     */
-    @Deprecated
-    static ByteStreamMessage of(Path path, @Nullable ExecutorService executor) {
-        if (executor == null) {
-            return builder(path).build();
-        } else {
-            return builder(path).executor(executor).build();
-        }
-    }
-
-    /**
-     * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
-     * The specified {@code bufferSize} is used to create a buffer used to read data from the {@link Path}.
-     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
-     * size less than or equal to {@code bufferSize}.
-     *
-     * @param path the path of the file
      * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
      *
      * @deprecated Use {@link #builder(Path)} with {@link PathStreamMessageBuilder#bufferSize(int)}
