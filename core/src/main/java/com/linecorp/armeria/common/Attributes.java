@@ -16,9 +16,10 @@
 
 package com.linecorp.armeria.common;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Consumer;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;
@@ -82,7 +83,8 @@ public interface Attributes extends AttributesGetters {
      * Returns a new {@link Attributes} with the specified parent {@link AttributesGetters}.
      * The parent {@link AttributesGetters} can be accessed via {@link #attr(AttributeKey)} or {@link #attrs()}.
      */
-    static Attributes of(@Nullable AttributesGetters parent) {
+    static Attributes fromParent(AttributesGetters parent) {
+        requireNonNull(parent, "parent");
         return builder(parent).build();
     }
 
@@ -90,15 +92,17 @@ public interface Attributes extends AttributesGetters {
      * Returns a new empty {@link AttributesBuilder}.
      */
     static AttributesBuilder builder() {
-        return builder(null);
+        return new ImmutableAttributesBuilder(null);
     }
 
     /**
      * Returns a new empty {@link AttributesBuilder}.
      * The parent {@link Attributes} can be accessed via {@link #attr(AttributeKey)} or {@link #attrs()}.
-     * Note that any mutations in {@link AttributesBuilder} won't modify the attributes in the parent.
+     *
+     * <p>Note that any mutations in {@link AttributesBuilder} won't modify the attributes in the parent.
      */
-    static AttributesBuilder builder(@Nullable AttributesGetters parent) {
+    static AttributesBuilder builder(AttributesGetters parent) {
+        requireNonNull(parent, "parent");
         return new ImmutableAttributesBuilder(parent);
     }
 
@@ -114,6 +118,7 @@ public interface Attributes extends AttributesGetters {
      * @see #toBuilder()
      */
     default Attributes withMutations(Consumer<AttributesBuilder> mutator) {
+        requireNonNull(mutator, "mutator");
         final AttributesBuilder builder = toBuilder();
         mutator.accept(builder);
         return builder.build();

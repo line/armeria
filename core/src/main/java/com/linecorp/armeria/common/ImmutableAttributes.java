@@ -32,7 +32,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 
-class ImmutableAttributes implements Attributes {
+final class ImmutableAttributes implements Attributes {
 
     static final Attributes EMPTY = new ImmutableAttributes(null, ImmutableMap.of());
 
@@ -55,7 +55,13 @@ class ImmutableAttributes implements Attributes {
 
     @Override
     public ConcurrentAttributes toConcurrentAttributes() {
-        final ConcurrentAttributes concurrentAttributes = ConcurrentAttributes.of(parent);
+        final ConcurrentAttributes concurrentAttributes;
+        if (parent == null) {
+            concurrentAttributes = ConcurrentAttributes.of();
+        } else {
+            concurrentAttributes = ConcurrentAttributes.fromParent(parent);
+        }
+
         if (!attributes.isEmpty()) {
             attributes.forEach((k, v) -> {
                 if (v == NULL_VALUE) {

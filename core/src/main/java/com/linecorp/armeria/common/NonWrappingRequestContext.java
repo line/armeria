@@ -78,7 +78,12 @@ public abstract class NonWrappingRequestContext implements RequestContext {
             @Nullable AttributesGetters rootAttributeMap) {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
-        attrs = ConcurrentAttributes.of(rootAttributeMap);
+        if (rootAttributeMap == null) {
+            attrs = ConcurrentAttributes.of();
+        } else {
+            attrs = ConcurrentAttributes.fromParent(rootAttributeMap);
+        }
+
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.id = requireNonNull(id, "id");
         this.method = requireNonNull(method, "method");

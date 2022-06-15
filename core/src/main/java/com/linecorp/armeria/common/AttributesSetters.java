@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import io.netty.util.AttributeKey;
 
 /**
- * Sets entries for building an {@link Attributes} or {@link ConcurrentAttributes}.
+ * Sets entries for building an {@link Attributes} or updating {@link ConcurrentAttributes}.
  */
 @UnstableApi
 public interface AttributesSetters {
