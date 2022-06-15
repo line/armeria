@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A utility class for adding a task with closing a {@link AutoCloseable} on shutdown.
+ * A utility class for adding a task with an {@link AutoCloseable} on shutdown.
  */
 @UnstableApi
 public final class ShutdownHooks {
