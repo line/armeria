@@ -385,18 +385,18 @@ public final class VirtualHost {
         final Routed<ServiceConfig> routed = router.find(requireNonNull(routingCtx, "routingCtx"));
         switch (routed.routingResultType()) {
             case MATCHED:
-                routingCtx.setResult(routed);
+                maybeSetRoutingResult(routingCtx, routed);
                 return routed;
             case NOT_MATCHED:
                 if (!useFallbackService) {
-                    // A result is set when a fallback service is used.
+                    maybeSetRoutingResult(routingCtx, routed);
                     return routed;
                 }
                 break;
             case CORS_PREFLIGHT:
                 assert routingCtx.status() == RoutingStatus.CORS_PREFLIGHT;
                 if (routed.value().handlesCorsPreflight()) {
-                    routingCtx.setResult(routed);
+                    maybeSetRoutingResult(routingCtx, routed);
                     // CorsService will handle the preflight request
                     // even if the service does not handle an OPTIONS method.
                     return routed;
@@ -416,8 +416,14 @@ public final class VirtualHost {
                                        .query(routingCtx.query())
                                        .build(),
                           fallbackServiceConfig);
-        routingCtx.setResult(fallbackRoute);
+        maybeSetRoutingResult(routingCtx, fallbackRoute);
         return fallbackRoute;
+    }
+
+    private static void maybeSetRoutingResult(RoutingContext routingContext, Routed<ServiceConfig> routed) {
+        if (!routingContext.hasResult()) {
+            routingContext.setResult(routed);
+        }
     }
 
     ServiceConfig fallbackServiceConfig() {
