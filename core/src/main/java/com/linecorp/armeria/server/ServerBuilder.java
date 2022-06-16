@@ -2001,6 +2001,6 @@ public final class ServerBuilder {
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null,
                 meterRegistry, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader);
+                enableServerHeader, enableDateHeader, dependencyInjector);
     }
 }

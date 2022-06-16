@@ -661,7 +661,7 @@ final class DefaultServerConfig implements ServerConfig {
                     meterRegistry(), channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
-                    isServerHeaderEnabled(), isDateHeaderEnabled());
+                    isServerHeaderEnabled(), isDateHeaderEnabled(), dependencyInjector());
         }
 
         return strVal;
@@ -683,7 +683,8 @@ final class DefaultServerConfig implements ServerConfig {
             Predicate<? super InetAddress> clientAddressTrustedProxyFilter,
             Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
-            boolean serverHeaderEnabled, boolean dateHeaderEnabled) {
+            boolean serverHeaderEnabled, boolean dateHeaderEnabled,
+            @Nullable DependencyInjector dependencyInjector) {
 
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -776,6 +777,10 @@ final class DefaultServerConfig implements ServerConfig {
         buf.append(serverHeaderEnabled ? "enabled" : "disabled");
         buf.append(", dateHeader: ");
         buf.append(dateHeaderEnabled ? "enabled" : "disabled");
+        if (dependencyInjector != null) {
+            buf.append(", dependencyInjector: ");
+            buf.append(dependencyInjector);
+        }
         buf.append(')');
 
         return buf.toString();

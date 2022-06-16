@@ -70,8 +70,8 @@ public interface DependencyInjector {
     void shutdown();
 
     /**
-     * Returns a new {@link DependencyInjector} that tries this {@link DependencyInjector} first and the
-     * specified {@link DependencyInjector} if .
+     * Returns a new {@link DependencyInjector} that tries {@link #getInstance(Class)} of
+     * this {@link DependencyInjector} first and the specified {@link DependencyInjector}.
      */
     default DependencyInjector orElse(DependencyInjector dependencyInjector) {
         return new OrElseDependencyInjector(this, dependencyInjector);
