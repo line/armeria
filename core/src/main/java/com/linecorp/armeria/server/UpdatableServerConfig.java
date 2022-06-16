@@ -220,11 +220,6 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
-    public boolean shutdownBlockingTaskExecutorOnStop() {
-        return delegate.shutdownBlockingTaskExecutorOnStop();
-    }
-
-    @Override
     public MeterRegistry meterRegistry() {
         return delegate.meterRegistry();
     }

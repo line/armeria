@@ -82,7 +82,6 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
     @Test
     void testAllConfigsAreSet() {
         final boolean verboseResponse = true;
-        final boolean shutdownOnStop = true;
         final long maxRequestLength = 2 * 1024;
         final AccessLogWriter accessLogWriter = AccessLogWriter.common();
         final Duration requestTimeoutDuration = Duration.ofMillis(1000);
@@ -96,7 +95,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
                 .maxRequestLength(maxRequestLength)
                 .exceptionHandlers((ctx, request, cause) -> HttpResponse.of(400))
                 .pathPrefix("/path")
-                .accessLogWriter(accessLogWriter, shutdownOnStop)
+                .accessLogWriter(accessLogWriter, false)
                 .verboseResponses(verboseResponse)
                 .defaultServiceName(defaultServiceName)
                 .defaultLogName(defaultLogName)
@@ -110,7 +109,6 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(pathBar.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
         assertThat(pathBar.maxRequestLength()).isEqualTo(maxRequestLength);
         assertThat(pathBar.accessLogWriter()).isEqualTo(accessLogWriter);
-        assertThat(pathBar.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(pathBar.verboseResponses()).isTrue();
         assertThat(pathBar.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
         final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
@@ -122,7 +120,6 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
         assertThat(pathFoo.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
         assertThat(pathFoo.maxRequestLength()).isEqualTo(maxRequestLength);
         assertThat(pathFoo.accessLogWriter()).isEqualTo(accessLogWriter);
-        assertThat(pathFoo.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(pathFoo.verboseResponses()).isTrue();
         assertThat(pathFoo.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(pathFoo.defaultLogName()).isEqualTo(defaultLogName);

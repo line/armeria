@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.findName;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
@@ -61,6 +62,7 @@ import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.Cookie;
@@ -75,6 +77,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.Multipart;
+import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.DependencyInjector;
@@ -441,7 +444,7 @@ final class AnnotatedValueResolver {
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
             final String name = findName(param, typeElement);
-            if (type == File.class || type == Path.class) {
+            if (type == File.class || type == Path.class || type == MultipartFile.class) {
                 return ofFileParam(name, annotatedElement, typeElement, type, description);
             }
             if (pathParams.contains(name)) {
@@ -679,6 +682,16 @@ final class AnnotatedValueResolver {
                     .build();
         }
 
+        if (actual == MultipartFile.class) {
+            return new Builder(annotatedElement, type)
+                    .resolver((unused, ctx) -> {
+                        final String filename = getName(annotatedElement);
+                        return Iterables.getFirst(ctx.aggregatedMultipart().files().get(filename), null);
+                    })
+                    .aggregation(AggregationStrategy.ALWAYS)
+                    .build();
+        }
+
         if (actual == Cookies.class) {
             return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> {
@@ -808,14 +821,18 @@ final class AnnotatedValueResolver {
             if (fileAggregatedMultipart == null) {
                 return resolver.defaultOrException();
             }
-            final Function<? super Path, Object> mapper;
-            if (resolver.elementType() == File.class) {
-                mapper = Path::toFile;
-            } else {
+            final Function<? super MultipartFile, Object> mapper;
+            final Class<?> elementType = resolver.elementType();
+            if (elementType == File.class) {
+                mapper = MultipartFile::file;
+            } else if (elementType == MultipartFile.class) {
                 mapper = Function.identity();
+            } else {
+                assert elementType == Path.class;
+                mapper = multipartFile -> multipartFile.file().toPath();
             }
             final String name = resolver.httpElementName();
-            final List<Path> values = fileAggregatedMultipart.files().get(name);
+            final List<MultipartFile> values = fileAggregatedMultipart.files().get(name);
             if (!resolver.hasContainer()) {
                 if (values != null && !values.isEmpty()) {
                     return mapper.apply(values.get(0));
@@ -1148,12 +1165,23 @@ final class AnnotatedValueResolver {
             checkArgument(resolver != null, "'resolver' should be specified");
 
             final boolean isOptional = type == Optional.class;
-            final boolean isNullable = isNullable();
+            final boolean isAnnotatedNullable = isAnnotatedNullable(typeElement);
+            final boolean isMarkedNullable = KotlinUtil.isMarkedNullable(typeElement);
+            final boolean isNullable = isAnnotatedNullable || isMarkedNullable;
             final Type originalParameterizedType = parameterizedTypeOf(typeElement);
             final Type unwrappedParameterizedType = isOptional ? unwrapOptional(originalParameterizedType)
                                                                : originalParameterizedType;
+
+            // Used only for warning message.
+            final String nullableRepresentation =
+                    isMarkedNullable && !isAnnotatedNullable ? "?(Kotlin nullable type)"
+                                                             : "@Nullable";
+
+            if (isAnnotatedNullable && isMarkedNullable) {
+                warnRedundantUse("@Nullable", "?(Kotlin nullable type)");
+            }
             if (isOptional && isNullable) {
-                warnRedundantUse("Optional", "@Nullable");
+                warnRedundantUse("Optional", nullableRepresentation);
             }
 
             final boolean shouldExist;
@@ -1166,7 +1194,7 @@ final class AnnotatedValueResolver {
                     if (isOptional) {
                         warnRedundantUse("@Default", "Optional");
                     } else if (isNullable) {
-                        warnRedundantUse("@Default", "@Nullable");
+                        warnRedundantUse("@Default", nullableRepresentation);
                     }
 
                     shouldExist = false;
@@ -1195,7 +1223,7 @@ final class AnnotatedValueResolver {
                 if (isOptional) {
                     warnRedundantUse("a path variable", "Optional");
                 } else {
-                    warnRedundantUse("a path variable", "@Nullable");
+                    warnRedundantUse("a path variable", nullableRepresentation);
                 }
             }
 
@@ -1268,16 +1296,6 @@ final class AnnotatedValueResolver {
             logger.warn(buf.toString());
         }
 
-        private boolean isNullable() {
-            for (Annotation a : annotatedElement.getAnnotations()) {
-                final String annotationTypeName = a.annotationType().getName();
-                if (annotationTypeName.endsWith(".Nullable")) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         @Nullable
         private Class<?> getContainerType(Type parameterizedType) {
             final Class<?> rawType = toRawType(parameterizedType);
@@ -1333,6 +1351,16 @@ final class AnnotatedValueResolver {
                         "Unsupported or invalid parameter type: " + parameterizedType, cause);
             }
             return toRawType(elementType);
+        }
+
+        private static boolean isAnnotatedNullable(AnnotatedElement annotatedElement) {
+            for (Annotation a : annotatedElement.getAnnotations()) {
+                final String annotationTypeName = a.annotationType().getName();
+                if (annotationTypeName.endsWith(".Nullable")) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Nullable

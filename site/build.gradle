@@ -14,7 +14,7 @@ buildscript {
     }
     dependencies {
         classpath "com.github.node-gradle:gradle-node-plugin:${managedVersions['com.github.node-gradle:gradle-node-plugin']}"
-        classpath 'org.jsoup:jsoup:1.13.1'
+        classpath 'org.jsoup:jsoup:1.14.3'
     }
 }
 

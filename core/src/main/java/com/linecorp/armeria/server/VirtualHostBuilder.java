@@ -56,6 +56,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.HostAndPort;
@@ -97,6 +98,7 @@ public final class VirtualHostBuilder {
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
     private final List<ServiceConfigSetters> serviceConfigSetters = new ArrayList<>();
+    private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
 
     @Nullable
     private String defaultHostname;
@@ -128,12 +130,10 @@ public final class VirtualHostBuilder {
     private Boolean verboseResponses;
     @Nullable
     private AccessLogWriter accessLogWriter;
-    private boolean shutdownAccessLogWriterOnStop;
     @Nullable
     private AnnotatedServiceExtensions annotatedServiceExtensions;
     @Nullable
     private ScheduledExecutorService blockingTaskExecutor;
-    private boolean shutdownBlockingTaskExecutorOnStop;
     @Nullable
     private SuccessFunction successFunction;
     @Nullable
@@ -916,8 +916,15 @@ public final class VirtualHostBuilder {
      * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
      */
     public VirtualHostBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
-        this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
-        shutdownAccessLogWriterOnStop = shutdownOnStop;
+        requireNonNull(accessLogWriter, "accessLogWriter");
+        if (this.accessLogWriter != null) {
+            this.accessLogWriter = this.accessLogWriter.andThen(accessLogWriter);
+        } else {
+            this.accessLogWriter = accessLogWriter;
+        }
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(accessLogWriter));
+        }
         return this;
     }
 
@@ -931,7 +938,9 @@ public final class VirtualHostBuilder {
     public VirtualHostBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
                                                    boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(blockingTaskExecutor));
+        }
         return this;
     }
 
@@ -1038,13 +1047,11 @@ public final class VirtualHostBuilder {
                 this.rejectedRouteHandler : template.rejectedRouteHandler;
 
         final AccessLogWriter accessLogWriter;
-        final boolean shutdownAccessLogWriterOnStop;
         if (this.accessLogWriter != null) {
             accessLogWriter = this.accessLogWriter;
-            shutdownAccessLogWriterOnStop = this.shutdownAccessLogWriterOnStop;
         } else {
-            accessLogWriter = template.accessLogWriter;
-            shutdownAccessLogWriterOnStop = template.shutdownAccessLogWriterOnStop;
+            accessLogWriter = template.accessLogWriter != null ?
+                              template.accessLogWriter : AccessLogWriter.disabled();
         }
 
         final Function<? super VirtualHost, ? extends Logger> accessLoggerMapper =
@@ -1056,13 +1063,10 @@ public final class VirtualHostBuilder {
                 annotatedServiceExtensions : template.annotatedServiceExtensions;
 
         final ScheduledExecutorService blockingTaskExecutor;
-        final boolean shutdownBlockingTaskExecutorOnStop;
         if (this.blockingTaskExecutor != null) {
             blockingTaskExecutor = this.blockingTaskExecutor;
-            shutdownBlockingTaskExecutorOnStop = this.shutdownBlockingTaskExecutorOnStop;
         } else {
             blockingTaskExecutor = template.blockingTaskExecutor;
-            shutdownBlockingTaskExecutorOnStop = template.shutdownBlockingTaskExecutorOnStop;
         }
 
         final SuccessFunction successFunction;
@@ -1077,7 +1081,6 @@ public final class VirtualHostBuilder {
                 this.multipartUploadsLocation : template.multipartUploadsLocation;
 
         assert rejectedRouteHandler != null;
-        assert accessLogWriter != null;
         assert accessLoggerMapper != null;
         assert extensions != null;
         assert blockingTaskExecutor != null;
@@ -1102,16 +1105,14 @@ public final class VirtualHostBuilder {
                     }
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
-                                            verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop,
-                                            blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
+                                            verboseResponses, accessLogWriter, blockingTaskExecutor,
                                             successFunction, multipartUploadsLocation);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
-                               accessLogWriter, shutdownAccessLogWriterOnStop, blockingTaskExecutor,
-                               shutdownBlockingTaskExecutorOnStop, successFunction,
+                               accessLogWriter, blockingTaskExecutor, successFunction,
                                multipartUploadsLocation);
 
         SslContext sslContext = null;
@@ -1175,13 +1176,16 @@ public final class VirtualHostBuilder {
                 checkState(sslContext.isServer(), "sslContextBuilder built a client SSL context.");
             }
 
+            final Builder<ShutdownSupport> builder = ImmutableList.builder();
+            builder.addAll(shutdownSupports);
+            builder.addAll(template.shutdownSupports);
+
             final VirtualHost virtualHost =
                     new VirtualHost(defaultHostname, hostnamePattern, port, sslContext,
                                     serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                     accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
                                     maxRequestLength, verboseResponses, accessLogWriter,
-                                    shutdownAccessLogWriterOnStop,
-                                    blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+                                    blockingTaskExecutor, builder.build());
 
             final Function<? super HttpService, ? extends HttpService> decorator =
                     getRouteDecoratingService(template);
@@ -1225,7 +1229,7 @@ public final class VirtualHostBuilder {
                           .add("maxRequestLength", maxRequestLength)
                           .add("verboseResponses", verboseResponses)
                           .add("accessLogWriter", accessLogWriter)
-                          .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
+                          .add("shutdownSupports", shutdownSupports)
                           .toString();
     }
 }
