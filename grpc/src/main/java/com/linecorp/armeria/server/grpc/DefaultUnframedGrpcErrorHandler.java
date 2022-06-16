@@ -264,7 +264,6 @@ final class DefaultUnframedGrpcErrorHandler {
                     }
                     if (rpcStatus != null && rpcStatus.getDetailsCount() > 0) {
                         jsonGenerator.writeFieldName("details");
-                        jsonGenerator.writeStartArray();
                         writeErrorDetails(rpcStatus.getDetailsList(), jsonGenerator);
                     }
                 }
