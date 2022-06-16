@@ -262,7 +262,7 @@ final class DefaultUnframedGrpcErrorHandler {
                         logger.warn("Unexpected exception while decoding grpc-status-details-bin: {}",
                                     grpcStatusDetailsBin);
                     }
-                    if (rpcStatus != null) {
+                    if (rpcStatus != null && rpcStatus.getDetailsCount() > 0) {
                         jsonGenerator.writeFieldName("details");
                         jsonGenerator.writeStartArray();
                         writeErrorDetails(rpcStatus.getDetailsList(), jsonGenerator);
