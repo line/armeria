@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.it.thrift;
 
-import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static com.linecorp.armeria.server.throttling.ThrottlingStrategy.always;
 import static com.linecorp.armeria.server.throttling.ThrottlingStrategy.never;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -32,8 +31,8 @@ import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnit;
 import org.mockito.junit.MockitoRule;
 
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
@@ -74,7 +73,7 @@ public class ThrottlingRpcServiceTest {
     @Test
     public void serve() throws Exception {
         final HelloService.Iface client =
-                Clients.newClient(server.httpUri(BINARY) + "/thrift-always", HelloService.Iface.class);
+                ThriftClients.newClient(server.httpUri() + "/thrift-always", HelloService.Iface.class);
         when(serviceHandler.hello("foo")).thenReturn("bar");
 
         assertThat(client.hello("foo")).isEqualTo("bar");
@@ -83,7 +82,7 @@ public class ThrottlingRpcServiceTest {
     @Test
     public void throttle() throws Exception {
         final HelloService.Iface client =
-                Clients.newClient(server.httpUri(BINARY) + "/thrift-never", HelloService.Iface.class);
+                ThriftClients.newClient(server.httpUri() + "/thrift-never", HelloService.Iface.class);
 
         assertThatThrownBy(() -> client.hello("foo"))
                 .isInstanceOf(TTransportException.class)
