@@ -109,7 +109,8 @@ final class DefaultServerConfig implements ServerConfig {
     private final Supplier<RequestId> requestIdGenerator;
     private final ServerErrorHandler errorHandler;
     private final Http1HeaderNaming http1HeaderNaming;
-    private final List<DependencyInjectorEntry> dependencyInjectors;
+    private final DependencyInjector dependencyInjector;
+    private final List<ShutdownSupport> shutdownSupports;
 
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
@@ -140,7 +141,8 @@ final class DefaultServerConfig implements ServerConfig {
             ServerErrorHandler errorHandler,
             @Nullable Mapping<String, SslContext> sslContexts,
             Http1HeaderNaming http1HeaderNaming,
-            List<DependencyInjectorEntry> dependencyInjectors) {
+            DependencyInjector dependencyInjector,
+            List<ShutdownSupport> shutdownSupports) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -252,7 +254,8 @@ final class DefaultServerConfig implements ServerConfig {
         this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         this.sslContexts = sslContexts;
         this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
-        this.dependencyInjectors = requireNonNull(dependencyInjectors, "dependencyInjector");
+        this.dependencyInjector = requireNonNull(dependencyInjector, "dependencyInjector");
+        this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
     }
 
     private static Int2ObjectMap<Mapping<String, VirtualHost>> buildDomainAndPortMapping(
@@ -634,8 +637,12 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
-    public List<DependencyInjectorEntry> dependencyInjectors() {
-        return dependencyInjectors;
+    public DependencyInjector dependencyInjector() {
+        return dependencyInjector;
+    }
+
+    List<ShutdownSupport> shutdownSupports() {
+        return shutdownSupports;
     }
 
     @Override

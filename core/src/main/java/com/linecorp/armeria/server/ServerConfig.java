@@ -293,5 +293,5 @@ public interface ServerConfig {
     /**
      * Returns the {@link DependencyInjector} that injects dependencies in annotated services.
      */
-    List<DependencyInjectorEntry> dependencyInjectors();
+    DependencyInjector dependencyInjector();
 }

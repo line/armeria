@@ -186,16 +186,16 @@ public final class DecoratorAnnotationUtil {
         }
 
         public Function<? super HttpService, ? extends HttpService> decorator(
-                List<DependencyInjector> dependencyInjectors) {
+                DependencyInjector dependencyInjector) {
             if (decoratorFactory != null) {
                 @SuppressWarnings("unchecked")
                 final DecoratorFactoryFunction<Annotation> factory = AnnotatedObjectFactory
-                        .getInstance(decoratorFactory, DecoratorFactoryFunction.class, dependencyInjectors);
+                        .getInstance(decoratorFactory, DecoratorFactoryFunction.class, dependencyInjector);
                 return factory.newDecorator(annotation);
             }
             assert decoratorAnnotation != null;
             return service -> service.decorate(AnnotatedObjectFactory.getInstance(
-                    decoratorAnnotation, DecoratingHttpServiceFunction.class, dependencyInjectors));
+                    decoratorAnnotation, DecoratingHttpServiceFunction.class, dependencyInjector));
         }
 
         public int order() {

@@ -656,10 +656,10 @@ public final class Server implements ListenableAsyncCloseable {
             serverChannels.clear();
 
             final Builder<ShutdownSupport> builder = ImmutableList.builder();
+            builder.addAll(config.delegate().shutdownSupports());
             for (VirtualHost virtualHost : config.virtualHosts()) {
                 builder.addAll(virtualHost.shutdownSupports());
             }
-
             for (ServiceConfig serviceConfig : config.serviceConfigs()) {
                 builder.addAll(serviceConfig.shutdownSupports());
             }
@@ -669,16 +669,6 @@ public final class Server implements ListenableAsyncCloseable {
                                                        .map(ShutdownSupport::shutdown)
                                                        .collect(toImmutableList()), cause -> null)
                               .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
-            for (DependencyInjectorEntry entry : config.dependencyInjectors()) {
-                if (entry.shutdownOnStop()) {
-                    final DependencyInjector dependencyInjector = entry.dependencyInjector();
-                    try {
-                        dependencyInjector.shutdown();
-                    } catch (Throwable t) {
-                        logger.warn("Unexpected exception while shutting down {}", dependencyInjector);
-                    }
-                }
-            }
         }
 
         @Override

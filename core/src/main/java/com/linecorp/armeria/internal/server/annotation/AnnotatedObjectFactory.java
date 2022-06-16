@@ -21,7 +21,6 @@ import static org.reflections.ReflectionUtils.withName;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
-import java.util.List;
 
 import com.google.common.collect.Iterables;
 
@@ -36,20 +35,18 @@ final class AnnotatedObjectFactory {
      * Returns an instance of the specified {@link Class} which is specified in the given
      * {@link Annotation}.
      */
-    public static <T> T getInstance(Annotation annotation, Class<T> expectedType,
-                                    List<DependencyInjector> dependencyInjectors) {
+    static <T> T getInstance(Annotation annotation, Class<T> expectedType,
+                             DependencyInjector dependencyInjector) {
         @SuppressWarnings("unchecked")
         final Class<? extends T> type = (Class<? extends T>) invokeValueMethod(annotation);
-        for (DependencyInjector dependencyInjector : dependencyInjectors) {
-            final T instance = dependencyInjector.getInstance(type);
-            if (instance != null) {
-                if (!expectedType.isInstance(instance)) {
-                    throw new IllegalArgumentException(
-                            "A class specified in @" + annotation.annotationType().getSimpleName() +
-                            " annotation cannot be cast to " + expectedType);
-                }
-                return instance;
+        final T instance = dependencyInjector.getInstance(type);
+        if (instance != null) {
+            if (!expectedType.isInstance(instance)) {
+                throw new IllegalArgumentException(
+                        "A class specified in @" + annotation.annotationType().getSimpleName() +
+                        " annotation cannot be cast to " + expectedType);
             }
+            return instance;
         }
 
         throw new IllegalArgumentException("cannot inject the dependency for " + type.getName() +

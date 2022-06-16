@@ -51,6 +51,10 @@ final class UpdatableServerConfig implements ServerConfig {
         delegate = requireNonNull(newConfig, "newConfig");
     }
 
+    DefaultServerConfig delegate() {
+        return delegate;
+    }
+
     // Delegate non-public methods
 
     /**
@@ -275,8 +279,8 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
-    public List<DependencyInjectorEntry> dependencyInjectors() {
-        return delegate.dependencyInjectors();
+    public DependencyInjector dependencyInjector() {
+        return delegate.dependencyInjector();
     }
 
     @Override

@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.server.annotation;
 
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistryTest.noopDependencyInjector;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.toArguments;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -144,7 +145,7 @@ class AnnotatedValueResolverTest {
         getAllMethods(Service.class).forEach(method -> {
             try {
                 final List<AnnotatedValueResolver> elements = AnnotatedValueResolver.ofServiceMethod(
-                        method, pathParams, objectResolvers, false, ImmutableList.of(), null);
+                        method, pathParams, objectResolvers, false, noopDependencyInjector, null);
                 elements.forEach(AnnotatedValueResolverTest::testResolver);
             } catch (NoAnnotatedParameterException ignored) {
                 // Ignore this exception because MixedBean class has not annotated method.
@@ -158,7 +159,7 @@ class AnnotatedValueResolverTest {
 
         getAllFields(FieldBean.class).forEach(field -> {
             final AnnotatedValueResolver resolver = AnnotatedValueResolver.ofBeanField(
-                    field, pathParams, objectResolvers, ImmutableList.of());
+                    field, pathParams, objectResolvers, noopDependencyInjector);
 
             if (resolver != null) {
                 testResolver(resolver);
@@ -181,7 +182,7 @@ class AnnotatedValueResolverTest {
         assertThat(constructors.size()).isOne();
         constructors.forEach(constructor -> {
             final List<AnnotatedValueResolver> elements = AnnotatedValueResolver.ofBeanConstructorOrMethod(
-                    constructor, pathParams, objectResolvers, ImmutableList.of());
+                    constructor, pathParams, objectResolvers, noopDependencyInjector);
             elements.forEach(AnnotatedValueResolverTest::testResolver);
 
             final ConstructorBean bean;
@@ -212,7 +213,7 @@ class AnnotatedValueResolverTest {
         final Constructor constructor = Iterables.getFirst(constructors, null);
 
         final List<AnnotatedValueResolver> initArgs = AnnotatedValueResolver.ofBeanConstructorOrMethod(
-                constructor, pathParams, objectResolvers, ImmutableList.of());
+                constructor, pathParams, objectResolvers, noopDependencyInjector);
         initArgs.forEach(AnnotatedValueResolverTest::testResolver);
         final MixedBean bean = (MixedBean) constructor.newInstance(toArguments(initArgs, resolverContext));
         getAllMethods(MixedBean.class).forEach(method -> testMethod(method, bean));
@@ -222,7 +223,7 @@ class AnnotatedValueResolverTest {
     private static <T> void testMethod(Method method, T bean) {
         try {
             final List<AnnotatedValueResolver> elements = AnnotatedValueResolver.ofBeanConstructorOrMethod(
-                    method, pathParams, objectResolvers, ImmutableList.of());
+                    method, pathParams, objectResolvers, noopDependencyInjector);
             elements.forEach(AnnotatedValueResolverTest::testResolver);
 
             method.setAccessible(true);

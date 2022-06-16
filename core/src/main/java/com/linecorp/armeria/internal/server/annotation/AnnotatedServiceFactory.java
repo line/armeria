@@ -154,13 +154,13 @@ public final class AnnotatedServiceFactory {
             List<RequestConverterFunction> requestConverterFunctions,
             List<ResponseConverterFunction> responseConverterFunctions,
             List<ExceptionHandlerFunction> exceptionHandlerFunctions,
-            List<DependencyInjector> dependencyInjectors, @Nullable String queryDelimiter) {
+            DependencyInjector dependencyInjector, @Nullable String queryDelimiter) {
         final List<Method> methods = requestMappingMethods(object);
         return methods.stream()
                       .flatMap((Method method) ->
                                        create(pathPrefix, object, method, useBlockingTaskExecutor,
                                               requestConverterFunctions, responseConverterFunctions,
-                                              exceptionHandlerFunctions, dependencyInjectors, queryDelimiter
+                                              exceptionHandlerFunctions, dependencyInjector, queryDelimiter
                                        ).stream())
                       .collect(toImmutableList());
     }
@@ -219,7 +219,7 @@ public final class AnnotatedServiceFactory {
                                                 List<RequestConverterFunction> baseRequestConverters,
                                                 List<ResponseConverterFunction> baseResponseConverters,
                                                 List<ExceptionHandlerFunction> baseExceptionHandlers,
-                                                List<DependencyInjector> dependencyInjectors,
+                                                DependencyInjector dependencyInjector,
                                                 @Nullable String queryDelimiter) {
         if (KotlinUtil.getCallKotlinSuspendingMethod() == null && KotlinUtil.maybeSuspendingFunction(method)) {
             throw new IllegalArgumentException(
@@ -234,15 +234,15 @@ public final class AnnotatedServiceFactory {
 
         final List<RequestConverterFunction> req =
                 getAnnotatedInstances(method, clazz, RequestConverter.class, RequestConverterFunction.class,
-                                      dependencyInjectors)
+                                      dependencyInjector)
                         .addAll(baseRequestConverters).build();
         final List<ResponseConverterFunction> res =
                 getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class,
-                                      dependencyInjectors)
+                                      dependencyInjector)
                         .addAll(baseResponseConverters).build();
         final List<ExceptionHandlerFunction> eh =
                 getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class,
-                                      dependencyInjectors)
+                                      dependencyInjector)
                         .addAll(baseExceptionHandlers).build();
 
         final String classAlias = clazz.getName();
@@ -263,13 +263,13 @@ public final class AnnotatedServiceFactory {
         return routes.stream().map(route -> {
             final List<AnnotatedValueResolver> resolvers =
                     getAnnotatedValueResolvers(req, route, method, clazz,
-                                               needToUseBlockingTaskExecutor, dependencyInjectors,
+                                               needToUseBlockingTaskExecutor, dependencyInjector,
                                                queryDelimiter);
             return new AnnotatedServiceElement(
                     route,
                     new AnnotatedService(object, method, resolvers, eh, res, route, defaultStatus,
                                          responseHeaders, responseTrailers, needToUseBlockingTaskExecutor),
-                    decorator(method, clazz, dependencyInjectors));
+                    decorator(method, clazz, dependencyInjector));
         }).collect(toImmutableList());
     }
 
@@ -335,7 +335,7 @@ public final class AnnotatedServiceFactory {
             Route route, Method method,
             Class<?> clazz,
             boolean useBlockingExecutor,
-            List<DependencyInjector> dependencyInjectors,
+            DependencyInjector dependencyInjector,
             @Nullable String queryDelimiter) {
         final Set<String> expectedParamNames = route.paramNames();
         List<AnnotatedValueResolver> resolvers;
@@ -343,7 +343,7 @@ public final class AnnotatedServiceFactory {
             resolvers = AnnotatedValueResolver.ofServiceMethod(
                     method, expectedParamNames,
                     AnnotatedValueResolver.toRequestObjectResolvers(req, method),
-                    useBlockingExecutor, dependencyInjectors, queryDelimiter);
+                    useBlockingExecutor, dependencyInjector, queryDelimiter);
         } catch (NoParameterException ignored) {
             // Allow no parameter like below:
             //
@@ -552,12 +552,12 @@ public final class AnnotatedServiceFactory {
      * decorator annotations.
      */
     private static Function<? super HttpService, ? extends HttpService> decorator(
-            Method method, Class<?> clazz, List<DependencyInjector> dependencyInjectors) {
+            Method method, Class<?> clazz, DependencyInjector dependencyInjector) {
         final List<DecoratorAndOrder> decorators = DecoratorAnnotationUtil.collectDecorators(clazz, method);
         Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
         for (int i = decorators.size() - 1; i >= 0; i--) {
             final DecoratorAndOrder d = decorators.get(i);
-            decorator = decorator.andThen(d.decorator(dependencyInjectors));
+            decorator = decorator.andThen(d.decorator(dependencyInjector));
         }
         return decorator;
     }
@@ -569,12 +569,12 @@ public final class AnnotatedServiceFactory {
      */
     private static <T extends Annotation, R> Builder<R> getAnnotatedInstances(
             AnnotatedElement method, AnnotatedElement clazz, Class<T> annotationType, Class<R> resultType,
-            List<DependencyInjector> dependencyInjectors) {
+            DependencyInjector dependencyInjector) {
         final Builder<R> builder = new Builder<>();
         Stream.concat(AnnotationUtil.findAll(method, annotationType).stream(),
                       AnnotationUtil.findAll(clazz, annotationType).stream())
               .forEach(annotation -> builder.add(
-                      AnnotatedObjectFactory.getInstance(annotation, resultType, dependencyInjectors)));
+                      AnnotatedObjectFactory.getInstance(annotation, resultType, dependencyInjector)));
         return builder;
     }
 

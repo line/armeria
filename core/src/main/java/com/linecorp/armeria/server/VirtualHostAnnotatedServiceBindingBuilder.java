@@ -312,10 +312,10 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      * {@link AnnotatedServiceExtensions} to the {@link VirtualHostBuilder}.
      *
      * @param extensions the {@link AnnotatedServiceExtensions} at the virtual host level.
-     * @param dependencyInjectors the {@link DependencyInjector}s to inject dependencies.
+     * @param dependencyInjector the {@link DependencyInjector} to inject dependencies.
      */
     List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedServiceExtensions extensions,
-                                                         List<DependencyInjector> dependencyInjectors) {
+                                                         DependencyInjector dependencyInjector) {
         final List<RequestConverterFunction> requestConverterFunctions =
                 requestConverterFunctionBuilder.addAll(extensions.requestConverters()).build();
         final List<ResponseConverterFunction> responseConverterFunctions =
@@ -328,7 +328,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         final List<AnnotatedServiceElement> elements =
                 AnnotatedServiceFactory.find(
                         pathPrefix, service, useBlockingTaskExecutor, requestConverterFunctions,
-                        responseConverterFunctions, exceptionHandlerFunctions, dependencyInjectors,
+                        responseConverterFunctions, exceptionHandlerFunctions, dependencyInjector,
                         queryDelimiter);
         return elements.stream().map(element -> {
             final HttpService decoratedService =

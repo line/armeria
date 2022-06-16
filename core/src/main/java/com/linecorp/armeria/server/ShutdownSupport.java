@@ -66,5 +66,17 @@ interface ShutdownSupport {
         };
     }
 
+    static ShutdownSupport of(DependencyInjector dependencyInjector) {
+        requireNonNull(dependencyInjector, "dependencyInjector");
+        return () -> {
+            try {
+                dependencyInjector.shutdown();
+            } catch (Exception e) {
+                logger.warn("Unexpected exception while shutting down: {}", dependencyInjector, e);
+            }
+            return UnmodifiableFuture.completedFuture(null);
+        };
+    }
+
     CompletableFuture<Void> shutdown();
 }

@@ -68,4 +68,12 @@ public interface DependencyInjector {
      * Shuts down this {@link DependencyInjector}.
      */
     void shutdown();
+
+    /**
+     * Returns a new {@link DependencyInjector} that tries this {@link DependencyInjector} first and the
+     * specified {@link DependencyInjector} if .
+     */
+    default DependencyInjector orElse(DependencyInjector dependencyInjector) {
+        return new OrElseDependencyInjector(this, dependencyInjector);
+    }
 }

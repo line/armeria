@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.DependencyInjector;
-import com.linecorp.armeria.server.DependencyInjectorEntry;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -65,13 +64,9 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
         super.serviceAdded(cfg);
-        final List<DependencyInjector> dependencyInjectors =
-                cfg.server()
-                   .config()
-                   .dependencyInjectors()
-                   .stream()
-                   .map(DependencyInjectorEntry::dependencyInjector)
-                   .collect(toImmutableList());
+        final DependencyInjector dependencyInjector = cfg.server()
+                                                         .config()
+                                                         .dependencyInjector();
 
         final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> registryDecorators =
                 handlerRegistry.decorators();
@@ -83,7 +78,7 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
             final List<? extends Function<? super HttpService, ? extends HttpService>> decorators =
                     entry.getValue()
                          .stream()
-                         .map(decoratorAndOrder -> decoratorAndOrder.decorator(dependencyInjectors))
+                         .map(decoratorAndOrder -> decoratorAndOrder.decorator(dependencyInjector))
                          .collect(toImmutableList());
             builder.put(entry.getKey(), applyDecorators(decorators, delegate));
         }
