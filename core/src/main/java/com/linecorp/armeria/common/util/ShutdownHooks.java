@@ -49,16 +49,16 @@ public final class ShutdownHooks {
     /**
      *　Adds an {@link AutoCloseable} to the JVM shutdown hook.
      */
-    public static CompletableFuture<Void> addClosingTask(AutoCloseable asyncCloseable) {
-        return addClosingTask(asyncCloseable, null, asyncCloseable.getClass().getSimpleName());
+    public static CompletableFuture<Void> addClosingTask(AutoCloseable autoCloseable) {
+        return addClosingTask(autoCloseable, null, autoCloseable.getClass().getSimpleName());
     }
 
     /**
      *　Adds an {@link AutoCloseable} and a {@link Runnable} to the JVM shutdown hook.
      */
     public static CompletableFuture<Void> addClosingTask(
-            AutoCloseable asyncCloseable, @Nullable Runnable whenClosing) {
-        return addClosingTask(asyncCloseable, whenClosing, asyncCloseable.getClass().getSimpleName());
+            AutoCloseable autoCloseable, Runnable whenClosing) {
+        return addClosingTask(autoCloseable, whenClosing, autoCloseable.getClass().getSimpleName());
     }
 
     /**
