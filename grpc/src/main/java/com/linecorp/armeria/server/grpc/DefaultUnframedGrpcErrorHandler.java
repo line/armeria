@@ -19,17 +19,15 @@ package com.linecorp.armeria.server.grpc;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
-import java.io.StringWriter;
+import java.io.OutputStream;
 import java.util.Base64;
 import java.util.List;
-import java.util.Map;
 
 import org.curioswitch.common.protobuf.json.MessageMarshaller;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -65,6 +63,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufOutputStream;
 
 final class DefaultUnframedGrpcErrorHandler {
 
@@ -100,18 +99,16 @@ final class DefaultUnframedGrpcErrorHandler {
     }
 
     @VisibleForTesting
-    static JsonNode convertErrorDetailToJsonNode(List<Any> details)
-            throws IOException {
-        final StringWriter jsonObjectWriter = new StringWriter();
-        try (JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter)) {
-            jsonGenerator.writeStartArray();
+    static void writeErrorDetails(List<Any> details, JsonGenerator jsonGenerator) throws IOException {
+        jsonGenerator.writeStartArray();
+        try {
             for (Any detail : details) {
                 ERROR_DETAILS_MARSHALLER.writeValue(detail, jsonGenerator);
             }
-            jsonGenerator.writeEndArray();
-            jsonGenerator.flush();
-            return mapper.readTree(jsonObjectWriter.toString());
+        } catch (IOException e) {
+            logger.warn("Unexpected exception while writing error details {} to json", details);
         }
+        jsonGenerator.writeEndArray();
     }
 
     @VisibleForTesting
@@ -163,9 +160,7 @@ final class DefaultUnframedGrpcErrorHandler {
                 = ofStatusMappingFunction(statusMappingFunction);
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();
-            @Nullable
             final String grpcMessage = status.getDescription();
-            @Nullable
             final Throwable cause = getThrowableFromContext(ctx);
             final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
             final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
@@ -196,9 +191,7 @@ final class DefaultUnframedGrpcErrorHandler {
                 = ofStatusMappingFunction(statusMappingFunction);
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();
-            @Nullable
             final String grpcMessage = status.getDescription();
-            @Nullable
             final Throwable cause = getThrowableFromContext(ctx);
             final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
             final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
@@ -234,49 +227,59 @@ final class DefaultUnframedGrpcErrorHandler {
                         .orElse(UnframedGrpcStatusMappingFunction.of());
         return (ctx, status, response) -> {
             final ByteBuf buffer = ctx.alloc().buffer();
+
             final Code grpcCode = status.getCode();
-            @Nullable
             final String grpcMessage = status.getDescription();
-            @Nullable
             final Throwable cause = getThrowableFromContext(ctx);
             final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
             final HttpHeaders trailers = !response.trailers().isEmpty() ?
                                          response.trailers() : response.headers();
-            @Nullable
             final String grpcStatusDetailsBin = trailers.get(GrpcHeaderNames.GRPC_STATUS_DETAILS_BIN);
             final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
                                                                    .contentType(MediaType.JSON_UTF_8)
                                                                    .addInt(GrpcHeaderNames.GRPC_STATUS,
                                                                            grpcCode.value())
                                                                    .build();
-            final ImmutableMap.Builder<String, Object> messageBuilder = ImmutableMap.builder();
-            messageBuilder.put("code", httpStatus.code());
-            messageBuilder.put("status", grpcCode.name());
-            if (grpcMessage != null) {
-                messageBuilder.put("message", grpcMessage);
-            }
-            if (cause != null && ctx.config().verboseResponses()) {
-                messageBuilder.put("stack-trace", Exceptions.traceText(cause));
-            }
-            if (!Strings.isNullOrEmpty(grpcStatusDetailsBin)) {
-                com.google.rpc.Status rpcStatus = null;
-                try {
-                    rpcStatus = decodeGrpcStatusDetailsBin(grpcStatusDetailsBin);
-                } catch (InvalidProtocolBufferException e) {
-                    logger.warn("Unexpected exception while decoding grpc-status-details-bin: {}",
-                                grpcStatusDetailsBin);
+            boolean success = false;
+            try (OutputStream outputStream = new ByteBufOutputStream(buffer);
+                 JsonGenerator jsonGenerator = mapper.createGenerator(outputStream)) {
+                jsonGenerator.writeStartObject();
+                jsonGenerator.writeFieldName("error");
+                jsonGenerator.writeStartObject();
+                jsonGenerator.writeNumberField("code", httpStatus.code());
+                jsonGenerator.writeStringField("status", grpcCode.name());
+                if (grpcMessage != null) {
+                    jsonGenerator.writeStringField("message", grpcMessage);
                 }
-                if (rpcStatus != null) {
+                if (cause != null && ctx.config().verboseResponses()) {
+                    jsonGenerator.writeStringField("stack-trace", Exceptions.traceText(cause));
+                }
+                if (!Strings.isNullOrEmpty(grpcStatusDetailsBin)) {
+                    com.google.rpc.Status rpcStatus = null;
                     try {
-                        messageBuilder.put("details", convertErrorDetailToJsonNode(rpcStatus.getDetailsList()));
-                    } catch (IOException e) {
-                        logger.warn("Unexpected exception while converting RPC status {} to strings",
-                                    rpcStatus);
+                        rpcStatus = decodeGrpcStatusDetailsBin(grpcStatusDetailsBin);
+                    } catch (InvalidProtocolBufferException e) {
+                        logger.warn("Unexpected exception while decoding grpc-status-details-bin: {}",
+                                    grpcStatusDetailsBin);
+                    }
+                    if (rpcStatus != null) {
+                        jsonGenerator.writeFieldName("details");
+                        jsonGenerator.writeStartArray();
+                        writeErrorDetails(rpcStatus.getDetailsList(), jsonGenerator);
                     }
                 }
+                jsonGenerator.writeEndObject();
+                jsonGenerator.writeEndObject();
+                jsonGenerator.flush();
+                success = true;
+            } catch (IOException e) {
+                logger.warn("Unexpected exception while generating json response");
+            } finally {
+                if (!success) {
+                    buffer.release();
+                }
             }
-            final Map<String, Object> errorObject = ImmutableMap.of("error", messageBuilder.build());
-            return HttpResponse.ofJson(responseHeaders, errorObject);
+            return HttpResponse.of(responseHeaders, HttpData.wrap(buffer));
         };
     }
 

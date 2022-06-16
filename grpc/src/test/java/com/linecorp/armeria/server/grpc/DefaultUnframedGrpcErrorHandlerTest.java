@@ -20,10 +20,12 @@ import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.IOException;
+import java.io.StringWriter;
 
 import org.junit.jupiter.api.Test;
 
-import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.core.JsonGenerator;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.protobuf.Any;
 import com.google.protobuf.Duration;
 import com.google.protobuf.Empty;
@@ -43,7 +45,11 @@ import com.google.rpc.ResourceInfo;
 import com.google.rpc.RetryInfo;
 import com.google.rpc.Status;
 
+import com.linecorp.armeria.internal.common.JacksonUtil;
+
 class DefaultUnframedGrpcErrorHandlerTest {
+
+    private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     @Test
     void convertErrorDetailToJsonNodeTest() throws IOException {
@@ -112,8 +118,10 @@ class DefaultUnframedGrpcErrorHandlerTest {
                                     .addDetails(Any.pack(localizedMessage))
                                     .build();
 
-        final JsonNode jsonNode = DefaultUnframedGrpcErrorHandler.convertErrorDetailToJsonNode(
-                status.getDetailsList());
+        final StringWriter jsonObjectWriter = new StringWriter();
+        final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
+        DefaultUnframedGrpcErrorHandler.writeErrorDetails(status.getDetailsList(), jsonGenerator);
+        jsonGenerator.flush();
         final String expectedJsonString =
                 "[\n" +
                 "  {\n" +
@@ -181,14 +189,17 @@ class DefaultUnframedGrpcErrorHandlerTest {
                 "    \"message\":\"message\"\n" +
                 "  }\n" +
                 "]";
-        assertThatJson(jsonNode).isEqualTo(expectedJsonString);
+        assertThatJson(mapper.readTree(jsonObjectWriter.toString())).isEqualTo(expectedJsonString);
     }
 
     @Test
-    void shouldThrowIOException() {
+    void shouldThrowIOException() throws IOException {
         final Empty empty = Empty.getDefaultInstance();
         final Status status = Status.newBuilder().addDetails(Any.pack(empty)).build();
-        assertThatThrownBy(() -> DefaultUnframedGrpcErrorHandler.convertErrorDetailToJsonNode(
-                status.getDetailsList())).isInstanceOf(IOException.class);
+        final StringWriter jsonObjectWriter = new StringWriter();
+        final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
+
+        assertThatThrownBy(() -> DefaultUnframedGrpcErrorHandler.writeErrorDetails(
+                status.getDetailsList(), jsonGenerator)).isInstanceOf(IOException.class);
     }
 }
