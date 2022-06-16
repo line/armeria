@@ -88,7 +88,6 @@ public final class ShutdownHooks {
             final Queue<Runnable> onShutdownTasks =
                     autoCloseableOnShutdownTasks.computeIfAbsent(autoCloseable, key -> new ArrayDeque<>());
             onShutdownTasks.add(task);
-            autoCloseableOnShutdownTasks.put(autoCloseable, onShutdownTasks);
             if (!addedShutdownHook) {
                 Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(() -> {
                     autoCloseableOnShutdownTasks.forEach((factory, queue) -> {
