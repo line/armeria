@@ -115,6 +115,8 @@ class GracefulShutdownIntegrationTest {
 
     @BeforeEach
     void setUp() {
+        accessLogWriterCounter1.set(0);
+        accessLogWriterCounter2.set(0);
         sleepServiceCalled.set(false);
         clientFactory = ClientFactory.builder()
                                      .idleTimeoutMillis(0)
@@ -144,7 +146,7 @@ class GracefulShutdownIntegrationTest {
             totalNanos += stopTime - startTime;
         }
 
-        assertThat(accessLogWriterCounter1).hasValue(iteration);
+        assertThat(accessLogWriterCounter1).hasValue(iteration * 2);
         assertThat(accessLogWriterCounter2).hasValue(iteration);
         return baselineNanos = totalNanos / iteration;
     }
