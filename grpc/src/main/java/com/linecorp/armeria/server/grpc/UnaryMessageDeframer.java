@@ -30,7 +30,7 @@ import com.linecorp.armeria.internal.common.stream.ByteBufsDecoderInput;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
-class UnaryMessageDeframer extends AbstractMessageDeframer {
+final class UnaryMessageDeframer extends AbstractMessageDeframer {
 
     private final ByteBufAllocator alloc;
     @Nullable
