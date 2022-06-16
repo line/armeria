@@ -33,14 +33,12 @@ import io.netty.buffer.ByteBufAllocator;
 class UnaryMessageDeframer extends AbstractMessageDeframer {
 
     private final ByteBufAllocator alloc;
-    private final boolean grpcWebText;
     @Nullable
     private final Base64Decoder base64Decoder;
 
     UnaryMessageDeframer(ByteBufAllocator alloc, int maxMessageLength, boolean grpcWebText) {
         super(maxMessageLength);
         this.alloc = alloc;
-        this.grpcWebText = grpcWebText;
         if (grpcWebText) {
             base64Decoder = new Base64Decoder(alloc);
         } else {
