@@ -227,7 +227,6 @@ final class DefaultUnframedGrpcErrorHandler {
                         .orElse(UnframedGrpcStatusMappingFunction.of());
         return (ctx, status, response) -> {
             final ByteBuf buffer = ctx.alloc().buffer();
-
             final Code grpcCode = status.getCode();
             final String grpcMessage = status.getDescription();
             final Throwable cause = getThrowableFromContext(ctx);
