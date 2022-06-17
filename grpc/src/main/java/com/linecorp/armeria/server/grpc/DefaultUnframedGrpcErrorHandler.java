@@ -101,12 +101,12 @@ final class DefaultUnframedGrpcErrorHandler {
     @VisibleForTesting
     static void writeErrorDetails(List<Any> details, JsonGenerator jsonGenerator) throws IOException {
         jsonGenerator.writeStartArray();
-        try {
-            for (Any detail : details) {
+        for (Any detail : details) {
+            try {
                 ERROR_DETAILS_MARSHALLER.writeValue(detail, jsonGenerator);
+            } catch (IOException e) {
+                logger.warn("Unexpected exception while writing error detail {} to json", detail);
             }
-        } catch (IOException e) {
-            logger.warn("Unexpected exception while writing error details {} to json", details);
         }
         jsonGenerator.writeEndArray();
     }
