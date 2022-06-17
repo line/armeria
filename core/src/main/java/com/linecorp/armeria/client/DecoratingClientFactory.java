@@ -148,7 +148,7 @@ public class DecoratingClientFactory extends AbstractUnwrappable<ClientFactory> 
     }
 
     @Override
-    public CompletableFuture<Void> closeOnJvmShutdown(@Nullable Runnable whenClosing) {
+    public CompletableFuture<Void> closeOnJvmShutdown(Runnable whenClosing) {
         return unwrap().closeOnJvmShutdown(whenClosing);
     }
 }

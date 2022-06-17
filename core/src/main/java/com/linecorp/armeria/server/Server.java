@@ -478,7 +478,7 @@ public final class Server implements ListenableAsyncCloseable {
      * Registers a JVM shutdown hook that closes this {@link Server} when the current JVM terminates.
      */
     public CompletableFuture<Void> closeOnJvmShutdown() {
-        return ShutdownHooks.addClosingTask(this, null, getClass().getSimpleName());
+        return ShutdownHooks.addClosingTask(this);
     }
 
     /**
@@ -488,7 +488,7 @@ public final class Server implements ListenableAsyncCloseable {
      */
     public CompletableFuture<Void> closeOnJvmShutdown(Runnable whenClosing) {
         requireNonNull(whenClosing, "whenClosing");
-        return ShutdownHooks.addClosingTask(this, whenClosing, getClass().getSimpleName());
+        return ShutdownHooks.addClosingTask(this, whenClosing);
     }
 
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {

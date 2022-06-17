@@ -272,8 +272,9 @@ final class DefaultClientFactory implements ClientFactory {
     }
 
     @Override
-    public CompletableFuture<Void> closeOnJvmShutdown(@Nullable Runnable whenClosing) {
-        return ShutdownHooks.addClosingTask(this, whenClosing, getClass().getSimpleName());
+    public CompletableFuture<Void> closeOnJvmShutdown(Runnable whenClosing) {
+        requireNonNull(whenClosing, "whenClosing");
+        return ShutdownHooks.addClosingTask(this, whenClosing);
     }
 
     private boolean checkDefault() {

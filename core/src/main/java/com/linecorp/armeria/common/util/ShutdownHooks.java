@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.util;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -58,13 +60,14 @@ public final class ShutdownHooks {
      */
     public static CompletableFuture<Void> addClosingTask(
             AutoCloseable autoCloseable, Runnable whenClosing) {
+        requireNonNull(whenClosing, "whenClosing");
         return addClosingTask(autoCloseable, whenClosing, autoCloseable.getClass().getSimpleName());
     }
 
     /**
      *　Adds an {@link AutoCloseable} and a {@link Runnable} to the JVM shutdown hook.
      */
-    public static CompletableFuture<Void> addClosingTask(
+    private static CompletableFuture<Void> addClosingTask(
             AutoCloseable autoCloseable, @Nullable Runnable whenClosing, String name) {
         final CompletableFuture<Void> closeFuture = new CompletableFuture<>();
         final Runnable task = () -> {
