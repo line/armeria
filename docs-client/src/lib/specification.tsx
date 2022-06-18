@@ -19,10 +19,6 @@ import { Link } from 'react-router-dom';
 
 type DocString = string | JSX.Element;
 
-interface HasDocString {
-  docString?: DocString;
-}
-
 export interface Parameter {
   name: string;
   location?: string;
@@ -229,9 +225,6 @@ export class Specification {
         const childDocStrings = this.parseParamDocStrings(
           method.docString as string,
         );
-        method.docString = this.removeParamDocStrings(
-          method.docString as string,
-        );
         for (const param of method.parameters) {
           const childDocString = childDocStrings.get(param.name);
           if (childDocString) {
@@ -242,23 +235,8 @@ export class Specification {
     }
 
     // TODO(trustin): Handle the docstrings of enum values.
-    for (const enm of this.data.enums) {
-      enm.docString = this.removeParamDocStrings(enm.docString as string);
-    }
-
     this.updateStructDocStrings(this.data.structs);
     this.updateStructDocStrings(this.data.exceptions);
-
-    this.data.enums.forEach(this.renderDocString);
-    this.data.exceptions.forEach(this.renderDocString);
-    for (const service of this.data.services) {
-      this.renderDocString(service);
-      for (const method of service.methods) {
-        this.renderDocString(method as HasDocString);
-        method.parameters.forEach(this.renderDocString);
-      }
-    }
-    this.data.structs.forEach(this.renderDocString);
   }
 
   private updateStructDocStrings(structs: Struct[]) {
@@ -267,7 +245,6 @@ export class Specification {
       const childDocStrings = this.parseParamDocStrings(
         struct.docString as string,
       );
-      struct.docString = this.removeParamDocStrings(struct.docString as string);
       for (const field of struct.fields) {
         const childDocString = childDocStrings.get(field.name);
         if (childDocString) {
@@ -289,32 +266,5 @@ export class Specification {
       match = pattern.exec(docString);
     }
     return parameters;
-  }
-
-  private removeParamDocStrings(docString: string | undefined) {
-    if (!docString) {
-      return '';
-    }
-    return docString.replace(/@param .*[\n\r]*/gim, '');
-  }
-
-  private renderDocString(item: HasDocString) {
-    if (!item.docString) {
-      return;
-    }
-    const docString = item.docString as string;
-    const lines = docString.split(/(?:\r\n|\n|\r)/gim);
-    // eslint-disable-next-line no-param-reassign
-    item.docString = (
-      <>
-        {lines.map((line, i) => (
-          // eslint-disable-next-line react/no-array-index-key
-          <React.Fragment key={`${line}-${i}`}>
-            {line}
-            {i < lines.length - 1 ? <br /> : null}
-          </React.Fragment>
-        ))}
-      </>
-    );
   }
 }

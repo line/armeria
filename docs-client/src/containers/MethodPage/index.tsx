@@ -38,6 +38,7 @@ import VariableList from '../../components/VariableList';
 import DebugPage from './DebugPage';
 import Endpoints from './Endpoints';
 import Exceptions from './Exceptions';
+import Description from '../../components/Description';
 
 interface OwnProps {
   specification: Specification;
@@ -160,9 +161,11 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
       <Typography variant="h5" paragraph>
         <code>{`${simpleName(service.name)}.${method.name}()`}</code>
       </Typography>
-      <Typography variant="body2" paragraph>
-        {method.docString}
-      </Typography>
+      {method.docString && (
+        <Section>
+          <Description docString={method.docString} />
+        </Section>
+      )}
       <Section>
         <VariableList
           key={method.name}

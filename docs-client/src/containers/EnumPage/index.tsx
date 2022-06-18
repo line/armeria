@@ -30,6 +30,7 @@ import {
 } from '../../lib/specification';
 
 import Section from '../../components/Section';
+import Description from '../../components/Description';
 
 interface OwnProps {
   specification: Specification;
@@ -75,7 +76,11 @@ const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
                     <code>{value.name}</code>
                   </TableCell>
                   {hasIntValue && <TableCell>{value.intValue}</TableCell>}
-                  {hasDocString && <TableCell>{value.docString}</TableCell>}
+                  {hasDocString && (
+                    <TableCell>
+                      <Description docString={value.docString} />
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             ) : (

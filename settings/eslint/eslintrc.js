@@ -89,6 +89,9 @@ module.exports = {
           'error', {
             'functions': false,
           }
+        ],
+        'react/no-unstable-nested-components': [
+          'warn', {'allowAsProps' : true}
         ]
       },
     },

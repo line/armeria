@@ -27,6 +27,7 @@ import {
 } from '../../lib/specification';
 
 import Section from '../../components/Section';
+import Description from '../../components/Description';
 
 interface OwnProps {
   specification: Specification;
@@ -51,9 +52,7 @@ const StructPage: React.FunctionComponent<Props> = ({
       <Typography variant="subtitle1" paragraph>
         <code>{packageName(data.name)}</code>
       </Typography>
-      <Typography variant="body2" paragraph>
-        {data.docString}
-      </Typography>
+      <Description docString={data.docString} />
       <Section>
         <VariableList
           title="Fields"

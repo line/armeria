@@ -26,6 +26,7 @@ import React, { useReducer } from 'react';
 
 import { makeStyles } from '@material-ui/core';
 import { Specification } from '../../lib/specification';
+import Description from '../Description';
 
 const useStyles = makeStyles({
   hidden: {
@@ -119,7 +120,9 @@ const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
           </code>
         </TableCell>
         <TableCell>
-          <pre>{variable.docString}</pre>
+          <pre>
+            <Description docString={variable.docString} />
+          </pre>
         </TableCell>
         {hasChildren && (
           <TableCell>{expanded ? <ExpandLess /> : <ExpandMore />}</TableCell>
