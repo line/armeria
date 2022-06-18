@@ -83,16 +83,16 @@ final class StreamWriterOutputStream<T> extends OutputStream {
         if (closed) {
             return;
         }
-        flush();
-        writer.close();
-        closed = true;
+        try {
+            drain();
+        } finally {
+            writer.close();
+            closed = true;
+        }
     }
 
     private void ensureOpen() throws IOException {
-        if (closed) {
-            throw new IOException("Stream closed");
-        }
-        if (!writer.isOpen()) {
+        if (closed || !writer.isOpen()) {
             closed = true;
             throw new IOException("Stream closed");
         }
