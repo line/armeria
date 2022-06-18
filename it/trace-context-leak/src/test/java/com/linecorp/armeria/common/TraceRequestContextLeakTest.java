@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.ConcurrentHashMap;
@@ -184,6 +185,16 @@ class TraceRequestContextLeakTest {
 
             await().untilTrue(isThrown);
             assertThat(exception.get()).getRootCause().hasMessageContaining("RequestContext didn't popped");
+        }
+    }
+
+    @Test
+    void illegallyPushServiceRequestContext() {
+        final ServiceRequestContext sctx1 = newCtx("/1");
+        final ServiceRequestContext sctx2 = newCtx("/2");
+        try (SafeCloseable ignored = sctx1.push()) {
+            assertThatThrownBy(sctx2::push).isInstanceOf(IllegalStateException.class)
+                    .getRootCause().hasMessageContaining("RequestContext didn't popped");
         }
     }
 
