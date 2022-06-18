@@ -61,18 +61,14 @@ final class StreamWriterOutputStream<T> extends OutputStream {
         requireNonNull(bytes, "bytes");
         checkArgument(off >= 0, "off: %s (expected: >= 0)", off);
         checkArgument(len >= 0, "len: %s (expected: >= 0)", len);
+        ensureOpen();
         while (len > 0) {
+            final int writableBytes = buffer.writableBytes();
+            buffer.writeBytes(bytes, off, Math.min(writableBytes, len));
+            off += writableBytes;
+            len -= writableBytes;
             ensureOpen();
             maybeDrain();
-            final int writableBytes = maxBufferSize - buffer.readableBytes();
-            if (writableBytes < len) {
-                buffer.writeBytes(bytes, off, writableBytes);
-                off += writableBytes;
-                len -= writableBytes;
-            } else {
-                buffer.writeBytes(bytes, off, len);
-                break;
-            }
         }
     }
 
