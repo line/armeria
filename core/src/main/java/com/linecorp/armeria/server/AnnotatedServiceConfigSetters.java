@@ -18,10 +18,12 @@ package com.linecorp.armeria.server;
 
 import java.util.concurrent.Executors;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
+@UnstableApi
 interface AnnotatedServiceConfigSetters extends ServiceConfigSetters {
 
     /**
