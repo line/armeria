@@ -291,12 +291,13 @@ class StreamWriterOutputStreamTest {
                 });
 
         outputStream.write(1);
-        assertThatThrownBy(outputStream::flush).isInstanceOf(RuntimeException.class);
 
-        assertThatThrownBy(outputStream::close)
+        assertThatThrownBy(outputStream::flush).isInstanceOf(RuntimeException.class);
+        assertThatThrownBy(outputStream::close).isInstanceOf(RuntimeException.class);
+        assertThat(writer.isOpen()).isFalse();
+
+        assertThatThrownBy(() -> outputStream.write(0))
                 .isInstanceOf(IOException.class)
                 .hasMessage("Stream closed");
-        assertThat(writer.isOpen()).isFalse();
-        assertThat(writer.isComplete()).isTrue();
     }
 }
