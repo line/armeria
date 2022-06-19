@@ -53,9 +53,9 @@ const StructPage: React.FunctionComponent<Props> = ({
         <code>{packageName(data.name)}</code>
       </Typography>
       {data.docString && (
-          <Section>
-            <Description docString={data.docString} />
-          </Section>
+        <Section>
+          <Description docString={data.docString} />
+        </Section>
       )}
       <Section>
         <VariableList
