@@ -47,6 +47,16 @@ public final class FieldInfo {
     }
 
     /**
+     * Creates a new {@link FieldInfo} with the specified {@code name}, {@link TypeSignature} and DocString.
+     * The {@link FieldLocation} and {@link FieldRequirement} of the {@link FieldInfo} will be
+     * {@code UNSPECIFIED}.
+     */
+    public static FieldInfo of(String name, TypeSignature typeSignature, String docString) {
+        return new FieldInfo(name, FieldLocation.UNSPECIFIED, FieldRequirement.UNSPECIFIED, typeSignature,
+            ImmutableList.of(), docString);
+    }
+
+    /**
      * Returns a newly created {@link FieldInfoBuilder}.
      */
     public static FieldInfoBuilder builder(String name, TypeSignature typeSignature) {

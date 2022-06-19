@@ -32,7 +32,7 @@ import com.linecorp.armeria.internal.server.annotation.DefaultValues;
  * </ul>
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.TYPE, ElementType.METHOD, ElementType.PARAMETER })
+@Target({ ElementType.TYPE, ElementType.METHOD, ElementType.PARAMETER, ElementType.FIELD })
 public @interface Description {
 
     /**

@@ -70,6 +70,7 @@ import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
 import com.linecorp.armeria.server.docs.EnumInfo;
+import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldLocation;
@@ -372,11 +373,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             return TypeSignature.ofList(toTypeSignature(clazz.getComponentType()));
         }
 
-        if (clazz.isEnum()) {
-            return TypeSignature.ofNamed(clazz);
-        }
-
-        return TypeSignature.ofBase(clazz.getSimpleName());
+        return TypeSignature.ofNamed(clazz);
     }
 
     private static FieldLocation location(AnnotatedValueResolver resolver) {
@@ -414,28 +411,58 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         }
 
         if (type.isEnum()) {
-            @SuppressWarnings("unchecked")
-            final Class<? extends Enum<?>> enumType = (Class<? extends Enum<?>>) type;
-            final Description description = AnnotationUtil.findFirst(enumType, Description.class);
-
-            if (description != null) {
-                return new EnumInfo(enumType, description.value());
-            }
-
-            return new EnumInfo(enumType);
+            return newEnumInfo(type);
         }
 
         return newStructInfo(type);
     }
 
+    private static EnumInfo newEnumInfo(Class<?> enumClass) {
+        final String name = enumClass.getName();
+        final Description description = AnnotationUtil.findFirst(enumClass, Description.class);
+
+        final Field[] declaredFields = enumClass.getDeclaredFields();
+        final List<EnumValueInfo> values =
+            Stream.of(declaredFields)
+                .filter(Field::isEnumConstant)
+                .map(f -> {
+                    final Description valueDescription = AnnotationUtil.findFirst(f, Description.class);
+                    if (valueDescription != null) {
+                        return new EnumValueInfo(f.getName(),  null, valueDescription.value());
+                    }
+
+                    return new EnumValueInfo(f.getName(), null);
+                })
+                .collect(Collectors.toList());
+
+        if (description != null) {
+            return new EnumInfo(name, values, description.value());
+        }
+
+        return new EnumInfo(name, values);
+    }
+
     private static StructInfo newStructInfo(Class<?> structClass) {
         final String name = structClass.getName();
+        final Description description = AnnotationUtil.findFirst(structClass, Description.class);
 
         final Field[] declaredFields = structClass.getDeclaredFields();
         final List<FieldInfo> fields =
                 Stream.of(declaredFields)
-                      .map(f -> FieldInfo.of(f.getName(), toTypeSignature(f.getGenericType())))
+                      .map(f -> {
+                          final Description fieldDescription = AnnotationUtil.findFirst(f, Description.class);
+                          if (fieldDescription != null) {
+                              return FieldInfo.of(f.getName(), toTypeSignature(f.getGenericType()), fieldDescription.value());
+                          }
+
+                          return FieldInfo.of(f.getName(), toTypeSignature(f.getGenericType()));
+                      })
                       .collect(Collectors.toList());
+
+        if (description != null) {
+            return new StructInfo(name, fields, description.value());
+        }
+
         return new StructInfo(name, fields);
     }
 
