@@ -211,17 +211,43 @@ files into the specific location in the class path.
 
   ```java
   import com.linecorp.armeria.server.annotation.Description;
+  import com.linecorp.armeria.server.annotation.ResponseObject;
 
-  @Description("A service that provides user information.")
+  @Description("""
+      ## A service that provides user information.
+  """)
   public class UserService {
 
       @Get("/users/{id}")
       @Description("Retrieves the user information by the given user ID.")
-      public User getUser(@Param("id") @Description("the user ID") String id) { ... }
+      public User getUser(
+            @Param("id") @Description("the user ID") String id,
+            @Param("userType") @Description("the user type") UserType userType
+      ) { ... }
 
       ...
   }
+
+  @ResponseObject
+  public class User {
+      @Description("User Identification")
+      private String id;
+
+      @Description("User name")
+      private String name;
+  }
+
+  public enum UserType {
+      @Description("`Admin` type")
+      ADMIN,
+      @Description("`User` type")
+      USER
+  }
   ```
+
+  - Support enums `description` in annotated service.
+  - Support return types documentation in annotated service using <type://@ResponseObject> annotation.
+  - Support markdown ([GitHub Flavored Markdown Spec](https://github.github.com/gfm/))
 
   Using JavaDoc:
 
