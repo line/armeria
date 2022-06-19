@@ -224,7 +224,7 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                         )
                       }
                     >
-                      <Grid container alignItems="center" spacing={2}>
+                      <Grid container alignItems="center" spacing={1}>
                         <Grid item xs="auto">
                           <Typography
                             className={httpMethodClass(method.httpMethod)}
@@ -240,6 +240,15 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                           >
                             <code>{`${method.name}()`}</code>
                           </ListItemText>
+                          {method.endpoints.map((endpoint) => (
+                            <ListItemText
+                              primaryTypographyProps={{
+                                variant: 'caption',
+                              }}
+                            >
+                              {endpoint.pathMapping}
+                            </ListItemText>
+                          ))}
                         </Grid>
                       </Grid>
                     </ListItem>
