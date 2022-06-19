@@ -52,7 +52,11 @@ const StructPage: React.FunctionComponent<Props> = ({
       <Typography variant="subtitle1" paragraph>
         <code>{packageName(data.name)}</code>
       </Typography>
-      <Description docString={data.docString} />
+      {data.docString && (
+          <Section>
+            <Description docString={data.docString} />
+          </Section>
+      )}
       <Section>
         <VariableList
           title="Fields"

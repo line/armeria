@@ -55,9 +55,11 @@ const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
       <Typography variant="subtitle1" paragraph>
         <code>{packageName(data.name)}</code>
       </Typography>
-      <Typography variant="body2" paragraph>
-        {data.docString}
-      </Typography>
+      {data.docString && (
+        <Section>
+          <Description docString={data.docString} />
+        </Section>
+      )}
       <Section>
         <Typography variant="h6">Values</Typography>
         <Table>

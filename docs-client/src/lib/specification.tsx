@@ -195,7 +195,7 @@ export class Specification {
 
   public getTypeSignatureHtml(typeSignature: string) {
     // Split on all non-identifier parts and optimistically find matches for type identifiers.
-    const parts = typeSignature.split(/([^\w.]+)/g);
+    const parts = typeSignature.split(/([^$\w.]+)/g);
     return <>{parts.map((part) => this.renderTypePart(part))}</>;
   }
 

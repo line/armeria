@@ -61,6 +61,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
@@ -371,6 +372,10 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             return TypeSignature.ofList(toTypeSignature(clazz.getComponentType()));
         }
 
+        if (clazz.isEnum()) {
+            return TypeSignature.ofNamed(clazz);
+        }
+
         return TypeSignature.ofBase(clazz.getSimpleName());
     }
 
@@ -411,6 +416,12 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         if (type.isEnum()) {
             @SuppressWarnings("unchecked")
             final Class<? extends Enum<?>> enumType = (Class<? extends Enum<?>>) type;
+            final Description description = AnnotationUtil.findFirst(enumType, Description.class);
+
+            if (description != null) {
+                return new EnumInfo(enumType, description.value());
+            }
+
             return new EnumInfo(enumType);
         }
 
