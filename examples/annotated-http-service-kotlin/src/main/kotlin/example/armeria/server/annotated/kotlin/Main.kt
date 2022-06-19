@@ -44,6 +44,8 @@ fun configureServices(sb: ServerBuilder) {
         .build(DecoratingService())
         // DocService
         .serviceUnder("/docs", DocService())
+        // MarkdownDescriptionService
+        .annotatedService(MarkdownDescriptionService())
 }
 
 private fun AnnotatedServiceBindingBuilder.applyCommonDecorator(): AnnotatedServiceBindingBuilder {
