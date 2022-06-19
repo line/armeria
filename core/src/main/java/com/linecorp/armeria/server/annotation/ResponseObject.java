@@ -16,18 +16,19 @@
 
 package com.linecorp.armeria.server.annotation;
 
-import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin;
-import com.linecorp.armeria.server.docs.DocService;
-
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin;
+import com.linecorp.armeria.server.docs.DocService;
+
 /**
- * Specifies which element should be converted to structs in {@link DocService} by {@link AnnotatedDocServicePlugin}.
+ * Specifies which element should be converted to structs in
+ * {@link DocService} by {@link AnnotatedDocServicePlugin}.
  *
- * The following example shows when to apply a {@link ResponseObject} implicitly.
+ * <p>The following example shows when to apply a {@link ResponseObject} implicitly.
  * <pre>{@code
  * > @ResponseObject
  * > public class ResponseBean {

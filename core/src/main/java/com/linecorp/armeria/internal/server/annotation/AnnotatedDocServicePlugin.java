@@ -462,7 +462,10 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                       .map(f -> {
                           final Description fieldDescription = AnnotationUtil.findFirst(f, Description.class);
                           if (fieldDescription != null) {
-                              return FieldInfo.of(f.getName(), toTypeSignature(f.getGenericType()), fieldDescription.value());
+                              return FieldInfo.of(
+                                      f.getName(),
+                                      toTypeSignature(f.getGenericType()), fieldDescription.value()
+                              );
                           }
 
                           return FieldInfo.of(f.getName(), toTypeSignature(f.getGenericType()));
