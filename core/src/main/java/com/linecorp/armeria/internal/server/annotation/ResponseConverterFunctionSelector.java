@@ -16,6 +16,22 @@ under the License.
 
 package com.linecorp.armeria.internal.server.annotation;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.List;
+import java.util.Objects;
+import java.util.ServiceLoader;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Stream;
+
+import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -32,20 +48,6 @@ import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
-
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.List;
-import java.util.ServiceLoader;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Stream;
-
-import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
 
 final class ResponseConverterFunctionSelector {
 
@@ -66,34 +68,52 @@ final class ResponseConverterFunctionSelector {
     }
 
     static ResponseConverterFunction responseConverter(
-            Method method, List<ResponseConverterFunction> responseConverters) {
+            Method method, List<ResponseConverterFunction> configuredConverters) {
 
         final Type actualType = getActualReturnType(method);
+
+        final ImmutableList<ResponseConverterFunction> backingConvertersForSpi =
+                ImmutableList
+                        .<ResponseConverterFunction>builder()
+                        .addAll(configuredConverters)
+                        .addAll(defaultResponseConverters)
+                        .build();
+        final ResponseConverterFunction responseConverterFunctionForSpi =
+                createCompositeResponseConverterFunction(backingConvertersForSpi);
+        final ImmutableList<ResponseConverterFunction> spiConverters = getValidSpiConverterFunctions(actualType,
+                                                                                                     responseConverterFunctionForSpi);
+
         final ImmutableList<ResponseConverterFunction> backingConverters =
                 ImmutableList
                         .<ResponseConverterFunction>builder()
-                        .addAll(responseConverters)
+                        .addAll(configuredConverters)
+                        .addAll(spiConverters)
                         .addAll(defaultResponseConverters)
                         .build();
-        final ResponseConverterFunction responseConverter = new CompositeResponseConverterFunction(
+
+        return createCompositeResponseConverterFunction(backingConverters);
+    }
+
+    private static ResponseConverterFunction createCompositeResponseConverterFunction(
+            ImmutableList<ResponseConverterFunction> responseConverters) {
+        return new CompositeResponseConverterFunction(
                 ImmutableList
                         .<ResponseConverterFunction>builder()
-                        .addAll(backingConverters)
+                        .addAll(responseConverters)
                         // It is the last converter to try to convert the result object into an HttpResponse
                         // after aggregating the published object from a Publisher or Stream.
                         .add(new AggregatedResponseConverterFunction(
-                                new CompositeResponseConverterFunction(backingConverters)))
+                                new CompositeResponseConverterFunction(responseConverters)))
                         .build());
+    }
 
-        for (final ResponseConverterFunctionProvider provider : responseConverterFunctionProviders) {
-            final ResponseConverterFunction func =
-                    provider.createResponseConverterFunction(actualType, responseConverter);
-            if (func != null) {
-                return func;
-            }
-        }
-
-        return responseConverter;
+    private static ImmutableList<ResponseConverterFunction> getValidSpiConverterFunctions(Type actualType,
+                                                                                          ResponseConverterFunction responseConverter) {
+        return responseConverterFunctionProviders.stream().map(
+                responseConverterFunctionProvider ->
+                        responseConverterFunctionProvider.createResponseConverterFunction(
+                                actualType, responseConverter)
+        ).filter(Objects::nonNull).collect(toImmutableList());
     }
 
     private static Type getActualReturnType(Method method) {

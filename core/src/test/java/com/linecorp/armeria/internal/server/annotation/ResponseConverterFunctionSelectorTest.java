@@ -1,5 +1,6 @@
 package com.linecorp.armeria.internal.server.annotation;
 
+import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.Method;
@@ -19,22 +20,30 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
-@SuppressWarnings("ConstantConditions")
+/**
+ * This test uses TestSpiConverter
+ * This converter is automatically loaded via the configuration specified in the file:
+ * com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider, inside the META-INF.services folder
+ */
 class ResponseConverterFunctionSelectorTest {
 
-    private static final ServiceRequestContext ctx = ServiceRequestContext.builder(
+    private static final ServiceRequestContext CONTEXT = ServiceRequestContext.builder(
             HttpRequest.of(HttpMethod.GET, "/")).build();
+    private static final ResponseHeaders HEADERS = ResponseHeaders.of(HttpStatus.OK);
+    private static final HttpHeaders TRAILERS = HttpHeaders.of();
 
     @Test
     void prioritisesPassedInResponseConverters() throws Exception {
+        // uses provided converter instead of default String converter
         final ResponseConverterFunction converterFunction =
                 ResponseConverterFunctionSelector.responseConverter(
-                        getMethod("testEndpoint"),
+                        getMethod("testEndpointReturningString"),
                         Collections.singletonList(new MyResponseConverterFunctionProvider())
                 );
 
-        final HttpResponse response = converterFunction.convertResponse(ctx, null, new TestClassToConvert(),
-                                                                        null);
+        final HttpResponse response = converterFunction.convertResponse(CONTEXT, HEADERS,
+                                                                        "my_string",
+                                                                        TRAILERS);
 
         assertThat(response.aggregate().join().contentUtf8()).isEqualTo("my_response");
     }
@@ -43,14 +52,45 @@ class ResponseConverterFunctionSelectorTest {
     void usesSpiResponseConverterGivenNoResponseConverterSpecified() throws Exception {
         final ResponseConverterFunction converterFunction =
                 ResponseConverterFunctionSelector.responseConverter(
-                        getMethod("testEndpoint"),
-                        Collections.emptyList()
+                        getMethod("testEndpoint1"),
+                        emptyList()
                 );
 
-        final HttpResponse response = converterFunction.convertResponse(ctx, null, new TestClassToConvert(),
-                                                                        null);
+        final HttpResponse response = converterFunction.convertResponse(CONTEXT, HEADERS,
+                                                                        new TestClassToConvert1(),
+                                                                        TRAILERS);
 
         assertThat(response.aggregate().join().contentUtf8()).isEqualTo("testResponse");
+    }
+
+    @Test
+    void providesConverterFunctionForSpiProviders() throws Exception {
+        // ResponseConverterFunctionSelector should provide a ResponseConverterFunction to ResponseConverterFunctionProviders
+        final ResponseConverterFunction converterFunction =
+                ResponseConverterFunctionSelector.responseConverter(
+                        getMethod("testEndpoint2"),
+                        emptyList()
+                );
+
+        final HttpResponse response = converterFunction.convertResponse(CONTEXT, HEADERS,
+                                                                        new TestClassToConvert2(),
+                                                                        TRAILERS);
+
+        assertThat(response.aggregate().join().contentUtf8()).isEqualTo("converted_using_passed_in_converter");
+    }
+
+    @Test
+    void usesDefaultStringConverterGivenNoResponseConverterSpecifiedNorSpiConverterFound() throws Exception {
+        final ResponseConverterFunction converterFunction =
+                ResponseConverterFunctionSelector.responseConverter(
+                        getMethod("testEndpointReturningString"),
+                        emptyList()
+                );
+
+        final HttpResponse response = converterFunction.convertResponse(CONTEXT, HEADERS, "my_string",
+                                                                        TRAILERS);
+
+        assertThat(response.aggregate().join().contentUtf8()).isEqualTo("my_string");
     }
 
     private static Method getMethod(String methodName) throws NoSuchMethodException {
@@ -65,11 +105,16 @@ class ResponseConverterFunctionSelectorTest {
         }
     }
 
-    @FunctionalInterface
     @SuppressWarnings("unused")
     private interface TestService {
-        HttpResult<TestClassToConvert> testEndpoint();
+        HttpResult<TestClassToConvert1> testEndpoint1();
+
+        HttpResult<TestClassToConvert2> testEndpoint2();
+
+        HttpResult<String> testEndpointReturningString();
     }
 
-    static class TestClassToConvert {}
+    static class TestClassToConvert1 {}
+
+    static class TestClassToConvert2 {}
 }
