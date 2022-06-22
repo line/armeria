@@ -233,8 +233,6 @@ export class Specification {
         }
       }
     }
-
-    // TODO(trustin): Handle the docstrings of enum values.
     this.updateStructDocStrings(this.data.structs);
     this.updateStructDocStrings(this.data.exceptions);
   }
