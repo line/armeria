@@ -245,8 +245,7 @@ final class DefaultUnframedGrpcErrorHandler {
                 jsonGenerator.writeStartObject();
                 jsonGenerator.writeFieldName("error");
                 jsonGenerator.writeStartObject();
-                jsonGenerator.writeNumberField("code", httpStatus.code());
-                jsonGenerator.writeStringField("status", grpcCode.name());
+                jsonGenerator.writeNumberField("code", grpcCode.value());
                 if (grpcMessage != null) {
                     jsonGenerator.writeStringField("message", grpcMessage);
                 }
