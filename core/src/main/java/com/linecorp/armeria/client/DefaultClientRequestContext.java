@@ -81,7 +81,7 @@ import io.netty.util.AttributeKey;
 @UnstableApi
 public final class DefaultClientRequestContext
         extends NonWrappingRequestContext
-        implements ClientRequestContext {
+        implements ClientRequestContext, ClientRequestContextExtension {
 
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
@@ -726,7 +726,8 @@ public final class DefaultClientRequestContext
         return log;
     }
 
-    CancellationScheduler responseCancellationScheduler() {
+    @Override
+    public CancellationScheduler responseCancellationScheduler() {
         return responseCancellationScheduler;
     }
 

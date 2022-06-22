@@ -25,11 +25,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContextExtension;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
@@ -121,10 +121,10 @@ public final class BraveClient extends SimpleDecoratingHttpClient {
         req = req.withHeaders(newHeaders);
         ctx.updateRequest(req);
 
-        if (currentTraceContext != null && !span.isNoop() && ctx instanceof DefaultClientRequestContext) {
-            final DefaultClientRequestContext defaultCtx = (DefaultClientRequestContext) ctx;
+        final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
+        if (currentTraceContext != null && !span.isNoop() && ctxExtension != null) {
             // Make the span the current span and run scope decorators when the ctx is pushed.
-            defaultCtx.hook(() -> currentTraceContext.newScope(span.context()));
+            ctxExtension.hook(() -> currentTraceContext.newScope(span.context()));
         }
 
         maybeAddTagsToSpan(ctx, braveReq, span);

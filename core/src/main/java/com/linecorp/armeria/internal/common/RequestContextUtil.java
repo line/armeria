@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextExtension;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestContextStorageProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -198,10 +199,9 @@ public final class RequestContextUtil {
     @Nullable
     private static AutoCloseable invokeHook(RequestContext ctx) {
         final Supplier<? extends AutoCloseable> hook;
-        if (ctx instanceof DefaultServiceRequestContext) {
-            hook = ((DefaultServiceRequestContext) ctx).hook();
-        } else if (ctx instanceof DefaultClientRequestContext) {
-            hook = ((DefaultClientRequestContext) ctx).hook();
+        final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
+        if (ctxExtension != null) {
+            hook = ctxExtension.hook();
         } else {
             hook = null;
         }

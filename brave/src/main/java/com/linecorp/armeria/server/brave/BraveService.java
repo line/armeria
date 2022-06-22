@@ -22,9 +22,9 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestContextExtension;
 import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.internal.common.brave.SpanTags;
-import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -100,11 +100,10 @@ public final class BraveService extends SimpleDecoratingHttpService {
         final HttpServerRequest braveReq = ServiceRequestContextAdapter.asHttpServerRequest(ctx);
         final Span span = handler.handleReceive(braveReq);
 
-        if (currentTraceContext.scopeDecoratorAdded() && !span.isNoop() &&
-            ctx instanceof DefaultServiceRequestContext) {
-            final DefaultServiceRequestContext defaultCtx = (DefaultServiceRequestContext) ctx;
+        final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
+        if (currentTraceContext.scopeDecoratorAdded() && !span.isNoop() && ctxExtension != null) {
             // Run the scope decorators when the ctx is pushed to the thread local.
-            defaultCtx.hook(() -> currentTraceContext.decorateScope(span.context(),
+            ctxExtension.hook(() -> currentTraceContext.decorateScope(span.context(),
                                                                     SERVICE_REQUEST_DECORATING_SCOPE));
         }
 

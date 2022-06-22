@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextExtension;
 import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
@@ -79,7 +80,12 @@ class RequestContextWrapperTest {
         assertThat(wrapped1.unwrap()).isSameAs(ctx);
 
         final DefaultClientRequestContext as = wrapped2.as(DefaultClientRequestContext.class);
-        assert as != null;
         assertThat(as).isSameAs(ctx);
+
+        final ClientRequestContextExtension clientExtension = wrapped2.as(ClientRequestContextExtension.class);
+        assertThat(clientExtension).isSameAs(ctx);
+
+        final RequestContextExtension extension = wrapped2.as(RequestContextExtension.class);
+        assertThat(extension).isSameAs(ctx);
     }
 }
