@@ -434,7 +434,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Field[] declaredFields = enumClass.getDeclaredFields();
         final List<EnumValueInfo> values =
             Stream.of(declaredFields)
-                .filter(Field::isEnumConstant)
+                  .filter(Field::isEnumConstant)
                 .map(f -> {
                     final Description valueDescription = AnnotationUtil.findFirst(f, Description.class);
                     if (valueDescription != null) {
