@@ -38,5 +38,5 @@ import com.linecorp.armeria.server.docs.DocService;
  * }</pre>
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ElementType.TYPE})
+@Target(ElementType.TYPE)
 public @interface ResponseObject {}
