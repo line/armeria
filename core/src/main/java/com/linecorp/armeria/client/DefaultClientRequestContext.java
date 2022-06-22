@@ -53,7 +53,6 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -78,10 +77,8 @@ import io.netty.util.AttributeKey;
 /**
  * Default {@link ClientRequestContext} implementation.
  */
-@UnstableApi
-public final class DefaultClientRequestContext
-        extends NonWrappingRequestContext
-        implements ClientRequestContext, ClientRequestContextExtension {
+final class DefaultClientRequestContext extends NonWrappingRequestContext
+        implements ClientRequestContextExtension {
 
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
@@ -247,14 +244,7 @@ public final class DefaultClientRequestContext
         return current != null ? current.root() : null;
     }
 
-    /**
-     * Initializes this context with the specified {@link EndpointGroup}.
-     * This method must be invoked to finish the construction of this context.
-     *
-     * @return {@code true} if the initialization has succeeded.
-     *         {@code false} if the initialization has failed and this context's {@link RequestLog} has been
-     *         completed with the cause of the failure.
-     */
+    @Override
     public CompletableFuture<Boolean> init(EndpointGroup endpointGroup) {
         assert endpoint == null : endpoint;
         assert !initialized;
@@ -349,12 +339,7 @@ public final class DefaultClientRequestContext
         }
     }
 
-    /**
-     * Returns a {@link CompletableFuture} that will be completed
-     * if this {@link ClientRequestContext} is initialized with an {@link EndpointGroup}.
-     *
-     * @see #init(EndpointGroup)
-     */
+    @Override
     public CompletableFuture<Boolean> whenInitialized() {
         CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
         if (whenInitialized != null) {
@@ -369,9 +354,7 @@ public final class DefaultClientRequestContext
         }
     }
 
-    /**
-     * Completes the {@link #whenInitialized()} with the specified value.
-     */
+    @Override
     public void finishInitialization(boolean success) {
         final CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
         if (whenInitialized != null) {

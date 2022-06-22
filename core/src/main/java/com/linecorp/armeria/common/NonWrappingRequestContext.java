@@ -39,7 +39,7 @@ import io.netty.util.AttributeKey;
  * {@link RequestContext}.
  */
 @UnstableApi
-public abstract class NonWrappingRequestContext implements RequestContext, RequestContextExtension {
+public abstract class NonWrappingRequestContext implements RequestContextExtension {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<NonWrappingRequestContext, Supplier>

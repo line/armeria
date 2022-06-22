@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  * recommended to consult with the maintainers before using this class.
  */
 @UnstableApi
-public interface RequestContextExtension {
+public interface RequestContextExtension extends RequestContext {
 
     /**
      * Adds a hook which is invoked whenever this {@link NonWrappingRequestContext} is pushed to the

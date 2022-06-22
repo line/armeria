@@ -16,7 +16,11 @@
 
 package com.linecorp.armeria.client;
 
+import java.util.concurrent.CompletableFuture;
+
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 
 /**
@@ -27,10 +31,33 @@ import com.linecorp.armeria.internal.common.CancellationScheduler;
  * recommended to consult with the maintainers before using this class.
  */
 @UnstableApi
-public interface ClientRequestContextExtension {
+public interface ClientRequestContextExtension extends ClientRequestContext {
 
     /**
      * Returns the {@link CancellationScheduler} used to schedule a response timeout.
      */
     CancellationScheduler responseCancellationScheduler();
+
+    /**
+     * Returns a {@link CompletableFuture} that will be completed
+     * if this {@link ClientRequestContext} is initialized with an {@link EndpointGroup}.
+     *
+     * @see #init(EndpointGroup)
+     */
+    CompletableFuture<Boolean> whenInitialized();
+
+    /**
+     * Initializes this context with the specified {@link EndpointGroup}.
+     * This method must be invoked to finish the construction of this context.
+     *
+     * @return {@code true} if the initialization has succeeded.
+     *         {@code false} if the initialization has failed and this context's {@link RequestLog} has been
+     *         completed with the cause of the failure.
+     */
+    CompletableFuture<Boolean> init(EndpointGroup endpointGroup);
+
+    /**
+     * Completes the {@link #whenInitialized()} with the specified value.
+     */
+    void finishInitialization(boolean success);
 }
