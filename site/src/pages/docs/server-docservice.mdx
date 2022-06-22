@@ -213,9 +213,7 @@ files into the specific location in the class path.
   import com.linecorp.armeria.server.annotation.Description;
   import com.linecorp.armeria.server.annotation.ResponseObject;
 
-  @Description("""
-      ## A service that provides user information.
-  """)
+  @Description("### A service that provides user information.")
   public class UserService {
 
       @Get("/users/{id}")
