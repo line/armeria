@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,11 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.client.DefaultWebClient.pathWithQuery;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
 import static java.util.Objects.requireNonNull;
 
@@ -34,6 +33,14 @@ import java.util.function.Function;
 
 import javax.net.ssl.SSLSession;
 
+import com.google.common.base.Strings;
+
+import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.Flags;
@@ -145,7 +152,7 @@ public final class DefaultClientRequestContext
      * @param requestStartTimeMicros the number of microseconds since the epoch,
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
-    DefaultClientRequestContext(
+    public DefaultClientRequestContext(
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
@@ -802,5 +809,15 @@ public final class DefaultClientRequestContext
 
             return buf.toString();
         }
+    }
+
+    static String pathWithQuery(URI uri, @Nullable String query) {
+        String path = uri.getRawPath();
+        if (Strings.isNullOrEmpty(path)) {
+            path = query == null ? "/" : "/?" + query;
+        } else if (query != null) {
+            path = path + '?' + query;
+        }
+        return path;
     }
 }

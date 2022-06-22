@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.client;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -22,21 +22,23 @@ import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 import io.netty.util.concurrent.FastThreadLocal;
 
-final class ClientThreadLocalState {
+public final class ClientThreadLocalState {
 
     private static final FastThreadLocal<ClientThreadLocalState> threadLocalState = new FastThreadLocal<>();
 
     @Nullable
-    static ClientThreadLocalState get() {
+    public static ClientThreadLocalState get() {
         return threadLocalState.get();
     }
 
-    static ClientThreadLocalState maybeCreate() {
+    public static ClientThreadLocalState maybeCreate() {
         ClientThreadLocalState state = threadLocalState.get();
         if (state == null) {
             state = new ClientThreadLocalState();
@@ -51,14 +53,14 @@ final class ClientThreadLocalState {
     @Nullable
     private DefaultClientRequestContextCaptor pendingContextCaptor;
 
-    void add(Consumer<? super ClientRequestContext> customizer) {
+    public void add(Consumer<? super ClientRequestContext> customizer) {
         if (customizers == null) {
             customizers = new ArrayList<>();
         }
         customizers.add(customizer);
     }
 
-    void remove(Consumer<? super ClientRequestContext> customizer) {
+    public void remove(Consumer<? super ClientRequestContext> customizer) {
         if (customizers != null) {
             // Iterate in reverse order since we add/remove in LIFO order.
             for (int i = customizers.size() - 1; i >= 0; i--) {
@@ -74,7 +76,7 @@ final class ClientThreadLocalState {
         reportThreadSafetyViolation();
     }
 
-    ClientRequestContextCaptor newContextCaptor() {
+    public ClientRequestContextCaptor newContextCaptor() {
         final DefaultClientRequestContextCaptor oldPendingContextCaptor = pendingContextCaptor;
         return pendingContextCaptor = new DefaultClientRequestContextCaptor(oldPendingContextCaptor);
     }

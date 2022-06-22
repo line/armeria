@@ -24,9 +24,9 @@ import org.junit.jupiter.api.Test;
 import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextExtension;
-import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

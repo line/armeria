@@ -22,7 +22,6 @@ import java.util.Map;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientOptions;
-import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -40,6 +39,7 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 
 import io.grpc.CallCredentials;
 import io.grpc.CallOptions;

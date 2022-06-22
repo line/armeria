@@ -14,10 +14,11 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.client;
 
 import java.util.concurrent.CompletableFuture;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;

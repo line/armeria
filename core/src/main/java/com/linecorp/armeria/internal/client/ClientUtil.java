@@ -24,7 +24,6 @@ import java.util.function.Function;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.ClientRequestContextExtension;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
