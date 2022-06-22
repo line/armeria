@@ -43,7 +43,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
 
-class GrpcDecoratingServiceTest {
+class GrpcDecoratingServiceItTest {
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {

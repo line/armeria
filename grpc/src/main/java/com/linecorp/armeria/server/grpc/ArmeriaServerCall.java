@@ -33,7 +33,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
-import com.google.common.base.Strings;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -131,7 +130,6 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     private ResponseHeaders responseHeaders;
     @Nullable
     private O firstResponse;
-    @Nullable
     private final String clientAcceptEncoding;
 
     @Nullable
@@ -152,6 +150,7 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
     private int pendingRequests;
     private volatile int pendingMessages;
+    private final boolean autoCompression;
 
     ArmeriaServerCall(HttpRequest req,
                       MethodDescriptor<I, O> method,
@@ -167,7 +166,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
                       boolean unsafeWrapRequestBuffers,
                       boolean useBlockingTaskExecutor,
                       ResponseHeaders defaultHeaders,
-                      @Nullable GrpcStatusFunction statusFunction) {
+                      @Nullable GrpcStatusFunction statusFunction,
+                      boolean autoCompression) {
         requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
         this.simpleMethodName = requireNonNull(simpleMethodName, "simpleMethodName");
@@ -191,8 +191,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
 
         this.res = requireNonNull(res, "res");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
-        clientAcceptEncoding =
-                Strings.emptyToNull(clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING));
+        clientAcceptEncoding = clientHeaders.get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING, "");
+        this.autoCompression = autoCompression;
         marshaller = new GrpcMessageMarshaller<>(alloc, serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapRequestBuffers);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
@@ -253,15 +253,26 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
         checkState(responseHeaders == null, "sendHeaders already called");
         checkState(!closeCalled, "call is closed");
 
-        if (compressor == null || !messageCompression || clientAcceptEncoding == null) {
-            compressor = Codec.Identity.NONE;
-        } else {
+        if (messageCompression && !clientAcceptEncoding.isEmpty()) {
             final List<String> acceptedEncodingsList =
                     ACCEPT_ENCODING_SPLITTER.splitToList(clientAcceptEncoding);
-            if (!acceptedEncodingsList.contains(compressor.getMessageEncoding())) {
-                // resort to using no compression.
+            if (compressor != null) {
+                if (!acceptedEncodingsList.contains(compressor.getMessageEncoding())) {
+                    // resort to using no compression.
+                    compressor = Codec.Identity.NONE;
+                }
+            } else if (autoCompression) {
+                for (final String encoding : acceptedEncodingsList) {
+                    if (compressorRegistry.lookupCompressor(encoding) != null) {
+                        setCompression(encoding);
+                        break;
+                    }
+                }
+            } else {
                 compressor = Codec.Identity.NONE;
             }
+        } else {
+            compressor = Codec.Identity.NONE;
         }
         responseFramer.setCompressor(ForwardingCompressor.forGrpc(compressor));
 
@@ -695,7 +706,8 @@ final class ArmeriaServerCall<I, O> extends ServerCall<I, O>
     }
 
     private static Metadata generateMetadataFromThrowable(Throwable exception) {
-        @Nullable final Metadata metadata = Status.trailersFromThrowable(exception);
+        @Nullable
+        final Metadata metadata = Status.trailersFromThrowable(exception);
         return metadata != null ? metadata : new Metadata();
     }
 

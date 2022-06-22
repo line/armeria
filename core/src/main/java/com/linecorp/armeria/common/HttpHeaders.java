@@ -92,7 +92,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
  *   <li>{@link CacheControl} and {@link ContentDisposition}
  *     <ul>
  *       <li>Converted via {@code asHeaderValue()}</li>
- *       <li>e.g. {@code "no-cache, no-store, must-revalidate"}, {@code "form-data; name=\"fieldName\""}</li>
+ *       <li>e.g. {@code "no-cache, no-store, max-age=0, must-revalidate"},
+ *         {@code "form-data; name=\"fieldName\""}</li>
  *     </ul>
  *   </li>
  *   <li>{@link Instant}, {@link TemporalAccessor}, {@link Date} and {@link Calendar}

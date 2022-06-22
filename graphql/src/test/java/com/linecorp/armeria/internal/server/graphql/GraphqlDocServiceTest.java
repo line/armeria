@@ -100,7 +100,8 @@ class GraphqlDocServiceTest {
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.headers().get(HttpHeaderNames.CACHE_CONTROL)).isEqualTo("no-cache, must-revalidate");
+        assertThat(res.headers().get(HttpHeaderNames.CACHE_CONTROL))
+                .isEqualTo("no-cache, max-age=0, must-revalidate");
         assertThatJson(res.contentUtf8())
                 .when(IGNORING_ARRAY_ORDER)
                 .node("services[0].name").isEqualTo("com.linecorp.armeria.server.graphql.DefaultGraphqlService")

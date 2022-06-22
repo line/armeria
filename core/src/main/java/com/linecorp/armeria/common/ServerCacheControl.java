@@ -42,17 +42,19 @@ public final class ServerCacheControl extends CacheControl {
     public static final ServerCacheControl EMPTY = builder().build();
 
     /**
-     * {@code "no-cache, no-store, must-revalidate"}.
+     * {@code "no-cache, no-store, max-age=0, must-revalidate"}.
      */
     public static final ServerCacheControl DISABLED = builder().noCache()
+                                                               .maxAgeSeconds(0)
                                                                .noStore()
                                                                .mustRevalidate()
                                                                .build();
 
     /**
-     * {@code "no-cache, must-revalidate"}.
+     * {@code "no-cache, max-age=0, must-revalidate"}.
      */
     public static final ServerCacheControl REVALIDATED = builder().noCache()
+                                                                  .maxAgeSeconds(0)
                                                                   .mustRevalidate()
                                                                   .build();
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,14 +14,24 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.server.grpc;
+package com.linecorp.armeria.client.proxy;
 
-public final class GrpcMethodUtil {
+import java.net.InetSocketAddress;
 
-    public static String extractMethodName(String fullMethodName) {
-        final int methodIndex = fullMethodName.lastIndexOf('/');
-        return fullMethodName.substring(methodIndex + 1);
+class ProxySuccessEvent {
+    private final InetSocketAddress backendAddress;
+    private final Object response;
+
+    ProxySuccessEvent(InetSocketAddress backendAddress, Object response) {
+        this.backendAddress = backendAddress;
+        this.response = response;
     }
 
-    private GrpcMethodUtil() {}
+    public Object getResponse() {
+        return response;
+    }
+
+    public InetSocketAddress getBackendAddress() {
+        return backendAddress;
+    }
 }

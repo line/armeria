@@ -16,8 +16,15 @@
 package com.linecorp.armeria.server.file;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.net.URL;
+import java.nio.file.Path;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.DisabledOnJre;
+import org.junit.jupiter.api.condition.JRE;
+import org.junit.jupiter.api.io.TempDir;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CommonPools;
@@ -72,5 +79,48 @@ class HttpFileTest {
         final AggregatedHttpResponse agg = response.aggregate().join();
         assertThat(agg.status()).isEqualTo(HttpStatus.TEMPORARY_REDIRECT);
         assertThat(agg.headers().get(HttpHeaderNames.LOCATION)).isEqualTo("/foo/bar?a=b");
+    }
+
+    @Test
+    void createFromFileUrl(@TempDir Path tempDir) throws Exception {
+        final URL file = tempDir.resolve("test.txt").toUri().toURL();
+        final HttpFileBuilder builder = HttpFile.builder(file);
+        assertThat(builder).isInstanceOf(HttpFileBuilder.FileSystemHttpFileBuilder.class);
+    }
+
+    @Test
+    void createFromHttpUrl() throws Exception {
+        final URL url = new URL("https://line.me");
+        final String exMsg = "Unsupported URL: https://line.me " +
+            "(must start with 'file:', 'jar:file' or 'jrt:')";
+        assertThatThrownBy(() -> HttpFile.builder(url)).isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining(exMsg);
+    }
+
+    @Test
+    // in JDK 8, getting class by getResource returns jar protocol
+    @DisabledOnJre(JRE.JAVA_8)
+    void createFromJrtUrl() {
+        final URL jarFileUrl = ClassLoader.getSystemClassLoader().getResource("java/lang/Object.class");
+        assertThat(jarFileUrl.getProtocol()).isEqualTo("jrt");
+        final HttpFileBuilder builder = HttpFile.builder(jarFileUrl);
+        assertThat(builder).isInstanceOf(HttpFileBuilder.ClassPathHttpFileBuilder.class);
+    }
+
+    @Test
+    void createFromJarFileUrl() {
+        final URL jarFileUrl = Test.class.getClassLoader().getResource("META-INF/LICENSE.md");
+        assertThat(jarFileUrl.getProtocol()).isEqualTo("jar");
+        final HttpFileBuilder builder = HttpFile.builder(jarFileUrl);
+        assertThat(builder).isInstanceOf(HttpFileBuilder.ClassPathHttpFileBuilder.class);
+    }
+
+    @Test
+    void createFromJarHttpUrl() throws Exception {
+        final URL jarHttpUrl = new URL("jar:http://www.foo.com/bar/baz.jar!/COM/foo/Quux.class");
+        final String exMsg = "Unsupported URL: jar:http://www.foo.com/bar/baz.jar!/COM/foo/Quux.class " +
+            "(must start with 'file:', 'jar:file' or 'jrt:')";
+        assertThatThrownBy(() -> HttpFile.builder(jarHttpUrl)).isInstanceOf(IllegalArgumentException.class)
+            .hasMessageContaining(exMsg);
     }
 }
