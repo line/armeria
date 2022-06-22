@@ -8,7 +8,7 @@ boms:
   # Ensure that we use the same Protobuf version as what gRPC depends on.
   # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
   #      (Switch to the right tag and look for 'protobufVersion' and 'protocVersion'.)
-  - io.grpc:grpc-bom:1.45.1
+  - io.grpc:grpc-bom:1.46.0
   - io.micrometer:micrometer-bom:1.8.5
   - io.netty:netty-bom:4.1.76.Final
   - io.zipkin.brave:brave-bom:5.13.8
