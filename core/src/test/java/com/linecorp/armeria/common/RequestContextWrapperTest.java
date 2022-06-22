@@ -23,6 +23,8 @@ import org.junit.jupiter.api.Test;
 
 import com.google.errorprone.annotations.MustBeClosed;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -56,7 +58,7 @@ class RequestContextWrapperTest {
     }
 
     @Test
-    void testUnwrapBehavior() {
+    void testServiceUnwrapBehavior() {
         final RequestContext ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
         final WrappedRequestContext wrapped1 = new WrappedRequestContext(ctx);
         final WrappedRequestContext wrapped2 = new WrappedRequestContext(wrapped1);
@@ -64,6 +66,19 @@ class RequestContextWrapperTest {
         assertThat(wrapped1.unwrap()).isSameAs(ctx);
 
         final DefaultServiceRequestContext as = wrapped2.as(DefaultServiceRequestContext.class);
+        assert as != null;
+        assertThat(as).isSameAs(ctx);
+    }
+
+    @Test
+    void testClientUnwrapBehavior() {
+        final RequestContext ctx = ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
+        final WrappedRequestContext wrapped1 = new WrappedRequestContext(ctx);
+        final WrappedRequestContext wrapped2 = new WrappedRequestContext(wrapped1);
+        assertThat(wrapped2.unwrap()).isSameAs(wrapped1);
+        assertThat(wrapped1.unwrap()).isSameAs(ctx);
+
+        final DefaultClientRequestContext as = wrapped2.as(DefaultClientRequestContext.class);
         assert as != null;
         assertThat(as).isSameAs(ctx);
     }
