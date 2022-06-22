@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletableFuture;
@@ -92,7 +91,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
         subscribed = true;
         if (needsFiltering()) {
             delegate.subscribe(
-                    new FilteringSubscriber(subscriber, executor, options, offset, length),
+                    new FilteringSubscriber(subscriber, executor, offset, length),
                     executor, options);
         } else {
             delegate.subscribe(subscriber, executor, options);
@@ -124,22 +123,16 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
         private final int offset;
         private final int end;
         private final EventExecutor executor;
-        private final boolean notifyCancellation;
 
         @Nullable
         private Subscription upstream;
-        @Nullable
-        private HttpData buffer;
         private int position;
-        private boolean inOnNext;
         private boolean completed;
-        private boolean completing;
 
         FilteringSubscriber(Subscriber<? super HttpData> downstream,
-                            EventExecutor executor, SubscriptionOption[] options, int offset, int length) {
+                            EventExecutor executor, int offset, int length) {
             this.downstream = downstream;
             this.executor = executor;
-            notifyCancellation = containsNotifyCancellation(options);
             this.offset = offset;
             if (length == -1) {
                 end = Integer.MAX_VALUE;
@@ -158,52 +151,16 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
         @Override
         public void onNext(HttpData data) {
             requireNonNull(data, "data");
-            assert buffer == null;
             if (completed) {
                 data.close();
                 return;
             }
 
-            inOnNext = true;
-            try {
-                if (!onNext0(data)) {
-                    return;
-                }
-
-                // Use a while-loop to avoid deep recursive calls.
-                // https://github.com/reactive-streams/reactive-streams-jvm#3.3
-                while (buffer != null && demand > 0) {
-                    final HttpData buffer = this.buffer;
-                    this.buffer = null;
-                    if (!onNext0(buffer)) {
-                        break;
-                    }
-                }
-
-                if (completing && buffer == null) {
-                    downstream.onComplete();
-                    return;
-                }
-
-                if (buffer == null && demand > 0) {
-                    requestOneOrCancel();
-                }
-            } finally {
-                inOnNext = false;
-            }
-        }
-
-        /**
-         * Publishes the {@link HttpData} to the downstream.
-         *
-         * @return true if data is published to the downstream.
-         */
-        private boolean onNext0(HttpData data) {
             if (position >= end) {
                 // Drop tail bytes. Fully received the desired data already.
                 data.close();
                 upstream.cancel();
-                return false;
+                return;
             }
 
             final int dataSize = data.length();
@@ -216,7 +173,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
                 data.close();
                 position += dataSize;
                 requestOneOrCancel();
-                return false;
+                return;
             }
 
             if (skipBytes == 0 && dropBytes == 0) {
@@ -227,17 +184,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
                 try {
                     final int slicedDataSize = dataSize - skipBytes - dropBytes;
                     final HttpData slicedData = retainedSlice(data, skipBytes, slicedDataSize);
-                    final int nextOffset = skipBytes + slicedDataSize;
-
-                    if (dropBytes == 0) {
-                        final int remainingLength = dataSize - nextOffset;
-                        if (remainingLength > 0) {
-                            // The stored buffer will be passed down later when there's demand.
-                            buffer = retainedSlice(data, nextOffset, remainingLength);
-                        }
-                    }
-
-                    position += nextOffset;
+                    position += skipBytes + slicedDataSize;
                     downstream.onNext(slicedData);
                 } finally {
                     data.close();
@@ -248,11 +195,11 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
             if (position == end) {
                 onComplete();
                 upstream.cancel();
-                cleanup();
             } else {
-                demand--;
+                if (--demand > 0) {
+                    upstream.request(1);
+                }
             }
-            return true;
         }
 
         private void requestOneOrCancel() {
@@ -276,29 +223,11 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
                 return;
             }
             completed = true;
-            cleanup();
             downstream.onError(t);
         }
 
         @Override
         public void onComplete() {
-            if (buffer != null) {
-                if (!completed) {
-                    // A fixed stream can send `onComplete()` right after `onNext()` so `abort()` called amid
-                    // `onNext()` can be ignored by the upstream.
-                    final Throwable abortedCause = DefaultByteStreamMessage.this.abortedCause;
-                    if (abortedCause != null) {
-                        completed = true;
-                        cleanup();
-                        downstream.onError(abortedCause);
-                        return;
-                    }
-                }
-
-                // Signal downstream after the buffer is delivered.
-                completing = true;
-                return;
-            }
             if (completed) {
                 return;
             }
@@ -327,20 +256,10 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
                 return;
             }
 
-            if (completing && buffer == null) {
-                downstream.onComplete();
-                return;
-            }
-
             final long oldDemand = demand;
             demand += n;
-            if (oldDemand == 0 && buffer == null) {
+            if (oldDemand == 0) {
                 upstream.request(1);
-            } else if (buffer != null && !inOnNext) {
-                // If inOnNext is true, the new demand will be handled by the while-loop in `onNext()`
-                final HttpData buffer = this.buffer;
-                this.buffer = null;
-                onNext(buffer);
             }
         }
 
@@ -358,19 +277,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
                 return;
             }
             completed = true;
-            cleanup();
-            if (notifyCancellation) {
-                downstream.onError(CancelledSubscriptionException.get());
-            }
             upstream.cancel();
-        }
-
-        private void cleanup() {
-            if (buffer != null) {
-                buffer.close();
-                buffer = null;
-            }
-            demand = 0;
         }
     }
 }

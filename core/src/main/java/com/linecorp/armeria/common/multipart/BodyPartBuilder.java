@@ -119,7 +119,7 @@ public final class BodyPartBuilder {
      */
     public BodyPartBuilder content(Path path, int bufferSize) {
         requireNonNull(path, "path");
-        return content(StreamMessage.of(path, bufferSize));
+        return content(StreamMessage.builder(path).bufferSize(bufferSize).build());
     }
 
     /**
