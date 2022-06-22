@@ -67,8 +67,10 @@ class RequestContextWrapperTest {
         assertThat(wrapped1.unwrap()).isSameAs(ctx);
 
         final DefaultServiceRequestContext as = wrapped2.as(DefaultServiceRequestContext.class);
-        assert as != null;
         assertThat(as).isSameAs(ctx);
+
+        final RequestContextExtension extension = wrapped2.as(RequestContextExtension.class);
+        assertThat(extension).isSameAs(ctx);
     }
 
     @Test
