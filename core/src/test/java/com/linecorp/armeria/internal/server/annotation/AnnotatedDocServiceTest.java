@@ -146,6 +146,7 @@ class AnnotatedDocServiceTest {
         addMultiMethodInfo(methodInfos);
         addJsonMethodInfo(methodInfos);
         addPeriodMethodInfo(methodInfos);
+        addDescriptionMethodInfo(methodInfos);
         final Map<Class<?>, String> serviceDescription = ImmutableMap.of(MyService.class, "My service class");
 
         final JsonNode expectedJson = mapper.valueToTree(AnnotatedDocServicePlugin.generate(
@@ -324,6 +325,21 @@ class AnnotatedDocServiceTest {
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
+    private static void addDescriptionMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/description")
+                .availableMimeTypes(MediaType.JSON_UTF_8)
+                .build();
+        final List<FieldInfo> fieldInfos = ImmutableList.of(
+                FieldInfo.builder("DescriptionEnum", toTypeSignature(DescriptionEnum.class))
+                        .requirement(REQUIRED)
+                        .location(QUERY)
+                        .docString("DESCRIPTION PARAM").build());
+        final MethodInfo methodInfo = new MethodInfo(
+                "description", STRING, fieldInfos, ImmutableList.of(),
+                ImmutableList.of(endpoint), HttpMethod.GET, "## Description method with markdown");
+        methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
+    }
+
     private static void addExamples(JsonNode json) {
         // Add the global example.
         ((ArrayNode) json.get("exampleHeaders")).add(mapper.valueToTree(EXAMPLE_HEADERS_ALL));
@@ -490,12 +506,28 @@ class AnnotatedDocServiceTest {
         public HttpResponse period(@Param Period period) {
             return HttpResponse.of(200);
         }
+
+        @Description("## Description method with markdown")
+        @Get("/description")
+        public String description(@Param @Description("DESCRIPTION PARAM") DescriptionEnum DescriptionEnum) {
+            return DescriptionEnum.name();
+        }
     }
 
     private enum MyEnum {
         A,
         B,
         C
+    }
+
+    @Description("DESCRIPTION ENUM")
+    private enum DescriptionEnum {
+        @Description("DESCRIPTION `A`")
+        DESCRIPTION_A,
+        @Description("DESCRIPTION `B`")
+        DESCRIPTION_B,
+        @Description("DESCRIPTION `C`")
+        DESCRIPTION_C
     }
 
     private static class JsonRequest {
