@@ -17,6 +17,7 @@ package com.linecorp.armeria.internal.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.client.ClientUtil.pathWithQuery;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
 import static java.util.Objects.requireNonNull;
 
@@ -32,8 +33,6 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 import javax.net.ssl.SSLSession;
-
-import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientOptions;
@@ -809,15 +808,5 @@ public final class DefaultClientRequestContext
 
             return buf.toString();
         }
-    }
-
-    static String pathWithQuery(URI uri, @Nullable String query) {
-        String path = uri.getRawPath();
-        if (Strings.isNullOrEmpty(path)) {
-            path = query == null ? "/" : "/?" + query;
-        } else if (query != null) {
-            path = path + '?' + query;
-        }
-        return path;
     }
 }

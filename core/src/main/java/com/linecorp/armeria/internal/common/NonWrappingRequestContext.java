@@ -33,7 +33,6 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.Channel;
@@ -43,7 +42,6 @@ import io.netty.util.AttributeKey;
  * A skeletal {@link RequestContext} implementation that helps to implement a non-wrapping
  * {@link RequestContext}.
  */
-@UnstableApi
 public abstract class NonWrappingRequestContext implements RequestContextExtension {
 
     @SuppressWarnings("rawtypes")

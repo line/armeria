@@ -16,13 +16,12 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.ClientUtil.pathWithQuery;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
-
-import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
@@ -133,15 +132,5 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     @Override
     public HttpClient unwrap() {
         return (HttpClient) super.unwrap();
-    }
-
-    static String pathWithQuery(URI uri, @Nullable String query) {
-        String path = uri.getRawPath();
-        if (Strings.isNullOrEmpty(path)) {
-            path = query == null ? "/" : "/?" + query;
-        } else if (query != null) {
-            path = path + '?' + query;
-        }
-        return path;
     }
 }

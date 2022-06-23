@@ -21,7 +21,6 @@ import java.util.function.Supplier;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
 /**
@@ -31,7 +30,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
  * {@link RequestContext} may extend this interface. It is highly
  * recommended to consult with the maintainers before using this class.
  */
-@UnstableApi
 public interface RequestContextExtension extends RequestContext {
 
     /**
