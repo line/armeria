@@ -3,7 +3,6 @@ package example.armeria.server.annotated.kotlin
 import com.linecorp.armeria.server.annotation.Description
 import com.linecorp.armeria.server.annotation.Get
 import com.linecorp.armeria.server.annotation.Param
-import com.linecorp.armeria.server.annotation.ResponseObject
 
 @CoroutineNameDecorator(name = "default")
 class MarkdownDescriptionService {
@@ -58,7 +57,6 @@ class MarkdownDescriptionService {
         ### Structs description subtitle
         > support quotes
     """)
-    @ResponseObject
     data class MarkdownDescriptionResult(
         @field:Description("result1 description (default)")
         val result1: String,

@@ -4,7 +4,6 @@ import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.Get
 import com.linecorp.armeria.server.annotation.Param
 import com.linecorp.armeria.server.annotation.ProducesJson
-import com.linecorp.armeria.server.annotation.ResponseObject
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.withContext
 import org.slf4j.LoggerFactory
@@ -33,7 +32,6 @@ class ContextAwareService {
     companion object {
         private val log = LoggerFactory.getLogger(ContextAwareService::class.java)
 
-        @ResponseObject
         data class FooResponse(val id: Int, val name: String)
     }
 }

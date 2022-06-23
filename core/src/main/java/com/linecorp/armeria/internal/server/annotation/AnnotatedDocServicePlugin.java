@@ -65,7 +65,6 @@ import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
-import com.linecorp.armeria.server.annotation.ResponseObject;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
@@ -375,11 +374,6 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         }
 
         if (clazz.isEnum()) {
-            return TypeSignature.ofNamed(clazz);
-        }
-
-        final ResponseObject responseObject = AnnotationUtil.findFirst(clazz, ResponseObject.class);
-        if (responseObject != null) {
             return TypeSignature.ofNamed(clazz);
         }
 
