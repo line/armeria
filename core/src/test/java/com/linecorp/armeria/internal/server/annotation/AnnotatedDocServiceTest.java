@@ -330,7 +330,7 @@ class AnnotatedDocServiceTest {
                 .availableMimeTypes(MediaType.JSON_UTF_8)
                 .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
-                FieldInfo.builder("DescriptionEnum", toTypeSignature(DescriptionEnum.class))
+                FieldInfo.builder("descriptionEnum", toTypeSignature(DescriptionEnum.class))
                         .requirement(REQUIRED)
                         .location(QUERY)
                         .docString("DESCRIPTION PARAM").build());
@@ -509,8 +509,8 @@ class AnnotatedDocServiceTest {
 
         @Description("## Description method with markdown")
         @Get("/description")
-        public String description(@Param @Description("DESCRIPTION PARAM") DescriptionEnum DescriptionEnum) {
-            return DescriptionEnum.name();
+        public String description(@Param @Description("DESCRIPTION PARAM") DescriptionEnum descriptionEnum) {
+            return descriptionEnum.name();
         }
     }
 
