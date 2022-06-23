@@ -25,7 +25,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.grpc.reactor.Hello.HelloReply;
 import com.linecorp.armeria.grpc.reactor.Hello.HelloRequest;
 import com.linecorp.armeria.grpc.reactor.HelloServiceImpl.AuthError;
@@ -46,7 +46,7 @@ class HelloServiceTest {
     static void beforeClass() throws Exception {
         server = newServer(0);
         server.start().join();
-        helloService = Clients.newClient(uri(), ReactorHelloServiceGrpc.ReactorHelloServiceStub.class);
+        helloService = GrpcClients.newClient(uri(), ReactorHelloServiceGrpc.ReactorHelloServiceStub.class);
     }
 
     @AfterAll

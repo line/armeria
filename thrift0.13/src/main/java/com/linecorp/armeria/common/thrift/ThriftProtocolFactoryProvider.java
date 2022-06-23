@@ -24,6 +24,7 @@ import org.apache.thrift.protocol.TProtocolFactory;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * SPI Provider for links from {@link SerializationFormat} to {@link TProtocolFactory}.
@@ -34,26 +35,39 @@ public abstract class ThriftProtocolFactoryProvider {
      */
     protected static final class Entry {
         final SerializationFormat serializationFormat;
-        final TProtocolFactory tProtocolFactory;
+        final TProtocolFactory protocolFactory;
 
-        public Entry(SerializationFormat serializationFormat, TProtocolFactory tProtocolFactory) {
+        public Entry(SerializationFormat serializationFormat, TProtocolFactory protocolFactory) {
             this.serializationFormat = requireNonNull(serializationFormat, "serializationFormat");
-            this.tProtocolFactory = requireNonNull(tProtocolFactory, "tProtocolFactory");
+            this.protocolFactory = requireNonNull(protocolFactory, "protocolFactory");
         }
 
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this)
                               .add("serializationFormat", serializationFormat)
-                              .add("tProtocolFactory", tProtocolFactory)
+                              .add("protocolFactory", protocolFactory)
                               .toString();
         }
     }
 
     /**
-     * Returns the configured {@link Entry}s for this SPI provider.
-     *
-     * @return an immutable set of configured entries
+     * Returns the supported Thrift-related {@link SerializationFormat}s.
      */
-    protected abstract Set<Entry> entries();
+    protected abstract Set<SerializationFormat> serializationFormats();
+
+    /**
+     * Returns the {@link TProtocolFactory} for the specified {@link SerializationFormat},
+     * {@code maxStringLength} and {@code maxContainerLength}.
+     * Returns {@code null} if the {@link SerializationFormat} is unsupported.
+     *
+     * @param serializationFormat the serialization format that the {@link TProtocolFactory} supports.
+     * @param maxStringLength the maximum allowed number of bytes to read from the transport for
+     *                        variable-length fields (such as strings or binary). {@code 0} means unlimited.
+     * @param maxContainerLength the maximum allowed number of containers to read from the transport for
+     *                           maps, sets and lists. {@code 0} means unlimited.
+     */
+    @Nullable
+    protected abstract TProtocolFactory protocolFactory(SerializationFormat serializationFormat,
+                                                        int maxStringLength, int maxContainerLength);
 }

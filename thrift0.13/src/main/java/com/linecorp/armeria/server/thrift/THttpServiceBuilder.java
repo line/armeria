@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.thrift;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.LinkedHashSet;
@@ -24,6 +25,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+
+import org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.thrift.protocol.TCompactProtocol;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
@@ -36,6 +40,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.RpcService;
+import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -76,7 +81,11 @@ public final class THttpServiceBuilder {
     private BiFunction<? super ServiceRequestContext, ? super Throwable, ? extends RpcResponse>
             exceptionHandler = defaultExceptionHandler;
 
-    THttpServiceBuilder() { }
+    // -1 means to use the default request length of the Server.
+    private int maxRequestStringLength = -1;
+    private int maxRequestContainerLength = -1;
+
+    THttpServiceBuilder() {}
 
     /**
      * Adds a new {@code TMultiplexed} service to the builder.
@@ -150,6 +159,38 @@ public final class THttpServiceBuilder {
     }
 
     /**
+     * Sets the maximum allowed number of bytes to read from the transport for
+     * variable-length fields (such as strings or binary).
+     * If unspecified, the default value of {@link ServerBuilder#maxRequestLength(long)} will be used.
+     *
+     * <p>Note that this options is only valid for {@link TBinaryProtocol} and {@link TCompactProtocol}.
+     *
+     * @param maxRequestStringLength the maximum allowed string length. {@code 0} disables the length limit.
+     * @see ServerBuilder#maxRequestLength(long)
+     */
+    public THttpServiceBuilder maxRequestStringLength(int maxRequestStringLength) {
+        checkArgument(maxRequestStringLength >= 0, "maxRequestStringLength: %s (expected: >= 0)",
+                      maxRequestStringLength);
+        this.maxRequestStringLength = maxRequestStringLength;
+        return this;
+    }
+
+    /**
+     * Sets the maximum allowed number of containers to read from the transport for maps, sets and lists.
+     * If unspecified, the default value of {@link ServerBuilder#maxRequestLength(long)} will be used.
+     *
+     * <p>Note that this options is only valid for {@link TBinaryProtocol} and {@link TCompactProtocol}.
+     *
+     * @param maxRequestContainerLength the maximum allowed string length. {@code 0} disables the length limit.
+     */
+    public THttpServiceBuilder maxRequestContainerLength(int maxRequestContainerLength) {
+        checkArgument(maxRequestContainerLength >= 0, "maxRequestContainerLength: %s (expected: >= 0)",
+                      maxRequestContainerLength);
+        this.maxRequestContainerLength = maxRequestContainerLength;
+        return this;
+    }
+
+    /**
      * Sets the {@link BiFunction} that returns an {@link RpcResponse} using the given {@link Throwable}
      * and {@link ServiceRequestContext}.
      */
@@ -203,6 +244,7 @@ public final class THttpServiceBuilder {
         builder.add(defaultSerializationFormat);
         builder.addAll(otherSerializationFormats);
 
-        return new THttpService(decorate(tcs), defaultSerializationFormat, builder.build(), exceptionHandler);
+        return new THttpService(decorate(tcs), defaultSerializationFormat, builder.build(),
+                                maxRequestStringLength, maxRequestContainerLength, exceptionHandler);
     }
 }

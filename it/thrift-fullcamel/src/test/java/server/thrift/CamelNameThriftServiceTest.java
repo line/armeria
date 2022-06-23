@@ -16,14 +16,13 @@
 
 package server.thrift;
 
-import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import org.apache.thrift.TException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.SayHelloService.Iface;
@@ -60,7 +59,7 @@ class CamelNameThriftServiceTest {
     @Test
     void testSync_SayHelloService_sayHello()
             throws Exception {
-        final Iface client = Clients.newClient(server.httpUri(BINARY) + "/hello", Iface.class);
+        final Iface client = ThriftClients.newClient(server.httpUri() + "/hello", Iface.class);
         assertThat(client.sayHello("Armeria")).isEqualTo("Hello, Armeria!");
         assertThat(client.sayHello(null)).isEqualTo("Hello, null!");
 
