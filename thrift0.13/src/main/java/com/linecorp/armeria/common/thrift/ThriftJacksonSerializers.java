@@ -127,8 +127,8 @@ final class ThriftJacksonSerializers extends Serializers.Base implements Seriali
             return Exceptions.throwUnsafely(ex);
         }
 
-        final TProtocolFactory factory = useNamedEnums ? ThriftProtocolFactories.TEXT_NAMED_ENUM
-                                                       : ThriftProtocolFactories.TEXT;
+        final TProtocolFactory factory = useNamedEnums ? ThriftProtocolFactories.textNamedEnum()
+                                                       : ThriftProtocolFactories.text();
         final TProtocol protocol = factory.getProtocol(buffer);
         writer.accept(protocol);
         return new String(buffer.getArray(), 0, buffer.length());

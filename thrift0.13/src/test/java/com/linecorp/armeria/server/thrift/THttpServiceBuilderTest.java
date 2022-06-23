@@ -28,10 +28,9 @@ import org.apache.thrift.TException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -96,9 +95,9 @@ class THttpServiceBuilderTest {
 
     @Test
     void exceptionHandler() throws TException {
-        final FooService.Iface client = Clients
-                .builder(server.uri(SessionProtocol.HTTP, BINARY).resolve("/exception"))
-                .build(FooService.Iface.class);
+        final FooService.Iface client = ThriftClients.builder(server.httpUri())
+                                                     .path("/exception")
+                                                     .build(FooService.Iface.class);
         final Throwable thrown = catchThrowable(client::bar1);
         assertThat(thrown).isInstanceOf(FooServiceException.class);
         assertThat(((FooServiceException) thrown).getStringVal()).isEqualTo("Illegal state!");
@@ -108,9 +107,9 @@ class THttpServiceBuilderTest {
 
     @Test
     void exceptionHandler_Test() throws TException {
-        final FooService.Iface client = Clients
-                .builder(server.uri(SessionProtocol.HTTP, BINARY).resolve("/rpc-exception"))
-                .build(FooService.Iface.class);
+        final FooService.Iface client = ThriftClients.builder(server.httpUri())
+                                                     .path("/rpc-exception")
+                                                     .build(FooService.Iface.class);
         final Throwable thrown = catchThrowable(client::bar1);
         assertThat(thrown).isInstanceOf(FooServiceException.class);
         assertThat(((FooServiceException) thrown).getStringVal()).isEqualTo("Foo Bar Qux");
