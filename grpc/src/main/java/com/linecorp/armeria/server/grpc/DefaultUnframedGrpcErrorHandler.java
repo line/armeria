@@ -87,50 +87,6 @@ final class DefaultUnframedGrpcErrorHandler {
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     /**
-     * Ensure that unframedGrpcStatusMappingFunction never returns null by falling back to the default.
-     */
-    private static UnframedGrpcStatusMappingFunction ofStatusMappingFunction(
-            UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        requireNonNull(statusMappingFunction, "statusMappingFunction");
-        if (statusMappingFunction == UnframedGrpcStatusMappingFunction.of()) {
-            return statusMappingFunction;
-        }
-        return statusMappingFunction.orElse(UnframedGrpcStatusMappingFunction.of());
-    }
-
-    @VisibleForTesting
-    static void writeErrorDetails(List<Any> details, JsonGenerator jsonGenerator) throws IOException {
-        jsonGenerator.writeStartArray();
-        for (Any detail : details) {
-            try {
-                ERROR_DETAILS_MARSHALLER.writeValue(detail, jsonGenerator);
-            } catch (IOException e) {
-                logger.warn("Unexpected exception while writing error detail {} to json", detail);
-            }
-        }
-        jsonGenerator.writeEndArray();
-    }
-
-    @VisibleForTesting
-    static com.google.rpc.Status decodeGrpcStatusDetailsBin(String grpcStatusDetailsBin)
-            throws InvalidProtocolBufferException {
-        final byte[] result = Base64.getDecoder().decode(grpcStatusDetailsBin);
-        return com.google.rpc.Status.parseFrom(result);
-    }
-
-    @Nullable
-    private static Throwable getThrowableFromContext(ServiceRequestContext ctx) {
-        final RequestLogAccess log = ctx.log();
-        final Throwable cause;
-        if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
-            cause = log.partial().responseCause();
-        } else {
-            cause = null;
-        }
-        return cause;
-    }
-
-    /**
      * Returns a plaintext or JSON response based on the content type.
      *
      * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
@@ -281,4 +237,49 @@ final class DefaultUnframedGrpcErrorHandler {
     }
 
     private DefaultUnframedGrpcErrorHandler() {}
+
+    /**
+     * Ensure that unframedGrpcStatusMappingFunction never returns null by falling back to the default.
+     */
+    private static UnframedGrpcStatusMappingFunction ofStatusMappingFunction(
+            UnframedGrpcStatusMappingFunction statusMappingFunction) {
+        requireNonNull(statusMappingFunction, "statusMappingFunction");
+        if (statusMappingFunction == UnframedGrpcStatusMappingFunction.of()) {
+            return statusMappingFunction;
+        }
+        return statusMappingFunction.orElse(UnframedGrpcStatusMappingFunction.of());
+    }
+
+    @VisibleForTesting
+    static void writeErrorDetails(List<Any> details, JsonGenerator jsonGenerator) throws IOException {
+        jsonGenerator.writeStartArray();
+        for (Any detail : details) {
+            try {
+                ERROR_DETAILS_MARSHALLER.writeValue(detail, jsonGenerator);
+            } catch (IOException e) {
+                logger.warn("Unexpected exception while writing error detail {} to json", detail);
+            }
+        }
+        jsonGenerator.writeEndArray();
+    }
+
+    @VisibleForTesting
+    static com.google.rpc.Status decodeGrpcStatusDetailsBin(String grpcStatusDetailsBin)
+            throws InvalidProtocolBufferException {
+        final byte[] result = Base64.getDecoder().decode(grpcStatusDetailsBin);
+        return com.google.rpc.Status.parseFrom(result);
+    }
+
+    @Nullable
+    private static Throwable getThrowableFromContext(ServiceRequestContext ctx) {
+        final RequestLogAccess log = ctx.log();
+        final Throwable cause;
+        if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+            cause = log.partial().responseCause();
+        } else {
+            cause = null;
+        }
+        return cause;
+    }
+
 }
