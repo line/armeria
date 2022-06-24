@@ -49,7 +49,6 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -75,7 +74,6 @@ import io.netty.util.AttributeKey;
 /**
  * Default {@link ServiceRequestContext} implementation.
  */
-@UnstableApi
 public final class DefaultServiceRequestContext
         extends NonWrappingRequestContext
         implements ServiceRequestContext {

@@ -58,7 +58,6 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -84,7 +83,6 @@ import io.netty.util.AttributeKey;
 /**
  * Default {@link ClientRequestContext} implementation.
  */
-@UnstableApi
 public final class DefaultClientRequestContext
         extends NonWrappingRequestContext
         implements ClientRequestContextExtension {
