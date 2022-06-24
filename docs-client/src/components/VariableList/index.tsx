@@ -19,6 +19,7 @@ import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
+import TableContainer from '@material-ui/core/TableContainer';
 import Typography from '@material-ui/core/Typography';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
@@ -206,27 +207,29 @@ export default ({ title, variables, specification }: Props) => {
   return (
     <>
       <Typography variant="h6">{title}</Typography>
-      <Table>
-        <TableHead>
-          <TableRow>
-            <TableCell>Name</TableCell>
-            {hasLocation && <TableCell>Location</TableCell>}
-            <TableCell>Required</TableCell>
-            <TableCell>Type</TableCell>
-            <TableCell>Description</TableCell>
-            {hasBean && <TableCell />}
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          <FieldInfos
-            hasLocation={hasLocation}
-            indent={0}
-            title={title}
-            variables={variables}
-            specification={specification}
-          />
-        </TableBody>
-      </Table>
+      <TableContainer>
+        <Table>
+          <TableHead>
+            <TableRow>
+              <TableCell>Name</TableCell>
+              {hasLocation && <TableCell>Location</TableCell>}
+              <TableCell>Required</TableCell>
+              <TableCell>Type</TableCell>
+              <TableCell>Description</TableCell>
+              {hasBean && <TableCell />}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            <FieldInfos
+              hasLocation={hasLocation}
+              indent={0}
+              title={title}
+              variables={variables}
+              specification={specification}
+            />
+          </TableBody>
+        </Table>
+      </TableContainer>
       <Typography variant="body2" paragraph />
     </>
   );

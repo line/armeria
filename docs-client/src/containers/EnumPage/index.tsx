@@ -20,6 +20,7 @@ import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
+import TableContainer from '@material-ui/core/TableContainer';
 import React from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
@@ -62,36 +63,38 @@ const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
       )}
       <Section>
         <Typography variant="h6">Values</Typography>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              {hasIntValue && <TableCell>Int Value</TableCell>}
-              {hasDocString && <TableCell>Description</TableCell>}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data.values.length > 0 ? (
-              data.values.map((value) => (
-                <TableRow key={value.name}>
-                  <TableCell>
-                    <code>{value.name}</code>
-                  </TableCell>
-                  {hasIntValue && <TableCell>{value.intValue}</TableCell>}
-                  {hasDocString && (
-                    <TableCell>
-                      <Description docString={value.docString} />
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))
-            ) : (
+        <TableContainer>
+          <Table>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={2}>There are no values.</TableCell>
+                <TableCell>Name</TableCell>
+                {hasIntValue && <TableCell>Int Value</TableCell>}
+                {hasDocString && <TableCell>Description</TableCell>}
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {data.values.length > 0 ? (
+                data.values.map((value) => (
+                  <TableRow key={value.name}>
+                    <TableCell>
+                      <code>{value.name}</code>
+                    </TableCell>
+                    {hasIntValue && <TableCell>{value.intValue}</TableCell>}
+                    {hasDocString && (
+                      <TableCell>
+                        <Description docString={value.docString} />
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={2}>There are no values.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Section>
     </>
   );

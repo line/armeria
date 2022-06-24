@@ -19,6 +19,7 @@ import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
 import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
+import TableContainer from '@material-ui/core/TableContainer';
 import React from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
@@ -176,19 +177,21 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
       </Section>
       <Section>
         <Typography variant="h6">Return Type</Typography>
-        <Table>
-          <TableBody>
-            <TableRow>
-              <TableCell>
-                <code>
-                  {props.specification.getTypeSignatureHtml(
-                    method.returnTypeSignature,
-                  )}
-                </code>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+        <TableContainer>
+          <Table>
+            <TableBody>
+              <TableRow>
+                <TableCell>
+                  <code>
+                    {props.specification.getTypeSignatureHtml(
+                      method.returnTypeSignature,
+                    )}
+                  </code>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Section>
       {!isAnnotatedService && (
         <Exceptions method={method} specification={props.specification} />
