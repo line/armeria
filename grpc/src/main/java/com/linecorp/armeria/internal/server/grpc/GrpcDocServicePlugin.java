@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -381,7 +380,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     @Override
-    public Map<String, DescriptionInfo> loadDocStrings(Set<ServiceConfig> serviceConfigs) {;
+    public Map<String, DescriptionInfo> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
         return serviceConfigs.stream()
                              .flatMap(c -> {
                                  final GrpcService grpcService = c.service().as(GrpcService.class);
@@ -395,6 +394,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                                                             new DescriptionInfo(entry.getValue(), Markup.NONE),
                                                     (a, b) -> a));
     }
+
     @Override
     public Set<Class<?>> supportedExampleRequestTypes() {
         return ImmutableSet.of(MessageOrBuilder.class);

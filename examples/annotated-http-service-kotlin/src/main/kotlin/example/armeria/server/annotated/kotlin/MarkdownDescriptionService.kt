@@ -38,20 +38,16 @@ class MarkdownDescriptionService {
         """, markup = Markup.MARKDOWN)
     @Get("/markdown")
     fun markdown(
-        @Description(
-                value = """
-                    `Param` description
-                    """,
-                markup = Markup.MARKDOWN)
+        @Description(value = "`Param` description", markup = Markup.MARKDOWN)
         @Param param1: String,
         @Param param2: String,
         @Description("param3 description")
         @Param param3: MarkdownEnumParam
     ): MarkdownDescriptionResult {
         return MarkdownDescriptionResult(
-                result1 = "foo",
-                result2 = "bar",
-                result3 = "hello"
+            result1 = param1,
+            result2 = param2,
+            result3 = param3.name
         )
     }
 
@@ -61,13 +57,13 @@ class MarkdownDescriptionService {
         > support quotes
     """, markup = Markup.MARKDOWN)
     data class MarkdownDescriptionResult(
-            @field:Description(value = "result1 description (default)", markup = Markup.MARKDOWN)
-            val result1: String,
-            @field:Description(value = "`result2` **description** (use markdown)", markup = Markup.MARKDOWN)
-            val result2: String,
-            @field:Description(value = "`result3` see https://armeria.dev/ (add links)",
-                    markup = Markup.MARKDOWN)
-            val result3: String
+        @field:Description(value = "result1 description (default)", markup = Markup.MARKDOWN)
+        val result1: String,
+        @field:Description(value = "`result2` **description** (use markdown)", markup = Markup.MARKDOWN)
+        val result2: String,
+        @field:Description(value = "`result3` see https://armeria.dev/ (add links)",
+                markup = Markup.MARKDOWN)
+        val result3: String
     )
 
     @Description("MarkdownEnumParam")

@@ -211,9 +211,8 @@ files into the specific location in the class path.
 
   ```java
   import com.linecorp.armeria.server.annotation.Description;
-  import com.linecorp.armeria.server.annotation.ResponseObject;
 
-  @Description("### A service that provides user information.")
+  @Description(value = "### A service that provides user information.", markup=Markup.MARKDOWN)
   public class UserService {
 
       @Get("/users/{id}")
@@ -234,16 +233,20 @@ files into the specific location in the class path.
       private String name;
   }
 
+  @Description(value = "flowchart LR\n" +
+                       " ADMIN --- USER",
+               markup = Markup.MERMAID)
   public enum UserType {
-      @Description("`Admin` type")
+      @Description(value = "`Admin` type", markup = Markup.MARKDOWN)
       ADMIN,
-      @Description("`User` type")
+      @Description(value = "`User` type", markup = Markup.MARKDOWN)
       USER
   }
   ```
 
-  - Support enums `description` in annotated service.
+  - Support enum type descriptions in annotated service.
   - Support markdown ([GitHub Flavored Markdown Spec](https://github.github.com/gfm/))
+  - Support mermaid.js ([mermaid.js](https://mermaid-js.github.io/mermaid/#/))
 
   Using JavaDoc:
 

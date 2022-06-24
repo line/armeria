@@ -354,13 +354,13 @@ class AnnotatedDocServiceTest {
                 .availableMimeTypes(MediaType.JSON_UTF_8)
                 .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of();
-        final String mermaidDescription =  "graph TD;\n"
-                                         + " A-->B;\n"
-                                         + " A-->C;\n"
-                                         + " B-->D;\n"
-                                         + " C-->D;";
+        final String mermaidDescription =  "graph TD;\n" +
+                                           " A-->B;\n" +
+                                           " A-->C;\n" +
+                                           " B-->D;\n" +
+                                           " C-->D;";
         final MethodInfo methodInfo = new MethodInfo(
-                "mermaid", STRING, fieldInfos, ImmutableList.of(),
+                "mermaid", TypeSignature.ofBase("HttpResponse"), fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, mermaidDescription, Markup.MERMAID);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
@@ -538,11 +538,11 @@ class AnnotatedDocServiceTest {
             return descriptionEnum.name();
         }
 
-        @Description(value = "graph TD;\n"
-                           + " A-->B;\n"
-                           + " A-->C;\n"
-                           + " B-->D;\n"
-                           + " C-->D;",
+        @Description(value = "graph TD;\n" +
+                             " A-->B;\n" +
+                             " A-->C;\n" +
+                             " B-->D;\n" +
+                             " C-->D;",
                 markup = Markup.MERMAID)
         @Get("/mermaid")
         public HttpResponse mermaid() {
