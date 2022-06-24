@@ -45,7 +45,7 @@ public class AnnotatedBeanFactoryRegistryTest {
         }
 
         @Override
-        public void shutdown() {}
+        public void close() {}
     };
     private static final Set<String> vars = ImmutableSet.of();
     private static final List<RequestObjectResolver> resolvers = ImmutableList.of();

@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
@@ -38,7 +39,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
  * such as {@code armeria-spring-boot2-autoconfigure} is added.
  */
 @UnstableApi
-public interface DependencyInjector {
+public interface DependencyInjector extends SafeCloseable {
 
     /**
      * Returns a {@link DependencyInjector} that injects dependencies using the specified singleton instances.
@@ -63,11 +64,6 @@ public interface DependencyInjector {
      */
     @Nullable
     <T> T getInstance(Class<T> type);
-
-    /**
-     * Shuts down this {@link DependencyInjector}.
-     */
-    void shutdown();
 
     /**
      * Returns a new {@link DependencyInjector} that tries {@link #getInstance(Class)} of

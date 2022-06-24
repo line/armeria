@@ -35,8 +35,8 @@ final class OrElseDependencyInjector implements DependencyInjector {
     }
 
     @Override
-    public void shutdown() {
-        first.shutdown();
-        second.shutdown();
+    public void close() {
+        first.close();
+        second.close();
     }
 }

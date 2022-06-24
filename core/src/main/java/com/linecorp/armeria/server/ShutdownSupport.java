@@ -70,9 +70,9 @@ interface ShutdownSupport {
         requireNonNull(dependencyInjector, "dependencyInjector");
         return () -> {
             try {
-                dependencyInjector.shutdown();
+                dependencyInjector.close();
             } catch (Exception e) {
-                logger.warn("Unexpected exception while shutting down: {}", dependencyInjector, e);
+                logger.warn("Unexpected exception while closing: {}", dependencyInjector, e);
             }
             return UnmodifiableFuture.completedFuture(null);
         };

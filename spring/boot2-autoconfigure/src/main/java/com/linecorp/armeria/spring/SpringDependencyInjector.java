@@ -13,21 +13,26 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.spring;
+package com.linecorp.armeria.spring;
 
 import static java.util.Objects.requireNonNull;
 
 import org.springframework.beans.factory.BeanFactory;
-import org.springframework.beans.factory.NoSuchBeanDefinitionException;
-import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.server.DependencyInjector;
 
-final class SpringDependencyInjector implements DependencyInjector {
+/**
+ * Injects dependencies in annotated services using the {@code BeanFactory}.
+ */
+public final class SpringDependencyInjector implements DependencyInjector {
 
-    static DependencyInjector of(BeanFactory beanFactory) {
+    /**
+     * Creates a new {@link SpringDependencyInjector} that injects dependencies in annotated services using
+     * the specified {@link BeanFactory}.
+     */
+    public static SpringDependencyInjector of(BeanFactory beanFactory) {
         requireNonNull(beanFactory, "beanFactory");
         return new SpringDependencyInjector(beanFactory);
     }
@@ -40,18 +45,11 @@ final class SpringDependencyInjector implements DependencyInjector {
 
     @Override
     public <T> T getInstance(Class<T> type) {
-        try {
-            return beanFactory.getBean(type);
-        } catch (NoUniqueBeanDefinitionException t) {
-            throw t;
-        } catch (NoSuchBeanDefinitionException t) {
-            // Return null in order to apply the ReflectiveDependencyInjector as a fallback.
-            return null;
-        }
+        return beanFactory.getBean(type);
     }
 
     @Override
-    public void shutdown() {
+    public void close() {
         // The lifecycle of the beanFactory is managed by Spring.
     }
 

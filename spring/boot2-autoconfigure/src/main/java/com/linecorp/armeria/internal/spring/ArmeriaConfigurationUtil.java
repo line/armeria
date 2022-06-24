@@ -68,6 +68,7 @@ import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.InternalServiceId;
 import com.linecorp.armeria.spring.InternalServices;
 import com.linecorp.armeria.spring.MetricCollectingServiceConfigurator;
+import com.linecorp.armeria.spring.SpringDependencyInjector;
 import com.linecorp.armeria.spring.Ssl;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -189,7 +190,9 @@ public final class ArmeriaConfigurationUtil {
                                                       minBytesToForceChunkedAndEncoding));
         }
 
-        server.dependencyInjector(SpringDependencyInjector.of(beanFactory), false);
+        if (settings.enableAutoInjection()) {
+            server.dependencyInjector(SpringDependencyInjector.of(beanFactory), false);
+        }
     }
 
     private static void configureInternalService(ServerBuilder server, InternalServiceId serviceId,

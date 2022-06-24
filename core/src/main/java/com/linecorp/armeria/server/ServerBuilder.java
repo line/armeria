@@ -1751,13 +1751,14 @@ public final class ServerBuilder {
      * @param shutdownOnStop whether to shut down the {@link DependencyInjector} when the {@link Server} stops
      */
     @UnstableApi
+    @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
     public ServerBuilder dependencyInjector(DependencyInjector dependencyInjector, boolean shutdownOnStop) {
         requireNonNull(dependencyInjector, "dependencyInjector");
         if (this.dependencyInjector == null) {
-            this.dependencyInjector = dependencyInjector;
-        } else {
-            this.dependencyInjector = this.dependencyInjector.orElse(dependencyInjector);
+            // Apply BuiltInDependencyInjector at first if a DependencyInjector is set.
+            this.dependencyInjector = BuiltInDependencyInjector.INSTANCE;
         }
+        this.dependencyInjector = this.dependencyInjector.orElse(dependencyInjector);
         if (shutdownOnStop) {
             shutdownSupports.add(ShutdownSupport.of(dependencyInjector));
         }
@@ -1792,7 +1793,7 @@ public final class ServerBuilder {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
         assert extensions != null;
-        final DependencyInjector dependencyInjector = dependencyInjectorWithFallback();
+        final DependencyInjector dependencyInjector = dependencyInjector();
 
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector);
@@ -1941,13 +1942,14 @@ public final class ServerBuilder {
         return Collections.unmodifiableList(distinctPorts);
     }
 
-    private DependencyInjector dependencyInjectorWithFallback() {
+    @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
+    private DependencyInjector dependencyInjector() {
+        if (dependencyInjector != null) {
+            return dependencyInjector;
+        }
         final ReflectiveDependencyInjector reflectiveDependencyInjector = new ReflectiveDependencyInjector();
         shutdownSupports.add(ShutdownSupport.of(reflectiveDependencyInjector));
-        if (dependencyInjector == null) {
-            return reflectiveDependencyInjector;
-        }
-        return dependencyInjector.orElse(reflectiveDependencyInjector);
+        return reflectiveDependencyInjector;
     }
 
     private static VirtualHost setSslContextIfAbsent(VirtualHost h,

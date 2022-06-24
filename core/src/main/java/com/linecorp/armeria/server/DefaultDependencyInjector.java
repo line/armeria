@@ -72,7 +72,7 @@ final class DefaultDependencyInjector implements DependencyInjector {
     }
 
     @Override
-    public synchronized void shutdown() {
+    public synchronized void close() {
         if (isShutdown) {
             return;
         }

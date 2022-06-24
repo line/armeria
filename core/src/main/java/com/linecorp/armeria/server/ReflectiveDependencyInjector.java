@@ -52,7 +52,7 @@ final class ReflectiveDependencyInjector implements DependencyInjector {
     }
 
     @Nullable
-    private static <T> T create(Class<? extends T> type) {
+    static <T> T create(Class<? extends T> type) {
         @SuppressWarnings("unchecked")
         final Constructor<? extends T> constructor =
                 Iterables.getFirst(getConstructors(type, withParametersCount(0)), null);
@@ -71,7 +71,7 @@ final class ReflectiveDependencyInjector implements DependencyInjector {
     }
 
     @Override
-    public synchronized void shutdown() {
+    public synchronized void close() {
         if (isShutdown) {
             return;
         }

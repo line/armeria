@@ -51,6 +51,7 @@ task generateSources(type: Copy) {
     include '**/LocalArmeriaPort.java'
     include '**/LocalArmeriaPorts.java'
     include '**/PrometheusSupport.java'
+    include '**/SpringDependencyInjector.java'
     include '**/Ssl.java'
 }
 
