@@ -46,6 +46,8 @@ fun configureServices(sb: ServerBuilder) {
         .serviceUnder("/docs", DocService())
         // MarkdownDescriptionService
         .annotatedService(MarkdownDescriptionService())
+        // MermaidDescriptionService
+        .annotatedService(MermaidDescriptionService())
 }
 
 private fun AnnotatedServiceBindingBuilder.applyCommonDecorator(): AnnotatedServiceBindingBuilder {

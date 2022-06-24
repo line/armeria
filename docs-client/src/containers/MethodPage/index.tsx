@@ -164,7 +164,10 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
       </Typography>
       {method.docString && (
         <Section>
-          <Description docString={method.docString} />
+          <Description
+            docString={method.docString}
+            supportedMarkup={method.supportedMarkup}
+          />
         </Section>
       )}
       <Section>

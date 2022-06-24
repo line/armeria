@@ -42,6 +42,7 @@ interface Variable {
   requirement: string;
   typeSignature: string;
   docString?: string | JSX.Element;
+  supportedMarkup: string;
 }
 
 interface Props {
@@ -122,7 +123,10 @@ const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
         </TableCell>
         <TableCell>
           <pre>
-            <Description docString={variable.docString} />
+            <Description
+              docString={variable.docString}
+              supportedMarkup={variable.supportedMarkup}
+            />
           </pre>
         </TableCell>
         {hasChildren && (

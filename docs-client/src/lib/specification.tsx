@@ -26,6 +26,7 @@ export interface Parameter {
   requirement: string;
   typeSignature: string;
   docString?: DocString;
+  supportedMarkup: string;
 }
 
 export interface Endpoint {
@@ -49,6 +50,7 @@ export interface Method {
   exampleQueries: string[];
   httpMethod: string;
   docString?: DocString;
+  supportedMarkup: string;
 }
 
 export interface Service {
@@ -56,18 +58,21 @@ export interface Service {
   methods: Method[];
   exampleHeaders: { [name: string]: string }[];
   docString?: DocString;
+  supportedMarkup: string;
 }
 
 export interface Value {
   name: string;
   intValue?: number;
   docString?: DocString;
+  supportedMarkup: string;
 }
 
 export interface Enum {
   name: string;
   values: Value[];
   docString?: DocString;
+  supportedMarkup: string;
 }
 
 export interface Field {
@@ -75,12 +80,14 @@ export interface Field {
   requirement: string;
   typeSignature: string;
   docString?: DocString;
+  supportedMarkup: string;
 }
 
 export interface Struct {
   name: string;
   fields: Field[];
   docString?: DocString;
+  supportedMarkup: string;
 }
 
 export interface SpecificationData {

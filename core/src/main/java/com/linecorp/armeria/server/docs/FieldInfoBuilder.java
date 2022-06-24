@@ -26,6 +26,7 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.annotation.Markup;
 
 /**
  * Creates a new {@link FieldInfo} using the builder pattern.
@@ -41,6 +42,7 @@ public final class FieldInfoBuilder {
     private FieldLocation location = FieldLocation.UNSPECIFIED;
     @Nullable
     private String docString;
+    private Markup supportedMarkup = Markup.NONE;
 
     FieldInfoBuilder(String name, TypeSignature typeSignature) {
         this.name = requireNonNull(name, "name");
@@ -85,10 +87,19 @@ public final class FieldInfoBuilder {
     }
 
     /**
+     * Sets the supported markup of the field.
+     */
+    public FieldInfoBuilder supportedMarkup(Markup supportedMarkup) {
+        this.supportedMarkup = requireNonNull(supportedMarkup, "supportedMarkup");
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link FieldInfo} based on the properties of this builder.
      */
     public FieldInfo build() {
-        return new FieldInfo(name, location, requirement, typeSignature, childFieldInfos, docString);
+        return new FieldInfo(name, location, requirement, typeSignature,
+                childFieldInfos, docString, supportedMarkup);
     }
 
     @Override
@@ -100,6 +111,7 @@ public final class FieldInfoBuilder {
                           .add("typeSignature", typeSignature)
                           .add("childFieldInfos", childFieldInfos)
                           .add("docString", docString)
+                          .add("supportedMarkup", supportedMarkup)
                           .toString();
     }
 }

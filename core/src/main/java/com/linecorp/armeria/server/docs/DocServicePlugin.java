@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.annotation.DescriptionInfo;
 
 /**
  * Generates the {@link ServiceSpecification}s of the supported {@link Service}s.
@@ -62,7 +63,8 @@ public interface DocServicePlugin {
     // TODO(trustin): How do we specify the docstring of a method return value?
 
     /**
-     * Loads the documentation strings that describes services and their methods, enums and their values and
+     * Loads the documentation description infos include strings and markup types
+     * that describes services and their methods, enums and their values and
      * structs/exceptions and their fields. The {@link Map} returned by this method will contain the
      * documentation strings identified by the key strings that conforms to one of the following formats:
      * <ul>
@@ -75,7 +77,7 @@ public interface DocServicePlugin {
      *       an exception</li>
      * </ul>
      */
-    default Map<String, String> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
+    default Map<String, DescriptionInfo> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
         return ImmutableMap.of();
     }
 

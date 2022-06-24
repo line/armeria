@@ -27,6 +27,7 @@ import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.annotation.Markup;
 
 /**
  * Metadata about an enum value.
@@ -39,6 +40,7 @@ public final class EnumValueInfo {
     private final String docString;
     @Nullable
     private final Integer intValue;
+    private final Markup supportedMarkup;
 
     /**
      * Creates a new instance.
@@ -46,7 +48,7 @@ public final class EnumValueInfo {
      * @param name the name of the enum value
      */
     public EnumValueInfo(String name) {
-        this(name, null, null);
+        this(name, null, null, Markup.NONE);
     }
 
     /**
@@ -56,7 +58,7 @@ public final class EnumValueInfo {
      * @param intValue the integer value of the enum value
      */
     public EnumValueInfo(String name, @Nullable Integer intValue) {
-        this(name, intValue, null);
+        this(name, intValue, null, Markup.NONE);
     }
 
     /**
@@ -66,10 +68,12 @@ public final class EnumValueInfo {
      * @param intValue the integer value of the enum value
      * @param docString the documentation string that describes the enum value
      */
-    public EnumValueInfo(String name, @Nullable Integer intValue, @Nullable String docString) {
+    public EnumValueInfo(String name, @Nullable Integer intValue,
+                         @Nullable String docString, Markup supportedMarkup) {
         this.name = requireNonNull(name, "name");
         this.intValue = intValue;
         this.docString = Strings.emptyToNull(docString);
+        this.supportedMarkup = supportedMarkup;
     }
 
     /**
@@ -100,6 +104,15 @@ public final class EnumValueInfo {
         return docString;
     }
 
+    /**
+     * Returns the supported markup.
+     */
+    @JsonProperty
+    @JsonInclude(Include.NON_NULL)
+    public Markup supportedMarkup() {
+        return supportedMarkup;
+    }
+
     @Override
     public int hashCode() {
         return Objects.hash(name, intValue);
@@ -125,6 +138,7 @@ public final class EnumValueInfo {
                           .add("name", name)
                           .add("intValue", intValue)
                           .add("docString", docString)
+                          .add("supportedMarkup", supportedMarkup)
                           .toString();
     }
 }

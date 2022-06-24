@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.server.annotation.Markup;
 
 class MethodInfoTest {
 
@@ -35,7 +36,7 @@ class MethodInfoTest {
                               /* endpoints */ ImmutableList.of(), /* exampleHeaders */ ImmutableList.of(),
                               /* exampleRequests */ ImmutableList.of(),
                               examplePaths, exampleQueries,
-                              HttpMethod.GET, null);
+                              HttpMethod.GET, null, Markup.NONE);
     }
 
     @Test

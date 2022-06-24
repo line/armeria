@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Service;
+import com.linecorp.armeria.server.annotation.Markup;
 
 /**
  * Metadata about a {@link Service}.
@@ -53,13 +54,23 @@ public final class ServiceInfo {
     private final List<HttpHeaders> exampleHeaders;
     @Nullable
     private final String docString;
+    private final Markup supportedMarkup;
 
     /**
      * Creates a new instance.
      */
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods) {
-        this(name, methods, null);
+        this(name, methods, null, Markup.NONE);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public ServiceInfo(String name,
+            Iterable<MethodInfo> methods,
+            @Nullable String docString) {
+        this(name, methods, ImmutableList.of(), docString, Markup.NONE);
     }
 
     /**
@@ -67,8 +78,9 @@ public final class ServiceInfo {
      */
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods,
-                       @Nullable String docString) {
-        this(name, methods, ImmutableList.of(), docString);
+                       @Nullable String docString,
+                       Markup supportedMarkup) {
+        this(name, methods, ImmutableList.of(), docString, supportedMarkup);
     }
 
     /**
@@ -77,12 +89,14 @@ public final class ServiceInfo {
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods,
                        Iterable<HttpHeaders> exampleHeaders,
-                       @Nullable String docString) {
+                       @Nullable String docString,
+                       Markup markup) {
 
         this.name = requireNonNull(name, "name");
         this.methods = mergeEndpoints(requireNonNull(methods));
         this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
         this.docString = Strings.emptyToNull(docString);
+        this.supportedMarkup = markup;
     }
 
     /**
@@ -122,7 +136,7 @@ public final class ServiceInfo {
                                           value.parameters(), value.exceptionTypeSignatures(),
                                           endpointInfos, value.exampleHeaders(),
                                           value.exampleRequests(), value.examplePaths(), value.exampleQueries(),
-                                          value.httpMethod(), value.docString());
+                                          value.httpMethod(), value.docString(), value.supportedMarkup());
                 }
             });
         }
@@ -167,6 +181,15 @@ public final class ServiceInfo {
     }
 
     /**
+     * Returns the supported markup.
+     */
+    @JsonProperty
+    @JsonInclude(Include.NON_NULL)
+    public Markup supportedMarkup() {
+        return supportedMarkup;
+    }
+
+    /**
      * Returns the example HTTP headers of the service.
      */
     @JsonProperty
@@ -200,6 +223,7 @@ public final class ServiceInfo {
                           .add("methods", methods)
                           .add("exampleHeaders", exampleHeaders)
                           .add("docstring", docString)
+                          .add("supportedMarkup", supportedMarkup)
                           .toString();
     }
 }

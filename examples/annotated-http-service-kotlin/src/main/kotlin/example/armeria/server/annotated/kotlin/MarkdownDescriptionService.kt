@@ -2,11 +2,12 @@ package example.armeria.server.annotated.kotlin
 
 import com.linecorp.armeria.server.annotation.Description
 import com.linecorp.armeria.server.annotation.Get
+import com.linecorp.armeria.server.annotation.Markup
 import com.linecorp.armeria.server.annotation.Param
 
 @CoroutineNameDecorator(name = "default")
 class MarkdownDescriptionService {
-    @Description("""
+    @Description(value = """
         ## Support markdown
         ### Support header
         - support lists
@@ -34,12 +35,14 @@ class MarkdownDescriptionService {
           .build()
           .start();
         ```
-    """)
+        """, markup = Markup.MARKDOWN)
     @Get("/markdown")
     fun markdown(
-        @Description("""
-        `Param` description
-        """)
+        @Description(
+                value = """
+                    `Param` description
+                    """,
+                markup = Markup.MARKDOWN)
         @Param param1: String,
         @Param param2: String,
         @Description("param3 description")
@@ -52,23 +55,24 @@ class MarkdownDescriptionService {
         )
     }
 
-    @Description("""
+    @Description(value = """
         ## Structs description
         ### Structs description subtitle
         > support quotes
-    """)
+    """, markup = Markup.MARKDOWN)
     data class MarkdownDescriptionResult(
-        @field:Description("result1 description (default)")
-        val result1: String,
-        @field:Description("`result2` **description** (use markdown)")
-        val result2: String,
-        @field:Description("`result3` see https://armeria.dev/ (add links)")
-        val result3: String
+            @field:Description(value = "result1 description (default)", markup = Markup.MARKDOWN)
+            val result1: String,
+            @field:Description(value = "`result2` **description** (use markdown)", markup = Markup.MARKDOWN)
+            val result2: String,
+            @field:Description(value = "`result3` see https://armeria.dev/ (add links)",
+                    markup = Markup.MARKDOWN)
+            val result3: String
     )
 
     @Description("MarkdownEnumParam")
     enum class MarkdownEnumParam {
-        @field:Description("Description for `ENUM_1`")
+        @field:Description(value = "Description for `ENUM_1`", markup = Markup.MARKDOWN)
         ENUM_1,
         ENUM_2,
         ENUM_3

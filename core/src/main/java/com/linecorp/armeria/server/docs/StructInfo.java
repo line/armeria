@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
@@ -31,6 +32,7 @@ import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.annotation.Markup;
 
 /**
  * Metadata about a struct type.
@@ -42,21 +44,24 @@ public final class StructInfo implements NamedTypeInfo {
     private final List<FieldInfo> fields;
     @Nullable
     private final String docString;
+    private final Markup supportedMarkup;
 
     /**
      * Creates a new instance.
      */
     public StructInfo(String name, Iterable<FieldInfo> fields) {
-        this(name, fields, null);
+        this(name, fields, null, Markup.NONE);
     }
 
     /**
      * Creates a new instance.
      */
-    public StructInfo(String name, Iterable<FieldInfo> fields, @Nullable String docString) {
+    public StructInfo(String name, Iterable<FieldInfo> fields, @Nullable String docString,
+                      Markup supportedMarkup) {
         this.name = requireNonNull(name, "name");
         this.fields = ImmutableList.copyOf(requireNonNull(fields, "fields"));
         this.docString = Strings.emptyToNull(docString);
+        this.supportedMarkup = requireNonNull(supportedMarkup, "supportedMarkup");
     }
 
     @Override
@@ -75,6 +80,15 @@ public final class StructInfo implements NamedTypeInfo {
     @Override
     public String docString() {
         return docString;
+    }
+
+    /**
+     * Returns the supported markup.
+     */
+    @JsonProperty
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    public Markup supportedMarkup() {
+        return supportedMarkup;
     }
 
     @Override

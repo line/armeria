@@ -15,14 +15,14 @@
  */
 
 import React from 'react';
-import remarkGfm from 'remark-gfm';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { prism } from 'react-syntax-highlighter/dist/esm/styles/prism';
-import ReactMarkdown from 'react-markdown';
 import 'github-markdown-css/github-markdown-light.css';
+import Typography from '@material-ui/core/Typography';
+import MarkdownWrapper from './Markdown';
+import MermaidWrapper from './Mermaid';
 
 interface DescriptionProps {
   docString?: string | JSX.Element;
+  supportedMarkup: string;
 }
 
 const removeIndentDocString = (docString: string | undefined) => {
@@ -45,36 +45,47 @@ const removeIndentDocString = (docString: string | undefined) => {
   }
 };
 
+const renderDefaultDocString = (docString: string): JSX.Element => {
+  if (!docString) {
+    return <div />;
+  }
+
+  const lines = docString.split(/(?:\r\n|\n|\r)/gim);
+  return (
+    <>
+      {lines.map((line, i) => (
+        // eslint-disable-next-line react/no-array-index-key
+        <React.Fragment key={`${line}-${i}`}>
+          {line}
+          {i < lines.length - 1 ? <br /> : null}
+        </React.Fragment>
+      ))}
+    </>
+  );
+};
+
 const Description: React.FunctionComponent<DescriptionProps> = ({
   docString,
+  supportedMarkup,
 }) => {
   return (
-    <div className="markdown-body">
-      <ReactMarkdown
-        remarkPlugins={[[remarkGfm, { singleTilde: false }]]}
-        components={{
-          code({ node, inline, className, children, ...props }) {
-            const match = /language-(\w+)/.exec(className || '');
-            return !inline && match ? (
-              <SyntaxHighlighter
-                style={prism}
-                language={match[1]}
-                PreTag="div"
-                {...props}
-              >
-                {String(children).replace(/\n$/, '')}
-              </SyntaxHighlighter>
-            ) : (
-              <code className={className} {...props}>
-                {children}
-              </code>
-            );
-          },
-        }}
-      >
-        {removeIndentDocString(docString as string)}
-      </ReactMarkdown>
-    </div>
+    <>
+      {supportedMarkup === 'MARKDOWN' && (
+        <MarkdownWrapper
+          docString={removeIndentDocString(docString as string)}
+        />
+      )}
+      {supportedMarkup === 'MERMAID' && (
+        <MermaidWrapper
+          docString={removeIndentDocString(docString as string)}
+        />
+      )}
+      {(!supportedMarkup || supportedMarkup === 'NONE') && (
+        <Typography variant="body2">
+          {renderDefaultDocString(docString as string)}
+        </Typography>
+      )}
+    </>
   );
 };
 

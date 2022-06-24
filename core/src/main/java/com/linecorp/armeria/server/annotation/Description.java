@@ -39,4 +39,9 @@ public @interface Description {
      * The description of a type, a field, a method or a parameter.
      */
     String value() default DefaultValues.UNSPECIFIED;
+
+    /**
+     * The supported markup type in doc service.
+     */
+    Markup markup() default Markup.NONE;
 }

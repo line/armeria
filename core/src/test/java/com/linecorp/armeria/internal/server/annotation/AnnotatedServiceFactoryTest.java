@@ -30,6 +30,8 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import com.linecorp.armeria.server.annotation.DescriptionInfo;
+import com.linecorp.armeria.server.annotation.Markup;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -198,14 +200,16 @@ class AnnotatedServiceFactoryTest {
     void testDescriptionLoadingPriority() throws NoSuchMethodException {
         final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod1", String.class)
                                                                        .getParameters()[0];
-        assertThat(AnnotatedServiceFactory.findDescription(parameter)).isEqualTo(ANNOTATED_DESCRIPTION);
+        final DescriptionInfo descriptionInfo = AnnotatedServiceFactory.findDescription(parameter);
+        assertThat(descriptionInfo.getDocString()).isEqualTo(ANNOTATED_DESCRIPTION);
     }
 
     @Test
     void testDescriptionLoadFromFile() throws NoSuchMethodException {
         final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod2", String.class)
                                                                        .getParameters()[0];
-        assertThat(AnnotatedServiceFactory.findDescription(parameter))
+        final DescriptionInfo descriptionInfo = AnnotatedServiceFactory.findDescription(parameter);
+        assertThat(descriptionInfo.getDocString())
                 .isEqualTo("This is a description from the properties file");
     }
 

@@ -58,7 +58,10 @@ const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
       </Typography>
       {data.docString && (
         <Section>
-          <Description docString={data.docString} />
+          <Description
+            docString={data.docString}
+            supportedMarkup={data.supportedMarkup}
+          />
         </Section>
       )}
       <Section>
@@ -82,7 +85,10 @@ const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
                     {hasIntValue && <TableCell>{value.intValue}</TableCell>}
                     {hasDocString && (
                       <TableCell>
-                        <Description docString={value.docString} />
+                        <Description
+                          docString={value.docString}
+                          supportedMarkup={value.supportedMarkup}
+                        />
                       </TableCell>
                     )}
                   </TableRow>

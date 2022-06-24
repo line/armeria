@@ -58,6 +58,8 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.server.annotation.DescriptionInfo;
+import com.linecorp.armeria.server.annotation.Markup;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
@@ -482,10 +484,8 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         }
     }
 
-    // Methods related with extracting documentation strings.
-
     @Override
-    public Map<String, String> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
+    public Map<String, DescriptionInfo> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
         return serviceConfigs.stream()
                              .flatMap(c -> {
                                  final THttpService service = c.service().as(THttpService.class);
@@ -495,10 +495,11 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                              .flatMap(entry -> entry.interfaces().stream().map(Class::getClassLoader))
                              .flatMap(loader -> docstringExtractor.getAllDocStrings(loader)
                                                                   .entrySet().stream())
-                             .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a));
+                             .collect(toImmutableMap(Map.Entry<String, String>::getKey,
+                                                    (Map.Entry<String, String> entry) ->
+                                                            new DescriptionInfo(entry.getValue(), Markup.NONE),
+                                                    (a, b) -> a));
     }
-
-    // Methods related with serializing example requests.
 
     @Override
     public Set<Class<?>> supportedExampleRequestTypes() {

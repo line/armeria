@@ -54,7 +54,10 @@ const StructPage: React.FunctionComponent<Props> = ({
       </Typography>
       {data.docString && (
         <Section>
-          <Description docString={data.docString} />
+          <Description
+            docString={data.docString}
+            supportedMarkup={data.supportedMarkup}
+          />
         </Section>
       )}
       <Section>

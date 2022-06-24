@@ -29,6 +29,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.server.annotation.Markup;
 
 class ServiceInfoTest {
 
@@ -37,7 +38,7 @@ class ServiceInfoTest {
         final EndpointInfo endpoint = EndpointInfo.builder("*", endpointPathMapping)
                 .availableMimeTypes(MediaType.JSON_UTF_8).build();
         return new MethodInfo(methodName, TypeSignature.ofBase("T"), ImmutableList.of(), ImmutableList.of(),
-                              ImmutableList.of(endpoint), method, null);
+                              ImmutableList.of(endpoint), method, null, Markup.NONE);
     }
 
     @Test
