@@ -75,4 +75,23 @@ public interface ResponseConverterFunction {
         // Always throw the exception quietly.
         throw FallthroughException.get();
     }
+
+    /**
+     * Only return the defaultResponseConverterFunction if it is not the same class or a superclass of
+     * the current instance
+     * @param defaultResponseConverterFunction
+     * @return
+     */
+    default ResponseConverterFunction orElse(ResponseConverterFunction defaultResponseConverterFunction) {
+        // The code below has been commented out because the ResponseConverterFunction passed in is the
+        // CompositeResponseConverterFunction, which contains a list of backingConverters
+
+        /* if (defaultResponseConverterFunction.getClass().isInstance(this)) {
+            return this;
+        } else {
+            return defaultResponseConverterFunction;
+        }*/
+
+        return this;
+    }
 }

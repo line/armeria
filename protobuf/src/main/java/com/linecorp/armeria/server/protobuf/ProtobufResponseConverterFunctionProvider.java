@@ -40,7 +40,7 @@ public final class ProtobufResponseConverterFunctionProvider implements Response
             Type returnType,
             ResponseConverterFunction responseConverter) {
         if (isSupportedType(returnType)) {
-            return new ProtobufResponseConverterFunction();
+            return responseConverter.orElse(new ProtobufResponseConverterFunction());
         }
         return null;
     }
