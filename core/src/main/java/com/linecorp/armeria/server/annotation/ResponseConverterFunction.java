@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.annotation.OrElseResponseConverterFunction;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -77,21 +78,11 @@ public interface ResponseConverterFunction {
     }
 
     /**
-     * Only return the defaultResponseConverterFunction if it is not the same class or a superclass of
-     * the current instance
-     * @param defaultResponseConverterFunction
-     * @return
+     * Create a ResponseConverterFunction which, during response conversion, will use the current instance
+     * to convert the response. If that fails, the otherConverter will be used
+     * @param otherConverter the ResponseConverterFunction to be used in case the current instance is unable to convert the response
      */
-    default ResponseConverterFunction orElse(ResponseConverterFunction defaultResponseConverterFunction) {
-        // The code below has been commented out because the ResponseConverterFunction passed in is the
-        // CompositeResponseConverterFunction, which contains a list of backingConverters
-
-        /* if (defaultResponseConverterFunction.getClass().isInstance(this)) {
-            return this;
-        } else {
-            return defaultResponseConverterFunction;
-        }*/
-
-        return this;
+    default OrElseResponseConverterFunction orElse(ResponseConverterFunction otherConverter) {
+        return new OrElseResponseConverterFunction(this, otherConverter);
     }
 }
