@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Supported markup types in {@link Description}.
  */
+@UnstableApi
 public enum Markup {
     NONE,
     MARKDOWN,

@@ -166,10 +166,10 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Class<?> clazz = service.object().getClass();
         route.methods().forEach(
                 httpMethod -> {
-                    final DescriptionInfo docStringInfo = AnnotatedServiceFactory.findDescription(method);
-                    final String docString = docStringInfo != null ? docStringInfo.getDocString() : null;
-                    final Markup supportedMarkup = docStringInfo != null ?
-                            docStringInfo.getSupportedMarkup() : Markup.NONE;
+                    final DescriptionInfo descriptionInfo = AnnotatedServiceFactory.findDescription(method);
+                    final String docString = descriptionInfo != null ? descriptionInfo.docString() : null;
+                    final Markup supportedMarkup = descriptionInfo != null ?
+                                                   descriptionInfo.markup() : Markup.NONE;
                     final MethodInfo methodInfo = new MethodInfo(
                             name, returnTypeSignature, fieldInfos, ImmutableList.of(), // Ignore exceptions.
                             ImmutableList.of(endpoint), httpMethod, docString, supportedMarkup);
@@ -294,8 +294,8 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                                                              : FieldRequirement.OPTIONAL);
         final DescriptionInfo description = resolver.description();
         if (description != null) {
-            builder.docString(description.getDocString());
-            builder.supportedMarkup(description.getSupportedMarkup());
+            builder.docString(description.docString());
+            builder.supportedMarkup(description.markup());
         }
         return builder.build();
     }
@@ -403,15 +403,15 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
 
     @VisibleForTesting
     static ServiceSpecification generate(Map<Class<?>, DescriptionInfo> serviceDescription,
-            Map<Class<?>, Set<MethodInfo>> methodInfos) {
+                                         Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final Set<ServiceInfo> serviceInfos = methodInfos
                 .entrySet().stream()
                 .map(entry -> {
                     final Class<?> service = entry.getKey();
-                    final DescriptionInfo docStringInfo = serviceDescription.get(service);
-                    final String docString = docStringInfo != null ? docStringInfo.getDocString() : null;
-                    final Markup supportedMarkup = docStringInfo != null ?
-                            docStringInfo.getSupportedMarkup() : Markup.NONE;
+                    final DescriptionInfo descriptionInfo = serviceDescription.get(service);
+                    final String docString = descriptionInfo != null ? descriptionInfo.docString() : null;
+                    final Markup supportedMarkup = descriptionInfo != null ?
+                                                   descriptionInfo.markup() : Markup.NONE;
                     return new ServiceInfo(service.getName(), entry.getValue(), docString, supportedMarkup);
                 })
                 .collect(toImmutableSet());
@@ -439,17 +439,17 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Field[] declaredFields = enumClass.getDeclaredFields();
         final List<EnumValueInfo> values =
                 Stream.of(declaredFields)
-                        .filter(Field::isEnumConstant)
-                        .map(f -> {
-                            final Description valueDescription = AnnotationUtil.findFirst(f, Description.class);
-                            if (valueDescription != null) {
-                                return new EnumValueInfo(f.getName(), null,
-                                        valueDescription.value(), valueDescription.markup());
-                            }
+                      .filter(Field::isEnumConstant)
+                      .map(f -> {
+                          final Description valueDescription = AnnotationUtil.findFirst(f, Description.class);
+                          if (valueDescription != null) {
+                              return new EnumValueInfo(f.getName(), null,
+                                                       valueDescription.value(), valueDescription.markup());
+                          }
 
-                            return new EnumValueInfo(f.getName(), null);
-                        })
-                        .collect(Collectors.toList());
+                          return new EnumValueInfo(f.getName(), null);
+                      })
+                      .collect(Collectors.toList());
 
         if (description != null) {
             return new EnumInfo(name, values, description.value(), description.markup());
@@ -465,20 +465,20 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Field[] declaredFields = structClass.getDeclaredFields();
         final List<FieldInfo> fields =
                 Stream.of(declaredFields)
-                        .map(f -> {
-                            final Description fieldDescription = AnnotationUtil.findFirst(f, Description.class);
-                            if (fieldDescription != null) {
-                                return FieldInfo.of(
-                                        f.getName(),
-                                        toTypeSignature(f.getGenericType()),
-                                        fieldDescription.value(),
-                                        fieldDescription.markup()
-                                );
-                            }
+                      .map(f -> {
+                          final Description fieldDescription = AnnotationUtil.findFirst(f, Description.class);
+                          if (fieldDescription != null) {
+                              return FieldInfo.of(
+                                      f.getName(),
+                                      toTypeSignature(f.getGenericType()),
+                                      fieldDescription.value(),
+                                      fieldDescription.markup()
+                              );
+                          }
 
-                            return FieldInfo.of(f.getName(), toTypeSignature(f.getGenericType()));
-                        })
-                        .collect(Collectors.toList());
+                          return FieldInfo.of(f.getName(), toTypeSignature(f.getGenericType()));
+                      })
+                      .collect(Collectors.toList());
 
         if (description != null) {
             return new StructInfo(name, fields, description.value(), description.markup());

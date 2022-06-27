@@ -200,7 +200,7 @@ class AnnotatedServiceFactoryTest {
         final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod1", String.class)
                                                                        .getParameters()[0];
         final DescriptionInfo descriptionInfo = AnnotatedServiceFactory.findDescription(parameter);
-        assertThat(descriptionInfo.getDocString()).isEqualTo(ANNOTATED_DESCRIPTION);
+        assertThat(descriptionInfo.docString()).isEqualTo(ANNOTATED_DESCRIPTION);
     }
 
     @Test
@@ -208,7 +208,7 @@ class AnnotatedServiceFactoryTest {
         final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod2", String.class)
                                                                        .getParameters()[0];
         final DescriptionInfo descriptionInfo = AnnotatedServiceFactory.findDescription(parameter);
-        assertThat(descriptionInfo.getDocString())
+        assertThat(descriptionInfo.docString())
                 .isEqualTo("This is a description from the properties file");
     }
 

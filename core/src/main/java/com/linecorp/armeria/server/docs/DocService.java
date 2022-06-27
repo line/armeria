@@ -132,16 +132,16 @@ public final class DocService extends SimpleDecoratingHttpService {
      * Creates a new instance with example HTTP headers and example requests and injected scripts.
      */
     DocService(Map<String, ListMultimap<String, HttpHeaders>> exampleHeaders,
-            Map<String, ListMultimap<String, String>> exampleRequests,
-            Map<String, ListMultimap<String, String>> examplePaths,
-            Map<String, ListMultimap<String, String>> exampleQueries,
-            List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
-            DocServiceFilter filter) {
+               Map<String, ListMultimap<String, String>> exampleRequests,
+               Map<String, ListMultimap<String, String>> examplePaths,
+               Map<String, ListMultimap<String, String>> exampleQueries,
+               List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
+               DocServiceFilter filter) {
 
         super(FileService.builder(new DocServiceVfs())
-                .serveCompressedFiles(true)
-                .autoDecompress(true)
-                .build());
+                         .serveCompressedFiles(true)
+                         .autoDecompress(true)
+                         .build());
 
         this.exampleHeaders = immutableCopyOf(exampleHeaders, "exampleHeaders");
         this.exampleRequests = immutableCopyOf(exampleRequests, "exampleRequests");
@@ -212,9 +212,9 @@ public final class DocService extends SimpleDecoratingHttpService {
     private static ServiceSpecification addDocStrings(ServiceSpecification spec, List<ServiceConfig> services) {
         final Map<String, DescriptionInfo> descriptionInfos =
                 plugins.stream()
-                        .flatMap(plugin -> plugin.loadDocStrings(findSupportedServices(plugin, services))
-                                .entrySet().stream())
-                        .collect(toImmutableMap(Entry::getKey, Entry::getValue, (a, b) -> a));
+                       .flatMap(plugin -> plugin.loadDocStrings(findSupportedServices(plugin, services))
+                                                .entrySet().stream())
+                       .collect(toImmutableMap(Entry::getKey, Entry::getValue, (a, b) -> a));
 
         return new ServiceSpecification(
                 spec.services().stream()
@@ -240,18 +240,18 @@ public final class DocService extends SimpleDecoratingHttpService {
         return new ServiceInfo(
                 service.name(),
                 service.methods().stream()
-                        .map(method -> addMethodDocStrings(service, method, descriptionInfos))
-                        .collect(toImmutableList()),
+                       .map(method -> addMethodDocStrings(service, method, descriptionInfos))
+                       .collect(toImmutableList()),
                 service.exampleHeaders(),
-                descriptionInfo.getDocString(),
-                descriptionInfo.getSupportedMarkup());
+                descriptionInfo.docString(),
+                descriptionInfo.markup());
     }
 
     private static MethodInfo addMethodDocStrings(ServiceInfo service, MethodInfo method,
                                                   Map<String, DescriptionInfo> descriptionInfos) {
         final DescriptionInfo descriptionInfo =
                 findDescription(service.name() + '/' + method.name(), method.docString(),
-                        method.supportedMarkup(), descriptionInfos);
+                                method.supportedMarkup(), descriptionInfos);
         return new MethodInfo(method.name(),
                               method.returnTypeSignature(),
                               method.parameters().stream()
@@ -265,22 +265,22 @@ public final class DocService extends SimpleDecoratingHttpService {
                               method.examplePaths(),
                               method.exampleQueries(),
                               method.httpMethod(),
-                              descriptionInfo.getDocString(),
-                              descriptionInfo.getSupportedMarkup());
+                              descriptionInfo.docString(),
+                              descriptionInfo.markup());
     }
 
     private static FieldInfo addParameterDocString(ServiceInfo service, MethodInfo method, FieldInfo field,
                                                    Map<String, DescriptionInfo> descriptionInfos) {
         final DescriptionInfo descriptionInfo =
                 findDescription(service.name() + '/' + method.name() + '/' + field.name(),
-                        field.docString(), field.supportedMarkup(), descriptionInfos);
+                                field.docString(), field.supportedMarkup(), descriptionInfos);
         return new FieldInfo(field.name(),
                              field.location(),
                              field.requirement(),
                              field.typeSignature(),
                              field.childFieldInfos(),
-                             descriptionInfo.getDocString(),
-                             descriptionInfo.getSupportedMarkup());
+                             descriptionInfo.docString(),
+                             descriptionInfo.markup());
     }
 
     private static EnumInfo addEnumDocStrings(EnumInfo e, Map<String, DescriptionInfo> descriptionInfos) {
@@ -288,21 +288,21 @@ public final class DocService extends SimpleDecoratingHttpService {
                 findDescription(e.name(), e.docString(), e.supportedMarkup(), descriptionInfos);
         return new EnumInfo(e.name(),
                             e.values().stream()
-                                    .map(v -> addEnumValueDocString(e, v, descriptionInfos))
-                                    .collect(toImmutableList()),
-                            descriptionInfo.getDocString(),
-                            descriptionInfo.getSupportedMarkup());
+                             .map(v -> addEnumValueDocString(e, v, descriptionInfos))
+                             .collect(toImmutableList()),
+                            descriptionInfo.docString(),
+                            descriptionInfo.markup());
     }
 
     private static EnumValueInfo addEnumValueDocString(EnumInfo e, EnumValueInfo v,
-            Map<String, DescriptionInfo> descriptionInfos) {
+                                                       Map<String, DescriptionInfo> descriptionInfos) {
         final DescriptionInfo descriptionInfo =
                 findDescription(e.name() + '/' + v.name(), v.docString(), v.supportedMarkup(),
-                        descriptionInfos);
+                                descriptionInfos);
         return new EnumValueInfo(v.name(),
                                  v.intValue(),
-                                 descriptionInfo.getDocString(),
-                                 descriptionInfo.getSupportedMarkup());
+                                 descriptionInfo.docString(),
+                                 descriptionInfo.markup());
     }
 
     private static StructInfo addStructDocStrings(StructInfo struct,
@@ -313,8 +313,8 @@ public final class DocService extends SimpleDecoratingHttpService {
                               struct.fields().stream()
                                     .map(field -> addFieldDocString(struct, field, descriptionInfos))
                                     .collect(toImmutableList()),
-                              descriptionInfo.getDocString(),
-                              descriptionInfo.getSupportedMarkup());
+                              descriptionInfo.docString(),
+                              descriptionInfo.markup());
     }
 
     private static ExceptionInfo addExceptionDocStrings(ExceptionInfo e,
@@ -323,23 +323,23 @@ public final class DocService extends SimpleDecoratingHttpService {
                 findDescription(e.name(), e.docString(), e.supportedMarkup(), descriptionInfos);
         return new ExceptionInfo(e.name(),
                                  e.fields().stream()
-                                        .map(field -> addFieldDocString(e, field, descriptionInfos))
-                                        .collect(toImmutableList()), descriptionInfo.getDocString(),
-                                 descriptionInfo.getSupportedMarkup());
+                                  .map(field -> addFieldDocString(e, field, descriptionInfos))
+                                  .collect(toImmutableList()), descriptionInfo.docString(),
+                                 descriptionInfo.markup());
     }
 
     private static FieldInfo addFieldDocString(NamedTypeInfo parent, FieldInfo field,
                                                Map<String, DescriptionInfo> descriptionInfos) {
         final DescriptionInfo descriptionInfo =
                 findDescription(parent.name() + '/' + field.name(), field.docString(), field.supportedMarkup(),
-                        descriptionInfos);
+                                descriptionInfos);
         return new FieldInfo(field.name(),
                              field.location(),
                              field.requirement(),
                              field.typeSignature(),
                              field.childFieldInfos(),
-                             descriptionInfo.getDocString(),
-                             descriptionInfo.getSupportedMarkup());
+                             descriptionInfo.docString(),
+                             descriptionInfo.markup());
     }
 
     @Nullable

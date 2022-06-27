@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -23,31 +23,32 @@ import com.linecorp.armeria.common.annotation.Nullable;
 /**
  * Description information used in Annotated Service when using {@link Description}.
  */
-public class DescriptionInfo {
+public final class DescriptionInfo {
+    @Nullable
     final String docString;
-    final Markup supportedMarkup;
+    final Markup markup;
 
     /**
      * Creates a new instance.
      * @param docString the documentation string
-     * @param supportedMarkup the supported markup string
+     * @param markup the supported markup string
      */
-    public DescriptionInfo(@Nullable String docString, Markup supportedMarkup) {
+    public DescriptionInfo(@Nullable String docString, Markup markup) {
         this.docString = docString;
-        this.supportedMarkup = requireNonNull(supportedMarkup, "supportedMarkup");
+        this.markup = requireNonNull(markup, "markup");
     }
 
     /**
      * Returns the documentation string.
      */
-    public String getDocString() {
+    public String docString() {
         return docString;
     }
 
     /**
      * Returns the supported markup.
      */
-    public Markup getSupportedMarkup() {
-        return supportedMarkup;
+    public Markup markup() {
+        return markup;
     }
 }
