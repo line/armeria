@@ -18,6 +18,8 @@ package com.linecorp.armeria.client.retrofit2;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.BufferedInputStream;
+import java.math.BigInteger;
+import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.temporal.ChronoUnit;
 import java.util.concurrent.CompletableFuture;
@@ -62,22 +64,28 @@ public class ArmeriaCallFactoryLargeStreamTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     return HttpResponse.of(s -> s.onSubscribe(new Subscription() {
-                        int count;
+                        int sentCount;
 
                         @Override
                         public void request(long n) {
                             for (int i = 0; i < n; i++) {
-                                if (count == 0) {
+                                if (sentCount == 0) {
                                     s.onNext(ResponseHeaders.of(HttpStatus.OK));
                                 } else {
-                                    s.onNext(HttpData.wrap(new byte[1024]));
+                                    final byte[] data = new byte[10_000];
+                                    for (int j = 0; j < data.length; j++) {
+                                        data[j] = (byte) (((sentCount - 1) * data.length + j) % 256);
+                                    }
+                                    s.onNext(HttpData.wrap(data));
+                                }
+                                sentCount += 1;
+
+                                if ((sentCount - 1) * 10_000 > 1024 * 1024 * 512) {
+                                    s.onComplete();
+                                    return;
                                 }
                             }
-                            count += n;
-                            // 10MB
-                            if (count > 1024 * 10) {
-                                s.onComplete();
-                            }
+
                         }
 
                         @Override
@@ -100,17 +108,20 @@ public class ArmeriaCallFactoryLargeStreamTest {
         final Service downloadService =
                 ArmeriaRetrofit.builder(webClient)
                                .addConverterFactory(JacksonConverterFactory.create(OBJECT_MAPPER))
+                               .streaming(true)
                                .build()
                                .create(Service.class);
 
         final ResponseBody responseBody = downloadService.largeStream().get();
         try (BufferedInputStream bufferedInputStream = new BufferedInputStream(responseBody.byteStream())) {
-            long sum = 0;
             int read;
-            while ((read = bufferedInputStream.read(new byte[4096])) != -1) {
-                sum += read;
+            final byte[] data = new byte[4096];
+            final MessageDigest md5 = MessageDigest.getInstance("MD5");
+            while ((read = bufferedInputStream.read(data)) != -1) {
+                md5.update(data, 0, read);
             }
-            assertThat(sum).isEqualTo(1024 * 1024 * 10L);
+            assertThat(String.format("%032X", new BigInteger(1, md5.digest())))
+                    .isEqualTo("B0D8D7FEA8B1875D41648CF181FF8073");
         }
     }
 }
