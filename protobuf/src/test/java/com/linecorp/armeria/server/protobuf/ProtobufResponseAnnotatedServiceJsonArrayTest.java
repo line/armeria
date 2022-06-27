@@ -38,7 +38,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 /**
  * Given a ProtobufResponseConverterFunction with a custom JsonPrinter configured via the service builder,
- * The produced JSON should be show that the custom JsonPrinter was used
+ * The produced JSON should show that the custom JsonPrinter was used
  */
 class ProtobufResponseAnnotatedServiceJsonArrayTest {
 
