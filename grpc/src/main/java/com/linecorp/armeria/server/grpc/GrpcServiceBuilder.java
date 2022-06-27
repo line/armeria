@@ -388,7 +388,7 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Adds a gRPC {@link BindableService} with functions to this {@link GrpcServiceBuilder}
+     * Adds a gRPC {@link BindableService} with functions to this {@link GrpcServiceBuilder}.
      * @see #addService(String, BindableService)
      * @see #addService(BindableService, Iterable)
      */
