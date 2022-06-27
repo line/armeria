@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -104,6 +105,10 @@ public final class GrpcServiceBuilder {
     }
 
     private final HandlerRegistry.Builder registryBuilder = new HandlerRegistry.Builder();
+
+    private final Map<ServerServiceDefinition,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>>> additionalDecorators =
+            new HashMap<>();
 
     @Nullable
     private DecompressorRegistry decompressorRegistry;
@@ -323,6 +328,80 @@ public final class GrpcServiceBuilder {
         }
         registryBuilder.addService(path, bindableService.bindService(), methodDescriptor,
                                    bindableService.getClass());
+        return this;
+    }
+
+    /**
+     * Adds a gRPC {@link BindableService} with functions to this {@link GrpcServiceBuilder}.
+     * The functions will be applied in the specified order and before functions decorated with the service.
+     * In the following sample code, these functions will be applied
+     * in the order of FirstDecorator, SecondDecorator, ClassDecorator, and MethodDecorator.
+     * <pre>{@code
+     * @Decorator(ClassDecorator.class)
+     * class SimpleServiceImpl extends SimpleServiceImplBase {
+     *
+     *     @Decorator(MethodDecorator.class)
+     *     @Override
+     *     public void simpleCall(SimpleRequest request,
+     *                            StreamObserver<SimpleResponse> responseObserver) {
+     *         ...
+     *     }
+     * }
+     * ...
+     * GrpcService.builder()
+     *            .addService(new SimpleServiceImpl(),
+     *                        List.of(delegate -> delegate.decorate(new FirstDecorator()),
+     *                                delegate -> delegate.decorate(new SecondDecorator())))
+     *            .build()
+     * }</pre>
+     */
+    @UnstableApi
+    public GrpcServiceBuilder addService(
+            BindableService bindableService,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        requireNonNull(bindableService, "bindableService");
+        requireNonNull(decorators, "decorators");
+        final ServerServiceDefinition serverServiceDefinition = bindableService.bindService();
+        registryBuilder.addService(serverServiceDefinition, bindableService.getClass());
+        additionalDecorators.put(serverServiceDefinition, decorators);
+        return this;
+    }
+
+    /**
+     * Adds an implementation of gRPC service with functions to this {@link GrpcServiceBuilder}.
+     * @see #addService(Object, Function)
+     * @see #addService(BindableService, Iterable)
+     */
+    @UnstableApi
+    public <T> GrpcServiceBuilder addService(
+            T implementation,
+            Function<? super T, ServerServiceDefinition> serviceDefinitionFactory,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        requireNonNull(implementation, "implementation");
+        requireNonNull(serviceDefinitionFactory, "serviceDefinitionFactory");
+        requireNonNull(decorators, "decorators");
+        final ServerServiceDefinition serverServiceDefinition = serviceDefinitionFactory.apply(implementation);
+        requireNonNull(serverServiceDefinition, "serviceDefinitionFactory.apply() returned null");
+        registryBuilder.addService(serverServiceDefinition, implementation.getClass());
+        additionalDecorators.put(serverServiceDefinition, decorators);
+        return this;
+    }
+
+    /**
+     * Adds a gRPC {@link BindableService} with functions to this {@link GrpcServiceBuilder}
+     * @see #addService(String, BindableService)
+     * @see #addService(BindableService, Iterable)
+     */
+    @UnstableApi
+    public <T> GrpcServiceBuilder addService(
+            String path, BindableService bindableService,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        requireNonNull(path, "path");
+        requireNonNull(bindableService, "bindableService");
+        requireNonNull(decorators, "decorators");
+        final ServerServiceDefinition serverServiceDefinition = bindableService.bindService();
+        additionalDecorators.put(serverServiceDefinition, decorators);
+        registryBuilder.addService(path, serverServiceDefinition, null, bindableService.getClass());
         return this;
     }
 
@@ -819,6 +898,9 @@ public final class GrpcServiceBuilder {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
                         ServerInterceptors.intercept(entry.service(), interceptors);
+                if (additionalDecorators.containsKey(entry.service())) {
+                    additionalDecorators.put(intercepted, additionalDecorators.get(entry.service()));
+                }
                 newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor, entry.type());
             }
             handlerRegistry = newRegistryBuilder.build();
@@ -856,7 +938,7 @@ public final class GrpcServiceBuilder {
         }
 
         if (!handlerRegistry.decorators().isEmpty()) {
-            grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
+            grpcService = new GrpcDecoratingService(grpcService, handlerRegistry, additionalDecorators);
         }
         if (enableHttpJsonTranscoding) {
             grpcService = HttpJsonTranscodingService.of(

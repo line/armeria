@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -51,13 +52,19 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
 
     private final HandlerRegistry handlerRegistry;
 
+    private final Map<ServerServiceDefinition,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>>> additionalDecorators;
+
     @Nullable
     private Map<ServerMethodDefinition<?, ?>, HttpService> decorated;
 
-    GrpcDecoratingService(GrpcService delegate, HandlerRegistry handlerRegistry) {
+    GrpcDecoratingService(GrpcService delegate, HandlerRegistry handlerRegistry,
+                          Map<ServerServiceDefinition, Iterable<? extends Function<? super HttpService,
+                                  ? extends HttpService>>> additionalDecorators) {
         super(delegate);
         this.delegate = delegate;
         this.handlerRegistry = handlerRegistry;
+        this.additionalDecorators = additionalDecorators;
     }
 
     @Override
@@ -66,7 +73,7 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
         final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> registryDecorators =
                 handlerRegistry.decorators();
 
-        final Builder<ServerMethodDefinition<?, ?>, HttpService> builder = ImmutableMap.builder();
+        final Map<ServerMethodDefinition<?, ?>, HttpService> decorated = new HashMap<>();
 
         for (Entry<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> entry
                 : registryDecorators.entrySet()) {
@@ -75,9 +82,28 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
                          .stream()
                          .map(DecoratorAndOrder::decorator)
                          .collect(toImmutableList());
-            builder.put(entry.getKey(), applyDecorators(decorators, delegate));
+            decorated.put(entry.getKey(), applyDecorators(decorators, delegate));
         }
-        decorated = builder.build();
+
+        for (Entry<ServerServiceDefinition, Iterable<? extends Function<? super HttpService,
+                ? extends HttpService>>> entry : additionalDecorators.entrySet()) {
+            Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
+            for (Function<? super HttpService, ? extends HttpService> function : entry.getValue()) {
+                decorator = decorator.compose(function);
+            }
+            for (ServerMethodDefinition<?, ?> serverMethodDefinition : entry.getKey().getMethods()) {
+                if (decorated.containsKey(serverMethodDefinition)) {
+                    decorated.put(serverMethodDefinition, decorated.get(serverMethodDefinition)
+                                                                   .decorate(decorator));
+                } else {
+                    decorated.put(serverMethodDefinition, decorator.apply(delegate));
+                }
+            }
+        }
+
+        final Builder<ServerMethodDefinition<?, ?>, HttpService> builder = ImmutableMap.builder();
+        builder.putAll(decorated);
+        this.decorated = builder.build();
     }
 
     private static HttpService applyDecorators(
