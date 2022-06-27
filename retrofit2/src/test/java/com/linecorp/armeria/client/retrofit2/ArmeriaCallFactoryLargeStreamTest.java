@@ -80,12 +80,12 @@ public class ArmeriaCallFactoryLargeStreamTest {
                                 }
                                 sentCount += 1;
 
+                                // Sent more than 512MB
                                 if ((sentCount - 1) * 10_000 > 1024 * 1024 * 512) {
                                     s.onComplete();
                                     return;
                                 }
                             }
-
                         }
 
                         @Override
