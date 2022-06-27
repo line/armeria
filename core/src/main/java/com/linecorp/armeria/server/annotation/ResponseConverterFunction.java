@@ -26,7 +26,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.server.annotation.OrElseResponseConverterFunction;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**

@@ -35,12 +35,15 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 @UnstableApi
 public final class ProtobufResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
 
+    private static final ProtobufResponseConverterFunction protobufResponseConverter =
+            new ProtobufResponseConverterFunction();
+
     @Override
     public ResponseConverterFunction createResponseConverterFunction(
             Type returnType,
             ResponseConverterFunction responseConverter) {
         if (isSupportedType(returnType)) {
-            return responseConverter.orElse(new ProtobufResponseConverterFunction());
+            return responseConverter.orElse(protobufResponseConverter);
         }
         return null;
     }
