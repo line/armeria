@@ -10,7 +10,7 @@ class MarkdownDescriptionService {
     @Description(value = """
         ## Support markdown
         ### Support header
-        - support lists
+        - Support lists
         
         ### Support code-highlight
         ```java
@@ -54,7 +54,7 @@ class MarkdownDescriptionService {
     @Description(value = """
         ## Structs description
         ### Structs description subtitle
-        > support quotes
+        > Support blockquotes
     """, markup = Markup.MARKDOWN)
     data class MarkdownDescriptionResult(
         @field:Description(value = "result1 description (default)", markup = Markup.MARKDOWN)
