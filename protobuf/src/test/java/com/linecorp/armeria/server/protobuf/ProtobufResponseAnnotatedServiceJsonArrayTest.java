@@ -61,6 +61,7 @@ class ProtobufResponseAnnotatedServiceJsonArrayTest {
     private static class GreetingService {
         @Get("/json")
         @ProducesJson
+        @SuppressWarnings("unused")
         public Messages.SimpleRepeatedResponse produceJsonWithRepeatedFields() {
             return Messages.SimpleRepeatedResponse.newBuilder().addAllMessages(Collections.emptyList()).build();
         }
