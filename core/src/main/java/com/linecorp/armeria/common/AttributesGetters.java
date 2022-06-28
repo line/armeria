@@ -119,7 +119,7 @@ public interface AttributesGetters {
      *
      * Attributes child = Attributes.builder(parent)
      *                              .set(SECRET_TOKEN, "secret-2")
-     *                              .set(TRACE_ID, "trace-1)
+     *                              .set(TRACE_ID, "trace-1")
      *                              .build();
      *
      * Iterator<Entry<AttributeKey<?>, Object>> attrs = child.attrs();
