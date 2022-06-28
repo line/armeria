@@ -26,7 +26,7 @@ import ExpandMore from '@material-ui/icons/ExpandMore';
 import React, { useReducer } from 'react';
 
 import { makeStyles } from '@material-ui/core';
-import { Specification } from '../../lib/specification';
+import { DescriptionInfo, Specification } from '../../lib/specification';
 import Description from '../Description';
 
 const useStyles = makeStyles({
@@ -41,8 +41,7 @@ interface Variable {
   childFieldInfos?: Variable[];
   requirement: string;
   typeSignature: string;
-  docString?: string | JSX.Element;
-  supportedMarkup: string;
+  descriptionInfo?: DescriptionInfo;
 }
 
 interface Props {
@@ -122,12 +121,11 @@ const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
           </code>
         </TableCell>
         <TableCell>
-          <pre>
-            <Description
-              docString={variable.docString}
-              supportedMarkup={variable.supportedMarkup}
-            />
-          </pre>
+          {variable.descriptionInfo && (
+            <pre>
+              <Description descriptionInfo={variable.descriptionInfo} />
+            </pre>
+          )}
         </TableCell>
         {hasChildren && (
           <TableCell>{expanded ? <ExpandLess /> : <ExpandMore />}</TableCell>

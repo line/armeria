@@ -162,12 +162,9 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
       <Typography variant="h5" paragraph>
         <code>{`${simpleName(service.name)}.${method.name}()`}</code>
       </Typography>
-      {method.docString && (
+      {method.descriptionInfo && (
         <Section>
-          <Description
-            docString={method.docString}
-            supportedMarkup={method.supportedMarkup}
-          />
+          <Description descriptionInfo={method.descriptionInfo} />
         </Section>
       )}
       <Section>

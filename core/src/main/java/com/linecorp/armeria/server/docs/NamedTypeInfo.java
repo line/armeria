@@ -24,6 +24,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.annotation.DescriptionInfo;
 
 /**
  * Metadata about a named type.
@@ -38,12 +39,12 @@ public interface NamedTypeInfo {
     String name();
 
     /**
-     * Returns the documentation string. If not available, an empty string is returned.
+     * Returns the description object. If not available, an null value is returned.
      */
     @JsonProperty
     @JsonInclude(Include.NON_NULL)
     @Nullable
-    String docString();
+    DescriptionInfo descriptionInfo();
 
     /**
      * Returns all enum, struct and exception types referred by this type.

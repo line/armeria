@@ -25,14 +25,14 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.annotation.Markup;
+import com.linecorp.armeria.server.annotation.DescriptionInfo;
 
 /**
  * Metadata about a struct type.
@@ -43,25 +43,22 @@ public final class StructInfo implements NamedTypeInfo {
     private final String name;
     private final List<FieldInfo> fields;
     @Nullable
-    private final String docString;
-    private final Markup supportedMarkup;
+    private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
      */
     public StructInfo(String name, Iterable<FieldInfo> fields) {
-        this(name, fields, null, Markup.NONE);
+        this(name, fields, null);
     }
 
     /**
      * Creates a new instance.
      */
-    public StructInfo(String name, Iterable<FieldInfo> fields, @Nullable String docString,
-                      Markup supportedMarkup) {
+    public StructInfo(String name, Iterable<FieldInfo> fields, @Nullable DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
         this.fields = ImmutableList.copyOf(requireNonNull(fields, "fields"));
-        this.docString = Strings.emptyToNull(docString);
-        this.supportedMarkup = requireNonNull(supportedMarkup, "supportedMarkup");
+        this.descriptionInfo = descriptionInfo;
     }
 
     @Override
@@ -77,18 +74,14 @@ public final class StructInfo implements NamedTypeInfo {
         return fields;
     }
 
-    @Override
-    public String docString() {
-        return docString;
-    }
-
     /**
-     * Returns the supported markup.
+     * Returns the description information of the struct.
      */
     @JsonProperty
-    @JsonInclude(JsonInclude.Include.NON_NULL)
-    public Markup supportedMarkup() {
-        return supportedMarkup;
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
+    public DescriptionInfo descriptionInfo() {
+        return descriptionInfo;
     }
 
     @Override

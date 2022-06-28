@@ -65,7 +65,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.VirtualHost;
 import com.linecorp.armeria.server.annotation.DescriptionInfo;
-import com.linecorp.armeria.server.annotation.Markup;
 import com.linecorp.armeria.server.file.AbstractHttpVfs;
 import com.linecorp.armeria.server.file.AggregatedHttpFile;
 import com.linecorp.armeria.server.file.FileService;
@@ -235,23 +234,21 @@ public final class DocService extends SimpleDecoratingHttpService {
     private static ServiceInfo addServiceDocStrings(ServiceInfo service,
                                                     Map<String, DescriptionInfo> descriptionInfos) {
         final DescriptionInfo descriptionInfo =
-                findDescription(service.name(), service.docString(), service.supportedMarkup(),
-                                descriptionInfos);
+                findDescription(service.name(), service.descriptionInfo(), descriptionInfos);
         return new ServiceInfo(
                 service.name(),
                 service.methods().stream()
                        .map(method -> addMethodDocStrings(service, method, descriptionInfos))
                        .collect(toImmutableList()),
                 service.exampleHeaders(),
-                descriptionInfo.docString(),
-                descriptionInfo.markup());
+                descriptionInfo);
     }
 
     private static MethodInfo addMethodDocStrings(ServiceInfo service, MethodInfo method,
                                                   Map<String, DescriptionInfo> descriptionInfos) {
         final DescriptionInfo descriptionInfo =
-                findDescription(service.name() + '/' + method.name(), method.docString(),
-                                method.supportedMarkup(), descriptionInfos);
+                findDescription(service.name() + '/' + method.name(), method.descriptionInfo(),
+                                descriptionInfos);
         return new MethodInfo(method.name(),
                               method.returnTypeSignature(),
                               method.parameters().stream()
@@ -265,97 +262,81 @@ public final class DocService extends SimpleDecoratingHttpService {
                               method.examplePaths(),
                               method.exampleQueries(),
                               method.httpMethod(),
-                              descriptionInfo.docString(),
-                              descriptionInfo.markup());
+                              descriptionInfo);
     }
 
     private static FieldInfo addParameterDocString(ServiceInfo service, MethodInfo method, FieldInfo field,
                                                    Map<String, DescriptionInfo> descriptionInfos) {
         final DescriptionInfo descriptionInfo =
                 findDescription(service.name() + '/' + method.name() + '/' + field.name(),
-                                field.docString(), field.supportedMarkup(), descriptionInfos);
+                                field.descriptionInfo(), descriptionInfos);
         return new FieldInfo(field.name(),
                              field.location(),
                              field.requirement(),
                              field.typeSignature(),
                              field.childFieldInfos(),
-                             descriptionInfo.docString(),
-                             descriptionInfo.markup());
+                             descriptionInfo);
     }
 
     private static EnumInfo addEnumDocStrings(EnumInfo e, Map<String, DescriptionInfo> descriptionInfos) {
         final DescriptionInfo descriptionInfo =
-                findDescription(e.name(), e.docString(), e.supportedMarkup(), descriptionInfos);
+                findDescription(e.name(), e.descriptionInfo(), descriptionInfos);
         return new EnumInfo(e.name(),
                             e.values().stream()
                              .map(v -> addEnumValueDocString(e, v, descriptionInfos))
                              .collect(toImmutableList()),
-                            descriptionInfo.docString(),
-                            descriptionInfo.markup());
+                            descriptionInfo);
     }
 
     private static EnumValueInfo addEnumValueDocString(EnumInfo e, EnumValueInfo v,
                                                        Map<String, DescriptionInfo> descriptionInfos) {
         final DescriptionInfo descriptionInfo =
-                findDescription(e.name() + '/' + v.name(), v.docString(), v.supportedMarkup(),
-                                descriptionInfos);
-        return new EnumValueInfo(v.name(),
-                                 v.intValue(),
-                                 descriptionInfo.docString(),
-                                 descriptionInfo.markup());
+                findDescription(e.name() + '/' + v.name(), v.descriptionInfo(), descriptionInfos);
+        return new EnumValueInfo(v.name(), v.intValue(), descriptionInfo);
     }
 
     private static StructInfo addStructDocStrings(StructInfo struct,
                                                   Map<String, DescriptionInfo> descriptionInfos) {
         final DescriptionInfo descriptionInfo =
-                findDescription(struct.name(), struct.docString(), struct.supportedMarkup(), descriptionInfos);
+                findDescription(struct.name(), struct.descriptionInfo(), descriptionInfos);
         return new StructInfo(struct.name(),
                               struct.fields().stream()
                                     .map(field -> addFieldDocString(struct, field, descriptionInfos))
                                     .collect(toImmutableList()),
-                              descriptionInfo.docString(),
-                              descriptionInfo.markup());
+                              descriptionInfo);
     }
 
     private static ExceptionInfo addExceptionDocStrings(ExceptionInfo e,
                                                         Map<String, DescriptionInfo> descriptionInfos) {
         final DescriptionInfo descriptionInfo =
-                findDescription(e.name(), e.docString(), e.supportedMarkup(), descriptionInfos);
+                findDescription(e.name(), e.descriptionInfo(), descriptionInfos);
         return new ExceptionInfo(e.name(),
                                  e.fields().stream()
                                   .map(field -> addFieldDocString(e, field, descriptionInfos))
-                                  .collect(toImmutableList()), descriptionInfo.docString(),
-                                 descriptionInfo.markup());
+                                  .collect(toImmutableList()), descriptionInfo);
     }
 
     private static FieldInfo addFieldDocString(NamedTypeInfo parent, FieldInfo field,
                                                Map<String, DescriptionInfo> descriptionInfos) {
         final DescriptionInfo descriptionInfo =
-                findDescription(parent.name() + '/' + field.name(), field.docString(), field.supportedMarkup(),
+                findDescription(parent.name() + '/' + field.name(), field.descriptionInfo(),
                                 descriptionInfos);
         return new FieldInfo(field.name(),
                              field.location(),
                              field.requirement(),
                              field.typeSignature(),
                              field.childFieldInfos(),
-                             descriptionInfo.docString(),
-                             descriptionInfo.markup());
+                             descriptionInfo);
     }
 
     @Nullable
-    private static DescriptionInfo findDescription(String key, @Nullable String currentDocString,
-                                                   Markup currrentMarkup,
+    private static DescriptionInfo findDescription(String key, @Nullable DescriptionInfo currentDescriptionInfo,
                                                    Map<String, DescriptionInfo> descriptionInfos) {
-        if (currentDocString != null) {
-            return new DescriptionInfo(currentDocString, currrentMarkup);
+        if (currentDescriptionInfo != null) {
+            return currentDescriptionInfo;
         }
 
-        final DescriptionInfo descriptionInfo = descriptionInfos.get(key);
-        if (descriptionInfo != null) {
-            return descriptionInfo;
-        }
-
-        return new DescriptionInfo(null, Markup.NONE);
+        return descriptionInfos.get(key);
     }
 
     private ServiceSpecification addExamples(ServiceSpecification spec) {
@@ -391,11 +372,9 @@ public final class DocService extends SimpleDecoratingHttpService {
                         concatAndDedup(exampleRequests.get(m.name()), m.exampleRequests()),
                         concatAndDedup(examplePaths.get(m.name()), m.examplePaths()),
                         concatAndDedup(exampleQueries.get(m.name()), m.exampleQueries()),
-                        m.httpMethod(), m.docString(),
-                        m.supportedMarkup()))::iterator,
+                        m.httpMethod(), m.descriptionInfo()))::iterator,
                 Iterables.concat(service.exampleHeaders(), exampleHeaders.get("")),
-                service.docString(),
-                service.supportedMarkup());
+                service.descriptionInfo());
     }
 
     private static <T> Iterable<T> concatAndDedup(Iterable<T> first, Iterable<T> second) {

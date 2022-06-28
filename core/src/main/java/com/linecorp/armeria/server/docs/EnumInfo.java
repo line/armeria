@@ -24,12 +24,11 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.annotation.Markup;
+import com.linecorp.armeria.server.annotation.DescriptionInfo;
 
 /**
  * Metadata about an enum type.
@@ -40,8 +39,7 @@ public final class EnumInfo implements NamedTypeInfo {
     private final String name;
     private final List<EnumValueInfo> values;
     @Nullable
-    private final String docString;
-    private final Markup supportedMarkup;
+    private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
@@ -53,41 +51,40 @@ public final class EnumInfo implements NamedTypeInfo {
     /**
      * Creates a new instance.
      */
-    public EnumInfo(Class<? extends Enum<?>> enumType, String docString) {
-        this(enumType.getName(), enumType, requireNonNull(docString, "docString"), Markup.NONE);
+    public EnumInfo(Class<? extends Enum<?>> enumType, @Nullable DescriptionInfo descriptionInfo) {
+        this(enumType.getName(), enumType, descriptionInfo);
     }
 
     /**
      * Creates a new instance.
      */
     public EnumInfo(String name, Class<? extends Enum<?>> enumType) {
-        this(name, enumType, null, Markup.NONE);
+        this(name, enumType, null);
     }
 
     /**
      * Creates a new instance.
      */
     public EnumInfo(String name, Class<? extends Enum<?>> enumType,
-                    @Nullable String docString, Markup supportedMarkup) {
-        this(name, toEnumValues(enumType), docString, supportedMarkup);
+                    @Nullable DescriptionInfo descriptionInfo) {
+        this(name, toEnumValues(enumType), descriptionInfo);
     }
 
     /**
      * Creates a new instance.
      */
     public EnumInfo(String name, Iterable<EnumValueInfo> values) {
-        this(name, values, null, Markup.NONE);
+        this(name, values, null);
     }
 
     /**
      * Creates a new instance.
      */
     public EnumInfo(String name, Iterable<EnumValueInfo> values,
-                    @Nullable String docString, Markup supportedMarkup) {
+                    @Nullable DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
         this.values = ImmutableList.copyOf(requireNonNull(values, "values"));
-        this.docString = Strings.emptyToNull(docString);
-        this.supportedMarkup = requireNonNull(supportedMarkup, "supportedMarkup");
+        this.descriptionInfo = descriptionInfo;
     }
 
     @Override
@@ -104,18 +101,11 @@ public final class EnumInfo implements NamedTypeInfo {
     }
 
     /**
-     * Returns the enum description string.
+     * Returns description information of the enum.
      */
     @Override
-    public String docString() {
-        return docString;
-    }
-
-    /**
-     * Returns the supported markup.
-     */
-    public Markup supportedMarkup() {
-        return supportedMarkup;
+    public DescriptionInfo descriptionInfo() {
+        return descriptionInfo;
     }
 
     @Override

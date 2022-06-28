@@ -46,7 +46,9 @@ const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
   }
 
   const hasIntValue = data.values.some((value) => !!value.intValue);
-  const hasDocString = data.values.some((value) => !!value.docString);
+  const hasDescriptionInfo = data.values.some(
+    (value) => !!value.descriptionInfo,
+  );
 
   return (
     <>
@@ -56,12 +58,9 @@ const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
       <Typography variant="subtitle1" paragraph>
         <code>{packageName(data.name)}</code>
       </Typography>
-      {data.docString && (
+      {data.descriptionInfo && (
         <Section>
-          <Description
-            docString={data.docString}
-            supportedMarkup={data.supportedMarkup}
-          />
+          <Description descriptionInfo={data.descriptionInfo} />
         </Section>
       )}
       <Section>
@@ -72,7 +71,7 @@ const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
               <TableRow>
                 <TableCell>Name</TableCell>
                 {hasIntValue && <TableCell>Int Value</TableCell>}
-                {hasDocString && <TableCell>Description</TableCell>}
+                {hasDescriptionInfo && <TableCell>Description</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
@@ -83,11 +82,10 @@ const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
                       <code>{value.name}</code>
                     </TableCell>
                     {hasIntValue && <TableCell>{value.intValue}</TableCell>}
-                    {hasDocString && (
+                    {hasDescriptionInfo && (
                       <TableCell>
                         <Description
-                          docString={value.docString}
-                          supportedMarkup={value.supportedMarkup}
+                          descriptionInfo={value.descriptionInfo!!}
                         />
                       </TableCell>
                     )}

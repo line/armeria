@@ -151,7 +151,8 @@ class AnnotatedDocServiceTest {
         addMarkdownDescriptionMethodInfo(methodInfos);
         addMermaidDescriptionMethodInfo(methodInfos);
         final Map<Class<?>, DescriptionInfo> serviceDescription = ImmutableMap.of(MyService.class,
-                new DescriptionInfo("My service class", Markup.NONE));
+                                                                                  DescriptionInfo.of(
+                                                                                          "My service class"));
 
         final JsonNode expectedJson = mapper.valueToTree(AnnotatedDocServicePlugin.generate(
                 serviceDescription, methodInfos));
@@ -168,151 +169,150 @@ class AnnotatedDocServiceTest {
 
     private static void addFooMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/foo")
-                .availableMimeTypes(MediaType.JSON_UTF_8)
-                .build();
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
                 FieldInfo.builder("header", INT).requirement(REQUIRED)
-                        .location(FieldLocation.HEADER)
-                        .docString("header parameter").build(),
+                         .location(FieldLocation.HEADER)
+                         .descriptionInfo(DescriptionInfo.of("header parameter")).build(),
                 FieldInfo.builder("query", LONG).requirement(REQUIRED)
-                        .location(QUERY)
-                        .docString("query parameter").build());
+                         .location(QUERY)
+                         .descriptionInfo(DescriptionInfo.of("query parameter")).build());
         final MethodInfo methodInfo = new MethodInfo(
                 "foo", TypeSignature.ofBase("T"), fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, "foo method", Markup.NONE);
+                ImmutableList.of(endpoint), HttpMethod.GET, DescriptionInfo.of("foo method"));
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     private static void addAllMethodsMethodInfos(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/allMethods")
-                .availableMimeTypes(MediaType.JSON_UTF_8)
-                .build();
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         Stream.of(HttpMethod.values())
-                .filter(httpMethod -> httpMethod != HttpMethod.CONNECT && httpMethod != HttpMethod.UNKNOWN)
-                .forEach(httpMethod -> {
-                    final MethodInfo methodInfo =
-                            new MethodInfo("allMethods",
-                                    TypeSignature.ofContainer("CompletableFuture",
-                                            TypeSignature.ofUnresolved("")),
-                                    ImmutableList.of(), ImmutableList.of(), ImmutableList.of(endpoint),
-                                    httpMethod, null, Markup.NONE);
-                    methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
-                });
+              .filter(httpMethod -> httpMethod != HttpMethod.CONNECT && httpMethod != HttpMethod.UNKNOWN)
+              .forEach(httpMethod -> {
+                  final MethodInfo methodInfo =
+                          new MethodInfo("allMethods",
+                                         TypeSignature.ofContainer("CompletableFuture",
+                                                                   TypeSignature.ofUnresolved("")),
+                                         ImmutableList.of(), ImmutableList.of(), ImmutableList.of(endpoint),
+                                         httpMethod, null);
+                  methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
+              });
     }
 
     private static void addIntsMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/ints")
-                .availableMimeTypes(MediaType.JSON_UTF_8)
-                .build();
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
                 FieldInfo.builder("ints", TypeSignature.ofList(INT)).requirement(REQUIRED)
-                        .location(QUERY).build());
+                         .location(QUERY).build());
         final MethodInfo methodInfo = new MethodInfo(
                 "ints", TypeSignature.ofList(INT),
                 fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, null, Markup.NONE);
+                ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     private static void addPathParamsMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = EndpointInfo.builder("*", "/service/hello1/:hello2/hello3/:hello4")
-                .availableMimeTypes(MediaType.JSON_UTF_8)
-                .build();
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
                 FieldInfo.builder("hello2", STRING).requirement(REQUIRED).location(PATH).build(),
                 FieldInfo.builder("hello4", STRING).requirement(REQUIRED).location(PATH).build());
         final MethodInfo methodInfo = new MethodInfo(
                 "pathParams", STRING, fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, null, Markup.NONE);
+                ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     private static void addPathParamsWithQueriesMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = EndpointInfo.builder("*", "/service/hello1/:hello2")
-                .availableMimeTypes(MediaType.JSON_UTF_8)
-                .build();
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
                 FieldInfo.builder("hello2", STRING).requirement(REQUIRED).location(PATH).build(),
                 FieldInfo.builder("hello3", STRING).requirement(REQUIRED).location(QUERY).build());
         final MethodInfo methodInfo = new MethodInfo(
                 "pathParamsWithQueries", STRING, fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, null, Markup.NONE);
+                ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     private static void addRegexMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = EndpointInfo.builder("*", "regex:/(bar|baz)")
-                .regexPathPrefix("prefix:/service/")
-                .availableMimeTypes(MediaType.JSON_UTF_8)
-                .build();
+                                                  .regexPathPrefix("prefix:/service/")
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
                 FieldInfo.builder("myEnum", toTypeSignature(MyEnum.class))
-                        .requirement(REQUIRED)
-                        .location(QUERY)
-                        .build());
+                         .requirement(REQUIRED)
+                         .location(QUERY)
+                         .build());
         final MethodInfo methodInfo = new MethodInfo(
                 "regex", TypeSignature.ofList(TypeSignature.ofList(STRING)), fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, null, Markup.NONE);
+                ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     private static void addPrefixMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = EndpointInfo.builder("*", "prefix:/service/prefix/")
-                .availableMimeTypes(MediaType.JSON_UTF_8)
-                .build();
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final MethodInfo methodInfo = new MethodInfo(
                 "prefix", STRING, ImmutableList.of(), ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, null, Markup.NONE);
+                ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     private static void addConsumesMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/consumes")
-                .availableMimeTypes(MediaType.APPLICATION_BINARY,
-                        MediaType.JSON_UTF_8)
-                .build();
+                                                  .availableMimeTypes(MediaType.APPLICATION_BINARY,
+                                                                      MediaType.JSON_UTF_8)
+                                                  .build();
         final MethodInfo methodInfo = new MethodInfo(
                 "consumes", TypeSignature.ofContainer("BiFunction", TypeSignature.ofBase("JsonNode"),
-                TypeSignature.ofUnresolved(""), STRING),
-                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(endpoint), HttpMethod.GET,
-                null, Markup.NONE);
+                                                      TypeSignature.ofUnresolved(""), STRING),
+                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     private static void addBeanMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/bean")
-                .availableMimeTypes(MediaType.JSON_UTF_8)
-                .build();
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(compositeBean());
         final MethodInfo methodInfo = new MethodInfo(
                 "bean", TypeSignature.ofBase("HttpResponse"), fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, null, Markup.NONE);
+                ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     private static void addMultiMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint1 = EndpointInfo.builder("*", "exact:/service/multi")
-                .availableMimeTypes(MediaType.JSON_UTF_8)
-                .build();
+                                                   .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                   .build();
         final EndpointInfo endpoint2 = EndpointInfo.builder("*", "prefix:/service/multi2/")
-                .availableMimeTypes(MediaType.JSON_UTF_8)
-                .build();
+                                                   .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                   .build();
         final MethodInfo methodInfo = new MethodInfo(
                 "multi", TypeSignature.ofBase("HttpResponse"), ImmutableList.of(), ImmutableList.of(),
-                ImmutableList.of(endpoint1, endpoint2), HttpMethod.GET, null, Markup.NONE);
+                ImmutableList.of(endpoint1, endpoint2), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     private static void addJsonMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint1 = EndpointInfo.builder("*", "exact:/service/json")
-                .availableMimeTypes(MediaType.JSON_UTF_8)
-                .build();
+                                                   .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                   .build();
         final MethodInfo methodInfo1 = new MethodInfo(
                 "json", STRING, ImmutableList.of(), ImmutableList.of(),
-                ImmutableList.of(endpoint1), HttpMethod.POST, null, Markup.NONE);
+                ImmutableList.of(endpoint1), HttpMethod.POST, null);
         final MethodInfo methodInfo2 = new MethodInfo(
                 "json", STRING, ImmutableList.of(), ImmutableList.of(),
-                ImmutableList.of(endpoint1), HttpMethod.PUT, null, Markup.NONE);
+                ImmutableList.of(endpoint1), HttpMethod.PUT, null);
         final Set<MethodInfo> methods = methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>());
         methods.add(methodInfo1);
         methods.add(methodInfo2);
@@ -320,48 +320,48 @@ class AnnotatedDocServiceTest {
 
     private static void addPeriodMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/period")
-                .availableMimeTypes(MediaType.JSON_UTF_8)
-                .build();
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
                 FieldInfo.builder("period", TypeSignature.ofBase("Period"))
-                        .requirement(REQUIRED).location(QUERY).build());
+                         .requirement(REQUIRED).location(QUERY).build());
         final MethodInfo methodInfo = new MethodInfo(
                 "period", TypeSignature.ofBase("HttpResponse"), fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, null, Markup.NONE);
+                ImmutableList.of(endpoint), HttpMethod.GET, null);
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     private static void addMarkdownDescriptionMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/markdown")
-                .availableMimeTypes(MediaType.JSON_UTF_8)
-                .build();
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
                 FieldInfo.builder("descriptionEnum", toTypeSignature(DescriptionEnum.class))
-                        .requirement(REQUIRED)
-                        .location(QUERY)
-                        .docString("DESCRIPTION `PARAM`")
-                        .supportedMarkup(Markup.MARKDOWN)
-                        .build());
+                         .requirement(REQUIRED)
+                         .location(QUERY)
+                         .descriptionInfo(DescriptionInfo.of("DESCRIPTION `PARAM`", Markup.MARKDOWN))
+                         .build());
         final MethodInfo methodInfo = new MethodInfo(
                 "description", STRING, fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET,
-                "## Description method with markdown", Markup.MARKDOWN);
+                DescriptionInfo.of("## Description method with markdown", Markup.MARKDOWN));
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
     private static void addMermaidDescriptionMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/mermaid")
-                .availableMimeTypes(MediaType.JSON_UTF_8)
-                .build();
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of();
-        final String mermaidDescription =  "graph TD;\n" +
-                                           " A-->B;\n" +
-                                           " A-->C;\n" +
-                                           " B-->D;\n" +
-                                           " C-->D;";
+        final String mermaidDescription = "graph TD;\n" +
+                                          " A-->B;\n" +
+                                          " A-->C;\n" +
+                                          " B-->D;\n" +
+                                          " C-->D;";
         final MethodInfo methodInfo = new MethodInfo(
                 "mermaid", TypeSignature.ofBase("HttpResponse"), fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, mermaidDescription, Markup.MERMAID);
+                ImmutableList.of(endpoint), HttpMethod.GET,
+                DescriptionInfo.of(mermaidDescription, Markup.MERMAID));
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -385,8 +385,8 @@ class AnnotatedDocServiceTest {
                     exampleHeaders.add(mapper.valueToTree(EXAMPLE_HEADERS_METHOD));
                     final ArrayNode exampleRequests = (ArrayNode) method.get("exampleRequests");
                     exampleRequests.add('{' + System.lineSeparator() +
-                            "  \"hello\" : \"armeria\"" + System.lineSeparator() +
-                            '}');
+                                        "  \"hello\" : \"armeria\"" + System.lineSeparator() +
+                                        '}');
                     final ArrayNode examplePaths = (ArrayNode) method.get("examplePaths");
                     examplePaths.add(TextNode.valueOf("/service/hello1/foo/hello3/bar"));
                 }
@@ -398,7 +398,7 @@ class AnnotatedDocServiceTest {
                 }
 
                 if (MyService.class.getName().equals(serviceName) &&
-                        "pathParamsWithQueries".equals(methodName)) {
+                    "pathParamsWithQueries".equals(methodName)) {
                     final ArrayNode examplePaths = (ArrayNode) method.get("examplePaths");
                     examplePaths.add(TextNode.valueOf("/service/hello1/foo"));
                     examplePaths.add(TextNode.valueOf("/service/hello1/bar"));
@@ -416,10 +416,10 @@ class AnnotatedDocServiceTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());
         final JsonNode expectedJson = mapper.valueToTree(new ServiceSpecification(ImmutableList.of(),
-                ImmutableList.of(),
-                ImmutableList.of(),
-                ImmutableList.of(),
-                ImmutableList.of()));
+                                                                                  ImmutableList.of(),
+                                                                                  ImmutableList.of(),
+                                                                                  ImmutableList.of(),
+                                                                                  ImmutableList.of()));
         assertThatJson(actualJson).isEqualTo(expectedJson);
     }
 
@@ -431,7 +431,8 @@ class AnnotatedDocServiceTest {
         @Description("foo method")
         public <T> T foo(@Header @Description("header parameter") int header,
                          @Param @Description("query parameter") long query) {
-            @SuppressWarnings("unchecked") final T result = (T) ("header: " + header + ", query: " + query);
+            @SuppressWarnings("unchecked")
+            final T result = (T) ("header: " + header + ", query: " + query);
             return result;
         }
 
@@ -534,7 +535,7 @@ class AnnotatedDocServiceTest {
         @Description(value = "## Description method with markdown", markup = Markup.MARKDOWN)
         @Get("/markdown")
         public String description(@Param @Description(value = "DESCRIPTION `PARAM`", markup = Markup.MARKDOWN)
-                                  DescriptionEnum descriptionEnum) {
+                                          DescriptionEnum descriptionEnum) {
             return descriptionEnum.name();
         }
 

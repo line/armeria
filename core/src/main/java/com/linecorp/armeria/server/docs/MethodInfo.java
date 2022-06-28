@@ -28,7 +28,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
@@ -39,7 +38,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.annotation.Markup;
+import com.linecorp.armeria.server.annotation.DescriptionInfo;
 
 /**
  * Metadata about a function of a {@link Service}.
@@ -60,8 +59,7 @@ public final class MethodInfo {
     private final List<String> exampleQueries;
     private final HttpMethod httpMethod;
     @Nullable
-    private final String docString;
-    private final Markup supportedMarkup;
+    private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
@@ -72,28 +70,11 @@ public final class MethodInfo {
                       Iterable<TypeSignature> exceptionTypeSignatures,
                       Iterable<EndpointInfo> endpoints,
                       HttpMethod httpMethod,
-                      @Nullable String docString) {
+                      @Nullable DescriptionInfo descriptionInfo) {
         this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
                 /* exampleHeaders */ ImmutableList.of(), /* exampleRequests */ ImmutableList.of(),
                 /* examplePaths */ ImmutableList.of(), /* exampleQueries */ ImmutableList.of(),
-                httpMethod, docString, Markup.NONE);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public MethodInfo(String name,
-                      TypeSignature returnTypeSignature,
-                      Iterable<FieldInfo> parameters,
-                      Iterable<TypeSignature> exceptionTypeSignatures,
-                      Iterable<EndpointInfo> endpoints,
-                      HttpMethod httpMethod,
-                      @Nullable String docString,
-                      Markup supportedMarkup) {
-        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
-             /* exampleHeaders */ ImmutableList.of(), /* exampleRequests */ ImmutableList.of(),
-             /* examplePaths */ ImmutableList.of(), /* exampleQueries */ ImmutableList.of(),
-             httpMethod, docString, supportedMarkup);
+             httpMethod, descriptionInfo);
     }
 
     /**
@@ -109,27 +90,7 @@ public final class MethodInfo {
                       Iterable<String> examplePaths,
                       Iterable<String> exampleQueries,
                       HttpMethod httpMethod,
-                      @Nullable String docString) {
-        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
-             exampleHeaders, exampleRequests, examplePaths, exampleQueries, httpMethod,
-             docString, Markup.NONE);
-    }
-
-    /**
-     * Creates a new instance.
-     */
-    public MethodInfo(String name,
-                      TypeSignature returnTypeSignature,
-                      Iterable<FieldInfo> parameters,
-                      Iterable<TypeSignature> exceptionTypeSignatures,
-                      Iterable<EndpointInfo> endpoints,
-                      Iterable<HttpHeaders> exampleHeaders,
-                      Iterable<String> exampleRequests,
-                      Iterable<String> examplePaths,
-                      Iterable<String> exampleQueries,
-                      HttpMethod httpMethod,
-                      @Nullable String docString,
-                      Markup supportedMarkup) {
+                      @Nullable DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
 
         this.returnTypeSignature = requireNonNull(returnTypeSignature, "returnTypeSignature");
@@ -165,8 +126,7 @@ public final class MethodInfo {
         this.exampleQueries = exampleQueriesBuilder.build();
 
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
-        this.docString = Strings.emptyToNull(docString);
-        this.supportedMarkup = requireNonNull(supportedMarkup);
+        this.descriptionInfo = descriptionInfo;
     }
 
     /**
@@ -251,22 +211,13 @@ public final class MethodInfo {
     }
 
     /**
-     * Returns the documentation string of the function.
+     * Returns the description information object of the function.
      */
     @JsonProperty
     @JsonInclude(Include.NON_NULL)
     @Nullable
-    public String docString() {
-        return docString;
-    }
-
-    /**
-     * Returns the supported markup.
-     */
-    @JsonProperty
-    @JsonInclude(Include.NON_NULL)
-    public Markup supportedMarkup() {
-        return supportedMarkup;
+    public DescriptionInfo descriptionInfo() {
+        return descriptionInfo;
     }
 
     @Override

@@ -26,7 +26,7 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.annotation.Markup;
+import com.linecorp.armeria.server.annotation.DescriptionInfo;
 
 /**
  * Creates a new {@link FieldInfo} using the builder pattern.
@@ -41,13 +41,12 @@ public final class FieldInfoBuilder {
     private FieldRequirement requirement = FieldRequirement.UNSPECIFIED;
     private FieldLocation location = FieldLocation.UNSPECIFIED;
     @Nullable
-    private String docString;
-    private Markup supportedMarkup = Markup.NONE;
+    private DescriptionInfo descriptionInfo;
 
     FieldInfoBuilder(String name, TypeSignature typeSignature) {
         this.name = requireNonNull(name, "name");
         this.typeSignature = requireNonNull(typeSignature, "typeSignature");
-        childFieldInfos = ImmutableList.of();
+        this.childFieldInfos = ImmutableList.of();
     }
 
     FieldInfoBuilder(String name, TypeSignature typeSignature, FieldInfo... childFieldInfos) {
@@ -79,18 +78,10 @@ public final class FieldInfoBuilder {
     }
 
     /**
-     * Sets the documentation string of the field.
+     * Sets the description information of the field.
      */
-    public FieldInfoBuilder docString(String docString) {
-        this.docString = requireNonNull(docString, "docString");
-        return this;
-    }
-
-    /**
-     * Sets the supported markup of the field.
-     */
-    public FieldInfoBuilder supportedMarkup(Markup supportedMarkup) {
-        this.supportedMarkup = requireNonNull(supportedMarkup, "supportedMarkup");
+    public FieldInfoBuilder descriptionInfo(DescriptionInfo descriptionInfo) {
+        this.descriptionInfo = descriptionInfo;
         return this;
     }
 
@@ -99,7 +90,7 @@ public final class FieldInfoBuilder {
      */
     public FieldInfo build() {
         return new FieldInfo(name, location, requirement, typeSignature,
-                childFieldInfos, docString, supportedMarkup);
+                             childFieldInfos, descriptionInfo);
     }
 
     @Override
@@ -110,8 +101,7 @@ public final class FieldInfoBuilder {
                           .add("requirement", requirement)
                           .add("typeSignature", typeSignature)
                           .add("childFieldInfos", childFieldInfos)
-                          .add("docString", docString)
-                          .add("supportedMarkup", supportedMarkup)
+                          .add("descriptionInfo", descriptionInfo)
                           .toString();
     }
 }

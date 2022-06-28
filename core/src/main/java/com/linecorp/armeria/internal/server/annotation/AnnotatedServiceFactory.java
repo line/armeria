@@ -583,7 +583,6 @@ public final class AnnotatedServiceFactory {
     /**
      * Returns the description of the specified {@link AnnotatedElement}.
      */
-    @Nullable
     static DescriptionInfo findDescription(AnnotatedElement annotatedElement) {
         requireNonNull(annotatedElement, "annotatedElement");
         final Description description = AnnotationUtil.findFirst(annotatedElement, Description.class);
@@ -591,7 +590,7 @@ public final class AnnotatedServiceFactory {
             final String value = description.value();
             if (DefaultValues.isSpecified(value)) {
                 checkArgument(!value.isEmpty(), "value is empty.");
-                return new DescriptionInfo(description.value(), description.markup());
+                return DescriptionInfo.of(description.value(), description.markup());
             }
         } else if (annotatedElement instanceof Parameter) {
             // JavaDoc/KDoc descriptions only exist for method parameters
@@ -602,7 +601,7 @@ public final class AnnotatedServiceFactory {
             final String propertyName = executable.getName() + '.' + parameter.getName();
             final Properties cachedProperties = DOCUMENTATION_PROPERTIES_CACHE.getIfPresent(fileName);
             if (cachedProperties != null) {
-                return new DescriptionInfo(cachedProperties.getProperty(propertyName), Markup.NONE);
+                return DescriptionInfo.of(cachedProperties.getProperty(propertyName), Markup.NONE);
             }
             try (InputStream stream = AnnotatedServiceFactory.class.getClassLoader()
                                                                    .getResourceAsStream(fileName)) {
@@ -612,7 +611,7 @@ public final class AnnotatedServiceFactory {
                 final Properties properties = new Properties();
                 properties.load(stream);
                 DOCUMENTATION_PROPERTIES_CACHE.put(fileName, properties);
-                return new DescriptionInfo(properties.getProperty(propertyName), Markup.NONE);
+                return DescriptionInfo.of(properties.getProperty(propertyName), Markup.NONE);
             } catch (IOException exception) {
                 logger.warn("Failed to load an API description file: {}", fileName, exception);
             }

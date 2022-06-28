@@ -18,29 +18,49 @@ package com.linecorp.armeria.server.annotation;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 
 /**
  * Description information used in Annotated Service when using {@link Description}.
  */
 public final class DescriptionInfo {
-    @Nullable
     final String docString;
     final Markup markup;
+
+    /**
+     * Creates a new {@link DescriptionInfo} with the docStrings and specific markup.
+     *
+     * @param docString the documentation string of the field
+     * @param markup the support markup of the field
+     */
+    public static DescriptionInfo of(String docString, Markup markup) {
+        return new DescriptionInfo(docString, markup);
+    }
+
+    /**
+     * Creates a new {@link DescriptionInfo} with the docStrings.
+     *
+     * @param docString the documentation string of the field
+     */
+    public static DescriptionInfo of(String docString) {
+        return new DescriptionInfo(docString, Markup.NONE);
+    }
 
     /**
      * Creates a new instance.
      * @param docString the documentation string
      * @param markup the supported markup string
      */
-    public DescriptionInfo(@Nullable String docString, Markup markup) {
-        this.docString = docString;
+    DescriptionInfo(String docString, Markup markup) {
+        this.docString = requireNonNull(docString, "docString");
         this.markup = requireNonNull(markup, "markup");
     }
 
     /**
      * Returns the documentation string.
      */
+    @JsonProperty
     public String docString() {
         return docString;
     }
@@ -48,7 +68,17 @@ public final class DescriptionInfo {
     /**
      * Returns the supported markup.
      */
+    @JsonProperty
     public Markup markup() {
         return markup;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("docString", docString)
+                          .add("markup", markup)
+                          .toString();
     }
 }

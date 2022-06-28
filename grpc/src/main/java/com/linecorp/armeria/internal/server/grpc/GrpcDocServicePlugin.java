@@ -62,7 +62,6 @@ import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.DescriptionInfo;
-import com.linecorp.armeria.server.annotation.Markup;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
@@ -390,9 +389,9 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                              .flatMap(s -> docstringExtractor.getAllDocStrings(s.getClass().getClassLoader())
                                                              .entrySet().stream())
                              .collect(toImmutableMap(Map.Entry<String, String>::getKey,
-                                                    (Map.Entry<String, String> entry) ->
-                                                            new DescriptionInfo(entry.getValue(), Markup.NONE),
-                                                    (a, b) -> a));
+                                                     (Map.Entry<String, String> entry) ->
+                                                             DescriptionInfo.of(entry.getValue()),
+                                                     (a, b) -> a));
     }
 
     @Override

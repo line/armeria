@@ -17,7 +17,10 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-type DocString = string | JSX.Element;
+export interface DescriptionInfo {
+  docString: string;
+  markup: string;
+}
 
 export interface Parameter {
   name: string;
@@ -25,8 +28,7 @@ export interface Parameter {
   childFieldInfos: Parameter[];
   requirement: string;
   typeSignature: string;
-  docString?: DocString;
-  supportedMarkup: string;
+  descriptionInfo?: DescriptionInfo;
 }
 
 export interface Endpoint {
@@ -49,45 +51,39 @@ export interface Method {
   examplePaths: string[];
   exampleQueries: string[];
   httpMethod: string;
-  docString?: DocString;
-  supportedMarkup: string;
+  descriptionInfo?: DescriptionInfo;
 }
 
 export interface Service {
   name: string;
   methods: Method[];
   exampleHeaders: { [name: string]: string }[];
-  docString?: DocString;
-  supportedMarkup: string;
+  descriptionInfo?: DescriptionInfo;
 }
 
 export interface Value {
   name: string;
   intValue?: number;
-  docString?: DocString;
-  supportedMarkup: string;
+  descriptionInfo?: DescriptionInfo;
 }
 
 export interface Enum {
   name: string;
   values: Value[];
-  docString?: DocString;
-  supportedMarkup: string;
+  descriptionInfo?: DescriptionInfo;
 }
 
 export interface Field {
   name: string;
   requirement: string;
   typeSignature: string;
-  docString?: DocString;
-  supportedMarkup: string;
+  descriptionInfo?: DescriptionInfo;
 }
 
 export interface Struct {
   name: string;
   fields: Field[];
-  docString?: DocString;
-  supportedMarkup: string;
+  descriptionInfo?: DescriptionInfo;
 }
 
 export interface SpecificationData {
@@ -152,8 +148,6 @@ export class Specification {
     this.uniqueEnumNames = hasUniqueNames(this.enumsByName);
     this.uniqueServiceNames = hasUniqueNames(this.servicesByName);
     this.uniqueStructNames = hasUniqueNames(this.structsByName);
-
-    this.updateDocStrings();
   }
 
   public getServices(): Service[] {
@@ -224,52 +218,5 @@ export class Specification {
         {simpleName(name)}
       </Link>
     );
-  }
-
-  private updateDocStrings() {
-    for (const service of this.data.services) {
-      for (const method of service.methods) {
-        const childDocStrings = this.parseParamDocStrings(
-          method.docString as string,
-        );
-        for (const param of method.parameters) {
-          const childDocString = childDocStrings.get(param.name);
-          if (childDocString) {
-            param.docString = childDocString;
-          }
-        }
-      }
-    }
-    this.updateStructDocStrings(this.data.structs);
-    this.updateStructDocStrings(this.data.exceptions);
-  }
-
-  private updateStructDocStrings(structs: Struct[]) {
-    // TODO(trustin): Handle the docstrings of return values and exceptions.
-    for (const struct of structs) {
-      const childDocStrings = this.parseParamDocStrings(
-        struct.docString as string,
-      );
-      for (const field of struct.fields) {
-        const childDocString = childDocStrings.get(field.name);
-        if (childDocString) {
-          field.docString = childDocString;
-        }
-      }
-    }
-  }
-
-  private parseParamDocStrings(docString: string | undefined) {
-    const parameters = new Map<string, string>();
-    if (!docString) {
-      return parameters;
-    }
-    const pattern = /@param\s+(\w+)[\s.]+(({@|[^@])*)(?=(@[\w]+|$|\s))/gm;
-    let match = pattern.exec(docString);
-    while (match != null) {
-      parameters.set(match[1], match[2]);
-      match = pattern.exec(docString);
-    }
-    return parameters;
   }
 }

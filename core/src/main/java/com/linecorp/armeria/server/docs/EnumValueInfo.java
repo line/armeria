@@ -23,11 +23,10 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.annotation.Markup;
+import com.linecorp.armeria.server.annotation.DescriptionInfo;
 
 /**
  * Metadata about an enum value.
@@ -37,10 +36,9 @@ public final class EnumValueInfo {
 
     private final String name;
     @Nullable
-    private final String docString;
+    private final DescriptionInfo descriptionInfo;
     @Nullable
     private final Integer intValue;
-    private final Markup supportedMarkup;
 
     /**
      * Creates a new instance.
@@ -48,7 +46,7 @@ public final class EnumValueInfo {
      * @param name the name of the enum value
      */
     public EnumValueInfo(String name) {
-        this(name, null, null, Markup.NONE);
+        this(name, null, null);
     }
 
     /**
@@ -58,7 +56,7 @@ public final class EnumValueInfo {
      * @param intValue the integer value of the enum value
      */
     public EnumValueInfo(String name, @Nullable Integer intValue) {
-        this(name, intValue, null, Markup.NONE);
+        this(name, intValue, null);
     }
 
     /**
@@ -66,14 +64,13 @@ public final class EnumValueInfo {
      *
      * @param name the name of the enum value
      * @param intValue the integer value of the enum value
-     * @param docString the documentation string that describes the enum value
+     * @param descriptionInfo the description object that describes the enum value
      */
     public EnumValueInfo(String name, @Nullable Integer intValue,
-                         @Nullable String docString, Markup supportedMarkup) {
+                         @Nullable DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
         this.intValue = intValue;
-        this.docString = Strings.emptyToNull(docString);
-        this.supportedMarkup = supportedMarkup;
+        this.descriptionInfo = descriptionInfo;
     }
 
     /**
@@ -95,22 +92,13 @@ public final class EnumValueInfo {
     }
 
     /**
-     * Returns the documentation string that describes the enum value.
+     * Returns the description information that describes the enum value.
      */
     @JsonProperty
     @JsonInclude(Include.NON_NULL)
     @Nullable
-    public String docString() {
-        return docString;
-    }
-
-    /**
-     * Returns the supported markup.
-     */
-    @JsonProperty
-    @JsonInclude(Include.NON_NULL)
-    public Markup supportedMarkup() {
-        return supportedMarkup;
+    public DescriptionInfo descriptionInfo() {
+        return descriptionInfo;
     }
 
     @Override
@@ -137,8 +125,7 @@ public final class EnumValueInfo {
                           .omitNullValues()
                           .add("name", name)
                           .add("intValue", intValue)
-                          .add("docString", docString)
-                          .add("supportedMarkup", supportedMarkup)
+                          .add("descriptionInfo", descriptionInfo)
                           .toString();
     }
 }

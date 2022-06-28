@@ -27,7 +27,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.annotation.Markup;
+import com.linecorp.armeria.server.annotation.DescriptionInfo;
 
 /**
  * Metadata about a field of a struct or an exception.
@@ -44,7 +44,7 @@ public final class FieldInfo {
      */
     public static FieldInfo of(String name, TypeSignature typeSignature) {
         return new FieldInfo(name, FieldLocation.UNSPECIFIED, FieldRequirement.UNSPECIFIED, typeSignature,
-                             ImmutableList.of(), null, Markup.NONE);
+                             ImmutableList.of(), null);
     }
 
     /**
@@ -53,9 +53,9 @@ public final class FieldInfo {
      * {@code UNSPECIFIED}.
      */
     public static FieldInfo of(String name, TypeSignature typeSignature,
-                               String docString, Markup supportedMarkup) {
+                               @Nullable DescriptionInfo descriptionInfo) {
         return new FieldInfo(name, FieldLocation.UNSPECIFIED, FieldRequirement.UNSPECIFIED, typeSignature,
-            ImmutableList.of(), docString, supportedMarkup);
+                             ImmutableList.of(), descriptionInfo);
     }
 
     /**
@@ -88,22 +88,20 @@ public final class FieldInfo {
     private final List<FieldInfo> childFieldInfos;
 
     @Nullable
-    private final String docString;
-    private final Markup supportedMarkup;
+    private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
      */
     FieldInfo(String name, FieldLocation location, FieldRequirement requirement,
               TypeSignature typeSignature, List<FieldInfo> childFieldInfos,
-              @Nullable String docString, Markup supportedMarkup) {
+              @Nullable DescriptionInfo descriptionInfo) {
         this.name = name;
         this.location = location;
         this.requirement = requirement;
         this.typeSignature = typeSignature;
         this.childFieldInfos = childFieldInfos;
-        this.docString = docString;
-        this.supportedMarkup = supportedMarkup;
+        this.descriptionInfo = descriptionInfo;
     }
 
     /**
@@ -147,22 +145,13 @@ public final class FieldInfo {
     }
 
     /**
-     * Returns the documentation string of the field.
+     * Returns the description information object of the field.
      */
     @JsonProperty
     @JsonInclude(Include.NON_NULL)
     @Nullable
-    public String docString() {
-        return docString;
-    }
-
-    /**
-     * Returns the supported markup.
-     */
-    @JsonProperty
-    @JsonInclude(Include.NON_NULL)
-    public Markup supportedMarkup() {
-        return supportedMarkup;
+    public DescriptionInfo descriptionInfo() {
+        return descriptionInfo;
     }
 
     @Override
@@ -196,8 +185,7 @@ public final class FieldInfo {
                           .add("requirement", requirement)
                           .add("typeSignature", typeSignature)
                           .add("childFieldInfos", childFieldInfos)
-                          .add("docString", docString)
-                          .add("supportedMarkup", supportedMarkup)
+                          .add("descriptionInfo", descriptionInfo)
                           .toString();
     }
 }

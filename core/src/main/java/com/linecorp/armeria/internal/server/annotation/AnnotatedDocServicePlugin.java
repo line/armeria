@@ -64,7 +64,6 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.DescriptionInfo;
 import com.linecorp.armeria.server.annotation.Header;
-import com.linecorp.armeria.server.annotation.Markup;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
@@ -166,13 +165,10 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Class<?> clazz = service.object().getClass();
         route.methods().forEach(
                 httpMethod -> {
-                    final DescriptionInfo descriptionInfo = AnnotatedServiceFactory.findDescription(method);
-                    final String docString = descriptionInfo != null ? descriptionInfo.docString() : null;
-                    final Markup supportedMarkup = descriptionInfo != null ?
-                                                   descriptionInfo.markup() : Markup.NONE;
                     final MethodInfo methodInfo = new MethodInfo(
                             name, returnTypeSignature, fieldInfos, ImmutableList.of(), // Ignore exceptions.
-                            ImmutableList.of(endpoint), httpMethod, docString, supportedMarkup);
+                            ImmutableList.of(endpoint), httpMethod,
+                            AnnotatedServiceFactory.findDescription(method));
 
                     methodInfos.computeIfAbsent(clazz, unused -> new HashSet<>()).add(methodInfo);
                 });
@@ -294,8 +290,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                                                              : FieldRequirement.OPTIONAL);
         final DescriptionInfo description = resolver.description();
         if (description != null) {
-            builder.docString(description.docString());
-            builder.supportedMarkup(description.markup());
+            builder.descriptionInfo(description);
         }
         return builder.build();
     }
@@ -408,11 +403,8 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 .entrySet().stream()
                 .map(entry -> {
                     final Class<?> service = entry.getKey();
-                    final DescriptionInfo descriptionInfo = serviceDescription.get(service);
-                    final String docString = descriptionInfo != null ? descriptionInfo.docString() : null;
-                    final Markup supportedMarkup = descriptionInfo != null ?
-                                                   descriptionInfo.markup() : Markup.NONE;
-                    return new ServiceInfo(service.getName(), entry.getValue(), docString, supportedMarkup);
+                    return new ServiceInfo(service.getName(), entry.getValue(),
+                                           serviceDescription.get(service));
                 })
                 .collect(toImmutableSet());
 
@@ -444,7 +436,8 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                           final Description valueDescription = AnnotationUtil.findFirst(f, Description.class);
                           if (valueDescription != null) {
                               return new EnumValueInfo(f.getName(), null,
-                                                       valueDescription.value(), valueDescription.markup());
+                                                       DescriptionInfo.of(valueDescription.value(),
+                                                                          valueDescription.markup()));
                           }
 
                           return new EnumValueInfo(f.getName(), null);
@@ -452,7 +445,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                       .collect(Collectors.toList());
 
         if (description != null) {
-            return new EnumInfo(name, values, description.value(), description.markup());
+            return new EnumInfo(name, values, DescriptionInfo.of(description.value(), description.markup()));
         }
 
         return new EnumInfo(name, values);
@@ -471,8 +464,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                               return FieldInfo.of(
                                       f.getName(),
                                       toTypeSignature(f.getGenericType()),
-                                      fieldDescription.value(),
-                                      fieldDescription.markup()
+                                      DescriptionInfo.of(fieldDescription.value(), fieldDescription.markup())
                               );
                           }
 
@@ -481,7 +473,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                       .collect(Collectors.toList());
 
         if (description != null) {
-            return new StructInfo(name, fields, description.value(), description.markup());
+            return new StructInfo(name, fields, DescriptionInfo.of(description.value(), description.markup()));
         }
 
         return new StructInfo(name, fields);

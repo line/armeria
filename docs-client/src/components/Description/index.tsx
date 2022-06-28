@@ -19,19 +19,22 @@ import 'github-markdown-css/github-markdown-light.css';
 import Typography from '@material-ui/core/Typography';
 import MarkdownWrapper from './Markdown';
 import MermaidWrapper from './Mermaid';
+import { DescriptionInfo } from '../../lib/specification';
 
-interface DescriptionProps {
-  docString?: string | JSX.Element;
-  supportedMarkup: string;
+interface DescriptionInfoProps {
+  descriptionInfo: DescriptionInfo;
 }
 
-const removeIndentDocString = (docString: string | undefined) => {
+const removeIndentDocString = (docString: string) => {
   try {
     if (!docString) {
       return '';
     }
 
-    const lines = docString.replace(/@param .*[\n\r]*/gim, '').split('\n');
+    const lines = docString
+      .replace(/@param .*[\n\r]*/gim, '')
+      .split(/(?:\r\n|\n|\r)/gim);
+
     const firstContentfulLine = lines[0].trim() ? lines[0] : lines[1];
     // @ts-ignore
     const indent = firstContentfulLine.match(/^\s*/)[0].length;
@@ -50,7 +53,10 @@ const renderDefaultDocString = (docString: string): JSX.Element => {
     return <div />;
   }
 
-  const lines = docString.split(/(?:\r\n|\n|\r)/gim);
+  const lines = docString
+    .replace(/@param .*[\n\r]*/gim, '')
+    .split(/(?:\r\n|\n|\r)/gim);
+
   return (
     <>
       {lines.map((line, i) => (
@@ -64,25 +70,24 @@ const renderDefaultDocString = (docString: string): JSX.Element => {
   );
 };
 
-const Description: React.FunctionComponent<DescriptionProps> = ({
-  docString,
-  supportedMarkup,
+const Description: React.FunctionComponent<DescriptionInfoProps> = ({
+  descriptionInfo,
 }) => {
   return (
     <>
-      {supportedMarkup === 'MARKDOWN' && (
+      {descriptionInfo.markup === 'MARKDOWN' && (
         <MarkdownWrapper
-          docString={removeIndentDocString(docString as string)}
+          docString={removeIndentDocString(descriptionInfo.docString)}
         />
       )}
-      {supportedMarkup === 'MERMAID' && (
+      {descriptionInfo.markup === 'MERMAID' && (
         <MermaidWrapper
-          docString={removeIndentDocString(docString as string)}
+          docString={removeIndentDocString(descriptionInfo.docString)}
         />
       )}
-      {(!supportedMarkup || supportedMarkup === 'NONE') && (
+      {(!descriptionInfo.markup || descriptionInfo.markup === 'NONE') && (
         <Typography variant="body2">
-          {renderDefaultDocString(docString as string)}
+          {renderDefaultDocString(descriptionInfo.docString)}
         </Typography>
       )}
     </>
