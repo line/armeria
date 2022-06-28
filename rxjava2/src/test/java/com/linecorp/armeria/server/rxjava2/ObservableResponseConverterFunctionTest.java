@@ -24,6 +24,7 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -550,6 +551,9 @@ public class ObservableResponseConverterFunctionTest {
         final ObservableResponseConverterFunction converter =
                 new ObservableResponseConverterFunction((ctx, headers, result, trailers) -> null);
         for (Method method : RxJavaService.class.getDeclaredMethods()) {
+            if (!Modifier.isPublic(method.getModifiers())) {
+                continue;
+            }
             final String isResponseStreaming = method.getAnnotation(Streaming.class).value();
             final Boolean expected;
             if ("null".equals(isResponseStreaming)) {
