@@ -38,13 +38,13 @@ public interface NamedTypeInfoProvider {
      *
      * <p>The type descriptor is different depending on the implementation of {@link DocServicePlugin}.
      * One of the following type descriptions may be chosen to describe a type information.
-     * <li>
-     *    <ul>{@link Class} for {@link AnnotatedDocServicePlugin}</ul>
-     *    <ul>{@code com.google.protobuf.Descriptors.Descriptor} and
-     *        {@code com.google.protobuf.Descriptors.EnumDescriptor} for {@code GrpcDocServicePlugin}</ul>
-     *    <ul>{@code org.apache.thrift.TBase} {@code org.apache.thrift.TEnum} and
-     *        {@code org.apache.thrift.TException} for {@code ThriftDocServicePlugin}</ul>
-     * </li>
+     * <ul>
+     *    <li>{@link Class} for {@link AnnotatedDocServicePlugin}</li>
+     *    <li>{@code com.google.protobuf.Descriptors.Descriptor} and
+     *        {@code com.google.protobuf.Descriptors.EnumDescriptor} for {@code GrpcDocServicePlugin}</li>
+     *    <li>{@code org.apache.thrift.TBase} {@code org.apache.thrift.TEnum} and
+     *        {@code org.apache.thrift.TException} for {@code ThriftDocServicePlugin}</li>
+     * </ul>
      *
      * @return a new {@link StructInfo}. {@code null} if this {@link NamedTypeInfoProvider} cannot convert the
      *         {@code typeDescriptor} to the {@link NamedTypeInfo}.
