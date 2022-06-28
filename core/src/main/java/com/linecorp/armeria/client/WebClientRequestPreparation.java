@@ -417,12 +417,14 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
 
     @Override
     @FormatMethod
+    @SuppressWarnings("FormatStringAnnotation")
     public WebClientRequestPreparation content(@FormatString String format, Object... content) {
         return (WebClientRequestPreparation) super.content(format, content);
     }
 
     @Override
     @FormatMethod
+    @SuppressWarnings("FormatStringAnnotation")
     public WebClientRequestPreparation content(MediaType contentType, @FormatString String format,
                                                Object... content) {
         return (WebClientRequestPreparation) super.content(contentType, format, content);

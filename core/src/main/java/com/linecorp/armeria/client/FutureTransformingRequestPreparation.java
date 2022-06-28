@@ -240,6 +240,7 @@ public final class FutureTransformingRequestPreparation<T>
 
     @Override
     @FormatMethod
+    @SuppressWarnings("FormatStringAnnotation")
     public FutureTransformingRequestPreparation<T> content(@FormatString String format, Object... content) {
         delegate.content(format, content);
         return this;
@@ -247,6 +248,7 @@ public final class FutureTransformingRequestPreparation<T>
 
     @Override
     @FormatMethod
+    @SuppressWarnings("FormatStringAnnotation")
     public FutureTransformingRequestPreparation<T> content(MediaType contentType, @FormatString String format,
                                                            Object... content) {
         delegate.content(contentType, format, content);

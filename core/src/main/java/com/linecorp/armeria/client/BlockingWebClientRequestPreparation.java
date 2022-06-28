@@ -302,6 +302,7 @@ public final class BlockingWebClientRequestPreparation
 
     @Override
     @FormatMethod
+    @SuppressWarnings("FormatStringAnnotation")
     public BlockingWebClientRequestPreparation content(@FormatString String format, Object... content) {
         delegate.content(format, content);
         return this;
@@ -309,6 +310,7 @@ public final class BlockingWebClientRequestPreparation
 
     @Override
     @FormatMethod
+    @SuppressWarnings("FormatStringAnnotation")
     public BlockingWebClientRequestPreparation content(MediaType contentType, @FormatString String format,
                                                        Object... content) {
         delegate.content(contentType, format, content);
