@@ -64,7 +64,6 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      */
     public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz) {
         requireNonNull(clazz, "clazz");
-        @SuppressWarnings("ThreadJoinLoop")
         final CompletableFuture<? extends ResponseEntity<? extends T>> response =
                 delegate.asJson(clazz).execute();
         return cast(response);
