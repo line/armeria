@@ -145,7 +145,6 @@ class JsonNamedTypeInfoProviderTest {
 
     @Test
     void specification() throws Exception {
-        Thread.sleep(Long.MAX_VALUE);
         final BlockingWebClient client = server.blockingWebClient();
 
         final JsonNode response = client.prepare()

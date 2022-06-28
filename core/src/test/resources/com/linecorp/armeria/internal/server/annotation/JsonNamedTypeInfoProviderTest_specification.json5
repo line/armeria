@@ -8,7 +8,7 @@
           "returnTypeSignature": "CompletableFuture<com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$BarResponse>",
           "parameters": [
             {
-              "name": "FooRequest",
+              "name": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$FooRequest",
               "location": "UNSPECIFIED",
               "requirement": "REQUIRED",
               "typeSignature": "object",
