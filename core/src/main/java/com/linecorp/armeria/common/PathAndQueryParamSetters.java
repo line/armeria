@@ -38,7 +38,7 @@ public interface PathAndQueryParamSetters {
     PathAndQueryParamSetters pathParams(Map<String, ?> pathParams);
 
     /**
-     * Disables path parameters substitution. If path parameter is not disabled and a parameter's, specified
+     * Disables path parameters substitution. If path parameter is not disabled and a parameter is specified
      * using {@code {}} or {@code :}, value is not found, an {@link IllegalStateException} is thrown.
      */
     PathAndQueryParamSetters disablePathParams();
