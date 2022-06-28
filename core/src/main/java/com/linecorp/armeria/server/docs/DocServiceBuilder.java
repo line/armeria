@@ -31,6 +31,7 @@ import com.google.common.collect.ListMultimap;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -59,6 +60,9 @@ public final class DocServiceBuilder {
     private final Map<String, ListMultimap<String, String>> exampleQueries = new HashMap<>();
     private final List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers =
             new ArrayList<>();
+
+    @Nullable
+    private NamedTypeInfoProvider namedTypeInfoProvider;
 
     DocServiceBuilder() {}
 
@@ -448,6 +452,20 @@ public final class DocServiceBuilder {
         return this;
     }
 
+    /**
+     * Adds the specified {@link NamedTypeInfoProvider}s used to create a {@link NamedTypeInfo} from
+     * a type descriptor.
+     */
+    public DocServiceBuilder namedTypeInfoProvider(NamedTypeInfoProvider namedTypeInfoProvider) {
+        requireNonNull(namedTypeInfoProvider, "namedTypeInfoProvider");
+        if (this.namedTypeInfoProvider == null) {
+            this.namedTypeInfoProvider = namedTypeInfoProvider;
+        } else {
+            this.namedTypeInfoProvider.orElse(namedTypeInfoProvider);
+        }
+        return this;
+    }
+
     private void putExampleRequest(String serviceName, String methodName, String serializedExampleRequest) {
         exampleRequests.computeIfAbsent(serviceName, unused -> ArrayListMultimap.create())
                        .put(methodName, serializedExampleRequest);
@@ -521,6 +539,7 @@ public final class DocServiceBuilder {
      */
     public DocService build() {
         return new DocService(exampleHeaders, exampleRequests, examplePaths, exampleQueries,
-                              injectedScriptSuppliers, unifyFilter(includeFilter, excludeFilter));
+                              injectedScriptSuppliers, unifyFilter(includeFilter, excludeFilter),
+                              namedTypeInfoProvider);
     }
 }

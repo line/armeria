@@ -96,8 +96,14 @@ public final class DocService extends SimpleDecoratingHttpService {
     static final List<DocServicePlugin> plugins = ImmutableList.copyOf(ServiceLoader.load(
             DocServicePlugin.class, DocService.class.getClassLoader()));
 
+    static final List<NamedTypeInfoProvider> spiNamedTypeInfoProviders =
+            ImmutableList.copyOf(ServiceLoader.load(
+                    NamedTypeInfoProvider.class, DocService.class.getClassLoader()));
+
     static {
         logger.debug("Available {}s: {}", DocServicePlugin.class.getSimpleName(), plugins);
+        logger.debug("Available {}s: {}", NamedTypeInfoProvider.class.getSimpleName(),
+                     spiNamedTypeInfoProviders);
     }
 
     /**
@@ -113,6 +119,8 @@ public final class DocService extends SimpleDecoratingHttpService {
     private final Map<String, ListMultimap<String, String>> exampleQueries;
     private final List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers;
     private final DocServiceFilter filter;
+    @Nullable
+    private final NamedTypeInfoProvider namedTypeInfoProvider;
 
     @Nullable
     private Server server;
@@ -122,8 +130,9 @@ public final class DocService extends SimpleDecoratingHttpService {
      */
     public DocService() {
         this(/* exampleHeaders */ ImmutableMap.of(), /* exampleRequests */ ImmutableMap.of(),
-             /* examplePaths */ ImmutableMap.of(), /* exampleQueries */ ImmutableMap.of(),
-             /* injectedScriptSuppliers */ ImmutableList.of(), DocServiceBuilder.ALL_SERVICES);
+                /* examplePaths */ ImmutableMap.of(), /* exampleQueries */ ImmutableMap.of(),
+                /* injectedScriptSuppliers */ ImmutableList.of(), DocServiceBuilder.ALL_SERVICES,
+                                  null);
     }
 
     /**
@@ -134,7 +143,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                Map<String, ListMultimap<String, String>> examplePaths,
                Map<String, ListMultimap<String, String>> exampleQueries,
                List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
-               DocServiceFilter filter) {
+               DocServiceFilter filter, @Nullable NamedTypeInfoProvider namedTypeInfoProvider) {
 
         super(FileService.builder(new DocServiceVfs())
                          .serveCompressedFiles(true)
@@ -147,6 +156,7 @@ public final class DocService extends SimpleDecoratingHttpService {
         this.exampleQueries = immutableCopyOf(exampleQueries, "exampleQueries");
         this.injectedScriptSuppliers = requireNonNull(injectedScriptSuppliers, "injectedScriptSuppliers");
         this.filter = requireNonNull(filter, "filter");
+        this.namedTypeInfoProvider = composeNamedTypeInfoProvider(namedTypeInfoProvider);
     }
 
     private static <T> Map<String, ListMultimap<String, T>> immutableCopyOf(
@@ -155,6 +165,24 @@ public final class DocService extends SimpleDecoratingHttpService {
 
         return map.entrySet().stream().collect(toImmutableMap(
                 Entry::getKey, e -> ImmutableListMultimap.copyOf(e.getValue())));
+    }
+
+    private static NamedTypeInfoProvider composeNamedTypeInfoProvider(
+            @Nullable NamedTypeInfoProvider namedTypeInfoProvider) {
+        return typeDescriptor -> {
+            if (namedTypeInfoProvider != null) {
+                // Respect user-defined provider first.
+                return namedTypeInfoProvider.newNamedTypeInfo(typeDescriptor);
+            }
+
+            for (NamedTypeInfoProvider provider : spiNamedTypeInfoProviders) {
+                final NamedTypeInfo namedTypeInfo = provider.newNamedTypeInfo(typeDescriptor);
+                if (namedTypeInfo != null) {
+                    return namedTypeInfo;
+                }
+            }
+            return null;
+        };
     }
 
     @Override
@@ -183,7 +211,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                               .filter(se -> virtualHosts.contains(se.virtualHost()))
                               .collect(toImmutableList());
 
-                ServiceSpecification spec = generate(services, filter);
+                ServiceSpecification spec = generate(services);
 
                 spec = addDocStrings(spec, services);
                 spec = addExamples(spec);
@@ -199,11 +227,11 @@ public final class DocService extends SimpleDecoratingHttpService {
         });
     }
 
-    private static ServiceSpecification generate(List<ServiceConfig> services, DocServiceFilter filter) {
+    private ServiceSpecification generate(List<ServiceConfig> services) {
         return ServiceSpecification.merge(
                 plugins.stream()
                        .map(plugin -> plugin.generateSpecification(
-                               findSupportedServices(plugin, services), filter))
+                               findSupportedServices(plugin, services), filter, namedTypeInfoProvider))
                        .collect(toImmutableList()));
     }
 

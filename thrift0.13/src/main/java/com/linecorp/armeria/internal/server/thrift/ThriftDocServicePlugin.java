@@ -16,9 +16,10 @@
 
 package com.linecorp.armeria.internal.server.thrift;
 
-import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.linecorp.armeria.internal.server.thrift.ThriftNameTypeInfoProvider.VOID;
+import static com.linecorp.armeria.internal.server.thrift.ThriftNameTypeInfoProvider.newFieldInfo;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
@@ -28,7 +29,6 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,19 +37,10 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.thrift.TBase;
-import org.apache.thrift.TEnum;
 import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
-import org.apache.thrift.TFieldRequirementType;
 import org.apache.thrift.TSerializer;
-import org.apache.thrift.meta_data.EnumMetaData;
 import org.apache.thrift.meta_data.FieldMetaData;
-import org.apache.thrift.meta_data.FieldValueMetaData;
-import org.apache.thrift.meta_data.ListMetaData;
-import org.apache.thrift.meta_data.MapMetaData;
-import org.apache.thrift.meta_data.SetMetaData;
-import org.apache.thrift.meta_data.StructMetaData;
-import org.apache.thrift.protocol.TType;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -65,16 +56,12 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.docs.EnumInfo;
-import com.linecorp.armeria.server.docs.EnumValueInfo;
-import com.linecorp.armeria.server.docs.ExceptionInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
-import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfo;
+import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
-import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.thrift.THttpService;
 
@@ -84,16 +71,6 @@ import com.linecorp.armeria.server.thrift.THttpService;
 public final class ThriftDocServicePlugin implements DocServicePlugin {
 
     private static final String REQUEST_STRUCT_SUFFIX = "_args";
-
-    private static final TypeSignature VOID = TypeSignature.ofBase("void");
-    private static final TypeSignature BOOL = TypeSignature.ofBase("bool");
-    private static final TypeSignature I8 = TypeSignature.ofBase("i8");
-    private static final TypeSignature I16 = TypeSignature.ofBase("i16");
-    private static final TypeSignature I32 = TypeSignature.ofBase("i32");
-    private static final TypeSignature I64 = TypeSignature.ofBase("i64");
-    private static final TypeSignature DOUBLE = TypeSignature.ofBase("double");
-    private static final TypeSignature STRING = TypeSignature.ofBase("string");
-    private static final TypeSignature BINARY = TypeSignature.ofBase("binary");
 
     @Nullable
     private static final MethodHandle legacyTSerializerToString;
@@ -127,7 +104,8 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
     @Override
     public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
-                                                      DocServiceFilter filter) {
+                                                      DocServiceFilter filter,
+                                                      NamedTypeInfoProvider namedTypeInfoProvider) {
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(filter, "filter");
 
@@ -162,18 +140,20 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         final List<Entry> entries = map.values().stream()
                                        .map(EntryBuilder::build)
                                        .collect(Collectors.toList());
-        return generate(entries, filter);
+        return generate(entries, filter, namedTypeInfoProvider);
     }
 
     @VisibleForTesting
-    public ServiceSpecification generate(List<Entry> entries, DocServiceFilter filter) {
+    public ServiceSpecification generate(List<Entry> entries, DocServiceFilter filter,
+                                         NamedTypeInfoProvider namedTypeInfoProvider) {
         final List<ServiceInfo> services =
                 entries.stream()
                        .map(e -> newServiceInfo(e.serviceType, e.endpointInfos, filter))
                        .filter(Objects::nonNull)
                        .collect(toImmutableList());
 
-        return ServiceSpecification.generate(services, ThriftDocServicePlugin::newNamedTypeInfo);
+        return ServiceSpecification.generate(
+                services, typeSignature -> newNamedTypeInfo(typeSignature, namedTypeInfoProvider));
     }
 
     @VisibleForTesting
@@ -293,163 +273,16 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                               HttpMethod.POST, null);
     }
 
-    private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature) {
+    private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature,
+                                                  NamedTypeInfoProvider namedTypeInfoProvider) {
         final Class<?> type = (Class<?>) typeSignature.namedTypeDescriptor();
         if (type == null) {
             throw new IllegalArgumentException("cannot create a named type from: " + typeSignature);
         }
 
-        if (type.isEnum()) {
-            @SuppressWarnings("unchecked")
-            final Class<? extends Enum<? extends TEnum>> enumType =
-                    (Class<? extends Enum<? extends TEnum>>) type;
-            return newEnumInfo(enumType);
-        }
-
-        if (TException.class.isAssignableFrom(type)) {
-            @SuppressWarnings("unchecked")
-            final Class<? extends TException> castType = (Class<? extends TException>) type;
-            return newExceptionInfo(castType);
-        }
-
-        assert TBase.class.isAssignableFrom(type);
-        @SuppressWarnings("unchecked")
-        final Class<? extends TBase<?, ?>> castType = (Class<? extends TBase<?, ?>>) type;
-        return newStructInfo(castType);
-    }
-
-    @VisibleForTesting
-    static StructInfo newStructInfo(Class<? extends TBase<?, ?>> structClass) {
-        final String name = structClass.getName();
-
-        final Map<?, FieldMetaData> metaDataMap = FieldMetaData.getStructMetaDataMap(structClass);
-        final List<FieldInfo> fields =
-                metaDataMap.values().stream()
-                           .map(fieldMetaData -> newFieldInfo(structClass, fieldMetaData))
-                           .collect(Collectors.toList());
-
-        return new StructInfo(name, fields);
-    }
-
-    @VisibleForTesting
-    static ExceptionInfo newExceptionInfo(Class<? extends TException> exceptionClass) {
-        requireNonNull(exceptionClass, "exceptionClass");
-        final String name = exceptionClass.getName();
-
-        List<FieldInfo> fields;
-        try {
-            @SuppressWarnings("unchecked")
-            final Map<?, FieldMetaData> metaDataMap =
-                    (Map<?, FieldMetaData>) exceptionClass.getDeclaredField("metaDataMap").get(null);
-
-            fields = metaDataMap.values().stream()
-                                .map(fieldMetaData -> newFieldInfo(exceptionClass, fieldMetaData))
-                                .collect(toImmutableList());
-        } catch (IllegalAccessException e) {
-            throw new AssertionError("will not happen", e);
-        } catch (NoSuchFieldException ignored) {
-            fields = Collections.emptyList();
-        }
-
-        return new ExceptionInfo(name, fields);
-    }
-
-    @VisibleForTesting
-    static FieldInfo newFieldInfo(Class<?> parentType, FieldMetaData fieldMetaData) {
-        requireNonNull(fieldMetaData, "fieldMetaData");
-        final FieldValueMetaData fieldValueMetaData = fieldMetaData.valueMetaData;
-        final TypeSignature typeSignature;
-
-        if (fieldValueMetaData.isStruct() && fieldValueMetaData.isTypedef() &&
-            parentType.getSimpleName().equals(fieldValueMetaData.getTypedefName())) {
-            // Handle the special case where a struct field refers to itself,
-            // where the Thrift compiler handles it as a typedef.
-            typeSignature = TypeSignature.ofNamed(parentType);
-        } else {
-            typeSignature = toTypeSignature(fieldValueMetaData);
-        }
-
-        return FieldInfo.builder(fieldMetaData.fieldName, typeSignature)
-                        .requirement(convertRequirement(fieldMetaData.requirementType)).build();
-    }
-
-    @VisibleForTesting
-    static TypeSignature toTypeSignature(FieldValueMetaData fieldValueMetaData) {
-        if (fieldValueMetaData instanceof StructMetaData) {
-            return TypeSignature.ofNamed(((StructMetaData) fieldValueMetaData).structClass);
-        }
-
-        if (fieldValueMetaData instanceof EnumMetaData) {
-            return TypeSignature.ofNamed(((EnumMetaData) fieldValueMetaData).enumClass);
-        }
-
-        if (fieldValueMetaData instanceof ListMetaData) {
-            return TypeSignature.ofList(toTypeSignature(((ListMetaData) fieldValueMetaData).elemMetaData));
-        }
-
-        if (fieldValueMetaData instanceof SetMetaData) {
-            return TypeSignature.ofSet(toTypeSignature(((SetMetaData) fieldValueMetaData).elemMetaData));
-        }
-
-        if (fieldValueMetaData instanceof MapMetaData) {
-            return TypeSignature.ofMap(toTypeSignature(((MapMetaData) fieldValueMetaData).keyMetaData),
-                                       toTypeSignature(((MapMetaData) fieldValueMetaData).valueMetaData));
-        }
-
-        if (fieldValueMetaData.isBinary()) {
-            return BINARY;
-        }
-
-        switch (fieldValueMetaData.type) {
-            case TType.VOID:
-                return VOID;
-            case TType.BOOL:
-                return BOOL;
-            case TType.BYTE:
-                return I8;
-            case TType.DOUBLE:
-                return DOUBLE;
-            case TType.I16:
-                return I16;
-            case TType.I32:
-                return I32;
-            case TType.I64:
-                return I64;
-            case TType.STRING:
-                return STRING;
-        }
-
-        final String unresolvedName;
-        if (fieldValueMetaData.isTypedef()) {
-            unresolvedName = fieldValueMetaData.getTypedefName();
-        } else {
-            unresolvedName = null;
-        }
-
-        return TypeSignature.ofUnresolved(firstNonNull(unresolvedName, "unknown"));
-    }
-
-    @VisibleForTesting
-    static EnumInfo newEnumInfo(Class<? extends Enum<? extends TEnum>> enumType) {
-        final List<EnumValueInfo> values = Arrays.stream(enumType.getEnumConstants())
-                                                 .map(e -> new EnumValueInfo(e.name(), ((TEnum) e).getValue()))
-                                                 .collect(toImmutableList());
-
-        return new EnumInfo(enumType.getTypeName(), values);
-    }
-
-    private static FieldRequirement convertRequirement(byte value) {
-        switch (value) {
-            case TFieldRequirementType.REQUIRED:
-                return FieldRequirement.REQUIRED;
-            case TFieldRequirementType.OPTIONAL:
-                return FieldRequirement.OPTIONAL;
-            case TFieldRequirementType.DEFAULT:
-                // Convert to unspecified for consistency with gRPC and AnnotatedService.
-                return FieldRequirement.UNSPECIFIED;
-            default:
-                throw new IllegalArgumentException("unknown requirement type: " + value);
-        }
+        assert type.isEnum() || TException.class.isAssignableFrom(type) || TBase.class.isAssignableFrom(type);
+        final NamedTypeInfo namedTypeInfo = namedTypeInfoProvider.newNamedTypeInfo(type);
+        return requireNonNull(namedTypeInfo, "namedTypeInfoProvider.newNamedTypeInfo() returned null");
     }
 
     @VisibleForTesting

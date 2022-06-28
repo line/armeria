@@ -369,7 +369,7 @@ class AnnotatedDocServicePluginTest {
         final Server server = builder.build();
         final ServiceSpecification specification =
                 plugin.generateSpecification(ImmutableSet.copyOf(server.serviceConfigs()),
-                                             unifyFilter(include, exclude));
+                                             unifyFilter(include, exclude), typeDescriptor -> null);
         return specification.services()
                             .stream()
                             .collect(toImmutableMap(ServiceInfo::name, Function.identity()));

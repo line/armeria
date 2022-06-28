@@ -852,6 +852,16 @@ final class AnnotatedValueResolver {
                                            element.getClass().getSimpleName());
     }
 
+    static boolean isAnnotatedNullable(AnnotatedElement annotatedElement) {
+        for (Annotation a : annotatedElement.getAnnotations()) {
+            final String annotationTypeName = a.annotationType().getName();
+            if (annotationTypeName.endsWith(".Nullable")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Nullable
     private final Class<? extends Annotation> annotationType;
 
@@ -1331,16 +1341,6 @@ final class AnnotatedValueResolver {
                         "Unsupported or invalid parameter type: " + parameterizedType, cause);
             }
             return toRawType(elementType);
-        }
-
-        private static boolean isAnnotatedNullable(AnnotatedElement annotatedElement) {
-            for (Annotation a : annotatedElement.getAnnotations()) {
-                final String annotationTypeName = a.annotationType().getName();
-                if (annotationTypeName.endsWith(".Nullable")) {
-                    return true;
-                }
-            }
-            return false;
         }
 
         @Nullable

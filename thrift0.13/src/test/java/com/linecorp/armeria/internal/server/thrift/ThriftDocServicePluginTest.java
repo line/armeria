@@ -19,24 +19,13 @@ package com.linecorp.armeria.internal.server.thrift;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.docs.DocServiceUtil.unifyFilter;
-import static com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.newEnumInfo;
-import static com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.newExceptionInfo;
-import static com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.newFieldInfo;
-import static com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.newStructInfo;
-import static com.linecorp.armeria.internal.server.thrift.ThriftDocServicePlugin.toTypeSignature;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
-import org.apache.thrift.TFieldRequirementType;
-import org.apache.thrift.meta_data.FieldMetaData;
-import org.apache.thrift.meta_data.FieldValueMetaData;
-import org.apache.thrift.protocol.TType;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -48,22 +37,14 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.docs.EnumInfo;
-import com.linecorp.armeria.server.docs.EnumValueInfo;
-import com.linecorp.armeria.server.docs.ExceptionInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
-import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
-import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.thrift.THttpService;
-import com.linecorp.armeria.service.test.thrift.main.FooEnum;
 import com.linecorp.armeria.service.test.thrift.main.FooService;
-import com.linecorp.armeria.service.test.thrift.main.FooServiceException;
 import com.linecorp.armeria.service.test.thrift.main.FooStruct;
-import com.linecorp.armeria.service.test.thrift.main.FooUnion;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService.AsyncIface;
 
@@ -74,6 +55,8 @@ class ThriftDocServicePluginTest {
     private static final String FOO_NAME = FooService.class.getName();
 
     private static final ThriftDocServicePlugin generator = new ThriftDocServicePlugin();
+
+    private static final ThriftNameTypeInfoProvider namedTypeInfoProvider = new ThriftNameTypeInfoProvider();
 
     @Test
     void servicesTest() {
@@ -120,7 +103,7 @@ class ThriftDocServicePluginTest {
         final ServiceSpecification specification = generator.generateSpecification(
                 ImmutableSet.copyOf(server.serviceConfigs()),
                 unifyFilter((plugin, service, method) -> true,
-                            (plugin, service, method) -> false));
+                            (plugin, service, method) -> false), namedTypeInfoProvider);
 
         final ServiceInfo fooServiceInfo = specification.services().iterator().next();
         final Map<String, MethodInfo> methods =
@@ -211,7 +194,7 @@ class ThriftDocServicePluginTest {
         // Generate the specification with the ServiceConfigs.
         final ServiceSpecification specification = generator.generateSpecification(
                 ImmutableSet.copyOf(server.serviceConfigs()),
-                unifyFilter(include, exclude));
+                unifyFilter(include, exclude), namedTypeInfoProvider);
 
         // Ensure the specification contains all services.
         return specification.services()
@@ -224,28 +207,6 @@ class ThriftDocServicePluginTest {
                        .stream()
                        .map(MethodInfo::name)
                        .collect(toImmutableList());
-    }
-
-    @Test
-    void testNewEnumInfo() {
-        final EnumInfo enumInfo = newEnumInfo(FooEnum.class);
-
-        assertThat(enumInfo).isEqualTo(new EnumInfo(FooEnum.class.getName(),
-                                                    Arrays.asList(new EnumValueInfo("VAL1", 1),
-                                                                  new EnumValueInfo("VAL2", 2),
-                                                                  new EnumValueInfo("VAL3", 3))));
-    }
-
-    @Test
-    void testNewExceptionInfo() {
-        final ExceptionInfo exception = newExceptionInfo(FooServiceException.class);
-
-        assertThat(exception).isEqualTo(new ExceptionInfo(
-                FooServiceException.class.getName(),
-                ImmutableList.of(newFieldInfo(
-                        FooServiceException.class,
-                        new FieldMetaData("stringVal", TFieldRequirementType.DEFAULT,
-                                          new FieldValueMetaData(TType.STRING, false))))));
     }
 
     @Test
@@ -327,36 +288,5 @@ class ThriftDocServicePluginTest {
 
         final List<HttpHeaders> exampleHeaders = service.exampleHeaders();
         assertThat(exampleHeaders).isEmpty();
-    }
-
-    @Test
-    void testNewStructInfoTest() throws Exception {
-        final TypeSignature string = TypeSignature.ofBase("string");
-        final List<FieldInfo> fields = new ArrayList<>();
-        fields.add(FieldInfo.of("boolVal", TypeSignature.ofBase("bool")));
-        fields.add(FieldInfo.of("byteVal", TypeSignature.ofBase("i8")));
-        fields.add(FieldInfo.of("i16Val", TypeSignature.ofBase("i16")));
-        fields.add(FieldInfo.of("i32Val", TypeSignature.ofBase("i32")));
-        fields.add(FieldInfo.of("i64Val", TypeSignature.ofBase("i64")));
-        fields.add(FieldInfo.of("doubleVal", TypeSignature.ofBase("double")));
-        fields.add(FieldInfo.of("stringVal", string));
-        fields.add(FieldInfo.of("binaryVal", TypeSignature.ofBase("binary")));
-        fields.add(FieldInfo.of("enumVal", TypeSignature.ofNamed(FooEnum.class)));
-        fields.add(FieldInfo.of("unionVal", TypeSignature.ofNamed(FooUnion.class)));
-        fields.add(FieldInfo.of("mapVal", TypeSignature.ofMap(
-                string, TypeSignature.ofNamed(FooEnum.class))));
-        fields.add(FieldInfo.of("setVal", TypeSignature.ofSet(FooUnion.class)));
-        fields.add(FieldInfo.of("listVal", TypeSignature.ofList(string)));
-        fields.add(FieldInfo.builder("selfRef", TypeSignature.ofNamed(FooStruct.class))
-                            .requirement(FieldRequirement.OPTIONAL).build());
-
-        final StructInfo fooStruct = newStructInfo(FooStruct.class);
-        assertThat(fooStruct).isEqualTo(new StructInfo(FooStruct.class.getName(), fields));
-    }
-
-    @Test
-    void incompleteStructMetadata() throws Exception {
-        assertThat(toTypeSignature(new FieldValueMetaData(TType.STRUCT)))
-                .isEqualTo(TypeSignature.ofUnresolved("unknown"));
     }
 }

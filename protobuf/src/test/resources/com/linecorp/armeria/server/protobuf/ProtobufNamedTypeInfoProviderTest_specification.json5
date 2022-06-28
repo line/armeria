@@ -1,0 +1,284 @@
+{
+  "services" : [ {
+    "name" : "com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProviderTest$ProtobufService",
+    "methods" : [ {
+      "name" : "json",
+      "returnTypeSignature" : "CompletableFuture<com.linecorp.armeria.protobuf.testing.Messages$TestMessage>",
+      "parameters" : [ {
+        "name" : "armeria.protobuf.testing.TestMessage",
+        "location" : "UNSPECIFIED",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "object",
+        "childFieldInfos" : [ {
+          "name" : "bool",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "bool",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "int32",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "int32",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "int64",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "int64",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "uint32",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "uint32",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "uint64",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "uint64",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "sint32",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "sint32",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "sint64",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "sint64",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "fixed32",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "fixed32",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "fixed64",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "fixed64",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "float",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "float",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "double",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "double",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "string",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "string",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "bytes",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "bytes",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "test_enum",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "armeria.protobuf.testing.TestEnum",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "nested",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "armeria.protobuf.testing.TestMessage.Nested",
+          "childFieldInfos" : [ {  // The fields of a nested type.
+            "name" : "string",
+            "location" : "UNSPECIFIED",
+            "requirement" : "OPTIONAL",
+            "typeSignature" : "string",
+            "childFieldInfos" : [ ]
+          } ]
+        }, {
+          "name" : "strings",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "repeated<string>",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "map",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "map<string, int32>",
+          "childFieldInfos" : [ ]
+        }, {
+          "name" : "self",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "armeria.protobuf.testing.TestMessage",
+          "childFieldInfos" : [ ]  // Don't populate the fields of a circular type.
+        } ]
+      } ],
+      "exceptionTypeSignatures" : [ ],
+      "endpoints" : [ {
+        "hostnamePattern" : "*",
+        "pathMapping" : "exact:/json",
+        "availableMimeTypes" : [ "application/json", "application/json; charset=utf-8" ]
+      } ],
+      "exampleHeaders" : [ ],
+      "exampleRequests" : [ ],
+      "examplePaths" : [ ],
+      "exampleQueries" : [ ],
+      "httpMethod" : "POST"
+    } ],
+    "exampleHeaders" : [ ]
+  } ],
+  "enums" : [ {
+    "name" : "armeria.protobuf.testing.TestEnum",
+    "values" : [ {
+      "name" : "ZERO",
+      "intValue" : 0
+    }, {
+      "name" : "ONE",
+      "intValue" : 1
+    }, {
+      "name" : "TWO",
+      "intValue" : 2
+    } ]
+  } ],
+  "structs" : [ {
+    "name" : "armeria.protobuf.testing.TestMessage",
+    "fields" : [ {
+      "name" : "bool",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "bool",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "int32",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "int32",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "int64",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "int64",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "uint32",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "uint32",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "uint64",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "uint64",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "sint32",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "sint32",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "sint64",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "sint64",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "fixed32",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "fixed32",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "fixed64",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "fixed64",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "float",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "float",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "double",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "double",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "string",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "bytes",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "bytes",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "test_enum",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "armeria.protobuf.testing.TestEnum",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "nested",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "armeria.protobuf.testing.TestMessage.Nested",
+      "childFieldInfos" : [ {
+        "name" : "string",
+        "location" : "UNSPECIFIED",
+        "requirement" : "OPTIONAL",
+        "typeSignature" : "string",
+        "childFieldInfos" : [ ]
+      } ]
+    }, {
+      "name" : "strings",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "repeated<string>",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "map",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "map<string, int32>",
+      "childFieldInfos" : [ ]
+    }, {
+      "name" : "self",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "armeria.protobuf.testing.TestMessage",
+      "childFieldInfos" : [ ]
+    } ]
+  }, {
+    "name" : "armeria.protobuf.testing.TestMessage.Nested",
+    "fields" : [ {
+      "name" : "string",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "string",
+      "childFieldInfos" : [ ]
+    } ]
+  } ],
+  "exceptions" : [ ],
+  "exampleHeaders" : [ ]
+}

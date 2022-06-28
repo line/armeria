@@ -1,0 +1,201 @@
+{
+  "services": [
+    {
+      "name": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$JsonService",
+      "methods": [
+        {
+          "name": "json",
+          "returnTypeSignature": "CompletableFuture<com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$BarResponse>",
+          "parameters": [
+            {
+              "name": "FooRequest",
+              "location": "UNSPECIFIED",
+              "requirement": "REQUIRED",
+              "typeSignature": "object",
+              "childFieldInfos": [
+                {
+                  "name": "intField",
+                  "location": "UNSPECIFIED",
+                  "requirement": "REQUIRED",
+                  "typeSignature": "int", // A primitive type
+                  "childFieldInfos": [ ]
+                }, {
+                  "name": "stringField",
+                  "location": "UNSPECIFIED",
+                  "requirement": "REQUIRED",
+                  "typeSignature": "string",
+                  "childFieldInfos": [ ]
+                }, {
+                  "name": "sameName",
+                  "location": "UNSPECIFIED",
+                  "requirement": "REQUIRED", // Non-null is assumed by default.
+                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner",
+                  "childFieldInfos": [
+                    {
+                      "name": "innerValue",
+                      "location": "UNSPECIFIED",
+                      "requirement": "REQUIRED",
+                      "typeSignature": "boolean",
+                      "childFieldInfos": [ ]
+                    }
+                  ]
+                }, {
+                  "name": "rename",
+                  "location": "UNSPECIFIED",
+                  "requirement": "UNSPECIFIED", // requirement is unspecified if no field information is given.
+                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner",
+                  "childFieldInfos": [
+                    // Nested fields
+                    {
+                      "name": "innerValue",
+                      "location": "UNSPECIFIED",
+                      "requirement": "REQUIRED",
+                      "typeSignature": "boolean",
+                      "childFieldInfos": [ ]
+                    }
+                  ]
+                }, {
+                  "name": "collection",
+                  "location": "UNSPECIFIED",
+                  "requirement": "REQUIRED",
+                  "typeSignature": "list<com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner>",
+                  "childFieldInfos": [ ]
+                }, {
+                  "name": "nullableField",
+                  "location": "UNSPECIFIED",
+                  "requirement": "OPTIONAL", // A `@Nullable` object
+                  "typeSignature": "string",
+                  "childFieldInfos": [ ]
+                }, {
+                  "name": "optionalField",
+                  "location": "UNSPECIFIED",
+                  "requirement": "OPTIONAL", // An `Optional` object
+                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner",
+                  "childFieldInfos": [
+                    {
+                      "name": "innerValue",
+                      "location": "UNSPECIFIED",
+                      "requirement": "REQUIRED",
+                      "typeSignature": "boolean",
+                      "childFieldInfos": [ ]
+                    }
+                  ]
+                }, {
+                  "name": "circular",
+                  "location": "UNSPECIFIED",
+                  "requirement": "REQUIRED",
+                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$FooRequest",
+                  "childFieldInfos": [ ] // Stop traversing if a circular field is detected.
+                }
+              ]
+            }
+          ],
+          "exceptionTypeSignatures": [ ],
+          "endpoints": [
+            {
+              "hostnamePattern": "*",
+              "pathMapping": "exact:/json",
+              "availableMimeTypes": [ "application/json", "application/json; charset=utf-8" ]
+            }
+          ],
+          "exampleHeaders": [ ],
+          "exampleRequests": [ ],
+          "examplePaths": [ ],
+          "exampleQueries": [ ],
+          "httpMethod": "POST"
+        }
+      ],
+      "exampleHeaders": [ ]
+    }
+  ],
+  "enums": [ ],
+  "structs": [
+    {
+      "name": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$BarResponse",
+      "fields": [
+        {
+          "name": "getterField",
+          "location": "UNSPECIFIED",
+          "requirement": "REQUIRED",
+          "typeSignature": "string",
+          "childFieldInfos": [ ]
+        }, {
+          "name": "getterNullableField",
+          "location": "UNSPECIFIED",
+          "requirement": "OPTIONAL",
+          "typeSignature": "string",
+          "childFieldInfos": [ ]
+        }, {
+          "name": "intField",
+          "location": "UNSPECIFIED",
+          "requirement": "REQUIRED",
+          "typeSignature": "int",
+          "childFieldInfos": [ ]
+        }, {
+          "name": "sameName",
+          "location": "UNSPECIFIED",
+          "requirement": "REQUIRED",
+          "typeSignature": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner",
+          "childFieldInfos": [
+            {
+              "name": "innerValue",
+              "location": "UNSPECIFIED",
+              "requirement": "REQUIRED",
+              "typeSignature": "boolean",
+              "childFieldInfos": [ ]
+            }
+          ]
+        }, {
+          "name": "rename",
+          "location": "UNSPECIFIED",
+          "requirement": "UNSPECIFIED",
+          "typeSignature": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner",
+          "childFieldInfos": [
+            {
+              "name": "innerValue",
+              "location": "UNSPECIFIED",
+              "requirement": "REQUIRED",
+              "typeSignature": "boolean",
+              "childFieldInfos": [ ]
+            }
+          ]
+        }, {
+          "name": "collection",
+          "location": "UNSPECIFIED",
+          "requirement": "REQUIRED",
+          "typeSignature": "list<com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner>",
+          "childFieldInfos": [ ]
+        }, {
+          "name": "nullableField",
+          "location": "UNSPECIFIED",
+          "requirement": "OPTIONAL",
+          "typeSignature": "string",
+          "childFieldInfos": [ ]
+        }, {
+          "name": "optionalField",
+          "location": "UNSPECIFIED",
+          "requirement": "OPTIONAL",
+          "typeSignature": "string",
+          "childFieldInfos": [ ]
+        }, {
+          "name": "circular",
+          "location": "UNSPECIFIED",
+          "requirement": "REQUIRED",
+          "typeSignature": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$BarResponse",
+          "childFieldInfos": [ ]
+        }
+      ]
+    }, {
+      "name": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner",
+      "fields": [
+        {
+          "name": "innerValue",
+          "location": "UNSPECIFIED",
+          "requirement": "REQUIRED",
+          "typeSignature": "boolean",
+          "childFieldInfos": [ ]
+        }
+      ]
+    }
+  ]
+}

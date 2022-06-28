@@ -1,5 +1,6 @@
 dependencies {
     implementation project(':grpc')
+    implementation project(':protobuf')
 
     // ScalaPB
     api "com.thesamet.scalapb:scalapb-json4s_3"
