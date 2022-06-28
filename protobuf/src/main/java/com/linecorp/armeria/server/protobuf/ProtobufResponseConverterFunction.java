@@ -152,11 +152,11 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
             return null;
         }
 
-        // Non-streaming types
-        if (Message.class.isAssignableFrom(clazz)) {
+        // Non-streaming types.
+        if (isJson(produceType)) {
             return false;
         }
-        if (produceType != null && (isJson(produceType) || isProtobuf(produceType))) {
+        if (Message.class.isAssignableFrom(clazz) && isProtobuf(produceType)) {
             return false;
         }
 
