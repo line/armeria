@@ -32,8 +32,8 @@ final class OrElseResponseConverterFunction implements ResponseConverterFunction
     private final ResponseConverterFunction firstConverter;
     private final ResponseConverterFunction secondConverter;
 
-    public OrElseResponseConverterFunction(ResponseConverterFunction firstConverter,
-                                           ResponseConverterFunction secondConverter) {
+    OrElseResponseConverterFunction(ResponseConverterFunction firstConverter,
+                                    ResponseConverterFunction secondConverter) {
         this.firstConverter = firstConverter;
         this.secondConverter = secondConverter;
     }
