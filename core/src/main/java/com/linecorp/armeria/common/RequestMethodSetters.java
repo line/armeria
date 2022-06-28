@@ -19,7 +19,7 @@ package com.linecorp.armeria.common;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Provide the setters for building a {@link HttpMethod} and a request path.
+ * Provide the setters for building an {@link HttpMethod} and a request path.
  */
 @UnstableApi
 public interface RequestMethodSetters {
