@@ -148,6 +148,8 @@ export class Specification {
     this.uniqueEnumNames = hasUniqueNames(this.enumsByName);
     this.uniqueServiceNames = hasUniqueNames(this.servicesByName);
     this.uniqueStructNames = hasUniqueNames(this.structsByName);
+
+    this.updateDocStrings();
   }
 
   public getServices(): Service[] {
@@ -218,5 +220,58 @@ export class Specification {
         {simpleName(name)}
       </Link>
     );
+  }
+
+  private updateDocStrings() {
+    for (const service of this.data.services) {
+      for (const method of service.methods) {
+        const childDocStrings = this.parseParamDocStrings(
+          method.descriptionInfo?.docString as string,
+        );
+        for (const param of method.parameters) {
+          const childDocString = childDocStrings.get(param.name);
+          if (childDocString) {
+            param.descriptionInfo = {
+              docString: childDocString,
+              markup: 'NONE',
+            };
+          }
+        }
+      }
+    }
+    this.updateStructDocStrings(this.data.structs);
+    this.updateStructDocStrings(this.data.exceptions);
+  }
+
+  private updateStructDocStrings(structs: Struct[]) {
+    // TODO(trustin): Handle the docstrings of return values and exceptions.
+    for (const struct of structs) {
+      const childDocStrings = this.parseParamDocStrings(
+        struct.descriptionInfo?.docString as string,
+      );
+      for (const field of struct.fields) {
+        const childDocString = childDocStrings.get(field.name);
+        if (childDocString) {
+          field.descriptionInfo = {
+            docString: childDocString,
+            markup: 'NONE',
+          };
+        }
+      }
+    }
+  }
+
+  private parseParamDocStrings(docString: string | undefined) {
+    const parameters = new Map<string, string>();
+    if (!docString) {
+      return parameters;
+    }
+    const pattern = /@param\s+(\w+)[\s.]+(({@|[^@])*)(?=(@[\w]+|$|\s))/gm;
+    let match = pattern.exec(docString);
+    while (match != null) {
+      parameters.set(match[1], match[2]);
+      match = pattern.exec(docString);
+    }
+    return parameters;
   }
 }

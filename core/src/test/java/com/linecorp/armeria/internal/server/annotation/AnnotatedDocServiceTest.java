@@ -163,7 +163,6 @@ class AnnotatedDocServiceTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CACHE_CONTROL))
                 .isEqualTo("no-cache, max-age=0, must-revalidate");
-        System.out.println(res.contentUtf8());
         assertThatJson(res.contentUtf8()).when(IGNORING_ARRAY_ORDER).isEqualTo(expectedJson);
     }
 
