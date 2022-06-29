@@ -63,7 +63,7 @@ public interface DocServicePlugin {
     // TODO(trustin): How do we specify the docstring of a method return value?
 
     /**
-     * Loads the documentation description infos include strings and markup types
+     * Loads the {@link DescriptionInfo} that describes services and their methods, enums and their values and
      * that describes services and their methods, enums and their values and
      * structs/exceptions and their fields. The {@link Map} returned by this method will contain the
      * documentation strings identified by the key strings that conforms to one of the following formats:
