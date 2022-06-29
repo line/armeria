@@ -15,7 +15,6 @@
  */
 
 import React, { useEffect } from 'react';
-// @ts-ignore
 import mermaid from 'mermaid';
 
 interface MermaidWrapperProps {
@@ -26,20 +25,21 @@ interface MermaidProps {
   chart: string;
 }
 
+mermaid.initialize({
+  startOnLoad: true,
+  arrowMarkerAbsolute: false,
+});
+
 const Mermaid: React.FunctionComponent<MermaidProps> = ({ chart }) => {
   useEffect(() => {
+    // Need to be removed property when mermaid component reloaded.
+    const element = document.querySelector('.mermaid');
+    if (element) {
+      element.removeAttribute('data-processed');
+    }
+
     mermaid.contentLoaded();
   });
-
-  const configs = {
-    startOnLoad: true,
-    theme: 'base',
-    logLevel: 'fatal',
-    securityLevel: 'strict',
-    arrowMarkerAbsolute: false,
-  };
-
-  mermaid.initialize({ ...configs });
 
   if (!chart) {
     return <div />;
