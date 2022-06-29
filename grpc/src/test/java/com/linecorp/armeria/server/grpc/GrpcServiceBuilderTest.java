@@ -281,7 +281,7 @@ class GrpcServiceBuilderTest {
                                                       .addService("/foo", secondTestService);
         final HandlerRegistry handlerRegistry = handlerRegistry(builder);
         final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators =
-                handlerRegistry.decorators();
+                handlerRegistry.annotationDecorators();
 
         ServerMethodDefinition<?, ?> methodDefinition = handlerRegistry.methods().get(
                 "armeria.grpc.testing.TestService/UnaryCall");
@@ -319,7 +319,7 @@ class GrpcServiceBuilderTest {
                                                       .addService(thirdTestService);
         final HandlerRegistry handlerRegistry = handlerRegistry(builder);
         final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators =
-                handlerRegistry.decorators();
+                handlerRegistry.annotationDecorators();
 
         ServerMethodDefinition<?, ?> methodDefinition = handlerRegistry.methods().get(
                 "armeria.grpc.testing.TestService/UnaryCall");
@@ -342,7 +342,7 @@ class GrpcServiceBuilderTest {
                             impl -> ServerInterceptors.intercept(impl, new DummyInterceptor()));
         final HandlerRegistry handlerRegistry = handlerRegistry(builder);
         final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators =
-                handlerRegistry.decorators();
+                handlerRegistry.annotationDecorators();
 
         final ServerMethodDefinition<?, ?> methodDefinition = handlerRegistry.methods().get(
                 "armeria.grpc.testing.TestService/UnaryCall");

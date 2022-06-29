@@ -52,31 +52,24 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
 
     private final HandlerRegistry handlerRegistry;
 
-    private final Map<ServerServiceDefinition,
-            Iterable<? extends Function<? super HttpService, ? extends HttpService>>> additionalDecorators;
-
     @Nullable
     private Map<ServerMethodDefinition<?, ?>, HttpService> decorated;
 
-    GrpcDecoratingService(GrpcService delegate, HandlerRegistry handlerRegistry,
-                          Map<ServerServiceDefinition, Iterable<? extends Function<? super HttpService,
-                                  ? extends HttpService>>> additionalDecorators) {
+    GrpcDecoratingService(GrpcService delegate, HandlerRegistry handlerRegistry) {
         super(delegate);
         this.delegate = delegate;
         this.handlerRegistry = handlerRegistry;
-        this.additionalDecorators = additionalDecorators;
     }
 
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
         super.serviceAdded(cfg);
-        final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> registryDecorators =
-                handlerRegistry.decorators();
-
         final Map<ServerMethodDefinition<?, ?>, HttpService> decorated = new HashMap<>();
 
+        final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> annotationDecorators =
+                handlerRegistry.annotationDecorators();
         for (Entry<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> entry
-                : registryDecorators.entrySet()) {
+                : annotationDecorators.entrySet()) {
             final List<? extends Function<? super HttpService, ? extends HttpService>> decorators =
                     entry.getValue()
                          .stream()
@@ -85,20 +78,12 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
             decorated.put(entry.getKey(), applyDecorators(decorators, delegate));
         }
 
-        for (Entry<ServerServiceDefinition, Iterable<? extends Function<? super HttpService,
+        final Map<ServerMethodDefinition<?, ?>, Iterable<? extends Function<? super HttpService,
+                ? extends HttpService>>> additionalDecorators = handlerRegistry.additionalDecorators();
+        for (Entry<ServerMethodDefinition<?, ?>, Iterable<? extends Function<? super HttpService,
                 ? extends HttpService>>> entry : additionalDecorators.entrySet()) {
-            Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
-            for (Function<? super HttpService, ? extends HttpService> function : entry.getValue()) {
-                decorator = decorator.compose(function);
-            }
-            for (ServerMethodDefinition<?, ?> serverMethodDefinition : entry.getKey().getMethods()) {
-                if (decorated.containsKey(serverMethodDefinition)) {
-                    decorated.put(serverMethodDefinition, decorated.get(serverMethodDefinition)
-                                                                   .decorate(decorator));
-                } else {
-                    decorated.put(serverMethodDefinition, decorator.apply(delegate));
-                }
-            }
+            final HttpService service = decorated.getOrDefault(entry.getKey(), delegate);
+            decorated.put(entry.getKey(), applyDecorators(entry.getValue(), service));
         }
 
         final Builder<ServerMethodDefinition<?, ?>, HttpService> builder = ImmutableMap.builder();
@@ -107,11 +92,11 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
     }
 
     private static HttpService applyDecorators(
-            List<? extends Function<? super HttpService, ? extends HttpService>> decorators,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators,
             HttpService delegate) {
         Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
-        for (int i = decorators.size() - 1; i >= 0; i--) {
-            decorator = decorator.andThen(decorators.get(i));
+        for (Function<? super HttpService, ? extends HttpService> function : decorators) {
+            decorator = decorator.compose(function);
         }
         return decorator.apply(delegate);
     }

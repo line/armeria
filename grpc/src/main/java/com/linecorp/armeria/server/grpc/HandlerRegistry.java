@@ -56,6 +56,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 
 import com.google.common.base.CaseFormat;
 import com.google.common.base.Converter;
@@ -65,6 +66,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
+import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 
 import io.grpc.MethodDescriptor;
@@ -85,18 +87,23 @@ final class HandlerRegistry {
     private final Map<String, ServerMethodDefinition<?, ?>> methods;
     private final Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute;
     private final Map<MethodDescriptor<?, ?>, String> simpleMethodNames;
-    private final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators;
+    private final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> annotationDecorators;
+    private final Map<ServerMethodDefinition<?, ?>, Iterable<? extends Function<? super HttpService,
+            ? extends HttpService>>> additionalDecorators;
 
     private HandlerRegistry(List<ServerServiceDefinition> services,
                             Map<String, ServerMethodDefinition<?, ?>> methods,
                             Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute,
                             Map<MethodDescriptor<?, ?>, String> simpleMethodNames,
-                            Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators) {
+                            Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> annotationDecorators,
+                            Map<ServerMethodDefinition<?, ?>, Iterable<? extends Function<? super HttpService,
+                                    ? extends HttpService>>> additionalDecorators) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
         this.methodsByRoute = requireNonNull(methodsByRoute, "methodsByRoute");
         this.simpleMethodNames = requireNonNull(simpleMethodNames, "simpleMethodNames");
-        this.decorators = requireNonNull(decorators, "decorators");
+        this.annotationDecorators = requireNonNull(annotationDecorators, "annotationDecorators");
+        this.additionalDecorators = requireNonNull(additionalDecorators, "additionalDecorators");
     }
 
     @Nullable
@@ -125,22 +132,32 @@ final class HandlerRegistry {
         return methodsByRoute;
     }
 
-    Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators() {
-        return decorators;
+    Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> annotationDecorators() {
+        return annotationDecorators;
+    }
+
+    Map<ServerMethodDefinition<?, ?>, Iterable<? extends Function<? super HttpService, ? extends HttpService>>>
+    additionalDecorators() {
+        return additionalDecorators;
     }
 
     static final class Builder {
         private final List<Entry> entries = new ArrayList<>();
 
-        Builder addService(ServerServiceDefinition service, @Nullable Class<?> type) {
-            entries.add(new Entry(service.getServiceDescriptor().getName(), service, null, type));
+        Builder addService(ServerServiceDefinition service, @Nullable Class<?> type,
+                           @Nullable Iterable<? extends Function<? super HttpService,
+                                   ? extends HttpService>> additionalDecorators) {
+            entries.add(new Entry(service.getServiceDescriptor().getName(), service, null, type,
+                                  additionalDecorators));
             return this;
         }
 
         Builder addService(String path, ServerServiceDefinition service,
-                           @Nullable MethodDescriptor<?, ?> methodDescriptor, @Nullable Class<?> type) {
-            entries.add(new Entry(normalizePath(path, methodDescriptor == null),
-                                  service, methodDescriptor, type));
+                           @Nullable MethodDescriptor<?, ?> methodDescriptor, @Nullable Class<?> type,
+                           @Nullable Iterable<? extends Function<? super HttpService,
+                                   ? extends HttpService>> additionalDecorators) {
+            entries.add(new Entry(normalizePath(path, methodDescriptor == null), service,
+                                  methodDescriptor, type, additionalDecorators));
             return this;
         }
 
@@ -179,12 +196,17 @@ final class HandlerRegistry {
             final ImmutableMap.Builder<MethodDescriptor<?, ?>, String> bareMethodNames = ImmutableMap.builder();
             final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators =
                     ImmutableMap.builder();
+            final ImmutableMap.Builder<ServerMethodDefinition<?, ?>,
+                    Iterable<? extends Function<? super HttpService, ? extends HttpService>>>
+                    additionalDecoratorsBuilder = ImmutableMap.builder();
 
             for (Entry entry : entries) {
                 final ServerServiceDefinition service = entry.service();
                 final String path = entry.path();
                 services.put(path, service);
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
+                final Iterable<? extends Function<? super HttpService, ? extends HttpService>>
+                        additionalDecorators = entry.additionalDecorators();
                 if (methodDescriptor == null) {
                     final Class<?> type = entry.type();
                     final Map<String, Method> publicMethods = new HashMap<>();
@@ -207,7 +229,9 @@ final class HandlerRegistry {
                         methodsByRoute.put(Route.builder().exact('/' + pathWithMethod).build(),
                                            methodDefinition);
                         bareMethodNames.put(methodDescriptor0, bareMethodName);
-
+                        if (additionalDecorators != null) {
+                            additionalDecoratorsBuilder.put(methodDefinition, additionalDecorators);
+                        }
                         final String methodName = methodNameConverter.convert(bareMethodName);
                         final Method method = publicMethods.get(methodName);
                         if (method != null) {
@@ -227,6 +251,9 @@ final class HandlerRegistry {
                                    .orElseThrow(() -> new IllegalArgumentException(
                                            "Failed to retrieve " + methodDescriptor + " in " + service));
                     methods.put(path, methodDefinition);
+                    if (additionalDecorators != null) {
+                        additionalDecoratorsBuilder.put(methodDefinition, additionalDecorators);
+                    }
                     methodsByRoute.put(Route.builder().exact('/' + path).build(), methodDefinition);
                     final MethodDescriptor<?, ?> methodDescriptor0 = methodDefinition.getMethodDescriptor();
                     final String bareMethodName = methodDescriptor0.getBareMethodName();
@@ -255,7 +282,8 @@ final class HandlerRegistry {
                                        methods.build(),
                                        methodsByRoute.build(),
                                        bareMethodNames.buildKeepingLast(),
-                                       decorators.build());
+                                       decorators.build(),
+                                       additionalDecoratorsBuilder.build());
         }
     }
 
@@ -267,12 +295,19 @@ final class HandlerRegistry {
         @Nullable
         private final Class<?> type;
 
+        @Nullable
+        private final Iterable<? extends Function<? super HttpService, ? extends HttpService>>
+                additionalDecorators;
+
         Entry(String path, ServerServiceDefinition service,
-              @Nullable MethodDescriptor<?, ?> method, @Nullable Class<?> type) {
+              @Nullable MethodDescriptor<?, ?> method, @Nullable Class<?> type,
+              @Nullable Iterable<? extends Function<? super HttpService,
+                      ? extends HttpService>> additionalDecorators) {
             this.path = path;
             this.service = service;
             this.method = method;
             this.type = type;
+            this.additionalDecorators = additionalDecorators;
         }
 
         String path() {
@@ -291,6 +326,11 @@ final class HandlerRegistry {
         @Nullable
         Class<?> type() {
             return type;
+        }
+
+        @Nullable
+        Iterable<? extends Function<? super HttpService, ? extends HttpService>> additionalDecorators() {
+            return additionalDecorators;
         }
     }
 }

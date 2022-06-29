@@ -23,7 +23,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
 import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -106,10 +105,6 @@ public final class GrpcServiceBuilder {
 
     private final HandlerRegistry.Builder registryBuilder = new HandlerRegistry.Builder();
 
-    private final Map<ServerServiceDefinition,
-            Iterable<? extends Function<? super HttpService, ? extends HttpService>>> additionalDecorators =
-            new HashMap<>();
-
     @Nullable
     private DecompressorRegistry decompressorRegistry;
 
@@ -165,7 +160,7 @@ public final class GrpcServiceBuilder {
      * what's returned by {@link BindableService#bindService()}.
      */
     public GrpcServiceBuilder addService(ServerServiceDefinition service) {
-        registryBuilder.addService(requireNonNull(service, "service"), null);
+        registryBuilder.addService(requireNonNull(service, "service"), null, null);
         return this;
     }
 
@@ -188,7 +183,7 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder addService(String path, ServerServiceDefinition service) {
         registryBuilder.addService(requireNonNull(path, "path"), requireNonNull(service, "service"),
-                                   null, null);
+                                   null, null, null);
         return this;
     }
 
@@ -215,7 +210,7 @@ public final class GrpcServiceBuilder {
         registryBuilder.addService(requireNonNull(path, "path"),
                                    requireNonNull(service, "service"),
                                    requireNonNull(methodDescriptor, "methodDescriptor"),
-                                   null);
+                                   null, null);
         return this;
     }
 
@@ -238,7 +233,7 @@ public final class GrpcServiceBuilder {
             return this;
         }
 
-        registryBuilder.addService(bindableService.bindService(), bindableService.getClass());
+        registryBuilder.addService(bindableService.bindService(), bindableService.getClass(), null);
         return this;
     }
 
@@ -264,7 +259,7 @@ public final class GrpcServiceBuilder {
             return addService(path, ServerInterceptors.intercept(bindableService,
                                                                  newProtoReflectionServiceInterceptor()));
         }
-        registryBuilder.addService(path, bindableService.bindService(), null, bindableService.getClass());
+        registryBuilder.addService(path, bindableService.bindService(), null, bindableService.getClass(), null);
         return this;
     }
 
@@ -296,7 +291,7 @@ public final class GrpcServiceBuilder {
         requireNonNull(serviceDefinitionFactory, "serviceDefinitionFactory");
         final ServerServiceDefinition serverServiceDefinition = serviceDefinitionFactory.apply(implementation);
         requireNonNull(serverServiceDefinition, "serviceDefinitionFactory.apply() returned null");
-        registryBuilder.addService(serverServiceDefinition, implementation.getClass());
+        registryBuilder.addService(serverServiceDefinition, implementation.getClass(), null);
         return this;
     }
 
@@ -327,7 +322,7 @@ public final class GrpcServiceBuilder {
             return addService(path, interceptor, methodDescriptor);
         }
         registryBuilder.addService(path, bindableService.bindService(), methodDescriptor,
-                                   bindableService.getClass());
+                                   bindableService.getClass(), null);
         return this;
     }
 
@@ -360,10 +355,13 @@ public final class GrpcServiceBuilder {
             BindableService bindableService,
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(bindableService, "bindableService");
+        if (bindableService instanceof ProtoReflectionService) {
+            final ServerServiceDefinition interceptor =
+                    ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
+            return addService(interceptor);
+        }
         requireNonNull(decorators, "decorators");
-        final ServerServiceDefinition serverServiceDefinition = bindableService.bindService();
-        registryBuilder.addService(serverServiceDefinition, bindableService.getClass());
-        additionalDecorators.put(serverServiceDefinition, decorators);
+        registryBuilder.addService(bindableService.bindService(), bindableService.getClass(), decorators);
         return this;
     }
 
@@ -382,8 +380,7 @@ public final class GrpcServiceBuilder {
         requireNonNull(decorators, "decorators");
         final ServerServiceDefinition serverServiceDefinition = serviceDefinitionFactory.apply(implementation);
         requireNonNull(serverServiceDefinition, "serviceDefinitionFactory.apply() returned null");
-        registryBuilder.addService(serverServiceDefinition, implementation.getClass());
-        additionalDecorators.put(serverServiceDefinition, decorators);
+        registryBuilder.addService(serverServiceDefinition, implementation.getClass(), decorators);
         return this;
     }
 
@@ -398,10 +395,39 @@ public final class GrpcServiceBuilder {
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(path, "path");
         requireNonNull(bindableService, "bindableService");
+        if (bindableService instanceof ProtoReflectionService) {
+            final ServerServiceDefinition interceptor =
+                    ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
+            return addService(path, interceptor);
+        }
         requireNonNull(decorators, "decorators");
-        final ServerServiceDefinition serverServiceDefinition = bindableService.bindService();
-        additionalDecorators.put(serverServiceDefinition, decorators);
-        registryBuilder.addService(path, serverServiceDefinition, null, bindableService.getClass());
+        registryBuilder.addService(path, bindableService.bindService(), null, bindableService.getClass(),
+                                   decorators);
+        return this;
+    }
+
+    /**
+     * Adds a {@linkplain MethodDescriptor method} of gRPC {@link BindableService} to this
+     * {@link GrpcServiceBuilder}. You can get {@link MethodDescriptor}s from the enclosing class of
+     * your generated stub.
+     * @see #addService(String, ServerServiceDefinition, MethodDescriptor)
+     * @see #addService(BindableService, Iterable)
+     */
+    @UnstableApi
+    public GrpcServiceBuilder addService(
+            String path, BindableService bindableService, MethodDescriptor<?, ?> methodDescriptor,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        requireNonNull(path, "path");
+        requireNonNull(bindableService, "bindableService");
+        requireNonNull(methodDescriptor, "methodDescriptor");
+        if (bindableService instanceof ProtoReflectionService) {
+            final ServerServiceDefinition interceptor =
+                    ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
+            return addService(path, interceptor, methodDescriptor);
+        }
+        requireNonNull(decorators, "decorators");
+        registryBuilder.addService(path, bindableService.bindService(), methodDescriptor,
+                                   bindableService.getClass(), decorators);
         return this;
     }
 
@@ -889,7 +915,7 @@ public final class GrpcServiceBuilder {
             grpcHealthCheckService = GrpcHealthCheckService.builder().build();
         }
         if (grpcHealthCheckService != null) {
-            registryBuilder.addService(grpcHealthCheckService.bindService(), null);
+            registryBuilder.addService(grpcHealthCheckService.bindService(), null, null);
         }
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
@@ -898,10 +924,8 @@ public final class GrpcServiceBuilder {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
                         ServerInterceptors.intercept(entry.service(), interceptors);
-                if (additionalDecorators.containsKey(entry.service())) {
-                    additionalDecorators.put(intercepted, additionalDecorators.get(entry.service()));
-                }
-                newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor, entry.type());
+                newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor, entry.type(),
+                                              entry.additionalDecorators());
             }
             handlerRegistry = newRegistryBuilder.build();
         } else {
@@ -937,8 +961,9 @@ public final class GrpcServiceBuilder {
                                                      : UnframedGrpcErrorHandler.of());
         }
 
-        if (!handlerRegistry.decorators().isEmpty()) {
-            grpcService = new GrpcDecoratingService(grpcService, handlerRegistry, additionalDecorators);
+        if (!handlerRegistry.annotationDecorators().isEmpty() ||
+            !handlerRegistry.additionalDecorators().isEmpty()) {
+            grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
         }
         if (enableHttpJsonTranscoding) {
             grpcService = HttpJsonTranscodingService.of(
