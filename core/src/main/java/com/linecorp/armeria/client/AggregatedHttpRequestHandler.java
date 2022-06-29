@@ -56,12 +56,15 @@ final class AggregatedHttpRequestHandler extends AbstractHttpRequestHandler
             return;
         }
 
+        assert request != null;
         if (!tryInitialize()) {
+            request.content().close();
             return;
         }
 
         writeHeaders(request.headers());
         if (cancelled) {
+            request.content().close();
             // If the headers size exceeds the limit, the headers write fails immediately.
             return;
         }

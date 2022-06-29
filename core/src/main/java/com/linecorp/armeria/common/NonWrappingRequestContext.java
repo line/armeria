@@ -87,7 +87,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
         this.method = requireNonNull(method, "method");
         this.path = requireNonNull(path, "path");
         this.query = query;
-        this.exchangeType = exchangeType;
+        this.exchangeType = requireNonNull(exchangeType, "exchangeType");
         this.req = req;
         this.rpcReq = rpcReq;
     }

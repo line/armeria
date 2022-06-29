@@ -91,8 +91,8 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
         return requestOptions;
     }
 
-    @SuppressWarnings("ReactiveStreamsUnusedPublisher")
     boolean isRequestStreaming() {
+        //noinspection ReactiveStreamsUnusedPublisher
         return publisher() != null;
     }
 
@@ -363,7 +363,10 @@ public final class WebClientRequestPreparation extends AbstractHttpRequestBuilde
 
     @Nullable
     ExchangeType exchangeType() {
-        return requestOptionsBuilder().exchangeType();
+        if (requestOptionsBuilder == null) {
+            return null;
+        }
+        return requestOptionsBuilder.exchangeType();
     }
 
     @Override
