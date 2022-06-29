@@ -87,7 +87,6 @@ import com.linecorp.armeria.server.annotation.ExceptionHandler;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
-import com.linecorp.armeria.server.annotation.Markup;
 import com.linecorp.armeria.server.annotation.MatchesHeader;
 import com.linecorp.armeria.server.annotation.MatchesParam;
 import com.linecorp.armeria.server.annotation.Options;
@@ -601,7 +600,7 @@ public final class AnnotatedServiceFactory {
             final String propertyName = executable.getName() + '.' + parameter.getName();
             final Properties cachedProperties = DOCUMENTATION_PROPERTIES_CACHE.getIfPresent(fileName);
             if (cachedProperties != null) {
-                return DescriptionInfo.of(cachedProperties.getProperty(propertyName), Markup.NONE);
+                return DescriptionInfo.of(cachedProperties.getProperty(propertyName));
             }
             try (InputStream stream = AnnotatedServiceFactory.class.getClassLoader()
                                                                    .getResourceAsStream(fileName)) {
@@ -611,7 +610,7 @@ public final class AnnotatedServiceFactory {
                 final Properties properties = new Properties();
                 properties.load(stream);
                 DOCUMENTATION_PROPERTIES_CACHE.put(fileName, properties);
-                return DescriptionInfo.of(properties.getProperty(propertyName), Markup.NONE);
+                return DescriptionInfo.of(properties.getProperty(propertyName));
             } catch (IOException exception) {
                 logger.warn("Failed to load an API description file: {}", fileName, exception);
             }
