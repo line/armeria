@@ -120,7 +120,8 @@ interface RequestOptionsSetters {
      *
      * <p>gRPC clients
      *
-     * <p>An {@link ExchangeType} is automatically inferred from the {@code io.grpc.MethodDescriptor.MethodType}.
+     * <p>An {@link ExchangeType} is automatically inferred from the
+     * {@code io.grpc.MethodDescriptor.MethodType}.
      * <pre>{@code
      * try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
      *     Response response = grpcClient.unaryCall(...);
