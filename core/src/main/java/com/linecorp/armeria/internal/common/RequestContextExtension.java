@@ -26,9 +26,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 /**
  * This class exposes extension methods for {@link RequestContext}
  * which are used internally by Armeria but aren't intended for public usage.
- * Advanced users who have implemented their own concrete
- * {@link RequestContext} may extend this interface. It is highly
- * recommended to consult with the maintainers before using this class.
  */
 public interface RequestContextExtension extends RequestContext {
 

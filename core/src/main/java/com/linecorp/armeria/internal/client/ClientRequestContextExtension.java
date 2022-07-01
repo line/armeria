@@ -22,15 +22,13 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.RequestContextExtension;
 
 /**
  * This class exposes extension methods for {@link ClientRequestContext}
  * which are used internally by Armeria but aren't intended for public usage.
- * Advanced users who have implemented their own concrete
- * {@link ClientRequestContext} may extend this interface. It is highly
- * recommended to consult with the maintainers before using this class.
  */
-public interface ClientRequestContextExtension extends ClientRequestContext {
+public interface ClientRequestContextExtension extends ClientRequestContext, RequestContextExtension {
 
     /**
      * Returns the {@link CancellationScheduler} used to schedule a response timeout.

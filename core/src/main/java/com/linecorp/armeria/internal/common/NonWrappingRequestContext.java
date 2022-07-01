@@ -25,6 +25,7 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
