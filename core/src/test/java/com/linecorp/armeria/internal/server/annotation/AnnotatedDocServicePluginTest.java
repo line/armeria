@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
@@ -144,7 +145,11 @@ class AnnotatedDocServicePluginTest {
                                                                    TypeSignature.ofUnresolved(""),
                                                                    TypeSignature.ofBase("string")));
 
-        assertThat(toTypeSignature(FieldContainer.class)).isEqualTo(TypeSignature.ofBase("FieldContainer"));
+        assertThat(toTypeSignature(FieldContainer.class)).isEqualTo(
+                TypeSignature.ofNamed(FieldContainer.class));
+        final TypeSignature optional =
+                toTypeSignature(FieldContainer.class.getDeclaredField("optional").getGenericType());
+        assertThat(optional).isEqualTo(TypeSignature.ofOptional(TypeSignature.ofBase("string")));
     }
 
     @Test
@@ -434,6 +439,7 @@ class AnnotatedDocServicePluginTest {
         CompletableFuture<T> typeVariableFuture;
         List<String>[] genericArray;
         BiFunction<JsonNode, ?, String> biFunction;
+        Optional<String> optional;
     }
 
     private static class FooClass {

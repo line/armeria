@@ -271,7 +271,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 if (namedTypeInfo == null) {
                     namedTypeInfo = requestJsonNamedTypeInfoProvider.newNamedTypeInfo(elementType);
                 }
-                if (namedTypeInfo instanceof StructInfo) {
+                if (namedTypeInfo instanceof StructInfo && !((StructInfo) namedTypeInfo).fields().isEmpty()) {
                     return FieldInfo.builder(namedTypeInfo.name(), OBJECT,
                                              ((StructInfo) namedTypeInfo).fields())
                                     .requirement(resolver.shouldExist() ?
