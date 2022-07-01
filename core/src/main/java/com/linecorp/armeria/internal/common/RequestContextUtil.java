@@ -95,22 +95,12 @@ public final class RequestContextUtil {
      */
     public static IllegalStateException newIllegalContextPushingException(
             RequestContext newCtx, RequestContext oldCtx) {
-        return newIllegalContextPushingException(newCtx, oldCtx, null);
-    }
-
-    /**
-     * Returns an {@link IllegalStateException} which is raised when pushing a context from
-     * the unexpected thread or forgetting to close the previous context.
-     */
-    public static IllegalStateException newIllegalContextPushingException(
-            RequestContext newCtx, RequestContext oldCtx, @Nullable Throwable cause) {
         requireNonNull(newCtx, "newCtx");
         requireNonNull(oldCtx, "oldCtx");
-        final String message = "Trying to call object wrapped with context " + newCtx + ", but context is " +
-                               "currently set to " + oldCtx + ". This means the callback was called from " +
-                               "unexpected thread or forgetting to close previous context.";
-        final IllegalStateException ex = cause == null ? new IllegalStateException(message)
-                                                       : new IllegalStateException(message, cause);
+        final IllegalStateException ex = new IllegalStateException(
+                "Trying to call object wrapped with context " + newCtx + ", but context is currently " +
+                "set to " + oldCtx + ". This means the callback was called from " +
+                "unexpected thread or forgetting to close previous context.");
         if (REPORTED_THREADS.add(Thread.currentThread())) {
             logger.warn("An error occurred while pushing a context", ex);
         }

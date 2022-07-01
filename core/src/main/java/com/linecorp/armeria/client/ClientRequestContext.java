@@ -214,13 +214,13 @@ public interface ClientRequestContext extends RequestContext {
     @MustBeClosed
     default SafeCloseable push() {
         final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
-        if (oldCtx == this) {
-            // Reentrance
-            return noopSafeCloseable();
-        }
-
         if (oldCtx == null) {
             return RequestContextUtil.invokeHookAndPop(this, null);
+        }
+
+        if (oldCtx.equals(this)) {
+            // Reentrance
+            return noopSafeCloseable();
         }
 
         final ServiceRequestContext root = root();

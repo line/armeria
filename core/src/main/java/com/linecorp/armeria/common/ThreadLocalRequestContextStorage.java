@@ -46,7 +46,7 @@ enum ThreadLocalRequestContextStorage implements RequestContextStorage {
         requireNonNull(current, "current");
         final InternalThreadLocalMap map = InternalThreadLocalMap.get();
         final RequestContext contextInThreadLocal = context.get(map);
-        if (current != contextInThreadLocal) {
+        if (!contextInThreadLocal.equals(current)) {
             throw newIllegalContextPoppingException(current, contextInThreadLocal);
         }
         context.set(map, toRestore);

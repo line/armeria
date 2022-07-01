@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -26,6 +26,10 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -40,14 +44,14 @@ class ServiceRequestContextTest {
         assertThatThrownBy(ServiceRequestContext::current).isInstanceOf(IllegalStateException.class)
                                                           .hasMessageContaining("unavailable");
 
-        final ServiceRequestContext sctx = serviceRequestContext();
+        final ServiceRequestContext sctx = serviceRequestContext("/1");
         try (SafeCloseable unused = sctx.push()) {
             assertThat(ServiceRequestContext.current()).isSameAs(sctx);
-            final ClientRequestContext cctx = clientRequestContext();
+            final ClientRequestContext cctx = clientRequestContext("/2");
             try (SafeCloseable unused1 = cctx.push()) {
-                assertThat(ServiceRequestContext.current()).isSameAs(sctx);
-                assertThat(ClientRequestContext.current()).isSameAs(cctx);
-                assertThat((ClientRequestContext) RequestContext.current()).isSameAs(cctx);
+                assertThat(ServiceRequestContext.current()).isEqualTo(sctx);
+                assertThat(ClientRequestContext.current()).isEqualTo(cctx);
+                assertThat((ClientRequestContext) RequestContext.current()).isEqualTo(cctx);
             }
             assertCurrentCtx(sctx);
         }
@@ -69,9 +73,9 @@ class ServiceRequestContextTest {
             assertThat(ServiceRequestContext.currentOrNull()).isSameAs(sctx);
             final ClientRequestContext cctx = clientRequestContext();
             try (SafeCloseable unused1 = cctx.push()) {
-                assertThat(ServiceRequestContext.currentOrNull()).isSameAs(sctx);
-                assertThat(ClientRequestContext.current()).isSameAs(cctx);
-                assertThat((ClientRequestContext) RequestContext.current()).isSameAs(cctx);
+                assertThat(ServiceRequestContext.currentOrNull()).isEqualTo(sctx);
+                assertThat(ClientRequestContext.current()).isEqualTo(cctx);
+                assertThat((ClientRequestContext) RequestContext.current()).isEqualTo(cctx);
             }
             assertCurrentCtx(sctx);
         }
@@ -88,23 +92,23 @@ class ServiceRequestContextTest {
                 .isEqualTo("defaultValue");
         assertThat(ServiceRequestContext.mapCurrent(Function.identity(), null)).isNull();
 
-        final ServiceRequestContext sctx = serviceRequestContext();
+        final ServiceRequestContext sctx = serviceRequestContext("/1");
         try (SafeCloseable unused = sctx.push()) {
             assertThat(ServiceRequestContext.mapCurrent(c -> c == sctx ? "foo" : "bar",
                                                         () -> "defaultValue"))
                     .isEqualTo("foo");
             assertThat(ServiceRequestContext.mapCurrent(Function.identity(), null)).isSameAs(sctx);
-            final ClientRequestContext cctx = clientRequestContext();
+            final ClientRequestContext cctx = clientRequestContext("/2");
             try (SafeCloseable unused1 = cctx.push()) {
                 assertThat(ServiceRequestContext.mapCurrent(c -> c == sctx ? "foo" : "bar",
                                                             () -> "defaultValue"))
                         .isEqualTo("foo");
-                assertThat(ClientRequestContext.mapCurrent(c -> c == cctx ? "baz" : "qux",
+                assertThat(ClientRequestContext.mapCurrent(c -> c.equals(cctx) ? "baz" : "qux",
                                                            () -> "defaultValue"))
                         .isEqualTo("baz");
-                assertThat(ServiceRequestContext.mapCurrent(Function.identity(), null)).isSameAs(sctx);
-                assertThat(ClientRequestContext.mapCurrent(Function.identity(), null)).isSameAs(cctx);
-                assertThat(RequestContext.mapCurrent(Function.identity(), null)).isSameAs(cctx);
+                assertThat(ServiceRequestContext.mapCurrent(Function.identity(), null)).isEqualTo(sctx);
+                assertThat(ClientRequestContext.mapCurrent(Function.identity(), null)).isEqualTo(cctx);
+                assertThat(RequestContext.mapCurrent(Function.identity(), null)).isEqualTo(cctx);
             }
             assertCurrentCtx(sctx);
         }
@@ -197,14 +201,22 @@ class ServiceRequestContextTest {
 
     private static void assertCurrentCtx(@Nullable RequestContext ctx) {
         final RequestContext current = RequestContext.currentOrNull();
-        assertThat(current).isSameAs(ctx);
+        assertThat(current).isEqualTo(ctx);
     }
 
     private static ServiceRequestContext serviceRequestContext() {
-        return ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        return serviceRequestContext("/");
+    }
+
+    private static ServiceRequestContext serviceRequestContext(String path) {
+        return ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, path));
     }
 
     private static ClientRequestContext clientRequestContext() {
-        return ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        return clientRequestContext("/");
+    }
+
+    private static ClientRequestContext clientRequestContext(String path) {
+        return ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, path));
     }
 }

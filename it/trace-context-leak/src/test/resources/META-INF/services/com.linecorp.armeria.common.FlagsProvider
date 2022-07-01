@@ -1,1 +1,1 @@
-com.linecorp.armeria.common.EnableLeakDetectionFlagsProvider
+com.linecorp.armeria.internal.common.EnableLeakDetectionFlagsProvider

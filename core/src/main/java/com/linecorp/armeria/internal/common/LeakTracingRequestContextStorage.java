@@ -16,19 +16,22 @@
 
 package com.linecorp.armeria.internal.common;
 
-import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPushingException;
 import static java.lang.Thread.currentThread;
 import static java.util.Objects.requireNonNull;
 
+import java.io.PrintWriter;
+import java.io.StringWriter;
+
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextWrapper;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
+import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.ServiceRequestContext;
-
-import io.netty.util.concurrent.FastThreadLocal;
+import com.linecorp.armeria.server.ServiceRequestContextWrapper;
 
 /**
  * A {@link RequestContextStorage} which keeps track of {@link RequestContext}s, reporting pushed thread
@@ -38,7 +41,6 @@ import io.netty.util.concurrent.FastThreadLocal;
 final class LeakTracingRequestContextStorage implements RequestContextStorage {
 
     private final RequestContextStorage delegate;
-    private final FastThreadLocal<PendingRequestContextStackTrace> pendingRequestCtx;
     private final Sampler<? super RequestContext> sampler;
 
     /**
@@ -49,7 +51,6 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
     LeakTracingRequestContextStorage(RequestContextStorage delegate,
                                             Sampler<? super RequestContext> sampler) {
         this.delegate = requireNonNull(delegate, "delegate");
-        pendingRequestCtx = new FastThreadLocal<>();
         this.sampler = requireNonNull(sampler, "sampler");
     }
 
@@ -57,38 +58,16 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
     @Override
     public <T extends RequestContext> T push(RequestContext toPush) {
         requireNonNull(toPush, "toPush");
-
-        final RequestContext prevContext = delegate.currentOrNull();
-        if (prevContext != null) {
-            if (prevContext == toPush) {
-                // Re-entrance
-            } else if (toPush instanceof ServiceRequestContext &&
-                       prevContext.root() == toPush) {
-                // The delegate has the ServiceRequestContext whose root() is toPush
-            } else if (toPush instanceof ClientRequestContext &&
-                       prevContext.root() == toPush.root()) {
-                // The delegate has the ClientRequestContext whose root() is the same as toPush.root()
-            } else {
-                throw newIllegalContextPushingException(prevContext, toPush, pendingRequestCtx.get());
-            }
-        }
-
         if (sampler.isSampled(toPush)) {
-            pendingRequestCtx.set(new PendingRequestContextStackTrace(toPush, true));
-        } else {
-            pendingRequestCtx.set(new PendingRequestContextStackTrace(toPush, false));
+            return delegate.push(warpRequestContext(toPush));
         }
-
         return delegate.push(toPush);
     }
 
     @Override
     public void pop(RequestContext current, @Nullable RequestContext toRestore) {
-        try {
-            delegate.pop(current, toRestore);
-        } finally {
-            pendingRequestCtx.remove();
-        }
+        requireNonNull(current, "current");
+        delegate.pop(current, toRestore);
     }
 
     @Nullable
@@ -97,14 +76,59 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
         return delegate.currentOrNull();
     }
 
-    static class PendingRequestContextStackTrace extends RuntimeException {
+    private static RequestContextWrapper<?> warpRequestContext(RequestContext ctx) {
+        return ctx instanceof ClientRequestContext ?
+               new TraceableClientRequestContext((ClientRequestContext) ctx)
+               : new TraceableServiceRequestContext((ServiceRequestContext) ctx);
+    }
+
+    private static final class TraceableClientRequestContext extends ClientRequestContextWrapper {
+
+        private final PendingRequestContextStackTrace stackTrace;
+
+        private TraceableClientRequestContext(ClientRequestContext delegate) {
+            super(delegate);
+            stackTrace = new PendingRequestContextStackTrace();
+        }
+
+        @Override
+        public String toString() {
+            final StringWriter sw = new StringWriter();
+            stackTrace.printStackTrace(new PrintWriter(sw));
+            return new StringBuilder().append(getClass().getSimpleName())
+                                      .append(super.toString())
+                                      .append(System.lineSeparator())
+                                      .append(sw).toString();
+        }
+    }
+
+    private static final class TraceableServiceRequestContext extends ServiceRequestContextWrapper {
+
+        private final PendingRequestContextStackTrace stackTrace;
+
+        private TraceableServiceRequestContext(ServiceRequestContext delegate) {
+            super(delegate);
+            stackTrace = new PendingRequestContextStackTrace();
+        }
+
+        @Override
+        public String toString() {
+            final StringWriter sw = new StringWriter();
+            stackTrace.printStackTrace(new PrintWriter(sw));
+            return new StringBuilder().append(getClass().getSimpleName())
+                           .append(super.toString())
+                           .append(System.lineSeparator())
+                           .append(sw).toString();
+        }
+    }
+
+    private static final class PendingRequestContextStackTrace extends RuntimeException {
 
         private static final long serialVersionUID = -689451606253441556L;
 
-        PendingRequestContextStackTrace(RequestContext context, boolean isSample) {
-            super("At thread [" + currentThread().getName() + "], previous RequestContext didn't popped : " +
-                  context + (isSample ? ", It is pushed at the following stacktrace" : ""), null,
-                  true, isSample);
+        private PendingRequestContextStackTrace() {
+            super("At thread [" + currentThread().getName() + "] previous RequestContext is pushed at " +
+                  "the following stacktrace");
         }
     }
 }

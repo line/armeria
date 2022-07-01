@@ -14,8 +14,10 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
+import com.linecorp.armeria.common.FlagsProvider;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.Sampler;
 
 public final class EnableLeakDetectionFlagsProvider implements FlagsProvider {
