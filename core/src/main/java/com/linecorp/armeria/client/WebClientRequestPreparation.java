@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.DefaultWebClient.RESPONSE_STREAMING_REQUEST_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -34,6 +35,7 @@ import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.AbstractHttpRequestBuilder;
 import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -65,13 +67,33 @@ public final class WebClientRequestPreparation
     @Override
     public HttpResponse execute() {
         final HttpRequest httpRequest = buildRequest();
+        final RequestOptions requestOptions = buildRequestOptions();
+        return client.execute(httpRequest, requestOptions);
+    }
+
+    private RequestOptions buildRequestOptions() {
         final RequestOptions requestOptions;
+        final boolean requestStreaming = isRequestStreaming();
         if (requestOptionsBuilder != null) {
+            if (requestOptionsBuilder.exchangeType() == null) {
+                if (!requestStreaming) {
+                    requestOptionsBuilder.exchangeType(ExchangeType.RESPONSE_STREAMING);
+                }
+            }
             requestOptions = requestOptionsBuilder.build();
         } else {
-            requestOptions = RequestOptions.of();
+            if (!requestStreaming) {
+                requestOptions = RESPONSE_STREAMING_REQUEST_OPTIONS;
+            } else {
+                requestOptions = RequestOptions.of();
+            }
         }
-        return client.execute(httpRequest, requestOptions);
+        return requestOptions;
+    }
+
+    boolean isRequestStreaming() {
+        //noinspection ReactiveStreamsUnusedPublisher
+        return publisher() != null;
     }
 
     /**
@@ -298,7 +320,10 @@ public final class WebClientRequestPreparation
             //noinspection unchecked
             attrs.forEach((key, value) -> attr((AttributeKey<Object>) key, value));
         }
-
+        final ExchangeType exchangeType = requestOptions.exchangeType();
+        if (exchangeType != null) {
+            exchangeType(exchangeType);
+        }
         return this;
     }
 
@@ -309,10 +334,7 @@ public final class WebClientRequestPreparation
 
     @Override
     public WebClientRequestPreparation responseTimeoutMillis(long responseTimeoutMillis) {
-        if (requestOptionsBuilder == null) {
-            requestOptionsBuilder = RequestOptions.builder();
-        }
-        requestOptionsBuilder.responseTimeoutMillis(responseTimeoutMillis);
+        requestOptionsBuilder().responseTimeoutMillis(responseTimeoutMillis);
         return this;
     }
 
@@ -323,29 +345,41 @@ public final class WebClientRequestPreparation
 
     @Override
     public WebClientRequestPreparation writeTimeoutMillis(long writeTimeoutMillis) {
-        if (requestOptionsBuilder == null) {
-            requestOptionsBuilder = RequestOptions.builder();
-        }
-        requestOptionsBuilder.writeTimeoutMillis(writeTimeoutMillis);
+        requestOptionsBuilder().writeTimeoutMillis(writeTimeoutMillis);
         return this;
     }
 
     @Override
     public WebClientRequestPreparation maxResponseLength(long maxResponseLength) {
-        if (requestOptionsBuilder == null) {
-            requestOptionsBuilder = RequestOptions.builder();
-        }
-        requestOptionsBuilder.maxResponseLength(maxResponseLength);
+        requestOptionsBuilder().maxResponseLength(maxResponseLength);
         return this;
     }
 
     @Override
     public <V> WebClientRequestPreparation attr(AttributeKey<V> key, @Nullable V value) {
+        requestOptionsBuilder().attr(key, value);
+        return this;
+    }
+
+    @Nullable
+    ExchangeType exchangeType() {
+        if (requestOptionsBuilder == null) {
+            return null;
+        }
+        return requestOptionsBuilder.exchangeType();
+    }
+
+    @Override
+    public WebClientRequestPreparation exchangeType(ExchangeType exchangeType) {
+        requestOptionsBuilder().exchangeType(exchangeType);
+        return this;
+    }
+
+    private RequestOptionsBuilder requestOptionsBuilder() {
         if (requestOptionsBuilder == null) {
             requestOptionsBuilder = RequestOptions.builder();
         }
-        requestOptionsBuilder.attr(key, value);
-        return this;
+        return requestOptionsBuilder;
     }
 
     // Override the return types of the chaining methods in the superclass.

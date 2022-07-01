@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.client.DefaultWebClient.RESPONSE_STREAMING_REQUEST_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -36,6 +37,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.common.stream.FixedStreamMessage;
 
 import io.netty.channel.EventLoop;
 
@@ -234,7 +236,13 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
      */
     @CheckReturnValue
     default HttpResponse execute(HttpRequest req) {
-        return execute(req, RequestOptions.of());
+        final RequestOptions requestOptions;
+        if (req instanceof FixedStreamMessage) {
+            requestOptions = RESPONSE_STREAMING_REQUEST_OPTIONS;
+        } else {
+            requestOptions = RequestOptions.of();
+        }
+        return execute(req, requestOptions);
     }
 
     /**

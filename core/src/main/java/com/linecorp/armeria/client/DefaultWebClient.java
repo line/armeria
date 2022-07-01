@@ -25,6 +25,7 @@ import java.net.URI;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Scheme;
@@ -37,6 +38,11 @@ import io.micrometer.core.instrument.MeterRegistry;
 final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> implements WebClient {
 
     static final WebClient DEFAULT = new WebClientBuilder().build();
+
+    static final RequestOptions RESPONSE_STREAMING_REQUEST_OPTIONS =
+            RequestOptions.builder()
+                          .exchangeType(ExchangeType.RESPONSE_STREAMING)
+                          .build();
 
     @Nullable
     private BlockingWebClient blockingWebClient;

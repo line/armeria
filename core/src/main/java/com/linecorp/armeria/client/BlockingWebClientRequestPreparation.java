@@ -33,6 +33,7 @@ import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -56,6 +57,7 @@ public final class BlockingWebClientRequestPreparation
 
     BlockingWebClientRequestPreparation(WebClientRequestPreparation delegate) {
         this.delegate = delegate;
+        delegate.exchangeType(ExchangeType.UNARY);
     }
 
     /**
@@ -63,7 +65,6 @@ public final class BlockingWebClientRequestPreparation
      */
     @Override
     public AggregatedHttpResponse execute() {
-        // TODO(ikhoon): Specify ExchangeType.UNARY or ExchangeType.REQUEST_STREAMING to RequestOptions.
         return ResponseAs.blocking().as(delegate.execute());
     }
 
@@ -214,6 +215,12 @@ public final class BlockingWebClientRequestPreparation
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
         return as(AggregatedResponseAs.json(typeRef, mapper));
+    }
+
+    @Override
+    public BlockingWebClientRequestPreparation exchangeType(ExchangeType exchangeType) {
+        delegate.exchangeType(exchangeType);
+        return this;
     }
 
     @Override

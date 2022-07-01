@@ -27,6 +27,7 @@ import org.reactivestreams.Publisher;
 import com.google.errorprone.annotations.FormatMethod;
 
 import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -54,9 +55,28 @@ public class TransformingRequestPreparation<T, R> implements WebRequestPreparati
 
     @Override
     public R execute() {
-        // TODO(ikhoon): Use ResponseAs.requiresAggregation() to specify a proper ExchangeType
-        //               to RequestOptions.
+        maybeSetDefaultExchangeType();
         return responseAs.as(delegate.execute());
+    }
+
+    private void maybeSetDefaultExchangeType() {
+        if (delegate instanceof BlockingWebClientRequestPreparation) {
+            // ExchangeType.UNARY is specified as the default type
+            return;
+        }
+
+        final WebClientRequestPreparation webClientPreparation = (WebClientRequestPreparation) delegate;
+        if (webClientPreparation.exchangeType() == null) {
+            final boolean requestStreaming = webClientPreparation.isRequestStreaming();
+            final boolean responseStreaming = !responseAs.requiresAggregation();
+            exchangeType(ExchangeType.of(requestStreaming, responseStreaming));
+        }
+    }
+
+    @Override
+    public TransformingRequestPreparation<T, R> exchangeType(ExchangeType exchangeType) {
+        delegate.exchangeType(exchangeType);
+        return this;
     }
 
     @Override
