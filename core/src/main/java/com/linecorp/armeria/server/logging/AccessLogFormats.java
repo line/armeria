@@ -180,7 +180,7 @@ final class AccessLogFormats {
 
     private static AccessLogComponent newAccessLogComponent(char token,
                                                             @Nullable String variable,
-                                                            @Nullable Condition.Builder condBuilder) {
+                                                            Condition.@Nullable Builder condBuilder) {
         final AccessLogType type = AccessLogType.find(token);
         checkArgument(type != null, "Unexpected token character: '%s'", token);
         if (type.variableRequirement() == VariableRequirement.YES) {

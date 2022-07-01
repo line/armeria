@@ -177,8 +177,8 @@ public final class JettyService implements HttpService {
     private Server server;
     @Nullable
     private ArmeriaConnector connector;
-    @Nullable
-    private com.linecorp.armeria.server.Server armeriaServer;
+
+    private com.linecorp.armeria.server.@Nullable Server armeriaServer;
     private boolean startedServer;
 
     private JettyService(@Nullable String hostname, boolean tlsReverseDnsLookup,
@@ -399,8 +399,8 @@ public final class JettyService implements HttpService {
 
         private final ServiceRequestContext ctx;
         private final HttpResponseWriter res;
-        @Nullable
-        MetaData.Response info;
+
+        MetaData.@Nullable Response info;
 
         ArmeriaHttpTransport(ServiceRequestContext ctx, HttpResponseWriter res) {
             this.ctx = ctx;
@@ -408,7 +408,7 @@ public final class JettyService implements HttpService {
         }
 
         @Override
-        public void send(@Nullable MetaData.Response info, boolean head,
+        public void send(MetaData.@Nullable Response info, boolean head,
                          @Nullable ByteBuffer content, boolean lastContent, Callback callback) {
             if (ctx.isTimedOut()) {
                 // Silently discard the write request in case of timeout to match the behavior of Jetty.
@@ -474,7 +474,7 @@ public final class JettyService implements HttpService {
         }
 
         @Nullable
-        private HttpHeaders toResponseTrailers(@Nullable MetaData.Response info) {
+        private HttpHeaders toResponseTrailers(MetaData.@Nullable Response info) {
             if (jResGetTrailerSupplier == null) {
                 return null;
             }

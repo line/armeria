@@ -177,6 +177,7 @@ public class TransformingRequestPreparation<T, R> implements WebRequestPreparati
 
     @Override
     @FormatMethod
+    @SuppressWarnings("FormatStringAnnotation")
     public TransformingRequestPreparation<T, R> content(String format, Object... content) {
         delegate.content(format, content);
         return this;
@@ -184,6 +185,7 @@ public class TransformingRequestPreparation<T, R> implements WebRequestPreparati
 
     @Override
     @FormatMethod
+    @SuppressWarnings("FormatStringAnnotation")
     public TransformingRequestPreparation<T, R> content(MediaType contentType, String format,
                                                         Object... content) {
         delegate.content(contentType, format, content);
