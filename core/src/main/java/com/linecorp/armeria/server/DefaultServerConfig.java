@@ -92,7 +92,6 @@ final class DefaultServerConfig implements ServerConfig {
     private final Duration gracefulShutdownTimeout;
 
     private final ScheduledExecutorService blockingTaskExecutor;
-    private final boolean shutdownBlockingTaskExecutorOnStop;
 
     private final MeterRegistry meterRegistry;
 
@@ -127,7 +126,7 @@ final class DefaultServerConfig implements ServerConfig {
             long http2MaxStreamsPerConnection, int http2MaxFrameSize,
             long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
             int http1MaxChunkSize, Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            ScheduledExecutorService blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
+            ScheduledExecutorService blockingTaskExecutor,
             MeterRegistry meterRegistry, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
             Map<ChannelOption<?>, Object> childChannelOptions,
@@ -176,8 +175,6 @@ final class DefaultServerConfig implements ServerConfig {
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         this.blockingTaskExecutor = monitorBlockingTaskExecutor(blockingTaskExecutor, meterRegistry);
-
-        this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.channelOptions = Collections.unmodifiableMap(
@@ -571,11 +568,6 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
-    public boolean shutdownBlockingTaskExecutorOnStop() {
-        return shutdownBlockingTaskExecutorOnStop;
-    }
-
-    @Override
     public MeterRegistry meterRegistry() {
         return meterRegistry;
     }
@@ -650,7 +642,7 @@ final class DefaultServerConfig implements ServerConfig {
                     http2MaxStreamsPerConnection(), http2MaxFrameSize(), http2MaxHeaderListSize(),
                     http1MaxInitialLineLength(), http1MaxHeaderSize(), http1MaxChunkSize(),
                     proxyProtocolMaxTlvSize(), gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
-                    blockingTaskExecutor(), shutdownBlockingTaskExecutorOnStop(),
+                    blockingTaskExecutor(),
                     meterRegistry(), channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
@@ -669,7 +661,7 @@ final class DefaultServerConfig implements ServerConfig {
             long http2MaxHeaderListSize, long http1MaxInitialLineLength, long http1MaxHeaderSize,
             long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            @Nullable ScheduledExecutorService blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
+            @Nullable ScheduledExecutorService blockingTaskExecutor,
             @Nullable MeterRegistry meterRegistry,
             Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
@@ -748,8 +740,6 @@ final class DefaultServerConfig implements ServerConfig {
         if (blockingTaskExecutor != null) {
             buf.append(", blockingTaskExecutor: ");
             buf.append(blockingTaskExecutor);
-            buf.append(", shutdownBlockingTaskExecutorOnStop: ");
-            buf.append(shutdownBlockingTaskExecutorOnStop);
         }
         if (meterRegistry != null) {
             buf.append(", meterRegistry: ");

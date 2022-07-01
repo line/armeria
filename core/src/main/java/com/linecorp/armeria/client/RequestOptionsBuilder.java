@@ -26,6 +26,7 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
@@ -41,6 +42,8 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
 
     @Nullable
     private Map<AttributeKey<?>, Object> attributes;
+    @Nullable
+    private ExchangeType exchangeType;
 
     RequestOptionsBuilder(@Nullable RequestOptions options) {
         if (options != null) {
@@ -51,6 +54,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
             if (!attrs.isEmpty()) {
                 attributes = new HashMap<>(attrs);
             }
+            exchangeType = options.exchangeType();
         }
     }
 
@@ -105,12 +109,24 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
         return this;
     }
 
+    @Nullable
+    ExchangeType exchangeType() {
+        return exchangeType;
+    }
+
+    @Override
+    public RequestOptionsBuilder exchangeType(ExchangeType exchangeType) {
+        requireNonNull(exchangeType, "exchangeType");
+        this.exchangeType = exchangeType;
+        return this;
+    }
+
     /**
      * Returns a newly created {@link RequestOptions} with the properties specified so far.
      */
     public RequestOptions build() {
         if (responseTimeoutMillis < 0 && writeTimeoutMillis < 0 &&
-            maxResponseLength < 0 && attributes == null) {
+            maxResponseLength < 0 && attributes == null && exchangeType == null) {
             return EMPTY;
         } else {
             final Map<AttributeKey<?>, Object> attributes;
@@ -120,7 +136,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
                 attributes = ImmutableMap.copyOf(this.attributes);
             }
             return new DefaultRequestOptions(responseTimeoutMillis, writeTimeoutMillis,
-                                             maxResponseLength, attributes);
+                                             maxResponseLength, attributes, exchangeType);
         }
     }
 }

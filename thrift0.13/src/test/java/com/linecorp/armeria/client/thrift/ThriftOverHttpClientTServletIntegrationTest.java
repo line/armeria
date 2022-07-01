@@ -61,7 +61,6 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.SessionProtocolNegotiationCache;
 import com.linecorp.armeria.client.SessionProtocolNegotiationException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
@@ -87,7 +86,7 @@ class ThriftOverHttpClientTServletIntegrationTest {
 
     @SuppressWarnings("unchecked")
     private static final Servlet thriftServlet =
-            new TServlet(new Processor(name -> "Hello, " + name + '!'), ThriftProtocolFactories.BINARY);
+            new TServlet(new Processor(name -> "Hello, " + name + '!'), ThriftProtocolFactories.binary(0, 0));
 
     private static final Servlet rootServlet = new HttpServlet() {
         private static final long serialVersionUID = 6765028749367036441L;
@@ -267,7 +266,7 @@ class ThriftOverHttpClientTServletIntegrationTest {
         assertThat(SessionProtocolNegotiationCache.isUnsupported(remoteAddress, H2C)).isFalse();
 
         final HelloService.Iface client =
-                Clients.newClient(http1uri(H2C), HelloService.Iface.class);
+                ThriftClients.newClient(http1uri(H2C), HelloService.Iface.class);
 
         assertThatThrownBy(() -> client.hello("unused"))
                 .isInstanceOfSatisfying(UnprocessedRequestException.class, e -> {
@@ -298,13 +297,13 @@ class ThriftOverHttpClientTServletIntegrationTest {
     private static HelloService.Iface newSchemeCapturingClient(
             String uri, AtomicReference<SessionProtocol> sessionProtocol) {
 
-        return Clients.builder(uri)
-                      .rpcDecorator((delegate, ctx, req) -> {
-                          ctx.log().whenAvailable(RequestLogProperty.SESSION)
-                             .thenAccept(log -> sessionProtocol.set(log.sessionProtocol()));
-                          return delegate.execute(ctx, req);
-                      })
-                      .build(HelloService.Iface.class);
+        return ThriftClients.builder(uri)
+                            .rpcDecorator((delegate, ctx, req) -> {
+                                ctx.log().whenAvailable(RequestLogProperty.SESSION)
+                                   .thenAccept(log -> sessionProtocol.set(log.sessionProtocol()));
+                                return delegate.execute(ctx, req);
+                            })
+                            .build(HelloService.Iface.class);
     }
 
     private static String http1uri(SessionProtocol protocol) {

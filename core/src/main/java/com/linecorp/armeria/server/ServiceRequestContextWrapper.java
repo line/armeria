@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
 import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -169,6 +170,11 @@ public class ServiceRequestContextWrapper
     @Override
     public boolean isTimedOut() {
         return delegate().isTimedOut();
+    }
+
+    @Override
+    public ExchangeType exchangeType() {
+        return delegate().exchangeType();
     }
 
     @Override

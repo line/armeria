@@ -1,4 +1,14 @@
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
+import org.jsoup.select.Elements
+
 import java.util.concurrent.atomic.AtomicBoolean
+
+buildscript {
+    dependencies {
+        classpath 'org.jsoup:jsoup:1.14.3'
+    }
+}
 
 plugins {
     id 'com.google.osdetector' version '1.6.2' apply false
@@ -28,6 +38,7 @@ apply from: "${rootDir}/gradle/scripts/build-flags.gradle"
 // Fail the build if the console contains 'LEAK:'.
 def hasLeak = new AtomicBoolean()
 gradle.buildFinished({ result ->
+
     if (hasLeak.get()) {
         throw new TestExecutionException('Found a leak while testing. ' +
                 "Specify '-Pleak' option to record the detail and " +
@@ -223,5 +234,83 @@ allprojects {
 tasks.closeAndReleaseStagingRepository.doFirst {
     if (JavaVersion.current() != JavaVersion.VERSION_17) {
         throw new IllegalStateException("You must release using JDK 17.");
+    }
+}
+
+task reportFailedTests(type: TestsReportTask)
+
+/**
+ * Summarizes the failed tests and reports as a file with the Markdown syntax.
+ */
+class TestsReportTask extends DefaultTask {
+    @OutputFile
+    final def reportFile = project.file("${project.buildDir}/failed-tests-result.txt")
+
+    @TaskAction
+    def run() {
+        // Collect up to 20 error results
+        int maxErrorSize = 20
+        List<Map> failedTests = []
+        Set<String> handledFiles = []
+
+        project.allprojects {
+            tasks.withType(Test) { testTask ->
+
+                def xmlFiles = testTask.reports.junitXml.outputLocation.asFileTree.files
+                if (xmlFiles.isEmpty()) {
+                    return
+                }
+                xmlFiles.each { file ->
+                    if (!handledFiles.add(file.name)) {
+                        return
+                    }
+
+                    Elements failures = Jsoup.parse(file, 'UTF-8').select("testsuite failure")
+                    if (failures.isEmpty() || failedTests.size() > maxErrorSize) {
+                        return
+                    }
+                    failures.each { failure ->
+                        Element parent = failure.parent()
+                        String fullMethodName = "${parent.attr("classname")}.${parent.attr("name")}"
+                        String detail = failure.wholeText()
+                        failedTests += [method: fullMethodName, detail: detail]
+                    }
+                }
+            }
+        }
+
+        if (failedTests.isEmpty()) {
+            return
+        }
+
+        reportFile.withPrintWriter('UTF-8') { writer ->
+            failedTests.each { it ->
+                String method = it.method
+                String detail = it.detail
+
+                // Create an link to directly create an issue from the error message
+                String ghIssueTitle = URLEncoder.encode("Test failure: `$method`", "UTF-8")
+                // 8k is the maximum allowed URL length for GitHub
+                String ghIssueBody = URLEncoder.encode("```\n${detail.substring(0, 6000)}\n```\n", "UTF-8")
+                String ghIssueLink =
+                        "https://github.com/line/armeria/issues/new?title=$ghIssueTitle&body=$ghIssueBody"
+                String ghSearchQuery = URLEncoder.encode("is:issue $method", "UTF-8")
+                String ghSearchLink = "https://github.com/line/armeria/issues?q=$ghSearchQuery"
+                writer.print("- $it.method - [Search similar issues]($ghSearchLink) | ")
+                writer.println("[Create an issue?]($ghIssueLink)")
+
+                writer.println("  ```")
+                List<String> lines = detail.split("\n") as List
+                def summary = lines.take(8)
+                summary.each { line -> writer.println("  $line") }
+                writer.println("  ```")
+                if (lines.size() > 8) {
+                    writer.println("  <details><summary>Full error messages</summary>")
+                    writer.println("  <pre>")
+                    lines.each { line -> writer.println("  $line") }
+                    writer.println("  </pre></details>\n")
+                }
+            }
+        }
     }
 }

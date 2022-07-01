@@ -17,6 +17,11 @@
 package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -39,6 +44,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
@@ -109,9 +115,9 @@ class AnnotatedServiceBindingBuilderTest {
     @Test
     void testAllConfigurationsAreRespected() {
         final boolean verboseResponse = true;
-        final boolean shutdownOnStop = true;
         final long maxRequestLength = 2 * 1024;
-        final AccessLogWriter accessLogWriter = AccessLogWriter.common();
+        final AccessLogWriter accessLogWriter = mock(AccessLogWriter.class);
+        when(accessLogWriter.shutdown()).thenReturn(UnmodifiableFuture.completedFuture(null));
         final Duration requestTimeoutDuration = Duration.ofMillis(1000);
         final String defaultServiceName = "TestService";
         final String defaultLogName = "TestLog";
@@ -123,7 +129,7 @@ class AnnotatedServiceBindingBuilderTest {
                                     .maxRequestLength(maxRequestLength)
                                     .exceptionHandlers((ctx, request, cause) -> HttpResponse.of(400))
                                     .pathPrefix("/home")
-                                    .accessLogWriter(accessLogWriter, shutdownOnStop)
+                                    .accessLogWriter(accessLogWriter, true)
                                     .verboseResponses(verboseResponse)
                                     .defaultServiceName(defaultServiceName)
                                     .defaultLogName(defaultLogName)
@@ -136,7 +142,6 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeFoo.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
         assertThat(homeFoo.maxRequestLength()).isEqualTo(maxRequestLength);
         assertThat(homeFoo.accessLogWriter()).isEqualTo(accessLogWriter);
-        assertThat(homeFoo.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(homeFoo.verboseResponses()).isTrue();
         assertThat(homeFoo.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
         final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
@@ -147,11 +152,16 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeBar.requestTimeoutMillis()).isEqualTo(requestTimeoutDuration.toMillis());
         assertThat(homeBar.maxRequestLength()).isEqualTo(maxRequestLength);
         assertThat(homeBar.accessLogWriter()).isEqualTo(accessLogWriter);
-        assertThat(homeBar.shutdownAccessLogWriterOnStop()).isTrue();
         assertThat(homeBar.verboseResponses()).isTrue();
         assertThat(homeBar.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
         assertThat(homeBar.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(homeBar.defaultLogName()).isEqualTo(defaultLogName);
+
+        server.start().join();
+        verify(accessLogWriter, never()).shutdown();
+        server.stop().join();
+        verify(accessLogWriter, times(2)).shutdown();
+        // shutdown is called twice because the accessLogWriter is set to the serviceConfigs of foo and bar.
     }
 
     @Test

@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExchangeTypeUtil.toExchangeType;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -132,6 +133,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     private int maxRequestMessageLength;
     private final boolean lookupMethodFromAttribute;
+    private final boolean autoCompression;
 
     FramedGrpcService(HandlerRegistry registry,
                       DecompressorRegistry decompressorRegistry,
@@ -145,12 +147,14 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean unsafeWrapRequestBuffers,
                       boolean useClientTimeoutHeader,
                       boolean lookupMethodFromAttribute,
-                      @Nullable GrpcHealthCheckService grpcHealthCheckService) {
+                      @Nullable GrpcHealthCheckService grpcHealthCheckService,
+                      boolean autoCompression) {
         this.registry = requireNonNull(registry, "registry");
         routes = ImmutableSet.copyOf(registry.methodsByRoute().keySet());
         exchangeTypes = registry.methods().entrySet().stream()
                                 .collect(toImmutableMap(e -> '/' + e.getKey(),
-                                                        e -> toExchangeType(e.getValue())));
+                                                        e -> toExchangeType(
+                                                                e.getValue().getMethodDescriptor().getType())));
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
@@ -163,6 +167,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.lookupMethodFromAttribute = lookupMethodFromAttribute;
+        this.autoCompression = autoCompression;
 
         advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
 
@@ -189,20 +194,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         return firstNonNull(exchangeTypes.get(headers.path()), ExchangeType.BIDI_STREAMING);
     }
 
-    private static ExchangeType toExchangeType(ServerMethodDefinition<?, ?> methodDefinition) {
-        switch (methodDefinition.getMethodDescriptor().getType()) {
-            case UNARY:
-                return ExchangeType.UNARY;
-            case CLIENT_STREAMING:
-                return ExchangeType.REQUEST_STREAMING;
-            case SERVER_STREAMING:
-                return ExchangeType.RESPONSE_STREAMING;
-            case BIDI_STREAMING:
-            default:
-                return ExchangeType.BIDI_STREAMING;
-        }
-    }
-
     @Override
     protected HttpResponse doPost(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final MediaType contentType = req.contentType();
@@ -215,18 +206,15 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
         ctx.logBuilder().serializationFormat(serializationFormat);
 
-        ServerMethodDefinition<?, ?> method = lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
+        final ServerMethodDefinition<?, ?> method = methodDefinition(ctx);
         if (method == null) {
-            method = methodDefinition(ctx, registry);
-            if (method == null) {
-                return HttpResponse.of(
-                        (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
-                                ctx,
-                                defaultHeaders.get(serializationFormat).toBuilder(),
-                                Status.UNIMPLEMENTED.withDescription(
-                                        "Method not found: " + ctx.config().route().patternString()),
-                                new Metadata()));
-            }
+            return HttpResponse.of(
+                    (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
+                            ctx,
+                            defaultHeaders.get(serializationFormat).toBuilder(),
+                            Status.UNIMPLEMENTED.withDescription(
+                                    "Method not found: " + ctx.config().route().patternString()),
+                            new Metadata()));
         }
 
         if (useClientTimeoutHeader) {
@@ -271,26 +259,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     }
 
     @Nullable
-    static ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx, HandlerRegistry registry) {
-        final Route mappedRoute = ctx.config().mappedRoute();
-        // method is found using mappedRoute when the grpcService is set via:
-        // - serverBuilder.service(grpcService);
-        // - serverBuilder.serviceUnder("/prefix", grpcService);
-        final ServerMethodDefinition<?, ?> method = registry.lookupMethod(mappedRoute);
-        if (method != null) {
-            return method;
-        }
-        // method is found using methodName when the grpcService is set via route builder:
-        // - serverBuilder.route().pathPrefix("/prefix")...build(grpcService);
-        final String methodName = GrpcRequestUtil.determineMethod(ctx);
-        if (methodName == null) {
-            return null;
-        }
-
-        return registry.lookupMethod(methodName);
-    }
-
-    @Nullable
     private <I, O> ArmeriaServerCall<I, O> startCall(
             String simpleMethodName,
             ServerMethodDefinition<I, O> methodDef,
@@ -314,7 +282,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 unsafeWrapRequestBuffers,
                 useBlockingTaskExecutor,
                 defaultHeaders.get(serializationFormat),
-                statusFunction);
+                statusFunction,
+                autoCompression);
         final ServerCall.Listener<I> listener;
         try (SafeCloseable ignored = ctx.push()) {
             listener = methodDef.getServerCallHandler()
@@ -363,6 +332,17 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         if (grpcHealthCheckService != null) {
             grpcHealthCheckService.serviceAdded(cfg);
         }
+    }
+
+    @Override
+    public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
+        // method could be set in HttpJsonTranscodingService.
+        final ServerMethodDefinition<?, ?> method =
+                lookupMethodFromAttribute ? ctx.attr(RESOLVED_GRPC_METHOD) : null;
+        if (method != null) {
+            return method;
+        }
+        return GrpcService.super.methodDefinition(ctx);
     }
 
     private static Server newDummyServer(Map<String, ServerServiceDefinition> grpcServices) {

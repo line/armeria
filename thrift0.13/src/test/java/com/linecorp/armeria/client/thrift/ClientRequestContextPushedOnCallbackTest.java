@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.thrift;
 
-import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.CountDownLatch;
@@ -53,7 +52,7 @@ class ClientRequestContextPushedOnCallbackTest {
     @Test
     void pushedContextOnAsyncMethodCallback() throws Exception {
         final AtomicReference<ClientRequestContext> ctxHolder = new AtomicReference<>();
-        final AsyncIface client = Clients.newClient(server.httpUri(BINARY) + "/hello", AsyncIface.class);
+        final AsyncIface client = ThriftClients.newClient(server.httpUri() + "/hello", AsyncIface.class);
 
         final ClientRequestContext ctx;
         final CountDownLatch latch = new CountDownLatch(1);
@@ -78,7 +77,7 @@ class ClientRequestContextPushedOnCallbackTest {
 
     @Test
     void pushedContextOnAsyncMethodCallback_onError() throws Exception {
-        final AsyncIface client = Clients.newClient(server.httpUri(BINARY) + "/exception", AsyncIface.class);
+        final AsyncIface client = ThriftClients.newClient(server.httpUri() + "/exception", AsyncIface.class);
         checkContextOnAsyncMethodCallbackOnError(client);
     }
 
@@ -106,10 +105,11 @@ class ClientRequestContextPushedOnCallbackTest {
 
     @Test
     void pushedContextOnAsyncMethodCallback_exceptionInDecorator() throws Exception {
-        final AsyncIface client = Clients.builder(server.httpUri(BINARY) + "/exception")
-                                         .rpcDecorator((delegate, ctx, req) -> {
-                                             throw new AnticipatedException();
-                                         }).build(AsyncIface.class);
+        final AsyncIface client = ThriftClients.builder(server.httpUri())
+                                               .path("/exception")
+                                               .rpcDecorator((delegate, ctx, req) -> {
+                                                   throw new AnticipatedException();
+                                               }).build(AsyncIface.class);
 
         checkContextOnAsyncMethodCallbackOnError(client);
     }

@@ -142,6 +142,18 @@ public class MediaTypeTest {
         });
     }
 
+    // reflection
+    @SuppressWarnings("Guava")
+    private static <T> FluentIterable<T> getConstants(Class<T> clazz) {
+        return getConstantFields(clazz).transform(input -> {
+            try {
+                return (T) input.get(null);
+            } catch (Exception e) {
+                throw new RuntimeException(e);
+            }
+        });
+    }
+
     @Test
     public void testCreate_invalidType() {
         try {
@@ -580,5 +592,15 @@ public class MediaTypeTest {
                          .withParameter("something", "cr@zy")
                          .withParameter("something-else", "crazy with spaces")
                          .toString());
+    }
+
+    @Test
+    public void wellDefinedUpstreamMediaTypes() {
+        getConstants(com.google.common.net.MediaType.class).forEach(upstreamMediaType -> {
+            // If upstreamMediaType is "well-known" in armeria, the same instance will be returned
+            assertThat(MediaType.parse(upstreamMediaType.toString()))
+                    .as("MediaType not well-defined for (%s)", upstreamMediaType.toString())
+                    .isSameAs(MediaType.parse(upstreamMediaType.toString()));
+        });
     }
 }

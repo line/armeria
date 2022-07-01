@@ -36,6 +36,9 @@ public abstract class AbstractMetricCollectingBuilder {
     @Nullable
     private BiPredicate<? super RequestContext, ? super RequestLog> successFunction;
 
+    /**
+     * Creates a new instance with the specified {@link MeterIdPrefixFunction}.
+     */
     protected AbstractMetricCollectingBuilder(MeterIdPrefixFunction meterIdPrefixFunction) {
         this.meterIdPrefixFunction = requireNonNull(meterIdPrefixFunction, "meterIdPrefixFunction");
     }

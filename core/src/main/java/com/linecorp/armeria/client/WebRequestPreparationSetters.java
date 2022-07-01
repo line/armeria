@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,14 +14,18 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.server.grpc;
+package com.linecorp.armeria.client;
 
-public final class GrpcMethodUtil {
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestMethodSetters;
 
-    public static String extractMethodName(String fullMethodName) {
-        final int methodIndex = fullMethodName.lastIndexOf('/');
-        return fullMethodName.substring(methodIndex + 1);
-    }
+/**
+ * Sets properties for building an {@link HttpRequest} using {@link WebClientRequestPreparation}.
+ */
+interface WebRequestPreparationSetters<T> extends RequestPreparationSetters, RequestMethodSetters {
 
-    private GrpcMethodUtil() {}
+    /**
+     * Builds and executes the request.
+     */
+    T execute();
 }
