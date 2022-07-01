@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,24 +13,25 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria
 
+package com.linecorp.armeria.scala
+
+import com.linecorp.armeria.client.WebClient
+import com.linecorp.armeria.client.scala.ScalaRestClient
 import com.linecorp.armeria.common.annotation.UnstableApi
+import scala.language.implicitConversions
 
-/**
- * Provides a collection of utilities for using Armeria in a project written in Scala.
- * Read [[https://armeria.dev/docs/advanced-scala]] for more information.
- */
-package object scala {
+@UnstableApi
+trait ClientConversions {
+
+  implicit final def restClientOps(webClient: WebClient): RestClientOps =
+    new RestClientOps(webClient)
+}
+
+final class RestClientOps(private val webClient: WebClient) extends AnyVal {
 
   /**
-   * Provides a collection of useful extension methods and implicit conversions for using Armeria
-   * in a project written in Scala. Read [[https://armeria.dev/docs/advanced-scala]] for more information.
+   * Returns a `ScalaRestClient` that connects to the same `URI` with this `WebClient`.
    */
-  @UnstableApi
-  object implicits
-      extends CommonConversions
-      with ClientConversions
-      with CollectionConverters
-      with ServerConversions
+  def asScalaRestClient(): ScalaRestClient = ScalaRestClient(webClient)
 }

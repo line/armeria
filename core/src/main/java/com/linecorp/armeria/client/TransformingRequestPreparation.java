@@ -42,12 +42,12 @@ import io.netty.util.AttributeKey;
  * transforms an {@link HttpResponse} into the {@code T} type object.
  */
 @UnstableApi
-public class TransformingRequestPreparation<T, R> implements RequestPreparationSetters<R> {
+public class TransformingRequestPreparation<T, R> implements WebRequestPreparationSetters<R> {
 
-    private final RequestPreparationSetters<T> delegate;
+    private final WebRequestPreparationSetters<T> delegate;
     private ResponseAs<T, R> responseAs;
 
-    TransformingRequestPreparation(RequestPreparationSetters<T> delegate, ResponseAs<T, R> responseAs) {
+    TransformingRequestPreparation(WebRequestPreparationSetters<T> delegate, ResponseAs<T, R> responseAs) {
         this.delegate = delegate;
         this.responseAs = responseAs;
     }
@@ -206,6 +206,12 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
     public TransformingRequestPreparation<T, R> headers(
             Iterable<? extends Entry<? extends CharSequence, String>> headers) {
         delegate.headers(headers);
+        return this;
+    }
+
+    @Override
+    public TransformingRequestPreparation<T, R> trailer(CharSequence name, Object value) {
+        delegate.trailer(name, value);
         return this;
     }
 

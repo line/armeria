@@ -598,6 +598,12 @@ public interface WebClient extends ClientBuilderParams, Unwrappable {
     @UnstableApi
     BlockingWebClient blocking();
 
+    /**
+     * Returns a {@link RestClient} that connects to the same {@link URI} with this {@link WebClient}.
+     */
+    @UnstableApi
+    RestClient asRestClient();
+
     @Override
     HttpClient unwrap();
 }

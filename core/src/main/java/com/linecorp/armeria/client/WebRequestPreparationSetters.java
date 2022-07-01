@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,24 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.retry;
 
-import com.linecorp.armeria.common.util.AbstractUnwrappable;
+package com.linecorp.armeria.client;
+
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestMethodSetters;
 
 /**
- * Wraps an existing {@link Backoff}.
+ * Sets properties for building an {@link HttpRequest} using {@link WebClientRequestPreparation}.
  */
-public class BackoffWrapper extends AbstractUnwrappable<Backoff> implements Backoff {
+interface WebRequestPreparationSetters<T> extends RequestPreparationSetters, RequestMethodSetters {
 
     /**
-     * Creates a {@link BackoffWrapper} with the specified {@code delegate}.
+     * Builds and executes the request.
      */
-    protected BackoffWrapper(Backoff delegate) {
-        super(delegate);
-    }
-
-    @Override
-    public long nextDelayMillis(int numAttemptsSoFar) {
-        return unwrap().nextDelayMillis(numAttemptsSoFar);
-    }
+    T execute();
 }
