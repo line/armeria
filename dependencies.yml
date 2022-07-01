@@ -519,6 +519,7 @@ org.jlleitschuh.gradle:
 org.jooq:
   joor: { version: '0.9.14' }
 
+# JSoup is only used for Gradle script and SAML testing.
 org.jsoup:
   jsoup: { version: '1.15.1' }
 
