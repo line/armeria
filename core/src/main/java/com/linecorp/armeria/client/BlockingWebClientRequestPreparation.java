@@ -33,6 +33,7 @@ import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -50,12 +51,13 @@ import io.netty.util.AttributeKey;
  */
 @UnstableApi
 public final class BlockingWebClientRequestPreparation
-        implements RequestPreparationSetters<AggregatedHttpResponse> {
+        implements WebRequestPreparationSetters<AggregatedHttpResponse> {
 
     private final WebClientRequestPreparation delegate;
 
     BlockingWebClientRequestPreparation(WebClientRequestPreparation delegate) {
         this.delegate = delegate;
+        delegate.exchangeType(ExchangeType.UNARY);
     }
 
     /**
@@ -63,7 +65,6 @@ public final class BlockingWebClientRequestPreparation
      */
     @Override
     public AggregatedHttpResponse execute() {
-        // TODO(ikhoon): Specify ExchangeType.UNARY or ExchangeType.REQUEST_STREAMING to RequestOptions.
         return ResponseAs.blocking().as(delegate.execute());
     }
 
@@ -217,6 +218,12 @@ public final class BlockingWebClientRequestPreparation
     }
 
     @Override
+    public BlockingWebClientRequestPreparation exchangeType(ExchangeType exchangeType) {
+        delegate.exchangeType(exchangeType);
+        return this;
+    }
+
+    @Override
     public BlockingWebClientRequestPreparation requestOptions(RequestOptions requestOptions) {
         delegate.requestOptions(requestOptions);
         return this;
@@ -352,6 +359,12 @@ public final class BlockingWebClientRequestPreparation
     public BlockingWebClientRequestPreparation headers(
             Iterable<? extends Entry<? extends CharSequence, String>> headers) {
         delegate.headers(headers);
+        return this;
+    }
+
+    @Override
+    public BlockingWebClientRequestPreparation trailer(CharSequence name, Object value) {
+        delegate.trailer(name, value);
         return this;
     }
 

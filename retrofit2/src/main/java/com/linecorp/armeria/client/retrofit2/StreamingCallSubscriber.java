@@ -62,7 +62,9 @@ final class StreamingCallSubscriber extends AbstractSubscriber {
             safeOnResponse(Okio.buffer(new ForwardingSource(pipeBuffer.source()) {
                 @Override
                 public long read(Buffer sink, long byteCount) throws IOException {
-                    request(1);
+                    if (pipeBuffer.exhausted()) {
+                        request(1);
+                    }
                     return super.read(sink, byteCount);
                 }
 

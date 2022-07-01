@@ -32,6 +32,7 @@ import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -49,7 +50,7 @@ import io.netty.util.AttributeKey;
  */
 @UnstableApi
 public final class FutureTransformingRequestPreparation<T>
-        implements RequestPreparationSetters<CompletableFuture<T>> {
+        implements WebRequestPreparationSetters<CompletableFuture<T>> {
 
     private static final Logger logger = LoggerFactory.getLogger(FutureTransformingRequestPreparation.class);
 
@@ -67,6 +68,12 @@ public final class FutureTransformingRequestPreparation<T>
 
     @Override
     public CompletableFuture<T> execute() {
+        if (delegate.exchangeType() == null) {
+            final boolean requestStreaming = delegate.isRequestStreaming();
+            final boolean responseStreaming = !responseAs.requiresAggregation();
+            exchangeType(ExchangeType.of(requestStreaming, responseStreaming));
+        }
+
         CompletableFuture<T> response;
         try {
             response = responseAs.as(delegate.execute());
@@ -294,6 +301,12 @@ public final class FutureTransformingRequestPreparation<T>
     }
 
     @Override
+    public FutureTransformingRequestPreparation<T> trailer(CharSequence name, Object value) {
+        delegate.trailer(name, value);
+        return this;
+    }
+
+    @Override
     public FutureTransformingRequestPreparation<T> trailers(
             Iterable<? extends Entry<? extends CharSequence, String>> trailers) {
         delegate.trailers(trailers);
@@ -376,6 +389,12 @@ public final class FutureTransformingRequestPreparation<T>
     @Override
     public <V> FutureTransformingRequestPreparation<T> attr(AttributeKey<V> key, @Nullable V value) {
         delegate.attr(key, value);
+        return this;
+    }
+
+    @Override
+    public FutureTransformingRequestPreparation<T> exchangeType(ExchangeType exchangeType) {
+        delegate.exchangeType(exchangeType);
         return this;
     }
 }
