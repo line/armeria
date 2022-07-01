@@ -74,10 +74,10 @@ interface RequestOptionsSetters {
      * {@link HttpResponse}. Note that an {@link HttpRequest} will be aggregated before being written if
      * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set. If unspecified,
      * the {@link Client}s try to infer a proper {@link ExchangeType}
-     * depending on the content type of a request and a response.
+     * depending on the content type of a request and a response. Here are examples:
      *
-     * <h2>Examples</h2>
-     * <h3>{@link WebClient}</h3>
+     * <p>{@link WebClient}
+     *
      * <pre>{@code
      * WebClient client = WebClient.of("https://armeria.dev");
      *
@@ -107,8 +107,9 @@ interface RequestOptionsSetters {
      * }
      * }</pre>
      *
-     * <h3>{@link BlockingWebClient}</h3>
-     * Since a request and a response of {@link BlockingWebClient} are fully aggregated,
+     * <p>{@link BlockingWebClient}
+     *
+     * <p>Since a request and a response of {@link BlockingWebClient} are fully aggregated,
      * {@link ExchangeType#UNARY} is only supported.
      * <pre>{@code
      * try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
@@ -117,8 +118,9 @@ interface RequestOptionsSetters {
      * }
      * }</pre>
      *
-     * <h3>gRPC clients</h3>
-     * An {@link ExchangeType} is automatically inferred from the {@code io.grpc.MethodDescriptor.MethodType}.
+     * <p>gRPC clients
+     *
+     * <p>An {@link ExchangeType} is automatically inferred from the {@code io.grpc.MethodDescriptor.MethodType}.
      * <pre>{@code
      * try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
      *     Response response = grpcClient.unaryCall(...);
@@ -126,8 +128,9 @@ interface RequestOptionsSetters {
      * }
      * }</pre>
      *
-     * <h3>Thrift clients</h3>
-     * Thrift protocols do not support streaming. {@link ExchangeType#UNARY} is only supported.
+     * <p>Thrift clients
+     *
+     * <p>Thrift protocols do not support streaming. {@link ExchangeType#UNARY} is only supported.
      */
     @UnstableApi
     RequestOptionsSetters exchangeType(ExchangeType exchangeType);
