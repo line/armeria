@@ -39,6 +39,7 @@ import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -137,26 +138,27 @@ public final class DefaultServiceRequestContext
      */
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
-            @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
-            long requestStartTimeNanos, long requestStartTimeMicros) {
+            RequestId id, RoutingContext routingContext, RoutingResult routingResult, ExchangeType exchangeType,
+            HttpRequest req, @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses,
+            InetAddress clientAddress, long requestStartTimeNanos, long requestStartTimeMicros) {
 
-        this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, req,
-             sslSession, proxiedAddresses, clientAddress, /* requestCancellationScheduler */ null,
+        this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, exchangeType,
+             req, sslSession, proxiedAddresses, clientAddress, /* requestCancellationScheduler */ null,
              requestStartTimeNanos, requestStartTimeMicros, HttpHeaders.of(), HttpHeaders.of());
     }
 
     public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, RoutingContext routingContext, RoutingResult routingResult, HttpRequest req,
-            @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses, InetAddress clientAddress,
+            RequestId id, RoutingContext routingContext, RoutingResult routingResult, ExchangeType exchangeType,
+            HttpRequest req, @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses,
+            InetAddress clientAddress,
             @Nullable CancellationScheduler requestCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros,
             HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
 
         super(meterRegistry, sessionProtocol, id,
               requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
-              requireNonNull(routingResult, "routingResult").query(),
+              requireNonNull(routingResult, "routingResult").query(), exchangeType,
               requireNonNull(req, "req"), null, null);
 
         this.ch = requireNonNull(ch, "ch");

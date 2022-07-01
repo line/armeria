@@ -344,7 +344,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, config.meterRegistry(), protocol,
-                nextRequestId(), routingCtx, routingResult,
+                nextRequestId(), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros());
 
@@ -434,7 +434,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             req.setResponse(res);
 
             assert responseEncoder != null;
-            if (service.exchangeType(headers, routed.route()).isResponseStreaming()) {
+            if (reqCtx.exchangeType().isResponseStreaming()) {
                 final HttpResponseSubscriber resSubscriber =
                         new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
                 res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
@@ -611,7 +611,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private ServiceRequestContext newEarlyRespondingRequestContext(Channel channel, HttpRequest req,
+    private ServiceRequestContext newEarlyRespondingRequestContext(Channel channel, DecodedHttpRequest req,
                                                                    ProxiedAddresses proxiedAddresses,
                                                                    InetAddress clientAddress,
                                                                    RoutingContext routingCtx) {
@@ -621,7 +621,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         return new DefaultServiceRequestContext(
                 routingCtx.virtualHost().fallbackServiceConfig(),
                 channel, NoopMeterRegistry.get(), protocol(),
-                nextRequestId(), routingCtx, routingResult,
+                nextRequestId(), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros());
     }

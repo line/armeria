@@ -27,6 +27,7 @@ import org.reactivestreams.Publisher;
 import com.google.errorprone.annotations.FormatMethod;
 
 import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -42,21 +43,40 @@ import io.netty.util.AttributeKey;
  * transforms an {@link HttpResponse} into the {@code T} type object.
  */
 @UnstableApi
-public class TransformingRequestPreparation<T, R> implements RequestPreparationSetters<R> {
+public class TransformingRequestPreparation<T, R> implements WebRequestPreparationSetters<R> {
 
-    private final RequestPreparationSetters<T> delegate;
+    private final WebRequestPreparationSetters<T> delegate;
     private ResponseAs<T, R> responseAs;
 
-    TransformingRequestPreparation(RequestPreparationSetters<T> delegate, ResponseAs<T, R> responseAs) {
+    TransformingRequestPreparation(WebRequestPreparationSetters<T> delegate, ResponseAs<T, R> responseAs) {
         this.delegate = delegate;
         this.responseAs = responseAs;
     }
 
     @Override
     public R execute() {
-        // TODO(ikhoon): Use ResponseAs.requiresAggregation() to specify a proper ExchangeType
-        //               to RequestOptions.
+        maybeSetDefaultExchangeType();
         return responseAs.as(delegate.execute());
+    }
+
+    private void maybeSetDefaultExchangeType() {
+        if (delegate instanceof BlockingWebClientRequestPreparation) {
+            // ExchangeType.UNARY is specified as the default type
+            return;
+        }
+
+        final WebClientRequestPreparation webClientPreparation = (WebClientRequestPreparation) delegate;
+        if (webClientPreparation.exchangeType() == null) {
+            final boolean requestStreaming = webClientPreparation.isRequestStreaming();
+            final boolean responseStreaming = !responseAs.requiresAggregation();
+            exchangeType(ExchangeType.of(requestStreaming, responseStreaming));
+        }
+    }
+
+    @Override
+    public TransformingRequestPreparation<T, R> exchangeType(ExchangeType exchangeType) {
+        delegate.exchangeType(exchangeType);
+        return this;
     }
 
     @Override
@@ -206,6 +226,12 @@ public class TransformingRequestPreparation<T, R> implements RequestPreparationS
     public TransformingRequestPreparation<T, R> headers(
             Iterable<? extends Entry<? extends CharSequence, String>> headers) {
         delegate.headers(headers);
+        return this;
+    }
+
+    @Override
+    public TransformingRequestPreparation<T, R> trailer(CharSequence name, Object value) {
+        delegate.trailer(name, value);
         return this;
     }
 

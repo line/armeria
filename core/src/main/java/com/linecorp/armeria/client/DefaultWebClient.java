@@ -24,6 +24,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.URI;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Scheme;
@@ -37,8 +38,15 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
     static final WebClient DEFAULT = new WebClientBuilder().build();
 
+    static final RequestOptions RESPONSE_STREAMING_REQUEST_OPTIONS =
+            RequestOptions.builder()
+                          .exchangeType(ExchangeType.RESPONSE_STREAMING)
+                          .build();
+
     @Nullable
     private BlockingWebClient blockingWebClient;
+    @Nullable
+    private RestClient restClient;
 
     DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry) {
         super(params, delegate, meterRegistry,
@@ -127,6 +135,14 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
             return blockingWebClient;
         }
         return blockingWebClient = new DefaultBlockingWebClient(this);
+    }
+
+    @Override
+    public RestClient asRestClient() {
+        if (restClient != null) {
+            return restClient;
+        }
+        return restClient = RestClient.of(this);
     }
 
     @Override

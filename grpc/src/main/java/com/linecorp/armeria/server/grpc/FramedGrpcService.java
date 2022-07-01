@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExchangeTypeUtil.toExchangeType;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -152,7 +153,8 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         routes = ImmutableSet.copyOf(registry.methodsByRoute().keySet());
         exchangeTypes = registry.methods().entrySet().stream()
                                 .collect(toImmutableMap(e -> '/' + e.getKey(),
-                                                        e -> toExchangeType(e.getValue())));
+                                                        e -> toExchangeType(
+                                                                e.getValue().getMethodDescriptor().getType())));
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
@@ -190,20 +192,6 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     public ExchangeType exchangeType(RequestHeaders headers, Route route) {
         // An invalid path will be handled later by 'doPost()'.
         return firstNonNull(exchangeTypes.get(headers.path()), ExchangeType.BIDI_STREAMING);
-    }
-
-    private static ExchangeType toExchangeType(ServerMethodDefinition<?, ?> methodDefinition) {
-        switch (methodDefinition.getMethodDescriptor().getType()) {
-            case UNARY:
-                return ExchangeType.UNARY;
-            case CLIENT_STREAMING:
-                return ExchangeType.REQUEST_STREAMING;
-            case SERVER_STREAMING:
-                return ExchangeType.RESPONSE_STREAMING;
-            case BIDI_STREAMING:
-            default:
-                return ExchangeType.BIDI_STREAMING;
-        }
     }
 
     @Override

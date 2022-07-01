@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 import io.netty.handler.codec.DateFormatter;
@@ -235,8 +236,20 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.from(responseFuture, ctx.eventLoop());
-        final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
-        doExecute0(ctx, reqDuplicator, req, res, responseFuture);
+        if (ctx.exchangeType().isRequestStreaming()) {
+            final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
+            doExecute0(ctx, reqDuplicator, req, res, responseFuture);
+        } else {
+            req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((agg, cause) -> {
+                if (cause != null) {
+                    handleException(ctx, null, responseFuture, cause, true);
+                } else {
+                    final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
+                    doExecute0(ctx, reqDuplicator, req, res, responseFuture);
+                }
+                return null;
+            });
+        }
         return res;
     }
 
@@ -294,7 +307,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                                                           (context, cause) -> HttpResponse.ofFailure(cause));
 
         final RetryConfig<HttpResponse> config = mapping().get(ctx, duplicateReq);
-        if (config.requiresResponseTrailers()) {
+        if (!ctx.exchangeType().isResponseStreaming() || config.requiresResponseTrailers()) {
+            // XXX(ikhoon): Should we use `response.aggregateWithPooledObjects()`?
             response.aggregate().handle((aggregated, cause) -> {
                 final HttpResponse response0 = cause != null ? HttpResponse.ofFailure(cause) : null;
                 handleResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx,
@@ -339,6 +353,7 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                     }
                     return;
                 }
+
                 assert response != null;
                 final HttpResponseDuplicator duplicator =
                         response.toDuplicator(derivedCtx.eventLoop().withoutContext(),
@@ -388,11 +403,14 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
     }
 
-    private static void handleException(ClientRequestContext ctx, HttpRequestDuplicator rootReqDuplicator,
+    private static void handleException(ClientRequestContext ctx,
+                                        @Nullable HttpRequestDuplicator rootReqDuplicator,
                                         CompletableFuture<HttpResponse> future, Throwable cause,
                                         boolean endRequestLog) {
         future.completeExceptionally(cause);
-        rootReqDuplicator.abort(cause);
+        if (rootReqDuplicator != null) {
+            rootReqDuplicator.abort(cause);
+        }
         if (endRequestLog) {
             ctx.logBuilder().endRequest(cause);
         }

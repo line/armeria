@@ -208,7 +208,9 @@
       <property name="allowMissingReturnTag" value="true"/>
       <property name="allowedAnnotations" value="Override, Test"/>
     </module>
-    <module name="MissingJavadocMethod"/>
+    <module name="MissingJavadocMethod">
+      <property name="scope" value="protected"/>
+    </module>
     <module name="MissingJavadocPackage"/>
     <module name="MissingJavadocType"/>
     <module name="JavadocParagraph"/>

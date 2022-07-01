@@ -18,9 +18,13 @@ package com.linecorp.armeria.client;
 
 import java.time.Duration;
 
+import com.linecorp.armeria.common.ExchangeType;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;
 
@@ -64,4 +68,70 @@ interface RequestOptionsSetters {
      * by the specified value.
      */
     <V> RequestOptionsSetters attr(AttributeKey<V> key, @Nullable V value);
+
+    /**
+     * Sets the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or
+     * {@link HttpResponse}. Note that an {@link HttpRequest} will be aggregated before being written if
+     * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set. If unspecified,
+     * the {@link Client}s try to infer a proper {@link ExchangeType}
+     * depending on the content type of a request and a response. Here are examples:
+     *
+     * <p>{@link WebClient}
+     *
+     * <pre>{@code
+     * WebClient client = WebClient.of("https://armeria.dev");
+     *
+     * try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+     *     client.prepare()
+     *           .post("/api/v1/items")
+     *           .contentJson(new Item(...)) // A non-streaming request type.
+     *           .asString()                 // A non-streaming response type.
+     *           .execute();
+     *     assert captor.get().exchangeType() == ExchangeType.UNARY;
+     * }
+     *
+     * try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+     *     client.get("/api/v1/items")   // A non-streaming request type.
+     *           .aggregate();           // A return type is not specified; Assuming that response streaming
+     *                                   // is enabled.
+     *     assert captor.get().exchangeType() == ExchangeType.RESPONSE_STREAMING;
+     * }
+     *
+     * try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+     *     client.prepare()
+     *           .post("/api/v1/items")
+     *           .content(MediaType.JSON_LINES, StreamMessage.of(...)) // A streaming request type.
+     *           .asFile(Path.get("/path/to/destination"))             // A streaming response type.
+     *           .execute();
+     *     assert captor.get().exchangeType() == ExchangeType.BIDI_STREAMING;
+     * }
+     * }</pre>
+     *
+     * <p>{@link BlockingWebClient}
+     *
+     * <p>Since a request and a response of {@link BlockingWebClient} are fully aggregated,
+     * {@link ExchangeType#UNARY} is only supported.
+     * <pre>{@code
+     * try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+     *     AggregatedHttpResponse response = client.blocking().get("/api/v1/items");
+     *     assert captor.get().exchangeType() == ExchangeType.UNARY;
+     * }
+     * }</pre>
+     *
+     * <p>gRPC clients
+     *
+     * <p>An {@link ExchangeType} is automatically inferred from the {@code io.grpc.MethodDescriptor.MethodType}.
+     * <pre>{@code
+     * try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+     *     Response response = grpcClient.unaryCall(...);
+     *     assert captor.get().exchangeType() == ExchangeType.UNARY;
+     * }
+     * }</pre>
+     *
+     * <p>Thrift clients
+     *
+     * <p>Thrift protocols do not support streaming. {@link ExchangeType#UNARY} is only supported.
+     */
+    @UnstableApi
+    RequestOptionsSetters exchangeType(ExchangeType exchangeType);
 }
