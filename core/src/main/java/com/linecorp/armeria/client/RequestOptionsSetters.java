@@ -72,10 +72,9 @@ interface RequestOptionsSetters {
     /**
      * Sets the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or
      * {@link HttpResponse}. Note that an {@link HttpRequest} will be aggregated before being written if
-     * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set.
-     *
-     * <p>If unspecified, the {@link Client}s try to infer a proper
-     * {@link ExchangeType} depending on the content type of a request and a response.
+     * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set. If unspecified,
+     * the {@link Client}s try to infer a proper {@link ExchangeType}
+     * depending on the content type of a request and a response.
      *
      * <h2>Examples</h2>
      * <h3>{@link WebClient}</h3>

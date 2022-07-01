@@ -30,6 +30,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.FormatMethod;
 
 import com.linecorp.armeria.common.Cookie;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -276,6 +277,12 @@ public final class RestClientPreparation implements RequestPreparationSetters {
     @Override
     public <V> RestClientPreparation attr(AttributeKey<V> key, @Nullable V value) {
         delegate.attr(key, value);
+        return this;
+    }
+
+    @Override
+    public RestClientPreparation exchangeType(ExchangeType exchangeType) {
+        delegate.exchangeType(exchangeType);
         return this;
     }
 
