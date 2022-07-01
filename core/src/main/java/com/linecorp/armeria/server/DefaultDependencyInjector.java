@@ -71,7 +71,7 @@ final class DefaultDependencyInjector implements DependencyInjector {
         try {
             closeable.close();
         } catch (Exception e) {
-            logger.warn("Unexpected exception while closing {}", closeable);
+            logger.warn("Unexpected exception while closing {}", closeable, e);
         }
     }
 

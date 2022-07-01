@@ -34,9 +34,6 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
  * {@link DecoratorFactory#value()}.
  * If the dependencies are not injected by this {@link DependencyInjector}, they are created via the default
  * constructor, which does not have a parameter, of the classes.
- *
- * <p>The dependencies are injected through bean definitions automatically, if the Spring integration module
- * such as {@code armeria-spring-boot2-autoconfigure} is added.
  */
 @UnstableApi
 public interface DependencyInjector extends SafeCloseable {
@@ -70,6 +67,7 @@ public interface DependencyInjector extends SafeCloseable {
      * this {@link DependencyInjector} first and the specified {@link DependencyInjector}.
      */
     default DependencyInjector orElse(DependencyInjector dependencyInjector) {
+        requireNonNull(dependencyInjector, "dependencyInjector");
         return new OrElseDependencyInjector(this, dependencyInjector);
     }
 }

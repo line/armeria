@@ -25,7 +25,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.DependencyInjector;
 
 /**
- * Injects dependencies in annotated services using the {@code BeanFactory}.
+ * Injects dependencies in annotations using the {@code BeanFactory}.
  */
 @UnstableApi
 public final class SpringDependencyInjector implements DependencyInjector {

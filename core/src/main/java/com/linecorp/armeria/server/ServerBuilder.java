@@ -1744,9 +1744,6 @@ public final class ServerBuilder {
     /**
      * Sets the {@link DependencyInjector} to inject dependencies in annotated services.
      *
-     * <p>The dependencies are injected through bean definitions automatically, if the Spring integration module
-     * such as {@code armeria-spring-boot2-autoconfigure} is added.
-     *
      * @param dependencyInjector the {@link DependencyInjector} to inject dependencies
      * @param shutdownOnStop whether to shut down the {@link DependencyInjector} when the {@link Server} stops
      */
@@ -1793,7 +1790,7 @@ public final class ServerBuilder {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
         assert extensions != null;
-        final DependencyInjector dependencyInjector = dependencyInjector();
+        final DependencyInjector dependencyInjector = dependencyInjectorOrReflective();
 
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector);
@@ -1943,7 +1940,7 @@ public final class ServerBuilder {
     }
 
     @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
-    private DependencyInjector dependencyInjector() {
+    private DependencyInjector dependencyInjectorOrReflective() {
         if (dependencyInjector != null) {
             return dependencyInjector;
         }

@@ -291,7 +291,7 @@ public interface ServerConfig {
     Http1HeaderNaming http1HeaderNaming();
 
     /**
-     * Returns the {@link DependencyInjector} that injects dependencies in annotated services.
+     * Returns the {@link DependencyInjector} that injects dependencies in annotations.
      */
     DependencyInjector dependencyInjector();
 }
