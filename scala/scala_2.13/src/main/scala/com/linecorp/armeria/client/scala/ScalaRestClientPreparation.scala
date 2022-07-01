@@ -24,7 +24,7 @@ import com.linecorp.armeria.client.{
   RestClientPreparation
 }
 import com.linecorp.armeria.common.annotation.UnstableApi
-import com.linecorp.armeria.common.{Cookie, HttpData, HttpResponse, MediaType, ResponseEntity}
+import com.linecorp.armeria.common.{Cookie, ExchangeType, HttpData, HttpResponse, MediaType, ResponseEntity}
 import com.linecorp.armeria.scala.implicits._
 import io.netty.util.AttributeKey
 import java.lang.{Iterable => JIterable}
@@ -137,6 +137,11 @@ final class ScalaRestClientPreparation private[scala] (delegate: RestClientPrepa
 
   override def attr[V](key: AttributeKey[V], value: V): ScalaRestClientPreparation = {
     delegate.attr(key, value)
+    this
+  }
+
+  override def exchangeType(exchangeType: ExchangeType): ScalaRestClientPreparation = {
+    delegate.exchangeType(exchangeType)
     this
   }
 
