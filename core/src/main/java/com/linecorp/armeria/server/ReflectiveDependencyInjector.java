@@ -34,7 +34,7 @@ final class ReflectiveDependencyInjector implements DependencyInjector {
 
     private static final Logger logger = LoggerFactory.getLogger(ReflectiveDependencyInjector.class);
 
-    private static final Map<Class<?>, Object> instances = new HashMap<>();
+    private final Map<Class<?>, Object> instances = new HashMap<>();
 
     private boolean isShutdown;
 
@@ -48,11 +48,11 @@ final class ReflectiveDependencyInjector implements DependencyInjector {
             //noinspection unchecked
             return (T) instance;
         }
-        return create(type);
+        return create(type, instances);
     }
 
     @Nullable
-    static <T> T create(Class<? extends T> type) {
+    static <T> T create(Class<? extends T> type, @Nullable Map<Class<?>, Object> instanceStorage) {
         @SuppressWarnings("unchecked")
         final Constructor<? extends T> constructor =
                 Iterables.getFirst(getConstructors(type, withParametersCount(0)), null);
@@ -63,7 +63,9 @@ final class ReflectiveDependencyInjector implements DependencyInjector {
         final T instance;
         try {
             instance = constructor.newInstance();
-            instances.put(type, instance);
+            if (instanceStorage != null) {
+                instanceStorage.put(type, instance);
+            }
         } catch (Throwable t) {
             throw new IllegalArgumentException("cannot create an instance of " + type.getName(), t);
         }

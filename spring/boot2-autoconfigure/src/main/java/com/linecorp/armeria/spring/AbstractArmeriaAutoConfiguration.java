@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.server.DependencyInjector;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
@@ -71,6 +72,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
             Optional<MeterIdPrefixFunction> meterIdPrefixFunction,
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
             Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
+            Optional<List<DependencyInjector>> dependencyInjectors,
             BeanFactory beanFactory) {
 
         if (!armeriaServerConfigurators.isPresent() &&
@@ -95,6 +97,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
                                            meterIdPrefixFunction.orElse(
                                                    MeterIdPrefixFunction.ofDefault("armeria.server")),
                                            metricCollectingServiceConfigurators.orElse(ImmutableList.of()),
+                                           dependencyInjectors.orElse(ImmutableList.of()),
                                            beanFactory);
 
         return serverBuilder.build();

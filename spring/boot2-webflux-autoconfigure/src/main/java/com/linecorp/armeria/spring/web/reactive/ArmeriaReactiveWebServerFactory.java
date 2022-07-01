@@ -60,6 +60,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.spring.ArmeriaConfigurationUtil;
+import com.linecorp.armeria.server.DependencyInjector;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -166,6 +167,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
                                                meterRegistry,
                                                meterIdPrefixFunctionOrDefault(),
                                                findBeans(MetricCollectingServiceConfigurator.class),
+                                               findBeans(DependencyInjector.class),
                                                beanFactory);
         }
 

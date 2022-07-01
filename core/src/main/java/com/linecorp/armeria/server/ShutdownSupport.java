@@ -66,13 +66,13 @@ interface ShutdownSupport {
         };
     }
 
-    static ShutdownSupport of(DependencyInjector dependencyInjector) {
-        requireNonNull(dependencyInjector, "dependencyInjector");
+    static ShutdownSupport of(AutoCloseable autoCloseable) {
+        requireNonNull(autoCloseable, "autoCloseable");
         return () -> {
             try {
-                dependencyInjector.close();
+                autoCloseable.close();
             } catch (Exception e) {
-                logger.warn("Unexpected exception while closing: {}", dependencyInjector, e);
+                logger.warn("Unexpected exception while closing: {}", autoCloseable, e);
             }
             return UnmodifiableFuture.completedFuture(null);
         };

@@ -21,11 +21,13 @@ import org.springframework.beans.factory.BeanFactory;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.DependencyInjector;
 
 /**
  * Injects dependencies in annotated services using the {@code BeanFactory}.
  */
+@UnstableApi
 public final class SpringDependencyInjector implements DependencyInjector {
 
     /**

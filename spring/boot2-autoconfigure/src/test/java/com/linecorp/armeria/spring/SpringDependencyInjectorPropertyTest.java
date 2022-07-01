@@ -41,14 +41,14 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.Get;
-import com.linecorp.armeria.spring.SpringDependencyInjectorTest.TestConfiguration;
+import com.linecorp.armeria.spring.SpringDependencyInjectorPropertyTest.TestConfiguration;
 
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class, properties =
         "management.metrics.export.defaults.enabled=true") // @AutoConfigureMetrics is not allowed for boot1.
 @ActiveProfiles({ "local", "autoConfTest" })
 @DirtiesContext
-public class SpringDependencyInjectorTest {
+public class SpringDependencyInjectorPropertyTest {
 
     private static final AtomicInteger counter = new AtomicInteger();
 

@@ -19,14 +19,11 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultDependencyInjector implements DependencyInjector {
 
@@ -52,21 +49,6 @@ final class DefaultDependencyInjector implements DependencyInjector {
         if (instance != null) {
             //noinspection unchecked
             return (T) instance;
-        }
-        return null;
-    }
-
-    @Nullable
-    private static <T> T getInstance(Class<T> type, Map<Class<?>, Supplier<?>> suppliers) {
-        final Supplier<?> supplier = suppliers.get(type);
-        if (supplier != null) {
-            final Object supplied = supplier.get();
-            requireNonNull(supplied, supplier + " returned null.");
-            if (!type.isInstance(supplied)) {
-                throw new IllegalArgumentException(supplied + " is not an instance of " + type.getName());
-            }
-            //noinspection unchecked
-            return (T) supplied;
         }
         return null;
     }

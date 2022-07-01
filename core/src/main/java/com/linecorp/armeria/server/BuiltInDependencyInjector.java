@@ -46,15 +46,15 @@ enum BuiltInDependencyInjector implements DependencyInjector {
         }
 
         //noinspection unchecked
-        return (T) instances.computeIfAbsent(type, unused -> {
-            final Object instance = create(type);
+        return (T) instances.computeIfAbsent(type, key -> {
+            final Object instance = create(key, null);
             assert instance != null;
             return instance;
         });
     }
 
     @Override
-    public synchronized void close() {
+    public void close() {
         // No need to close.
     }
 }

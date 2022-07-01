@@ -56,6 +56,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.server.DependencyInjector;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.encoding.EncodingService;
@@ -103,6 +104,7 @@ public final class ArmeriaConfigurationUtil {
             MeterRegistry meterRegistry,
             MeterIdPrefixFunction meterIdPrefixFunction,
             List<MetricCollectingServiceConfigurator> metricCollectingServiceConfigurators,
+            List<DependencyInjector> dependencyInjectors,
             BeanFactory beanFactory) {
 
         requireNonNull(server, "server");
@@ -190,6 +192,9 @@ public final class ArmeriaConfigurationUtil {
                                                       minBytesToForceChunkedAndEncoding));
         }
 
+        dependencyInjectors.forEach(injector -> {
+            server.dependencyInjector(injector, false); // The injector is closed by Spring.
+        });
         if (settings.enableAutoInjection()) {
             server.dependencyInjector(SpringDependencyInjector.of(beanFactory), false);
         }
