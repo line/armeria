@@ -197,7 +197,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
     static final class AbortableSubscriber implements Subscriber<Object>, Subscription {
         private final PublisherBasedStreamMessage<?> parent;
         private final EventExecutor executor;
-        private boolean withPooledObjects;
+        private final boolean withPooledObjects;
         private final boolean notifyCancellation;
         private Subscriber<Object> subscriber;
         @Nullable
@@ -222,10 +222,13 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
 
             if (executor.inEventLoop()) {
                 increaseDemand(n);
+                subscription.request(n);
             } else {
-                executor.execute(() -> increaseDemand(n));
+                executor.execute(() -> {
+                    increaseDemand(n);
+                    subscription.request(n);
+                });
             }
-            subscription.request(n);
         }
 
         private void increaseDemand(long n)  {

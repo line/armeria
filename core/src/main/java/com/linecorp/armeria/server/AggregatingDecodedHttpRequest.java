@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import javax.annotation.Nonnull;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -38,6 +39,8 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     private final long maxRequestLength;
     private final RequestHeaders headers;
     private final RoutingContext routingCtx;
+    private final ExchangeType exchangeType;
+
     @Nullable
     private ServiceRequestContext ctx;
     @Nullable
@@ -50,7 +53,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
 
     AggregatingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                   boolean keepAlive, long maxRequestLength,
-                                  RoutingContext routingCtx) {
+                                  RoutingContext routingCtx, ExchangeType exchangeType) {
         super(4);
         this.headers = headers;
         this.eventLoop = eventLoop;
@@ -60,6 +63,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         this.maxRequestLength = maxRequestLength;
         assert routingCtx.hasResult();
         this.routingCtx = routingCtx;
+        this.exchangeType = exchangeType;
     }
 
     @Override
@@ -169,6 +173,11 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Override
     public boolean isAggregated() {
         return true;
+    }
+
+    @Override
+    public ExchangeType exchangeType() {
+        return exchangeType;
     }
 
     @Override

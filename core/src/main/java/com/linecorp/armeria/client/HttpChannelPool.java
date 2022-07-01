@@ -28,6 +28,7 @@ import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -351,7 +352,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
         final InetSocketAddress remoteAddress;
         try {
-            remoteAddress = toRemoteAddress(key);
+            remoteAddress = key.toRemoteAddress();
         } catch (UnknownHostException e) {
             notifyConnect(desiredProtocol, key, eventLoop.newFailedFuture(e), promise, timingsBuilder);
             return;
@@ -438,12 +439,6 @@ final class HttpChannelPool implements AsyncCloseable {
             logger.warn("Exception while invoking {}.connectFailed() for {}",
                         ProxyConfigSelector.class.getSimpleName(), poolKey, t);
         }
-    }
-
-    private static InetSocketAddress toRemoteAddress(PoolKey key) throws UnknownHostException {
-        final InetAddress inetAddr = InetAddress.getByAddress(
-                key.host, NetUtil.createByteArrayFromIpAddressString(key.ipAddr));
-        return new InetSocketAddress(inetAddr, key.port);
     }
 
     private void initSession(SessionProtocol desiredProtocol, PoolKey poolKey,
@@ -615,18 +610,30 @@ final class HttpChannelPool implements AsyncCloseable {
 
     static final class PoolKey {
         final String host;
+        @Nullable
         final String ipAddr;
         final int port;
         final int hashCode;
         final ProxyConfig proxyConfig;
 
-        PoolKey(String host, String ipAddr, int port, ProxyConfig proxyConfig) {
+        PoolKey(String host, @Nullable String ipAddr, int port, ProxyConfig proxyConfig) {
             this.host = host;
             this.ipAddr = ipAddr;
             this.port = port;
             this.proxyConfig = proxyConfig;
-            hashCode = ((host.hashCode() * 31 + ipAddr.hashCode()) * 31 + port) * 31 +
-                       proxyConfig.hashCode();
+            hashCode = Objects.hash(host, ipAddr, port, proxyConfig);
+        }
+
+        private InetSocketAddress toRemoteAddress() throws UnknownHostException {
+            if (ipAddr != null) {
+                final InetAddress inetAddr = InetAddress.getByAddress(
+                        host, NetUtil.createByteArrayFromIpAddressString(ipAddr));
+                return new InetSocketAddress(inetAddr, port);
+            } else {
+                // key.ipAddr can be null for forward proxies
+                assert proxyConfig.proxyType().isForwardProxy();
+                return InetSocketAddress.createUnresolved(host, port);
+            }
         }
 
         @Override
@@ -641,7 +648,7 @@ final class HttpChannelPool implements AsyncCloseable {
 
             final PoolKey that = (PoolKey) o;
             // Compare IP address first, which is most likely to differ.
-            return ipAddr.equals(that.ipAddr) &&
+            return Objects.equals(ipAddr, that.ipAddr) &&
                    port == that.port &&
                    host.equals(that.host) &&
                    proxyConfig.equals(that.proxyConfig);

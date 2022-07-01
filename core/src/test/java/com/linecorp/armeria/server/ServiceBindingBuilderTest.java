@@ -22,10 +22,15 @@ import static com.linecorp.armeria.common.MediaType.JSON_UTF_8;
 import static com.linecorp.armeria.common.MediaType.PLAIN_TEXT_UTF_8;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.assertj.core.util.Files;
 import org.junit.Test;
@@ -35,6 +40,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 public class ServiceBindingBuilderTest {
@@ -43,6 +49,9 @@ public class ServiceBindingBuilderTest {
     public void serviceBindingBuilder() {
         final ServerBuilder sb = Server.builder();
         final AccessLogWriter accessLogWriter = mock(AccessLogWriter.class);
+        when(accessLogWriter.shutdown()).thenReturn(UnmodifiableFuture.completedFuture(null));
+        final ScheduledExecutorService blockingTaskExecutor = mock(ScheduledExecutorService.class);
+        when(blockingTaskExecutor.isTerminated()).thenReturn(true);
         final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
 
         sb.route().get("/foo/bar")
@@ -52,10 +61,12 @@ public class ServiceBindingBuilderTest {
           .maxRequestLength(8192)
           .verboseResponses(true)
           .accessLogWriter(accessLogWriter, true)
+          .blockingTaskExecutor(blockingTaskExecutor, true)
           .multipartUploadsLocation(multipartUploadsLocation)
           .build((ctx, req) -> HttpResponse.of(OK));
 
-        final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
+        final Server server = sb.build();
+        final List<ServiceConfig> serviceConfigs = server.serviceConfigs();
         assertThat(serviceConfigs.size()).isOne();
         final ServiceConfig serviceConfig = serviceConfigs.get(0);
 
@@ -69,8 +80,15 @@ public class ServiceBindingBuilderTest {
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(8192);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
         assertThat(serviceConfig.accessLogWriter()).isSameAs(accessLogWriter);
-        assertThat(serviceConfig.shutdownAccessLogWriterOnStop()).isTrue();
+        assertThat(serviceConfig.blockingTaskExecutor()).isSameAs(blockingTaskExecutor);
         assertThat(serviceConfig.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
+
+        server.start().join();
+        verify(accessLogWriter, never()).shutdown();
+        verify(blockingTaskExecutor, never()).shutdown();
+        server.stop().join();
+        verify(accessLogWriter, times(1)).shutdown();
+        verify(blockingTaskExecutor, times(1)).shutdown();
     }
 
     @Test
@@ -105,13 +123,14 @@ public class ServiceBindingBuilderTest {
     @Test
     public void overwriteServerBuilderProperty() {
         final AccessLogWriter accessLogWriter = mock(AccessLogWriter.class);
+        when(accessLogWriter.shutdown()).thenReturn(UnmodifiableFuture.completedFuture(null));
         final Path overWrittenMultipartUploadsLocation = Files.newTemporaryFolder().toPath();
         final Path routeMultipartUploadsLocation = Files.newTemporaryFolder().toPath();
 
         final ServerBuilder sb = Server.builder();
         sb.defaultVirtualHost()
           .maxRequestLength(1024)
-          .accessLogWriter(accessLogWriter, false)
+          .accessLogWriter(accessLogWriter, true)
           .requestTimeoutMillis(10000) // This is overwritten.
           .multipartUploadsLocation(overWrittenMultipartUploadsLocation) // This is overwritten.
           .defaultServiceNaming(ctx -> "globalServiceNaming"); // This is overwritten.
@@ -128,7 +147,8 @@ public class ServiceBindingBuilderTest {
         sb.defaultVirtualHost().maxRequestLength(1024);
         sb.verboseResponses(true);
 
-        final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
+        final Server server = sb.build();
+        final List<ServiceConfig> serviceConfigs = server.serviceConfigs();
         assertThat(serviceConfigs.size()).isEqualTo(2);
         final ServiceConfig serviceConfig = serviceConfigs.get(0);
         final Route route = serviceConfig.route();
@@ -143,19 +163,24 @@ public class ServiceBindingBuilderTest {
         assertThat(serviceConfig.maxRequestLength()).isEqualTo(1024);
         assertThat(serviceConfig.verboseResponses()).isEqualTo(true);
         assertThat(serviceConfig.accessLogWriter()).isSameAs(accessLogWriter);
-        assertThat(serviceConfig.shutdownAccessLogWriterOnStop()).isFalse();
+
+        server.start().join();
+        verify(accessLogWriter, never()).shutdown();
+        server.stop().join();
+        verify(accessLogWriter, times(1)).shutdown();
     }
 
     @Test
     public void usingServerBuilderProperty() {
         final AccessLogWriter accessLogWriter = mock(AccessLogWriter.class);
+        when(accessLogWriter.shutdown()).thenReturn(UnmodifiableFuture.completedFuture(null));
         final Path overWrittenMultipartUploadsLocation = Files.newTemporaryFolder().toPath();
         final Path routeMultipartUploadsLocation = Files.newTemporaryFolder().toPath();
 
         final ServerBuilder sb = Server.builder();
         sb.defaultVirtualHost()
           .maxRequestLength(1024)
-          .accessLogWriter(accessLogWriter, false)
+          .accessLogWriter(accessLogWriter, true)
           .requestTimeoutMillis(10000)
           .multipartUploadsLocation(overWrittenMultipartUploadsLocation)
           .defaultServiceNaming(ctx -> "globalServiceNaming");
@@ -173,7 +198,8 @@ public class ServiceBindingBuilderTest {
         sb.defaultVirtualHost().maxRequestLength(1024);
         sb.verboseResponses(true);
 
-        final List<ServiceConfig> serviceConfigs = sb.build().serviceConfigs();
+        final Server server = sb.build();
+        final List<ServiceConfig> serviceConfigs = server.serviceConfigs();
         assertThat(serviceConfigs.size()).isEqualTo(2);
         final ServiceConfig bazServiceConfig = serviceConfigs.get(1);
         final Route bazRoute = bazServiceConfig.route();
@@ -186,6 +212,11 @@ public class ServiceBindingBuilderTest {
                 .isEqualTo("globalServiceNaming");
         assertThat(bazServiceConfig.requestTimeoutMillis()).isEqualTo(10000);
         assertThat(bazServiceConfig.multipartUploadsLocation()).isSameAs(overWrittenMultipartUploadsLocation);
+
+        server.start().join();
+        verify(accessLogWriter, never()).shutdown();
+        server.stop().join();
+        verify(accessLogWriter, times(1)).shutdown();
     }
 
     @Test
@@ -231,6 +262,41 @@ public class ServiceBindingBuilderTest {
         final Route route2 = serviceConfigs.get(1).route();
         assertThat(route2.pathType()).isSameAs(RoutePathType.EXACT);
         assertThat(route2.paths()).containsExactly("/foo/bar/baz", "/foo/bar/baz");
+    }
+
+    @Test
+    public void multipleAccessLogWriters() {
+        final ServerBuilder sb = Server.builder();
+        final AccessLogWriter aWriter = mock(AccessLogWriter.class);
+        when(aWriter.shutdown()).thenReturn(UnmodifiableFuture.completedFuture(null));
+        final AccessLogWriter bWriter = mock(AccessLogWriter.class);
+        when(bWriter.shutdown()).thenReturn(UnmodifiableFuture.completedFuture(null));
+        final AccessLogWriter cWriter = mock(AccessLogWriter.class);
+        when(cWriter.shutdown()).thenReturn(UnmodifiableFuture.completedFuture(null));
+
+        sb.route().get("/foo/bar")
+          .accessLogWriter(aWriter, true)
+          .accessLogWriter(bWriter, false)
+          .accessLogWriter(cWriter, true)
+          .build((ctx, req) -> HttpResponse.of(OK));
+
+        final Server server = sb.build();
+        final List<ServiceConfig> serviceConfigs = server.serviceConfigs();
+        assertThat(serviceConfigs.size()).isOne();
+        final ServiceConfig serviceConfig = serviceConfigs.get(0);
+
+        final Route route = serviceConfig.route();
+        assertThat(route.pathType()).isSameAs(RoutePathType.EXACT);
+        assertThat(route.paths()).containsExactly("/foo/bar", "/foo/bar");
+
+        server.start().join();
+        verify(aWriter, never()).shutdown();
+        verify(bWriter, never()).shutdown();
+        verify(cWriter, never()).shutdown();
+        server.stop().join();
+        verify(aWriter, times(1)).shutdown();
+        verify(bWriter, never()).shutdown();
+        verify(cWriter, times(1)).shutdown();
     }
 
     @Test(expected = IllegalStateException.class)

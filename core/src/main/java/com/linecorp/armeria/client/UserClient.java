@@ -129,7 +129,24 @@ public abstract class UserClient<I extends Request, O extends Response>
      */
     protected final O execute(SessionProtocol protocol, HttpMethod method, String path,
                               @Nullable String query, @Nullable String fragment, I req) {
-        return execute(protocol, endpointGroup(), method, path, query, fragment, req, RequestOptions.of());
+        return execute(protocol, method, path, query, fragment, req, RequestOptions.of());
+    }
+
+    /**
+     * Executes the specified {@link Request} via the delegate.
+     *
+     * @param protocol the {@link SessionProtocol} to use
+     * @param method the method of the {@link Request}
+     * @param path the path part of the {@link Request} URI
+     * @param query the query part of the {@link Request} URI
+     * @param fragment the fragment part of the {@link Request} URI
+     * @param req the {@link Request}
+     * @param requestOptions the {@link RequestOptions} of the {@link Request}
+     */
+    protected final O execute(SessionProtocol protocol, HttpMethod method, String path,
+                              @Nullable String query, @Nullable String fragment, I req,
+                              RequestOptions requestOptions) {
+        return execute(protocol, endpointGroup(), method, path, query, fragment, req, requestOptions);
     }
 
     /**

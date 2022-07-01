@@ -150,6 +150,8 @@ public final class GrpcServiceBuilder {
 
     private boolean enableHealthCheckService;
 
+    private boolean autoCompression;
+
     @Nullable
     private GrpcHealthCheckService grpcHealthCheckService;
 
@@ -670,6 +672,16 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Sets whether the gRPC response is compressed automatically when a client sends the
+     * {@code grpc-accept-encoding} header with the encoding registered in the {@link CompressorRegistry}.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder autoCompression(boolean autoCompression) {
+        this.autoCompression = autoCompression;
+        return this;
+    }
+
+    /**
      * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
      * The mapping is used to handle a {@link Throwable} when it is raised.
      *
@@ -846,8 +858,8 @@ public final class GrpcServiceBuilder {
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
                 enableHttpJsonTranscoding, // The method definition might be set when transcoding is enabled.
-                grpcHealthCheckService);
-
+                grpcHealthCheckService,
+                autoCompression);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,

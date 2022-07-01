@@ -35,8 +35,8 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextCaptor;
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.logging.RequestLog;
-import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -95,8 +95,9 @@ class ThriftServiceLogNameTest {
     @Test
     void logName() throws TException {
         final HelloService.Iface client =
-                Clients.builder(server.httpUri(ThriftSerializationFormats.BINARY).resolve("/thrift"))
-                       .build(HelloService.Iface.class);
+                ThriftClients.builder(server.httpUri())
+                             .path("/thrift")
+                             .build(HelloService.Iface.class);
         client.hello("hello");
 
         final RequestLog log = capturedCtx.log().whenComplete().join();
@@ -108,8 +109,9 @@ class ThriftServiceLogNameTest {
     @Test
     void defaultNames() throws TException {
         final HelloService.Iface client =
-                Clients.builder(server.httpUri(ThriftSerializationFormats.BINARY).resolve("/default-names"))
-                       .build(HelloService.Iface.class);
+                ThriftClients.builder(server.httpUri())
+                             .path("/default-names")
+                             .build(HelloService.Iface.class);
         client.hello("hello");
 
         final RequestLog log = capturedCtx.log().whenComplete().join();
@@ -121,8 +123,9 @@ class ThriftServiceLogNameTest {
     @Test
     void logNameInAccessLog() throws TException {
         final HelloService.Iface client =
-                Clients.builder(server.httpUri(ThriftSerializationFormats.BINARY).resolve("/thrift"))
-                       .build(HelloService.Iface.class);
+                ThriftClients.builder(server.httpUri())
+                             .path("/thrift")
+                             .build(HelloService.Iface.class);
         client.hello("hello");
 
         await().untilAsserted(() -> {
@@ -136,8 +139,9 @@ class ThriftServiceLogNameTest {
     @Test
     void defaultNamesInAccessLog() throws TException {
         final HelloService.Iface client =
-                Clients.builder(server.httpUri(ThriftSerializationFormats.BINARY).resolve("/default-names"))
-                       .build(HelloService.Iface.class);
+                ThriftClients.builder(server.httpUri())
+                             .path("/default-names")
+                             .build(HelloService.Iface.class);
         client.hello("hello");
 
         await().untilAsserted(() -> {
@@ -151,8 +155,9 @@ class ThriftServiceLogNameTest {
     @Test
     void logNameOfClientSide() throws TException {
         final HelloService.Iface client =
-                Clients.builder(server.httpUri(ThriftSerializationFormats.BINARY).resolve("/thrift"))
-                       .build(HelloService.Iface.class);
+                ThriftClients.builder(server.httpUri())
+                             .path("/thrift")
+                             .build(HelloService.Iface.class);
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             client.hello("hello");
             final ClientRequestContext ctx = captor.get();

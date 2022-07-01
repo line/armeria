@@ -79,11 +79,13 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
 
     // Override the return type of the chaining methods in the superclass.
 
+    @Deprecated
     @Override
     public WebClientBuilder rpcDecorator(Function<? super RpcClient, ? extends RpcClient> decorator) {
         return (WebClientBuilder) super.rpcDecorator(decorator);
     }
 
+    @Deprecated
     @Override
     public WebClientBuilder rpcDecorator(DecoratingRpcClientFunction decorator) {
         return (WebClientBuilder) super.rpcDecorator(decorator);

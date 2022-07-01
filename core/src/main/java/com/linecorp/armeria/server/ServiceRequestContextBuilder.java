@@ -30,6 +30,7 @@ import java.util.function.Consumer;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.common.AbstractRequestContextBuilder;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -245,6 +246,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final Route route = Route.builder().path(path()).build();
         final Routed<ServiceConfig> routed = Routed.of(route, routingResult, serviceCfg);
         routingCtx.setResult(routed);
+        final ExchangeType exchangeType = service.exchangeType(routingCtx);
         final InetAddress clientAddress = server.config().clientAddressMapper().apply(proxiedAddresses)
                                                 .getAddress();
 
@@ -268,7 +270,7 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         // Build the context with the properties set by a user and the fake objects.
         return new DefaultServiceRequestContext(
                 serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
-                routingResult, req, sslSession(), proxiedAddresses, clientAddress,
+                routingResult, exchangeType, req, sslSession(), proxiedAddresses, clientAddress,
                 requestCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),

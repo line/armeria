@@ -80,10 +80,10 @@ class RedirectingClientTest {
             });
 
             sb.service("/seeOther", (ctx, req) -> HttpResponse.from(
-                    req.aggregate().thenApply(aggregatedReq -> {
-                        assertThat(aggregatedReq.contentUtf8()).isEqualTo("hello!");
-                        return HttpResponse.ofRedirect(HttpStatus.SEE_OTHER, "/seeOtherRedirect");
-                    })))
+                      req.aggregate().thenApply(aggregatedReq -> {
+                          assertThat(aggregatedReq.contentUtf8()).isEqualTo("hello!");
+                          return HttpResponse.ofRedirect(HttpStatus.SEE_OTHER, "/seeOtherRedirect");
+                      })))
               .service("/seeOtherRedirect", (ctx, req) -> {
                   assertThat(ctx.method()).isSameAs(HttpMethod.GET);
                   return HttpResponse.of(200);
