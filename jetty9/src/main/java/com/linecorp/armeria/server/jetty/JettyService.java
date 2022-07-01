@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.jetty;
 
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toHttp1Headers;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
@@ -69,7 +70,6 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.util.AsciiString;
 
 /**
  * An {@link HttpService} that dispatches its requests to a web application running in an embedded
@@ -375,19 +375,7 @@ public final class JettyService implements HttpService {
 
         // Convert HttpHeaders to HttpFields
         final HttpFields jHeaders = new HttpFields(aHeaders.size());
-        aHeaders.forEach(e -> {
-            final AsciiString key = e.getKey();
-            if (key.isEmpty()) {
-                return;
-            }
-
-            if (key.byteAt(0) != ':') {
-                jHeaders.add(key.toString(), e.getValue());
-            } else if (HttpHeaderNames.AUTHORITY.equals(key) && !aHeaders.contains(HttpHeaderNames.HOST)) {
-                // Convert `:authority` to `host`.
-                jHeaders.add(HttpHeaderNames.HOST.toString(), e.getValue());
-            }
-        });
+        toHttp1Headers(aHeaders, jHeaders, (output, key, value) -> output.add(key.toString(), value));
 
         return new MetaData.Request(aHeaders.get(HttpHeaderNames.METHOD), uri,
                                     ctx.sessionProtocol().isMultiplex() ? HttpVersion.HTTP_2
