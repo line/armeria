@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.retry;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.client.ClientUtil.executeWithFallback;
+import static com.linecorp.armeria.internal.client.ClientUtil.initContextAndExecuteWithFallback;
 
 import java.time.Duration;
 import java.util.Date;
@@ -29,8 +30,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
@@ -45,6 +48,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
+import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 import io.netty.handler.codec.DateFormatter;
@@ -303,8 +307,20 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             return;
         }
 
-        final HttpResponse response = executeWithFallback(unwrap(), derivedCtx,
-                                                          (context, cause) -> HttpResponse.ofFailure(cause));
+        final HttpResponse response;
+        final EndpointGroup endpointGroup = derivedCtx.endpointGroup();
+        if (!initialAttempt && derivedCtx instanceof DefaultClientRequestContext &&
+            endpointGroup != null && derivedCtx.endpoint() == null) {
+            // clear the pending throwable to retry endpoint selection
+            ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
+            // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
+            final DefaultClientRequestContext casted = (DefaultClientRequestContext) derivedCtx;
+            response = initContextAndExecuteWithFallback(unwrap(), casted, endpointGroup, HttpResponse::from,
+                                                         (context, cause) -> HttpResponse.ofFailure(cause));
+        } else {
+            response = executeWithFallback(unwrap(), derivedCtx,
+                                           (context, cause) -> HttpResponse.ofFailure(cause));
+        }
 
         final RetryConfig<HttpResponse> config = mapping().get(ctx, duplicateReq);
         if (!ctx.exchangeType().isResponseStreaming() || config.requiresResponseTrailers()) {
