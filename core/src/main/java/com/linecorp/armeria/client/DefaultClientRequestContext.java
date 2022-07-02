@@ -248,18 +248,18 @@ public final class DefaultClientRequestContext
     }
 
     @Nullable
-    private static ServiceRequestContext serviceRequestContext() {
-        final RequestContext current = RequestContext.currentOrNull();
-        return current != null ? current.root() : null;
-    }
-
-    @Nullable
     private static AttributesGetters getAttributes(@Nullable ServiceRequestContext ctx) {
         if (ctx instanceof DefaultServiceRequestContext) {
             return ((DefaultServiceRequestContext) ctx).attributes();
         } else {
             return null;
         }
+    }
+
+    @Nullable
+    private static ServiceRequestContext serviceRequestContext() {
+        final RequestContext current = RequestContext.currentOrNull();
+        return current != null ? current.root() : null;
     }
 
     /**
