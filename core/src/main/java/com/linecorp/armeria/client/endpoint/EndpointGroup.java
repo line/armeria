@@ -151,7 +151,7 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelec
      * If an {@link Endpoint} is not resolved by this {@link EndpointGroup} within the timeout, a null value
      * will be returned by {@link EndpointSelector#select(ClientRequestContext, ScheduledExecutorService)}.
      * The null {@link Endpoint} may cause a client request end with
-     * an {@code EndpointSelectionTimeoutException} if no {@link RetryingClient} is configured.
+     * an {@link EndpointSelectionTimeoutException} if no {@link RetryingClient} is configured.
      *
      * <p>{@code 0} means {@link #selectNow(ClientRequestContext)} should always return an {@link Endpoint}.
      */
