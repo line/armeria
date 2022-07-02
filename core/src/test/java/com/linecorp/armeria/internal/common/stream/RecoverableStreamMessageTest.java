@@ -443,17 +443,19 @@ class RecoverableStreamMessageTest {
     }
 
     @Test
-    void mixtureRecover() {
+    void mixtureRecoverChaining() {
         final HttpResponse failure =
                 HttpResponse.ofFailure(ClosedStreamException.get());
+        final HttpData fallbackData = HttpData.ofUtf8("fallback");
+        final IllegalStateException ex1 = new IllegalStateException("ex1");
+        final IllegalArgumentException ex2 = new IllegalArgumentException("ex2");
+        final IllegalStateException ex3 = new IllegalStateException("ex3");
         final StreamMessage<HttpObject> mixtureRecover =
-                failure.recover(cause -> HttpResponse.ofFailure(new IllegalStateException("ex1")))
-                       .recover(IllegalStateException.class,
-                                cause -> HttpResponse.ofFailure(new IllegalArgumentException("ex2")))
-                       .recoverAndResume(cause -> StreamMessage.aborted(new IllegalStateException("ex3")))
-                       .recoverAndResume(IllegalStateException.class,
-                                  cause -> StreamMessage.of(HttpData.ofUtf8("fallback")));
+                failure.recover(cause -> HttpResponse.ofFailure(ex1))
+                       .recover(IllegalStateException.class, cause -> HttpResponse.ofFailure(ex2))
+                       .recoverAndResume(cause -> StreamMessage.aborted(ex3))
+                       .recoverAndResume(IllegalStateException.class, cause -> StreamMessage.of(fallbackData));
 
-        assertThat(mixtureRecover.collect().join()).contains(HttpData.ofUtf8("fallback"));
+        assertThat(mixtureRecover.collect().join()).contains(fallbackData);
     }
 }
