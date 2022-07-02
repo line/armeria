@@ -22,11 +22,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.same;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoMoreInteractions;
 
 import java.util.ArrayList;
 import java.util.IdentityHashMap;
@@ -90,7 +88,6 @@ class UnaryServerCallTest {
 
     private ServiceRequestContext ctx;
 
-    @Mock
     private IdentityHashMap<Object, ByteBuf> buffersAttr;
 
     private UnaryServerCall<SimpleRequest, SimpleResponse> call;
@@ -107,6 +104,7 @@ class UnaryServerCallTest {
         call = newServerCall(res, responseFuture, false);
         call.setListener(listener);
 
+        buffersAttr = new IdentityHashMap<>();
         ctx.setAttr(GrpcUnsafeBufferUtil.BUFFERS, buffersAttr);
     }
 
@@ -130,8 +128,7 @@ class UnaryServerCallTest {
     void messageRead_notWrappedByteBuf() {
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.onRequestMessage(new DeframedMessage(buf, 0), true);
-
-        verifyNoMoreInteractions(buffersAttr);
+        assertThat(buffersAttr).isEmpty();
     }
 
     @Test
@@ -145,7 +142,8 @@ class UnaryServerCallTest {
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.onRequestMessage(new DeframedMessage(buf, 0), true);
 
-        verify(buffersAttr).put(any(), same(buf));
+        assertThat(buffersAttr).hasSize(1);
+        assertThat(buffersAttr).containsValue(buf);
     }
 
     @Test

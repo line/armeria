@@ -17,8 +17,10 @@
 package com.linecorp.armeria.client.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -29,7 +31,12 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
+import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallRequest;
+import com.linecorp.armeria.grpc.testing.Messages.StreamingInputCallResponse;
+import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
+import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
+import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceStub;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -41,6 +48,7 @@ import io.grpc.Codec;
 import io.grpc.Codec.Gzip;
 import io.grpc.Codec.Identity;
 import io.grpc.DecompressorRegistry;
+import io.grpc.stub.StreamObserver;
 
 class GrpcClientCompressionTest {
 
@@ -55,9 +63,10 @@ class GrpcClientCompressionTest {
         }
     };
 
+    final Gzip gzip = new Gzip();
+
     @Test
-    void compression() throws InterruptedException {
-        final Gzip gzip = new Gzip();
+    void compression_unary() throws InterruptedException {
         final TestServiceBlockingStub stub = GrpcClients.builder(server.httpUri())
                                                         .compressor(gzip)
                                                         .build(TestServiceBlockingStub.class);
@@ -83,13 +92,169 @@ class GrpcClientCompressionTest {
     }
 
     @Test
-    void decompressionRegistry() throws InterruptedException {
-        final TestServiceBlockingStub stub = GrpcClients.builder(server.httpUri())
-                                                        .decompressorRegistry(
-                                                                DecompressorRegistry.emptyInstance()
-                                                                                    .with(Codec.Identity.NONE,
-                                                                                          true))
-                                                        .build(TestServiceBlockingStub.class);
+    void compression_requestStreaming() throws InterruptedException {
+        final TestServiceStub stub = GrpcClients.builder(server.httpUri())
+                                                .compressor(gzip)
+                                                .build(TestServiceStub.class);
+
+        final AtomicBoolean completed = new AtomicBoolean();
+        StreamObserver<StreamingInputCallRequest> input =
+                stub.streamingInputCall(new StreamObserver<StreamingInputCallResponse>() {
+                    @Override
+                    public void onNext(StreamingInputCallResponse value) {}
+
+                    @Override
+                    public void onError(Throwable t) {}
+
+                    @Override
+                    public void onCompleted() {
+                        completed.set(true);
+                    }
+                });
+        input.onNext(StreamingInputCallRequest.getDefaultInstance());
+        input.onCompleted();
+        await().untilTrue(completed);
+        ServiceRequestContext ctx = server.requestContextCaptor().take();
+        RequestLog log = ctx.log().whenComplete().join();
+        String encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ENCODING);
+        assertThat(encoding).isEqualTo(gzip.getMessageEncoding());
+
+        // Override the client level compressor with CallOptions
+        final TestServiceStub noCompression =
+                stub.withCompression(Identity.NONE.getMessageEncoding());
+
+        completed.set(false);
+        input = noCompression.streamingInputCall(new StreamObserver<StreamingInputCallResponse>() {
+            @Override
+            public void onNext(StreamingInputCallResponse value) {}
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onCompleted() {
+                completed.set(true);
+            }
+        });
+        input.onNext(StreamingInputCallRequest.getDefaultInstance());
+        input.onCompleted();
+        ctx = server.requestContextCaptor().take();
+        log = ctx.log().whenComplete().join();
+        encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ENCODING);
+        assertThat(encoding).isNull();
+    }
+
+    @Test
+    void compression_responseStreaming() throws InterruptedException {
+        final TestServiceStub stub = GrpcClients.builder(server.httpUri())
+                                                .compressor(gzip)
+                                                .build(TestServiceStub.class);
+
+        final AtomicBoolean completed = new AtomicBoolean();
+        stub.streamingOutputCall(StreamingOutputCallRequest.getDefaultInstance(),
+                                 new StreamObserver<StreamingOutputCallResponse>() {
+                                     @Override
+                                     public void onNext(StreamingOutputCallResponse value) {}
+
+                                     @Override
+                                     public void onError(Throwable t) {}
+
+                                     @Override
+                                     public void onCompleted() {
+                                         completed.set(true);
+                                     }
+                                 });
+        await().untilTrue(completed);
+        ServiceRequestContext ctx = server.requestContextCaptor().take();
+        RequestLog log = ctx.log().whenComplete().join();
+        String encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ENCODING);
+        assertThat(encoding).isEqualTo(gzip.getMessageEncoding());
+
+        // Override the client level compressor with CallOptions
+        final TestServiceStub noCompression =
+                stub.withCompression(Identity.NONE.getMessageEncoding());
+
+        completed.set(false);
+        noCompression.streamingOutputCall(StreamingOutputCallRequest.getDefaultInstance(),
+                                          new StreamObserver<StreamingOutputCallResponse>() {
+                                              @Override
+                                              public void onNext(StreamingOutputCallResponse value) {}
+
+                                              @Override
+                                              public void onError(Throwable t) {}
+
+                                              @Override
+                                              public void onCompleted() {
+                                                  completed.set(true);
+                                              }
+                                          });
+        ctx = server.requestContextCaptor().take();
+        log = ctx.log().whenComplete().join();
+        encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ENCODING);
+        assertThat(encoding).isNull();
+    }
+
+    @Test
+    void compression_bidiStreaming() throws InterruptedException {
+        final TestServiceStub stub = GrpcClients.builder(server.httpUri())
+                                                .compressor(gzip)
+                                                .build(TestServiceStub.class);
+
+        final AtomicBoolean completed = new AtomicBoolean();
+        StreamObserver<StreamingOutputCallRequest> input =
+                stub.fullDuplexCall(new StreamObserver<StreamingOutputCallResponse>() {
+                    @Override
+                    public void onNext(StreamingOutputCallResponse value) {}
+
+                    @Override
+                    public void onError(Throwable t) {}
+
+                    @Override
+                    public void onCompleted() {
+                        completed.set(true);
+                    }
+                });
+        input.onNext(StreamingOutputCallRequest.getDefaultInstance());
+        input.onCompleted();
+
+        await().untilTrue(completed);
+        ServiceRequestContext ctx = server.requestContextCaptor().take();
+        RequestLog log = ctx.log().whenComplete().join();
+        String encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ENCODING);
+        assertThat(encoding).isEqualTo(gzip.getMessageEncoding());
+
+        // Override the client level compressor with CallOptions
+        final TestServiceStub noCompression =
+                stub.withCompression(Identity.NONE.getMessageEncoding());
+
+        completed.set(false);
+        input = noCompression.fullDuplexCall(new StreamObserver<StreamingOutputCallResponse>() {
+            @Override
+            public void onNext(StreamingOutputCallResponse value) {}
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onCompleted() {
+                completed.set(true);
+            }
+        });
+        input.onNext(StreamingOutputCallRequest.getDefaultInstance());
+        input.onCompleted();
+        ctx = server.requestContextCaptor().take();
+        log = ctx.log().whenComplete().join();
+        encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ENCODING);
+        assertThat(encoding).isNull();
+    }
+
+    @Test
+    void decompressionRegistry_unary() throws InterruptedException {
+        final TestServiceBlockingStub stub =
+                GrpcClients.builder(server.httpUri())
+                           .decompressorRegistry(DecompressorRegistry.emptyInstance()
+                                                                     .with(Codec.Identity.NONE, true))
+                           .build(TestServiceBlockingStub.class);
 
         final Payload payload = Payload.newBuilder().setBody(ByteString.copyFromUtf8("Hello")).build();
         stub.unaryCall(SimpleRequest.newBuilder().setPayload(payload).build());
@@ -104,6 +269,171 @@ class GrpcClientCompressionTest {
 
         final Payload payload0 = Payload.newBuilder().setBody(ByteString.copyFromUtf8("Hello")).build();
         decompressingStub.unaryCall(SimpleRequest.newBuilder().setPayload(payload0).build());
+        ctx = server.requestContextCaptor().take();
+        log = ctx.log().whenComplete().join();
+        encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
+        assertThat(encoding).isEqualTo("gzip");
+    }
+
+    @Test
+    void decompressionRegistry_requestStreaming() throws InterruptedException {
+        final TestServiceStub stub =
+                GrpcClients.builder(server.httpUri())
+                           .decompressorRegistry(DecompressorRegistry.emptyInstance()
+                                                                     .with(Codec.Identity.NONE, true))
+                           .build(TestServiceStub.class);
+
+        AtomicBoolean completed = new AtomicBoolean();
+        StreamObserver<StreamingInputCallRequest> input =
+                stub.streamingInputCall(new StreamObserver<StreamingInputCallResponse>() {
+                    @Override
+                    public void onNext(StreamingInputCallResponse value) {}
+
+                    @Override
+                    public void onError(Throwable t) {}
+
+                    @Override
+                    public void onCompleted() {
+                        completed.set(true);
+                    }
+                });
+        input.onNext(StreamingInputCallRequest.getDefaultInstance());
+        input.onCompleted();
+
+        ServiceRequestContext ctx = server.requestContextCaptor().take();
+        RequestLog log = ctx.log().whenComplete().join();
+        String encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
+        assertThat(encoding).isEqualTo("identity");
+
+        final TestServiceStub decompressingStub = GrpcClients.builder(server.httpUri())
+                                                             // Use the default DecompressorRegistry
+                                                             .build(TestServiceStub.class);
+
+        completed.set(false);
+        input = decompressingStub.streamingInputCall(new StreamObserver<StreamingInputCallResponse>() {
+            @Override
+            public void onNext(StreamingInputCallResponse value) {}
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onCompleted() {
+                completed.set(true);
+            }
+        });
+        input.onNext(StreamingInputCallRequest.getDefaultInstance());
+        input.onCompleted();
+        ctx = server.requestContextCaptor().take();
+        log = ctx.log().whenComplete().join();
+        encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
+        assertThat(encoding).isEqualTo("gzip");
+    }
+
+    @Test
+    void decompressionRegistry_responseStreaming() throws InterruptedException {
+        final TestServiceStub stub =
+                GrpcClients.builder(server.httpUri())
+                           .decompressorRegistry(DecompressorRegistry.emptyInstance()
+                                                                     .with(Codec.Identity.NONE, true))
+                           .build(TestServiceStub.class);
+
+        final AtomicBoolean completed = new AtomicBoolean();
+        StreamObserver<StreamingInputCallRequest> input =
+                stub.streamingInputCall(new StreamObserver<StreamingInputCallResponse>() {
+                    @Override
+                    public void onNext(StreamingInputCallResponse value) {}
+
+                    @Override
+                    public void onError(Throwable t) {}
+
+                    @Override
+                    public void onCompleted() {
+                        completed.set(true);
+                    }
+                });
+        input.onNext(StreamingInputCallRequest.getDefaultInstance());
+        input.onCompleted();
+
+        ServiceRequestContext ctx = server.requestContextCaptor().take();
+        RequestLog log = ctx.log().whenComplete().join();
+        String encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
+        assertThat(encoding).isEqualTo("identity");
+
+        final TestServiceStub decompressingStub = GrpcClients.builder(server.httpUri())
+                                                             // Use the default DecompressorRegistry
+                                                             .build(TestServiceStub.class);
+
+        completed.set(false);
+        input = decompressingStub.streamingInputCall(new StreamObserver<StreamingInputCallResponse>() {
+            @Override
+            public void onNext(StreamingInputCallResponse value) {}
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onCompleted() {
+                completed.set(true);
+            }
+        });
+        input.onNext(StreamingInputCallRequest.getDefaultInstance());
+        input.onCompleted();
+        ctx = server.requestContextCaptor().take();
+        log = ctx.log().whenComplete().join();
+        encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
+        assertThat(encoding).isEqualTo("gzip");
+    }
+
+    @Test
+    void decompressionRegistry_bidiStreaming() throws InterruptedException {
+        final TestServiceStub stub =
+                GrpcClients.builder(server.httpUri())
+                           .decompressorRegistry(DecompressorRegistry.emptyInstance()
+                                                                     .with(Codec.Identity.NONE, true))
+                           .build(TestServiceStub.class);
+
+        final AtomicBoolean completed = new AtomicBoolean();
+        StreamObserver<StreamingOutputCallRequest> input =
+                stub.fullDuplexCall(new StreamObserver<StreamingOutputCallResponse>() {
+                    @Override
+                    public void onNext(StreamingOutputCallResponse value) {}
+
+                    @Override
+                    public void onError(Throwable t) {}
+
+                    @Override
+                    public void onCompleted() {
+                        completed.set(true);
+                    }
+                });
+        input.onNext(StreamingOutputCallRequest.getDefaultInstance());
+        input.onCompleted();
+
+        ServiceRequestContext ctx = server.requestContextCaptor().take();
+        RequestLog log = ctx.log().whenComplete().join();
+        String encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
+        assertThat(encoding).isEqualTo("identity");
+
+        final TestServiceStub decompressingStub = GrpcClients.builder(server.httpUri())
+                                                             // Use the default DecompressorRegistry
+                                                             .build(TestServiceStub.class);
+
+        completed.set(false);
+        input = decompressingStub.fullDuplexCall(new StreamObserver<StreamingOutputCallResponse>() {
+            @Override
+            public void onNext(StreamingOutputCallResponse value) {}
+
+            @Override
+            public void onError(Throwable t) {}
+
+            @Override
+            public void onCompleted() {
+                completed.set(true);
+            }
+        });
+        input.onNext(StreamingOutputCallRequest.getDefaultInstance());
+        input.onCompleted();
         ctx = server.requestContextCaptor().take();
         log = ctx.log().whenComplete().join();
         encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
