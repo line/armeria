@@ -392,4 +392,52 @@ class RecoverableStreamMessageTest {
             .element(0)
             .isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    void shortcutRecoverableChainingRecover() {
+        final IllegalStateException ex1 = new IllegalStateException("ex1");
+        final IllegalStateException ex2 = new IllegalStateException("ex2");
+        final HttpResponse failedResponse =
+                HttpResponse.ofFailure(ex1);
+        final HttpResponse recoverableChain =
+                failedResponse.recover(RuntimeException.class, cause -> {
+                    assertThat(cause).isSameAs(ex1);
+                    return HttpResponse.ofFailure(ex2);
+                })
+               .recover(IllegalStateException.class, cause -> {
+                   assertThat(cause).isSameAs(ex2);
+                   return HttpResponse.of("fallback");
+               });
+
+        final AggregatedHttpResponse response = recoverableChain.aggregate().join();
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.contentUtf8()).isEqualTo("fallback");
+    }
+
+    @Test
+    void shortcutRecoverableChainStreamMessage() {
+        final DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+        final IllegalStateException ex1 = new IllegalStateException("oops1");
+        final IllegalStateException ex2 = new IllegalStateException("oops2");
+        final IllegalArgumentException ex3 = new IllegalArgumentException("oops3");
+        final StreamMessage<Integer> recoverable =
+                stream.recoverAndResume(RuntimeException.class, cause -> {
+                    assertThat(cause).isEqualTo(ex1);
+                    return StreamMessage.aborted(ex2);
+                })
+               .recoverAndResume(IllegalStateException.class, cause -> {
+                   assertThat(cause).isEqualTo(ex2);
+                   return StreamMessage.aborted(ex3);
+               })
+               .recoverAndResume(IllegalArgumentException.class, cause -> {
+                   assertThat(cause).isEqualTo(ex3);
+                   return StreamMessage.of(4, 5, 6);
+               });
+
+        stream.write(1);
+        stream.write(2);
+        stream.write(3);
+        stream.close(ex1);
+        assertThat(recoverable.collect().join()).contains(1, 2, 3, 4, 5, 6);
+    }
 }
