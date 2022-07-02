@@ -55,6 +55,10 @@ public abstract class DocStringExtractor {
 
     private final String path;
 
+    /**
+     * Creates a new {@link DocStringExtractor} with the specified {@code defaultPath} and {@code
+     * pathPropertyName}.
+     */
     protected DocStringExtractor(String defaultPath, String pathPropertyName) {
         path = computePath(defaultPath, pathPropertyName);
     }

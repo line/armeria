@@ -23,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.Test;
 import org.reactivestreams.Publisher;
@@ -33,6 +34,7 @@ import com.google.common.primitives.Bytes;
 import com.linecorp.armeria.common.HttpData;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -55,11 +57,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
@@ -81,11 +79,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
@@ -110,11 +104,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
@@ -154,11 +144,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertDoesNotThrow(inputStream::close);
@@ -204,7 +190,7 @@ class StreamMessageInputStreamTest {
     void available() throws Exception {
         final StreamMessage<byte[]> streamMessage = StreamMessage.of(new byte[] { 1, 2, 3, 4, 5 });
         final InputStream inputStream = streamMessage.toInputStream(HttpData::wrap);
-        final byte[] expected = {1, 2, 3, 4};
+        final byte[] expected = { 1, 2, 3, 4 };
         assertThat(inputStream.available()).isZero();
 
         final ByteBuf result = Unpooled.buffer();
@@ -212,11 +198,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(inputStream.read());
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isEqualTo(1);
@@ -249,11 +231,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
@@ -282,11 +260,7 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
@@ -309,13 +283,109 @@ class StreamMessageInputStreamTest {
             result.writeByte(read);
         }
 
-        final int readableBytes = result.readableBytes();
-        final byte[] actual = new byte[readableBytes];
-        for (int i = 0; i < readableBytes; i++) {
-            actual[i] = result.readByte();
-        }
+        final byte[] actual = ByteBufUtil.getBytes(result);
         result.release();
         assertThat(actual).isEqualTo(expected);
         assertThat(inputStream.available()).isZero();
+    }
+
+    @Test
+    void httpDataConverter_empty() throws IOException {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        final InputStream inputStream = streamMessage
+                .toInputStream(x -> {
+                    if (x % 2 == 0) {
+                        return HttpData.empty();
+                    }
+                    return HttpData.wrap(x.toString().getBytes());
+                });
+
+        final byte[] expected = ImmutableList.of(1, 3, 5, 7, 9)
+                                             .stream()
+                                             .map(x -> x.toString().getBytes())
+                                             .reduce(Bytes::concat).get();
+
+        final ByteBuf result = Unpooled.buffer();
+        int read;
+        while ((read = inputStream.read()) != -1) {
+            result.writeByte(read);
+        }
+
+        final byte[] actual = ByteBufUtil.getBytes(result);
+        result.release();
+        assertThat(actual).isEqualTo(expected);
+        assertThat(inputStream.available()).isZero();
+    }
+
+    @Test
+    void httpDataConverter_error_thrown() throws IOException {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        final InputStream inputStream = streamMessage
+                .toInputStream(x -> {
+                    if (x == 6) {
+                        throw new RuntimeException();
+                    }
+                    return HttpData.wrap(x.toString().getBytes());
+                });
+
+        final byte[] expected = ImmutableList.of(1, 2, 3, 4, 5)
+                                             .stream()
+                                             .map(x -> x.toString().getBytes())
+                                             .reduce(Bytes::concat).get();
+
+        final ByteBuf result = Unpooled.buffer();
+        int read;
+        while ((read = inputStream.read()) != -1) {
+            result.writeByte(read);
+        }
+
+        final byte[] actual = ByteBufUtil.getBytes(result);
+        result.release();
+        assertThat(actual).isEqualTo(expected);
+        assertThat(inputStream.available()).isZero();
+    }
+
+    @Test
+    void maybeRequest_when_not_enough_data() throws IOException {
+        final StreamMessage<String> streamMessage1 = StreamMessage.of("12", "34");
+        final DefaultStreamMessage<String> streamMessage2 = new DefaultStreamMessage<>();
+        streamMessage2.write("56");
+        streamMessage2.write("78");
+        final AtomicBoolean consumed = new AtomicBoolean();
+        streamMessage2.whenConsumed().thenRun(() -> {
+            consumed.set(true);
+            streamMessage2.close();
+        });
+        final InputStream inputStream = StreamMessage
+                .concat(streamMessage1, streamMessage2)
+                .toInputStream(x -> HttpData.wrap(x.getBytes()));
+
+        final ByteBuf result = Unpooled.buffer();
+        for (int i = 0; i < 2; i++) {
+            result.writeByte(inputStream.read());
+        }
+
+        byte[] actual = ByteBufUtil.getBytes(result);
+        result.clear();
+        assertThat(actual).isEqualTo(ImmutableList.of("12")
+                                                  .stream()
+                                                  .map(String::getBytes)
+                                                  .reduce(Bytes::concat).get());
+        assertThat(inputStream.available()).isZero();
+        assertThat(consumed).isFalse();
+
+        int read;
+        while ((read = inputStream.read()) != -1) {
+            result.writeByte(read);
+        }
+
+        actual = ByteBufUtil.getBytes(result);
+        result.release();
+        assertThat(actual).isEqualTo(ImmutableList.of("34", "56", "78")
+                                                  .stream()
+                                                  .map(String::getBytes)
+                                                  .reduce(Bytes::concat).get());
+        assertThat(inputStream.available()).isZero();
+        await().untilTrue(consumed);
     }
 }

@@ -67,7 +67,11 @@ final class AnnotatedElementNameUtil {
         return toHeaderName(getName(nameRetrievalTarget));
     }
 
-    private static String getName(Object element) {
+    /**
+     * Returns the name of the {@link Parameter} or the {@link Field}.
+     * @param element either {@link Parameter} or {@link Field}
+     */
+    static String getName(Object element) {
         if (element instanceof Parameter) {
             final Parameter parameter = (Parameter) element;
             if (!parameter.isNamePresent()) {

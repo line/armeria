@@ -42,6 +42,7 @@ import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -439,6 +440,13 @@ public interface RequestContext {
     default ByteBufAllocator alloc() {
         throw new UnsupportedOperationException("No ByteBufAllocator available for this RequestContext.");
     }
+
+    /**
+     * Returns the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or
+     * {@link HttpResponse}.
+     */
+    @UnstableApi
+    ExchangeType exchangeType();
 
     /**
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call

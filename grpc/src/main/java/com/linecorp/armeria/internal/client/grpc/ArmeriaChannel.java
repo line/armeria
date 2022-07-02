@@ -16,9 +16,13 @@
 package com.linecorp.armeria.internal.client.grpc;
 
 import static com.linecorp.armeria.internal.client.grpc.GrpcClientUtil.maxInboundMessageSizeBytes;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExchangeTypeUtil.toExchangeType;
 
 import java.net.URI;
+import java.util.EnumMap;
 import java.util.Map;
+
+import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
 import com.linecorp.armeria.client.ClientOptions;
@@ -27,6 +31,7 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.grpc.GrpcClientOptions;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -49,6 +54,7 @@ import io.grpc.Compressor;
 import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.MethodDescriptor;
+import io.grpc.MethodDescriptor.MethodType;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.handler.codec.http.HttpHeaderValues;
 
@@ -57,6 +63,16 @@ import io.netty.handler.codec.http.HttpHeaderValues;
  * {@link HttpClient} params for the associated gRPC stub.
  */
 final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwrappable {
+
+    private static final Map<MethodType, RequestOptions> REQUEST_OPTIONS_MAP;
+
+    static {
+        final EnumMap<MethodType, RequestOptions> requestOptionsMap = new EnumMap<>(MethodType.class);
+        for (MethodType methodType : MethodType.values()) {
+            requestOptionsMap.put(methodType, newRequestOptions(toExchangeType(methodType)));
+        }
+        REQUEST_OPTIONS_MAP = Maps.immutableEnumMap(requestOptionsMap);
+    }
 
     private final ClientBuilderParams params;
     private final HttpClient httpClient;
@@ -105,7 +121,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 RequestHeaders.of(HttpMethod.POST, uri().getPath() + method.getFullMethodName(),
                                   HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType(),
                                   HttpHeaderNames.TE, HttpHeaderValues.TRAILERS));
-        final DefaultClientRequestContext ctx = newContext(HttpMethod.POST, req);
+        final DefaultClientRequestContext ctx = newContext(HttpMethod.POST, req, method);
 
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
@@ -191,7 +207,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
         return httpClient.as(type);
     }
 
-    private DefaultClientRequestContext newContext(HttpMethod method, HttpRequest req) {
+    private <I, O> DefaultClientRequestContext newContext(HttpMethod method, HttpRequest req,
+                                                          MethodDescriptor<I, O> methodDescriptor) {
         return new DefaultClientRequestContext(
                 meterRegistry,
                 sessionProtocol,
@@ -203,9 +220,15 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 options(),
                 req,
                 null,
-                RequestOptions.of(),
+                REQUEST_OPTIONS_MAP.get(methodDescriptor.getType()),
                 System.nanoTime(),
                 SystemInfo.currentTimeMicros(),
                 /* hasBaseUri */ true);
+    }
+
+    private static RequestOptions newRequestOptions(ExchangeType exchangeType) {
+        return RequestOptions.builder()
+                             .exchangeType(exchangeType)
+                             .build();
     }
 }

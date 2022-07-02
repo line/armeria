@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import javax.annotation.Nonnull;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -39,6 +40,8 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     private final long maxRequestLength;
     private final RoutingContext routingCtx;
     private final Routed<ServiceConfig> routed;
+    private final ExchangeType exchangeType;
+
     @Nullable
     private ServiceRequestContext ctx;
     private long transferredBytes;
@@ -50,7 +53,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     StreamingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
                                 long maxRequestLength, RoutingContext routingCtx,
-                                Routed<ServiceConfig> routed) {
+                                Routed<ServiceConfig> routed, ExchangeType exchangeType) {
         super(headers);
 
         this.eventLoop = eventLoop;
@@ -61,6 +64,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         this.maxRequestLength = maxRequestLength;
         this.routingCtx = routingCtx;
         this.routed = routed;
+        this.exchangeType = exchangeType;
     }
 
     @Override
@@ -184,5 +188,10 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Override
     public boolean isAggregated() {
         return false;
+    }
+
+    @Override
+    public ExchangeType exchangeType() {
+        return exchangeType;
     }
 }

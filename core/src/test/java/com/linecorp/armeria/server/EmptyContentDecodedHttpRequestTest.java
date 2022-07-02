@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
@@ -36,7 +37,8 @@ class EmptyContentDecodedHttpRequestTest {
     void emptyContent() {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.GET, "/");
         final EmptyContentDecodedHttpRequest req =
-                new EmptyContentDecodedHttpRequest(eventLoop.get(), 1, 3, headers, true, null, null);
+                new EmptyContentDecodedHttpRequest(eventLoop.get(), 1, 3, headers, true, null, null,
+                                                   ExchangeType.BIDI_STREAMING);
 
         StepVerifier.create(req)
                     .expectComplete()
