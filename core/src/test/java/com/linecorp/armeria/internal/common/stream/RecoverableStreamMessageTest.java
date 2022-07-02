@@ -34,6 +34,7 @@ import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
@@ -399,7 +400,7 @@ class RecoverableStreamMessageTest {
         final IllegalStateException ex2 = new IllegalStateException("ex2");
         final HttpResponse failedResponse =
                 HttpResponse.ofFailure(ex1);
-        final HttpResponse recoverableChain =
+        final HttpResponse recoverChain =
                 failedResponse.recover(RuntimeException.class, cause -> {
                     assertThat(cause).isSameAs(ex1);
                     return HttpResponse.ofFailure(ex2);
@@ -409,7 +410,7 @@ class RecoverableStreamMessageTest {
                    return HttpResponse.of("fallback");
                });
 
-        final AggregatedHttpResponse response = recoverableChain.aggregate().join();
+        final AggregatedHttpResponse response = recoverChain.aggregate().join();
         assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
         assertThat(response.contentUtf8()).isEqualTo("fallback");
     }
@@ -439,5 +440,20 @@ class RecoverableStreamMessageTest {
         stream.write(3);
         stream.close(ex1);
         assertThat(recoverable.collect().join()).contains(1, 2, 3, 4, 5, 6);
+    }
+
+    @Test
+    void mixtureRecover() {
+        final HttpResponse failure =
+                HttpResponse.ofFailure(ClosedStreamException.get());
+        final StreamMessage<HttpObject> mixtureRecover =
+                failure.recover(cause -> HttpResponse.ofFailure(new IllegalStateException("ex1")))
+                       .recover(IllegalStateException.class,
+                                cause -> HttpResponse.ofFailure(new IllegalArgumentException("ex2")))
+                       .recoverAndResume(cause -> StreamMessage.aborted(new IllegalStateException("ex3")))
+                       .recoverAndResume(IllegalStateException.class,
+                                  cause -> StreamMessage.of(HttpData.ofUtf8("fallback")));
+
+        assertThat(mixtureRecover.collect().join()).contains(HttpData.ofUtf8("fallback"));
     }
 }
