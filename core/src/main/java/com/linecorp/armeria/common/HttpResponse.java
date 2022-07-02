@@ -976,7 +976,7 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(causeClass, "causeClass");
         requireNonNull(function, "function");
         return recover(cause -> {
-            if (!causeClass.isAssignableFrom(cause.getClass())) {
+            if (!causeClass.isInstance(cause)) {
                 return Exceptions.throwUnsafely(cause);
             }
             try {
