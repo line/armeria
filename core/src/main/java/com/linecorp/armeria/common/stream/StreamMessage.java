@@ -791,6 +791,23 @@ public interface StreamMessage<T> extends Publisher<T> {
      * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
      * stream.write(1);
      * stream.write(2);
+     * stream.write(3);
+     * stream.close(new IllegalStateException("test exception"));
+     * // Use the shortcut recover method as a chain.
+     * StreamMessage<Integer> recoverChain =
+     *     stream.recoverAndResume(RuntimeException.class, cause -> {
+     *         final IllegalArgumentException ex = new IllegalArgumentException("oops..");
+     *         // If a aborted StreamMessage returned from the first chain
+     *         return StreamMessage.aborted(ex);
+     *     })
+     *     // If the shortcut exception type is correct, catch and recover in the second chain.
+     *     .recoverAndResume(IllegalArgumentException.class, cause -> StreamMessage.of(4, 5));
+     *
+     * recoverChain.collect().join();
+     *
+     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * stream.write(1);
+     * stream.write(2);
      * stream.close(ClosedStreamException.get());
      * // If the exception type does not match
      * StreamMessage<Integer> mismatchRecovered =

@@ -963,6 +963,18 @@ public interface HttpResponse extends Response, HttpMessage {
      * notRecovered.aggregate().join();
      *
      * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Oops..."));
+     * // Use the shortcut recover method as a chain.
+     * HttpResponse recoverChain =
+     *     response.recover(RuntimeException.class, cause -> {
+     *         final IllegalArgumentException ex = new IllegalArgumentException("Oops2...");
+     *         // If a failed response is returned from the first chain
+     *         return HttpResponse.ofFailure(ex);
+     *     })
+     *     // If the shortcut exception type is correct, catch and recover in the second chain.
+     *     .recover(IllegalArgumentException.class, cause -> HttpResponse.of("fallback"));
+     * recoverChain.aggregate().join();
+     *
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Oops..."));
      * // If the exception type does not match
      * HttpResponse mismatchRecovered =
      *     response.recover(IllegalArgumentException.class, cause -> HttpResponse.of("Fallback"));
