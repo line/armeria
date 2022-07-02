@@ -49,8 +49,8 @@ public class AbstractCuratorFrameworkBuilder {
     @Nullable
     private final CuratorFramework client;
     private final String znodePath;
-    @Nullable
-    private final CuratorFrameworkFactory.Builder clientBuilder;
+
+    private final CuratorFrameworkFactory.@Nullable Builder clientBuilder;
     @Nullable
     private final ImmutableList.Builder<Consumer<? super Builder>> customizers;
 

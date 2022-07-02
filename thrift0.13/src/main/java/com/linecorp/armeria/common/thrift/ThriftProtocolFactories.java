@@ -16,12 +16,15 @@
 
 package com.linecorp.armeria.common.thrift;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TJSONProtocol;
 import org.apache.thrift.protocol.TProtocolFactory;
+
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.text.TTextProtocolFactory;
@@ -34,31 +37,38 @@ public final class ThriftProtocolFactories {
 
     /**
      * {@link TProtocolFactory} for Thrift TBinary protocol.
+     *
+     * <p>Note that this Thrift TBinary protocol does not limit the maximum number of bytes to read from the
+     * transport. Therefore, it is recommended NOT to use this factory in a public network. If an attacker
+     * sends a header with a large message size, an `OutOfMemoryError` may occur.
+     * Related: <a href="https://issues.apache.org/jira/browse/THRIFT-2572">Add string/collection length limit
+     * checks (from C++) to java protocol readers</a>
+     *
+     * @deprecated Use {@link #binary(int, int)} instead.
      */
-    public static final TProtocolFactory BINARY = new TBinaryProtocol.Factory() {
-        private static final long serialVersionUID = -9020693963961565748L;
-
-        @Override
-        public String toString() {
-            return "TProtocolFactory(binary)";
-        }
-    };
+    @Deprecated
+    public static final TProtocolFactory BINARY = binary(0, 0);
 
     /**
      * {@link TProtocolFactory} for Thrift TCompact protocol.
+     *
+     * <p>Note that this Thrift TCompact protocol does not limit the maximum number of bytes to read from the
+     * transport. Therefore, it is recommended to NOT use this factory in a public network. If an attacker
+     * sends a header with a large message size, an `OutOfMemoryError` may occur.
+     * Related: <a href="https://issues.apache.org/jira/browse/THRIFT-2572">Add string/collection length limit
+     * checks (from C++) to java protocol readers</a>
+     *
+     * @deprecated Use {@link #compact(int, int)}.
      */
-    public static final TProtocolFactory COMPACT = new TCompactProtocol.Factory() {
-        private static final long serialVersionUID = 1629726795326210377L;
-
-        @Override
-        public String toString() {
-            return "TProtocolFactory(compact)";
-        }
-    };
+    @Deprecated
+    public static final TProtocolFactory COMPACT = compact(0, 0);
 
     /**
      * {@link TProtocolFactory} for the Thrift TJSON protocol.
+     *
+     * @deprecated Use {@link #json()}.
      */
+    @Deprecated
     public static final TProtocolFactory JSON = new TJSONProtocol.Factory() {
         private static final long serialVersionUID = 7690636602996870153L;
 
@@ -70,12 +80,18 @@ public final class ThriftProtocolFactories {
 
     /**
      * {@link TProtocolFactory} for the Thrift TText protocol.
+     *
+     * @deprecated Use {@link #text()}.
      */
+    @Deprecated
     public static final TProtocolFactory TEXT = TTextProtocolFactory.get();
 
     /**
      * {@link TProtocolFactory} for the Thrift TText protocol with named enums.
+     *
+     * @deprecated Use {@link #textNamedEnum()}.
      */
+    @Deprecated
     public static final TProtocolFactory TEXT_NAMED_ENUM = TTextProtocolFactory.get(true);
 
     /**
@@ -91,9 +107,89 @@ public final class ThriftProtocolFactories {
     }
 
     /**
+     * Returns a {@link TProtocolFactory} for Thrift TBinary protocol.
+     *
+     * @param maxStringLength the maximum allowed number of bytes to read from the transport for
+     *                        variable-length fields (such as strings or binary). {@code 0} means unlimited.
+     * @param maxContainerLength the maximum allowed number of containers to read from the transport for
+     *                           maps, sets and lists. {@code 0} means unlimited.
+     */
+    public static TProtocolFactory binary(int maxStringLength, int maxContainerLength) {
+        checkArgument(maxStringLength >= 0, "maxStringLength: %s (expected: >= 0)", maxStringLength);
+        checkArgument(maxContainerLength >= 0, "maxContainerLength: %s (expected: >= 0)", maxContainerLength);
+        final int maxStringLength0 = maxStringLength == 0 ? -1 : maxStringLength;
+        final int maxContainerLength0 = maxContainerLength == 0 ? -1 : maxContainerLength;
+
+        // Thrift 0.9.x does not a constructor taking only maxStringLength and maxContainerLength.
+        // https://github.com/apache/thrift/blob/0.9.3/lib/java/src/org/apache/thrift/protocol/TBinaryProtocol.java#L68-L77
+        return new TBinaryProtocol.Factory(false, true, maxStringLength0, maxContainerLength0) {
+            private static final long serialVersionUID = -9020693963961565748L;
+
+            @Override
+            public String toString() {
+                return MoreObjects.toStringHelper(this)
+                                  .addValue("BINARY")
+                                  .add("maxStringLength", maxStringLength0)
+                                  .add("maxContainerLength", maxContainerLength0)
+                                  .toString();
+            }
+        };
+    }
+
+    /**
+     * Returns a {@link TProtocolFactory} for Thrift TCompact protocol.
+     *
+     * @param maxStringLength the maximum allowed number of bytes to read from the transport for
+     *                        variable-length fields (such as strings or binary). {@code 0} means unlimited.
+     * @param maxContainerLength the maximum allowed number of containers to read from the transport for
+     *                           maps, sets and lists. {@code 0} means unlimited.
+     */
+    public static TProtocolFactory compact(int maxStringLength, int maxContainerLength) {
+        checkArgument(maxStringLength >= 0, "maxStringLength: %s (expected: >= 0)", maxStringLength);
+        checkArgument(maxContainerLength >= 0, "maxContainerLength: %s (expected: >= 0)", maxContainerLength);
+        final int maxStringLength0 = maxStringLength == 0 ? -1 : maxStringLength;
+        final int maxContainerLength0 = maxContainerLength == 0 ? -1 : maxContainerLength;
+
+        return new TCompactProtocol.Factory(maxStringLength0, maxContainerLength0) {
+            private static final long serialVersionUID = 1629726795326210377L;
+
+            @Override
+            public String toString() {
+                return MoreObjects.toStringHelper(this)
+                                  .addValue("COMPACT")
+                                  .add("maxStringLength", maxStringLength0)
+                                  .add("maxContainerLength", maxContainerLength0)
+                                  .toString();
+            }
+        };
+    }
+
+    /**
+     * Returns a {@link TProtocolFactory} for the Thrift TJSON protocol.
+     */
+    public static TProtocolFactory json() {
+        return JSON;
+    }
+
+    /**
+     * Returns a {@link TProtocolFactory} for the Thrift TText protocol.
+     */
+    public static TProtocolFactory text() {
+        return TEXT;
+    }
+
+    /**
+     * Returns a {@link TProtocolFactory} for the Thrift TText protocol with named enums.
+     */
+    public static TProtocolFactory textNamedEnum() {
+        return TEXT_NAMED_ENUM;
+    }
+
+    /**
      * Returns the {@link SerializationFormat} for the specified {@link TProtocolFactory},
      * as if it were registered by {@link DefaultThriftProtocolFactoryProvider}.
-     * Consider having your own {@link TProtocolFactory} to {@link SerializationFormat} mapping if necessary.
+     * Consider having your own {@link TProtocolFactory} to {@link SerializationFormat} mapping if
+     * necessary.
      *
      * @throws IllegalArgumentException if the specified {@link TProtocolFactory} did not match anything
      * @deprecated This method has been deprecated without a replacement since it cannot reliably work

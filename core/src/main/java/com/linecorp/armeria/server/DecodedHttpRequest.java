@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -31,19 +32,26 @@ interface DecodedHttpRequest extends HttpRequest {
                                  RequestHeaders headers, boolean keepAlive,
                                  InboundTrafficController inboundTrafficController,
                                  RoutingContext routingCtx, @Nullable Routed<ServiceConfig> routed) {
-        if (endOfStream || routed == null) {
+        if (routed == null) {
             return new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                      routingCtx, routed);
+                                                      routingCtx, routed, ExchangeType.RESPONSE_STREAMING);
         } else {
             final ServiceConfig config = routed.value();
             final HttpService service = config.service();
-            if (service.exchangeType(headers, routed.route()).isRequestStreaming()) {
-                return new StreamingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                       inboundTrafficController,
-                                                       config.maxRequestLength(), routingCtx, routed);
+            final ExchangeType exchangeType = service.exchangeType(headers, routed.route());
+            if (endOfStream) {
+                return new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
+                                                          routingCtx, routed, exchangeType);
             } else {
-                return new AggregatingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                         config.maxRequestLength(), routingCtx, routed);
+                if (exchangeType.isRequestStreaming()) {
+                    return new StreamingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
+                                                           inboundTrafficController, config.maxRequestLength(),
+                                                           routingCtx, routed, exchangeType);
+                } else {
+                    return new AggregatingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
+                                                             config.maxRequestLength(), routingCtx, routed,
+                                                             exchangeType);
+                }
             }
         }
     }
@@ -90,4 +98,10 @@ interface DecodedHttpRequest extends HttpRequest {
      * Returns whether the request should be fully aggregated before passed to the {@link HttpServerHandler}.
      */
     boolean isAggregated();
+
+    /**
+     * Returns the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or
+     * {@link HttpResponse}.
+     */
+    ExchangeType exchangeType();
 }

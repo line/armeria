@@ -26,82 +26,37 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Sets properties for building an {@link HttpRequest}.
  */
-public interface HttpRequestSetters {
+@UnstableApi
+public interface HttpRequestSetters extends RequestMethodSetters, PathAndQueryParamSetters, HttpMessageSetters {
 
     /**
-     * Shortcut to set GET method and path.
+     * Sets the content as UTF-8 for this request.
      */
-    HttpRequestSetters get(String path);
-
-    /**
-     * Shortcut to set POST method and path.
-     */
-    HttpRequestSetters post(String path);
-
-    /**
-     * Shortcut to set PUT method and path.
-     */
-    HttpRequestSetters put(String path);
-
-    /**
-     * Shortcut to set DELETE method and path.
-     */
-    HttpRequestSetters delete(String path);
-
-    /**
-     * Shortcut to set PATCH method and path.
-     */
-    HttpRequestSetters patch(String path);
-
-    /**
-     * Shortcut to set OPTIONS method and path.
-     */
-    HttpRequestSetters options(String path);
-
-    /**
-     * Shortcut to set HEAD method and path.
-     */
-    HttpRequestSetters head(String path);
-
-    /**
-     * Shortcut to set TRACE method and path.
-     */
-    HttpRequestSetters trace(String path);
-
-    /**
-     * Sets the method for this request.
-     *
-     * @see HttpMethod
-     */
-    HttpRequestSetters method(HttpMethod method);
-
-    /**
-     * Sets the path for this request.
-     */
-    HttpRequestSetters path(String path);
-
-    /**
-     * Sets the content as UTF_8 for this request.
-     */
+    @Override
     HttpRequestSetters content(String content);
 
     /**
      * Sets the content for this request.
      */
+    @Override
     HttpRequestSetters content(MediaType contentType, CharSequence content);
 
     /**
      * Sets the content for this request.
      */
+    @Override
     HttpRequestSetters content(MediaType contentType, String content);
 
     /**
-     * Sets the content as UTF_8 for this request. The {@code content} is formatted by
+     * Sets the content as UTF-8 for this request. The {@code content} is formatted by
      * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
      */
+    @Override
     @FormatMethod
     HttpRequestSetters content(@FormatString String format, Object... content);
 
@@ -109,30 +64,35 @@ public interface HttpRequestSetters {
      * Sets the content for this request. The {@code content} is formatted by
      * {@link String#format(Locale, String, Object...)} with {@linkplain Locale#ENGLISH English locale}.
      */
+    @Override
     @FormatMethod
     HttpRequestSetters content(MediaType contentType, @FormatString String format,
-                                      Object... content);
+                               Object... content);
 
     /**
      * Sets the content for this request. The {@code content} will be wrapped using
      * {@link HttpData#wrap(byte[])}, so any changes made to {@code content} will be reflected in the request.
      */
+    @Override
     HttpRequestSetters content(MediaType contentType, byte[] content);
 
     /**
      * Sets the content for this request.
      */
+    @Override
     HttpRequestSetters content(MediaType contentType, HttpData content);
 
     /**
      * Sets the {@link Publisher} for this request.
      */
+    @Override
     HttpRequestSetters content(MediaType contentType, Publisher<? extends HttpData> content);
 
     /**
      * Sets the content for this request. The {@code content} is converted into JSON format
      * using the default {@link ObjectMapper}.
      */
+    @Override
     HttpRequestSetters contentJson(Object content);
 
     /**
@@ -144,6 +104,7 @@ public interface HttpRequestSetters {
      *            .build();
      * }</pre>
      */
+    @Override
     HttpRequestSetters header(CharSequence name, Object value);
 
     /**
@@ -157,12 +118,14 @@ public interface HttpRequestSetters {
      *
      * @see HttpHeaders
      */
+    @Override
     HttpRequestSetters headers(
             Iterable<? extends Entry<? extends CharSequence, String>> headers);
 
     /**
      * Sets HTTP trailers for this request.
      */
+    @Override
     HttpRequestSetters trailers(
             Iterable<? extends Entry<? extends CharSequence, String>> trailers);
 
@@ -175,6 +138,7 @@ public interface HttpRequestSetters {
      *            .build(); // GET `/bar`
      * }</pre>
      */
+    @Override
     HttpRequestSetters pathParam(String name, Object value);
 
     /**
@@ -186,12 +150,14 @@ public interface HttpRequestSetters {
      *            .build(); // GET `/1/2`
      * }</pre>
      */
+    @Override
     HttpRequestSetters pathParams(Map<String, ?> pathParams);
 
     /**
      * Disables path parameters substitution. If path parameter is not disabled and a parameter's, specified
      * using {@code {}} or {@code :}, value is not found, an {@link IllegalStateException} is thrown.
      */
+    @Override
     HttpRequestSetters disablePathParams();
 
     /**
@@ -203,6 +169,7 @@ public interface HttpRequestSetters {
      *            .build(); // GET `/endpoint?foo=bar`
      * }</pre>
      */
+    @Override
     HttpRequestSetters queryParam(String name, Object value);
 
     /**
@@ -216,6 +183,7 @@ public interface HttpRequestSetters {
      *
      * @see QueryParams
      */
+    @Override
     HttpRequestSetters queryParams(Iterable<? extends Entry<? extends String, String>> queryParams);
 
     /**
@@ -229,6 +197,7 @@ public interface HttpRequestSetters {
      *
      * @see Cookie
      */
+    @Override
     HttpRequestSetters cookie(Cookie cookie);
 
     /**
@@ -243,5 +212,6 @@ public interface HttpRequestSetters {
      *
      * @see Cookies
      */
+    @Override
     HttpRequestSetters cookies(Iterable<? extends Cookie> cookies);
 }

@@ -35,8 +35,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.client.Clients;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
@@ -86,9 +85,8 @@ class GrpcHealthCheckServiceTest {
 
     @Test
     void check() {
-        final HealthBlockingStub client = Clients.newClient(
-                server.httpUri(GrpcSerializationFormats.PROTO),
-                HealthBlockingStub.class);
+        final HealthBlockingStub client = GrpcClients.newClient(server.httpUri(),
+                                                                HealthBlockingStub.class);
         HealthCheckRequest request = HealthCheckRequest.getDefaultInstance();
         HealthCheckResponse response = client.check(request);
         assertThat(response.getStatus()).isEqualTo(ServingStatus.SERVING);
@@ -114,9 +112,7 @@ class GrpcHealthCheckServiceTest {
     @Test
     void watch() throws Exception {
         final HealthCheckRequest request = HealthCheckRequest.getDefaultInstance();
-        final HealthStub client = Clients.newClient(
-                server.httpUri(GrpcSerializationFormats.PROTO),
-                HealthStub.class);
+        final HealthStub client = GrpcClients.newClient(server.httpUri(), HealthStub.class);
         final StreamRecorder<HealthCheckResponse> recorder = StreamRecorder.create();
         client.watch(request, recorder);
         TimeUnit.SECONDS.sleep(1);
@@ -136,9 +132,9 @@ class GrpcHealthCheckServiceTest {
     @Test
     void watchTimeoutDisableCheck() throws Exception {
         final HealthCheckRequest request = HealthCheckRequest.getDefaultInstance();
-        final HealthStub client = Clients.builder(server.httpUri(GrpcSerializationFormats.PROTO))
-                                         .responseTimeoutMillis(0)
-                                         .build(HealthStub.class);
+        final HealthStub client = GrpcClients.builder(server.httpUri())
+                                             .responseTimeoutMillis(0)
+                                             .build(HealthStub.class);
         final StreamRecorder<HealthCheckResponse> recorder = StreamRecorder.create();
         client.watch(request, recorder);
         TimeUnit.SECONDS.sleep(5);
@@ -157,9 +153,7 @@ class GrpcHealthCheckServiceTest {
         final HealthCheckRequest request = HealthCheckRequest.newBuilder()
                                                              .setService("unknown-service")
                                                              .build();
-        final HealthStub client = Clients.newClient(
-                server.httpUri(GrpcSerializationFormats.PROTO),
-                HealthStub.class);
+        final HealthStub client = GrpcClients.newClient(server.httpUri(), HealthStub.class);
         final StreamRecorder<HealthCheckResponse> recorder = StreamRecorder.create();
         client.watch(request, recorder);
         TimeUnit.SECONDS.sleep(1);

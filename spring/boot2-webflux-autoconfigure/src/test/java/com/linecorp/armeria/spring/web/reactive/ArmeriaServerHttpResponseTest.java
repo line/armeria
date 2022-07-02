@@ -20,6 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -109,6 +111,11 @@ class ArmeriaServerHttpResponseTest {
                     .verify();
 
         await().until(() -> httpResponse.whenComplete().isDone());
+
+        // Spring headers does not have pseudo headers.
+        for (Entry<String, List<String>> header : response.getHeaders().entrySet()) {
+            assertThat(header.getKey()).doesNotStartWith(":");
+        }
     }
 
     @Test
