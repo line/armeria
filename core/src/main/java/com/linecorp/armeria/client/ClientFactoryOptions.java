@@ -267,13 +267,14 @@ public final class ClientFactoryOptions
             });
 
     /**
-     * This consumer lets users customize the behavior of Netty's {@link ChannelPipeline}.
+     * The {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
      * This customizer is run right before {@link ChannelPipeline#connect(SocketAddress)}
      * is invoked by Armeria. This customizer is no-op by default.
      *
-     * <p>Note that this customizer usage of this customizer is an advanced
-     * feature, and may produce unintentional side effects. It is encouraged to
-     * consult with maintainers before using this feature seriously.
+     * <p>Note that usage of this customizer is an advanced
+     * feature and may produce unintended side effects, including complete
+     * breakdown. It is not recommended if you are not familiar with
+     * Armeria and Netty internals.
      */
     @UnstableApi
     public static final ClientFactoryOption<Consumer<? super ChannelPipeline>> CHANNEL_PIPELINE_CUSTOMIZER =
@@ -544,8 +545,14 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the {@link ChannelPipeline} customizer set. This consumer is no-op
-     * by default.
+     * The {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
+     * This customizer is run right before {@link ChannelPipeline#connect(SocketAddress)}
+     * is invoked by Armeria. This customizer is no-op by default.
+     *
+     * <p>Note that usage of this customizer is an advanced
+     * feature and may produce unintended side effects, including complete
+     * breakdown. It is not recommended if you are not familiar with
+     * Armeria and Netty internals.
      */
     @UnstableApi
     public Consumer<? super ChannelPipeline> channelPipelineCustomizer() {
