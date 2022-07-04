@@ -42,6 +42,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -212,7 +213,7 @@ class HttpServerUpgradeHandlerTest {
         channel.finishAndReleaseAll();
     }
 
-    @Test
+    @RepeatedTest(2)
     void upgradeFailWithInvalidSettingsHeader() throws Exception {
         try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
             socket.setSoTimeout(1000);

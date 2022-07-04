@@ -79,13 +79,13 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
 
     private static final FullHttpResponse UPGRADE_RESPONSE = newUpgradeResponse();
 
-    private static final ByteBuf INVALID_SETTINGS_HEADER_MESSAGE =
-            Unpooled.directBuffer().writeBytes(
-                    "Invalid HTTP2-Settings header\n".getBytes(StandardCharsets.UTF_8));
-    private static final FullHttpResponse INVALID_SETTINGS_HEADER_RESPONSE =
-            newInvalidSettingsHeaderResponse();
+    private static final ByteBuf INVALID_SETTINGS_HEADER_MESSAGE = Unpooled.unreleasableBuffer(
+            Unpooled.directBuffer()
+                    .writeBytes("Invalid HTTP2-Settings header\n".getBytes(StandardCharsets.UTF_8)));
 
     private static final Splitter COMMA_SPLITTER = Splitter.on(',').omitEmptyStrings().trimResults();
+
+    private final FullHttpResponse invalidSettingsHeaderResponse = newInvalidSettingsHeaderResponse();
 
     /**
      * A codec that the source can be upgraded to {@link SessionProtocol#H2C}.
@@ -290,7 +290,7 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
         // Prepare and send the upgrade response. Wait for this write to complete before upgrading,
         // since we need the old codec in-place to properly encode the response.
         if (!upgradeCodec.prepareUpgradeResponse(ctx, request)) {
-            ctx.writeAndFlush(INVALID_SETTINGS_HEADER_RESPONSE.retain()).addListener(CLOSE);
+            ctx.writeAndFlush(invalidSettingsHeaderResponse.retain()).addListener(CLOSE);
             handlingInvalidSettingsHeader = true;
             return false;
         }
