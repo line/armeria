@@ -43,7 +43,8 @@ public final class DnsServiceEndpointGroupBuilder extends DnsEndpointGroupBuilde
      * Returns a newly created {@link DnsServiceEndpointGroup}.
      */
     public DnsServiceEndpointGroup build() {
-        return new DnsServiceEndpointGroup(selectionStrategy(), shouldAllowEmptyEndpoints(), buildResolver(),
+        return new DnsServiceEndpointGroup(selectionStrategy(), shouldAllowEmptyEndpoints(),
+                                           selectionTimeoutMillis(), buildResolver(),
                                            eventLoop(), backoff(), minTtl(), maxTtl(),
                                            hostname());
     }
@@ -209,5 +210,15 @@ public final class DnsServiceEndpointGroupBuilder extends DnsEndpointGroupBuilde
     @Override
     public DnsServiceEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
         return (DnsServiceEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    }
+
+    @Override
+    public DnsServiceEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
+        return (DnsServiceEndpointGroupBuilder) super.selectionTimeout(selectionTimeout);
+    }
+
+    @Override
+    public DnsServiceEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
+        return (DnsServiceEndpointGroupBuilder) super.selectionTimeoutMillis(selectionTimeoutMillis);
     }
 }

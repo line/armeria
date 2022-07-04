@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.EncodingService;
@@ -57,7 +58,8 @@ import io.grpc.ServerMethodDefinition;
  */
 final class UnframedGrpcService extends AbstractUnframedGrpcService {
 
-    private final Map<String, ServerMethodDefinition<?, ?>> methodsByName;
+    private final GrpcService delegate;
+    private final HandlerRegistry registry;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
@@ -65,13 +67,24 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
     UnframedGrpcService(GrpcService delegate, HandlerRegistry registry,
                         UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
         super(delegate, unframedGrpcErrorHandler);
+        this.delegate = delegate;
+        this.registry = registry;
         checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
-        methodsByName = registry.methods();
+    }
+
+    @Override
+    public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
+        return delegate.methodDefinition(ctx);
     }
 
     @Override
     public Map<String, ServerMethodDefinition<?, ?>> methods() {
-        return methodsByName;
+        return registry.methods();
+    }
+
+    @Override
+    public Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute() {
+        return registry.methodsByRoute();
     }
 
     @Override
@@ -91,14 +104,7 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
             }
         }
 
-        final String methodName = GrpcRequestUtil.determineMethod(ctx);
-        final ServerMethodDefinition<?, ?> method;
-        if (methodName != null) {
-            method = methodsByName.get(methodName);
-        } else {
-            method = null;
-        }
-
+        final ServerMethodDefinition<?, ?> method = methodDefinition(ctx);
         if (method == null) {
             // Unknown method, let the delegate return a usual error.
             return unwrap().serve(ctx, req);
@@ -143,8 +149,8 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
                 if (t != null) {
                     responseFuture.completeExceptionally(t);
                 } else {
-                    ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, method);
-                    frameAndServe(unwrap(), ctx, grpcHeaders.build(), clientRequest.content(), responseFuture);
+                    frameAndServe(unwrap(), ctx, grpcHeaders.build(),
+                                  clientRequest.content(), responseFuture, null);
                 }
             }
             return null;

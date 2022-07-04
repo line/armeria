@@ -82,11 +82,12 @@ public final class DnsAddressEndpointGroup extends DnsEndpointGroup {
     private final int port;
 
     DnsAddressEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
+                            long selectionTimeoutMillis,
                             DefaultDnsResolver resolver, EventLoop eventLoop, Backoff backoff,
                             int minTtl, int maxTtl, @Nullable ResolvedAddressTypes resolvedAddressTypes,
                             String hostname, int port) {
 
-        super(selectionStrategy, allowEmptyEndpoints, resolver, eventLoop,
+        super(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis, resolver, eventLoop,
               newQuestions(hostname, resolvedAddressTypes), backoff, minTtl, maxTtl);
 
         this.hostname = hostname;

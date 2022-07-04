@@ -205,7 +205,6 @@ public final class ServerBuilder {
 
     ServerBuilder() {
         // Set the default host-level properties.
-        virtualHostTemplate.accessLogWriter(AccessLogWriter.disabled(), true);
         virtualHostTemplate.rejectedRouteHandler(RejectedRouteHandler.WARN);
         virtualHostTemplate.defaultServiceNaming(ServiceNaming.fullTypeName());
         virtualHostTemplate.requestTimeoutMillis(Flags.defaultRequestTimeoutMillis());
@@ -468,6 +467,7 @@ public final class ServerBuilder {
      */
     public ServerBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnStop) {
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");
+        // We don't use ShutdownSupport to shutdown with other instances because we shut down workerGroup first.
         shutdownWorkerGroupOnStop = shutdownOnStop;
         return this;
     }
@@ -864,7 +864,7 @@ public final class ServerBuilder {
      */
     public ServerBuilder accessLogFormat(String accessLogFormat) {
         return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
-                               true);
+                               false);
     }
 
     /**
@@ -1090,12 +1090,39 @@ public final class ServerBuilder {
 
     /**
      * Binds the specified {@link HttpService} under the specified directory of the default {@link VirtualHost}.
+     * If the specified {@link HttpService} is an {@link HttpServiceWithRoutes}, the {@code pathPrefix} is added
+     * to each {@link Route} of {@link HttpServiceWithRoutes#routes()}. For example, the
+     * {@code serviceWithRoutes} in the following code will be bound to
+     * ({@code "/foo/bar"}) and ({@code "/foo/baz"}):
+     * <pre>{@code
+     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+     * >
+     * >     @Override
+     * >     public Set<Route> routes() {
+     * >         return Set.of(Route.builder().path("/bar").build(),
+     * >                       Route.builder().path("/baz").build());
+     * >     }
+     * > };
+     * >
+     * > Server.builder()
+     * >       .serviceUnder("/foo", serviceWithRoutes)
+     * >       .build();
+     * }</pre>
      */
     public ServerBuilder serviceUnder(String pathPrefix, HttpService service) {
         requireNonNull(pathPrefix, "pathPrefix");
         requireNonNull(service, "service");
-        warnIfServiceHasMultipleRoutes(pathPrefix, service);
-        return service(Route.builder().pathPrefix(pathPrefix).build(), service);
+        final HttpServiceWithRoutes serviceWithRoutes = service.as(HttpServiceWithRoutes.class);
+        if (serviceWithRoutes != null) {
+            serviceWithRoutes.routes()
+                             .forEach(route -> route().addRoute(route.withPrefix(pathPrefix))
+                                                      .mappedRoute(route)
+                                                      .build(service));
+            return this;
+        }
+        return route().addRoute(Route.builder().pathPrefix(pathPrefix).build()).build(service);
     }
 
     /**
@@ -1145,15 +1172,8 @@ public final class ServerBuilder {
         requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
         requireNonNull(decorators, "decorators");
 
-        HttpService decorated = serviceWithRoutes;
-        for (Function<? super HttpService, ? extends HttpService> d : decorators) {
-            checkNotNull(d, "decorators contains null: %s", decorators);
-            decorated = d.apply(decorated);
-            checkNotNull(decorated, "A decorator returned null: %s", d);
-        }
-
-        final HttpService finalDecorated = decorated;
-        serviceWithRoutes.routes().forEach(route -> route().addRoute(route).build(finalDecorated));
+        final HttpService decorated = decorate(serviceWithRoutes, decorators);
+        serviceWithRoutes.routes().forEach(route -> route().addRoute(route).build(decorated));
         return this;
     }
 
@@ -1169,6 +1189,18 @@ public final class ServerBuilder {
             HttpServiceWithRoutes serviceWithRoutes,
             Function<? super HttpService, ? extends HttpService>... decorators) {
         return service(serviceWithRoutes, ImmutableList.copyOf(requireNonNull(decorators, "decorators")));
+    }
+
+    static HttpService decorate(
+            HttpServiceWithRoutes serviceWithRoutes,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        HttpService decorated = serviceWithRoutes;
+        for (Function<? super HttpService, ? extends HttpService> d : decorators) {
+            checkNotNull(d, "decorators contains null: %s", decorators);
+            decorated = d.apply(decorated);
+            checkNotNull(decorated, "A decorator returned null: %s", d);
+        }
+        return decorated;
     }
 
     /**
@@ -1836,8 +1868,6 @@ public final class ServerBuilder {
         }
 
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
-        final boolean shutdownOnStop = defaultVirtualHost.shutdownBlockingTaskExecutorOnStop();
-
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
@@ -1846,7 +1876,7 @@ public final class ServerBuilder {
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, shutdownOnStop,
+                blockingTaskExecutor,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
@@ -1912,9 +1942,15 @@ public final class ServerBuilder {
 
     private static void warnIfServiceHasMultipleRoutes(String path, HttpService service) {
         if (service instanceof ServiceWithRoutes) {
+            if (!Flags.reportMaskedRoutes()) {
+                return;
+            }
+
             if (((ServiceWithRoutes) service).routes().size() > 0) {
                 logger.warn("The service has self-defined routes but the routes will be ignored. " +
-                            "It will be served at the route you specified: path={}, service={}",
+                            "It will be served at the route you specified: path={}, service={}. " +
+                            "If this is intended behavior, you can disable this log message by specifying " +
+                            "the -Dcom.linecorp.armeria.reportMaskedRoutes=false JVM option.",
                             path, service);
             }
         }
@@ -1927,7 +1963,7 @@ public final class ServerBuilder {
                 maxNumConnections, idleTimeoutMillis, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection, http2MaxFrameSize,
                 http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
-                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null, false,
+                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null,
                 meterRegistry, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader);

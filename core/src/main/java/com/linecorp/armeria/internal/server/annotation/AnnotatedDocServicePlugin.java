@@ -182,6 +182,12 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
 
     @VisibleForTesting
     static EndpointInfo endpointInfo(Route route, String hostnamePattern) {
+        final EndpointInfoBuilder builder = endpointInfoBuilder(route, hostnamePattern);
+        builder.availableMimeTypes(availableMimeTypes(route));
+        return builder.build();
+    }
+
+    public static EndpointInfoBuilder endpointInfoBuilder(Route route, String hostnamePattern) {
         final EndpointInfoBuilder builder;
         final RoutePathType pathType = route.pathType();
         final List<String> paths = route.paths();
@@ -206,9 +212,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 // Should never reach here.
                 throw new Error();
         }
-
-        builder.availableMimeTypes(availableMimeTypes(route));
-        return builder.build();
+        return builder;
     }
 
     private static Set<MediaType> availableMimeTypes(Route route) {

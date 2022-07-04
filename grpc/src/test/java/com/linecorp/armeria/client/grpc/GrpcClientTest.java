@@ -51,7 +51,6 @@ import org.mockito.ArgumentCaptor;
 
 import com.google.protobuf.ByteString;
 import com.google.protobuf.StringValue;
-import com.google.rpc.RequestInfo;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.ClientOptions;
@@ -1043,22 +1042,22 @@ class GrpcClientTest {
     void credentialsUnaryCall_fail() {
         final TestServiceBlockingStub stub =
                 // Explicitly construct URL to better test authority.
-                Clients.builder("gproto+https://127.0.0.1:" + server.httpsPort())
-                       .factory(ClientFactory.insecure())
-                       .build(TestServiceBlockingStub.class)
-                       .withCallCredentials(
-                               new CallCredentials() {
-                                   @Override
-                                   public void applyRequestMetadata(RequestInfo requestInfo,
-                                                                    Executor appExecutor,
-                                                                    MetadataApplier applier) {
-                                       applier.fail(Status.FAILED_PRECONDITION);
-                                   }
+                GrpcClients.builder("gproto+https://127.0.0.1:" + server.httpsPort())
+                           .factory(ClientFactory.insecure())
+                           .build(TestServiceBlockingStub.class)
+                           .withCallCredentials(
+                                   new CallCredentials() {
+                                       @Override
+                                       public void applyRequestMetadata(RequestInfo requestInfo,
+                                                                        Executor appExecutor,
+                                                                        MetadataApplier applier) {
+                                           applier.fail(Status.FAILED_PRECONDITION);
+                                       }
 
-                                   @Override
-                                   public void thisUsesUnstableApi() {
-                                   }
-                               });
+                                       @Override
+                                       public void thisUsesUnstableApi() {
+                                       }
+                                   });
 
         assertThatThrownBy(() -> stub.emptyCall(EMPTY))
                 .isInstanceOfSatisfying(StatusRuntimeException.class,
@@ -1499,8 +1498,6 @@ class GrpcClientTest {
             if (rpcReq != null) {
                 assertThat(rpcReq.params()).containsExactly(Empty.getDefaultInstance());
             }
-            assertThat(headers.get(GrpcHeaderNames.GRPC_STATUS)).isEqualTo(
-                    String.valueOf(Status.UNIMPLEMENTED.getCode().value()));
         });
     }
 

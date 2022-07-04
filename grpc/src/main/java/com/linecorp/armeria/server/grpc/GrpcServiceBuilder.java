@@ -56,7 +56,6 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
-import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.VirtualHost;
@@ -151,6 +150,8 @@ public final class GrpcServiceBuilder {
 
     private boolean enableHealthCheckService;
 
+    private boolean autoCompression;
+
     @Nullable
     private GrpcHealthCheckService grpcHealthCheckService;
 
@@ -161,7 +162,7 @@ public final class GrpcServiceBuilder {
      * what's returned by {@link BindableService#bindService()}.
      */
     public GrpcServiceBuilder addService(ServerServiceDefinition service) {
-        registryBuilder.addService(requireNonNull(service, "service"));
+        registryBuilder.addService(requireNonNull(service, "service"), null);
         return this;
     }
 
@@ -179,11 +180,12 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
+     * However, if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
      * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, ServerServiceDefinition service) {
-        registryBuilder.addService(requireNonNull(path, "path"), requireNonNull(service, "service"), null);
+        registryBuilder.addService(requireNonNull(path, "path"), requireNonNull(service, "service"),
+                                   null, null);
         return this;
     }
 
@@ -202,14 +204,15 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
-     * {@code "/foo"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
+     * However, if you set {@code "/fooHello"} to {@code path}, the {@code Hello} method will be served at
+     * {@code "/fooHello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, ServerServiceDefinition service,
                                          MethodDescriptor<?, ?> methodDescriptor) {
         registryBuilder.addService(requireNonNull(path, "path"),
                                    requireNonNull(service, "service"),
-                                   requireNonNull(methodDescriptor, "methodDescriptor"));
+                                   requireNonNull(methodDescriptor, "methodDescriptor"),
+                                   null);
         return this;
     }
 
@@ -223,6 +226,7 @@ public final class GrpcServiceBuilder {
             return addService(ServerInterceptors.intercept(bindableService,
                                                            newProtoReflectionServiceInterceptor()));
         }
+
         if (bindableService instanceof GrpcHealthCheckService) {
             if (enableHealthCheckService) {
                 throw new IllegalStateException("default gRPC health check service is enabled already.");
@@ -230,7 +234,9 @@ public final class GrpcServiceBuilder {
             grpcHealthCheckService = (GrpcHealthCheckService) bindableService;
             return this;
         }
-        return addService(bindableService.bindService());
+
+        registryBuilder.addService(bindableService.bindService(), bindableService.getClass());
+        return this;
     }
 
     /**
@@ -247,7 +253,7 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
+     * However, if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
      * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, BindableService bindableService) {
@@ -255,8 +261,40 @@ public final class GrpcServiceBuilder {
             return addService(path, ServerInterceptors.intercept(bindableService,
                                                                  newProtoReflectionServiceInterceptor()));
         }
+        registryBuilder.addService(path, bindableService.bindService(), null, bindableService.getClass());
+        return this;
+    }
 
-        return addService(path, bindableService.bindService());
+    /**
+     * Adds an implementation of gRPC service to this {@link GrpcServiceBuilder}.
+     * Most gRPC service implementations are {@link BindableService}s.
+     * This method is useful in cases like the followings.
+     *
+     * <p>Used for ScalaPB gRPC stubs
+     *
+     * <pre>{@code
+     * GrpcService.builder()
+     *            .addService(new HelloServiceImpl,
+     *                        HelloServiceGrpc.bindService(_,
+     *                                                     ExecutionContext.global))}
+     * </pre>
+     *
+     * <p>Used for intercepted gRPC-Java stubs
+     * <pre>{@code
+     * GrpcService.builder()
+     *            .addService(new TestServiceImpl,
+     *                        impl -> ServerInterceptors.intercept(impl, interceptors));
+     * }</pre>
+     */
+    public <T> GrpcServiceBuilder addService(
+            T implementation,
+            Function<? super T, ServerServiceDefinition> serviceDefinitionFactory) {
+        requireNonNull(implementation, "implementation");
+        requireNonNull(serviceDefinitionFactory, "serviceDefinitionFactory");
+        final ServerServiceDefinition serverServiceDefinition = serviceDefinitionFactory.apply(implementation);
+        requireNonNull(serverServiceDefinition, "serviceDefinitionFactory.apply() returned null");
+        registryBuilder.addService(serverServiceDefinition, implementation.getClass());
+        return this;
     }
 
     /**
@@ -274,18 +312,20 @@ public final class GrpcServiceBuilder {
      * }}</pre>
      * The normal gRPC service path for the {@code Hello} method is
      * {@code "/example.grpc.hello.HelloService/Hello"}.
-     * However if you set {@code "/foo"} to {@code path}, the {@code Hello} method will be served at
-     * {@code "/foo"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
+     * However, if you set {@code "/fooHello"} to {@code path}, the {@code Hello} method will be served at
+     * {@code "/fooHello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, BindableService bindableService,
                                          MethodDescriptor<?, ?> methodDescriptor) {
+        // TODO(minwoox): consider renaming to addMethod(...)
         if (bindableService instanceof ProtoReflectionService) {
             final ServerServiceDefinition interceptor =
                     ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
             return addService(path, interceptor, methodDescriptor);
         }
-
-        return addService(path, bindableService.bindService(), methodDescriptor);
+        registryBuilder.addService(path, bindableService.bindService(), methodDescriptor,
+                                   bindableService.getClass());
+        return this;
     }
 
     /**
@@ -307,7 +347,7 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder intercept(Iterable<? extends ServerInterceptor> interceptors) {
         requireNonNull(interceptors, "interceptors");
-        this.interceptors().addAll(interceptors);
+        interceptors().addAll(interceptors);
         return this;
     }
 
@@ -632,6 +672,16 @@ public final class GrpcServiceBuilder {
     }
 
     /**
+     * Sets whether the gRPC response is compressed automatically when a client sends the
+     * {@code grpc-accept-encoding} header with the encoding registered in the {@link CompressorRegistry}.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder autoCompression(boolean autoCompression) {
+        this.autoCompression = autoCompression;
+        return this;
+    }
+
+    /**
      * Adds the specified exception mapping that maps a {@link Throwable} to a gRPC {@link Status}.
      * The mapping is used to handle a {@link Throwable} when it is raised.
      *
@@ -772,15 +822,16 @@ public final class GrpcServiceBuilder {
             grpcHealthCheckService = GrpcHealthCheckService.builder().build();
         }
         if (grpcHealthCheckService != null) {
-            registryBuilder.addService(grpcHealthCheckService.bindService());
+            registryBuilder.addService(grpcHealthCheckService.bindService(), null);
         }
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
+            final ImmutableList<ServerInterceptor> interceptors = this.interceptors.build();
             for (Entry entry : registryBuilder.entries()) {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
-                        ServerInterceptors.intercept(entry.service(), interceptors.build());
-                newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor);
+                        ServerInterceptors.intercept(entry.service(), interceptors);
+                newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor, entry.type());
             }
             handlerRegistry = newRegistryBuilder.build();
         } else {
@@ -796,12 +847,6 @@ public final class GrpcServiceBuilder {
 
         GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,
-                handlerRegistry
-                        .methods()
-                        .keySet()
-                        .stream()
-                        .map(path -> Route.builder().exact('/' + path).build())
-                        .collect(ImmutableSet.toImmutableSet()),
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
                 firstNonNull(compressorRegistry, CompressorRegistry.getDefaultInstance()),
                 supportedSerializationFormats,
@@ -812,13 +857,18 @@ public final class GrpcServiceBuilder {
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
-                enableUnframedRequests || enableHttpJsonTranscoding,
-                grpcHealthCheckService);
+                enableHttpJsonTranscoding, // The method definition might be set when transcoding is enabled.
+                grpcHealthCheckService,
+                autoCompression);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,
                     unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
                                                      : UnframedGrpcErrorHandler.of());
+        }
+
+        if (!handlerRegistry.decorators().isEmpty()) {
+            grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
         }
         if (enableHttpJsonTranscoding) {
             grpcService = HttpJsonTranscodingService.of(

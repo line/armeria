@@ -25,13 +25,17 @@ import java.util.function.Function;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroupTest.EndpointComparator;
 import com.linecorp.armeria.client.endpoint.healthcheck.HealthCheckedEndpointGroupTest.MockEndpointGroup;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 class HealthCheckContextGroupTest {
 
@@ -49,6 +53,7 @@ class HealthCheckContextGroupTest {
 
         try (HealthCheckedEndpointGroup endpointGroup =
                      new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -57,7 +62,7 @@ class HealthCheckContextGroupTest {
             // Health status is not updated yet.
             assertThat(endpointGroup.endpoints()).isEmpty();
 
-            contexts.forEach(ctx -> ctx.updateHealth(1.0));
+            contexts.forEach(ctx -> ctx.updateHealth(1.0, null, null, null));
             assertThat(endpointGroup.endpoints()).containsAll(secondGroup.endpoints());
 
             firstGroup.set(Endpoint.of("dynamic1"), Endpoint.of("dynamic2"));
@@ -68,7 +73,7 @@ class HealthCheckContextGroupTest {
 
             // If health check is finished for the new endpoints,
             // the old EndpointGroup should be removed from the healthy endpoints.
-            contexts.forEach(ctx -> ctx.updateHealth(1.0));
+            contexts.forEach(ctx -> ctx.updateHealth(1.0, null, null, null));
             assertThat(endpointGroup.endpoints()).containsAll(firstGroup.endpoints());
 
             for (int i = 0; i < contexts.size(); i++) {
@@ -89,7 +94,7 @@ class HealthCheckContextGroupTest {
             assertThat(contexts).hasSize(4);
 
             assertThat(endpointGroup.endpoints()).usingElementComparator(new EndpointComparator())
-                    .containsExactly(dynamic1WithWeight, dynamic2);
+                                                 .containsExactly(dynamic1WithWeight, dynamic2);
 
             for (int i = 0; i < contexts.size(); i++) {
                 final DefaultHealthCheckerContext context = (DefaultHealthCheckerContext) contexts.get(i);
@@ -116,6 +121,7 @@ class HealthCheckContextGroupTest {
 
         try (HealthCheckedEndpointGroup endpointGroup =
                      new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -124,15 +130,17 @@ class HealthCheckContextGroupTest {
             // Health status is not updated yet.
             assertThat(endpointGroup.endpoints()).isEmpty();
 
-            contexts.get(0).updateHealth(1.0);
+            contexts.get(0).updateHealth(1.0, null, null, null);
             // The initial future should be completed after all endpoints are checked.
             assertThat(endpointGroup.whenReady()).isNotDone();
 
-            contexts.get(1).updateHealth(0);
+            final ClientRequestContext mockCtx =
+                    ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/health"));
+            contexts.get(1).updateHealth(0, mockCtx, null, new AnticipatedException());
             assertThat(endpointGroup.whenReady()).isDone();
             assertThat(endpointGroup.endpoints()).containsExactly(contexts.get(0).endpoint());
 
-            contexts.get(1).updateHealth(1.0);
+            contexts.get(1).updateHealth(1.0, null, null, null);
             assertThat(endpointGroup.endpoints()).containsExactly(static1, static2);
         }
     }

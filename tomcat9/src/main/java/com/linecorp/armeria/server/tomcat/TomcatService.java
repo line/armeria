@@ -16,6 +16,7 @@
 package com.linecorp.armeria.server.tomcat;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toHttp1Headers;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
@@ -28,7 +29,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayDeque;
-import java.util.Map.Entry;
 import java.util.Queue;
 
 import org.apache.catalina.LifecycleState;
@@ -63,6 +63,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.server.servlet.ServletTlsAttributes;
 import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.HttpService;
@@ -464,6 +465,10 @@ public abstract class TomcatService implements HttpService {
 
         coyoteReq.scheme().setString(req.scheme());
 
+        // Set the start time which is used by Tomcat access logging
+        coyoteReq.setStartTime(ctx.log().ensureAvailable(RequestLogProperty.REQUEST_START_TIME)
+                                  .requestStartTimeMillis());
+
         // Set the remote host/address.
         final InetSocketAddress remoteAddr = ctx.remoteAddress();
         coyoteReq.remoteAddr().setString(remoteAddr.getAddress().getHostAddress());
@@ -523,26 +528,8 @@ public abstract class TomcatService implements HttpService {
         if (headers.isEmpty()) {
             return;
         }
-
-        for (Entry<AsciiString, String> e : headers) {
-            final AsciiString k = e.getKey();
-            final String v = e.getValue();
-
-            if (k.isEmpty()) {
-                continue;
-            }
-
-            if (k.byteAt(0) != ':') {
-                final byte[] valueBytes = v.getBytes(StandardCharsets.US_ASCII);
-                cHeaders.addValue(k.array(), k.arrayOffset(), k.length())
-                        .setBytes(valueBytes, 0, valueBytes.length);
-            } else if (HttpHeaderNames.AUTHORITY.equals(k) && !headers.contains(HttpHeaderNames.HOST)) {
-                // Convert `:authority` to `host`.
-                final byte[] valueBytes = v.getBytes(StandardCharsets.US_ASCII);
-                cHeaders.addValue(HOST_BYTES, 0, HOST_BYTES.length)
-                        .setBytes(valueBytes, 0, valueBytes.length);
-            }
-        }
+        toHttp1Headers(headers, cHeaders,
+                       (output, key, value) -> output.addValue(key.toString()).setString(value));
     }
 
     private static ResponseHeaders convertResponse(Response coyoteRes) {

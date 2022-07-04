@@ -42,21 +42,22 @@ import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Objects;
 import com.google.common.collect.Iterators;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.AttributeKey;
 
-final class DefaultAttributeMap {
+final class DefaultConcurrentAttributes implements ConcurrentAttributes {
 
     // Forked from Netty 4.1.34 at 506f0d8f8c10e1b24924f7d992a726d7bdd2e486
     // - Add rootAttributeMap and related methods to retrieve values from the rootAttributeMap.
     // - Add setAttrIfAbsent and computeAttrIfAbsent
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<DefaultAttributeMap, AtomicReferenceArray>
-            updater = AtomicReferenceFieldUpdater.newUpdater(DefaultAttributeMap.class,
+    private static final AtomicReferenceFieldUpdater<DefaultConcurrentAttributes, AtomicReferenceArray>
+            updater = AtomicReferenceFieldUpdater.newUpdater(DefaultConcurrentAttributes.class,
                                                              AtomicReferenceArray.class, "attributes");
 
     private static final int BUCKET_SIZE = 8;
@@ -69,19 +70,21 @@ final class DefaultAttributeMap {
     volatile AtomicReferenceArray<DefaultAttribute<?>> attributes;
 
     @Nullable
-    private final RequestContext rootAttributeMap;
+    private final AttributesGetters parent;
 
-    DefaultAttributeMap(@Nullable RequestContext rootAttributeMap) {
-        this.rootAttributeMap = rootAttributeMap;
+    DefaultConcurrentAttributes(@Nullable AttributesGetters parent) {
+        this.parent = parent;
     }
 
+    @Override
     @Nullable
-    <T> T ownAttr(AttributeKey<T> key) {
+    public <T> T ownAttr(AttributeKey<T> key) {
         return attr(key, true);
     }
 
+    @Override
     @Nullable
-    <T> T attr(AttributeKey<T> key) {
+    public <T> T attr(AttributeKey<T> key) {
         return attr(key, false);
     }
 
@@ -90,8 +93,8 @@ final class DefaultAttributeMap {
         requireNonNull(key, "key");
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
-            if (!ownAttr && rootAttributeMap != null) {
-                return rootAttributeMap.attr(key);
+            if (!ownAttr && parent != null) {
+                return parent.attr(key);
             }
             return null;
         }
@@ -99,8 +102,8 @@ final class DefaultAttributeMap {
         final int i = index(key);
         final DefaultAttribute<?> head = attributes.get(i);
         if (head == null) {
-            if (!ownAttr && rootAttributeMap != null) {
-                return rootAttributeMap.attr(key);
+            if (!ownAttr && parent != null) {
+                return parent.attr(key);
             }
             return null;
         }
@@ -110,8 +113,8 @@ final class DefaultAttributeMap {
             for (;;) {
                 final DefaultAttribute<?> next = curr.next;
                 if (next == null) {
-                    if (!ownAttr && rootAttributeMap != null) {
-                        return rootAttributeMap.attr(key);
+                    if (!ownAttr && parent != null) {
+                        return parent.attr(key);
                     }
                     return null;
                 }
@@ -130,10 +133,19 @@ final class DefaultAttributeMap {
         return key.id() & MASK;
     }
 
-    @Nullable
     @SuppressWarnings("unchecked")
-    <T> T setAttr(AttributeKey<T> key, @Nullable T value) {
+    @Nullable
+    @Override
+    public <T> T getAndSet(AttributeKey<T> key, @Nullable T value) {
+        requireNonNull(key, "key");
         return (T) setAttr(key, value, SetAttrMode.OLD_VALUE);
+    }
+
+    @Override
+    public <T> ConcurrentAttributes set(AttributeKey<T> key, @Nullable T value) {
+        requireNonNull(key, "key");
+        setAttr(key, value, SetAttrMode.CUR_ATTR);
+        return this;
     }
 
     @Nullable
@@ -185,7 +197,7 @@ final class DefaultAttributeMap {
     private <T> Object getSetAttrResultForNewAttr(SetAttrMode mode, DefaultAttribute<T> attr) {
         switch (mode) {
             case OLD_VALUE:
-                return rootAttributeMap != null ? rootAttributeMap.ownAttr(attr.getKey()) : null;
+                return parent != null ? parent.ownAttr(attr.getKey()) : null;
             case CUR_ATTR:
                 return attr;
             default:
@@ -208,6 +220,34 @@ final class DefaultAttributeMap {
         }
     }
 
+    @Override
+    public <T> boolean remove(AttributeKey<T> key) {
+        requireNonNull(key, "key");
+        final AtomicReferenceArray<DefaultAttribute<?>> attributes = attributes();
+
+        final int i = index(key);
+        final DefaultAttribute<?> head = attributes.get(i);
+        if (head == null) {
+            return false;
+        }
+
+        synchronized (head) {
+            DefaultAttribute<?> curr = head;
+            for (;;) {
+                final DefaultAttribute<?> next = curr.next;
+                if (next == null) {
+                    return false;
+                }
+                if (next.key == key) {
+                    // Remove `next` from the chaining.
+                    curr.next = next.next;
+                    return true;
+                }
+                curr = next;
+            }
+        }
+    }
+
     private AtomicReferenceArray<DefaultAttribute<?>> attributes() {
         AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
@@ -221,14 +261,15 @@ final class DefaultAttributeMap {
         return attributes;
     }
 
-    Iterator<Entry<AttributeKey<?>, Object>> attrs() {
+    @Override
+    public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
-            if (rootAttributeMap == null) {
+            if (parent == null) {
                 return Collections.emptyIterator();
             }
 
-            final Iterator<Entry<AttributeKey<?>, Object>> rootAttrs = rootAttributeMap.attrs();
+            final Iterator<Entry<AttributeKey<?>, Object>> rootAttrs = parent.attrs();
             if (!rootAttrs.hasNext()) {
                 return Collections.emptyIterator();
             }
@@ -237,11 +278,11 @@ final class DefaultAttributeMap {
         }
 
         final Iterator<Entry<AttributeKey<?>, Object>> ownAttrsIt = new OwnIterator(attributes);
-        if (rootAttributeMap == null) {
+        if (parent == null) {
             return ownAttrsIt;
         }
 
-        final Iterator<Entry<AttributeKey<?>, Object>> rootAttrs = rootAttributeMap.attrs();
+        final Iterator<Entry<AttributeKey<?>, Object>> rootAttrs = parent.attrs();
         if (!rootAttrs.hasNext()) {
             return ownAttrsIt;
         }
@@ -249,7 +290,8 @@ final class DefaultAttributeMap {
         return new ConcatenatedCopyOnWriteIterator(ownAttrsIt, rootAttrs);
     }
 
-    Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
+    @Override
+    public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
         final AtomicReferenceArray<DefaultAttribute<?>> attributes = this.attributes;
         if (attributes == null) {
             return Collections.emptyIterator();
@@ -257,9 +299,62 @@ final class DefaultAttributeMap {
         return new OwnIterator(attributes);
     }
 
+    @Nullable
+    @Override
+    public AttributesGetters parent() {
+        return parent;
+    }
+
     @SuppressWarnings("unchecked")
     private static <T> T convert(Object o) {
         return (T) o;
+    }
+
+    @Override
+    public boolean isEmpty() {
+        return !attrs().hasNext();
+    }
+
+    @Override
+    public int size() {
+        return Iterators.size(attrs());
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+
+        if (!(o instanceof AttributesGetters)) {
+            return false;
+        }
+
+        final AttributesGetters that = (AttributesGetters) o;
+        if (size() != that.size()) {
+            return false;
+        }
+
+        for (final Iterator<Entry<AttributeKey<?>, Object>> it = attrs(); it.hasNext();) {
+            final Entry<AttributeKey<?>, Object> next = it.next();
+            final Object thisVal = next.getValue();
+            final Object thatVal = that.attr(next.getKey());
+            if (!thisVal.equals(thatVal)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    @Override
+    public int hashCode() {
+        int hashCode = 0;
+        for (final Iterator<Entry<AttributeKey<?>, Object>> it = attrs(); it.hasNext();) {
+            final Entry<AttributeKey<?>, Object> next = it.next();
+            hashCode += next.getKey().hashCode();
+            hashCode += next.getValue().hashCode();
+        }
+        return hashCode;
     }
 
     @Override
@@ -316,6 +411,33 @@ final class DefaultAttributeMap {
         }
 
         @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof Entry)) {
+                return false;
+            }
+            final Entry<?, ?> that = (Entry<?, ?>) o;
+            return Objects.equal(key, that.getKey()) &&
+                   Objects.equal(value, that.getValue());
+        }
+
+        @Override
+        public int hashCode() {
+            if (key == null) {
+                return 0;
+            }
+
+            int hashCode = key.hashCode();
+            final T value = getValue();
+            if (value != null) {
+                hashCode = 31 * hashCode + value.hashCode();
+            }
+            return hashCode;
+        }
+
+        @Override
         public String toString() {
             return key == null ? "<HEAD>" : key + "=" + value;
         }
@@ -351,7 +473,8 @@ final class DefaultAttributeMap {
 
         @Nullable
         private DefaultAttribute<?> findNext(@Nullable DefaultAttribute<?> next) {
-            loop: for (;;) {
+            loop:
+            for (;;) {
                 if (next == null) {
                     for (idx++; idx < attributes.length(); idx++) {
                         final DefaultAttribute<?> head = attributes.get(idx);
@@ -468,6 +591,7 @@ final class DefaultAttributeMap {
             return rootAttr.getKey();
         }
 
+        @Nullable
         @Override
         public T getValue() {
             final Entry<AttributeKey<T>, T> childAttr = this.childAttr;
@@ -491,6 +615,30 @@ final class DefaultAttributeMap {
             final T old = childAttr.getValue();
             childAttr.setValue(value);
             return old;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) {
+                return true;
+            }
+            if (!(o instanceof Entry)) {
+                return false;
+            }
+
+            final Entry<?, ?> that = (Entry<?, ?>) o;
+            return getKey().equals(that.getKey()) &&
+                   Objects.equal(getValue(), that.getValue());
+        }
+
+        @Override
+        public int hashCode() {
+            int hashCode = getKey().hashCode();
+            final T value = getValue();
+            if (value != null) {
+                hashCode = 31 * hashCode + value.hashCode();
+            }
+            return hashCode;
         }
 
         @Override

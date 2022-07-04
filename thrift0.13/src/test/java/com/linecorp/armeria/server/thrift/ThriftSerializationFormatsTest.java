@@ -36,8 +36,8 @@ import org.apache.thrift.transport.TTransportException;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -99,22 +99,22 @@ public class ThriftSerializationFormatsTest {
 
     @Test
     public void defaults() throws Exception {
-        final HelloService.Iface client = Clients.newClient(server.httpUri(BINARY) + "/hello",
-                                                            HelloService.Iface.class);
+        final HelloService.Iface client = ThriftClients.newClient(server.httpUri(BINARY) + "/hello",
+                                                                  HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 
     @Test
     public void notDefault() throws Exception {
-        final HelloService.Iface client = Clients.newClient(server.httpUri(TEXT) + "/hello",
-                                                            HelloService.Iface.class);
+        final HelloService.Iface client = ThriftClients.newClient(server.httpUri(TEXT) + "/hello",
+                                                                  HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 
     @Test
     public void notAllowed() throws Exception {
         final HelloService.Iface client =
-                Clients.newClient(server.httpUri(TEXT) + "/hellobinaryonly", HelloService.Iface.class);
+                ThriftClients.newClient(server.httpUri(TEXT) + "/hellobinaryonly", HelloService.Iface.class);
         assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(TTransportException.class)
                                                          .getCause()
                                                          .isInstanceOf(InvalidResponseHeadersException.class)
@@ -125,18 +125,20 @@ public class ThriftSerializationFormatsTest {
     public void contentTypeNotThrift() throws Exception {
         // Browser clients often send a non-Thrift content type.
         final HelloService.Iface client =
-                Clients.builder(server.httpUri(BINARY) + "/hello")
-                       .setHeader(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8")
-                       .build(HelloService.Iface.class);
+                ThriftClients.builder(server.httpUri() + "/hello")
+                             .setHeader(HttpHeaderNames.CONTENT_TYPE, "text/plain; charset=utf-8")
+                             .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 
     @Test
     public void acceptNotSameAsContentType() throws Exception {
         final HelloService.Iface client =
-                Clients.builder(server.httpUri(TEXT) + "/hello")
-                       .setHeader(HttpHeaderNames.ACCEPT, "application/x-thrift; protocol=TBINARY")
-                       .build(HelloService.Iface.class);
+                ThriftClients.builder(server.httpUri())
+                             .path("/hello")
+                             .serializationFormat(TEXT)
+                             .setHeader(HttpHeaderNames.ACCEPT, "application/x-thrift; protocol=TBINARY")
+                             .build(HelloService.Iface.class);
         assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(TTransportException.class)
                                                          .getCause()
                                                          .isInstanceOf(InvalidResponseHeadersException.class)
@@ -165,12 +167,14 @@ public class ThriftSerializationFormatsTest {
     @Test
     public void givenClients_whenBinary_thenBuildClient() throws Exception {
         HelloService.Iface client =
-                Clients.newClient(Scheme.of(BINARY, SessionProtocol.HTTP), server.httpEndpoint(), "/hello",
-                                  HelloService.Iface.class);
+                ThriftClients.builder(Scheme.of(BINARY, SessionProtocol.HTTP), server.httpEndpoint())
+                             .path("/hello")
+                             .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
 
-        client = Clients.newClient(Scheme.of(TEXT, SessionProtocol.HTTP), server.httpEndpoint(), "/hello",
-                                   HelloService.Iface.class);
+        client = ThriftClients.builder(Scheme.of(TEXT, SessionProtocol.HTTP), server.httpEndpoint())
+                              .path("/hello")
+                              .build(HelloService.Iface.class);
         assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
     }
 }

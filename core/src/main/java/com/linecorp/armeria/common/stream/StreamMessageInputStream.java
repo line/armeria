@@ -56,7 +56,7 @@ final class StreamMessageInputStream<T> extends InputStream {
     public int read() throws IOException {
         ensureOpen();
         ensureSubscribed();
-        subscriber.request();
+        maybeRequest();
         return byteBufsInputStream().read();
     }
 
@@ -64,7 +64,7 @@ final class StreamMessageInputStream<T> extends InputStream {
     public int read(byte[] b, int off, int len) throws IOException {
         ensureOpen();
         ensureSubscribed();
-        subscriber.request();
+        maybeRequest();
         return byteBufsInputStream().read(b, off, len);
     }
 
@@ -95,6 +95,12 @@ final class StreamMessageInputStream<T> extends InputStream {
             subscribed = true;
             source.subscribe(subscriber, executor);
             subscriber.whenSubscribed.join();
+        }
+    }
+
+    private void maybeRequest() throws IOException {
+        if (available() == 0) {
+            subscriber.request();
         }
     }
 
@@ -130,7 +136,13 @@ final class StreamMessageInputStream<T> extends InputStream {
                  return;
             }
             try {
-                byteBufsInputStream.add(httpDataConverter.apply(item).byteBuf());
+                final HttpData result = httpDataConverter.apply(item);
+                if (result.isEmpty()) {
+                    result.close();
+                    request();
+                    return;
+                }
+                byteBufsInputStream.add(result.byteBuf());
             } catch (Throwable ex) {
                 StreamMessageUtil.closeOrAbort(item, ex);
                 upstream.cancel();

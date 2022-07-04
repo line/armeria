@@ -81,12 +81,14 @@ final class RateLimitingSampler<T> implements Sampler<T> {
     final MaxFunction maxFunction;
     private final AtomicInteger usage = new AtomicInteger();
     private final AtomicLong nextReset;
+    private final int samplesPerSecond;
 
     RateLimitingSampler(int samplesPerSecond) {
         maxFunction =
                 samplesPerSecond < 10 ? new LessThan10(samplesPerSecond) : new AtLeast10(samplesPerSecond);
         final long now = System.nanoTime();
         nextReset = new AtomicLong(now + NANOS_PER_SECOND);
+        this.samplesPerSecond = samplesPerSecond;
     }
 
     @Override
@@ -124,7 +126,7 @@ final class RateLimitingSampler<T> implements Sampler<T> {
 
     @Override
     public String toString() {
-        return "RateLimitingSampler()";
+        return "rate-limiting=" + samplesPerSecond;
     }
 
     private abstract static class MaxFunction {

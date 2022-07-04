@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.RouteUtil.GLOB;
 
 import java.util.List;
@@ -32,7 +33,9 @@ import com.linecorp.armeria.internal.common.util.StringUtil;
 
 final class GlobPathMapping extends AbstractPathMapping {
 
+    private final String prefix;
     private final String glob;
+    private final int numGroupsToSkip;
     private final Pattern pattern;
     private final int numParams;
     private final Set<String> paramNames;
@@ -41,9 +44,15 @@ final class GlobPathMapping extends AbstractPathMapping {
     private final List<String> paths;
 
     GlobPathMapping(String glob, int numGroupsToSkip) {
+        this("", glob, numGroupsToSkip);
+    }
+
+    private GlobPathMapping(String prefix, String glob, int numGroupsToSkip) {
         final PatternAndParamCount patternAndParamCount = globToRegex(glob, numGroupsToSkip);
 
+        this.prefix = prefix;
         this.glob = glob;
+        this.numGroupsToSkip = numGroupsToSkip;
         pattern = patternAndParamCount.pattern;
         numParams = patternAndParamCount.numParams;
 
@@ -62,6 +71,19 @@ final class GlobPathMapping extends AbstractPathMapping {
         paths = ImmutableList.of(pattern.pattern(), aGlob);
     }
 
+    @Override
+    PathMapping doWithPrefix(String prefix) {
+        final String prefixGlob;
+        int numGroupsToSkip = this.numGroupsToSkip;
+        if (glob.startsWith("/")) {
+            prefixGlob = concatPaths(prefix, glob);
+        } else {
+            prefixGlob = concatPaths(prefix + "**/", glob);
+            numGroupsToSkip++;
+        }
+        return new GlobPathMapping(prefix, prefixGlob, numGroupsToSkip);
+    }
+
     @Nullable
     @Override
     RoutingResultBuilder doApply(RoutingContext routingCtx) {
@@ -71,7 +93,7 @@ final class GlobPathMapping extends AbstractPathMapping {
         }
 
         final RoutingResultBuilder builder = RoutingResult.builderWithExpectedNumParams(numParams)
-                                                          .path(routingCtx.path())
+                                                          .path(mappedPath(prefix, routingCtx.path()))
                                                           .query(routingCtx.query());
         for (int i = 1; i <= numParams; i++) {
             final String value = firstNonNull(m.group(i), "");

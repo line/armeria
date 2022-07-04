@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,14 +14,17 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.server.grpc;
+package com.linecorp.armeria.common;
 
-public final class GrpcMethodUtil {
+import static org.assertj.core.api.Assertions.assertThatCode;
 
-    public static String extractMethodName(String fullMethodName) {
-        final int methodIndex = fullMethodName.lastIndexOf('/');
-        return fullMethodName.substring(methodIndex + 1);
+import org.junit.jupiter.api.Test;
+
+class FlagsCyclicDependencyTest {
+
+    @Test
+    void testBasicCase() {
+        assertThatCode(Flags::requestContextStorageProvider)
+                .doesNotThrowAnyException();
     }
-
-    private GrpcMethodUtil() {}
 }

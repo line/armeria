@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.it.thrift;
 
-import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -26,8 +25,8 @@ import org.junit.jupiter.params.provider.EnumSource;
 
 import com.google.common.base.Ascii;
 
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -103,7 +102,7 @@ class ThriftHttpErrorResponseTest {
     @ParameterizedTest
     @EnumSource(TestParam.class)
     void test(TestParam param) throws Exception {
-        final Iface client = Clients.newClient(server.httpUri(BINARY).resolve(param.path), Iface.class);
+        final Iface client = ThriftClients.newClient(server.httpUri().resolve(param.path), Iface.class);
         assertThatThrownBy(() -> client.hello("foo"))
                 .isInstanceOf(TTransportException.class)
                 .getCause()

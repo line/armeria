@@ -36,9 +36,9 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
-import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionTimeoutException;
 import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.Scheme;
@@ -98,7 +98,7 @@ class LazyDynamicEndpointGroupTest {
         await().untilTrue(completed);
         assertThat(causeRef.get()).isInstanceOf(StatusRuntimeException.class)
                                   .hasCauseInstanceOf(UnprocessedRequestException.class)
-                                  .hasRootCauseInstanceOf(EmptyEndpointGroupException.class);
+                                  .hasRootCauseInstanceOf(EndpointSelectionTimeoutException.class);
     }
 
     @Test
@@ -131,7 +131,7 @@ class LazyDynamicEndpointGroupTest {
         await().untilTrue(completed);
         assertThat(causeRef.get()).isInstanceOf(StatusRuntimeException.class)
                                   .hasCauseInstanceOf(UnprocessedRequestException.class)
-                                  .hasRootCauseInstanceOf(EmptyEndpointGroupException.class);
+                                  .hasRootCauseInstanceOf(EndpointSelectionTimeoutException.class);
     }
 
     @Test

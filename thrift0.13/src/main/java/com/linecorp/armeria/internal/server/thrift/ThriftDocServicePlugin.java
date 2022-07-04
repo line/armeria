@@ -536,7 +536,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
         final TBase<?, ?> exampleTBase = (TBase<?, ?>) exampleRequest;
         try {
-            final TSerializer serializer = new TSerializer(ThriftProtocolFactories.TEXT);
+            final TSerializer serializer = new TSerializer(ThriftProtocolFactories.text());
             if (legacyTSerializerToString != null) {
                 try {
                     return (String) legacyTSerializerToString.invoke(serializer, exampleTBase,
