@@ -40,7 +40,6 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private final int streamId;
     private final boolean keepAlive;
     private final RoutingContext routingContext;
-    @Nullable
     private final ExchangeType exchangeType;
     @Nullable
     private ServiceRequestContext ctx;
