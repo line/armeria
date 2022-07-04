@@ -18,10 +18,9 @@ package com.linecorp.armeria.common.multipart;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import com.google.common.collect.Iterables;
+import java.util.List;
 
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * Utility methods to support multipart metadata handling.
@@ -39,12 +38,12 @@ public final class Multiparts {
         requireNonNull(contentType, "contentType");
         checkArgument(contentType.isMultipart(),
                       "Content-Type: %s (expected: multipart content type)", contentType);
-        @Nullable
-        final String boundary = Iterables.getFirst(contentType.parameters().get("boundary"), null);
-        if (boundary == null) {
+        final List<String> boundary = contentType.parameters().get("boundary");
+
+        if (boundary == null || boundary.isEmpty()) {
             throw new IllegalStateException("boundary parameter is missing on the Content-Type header");
         }
-        return boundary;
+        return boundary.get(0);
     }
 
     private Multiparts() {}
