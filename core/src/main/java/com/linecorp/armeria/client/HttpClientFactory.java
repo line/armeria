@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
@@ -379,6 +380,12 @@ final class HttpClientFactory implements ClientFactory {
     @Override
     public int numConnections() {
         return pools.values().stream().mapToInt(HttpChannelPool::numConnections).sum();
+    }
+
+    @Override
+    public CompletableFuture<Void> closeOnJvmShutdown(Runnable whenClosing) {
+        requireNonNull(whenClosing, "whenClosing");
+        return ShutdownHooks.addClosingTask(this, whenClosing);
     }
 
     HttpChannelPool pool(EventLoop eventLoop) {

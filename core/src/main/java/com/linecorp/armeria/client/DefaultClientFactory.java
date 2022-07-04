@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.ShutdownHooks;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
@@ -268,6 +269,12 @@ final class DefaultClientFactory implements ClientFactory {
             return;
         }
         closeable.close();
+    }
+
+    @Override
+    public CompletableFuture<Void> closeOnJvmShutdown(Runnable whenClosing) {
+        requireNonNull(whenClosing, "whenClosing");
+        return ShutdownHooks.addClosingTask(this, whenClosing);
     }
 
     private boolean checkDefault() {
