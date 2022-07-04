@@ -55,6 +55,9 @@ public abstract class AbstractMessageDeframer {
     @Nullable
     private Decompressor decompressor;
 
+    /**
+     * Creates a new instance with the specified {@code maxMessageLength}.
+     */
     protected AbstractMessageDeframer(int maxMessageLength) {
         this.maxMessageLength = maxMessageLength > 0 ? maxMessageLength : Integer.MAX_VALUE;
     }
