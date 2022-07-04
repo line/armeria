@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.stream.StreamDecoderInput;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
-public final class ByteBufDecoderInput implements StreamDecoderInput {
+public final class ByteBufsDecoderInput implements StreamDecoderInput {
 
     private final ByteBufAllocator alloc;
     private final Queue<ByteBuf> queue;
@@ -35,9 +35,9 @@ public final class ByteBufDecoderInput implements StreamDecoderInput {
 
     private boolean closed;
 
-    public ByteBufDecoderInput(ByteBufAllocator alloc) {
+    public ByteBufsDecoderInput(ByteBufAllocator alloc) {
         this.alloc = alloc;
-        queue = new ArrayDeque<>();
+        queue = new ArrayDeque<>(4);
     }
 
     public boolean add(ByteBuf byteBuf) {

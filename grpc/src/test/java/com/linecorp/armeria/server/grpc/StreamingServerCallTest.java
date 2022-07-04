@@ -81,7 +81,7 @@ import io.netty.util.AsciiString;
 // TODO(anuraag): Currently only grpc-protobuf has been published so we only test proto here.
 // Once grpc-thrift is published, add tests for thrift stubs which will not go through the
 // optimized protobuf marshalling paths.
-class ArmeriaServerCallTest {
+class StreamingServerCallTest {
 
     private static final int MAX_MESSAGE_BYTES = 1024;
     private static final AsciiString EXTRA_HEADER_NAME1 = HttpHeaderNames.of("extra-header-1");
@@ -99,7 +99,7 @@ class ArmeriaServerCallTest {
     @Mock
     private IdentityHashMap<Object, ByteBuf> buffersAttr;
 
-    private ArmeriaServerCall<SimpleRequest, SimpleResponse> call;
+    private StreamingServerCall<SimpleRequest, SimpleResponse> call;
 
     private CompletableFuture<Void> completionFuture;
 
@@ -149,7 +149,6 @@ class ArmeriaServerCallTest {
         call = newServerCall(res, true);
 
         call.setListener(mock(Listener.class));
-        call.startDeframing();
         final ByteBuf buf = GrpcTestUtil.requestByteBuf();
         call.onNext(new DeframedMessage(buf, 0));
 
@@ -280,8 +279,8 @@ class ArmeriaServerCallTest {
     @Test
     void deferResponseHeaders_streaming_nonResponseMessage() {
         final HttpResponseWriter response = HttpResponse.streaming();
-        final ArmeriaServerCall<StreamingOutputCallRequest, StreamingOutputCallResponse> call =
-                new ArmeriaServerCall<>(
+        final StreamingServerCall<StreamingOutputCallRequest, StreamingOutputCallResponse> call =
+                new StreamingServerCall<>(
                         HttpRequest.of(HttpMethod.GET, "/"),
                         TestServiceGrpc.getStreamingOutputCallMethod(),
                         TestServiceGrpc.getStreamingOutputCallMethod().getBareMethodName(),
@@ -348,9 +347,9 @@ class ArmeriaServerCallTest {
         assertThat(completed).isTrue();
     }
 
-    private ArmeriaServerCall<SimpleRequest, SimpleResponse> newServerCall(HttpResponseWriter response,
-                                                                           boolean unsafeWrapRequestBuffers) {
-        return new ArmeriaServerCall<>(
+    private StreamingServerCall<SimpleRequest, SimpleResponse> newServerCall(HttpResponseWriter response,
+                                                                             boolean unsafeWrapRequestBuffers) {
+        return new StreamingServerCall<>(
                 HttpRequest.of(HttpMethod.GET, "/"),
                 TestServiceGrpc.getUnaryCallMethod(),
                 TestServiceGrpc.getUnaryCallMethod().getBareMethodName(),
