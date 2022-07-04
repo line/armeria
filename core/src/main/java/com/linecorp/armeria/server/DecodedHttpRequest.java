@@ -32,7 +32,7 @@ interface DecodedHttpRequest extends HttpRequest {
                                  RequestHeaders headers, boolean keepAlive,
                                  InboundTrafficController inboundTrafficController,
                                  RoutingContext routingCtx) {
-        if (endOfStream || !routingCtx.hasResult()) {
+        if (!routingCtx.hasResult()) {
             return new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
                                                       routingCtx, ExchangeType.RESPONSE_STREAMING);
         } else {
