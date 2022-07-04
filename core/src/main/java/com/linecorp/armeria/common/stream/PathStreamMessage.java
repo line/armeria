@@ -89,7 +89,7 @@ final class PathStreamMessage implements ByteStreamMessage {
     }
 
     @Override
-    public ByteStreamMessage range(int offset, int length) {
+    public ByteStreamMessage range(long offset, long length) {
         checkArgument(offset >= 0, "offset: %s (expected: >= 0)", offset);
         checkArgument(length > 0, "length: %s (expected: > 0)", length);
         checkState(subscribed == 0, "cannot specify range(%s, %s) after this %s is subscribed", offset, length,

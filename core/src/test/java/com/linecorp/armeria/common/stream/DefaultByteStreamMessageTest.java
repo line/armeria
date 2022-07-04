@@ -79,7 +79,7 @@ class DefaultByteStreamMessageTest {
     @Test
     void skip1() {
         final StreamMessage<HttpData> delegate = newStreamMessage();
-        final ByteStreamMessage byteStreamMessage = ByteStreamMessage.of(delegate).range(1, Integer.MAX_VALUE);
+        final ByteStreamMessage byteStreamMessage = ByteStreamMessage.of(delegate).range(1, Long.MAX_VALUE);
         StepVerifier.create(byteStreamMessage, 1)
                     .expectNext(HttpData.ofUtf8("22"))
                     .thenRequest(2)

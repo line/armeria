@@ -25,7 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.google.common.math.IntMath;
+import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.HttpData;
@@ -38,8 +38,8 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
 
     private final StreamMessage<? extends HttpData> delegate;
 
-    private int offset;
-    private int length = -1;
+    private long offset;
+    private long length = -1;
     private long demand;
 
     @Nullable
@@ -51,7 +51,7 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
     }
 
     @Override
-    public ByteStreamMessage range(int offset, int length) {
+    public ByteStreamMessage range(long offset, long length) {
         checkArgument(offset >= 0, "offset: %s (expected: >= 0)", offset);
         checkArgument(length > 0, "length: %s (expected: > 0)", length);
         checkState(!subscribed, "cannot specify range(%s, %s) after this %s is subscribed", offset, length,
@@ -120,24 +120,24 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
     private final class FilteringSubscriber implements Subscriber<HttpData>, Subscription {
 
         private final Subscriber<? super HttpData> downstream;
-        private final int offset;
-        private final int end;
+        private final long offset;
+        private final long end;
         private final EventExecutor executor;
 
         @Nullable
         private Subscription upstream;
-        private int position;
+        private long position;
         private boolean completed;
 
         FilteringSubscriber(Subscriber<? super HttpData> downstream,
-                            EventExecutor executor, int offset, int length) {
+                            EventExecutor executor, long offset, long length) {
             this.downstream = downstream;
             this.executor = executor;
             this.offset = offset;
             if (length == -1) {
-                end = Integer.MAX_VALUE;
+                end = Long.MAX_VALUE;
             } else {
-                end = IntMath.saturatedAdd(offset, length);
+                end = LongMath.saturatedAdd(offset, length);
             }
         }
 
@@ -164,9 +164,9 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
             }
 
             final int dataSize = data.length();
-            final int dataEnd = IntMath.saturatedAdd(position, dataSize);
-            final int skipBytes = Math.max(0, IntMath.saturatedSubtract(offset, position));
-            final int dropBytes = Math.max(0, IntMath.saturatedSubtract(dataEnd, end));
+            final long dataEnd = LongMath.saturatedAdd(position, dataSize);
+            final long skipBytes = Math.max(0, LongMath.saturatedSubtract(offset, position));
+            final long dropBytes = Math.max(0, LongMath.saturatedSubtract(dataEnd, end));
 
             if (skipBytes >= dataSize) {
                 // Skip the entire data and request the next element.
@@ -182,9 +182,13 @@ final class DefaultByteStreamMessage implements ByteStreamMessage {
                 downstream.onNext(data);
             } else {
                 try {
-                    final int slicedDataSize = dataSize - skipBytes - dropBytes;
-                    final HttpData slicedData = retainedSlice(data, skipBytes, slicedDataSize);
-                    position += skipBytes + slicedDataSize;
+                    // skipBytes and dropBytes are less than dataSize(int).
+                    assert dropBytes < dataSize;
+                    final int intSkipBytes = (int) skipBytes;
+                    final int intDropBytes = (int) dropBytes;
+                    final int slicedDataSize = dataSize - intSkipBytes - intDropBytes;
+                    final HttpData slicedData = retainedSlice(data, intSkipBytes, slicedDataSize);
+                    position += intSkipBytes + slicedDataSize;
                     downstream.onNext(slicedData);
                 } finally {
                     data.close();

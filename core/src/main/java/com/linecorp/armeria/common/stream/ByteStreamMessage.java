@@ -109,8 +109,9 @@ public interface ByteStreamMessage extends StreamMessage<HttpData> {
      * }</pre>
      *
      * @throws IllegalArgumentException if the {@code offset} is negative or the {@code length} is non-positive.
+     * @throws IllegalStateException if this {@link ByteStreamMessage} is subscribed already.
      */
-    ByteStreamMessage range(int offset, int length);
+    ByteStreamMessage range(long offset, long length);
 
     /**
      * Collects the bytes published by this {@link ByteStreamMessage}.
