@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.it.metric;
 
-import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
@@ -38,9 +37,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.metric.MetricCollectingRpcClient;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -303,11 +302,12 @@ public class PrometheusMetricsIntegrationTest {
     }
 
     private static void makeRequest(String path, String serviceName, String name) throws TException {
-        final Iface client = Clients.builder(server.httpUri(BINARY).resolve(path))
-                                    .factory(clientFactory)
-                                    .rpcDecorator(MetricCollectingRpcClient.newDecorator(
-                                            new MeterIdPrefixFunctionImpl("client", serviceName)))
-                                    .build(Iface.class);
+        final Iface client = ThriftClients.builder(server.httpUri())
+                                          .path(path)
+                                          .factory(clientFactory)
+                                          .rpcDecorator(MetricCollectingRpcClient.newDecorator(
+                                                  new MeterIdPrefixFunctionImpl("client", serviceName)))
+                                          .build(Iface.class);
         client.hello(name);
     }
 

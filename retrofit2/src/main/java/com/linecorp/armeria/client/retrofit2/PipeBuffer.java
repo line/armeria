@@ -63,6 +63,12 @@ final class PipeBuffer {
         return source;
     }
 
+    boolean exhausted() {
+        synchronized (buffer) {
+            return buffer.exhausted();
+        }
+    }
+
     private final class PipeSource implements Source {
         final Timeout timeout = new Timeout();
 

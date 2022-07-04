@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.it.server;
 
-import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
@@ -35,7 +34,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -254,7 +253,7 @@ class GracefulShutdownIntegrationTest {
         });
 
         // Keep sending a request while shutting down so that the hard limit is reached.
-        for (int i = 1;; i++) {
+        for (int i = 1; ; i++) {
             try {
                 client.sleep(50);
             } catch (Exception e) {
@@ -271,8 +270,9 @@ class GracefulShutdownIntegrationTest {
     }
 
     private SleepService.Iface newClient() {
-        return Clients.builder(server.httpUri(BINARY) + "/sleep")
-                      .factory(clientFactory)
-                      .build(SleepService.Iface.class);
+        return ThriftClients.builder(server.httpUri())
+                            .path("/sleep")
+                            .factory(clientFactory)
+                            .build(SleepService.Iface.class);
     }
 }

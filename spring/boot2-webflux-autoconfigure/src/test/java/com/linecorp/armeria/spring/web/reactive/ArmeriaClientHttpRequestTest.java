@@ -22,6 +22,8 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.net.URI;
+import java.util.List;
+import java.util.Map.Entry;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -75,6 +77,14 @@ public class ArmeriaClientHttpRequestTest {
         StepVerifier.create(httpRequest).expectComplete().verify();
 
         await().until(() -> httpRequest.whenComplete().isDone());
+
+        // Spring headers does not have pseudo headers.
+        for (Entry<String, List<String>> header : request.getHeaders().entrySet()) {
+            assertThat(header.getKey()).doesNotStartWith(":");
+        }
+        assertThat(httpRequest.headers().names())
+                .contains(HttpHeaderNames.METHOD, HttpHeaderNames.AUTHORITY,
+                          HttpHeaderNames.SCHEME, HttpHeaderNames.PATH);
     }
 
     @Test

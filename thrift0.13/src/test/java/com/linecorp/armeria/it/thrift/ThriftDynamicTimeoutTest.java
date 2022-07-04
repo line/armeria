@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.it.thrift;
 
-import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.Duration;
@@ -33,9 +32,9 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.SimpleDecoratingRpcClient;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -82,10 +81,11 @@ class ThriftDynamicTimeoutTest {
     @ArgumentsSource(ClientDecoratorProvider.class)
     void testDynamicTimeout(Function<? super RpcClient, ? extends RpcClient> clientDecorator) throws Exception {
         final SleepService.Iface client =
-                Clients.builder(server.httpUri(BINARY) + "/sleep")
-                       .rpcDecorator(clientDecorator)
-                       .responseTimeout(Duration.ofSeconds(1))
-                       .build(SleepService.Iface.class);
+                ThriftClients.builder(server.httpUri())
+                             .path("/sleep")
+                             .rpcDecorator(clientDecorator)
+                             .responseTimeout(Duration.ofSeconds(1))
+                             .build(SleepService.Iface.class);
 
         final long delay = 1500;
         final Stopwatch sw = Stopwatch.createStarted();
@@ -98,10 +98,11 @@ class ThriftDynamicTimeoutTest {
     void testDisabledTimeout(Function<? super RpcClient, ? extends RpcClient> clientDecorator)
             throws Exception {
         final SleepService.Iface client =
-                Clients.builder(server.httpUri(BINARY) + "/fakeSleep")
-                       .rpcDecorator(clientDecorator)
-                       .responseTimeout(Duration.ofSeconds(1))
-                       .build(SleepService.Iface.class);
+                ThriftClients.builder(server.httpUri())
+                             .path("/fakeSleep")
+                             .rpcDecorator(clientDecorator)
+                             .responseTimeout(Duration.ofSeconds(1))
+                             .build(SleepService.Iface.class);
 
         final long delay = 30000;
         final Stopwatch sw = Stopwatch.createStarted();

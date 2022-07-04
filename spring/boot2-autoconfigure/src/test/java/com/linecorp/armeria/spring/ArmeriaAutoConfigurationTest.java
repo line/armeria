@@ -41,9 +41,9 @@ import org.springframework.test.context.junit4.SpringRunner;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.grpc.GrpcClients;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -303,8 +303,8 @@ public class ArmeriaAutoConfigurationTest {
 
     @Test
     public void testThriftService() throws Exception {
-        final HelloService.Iface client = Clients.newClient(newUrl("tbinary+h1c") + "/thrift",
-                                                            HelloService.Iface.class);
+        final HelloService.Iface client = ThriftClients.newClient(newUrl("h1c") + "/thrift",
+                                                                  HelloService.Iface.class);
         assertThat(client.hello("world")).isEqualTo("hello world");
 
         final WebClient webClient = WebClient.of(newUrl("h1c"));
@@ -323,8 +323,8 @@ public class ArmeriaAutoConfigurationTest {
 
     @Test
     public void testGrpcService() throws Exception {
-        final HelloServiceBlockingStub client = Clients.newClient(newUrl("gproto+h2c") + '/',
-                                                                  HelloServiceBlockingStub.class);
+        final HelloServiceBlockingStub client = GrpcClients.newClient(newUrl("h2c") + '/',
+                                                                      HelloServiceBlockingStub.class);
         final HelloRequest request = HelloRequest.newBuilder()
                                                  .setName("world")
                                                  .build();

@@ -42,10 +42,13 @@ public class SettableIntSupplier implements IntSupplier {
     /**
      * Creates a new instance with the specified {@code initialValue}.
      */
-    public static <T> SettableIntSupplier of(int initialValue) {
+    public static SettableIntSupplier of(int initialValue) {
         return new SettableIntSupplier(initialValue);
     }
 
+    /**
+     * Creates a new instance with the specified {@code initialValue}.
+     */
     protected SettableIntSupplier(int initialValue) {
         value = initialValue;
     }

@@ -23,14 +23,20 @@ import java.util.function.Consumer;
 import org.apache.curator.framework.CuratorFramework;
 import org.apache.curator.framework.CuratorFrameworkFactory.Builder;
 
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.endpoint.AbstractDynamicEndpointGroupBuilder;
+import com.linecorp.armeria.client.endpoint.DynamicEndpointGroupSetters;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.zookeeper.AbstractCuratorFrameworkBuilder;
 
 /**
  * Builds a {@link ZooKeeperEndpointGroup}.
  */
-public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFrameworkBuilder {
+public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFrameworkBuilder
+        implements DynamicEndpointGroupSetters {
 
+    private final DynamicEndpointGroupBuilder dynamicEndpointGroupBuilder = new DynamicEndpointGroupBuilder();
     private final ZooKeeperDiscoverySpec spec;
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
 
@@ -58,8 +64,11 @@ public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFramewor
     public ZooKeeperEndpointGroup build() {
         final CuratorFramework client = buildCuratorFramework();
         final boolean internalClient = !isUserSpecifiedCuratorFramework();
+        final boolean allowEmptyEndpoints = dynamicEndpointGroupBuilder.shouldAllowEmptyEndpoints();
+        final long selectionTimeoutMillis = dynamicEndpointGroupBuilder.selectionTimeoutMillis();
 
-        return new ZooKeeperEndpointGroup(selectionStrategy, client, znodePath(), spec, internalClient);
+        return new ZooKeeperEndpointGroup(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis,
+                                          client, znodePath(), spec, internalClient);
     }
 
     // Override the return type of the chaining methods in the superclass.
@@ -87,5 +96,54 @@ public final class ZooKeeperEndpointGroupBuilder extends AbstractCuratorFramewor
     @Override
     public ZooKeeperEndpointGroupBuilder customizer(Consumer<? super Builder> customizer) {
         return (ZooKeeperEndpointGroupBuilder) super.customizer(customizer);
+    }
+
+    @Override
+    public ZooKeeperEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
+        dynamicEndpointGroupBuilder.allowEmptyEndpoints(allowEmptyEndpoints);
+        return this;
+    }
+
+    /**
+     * Sets the timeout to wait until a successful {@link Endpoint} selection.
+     * {@link Duration#ZERO} disables the timeout.
+     * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used by default.
+     */
+    @Override
+    public ZooKeeperEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
+        dynamicEndpointGroupBuilder.selectionTimeout(selectionTimeout);
+        return this;
+    }
+
+    /**
+     * Sets the timeout to wait until a successful {@link Endpoint} selection.
+     * {@code 0} disables the timeout.
+     * If unspecified, {@link Flags#defaultResponseTimeoutMillis()} is used by default.
+     */
+    @Override
+    public ZooKeeperEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
+        dynamicEndpointGroupBuilder.selectionTimeoutMillis(selectionTimeoutMillis);
+        return this;
+    }
+
+    /**
+     * This workaround delegates DynamicEndpointGroupSetters properties to AbstractDynamicEndpointGroupBuilder.
+     * ZooKeeperEndpointGroupBuilder can't extend AbstractDynamicEndpointGroupBuilder because it already extends
+     * AbstractCuratorFrameworkBuilder.
+     */
+    private static class DynamicEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
+        protected DynamicEndpointGroupBuilder() {
+            super(Flags.defaultResponseTimeoutMillis());
+        }
+
+        @Override
+        public boolean shouldAllowEmptyEndpoints() {
+            return super.shouldAllowEmptyEndpoints();
+        }
+
+        @Override
+        public long selectionTimeoutMillis() {
+            return super.selectionTimeoutMillis();
+        }
     }
 }
