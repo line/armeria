@@ -186,6 +186,8 @@ date: 2022-07-04
 
 ## 🛠️ Bug fixes
 
+- You can now run `ServerInterceptors` in a blocking task executor when
+  <type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)> is enabled. #4331
 - <type://Multiparts#getBoundary()> now throws an `IllegalStateException` instead
   of `NullPointerException` when a boundary is missing. #4193 #4325
 - Armeria retrofit streaming mode now requests data to upstream when it does not have one. #4319
