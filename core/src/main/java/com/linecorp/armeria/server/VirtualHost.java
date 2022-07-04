@@ -385,9 +385,8 @@ public final class VirtualHost {
      *
      * @return the {@link ServiceConfig} wrapped by a {@link Routed} if there's a match.
      *         The fallback {@link ServiceConfig} wrapped by {@link Routed} if there's no match and
-     *         {@code useFallbackService} is set to {@code true}.
-     *         {@link Routed#empty()} if there's no match and {@code useFallbackService} is set to
-     *         {@code false}.
+     *         {@code useFallbackService} is {@code true}.
+     *         {@link Routed#empty()} if there's no match and {@code useFallbackService} is {@code false}.
      */
     public Routed<ServiceConfig> findServiceConfig(RoutingContext routingCtx, boolean useFallbackService) {
         final Routed<ServiceConfig> routed = router.find(requireNonNull(routingCtx, "routingCtx"));
