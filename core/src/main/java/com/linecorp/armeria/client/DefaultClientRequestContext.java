@@ -36,6 +36,7 @@ import java.util.function.Function;
 import javax.net.ssl.SSLSession;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.AttributesGetters;
 import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.Flags;
@@ -67,6 +68,7 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -193,7 +195,8 @@ public final class DefaultClientRequestContext
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros, boolean hasBaseUri) {
         super(meterRegistry, sessionProtocol, id, method, path, query,
-              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING), req, rpcReq, root);
+              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING), req, rpcReq,
+              getAttributes(root));
 
         this.eventLoop = eventLoop;
         this.hasBaseUri = hasBaseUri;
@@ -241,6 +244,15 @@ public final class DefaultClientRequestContext
             this.customizer = customizer;
         } else {
             this.customizer = customizer.andThen(threadLocalCustomizer);
+        }
+    }
+
+    @Nullable
+    private static AttributesGetters getAttributes(@Nullable ServiceRequestContext ctx) {
+        if (ctx instanceof DefaultServiceRequestContext) {
+            return ((DefaultServiceRequestContext) ctx).attributes();
+        } else {
+            return null;
         }
     }
 
@@ -464,7 +476,7 @@ public final class DefaultClientRequestContext
                                         SessionProtocol sessionProtocol, HttpMethod method,
                                         String path, @Nullable String query, @Nullable String fragment) {
         super(ctx.meterRegistry(), sessionProtocol, id, method, path, query, ctx.exchangeType(),
-              req, rpcReq, ctx.root());
+              req, rpcReq, getAttributes(ctx.root()));
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {

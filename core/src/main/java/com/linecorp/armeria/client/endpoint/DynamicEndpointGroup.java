@@ -233,7 +233,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         for (int i = 0; i < oldEndpoints.size(); i++) {
             final Endpoint a = oldEndpoints.get(i);
             final Endpoint b = newEndpoints.get(i);
-            if (!a.equals(b) || a.weight() != b.weight()) {
+            if (!a.equals(b) || a.weight() != b.weight() || !a.attrs().equals(b.attrs())) {
                 return true;
             }
         }
