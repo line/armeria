@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -74,11 +75,12 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
                     int maxRequestMessageLength, int maxResponseMessageLength,
                     ServiceRequestContext ctx, SerializationFormat serializationFormat,
                     @Nullable GrpcJsonMarshaller jsonMarshaller, boolean unsafeWrapRequestBuffers,
-                    boolean useBlockingTaskExecutor, ResponseHeaders defaultHeaders,
-                    @Nullable GrpcStatusFunction statusFunction, boolean autoCompress) {
+                    ResponseHeaders defaultHeaders,
+                    @Nullable GrpcStatusFunction statusFunction, @Nullable Executor blockingExecutor,
+                    boolean autoCompress) {
         super(req, method, simpleMethodName, compressorRegistry, decompressorRegistry, res,
               maxResponseMessageLength, ctx, serializationFormat, jsonMarshaller, unsafeWrapRequestBuffers,
-              useBlockingTaskExecutor, defaultHeaders, statusFunction, autoCompress);
+              defaultHeaders, statusFunction, blockingExecutor, autoCompress);
         requireNonNull(req, "req");
         this.ctx = requireNonNull(ctx, "ctx");
         final boolean grpcWebText = GrpcSerializationFormats.isGrpcWebText(serializationFormat);

@@ -293,11 +293,11 @@ class StreamingServerCallTest {
                         GrpcSerializationFormats.PROTO,
                         new DefaultJsonMarshaller(MessageMarshaller.builder().build()),
                         false,
-                        false,
                         ResponseHeaders.builder(HttpStatus.OK)
                                        .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                        .build(),
                         /* exceptionMappings */ null,
+                        /* blockingExecutor */ null,
                         false);
 
         final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
@@ -362,11 +362,11 @@ class StreamingServerCallTest {
                 GrpcSerializationFormats.PROTO,
                 new DefaultJsonMarshaller(MessageMarshaller.builder().build()),
                 unsafeWrapRequestBuffers,
-                false,
                 ResponseHeaders.builder(HttpStatus.OK)
                                .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                .build(),
                 /* exceptionMappings */ null,
+                /* blockingExecutor */ null,
                 false);
     }
 }
