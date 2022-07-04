@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.common;
 
-import static com.linecorp.armeria.server.ReflectiveDependencyInjector.create;
+import static com.linecorp.armeria.internal.common.ReflectiveDependencyInjector.create;
 
 import java.util.Map;
 import java.util.Set;
@@ -23,11 +23,12 @@ import java.util.concurrent.ConcurrentHashMap;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.server.annotation.ServerSentEventResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.decorator.LoggingDecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecoratorFactoryFunction;
 
-enum BuiltInDependencyInjector implements DependencyInjector {
+public enum BuiltInDependencyInjector implements DependencyInjector {
 
     INSTANCE;
 

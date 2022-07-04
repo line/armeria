@@ -37,6 +37,7 @@ import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;

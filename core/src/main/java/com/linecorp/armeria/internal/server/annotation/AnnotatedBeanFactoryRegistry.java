@@ -43,10 +43,10 @@ import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.RequestObjectResolver;
-import com.linecorp.armeria.server.DependencyInjector;
 import com.linecorp.armeria.server.annotation.RequestConverter;
 
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;

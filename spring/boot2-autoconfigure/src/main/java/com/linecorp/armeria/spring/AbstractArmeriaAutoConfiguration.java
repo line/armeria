@@ -32,10 +32,10 @@ import org.springframework.context.annotation.Bean;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
-import com.linecorp.armeria.server.DependencyInjector;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;

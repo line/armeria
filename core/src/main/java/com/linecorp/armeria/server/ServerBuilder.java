@@ -64,6 +64,7 @@ import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
@@ -77,6 +78,8 @@ import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
+import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
@@ -1748,7 +1751,6 @@ public final class ServerBuilder {
      * @param shutdownOnStop whether to shut down the {@link DependencyInjector} when the {@link Server} stops
      */
     @UnstableApi
-    @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
     public ServerBuilder dependencyInjector(DependencyInjector dependencyInjector, boolean shutdownOnStop) {
         requireNonNull(dependencyInjector, "dependencyInjector");
         if (this.dependencyInjector == null) {
@@ -1939,7 +1941,6 @@ public final class ServerBuilder {
         return Collections.unmodifiableList(distinctPorts);
     }
 
-    @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
     private DependencyInjector dependencyInjectorOrReflective() {
         if (dependencyInjector != null) {
             return dependencyInjector;

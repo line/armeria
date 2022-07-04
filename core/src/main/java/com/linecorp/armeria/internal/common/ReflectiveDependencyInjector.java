@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.common;
 
 import static org.reflections.ReflectionUtils.getConstructors;
 import static org.reflections.ReflectionUtils.withParametersCount;
@@ -28,9 +28,10 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class ReflectiveDependencyInjector implements DependencyInjector {
+public final class ReflectiveDependencyInjector implements DependencyInjector {
 
     private static final Logger logger = LoggerFactory.getLogger(ReflectiveDependencyInjector.class);
 
@@ -52,7 +53,7 @@ final class ReflectiveDependencyInjector implements DependencyInjector {
     }
 
     @Nullable
-    static <T> T create(Class<? extends T> type, @Nullable Map<Class<?>, Object> instanceStorage) {
+    public static <T> T create(Class<? extends T> type, @Nullable Map<Class<?>, Object> instanceStorage) {
         @SuppressWarnings("unchecked")
         final Constructor<? extends T> constructor =
                 Iterables.getFirst(getConstructors(type, withParametersCount(0)), null);

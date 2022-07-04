@@ -24,7 +24,7 @@ import java.lang.reflect.Method;
 
 import com.google.common.collect.Iterables;
 
-import com.linecorp.armeria.server.DependencyInjector;
+import com.linecorp.armeria.common.DependencyInjector;
 
 /**
  * A utility class for getting cached annotated objects.

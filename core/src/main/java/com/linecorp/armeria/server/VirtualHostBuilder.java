@@ -62,6 +62,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;

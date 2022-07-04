@@ -13,9 +13,14 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.common;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 final class OrElseDependencyInjector implements DependencyInjector {
+
+    private static final Logger logger = LoggerFactory.getLogger(OrElseDependencyInjector.class);
 
     private final DependencyInjector first;
     private final DependencyInjector second;
@@ -36,7 +41,15 @@ final class OrElseDependencyInjector implements DependencyInjector {
 
     @Override
     public void close() {
-        first.close();
-        second.close();
+        close(first);
+        close(second);
+    }
+
+    private static void close(DependencyInjector dependencyInjector) {
+        try {
+            dependencyInjector.close();
+        } catch (Throwable t) {
+            logger.warn("Unexpected exception while closing {}", dependencyInjector, t);
+        }
     }
 }
