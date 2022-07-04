@@ -67,7 +67,14 @@ date: 2022-07-04
       }
   }
   ```
-  - Set `armeria.enable-auto-injection` to `true` to apply <type://SpringDependencyInjector>.
+  - Set `armeria.enable-auto-injection` to `true` to apply <type://SpringDependencyInjector> automatically.
+    ```yml
+    // in application.yml
+    armeria:
+      ports:
+        ...
+      enable-auto-injection: true  // 👈👈👈
+    ```
 - You can now customize the length of string fields or container fields
   of Thrift messages using <type://THttpServiceBuilder> or <type://ThriftClientBuilder>. #4024 #4226
   ```java
@@ -119,10 +126,7 @@ date: 2022-07-04
                    .executor(executor)
                    .build();
   // Slice a range of a file data
-  pathContent.range(100, 200);
-  HttpResponse response = ...
-  ByteStreamMessage partialBody =
-      response.split().body().range(100, 200);
+  ByteStreamMessage partialContent = pathContent.range(100, 200);
   ```
 - You can now map a specific exception to a `LogLevel` in <type://LoggingService> and
   <type://LoggingClient>. #3400 #4090
@@ -156,7 +160,7 @@ date: 2022-07-04
   ```
 - You can now customize internal Netty `Pipeline` using
   <type://ClientFactoryOptions#CHANNEL_PIPELINE_CUSTOMIZER>. #3907 #4260
-  - This is for testing purpose and not recommended to use if you are not familiar with
+  - This is an advanced feature and not recommended to use if you are not familiar with
     Armeria and Netty internals.
 
 ### Kotlin
@@ -165,6 +169,7 @@ date: 2022-07-04
   ```kt
   serverBuilder.apply {
     annotatedService(object {
+      // Both `/foo` and `/foo?a=bar` are allowed.
       @Get("/foo")
       fun foo(@Param a: String?) = // 👈👈👈
         HttpResponse.of("a: $a")
@@ -187,7 +192,7 @@ date: 2022-07-04
 ## 🛠️ Bug fixes
 
 - You can now run `ServerInterceptors` in a blocking task executor when
-  <type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)> is enabled. #4331
+  <type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)> is enabled. #4275 #4331
 - <type://Multiparts#getBoundary()> now throws an `IllegalStateException` instead
   of `NullPointerException` when a boundary is missing. #4193 #4325
 - Armeria retrofit streaming mode now requests data to upstream when it does not have one. #4319
@@ -235,7 +240,7 @@ date: 2022-07-04
   - e.g <type://StreamMessage#of(File)?full>, <type://SplitHttpMessage#body()>, <type://Multipart.toStreamMessage()>
     and <type://BodyPart.content()>
 - `HttpService.exchangeType(RequestHeaders, Route)` is now
-  <type://HttpService#exchangeType(RequestHeaders,Routed)>. #4177
+  <type://HttpService#exchangeType(RoutingContext)>. #4177
 
 ## ⛓ Dependencies
 
@@ -243,8 +248,8 @@ date: 2022-07-04
 - Bucket4J 7.4.0 → 7.5.0
 - Dropwizard metrics 4.2.9 → 4.2.10
 - GraphQL 1.8.0 → 1.8.2
-- gRPC 1.45.1 → 1.47.0
-- grpc-kotlin-stub 1.2.1 → 1.3.0
+- gRPC-Java 1.45.1 → 1.47.0
+- grpc-Kotlin 1.2.1 → 1.3.0
 - Jackson 2.13.2.1 → 2.13.3
 - Kotlin 1.6.20 → 1.7.0
 - Kotlinx 1.6.1 → 1.6.3
@@ -255,9 +260,9 @@ date: 2022-07-04
 - Prometheus Simpleclient 0.15.0 → 0.16.0
 - Reactive Streams 1.0.3 → 1.0.4
 - RxJava 3.1.4 → 3.1.5
-- scalapb-runtime_2.12 0.11.10 → 0.11.11
+- ScalaPB 0.11.10 → 0.11.11
+- Spring 5.3.19 → 5.3.21
 - Spring Boot 2.6.6 → 2.7.1
-- Spring Web 5.3.19 → 5.3.21
 
 ## 🙇 Thank you
 
