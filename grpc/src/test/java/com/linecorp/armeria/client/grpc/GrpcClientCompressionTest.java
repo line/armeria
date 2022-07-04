@@ -138,6 +138,7 @@ class GrpcClientCompressionTest {
         });
         input.onNext(StreamingInputCallRequest.getDefaultInstance());
         input.onCompleted();
+        await().untilTrue(completed);
         ctx = server.requestContextCaptor().take();
         log = ctx.log().whenComplete().join();
         encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ENCODING);
@@ -188,6 +189,7 @@ class GrpcClientCompressionTest {
                                                   completed.set(true);
                                               }
                                           });
+        await().untilTrue(completed);
         ctx = server.requestContextCaptor().take();
         log = ctx.log().whenComplete().join();
         encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ENCODING);
@@ -216,7 +218,6 @@ class GrpcClientCompressionTest {
                 });
         input.onNext(StreamingOutputCallRequest.getDefaultInstance());
         input.onCompleted();
-
         await().untilTrue(completed);
         ServiceRequestContext ctx = server.requestContextCaptor().take();
         RequestLog log = ctx.log().whenComplete().join();
@@ -242,6 +243,7 @@ class GrpcClientCompressionTest {
         });
         input.onNext(StreamingOutputCallRequest.getDefaultInstance());
         input.onCompleted();
+        await().untilTrue(completed);
         ctx = server.requestContextCaptor().take();
         log = ctx.log().whenComplete().join();
         encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ENCODING);
@@ -283,7 +285,7 @@ class GrpcClientCompressionTest {
                                                                      .with(Codec.Identity.NONE, true))
                            .build(TestServiceStub.class);
 
-        AtomicBoolean completed = new AtomicBoolean();
+        final AtomicBoolean completed = new AtomicBoolean();
         StreamObserver<StreamingInputCallRequest> input =
                 stub.streamingInputCall(new StreamObserver<StreamingInputCallResponse>() {
                     @Override
@@ -299,6 +301,7 @@ class GrpcClientCompressionTest {
                 });
         input.onNext(StreamingInputCallRequest.getDefaultInstance());
         input.onCompleted();
+        await().untilTrue(completed);
 
         ServiceRequestContext ctx = server.requestContextCaptor().take();
         RequestLog log = ctx.log().whenComplete().join();
@@ -324,6 +327,7 @@ class GrpcClientCompressionTest {
         });
         input.onNext(StreamingInputCallRequest.getDefaultInstance());
         input.onCompleted();
+        await().untilTrue(completed);
         ctx = server.requestContextCaptor().take();
         log = ctx.log().whenComplete().join();
         encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
@@ -354,6 +358,7 @@ class GrpcClientCompressionTest {
                 });
         input.onNext(StreamingInputCallRequest.getDefaultInstance());
         input.onCompleted();
+        await().untilTrue(completed);
 
         ServiceRequestContext ctx = server.requestContextCaptor().take();
         RequestLog log = ctx.log().whenComplete().join();
@@ -379,6 +384,7 @@ class GrpcClientCompressionTest {
         });
         input.onNext(StreamingInputCallRequest.getDefaultInstance());
         input.onCompleted();
+        await().untilTrue(completed);
         ctx = server.requestContextCaptor().take();
         log = ctx.log().whenComplete().join();
         encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
@@ -409,6 +415,7 @@ class GrpcClientCompressionTest {
                 });
         input.onNext(StreamingOutputCallRequest.getDefaultInstance());
         input.onCompleted();
+        await().untilTrue(completed);
 
         ServiceRequestContext ctx = server.requestContextCaptor().take();
         RequestLog log = ctx.log().whenComplete().join();
@@ -434,6 +441,7 @@ class GrpcClientCompressionTest {
         });
         input.onNext(StreamingOutputCallRequest.getDefaultInstance());
         input.onCompleted();
+        await().untilTrue(completed);
         ctx = server.requestContextCaptor().take();
         log = ctx.log().whenComplete().join();
         encoding = log.requestHeaders().get(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
