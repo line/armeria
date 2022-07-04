@@ -332,7 +332,7 @@ public final class DefaultClientRequestContext
 
         // Use an arbitrary event loop for asynchronous Endpoint selection.
         final EventLoop temporaryEventLoop = options().factory().eventLoopSupplier().get();
-        return endpointGroup.select(this, temporaryEventLoop, connectTimeoutMillis()).handle((e, cause) -> {
+        return endpointGroup.select(this, temporaryEventLoop).handle((e, cause) -> {
             updateEndpoint(e);
             acquireEventLoop(endpointGroup);
 

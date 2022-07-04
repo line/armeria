@@ -21,6 +21,7 @@ import java.util.concurrent.ScheduledExecutorService;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -52,8 +53,29 @@ public interface EndpointSelector {
      *         this {@link EndpointSelector}'s selection strategy, or completed with {@code null} if no
      *         {@link Endpoint} was selected within the specified {@code timeoutMillis}, which can happen
      *         if the {@link EndpointGroup} is empty.
+     *
+     * @deprecated Use {@link #select(ClientRequestContext, ScheduledExecutorService)} with
+     *             {@link EndpointGroup#selectionTimeoutMillis()}.
      */
+    @Deprecated
     CompletableFuture<Endpoint> select(ClientRequestContext ctx,
                                        ScheduledExecutorService executor,
                                        long timeoutMillis);
+
+    /**
+     * Selects an {@link Endpoint} asynchronously from the {@link EndpointGroup} associated with the specified
+     * {@link ClientRequestContext}, waiting up to the specified {@code timeoutMillis}.
+     *
+     * @param ctx the {@link ClientRequestContext} of the {@link Request} being handled.
+     * @param executor the {@link ScheduledExecutorService} used for notifying the {@link CompletableFuture}
+     *                 being returned and scheduling timeout tasks.
+     *
+     * @return the {@link CompletableFuture} that will be completed with the {@link Endpoint} selected by
+     *         this {@link EndpointSelector}'s selection strategy, or completed with {@code null} if no
+     *         {@link Endpoint} was selected within the specified {@code timeoutMillis}, which can happen
+     *         if the {@link EndpointGroup} is empty.
+     */
+    default CompletableFuture<Endpoint> select(ClientRequestContext ctx, ScheduledExecutorService executor) {
+        return select(ctx, executor, Flags.defaultConnectTimeoutMillis());
+    }
 }

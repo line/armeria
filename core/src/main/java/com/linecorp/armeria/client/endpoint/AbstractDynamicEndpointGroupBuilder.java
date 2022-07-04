@@ -15,6 +15,10 @@
  */
 package com.linecorp.armeria.client.endpoint;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
+import java.time.Duration;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -25,11 +29,16 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public abstract class AbstractDynamicEndpointGroupBuilder implements DynamicEndpointGroupSetters {
 
     private boolean allowEmptyEndpoints = true;
+    private long selectionTimeoutMillis;
 
     /**
-     * Creates a new instance.
+     * Creates a new instance with the specified default {@code selectionTimeoutMillis}.
      */
-    protected AbstractDynamicEndpointGroupBuilder() {}
+    protected AbstractDynamicEndpointGroupBuilder(long selectionTimeoutMillis) {
+        checkArgument(selectionTimeoutMillis >= 0, "selectionTimeoutMillis: %s (expected: >= 0)",
+                      selectionTimeoutMillis);
+        this.selectionTimeoutMillis = selectionTimeoutMillis;
+    }
 
     // Note that we don't have `selectionStrategy()` here because some subclasses are delegating and
     // thus they use the `EndpointSelectionStrategy` of the delegate.
@@ -46,5 +55,31 @@ public abstract class AbstractDynamicEndpointGroupBuilder implements DynamicEndp
      */
     protected boolean shouldAllowEmptyEndpoints() {
         return allowEmptyEndpoints;
+    }
+
+    @Override
+    public AbstractDynamicEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
+        return (AbstractDynamicEndpointGroupBuilder)
+                DynamicEndpointGroupSetters.super.selectionTimeout(selectionTimeout);
+    }
+
+    @Override
+    public AbstractDynamicEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
+        checkArgument(selectionTimeoutMillis >= 0, "selectionTimeoutMillis: %s (expected: >= 0)",
+                      selectionTimeoutMillis);
+        if (selectionTimeoutMillis == 0) {
+            selectionTimeoutMillis = Long.MAX_VALUE;
+        }
+        this.selectionTimeoutMillis = selectionTimeoutMillis;
+        return this;
+    }
+
+    /**
+     * Returns the timeout to wait until a successful {@link Endpoint} selection.
+     */
+    // Intentionally leave as a non-final method so that some sub-builder classes override the visibility as
+    // a workaround of multiple inheritance
+    protected long selectionTimeoutMillis() {
+        return selectionTimeoutMillis;
     }
 }
