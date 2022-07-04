@@ -816,8 +816,7 @@ class HttpClientIntegrationTest {
     })
     class JettyInteropTest {
 
-        @Nullable
-        org.eclipse.jetty.server.Server jetty;
+        org.eclipse.jetty.server.@Nullable Server jetty;
 
         @BeforeAll
         void startJetty() throws Exception {

@@ -13,7 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.common;
+package com.linecorp.armeria.common;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,71 +30,70 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.util.AttributeKey;
 
-class DefaultAttributeMapTest {
+class DefaultConcurrentAttributesTest {
 
     @Test
     void testGetSetString() {
-        final DefaultAttributeMap map = new DefaultAttributeMap(null);
+        final ConcurrentAttributes map = ConcurrentAttributes.of();
         final AttributeKey<String> key = AttributeKey.valueOf("str");
         assertThat(map.attr(key)).isNull();
 
-        assertThat(map.setAttr(key, "Whoohoo")).isNull();
+        assertThat(map.getAndSet(key, "Whoohoo")).isNull();
         assertThat(map.attr(key)).isEqualTo("Whoohoo");
 
-        assertThat(map.setAttr(key, "What")).isEqualTo("Whoohoo");
+        assertThat(map.getAndSet(key, "What")).isEqualTo("Whoohoo");
         assertThat(map.attr(key)).isEqualTo("What");
 
-        assertThat(map.setAttr(key, null)).isEqualTo("What");
+        assertThat(map.getAndSet(key, null)).isEqualTo("What");
         assertThat(map.attr(key)).isNull();
 
-        assertThat(map.setAttr(key, "Why")).isNull();
+        assertThat(map.getAndSet(key, "Why")).isNull();
         assertThat(map.attr(key)).isEqualTo("Why");
     }
 
     @Test
     void testGetSetInt() {
-        final DefaultAttributeMap map = new DefaultAttributeMap(null);
+        final ConcurrentAttributes map = ConcurrentAttributes.of();
         final AttributeKey<Integer> key = AttributeKey.valueOf("int");
         assertThat(map.attr(key)).isNull();
 
-        assertThat(map.setAttr(key, 3653)).isNull();
+        assertThat(map.getAndSet(key, 3653)).isNull();
         assertThat(map.attr(key)).isEqualTo(3653);
 
-        assertThat(map.setAttr(key, 1)).isEqualTo(3653);
+        assertThat(map.getAndSet(key, 1)).isEqualTo(3653);
         assertThat(map.attr(key)).isEqualTo(1);
 
-        assertThat(map.setAttr(key, null)).isEqualTo(1);
+        assertThat(map.getAndSet(key, null)).isEqualTo(1);
         assertThat(map.attr(key)).isNull();
 
-        assertThat(map.setAttr(key, 2)).isNull();
+        assertThat(map.getAndSet(key, 2)).isNull();
         assertThat(map.attr(key)).isEqualTo(2);
     }
 
     @Test
     void testGetSetWithNull() {
-        final DefaultAttributeMap map = new DefaultAttributeMap(null);
+        final ConcurrentAttributes map = ConcurrentAttributes.of();
         final AttributeKey<Integer> key = AttributeKey.valueOf("key");
 
-        assertThat(map.setAttr(key, 1)).isNull();
+        assertThat(map.getAndSet(key, 1)).isNull();
         assertThat(map.attr(key)).isEqualTo(1);
 
-        assertThat(map.setAttr(key, null)).isEqualTo(1);
+        assertThat(map.getAndSet(key, null)).isEqualTo(1);
         assertThat(map.attr(key)).isNull();
     }
 
     @Test
     void testIterator() {
-        final DefaultAttributeMap map = new DefaultAttributeMap(null);
+        final ConcurrentAttributes map = ConcurrentAttributes.of();
         assertThat(map.attrs().hasNext()).isFalse();
 
-        final AttributeKey<Integer> key = AttributeKey.valueOf(DefaultAttributeMap.class, "KEY");
-        assertThat(map.setAttr(key, 42)).isNull();
+        final AttributeKey<Integer> key = AttributeKey.valueOf(DefaultConcurrentAttributes.class, "KEY");
+        assertThat(map.getAndSet(key, 42)).isNull();
 
         final ArrayList<Entry<AttributeKey<?>, Object>> attrs = Lists.newArrayList(map.attrs());
         assertThat(attrs).hasSize(1);
@@ -102,13 +101,13 @@ class DefaultAttributeMapTest {
 
     @Test
     void testIteratorWithFullMap() {
-        final DefaultAttributeMap map = new DefaultAttributeMap(null);
+        final DefaultConcurrentAttributes map = (DefaultConcurrentAttributes) ConcurrentAttributes.of();
         final List<AttributeKey<Integer>> expectedKeys = new ArrayList<>();
         for (int i = 0; i < 1024; i++) {
             final AttributeKey<Integer> key =
-                    AttributeKey.valueOf(DefaultAttributeMapTest.class, String.valueOf(i));
+                    AttributeKey.valueOf(DefaultConcurrentAttributesTest.class, String.valueOf(i));
             expectedKeys.add(key);
-            assertThat(map.setAttr(key, i)).isNull();
+            assertThat(map.getAndSet(key, i)).isNull();
         }
 
         // Make sure all buckets are filled.
@@ -121,14 +120,14 @@ class DefaultAttributeMapTest {
 
         for (int i = 1023; i >= 0; i -= 5) {
             final AttributeKey<Integer> key = expectedKeys.get(i);
-            assertThat(map.setAttr(key, null)).isEqualTo(i);
+            assertThat(map.getAndSet(key, null)).isEqualTo(i);
             expectedKeys.remove(i);
         }
 
         assertThat(expectedKeys).isEqualTo(actualKeys(map));
     }
 
-    private static List<AttributeKey<?>> actualKeys(DefaultAttributeMap map) {
+    private static List<AttributeKey<?>> actualKeys(DefaultConcurrentAttributes map) {
         return ImmutableList.copyOf(map.attrs()).stream().sorted((a, b) -> {
             final Integer aVal = a.getKey().id();
             final Integer bVal = b.getKey().id();
@@ -138,8 +137,9 @@ class DefaultAttributeMapTest {
 
     @Test
     void hasAttributeInRoot() {
-        final ServiceRequestContext root = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final DefaultAttributeMap child = new DefaultAttributeMap(root);
+        final DefaultServiceRequestContext root =
+                (DefaultServiceRequestContext) ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ConcurrentAttributes child = ConcurrentAttributes.fromParent(root.attributes());
 
         // root: [foo], child: []
         final AttributeKey<String> foo = AttributeKey.valueOf("foo");
@@ -150,19 +150,19 @@ class DefaultAttributeMapTest {
         assertThat(child.ownAttr(foo)).isNull();
 
         // root: [foo], child: [foo2]
-        assertThat(child.setAttr(foo, "foo2")).isEqualTo("foo");
+        assertThat(child.getAndSet(foo, "foo2")).isEqualTo("foo");
         assertThat(child.ownAttr(foo)).isEqualTo("foo2");
         assertThat(child.attr(foo)).isEqualTo("foo2");
         assertThat(root.attr(foo)).isEqualTo("foo");
 
         // root: [foo], child: [null]
-        assertThat(child.setAttr(foo, null)).isEqualTo("foo2");
+        assertThat(child.getAndSet(foo, null)).isEqualTo("foo2");
         assertThat(child.ownAttr(foo)).isNull();
         assertThat(child.attr(foo)).isNull();
         assertThat(root.attr(foo)).isEqualTo("foo");
 
         // root: [foo], child: [foo3]
-        assertThat(child.setAttr(foo, "foo3")).isNull(); // Should not return "foo".
+        assertThat(child.getAndSet(foo, "foo3")).isNull(); // Should not return "foo".
         assertThat(child.ownAttr(foo)).isEqualTo("foo3");
         assertThat(child.attr(foo)).isEqualTo("foo3");
         assertThat(root.attr(foo)).isEqualTo("foo");
@@ -170,24 +170,25 @@ class DefaultAttributeMapTest {
 
     @Test
     void hasNoAttributeInRoot() {
-        final ServiceRequestContext root = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final DefaultAttributeMap child = new DefaultAttributeMap(root);
+        final DefaultServiceRequestContext root =
+                (DefaultServiceRequestContext) ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ConcurrentAttributes child = ConcurrentAttributes.fromParent(root.attributes());
 
         final AttributeKey<String> foo = AttributeKey.valueOf("foo");
         // root: [], child: [foo]
-        assertThat(child.setAttr(foo, "foo")).isNull();
+        assertThat(child.getAndSet(foo, "foo")).isNull();
         assertThat(root.attr(foo)).isNull();
         assertThat(child.attr(foo)).isEqualTo("foo");
         assertThat(child.ownAttr(foo)).isEqualTo("foo");
 
         // root: [], child: [null]
-        assertThat(child.setAttr(foo, null)).isEqualTo("foo");
+        assertThat(child.getAndSet(foo, null)).isEqualTo("foo");
         assertThat(root.attr(foo)).isNull();
         assertThat(child.attr(foo)).isNull();
         assertThat(child.ownAttr(foo)).isNull();
 
         // root: [], child: [foo2]
-        assertThat(child.setAttr(foo, "foo2")).isNull();
+        assertThat(child.getAndSet(foo, "foo2")).isNull();
         assertThat(root.attr(foo)).isNull();
         assertThat(child.attr(foo)).isEqualTo("foo2");
         assertThat(child.ownAttr(foo)).isEqualTo("foo2");
@@ -195,8 +196,9 @@ class DefaultAttributeMapTest {
 
     @Test
     void attrsWithRoot() {
-        final ServiceRequestContext root = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-        final DefaultAttributeMap child = new DefaultAttributeMap(root);
+        final DefaultServiceRequestContext root =
+                (DefaultServiceRequestContext) ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final ConcurrentAttributes child = ConcurrentAttributes.fromParent(root.attributes());
 
         final AttributeKey<String> foo = AttributeKey.valueOf("foo");
         // root: [foo], child: []
@@ -220,7 +222,7 @@ class DefaultAttributeMapTest {
         // Set a new attribute to child.
         final AttributeKey<String> bar = AttributeKey.valueOf("bar");
         // root: [foo], child: [foo1, bar]
-        assertThat(child.setAttr(bar, "bar")).isNull();
+        assertThat(child.getAndSet(bar, "bar")).isNull();
 
         childIt = child.attrs();
         final List<String> attributeValues = new ArrayList<>(2);
@@ -263,5 +265,42 @@ class DefaultAttributeMapTest {
         }
         assertThat(childOwnIt.hasNext()).isFalse();
         assertThat(attributeValues).containsExactlyInAnyOrder("foo1", "bar1");
+    }
+
+    @Test
+    void getAndSet() {
+        final AttributeKey<Integer> foo = AttributeKey.valueOf("foo");
+        final AttributeKey<String> bar = AttributeKey.valueOf("bar");
+        final ConcurrentAttributes attributes = ConcurrentAttributes.of();
+        attributes.set(foo, 0)
+                  .set(bar, "bar");
+        final Integer oldFoo = attributes.getAndSet(foo, 1);
+        final String oldBar = attributes.getAndSet(bar, "new");
+        assertThat(oldFoo).isZero();
+        assertThat(oldBar).isEqualTo("bar");
+
+        assertThat(attributes.attr(foo)).isEqualTo(1);
+        assertThat(attributes.attr(bar)).isEqualTo("new");
+    }
+
+    @Test
+    void equalsAndHash() {
+        final AttributeKey<Integer> foo = AttributeKey.valueOf("foo");
+        final AttributeKey<String> bar = AttributeKey.valueOf("bar");
+        final ConcurrentAttributes attributes0 = Attributes.of(foo, 0, bar, "bar").toConcurrentAttributes();
+        final ConcurrentAttributes attributes1 = Attributes.of(foo, 0, bar, "bar").toConcurrentAttributes();
+        final ConcurrentAttributes attributes2 = Attributes.of(foo, 1, bar, "bar").toConcurrentAttributes();
+        final ConcurrentAttributes attributes3 = Attributes.builder(Attributes.of(foo, 0))
+                                                           .set(bar, "bar")
+                                                           .build().toConcurrentAttributes();
+
+        assertThat(attributes0).isEqualTo(attributes1);
+        assertThat(attributes0.hashCode()).isEqualTo(attributes1.hashCode());
+
+        assertThat(attributes0).isNotEqualTo(attributes2);
+        assertThat(attributes0.hashCode()).isNotEqualTo(attributes2.hashCode());
+
+        assertThat(attributes0).isEqualTo(attributes3);
+        assertThat(attributes0.hashCode()).isEqualTo(attributes3.hashCode());
     }
 }

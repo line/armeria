@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.ProxiedAddresses;
@@ -57,6 +58,11 @@ final class HttpClientDelegate implements HttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+        final Throwable throwable = ClientPendingThrowableUtil.pendingThrowable(ctx);
+        if (throwable != null) {
+            return earlyFailedResponse(throwable, ctx, req);
+        }
+
         final Endpoint endpoint = ctx.endpoint();
         if (endpoint == null) {
             // It is possible that we reach here even when `EndpointGroup` is not empty,
@@ -69,17 +75,11 @@ final class HttpClientDelegate implements HttpClient {
             // and response created here will be exposed only when `EndpointGroup.select()` returned `null`.
             //
             // See `DefaultClientRequestContext.init()` for more information.
-            final UnprocessedRequestException cause =
-                    UnprocessedRequestException.of(EmptyEndpointGroupException.get(ctx.endpointGroup()));
-            handleEarlyRequestException(ctx, req, cause);
-            return HttpResponse.ofFailure(cause);
+            return earlyFailedResponse(EmptyEndpointGroupException.get(ctx.endpointGroup()), ctx, req);
         }
 
         if (!isValidPath(req)) {
-            final UnprocessedRequestException cause = UnprocessedRequestException.of(
-                    new IllegalArgumentException("invalid path: " + req.path()));
-            handleEarlyRequestException(ctx, req, cause);
-            return HttpResponse.ofFailure(cause);
+            return earlyFailedResponse(new IllegalArgumentException("invalid path: " + req.path()), ctx, req);
         }
 
         final SessionProtocol protocol = ctx.sessionProtocol();
@@ -220,6 +220,12 @@ final class HttpClientDelegate implements HttpClient {
 
     private static boolean isValidPath(HttpRequest req) {
         return PathAndQuery.parse(req.path()) != null;
+    }
+
+    private static HttpResponse earlyFailedResponse(Throwable t, ClientRequestContext ctx, HttpRequest req) {
+        final UnprocessedRequestException cause = UnprocessedRequestException.of(t);
+        handleEarlyRequestException(ctx, req, cause);
+        return HttpResponse.ofFailure(cause);
     }
 
     private static void handleEarlyRequestException(ClientRequestContext ctx,
