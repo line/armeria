@@ -55,7 +55,7 @@ public final class DataCenterInfo {
     }
 
     /**
-     * return the name.
+     * Returns the data center name, such as {@code "aws-us-east-2"}.
      */
     public String getName() {
         return name;
