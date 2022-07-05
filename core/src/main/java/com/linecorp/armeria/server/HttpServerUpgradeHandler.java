@@ -85,7 +85,8 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
 
     private static final Splitter COMMA_SPLITTER = Splitter.on(',').omitEmptyStrings().trimResults();
 
-    private final FullHttpResponse invalidSettingsHeaderResponse = newInvalidSettingsHeaderResponse();
+    private static final FullHttpResponse invalidSettingsHeaderResponse =
+            new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, INVALID_SETTINGS_HEADER_MESSAGE.duplicate());
 
     /**
      * A codec that the source can be upgraded to {@link SessionProtocol#H2C}.
