@@ -170,7 +170,7 @@ date: 2022-07-04
     System.err.println("Server has stopped.");
   });
   ```
-- You can now customize internal Netty `Pipeline` using
+- You can now customize internal Netty `ChannelPipeline` using
   <type://ClientFactoryOptions#CHANNEL_PIPELINE_CUSTOMIZER>. #3907 #4260
   - This is an advanced feature and not recommended to use if you are not familiar with
     Armeria and Netty internals.
@@ -201,14 +201,14 @@ date: 2022-07-04
   - A gRPC client
   - A Thrift client
   - A <type://WebClient> when it's used with <type://ResponseAs>. #4236
-- Better performance for unary gRPC call by introducing `UnaryServerCall`. #4192
+- Better performance for unary gRPC call. #4192
 - Annotated services perform better on unary responses. #4177
 
 ## 🛠️ Bug fixes
 
 - You can now run `ServerInterceptors` in a blocking task executor when
   <type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)> is enabled. #4275 #4331
-- <type://Multiparts#getBoundary()> now throws an `IllegalStateException` instead
+- <type://Multiparts#getBoundary(MediaType)> now throws an `IllegalStateException` instead
   of `NullPointerException` when a boundary is missing. #4193 #4325
 - Armeria retrofit streaming mode now requests data to upstream when it does not have one. #4319
 - You no longer see deep recursive calls in <type://PublisherBasedStreamMessage>. #4298
@@ -228,8 +228,8 @@ date: 2022-07-04
   it's injected. #4240
 - Armeria server sends now 400 Bad Request when an HTTP/2 upgrade request contains invalid headers. #4016 #4224
 - <type://EurekaUpdatingListener> now registers itself with the `instanceId` which is `hostname:appname:port`,
-  so it doesn't cause a conflict when more than one app are running in the same host. #4223
-- A ramping up <type://EndpointSelectionStrategy> now correctly works with
+  so it doesn't cause a conflict when more than one app with the same name are running in the same host. #4223
+- A ramping up <type://EndpointSelectionStrategy> now works correctly in combination with
   <type://HealthCheckedEndpointGroup>. #4221
 - The information of a thrown exception in gRPC service is now propagated to the client via the
   `grpc-status-details-bin` header. #4203 #4204
@@ -255,8 +255,8 @@ date: 2022-07-04
 ## ☢️ Breaking changes
 
 - <type://ByteStreamMessage> is returned instead of `StreamMessage<HttpData>`. #4058
-  - e.g <type://StreamMessage#of(File)?full>, <type://SplitHttpMessage#body()>, <type://Multipart.toStreamMessage()>
-    and <type://BodyPart.content()>
+  - e.g <type://StreamMessage#of(File)?full>, <type://SplitHttpMessage#body()>,
+    <type://Multipart#toStreamMessage()> and <type://BodyPart#content()>
 - `HttpService.exchangeType(RequestHeaders, Route)` is now
   <type://HttpService#exchangeType(RoutingContext)>. #4177
 

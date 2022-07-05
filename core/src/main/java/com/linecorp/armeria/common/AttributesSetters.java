@@ -33,7 +33,7 @@ public interface AttributesSetters {
      * If a {@code null} value is specified, the value in the {@link AttributesGetters#parent()} is hidden as
      * well.
      *
-     * <p><pre>{@code
+     * <pre>{@code
      * static final AttributeKey<String> USER_ID = AttributeKey.valueOf("USER_ID");
      * static final AttributeKey<String> SECRET_TOKEN = AttributeKey.valueOf("SECRET_TOKEN");
      * static final AttributeKey<String> TRACE_ID = AttributeKey.valueOf("TRACE_ID");
@@ -68,7 +68,7 @@ public interface AttributesSetters {
      * If a {@code null} value is specified, the value in the {@link AttributesGetters#parent()} is hidden as
      * well.
      *
-     * <p><pre>{@code
+     * <pre>{@code
      * static final AttributeKey<String> USER_ID = AttributeKey.valueOf("USER_ID");
      * static final AttributeKey<String> SECRET_TOKEN = AttributeKey.valueOf("SECRET_TOKEN");
      * static final AttributeKey<String> TRACE_ID = AttributeKey.valueOf("TRACE_ID");
@@ -100,7 +100,8 @@ public interface AttributesSetters {
      *         A {@code null} can be returned if the {@link AttributeKey} is previously
      *         associated with {@code null}.
      */
-    @Nullable <T> T getAndSet(AttributeKey<T> key, @Nullable T value);
+    @Nullable
+    <T> T getAndSet(AttributeKey<T> key, @Nullable T value);
 
     /**
      * Removes the value associated with the specified {@link AttributeKey} in the
@@ -108,7 +109,7 @@ public interface AttributesSetters {
      *
      * <p>Note that this method won't remove the value in {@link AttributesGetters#parent()}.
      *
-     * <p><pre>{@code
+     * <pre>{@code
      * static final AttributeKey<String> USER_ID = AttributeKey.valueOf("USER_ID");
      * static final AttributeKey<String> SECRET_TOKEN = AttributeKey.valueOf("SECRET_TOKEN");
      * static final AttributeKey<String> TRACE_ID = AttributeKey.valueOf("TRACE_ID");
