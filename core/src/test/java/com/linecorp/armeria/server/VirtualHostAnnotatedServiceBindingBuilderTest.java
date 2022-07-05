@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistryTest.noopDependencyInjector;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.nio.file.Path;
@@ -101,7 +102,7 @@ class VirtualHostAnnotatedServiceBindingBuilderTest {
                 .defaultLogName(defaultLogName)
                 .multipartUploadsLocation(multipartUploadsLocation)
                 .build(new TestService())
-                .build(template);
+                .build(template, noopDependencyInjector);
 
         assertThat(virtualHost.serviceConfigs()).hasSize(2);
         final ServiceConfig pathBar = virtualHost.serviceConfigs().get(0);

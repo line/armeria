@@ -674,10 +674,10 @@ public final class Server implements ListenableAsyncCloseable {
             serverChannels.clear();
 
             final Builder<ShutdownSupport> builder = ImmutableList.builder();
+            builder.addAll(config.delegate().shutdownSupports());
             for (VirtualHost virtualHost : config.virtualHosts()) {
                 builder.addAll(virtualHost.shutdownSupports());
             }
-
             for (ServiceConfig serviceConfig : config.serviceConfigs()) {
                 builder.addAll(serviceConfig.shutdownSupports());
             }

@@ -39,7 +39,7 @@ public interface ResponseConverterFunction {
 
     /**
      * Returns {@link HttpResponse} instance corresponds to the given {@code result}.
-     * Calls {@link ResponseConverterFunction#fallthrough()} or throws a {@link FallthroughException} if
+     * Calls {@link ResponseConverterFunction#fallthrough()} if
      * this converter cannot convert the {@code result} to the {@link HttpResponse}.
      *
      * @param headers The HTTP headers that you might want to use to create the {@link HttpResponse}.
