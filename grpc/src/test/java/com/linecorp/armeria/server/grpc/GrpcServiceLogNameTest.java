@@ -25,6 +25,7 @@ import java.util.concurrent.Executors;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.ArgumentCaptor;
@@ -95,14 +96,15 @@ class GrpcServiceLogNameTest {
         rootLogger.detachAppender(appender);
     }
 
-    @Test
+    // TODO(ikhoon): Revert after CI build passes
+    @RepeatedTest(100)
     void logName() {
         final TestServiceBlockingStub client =
                 GrpcClients.builder(server.httpUri().resolve("/grpc/"))
                            .build(TestServiceBlockingStub.class);
         client.emptyCall(Empty.newBuilder().build());
 
-        final RequestLog log = capturedCtx.log().partial();
+        final RequestLog log = capturedCtx.log().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo(TestServiceGrpc.SERVICE_NAME);
         assertThat(log.name()).isEqualTo("EmptyCall");
         assertThat(log.fullName()).isEqualTo(TestServiceGrpc.getEmptyCallMethod().getFullMethodName());
@@ -115,7 +117,7 @@ class GrpcServiceLogNameTest {
                            .build(TestServiceBlockingStub.class);
         client.emptyCall(Empty.newBuilder().build());
 
-        final RequestLog log = capturedCtx.log().partial();
+        final RequestLog log = capturedCtx.log().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("DefaultServiceName");
         assertThat(log.name()).isEqualTo("DefaultName");
         assertThat(log.fullName()).isEqualTo("DefaultServiceName/DefaultName");
