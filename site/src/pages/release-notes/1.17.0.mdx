@@ -44,7 +44,8 @@ date: 2022-07-04
   ```java
   // Inject authClient that is needed to create the AuthDecorator.
   WebClient authClient = ...
-  DependencyInjector injector = DependencyInjector.ofSingletons(new AuthDecorator(authClient));
+  DependencyInjector injector =
+      DependencyInjector.ofSingletons(new AuthDecorator(authClient));
   serverBuilder.dependencyInjector(dependencyInjector, true);
 
   // An annotated service that uses AuthDecorator.
@@ -60,7 +61,9 @@ date: 2022-07-04
       AuthDecorator(WebClient authClient) { ... }
 
       @Override
-      public HttpResponse serve(HttpService delegate, ServiceRequestContext ctx, HttpRequest req)
+      public HttpResponse serve(HttpService delegate,
+                                ServiceRequestContext ctx,
+                                HttpRequest req)
               throws Exception {
           // Authorize the request.
           ...
@@ -132,14 +135,17 @@ date: 2022-07-04
   <type://LoggingClient>. #3400 #4090
   ```java
   LoggingService.builder()
-                .responseLogLevel(IllegalStateException.class, LogLevel.WARN)
-                .responseLogLevel(IllegalArgumentException.class, LogLevel.ERROR)
+                .responseLogLevel(IllegalStateException.class,
+                                  LogLevel.WARN)
+                .responseLogLevel(IllegalArgumentException.class,
+                                  LogLevel.ERROR)
                 ...
   ```
 - You can now map a specific exception to an <type://HttpResponse>. #4279 #4283
   ```java
   HttpResponse recovered =
-      response.recover(IllegalStateException.class, cause -> HttpResponse.of("Fallback"));
+      response.recover(IllegalStateException.class,
+                       cause -> HttpResponse.of("Fallback"));
   ```
 - You can now enable automatic compression for a gRPC response. #4258 #4266
   ```java
@@ -153,7 +159,8 @@ date: 2022-07-04
 - You can now add a hook to <type://Server> and <type://ClientFactory> that is called when the
   JVM shuts down. #4015 #4043
   ```java
-  Runnable whenClosing = () -> System.err.println("Before stopping Server");
+  Runnable whenClosing =
+      () -> System.err.println("Before stopping Server");
   server.closeOnJvmShutdown(whenClosing).thenRun(() -> {
       System.err.println("After Server stopped");
    });
