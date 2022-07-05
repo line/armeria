@@ -29,6 +29,7 @@ import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -39,6 +40,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
@@ -268,10 +270,29 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             @Nullable CompletableFuture<HttpResponse> resFuture,
             SerializationFormat serializationFormat) {
         final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
+        final Executor blockingExecutor;
+        if (useBlockingTaskExecutor) {
+            blockingExecutor = MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor());
+        } else {
+            blockingExecutor = null;
+        }
         final AbstractServerCall<I, O> call = newServerCall(simpleMethodName, methodDef, ctx, req,
-                                                            res, resFuture, serializationFormat);
-        final ServerCall.Listener<I> listener;
-        try (SafeCloseable ignored = ctx.push()) {
+                                                            res, resFuture, serializationFormat,
+                                                            blockingExecutor);
+        if (blockingExecutor != null) {
+            blockingExecutor.execute(() -> startCall(methodDef, ctx, req, methodDescriptor, call));
+        } else {
+            try (SafeCloseable ignored = ctx.push()) {
+                startCall(methodDef, ctx, req, methodDescriptor, call);
+            }
+        }
+    }
+
+    private <I, O> void startCall(ServerMethodDefinition<I, O> methodDef, ServiceRequestContext ctx,
+                                  HttpRequest req, MethodDescriptor<I, O> methodDescriptor,
+                                  AbstractServerCall<I, O> call) {
+        final Listener<I> listener;
+        try {
             listener = methodDef.getServerCallHandler()
                                 .startCall(call, MetadataUtil.copyFromHeaders(req.headers()));
         } catch (Throwable t) {
@@ -306,7 +327,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             String simpleMethodName, ServerMethodDefinition<I, O> methodDef,
             ServiceRequestContext ctx, HttpRequest req,
             HttpResponse res, @Nullable CompletableFuture<HttpResponse> resFuture,
-            SerializationFormat serializationFormat) {
+            SerializationFormat serializationFormat, @Nullable Executor blockingExecutor) {
         final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
         if (methodDescriptor.getType() == MethodType.UNARY) {
             assert resFuture != null;
@@ -324,9 +345,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     serializationFormat,
                     jsonMarshallers.get(methodDescriptor.getServiceName()),
                     unsafeWrapRequestBuffers,
-                    useBlockingTaskExecutor,
                     defaultHeaders.get(serializationFormat),
-                    statusFunction, autoCompression);
+                    statusFunction,
+                    blockingExecutor,
+                    autoCompression);
         } else {
             return new StreamingServerCall<>(
                     req,
@@ -341,9 +363,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                     serializationFormat,
                     jsonMarshallers.get(methodDescriptor.getServiceName()),
                     unsafeWrapRequestBuffers,
-                    useBlockingTaskExecutor,
                     defaultHeaders.get(serializationFormat),
-                    statusFunction, autoCompression);
+                    statusFunction,
+                    blockingExecutor,
+                    autoCompression);
         }
     }
 

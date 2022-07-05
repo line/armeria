@@ -30,7 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Splitter;
-import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -147,9 +146,9 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                        SerializationFormat serializationFormat,
                        @Nullable GrpcJsonMarshaller jsonMarshaller,
                        boolean unsafeWrapRequestBuffers,
-                       boolean useBlockingTaskExecutor,
                        ResponseHeaders defaultHeaders,
                        @Nullable GrpcStatusFunction statusFunction,
+                       @Nullable Executor blockingExecutor,
                        boolean autoCompression) {
         requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
@@ -171,8 +170,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         marshaller = new GrpcMessageMarshaller<>(alloc, serializationFormat, method, jsonMarshaller,
                                                  unsafeWrapRequestBuffers);
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
-        blockingExecutor = useBlockingTaskExecutor ?
-                           MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor()) : null;
+        this.blockingExecutor = blockingExecutor;
         defaultResponseHeaders = defaultHeaders;
         this.statusFunction = statusFunction;
 

@@ -81,11 +81,11 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                         HttpResponseWriter res, int maxRequestMessageLength, int maxResponseMessageLength,
                         ServiceRequestContext ctx, SerializationFormat serializationFormat,
                         @Nullable GrpcJsonMarshaller jsonMarshaller, boolean unsafeWrapRequestBuffers,
-                        boolean useBlockingTaskExecutor, ResponseHeaders defaultHeaders,
-                        @Nullable GrpcStatusFunction statusFunction, boolean autoCompress) {
+                        ResponseHeaders defaultHeaders, @Nullable GrpcStatusFunction statusFunction,
+                        @Nullable Executor blockingExecutor, boolean autoCompress) {
         super(req, method, simpleMethodName, compressorRegistry, decompressorRegistry, res,
               maxResponseMessageLength, ctx, serializationFormat, jsonMarshaller, unsafeWrapRequestBuffers,
-              useBlockingTaskExecutor, defaultHeaders, statusFunction, autoCompress);
+              defaultHeaders, statusFunction, blockingExecutor, autoCompress);
         requireNonNull(req, "req");
         this.method = requireNonNull(method, "method");
         this.ctx = requireNonNull(ctx, "ctx");

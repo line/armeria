@@ -326,11 +326,12 @@ class UnaryServerCallTest {
                         GrpcSerializationFormats.PROTO,
                         new DefaultJsonMarshaller(MessageMarshaller.builder().build()),
                         false,
-                        false,
                         ResponseHeaders.builder(HttpStatus.OK)
                                        .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                        .build(),
-                        /* exceptionMappings */ null, /* autoCompress */ false);
+                        /* exceptionMappings */ null,
+                        /* blockingExecutor */ null,
+                        /* autoCompress */ false);
 
         final AtomicReference<SimpleRequest> requestCaptor = new AtomicReference<>();
         final AtomicBoolean completed = new AtomicBoolean();
@@ -369,10 +370,11 @@ class UnaryServerCallTest {
                 GrpcSerializationFormats.PROTO,
                 new DefaultJsonMarshaller(MessageMarshaller.builder().build()),
                 unsafeWrapRequestBuffers,
-                false,
                 ResponseHeaders.builder(HttpStatus.OK)
                                .contentType(GrpcSerializationFormats.PROTO.mediaType())
                                .build(),
-                /* exceptionMappings */ null, /* autoCompress */ false);
+                /* exceptionMappings */ null,
+                /* blockingExecutor */ null,
+                /* autoCompress */ false);
     }
 }
