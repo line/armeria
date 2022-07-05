@@ -43,6 +43,7 @@ final class CompositeEndpointGroup extends AbstractEndpointGroup implements List
 
     private final EndpointSelectionStrategy selectionStrategy;
     private final EndpointSelector selector;
+    private final long selectionTimeoutMillis;
 
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
@@ -57,12 +58,16 @@ final class CompositeEndpointGroup extends AbstractEndpointGroup implements List
         this.endpointGroups = ImmutableList.copyOf(requireNonNull(endpointGroups, "endpointGroups"));
         dirty = new AtomicBoolean(true);
 
+        long selectionTimeoutMillis = 0;
         for (EndpointGroup endpointGroup : endpointGroups) {
             endpointGroup.addListener(unused -> {
                 dirty.set(true);
                 notifyListeners(endpoints());
             });
+            selectionTimeoutMillis = Math.max(selectionTimeoutMillis,
+                                              endpointGroup.selectionTimeoutMillis());
         }
+        this.selectionTimeoutMillis = selectionTimeoutMillis;
 
         initialEndpointsFuture =
                 CompletableFuture.anyOf(this.endpointGroups.stream()
@@ -104,11 +109,22 @@ final class CompositeEndpointGroup extends AbstractEndpointGroup implements List
         return selector.selectNow(ctx);
     }
 
+    @Deprecated
     @Override
     public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
                                               ScheduledExecutorService executor,
                                               long timeoutMillis) {
-        return selector.select(ctx, executor, timeoutMillis);
+        return select(ctx, executor);
+    }
+
+    @Override
+    public CompletableFuture<Endpoint> select(ClientRequestContext ctx, ScheduledExecutorService executor) {
+        return selector.select(ctx, executor);
+    }
+
+    @Override
+    public long selectionTimeoutMillis() {
+        return selectionTimeoutMillis;
     }
 
     @Override

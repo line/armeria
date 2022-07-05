@@ -76,7 +76,8 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
                 builder.resolvedAddressTypes(resolvedAddressTypes);
             }
         });
-        return new DnsAddressEndpointGroup(selectionStrategy(), shouldAllowEmptyEndpoints(), resolver,
+        return new DnsAddressEndpointGroup(selectionStrategy(), shouldAllowEmptyEndpoints(),
+                                           selectionTimeoutMillis(), resolver,
                                            eventLoop(), backoff(), minTtl(), maxTtl(),
                                            resolvedAddressTypes, hostname(), port);
     }
@@ -241,5 +242,15 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
     @Override
     public DnsAddressEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
         return (DnsAddressEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
+        return (DnsAddressEndpointGroupBuilder) super.selectionTimeout(selectionTimeout);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
+        return (DnsAddressEndpointGroupBuilder) super.selectionTimeoutMillis(selectionTimeoutMillis);
     }
 }

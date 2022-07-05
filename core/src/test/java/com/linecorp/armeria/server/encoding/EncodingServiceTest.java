@@ -23,9 +23,8 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 class EncodingServiceTest {
@@ -34,7 +33,7 @@ class EncodingServiceTest {
     void exchangeType() {
         final EncodingService encodingService = EncodingService.newDecorator().apply(new HttpService() {
             @Override
-            public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+            public ExchangeType exchangeType(RoutingContext routingContext) {
                 return ExchangeType.UNARY;
             }
 
@@ -44,7 +43,7 @@ class EncodingServiceTest {
             }
         });
 
-        final ExchangeType exchangeType = encodingService.exchangeType(null, null);
+        final ExchangeType exchangeType = encodingService.exchangeType(null);
 
         // Should not return ExchangeType.UNARY to avoid aggregation and preserve the compressed chunks.
         assertThat(exchangeType).isEqualTo(ExchangeType.BIDI_STREAMING);

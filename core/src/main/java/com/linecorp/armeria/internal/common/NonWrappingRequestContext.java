@@ -25,6 +25,8 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.common.AttributesGetters;
+import com.linecorp.armeria.common.ConcurrentAttributes;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -34,6 +36,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.Channel;
@@ -51,7 +54,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
             NonWrappingRequestContext.class, Supplier.class, "contextHook");
 
     private final MeterRegistry meterRegistry;
-    private final DefaultAttributeMap attrs;
+    private final ConcurrentAttributes attrs;
     private final SessionProtocol sessionProtocol;
     private final RequestId id;
     private final HttpMethod method;
@@ -81,10 +84,15 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, ExchangeType exchangeType,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            @Nullable RequestContext rootAttributeMap) {
+            @Nullable AttributesGetters rootAttributeMap) {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
-        attrs = new DefaultAttributeMap(rootAttributeMap);
+        if (rootAttributeMap == null) {
+            attrs = ConcurrentAttributes.of();
+        } else {
+            attrs = ConcurrentAttributes.fromParent(rootAttributeMap);
+        }
+
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.id = requireNonNull(id, "id");
         this.method = requireNonNull(method, "method");
@@ -221,11 +229,12 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     @Override
     public final <V> V setAttr(AttributeKey<V> key, @Nullable V value) {
         requireNonNull(key, "key");
-        return attrs.setAttr(key, value);
+        return attrs.getAndSet(key, value);
     }
 
     @Override
     public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
+        // TODO(ikhoon): Make this method return `AttributesGetters` in Armeria 2.x
         return attrs.attrs();
     }
 
@@ -234,6 +243,25 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         return attrs.ownAttrs();
     }
 
+    /**
+     * Returns the {@link AttributesGetters} which stores the pairs of an {@link AttributeKey} and an object
+     * set via {@link #setAttr(AttributeKey, Object)}.
+     */
+    @UnstableApi
+    public final AttributesGetters attributes() {
+        return attrs;
+    }
+
+    /**
+     * Adds a hook which is invoked whenever this {@link NonWrappingRequestContext} is pushed to the
+     * {@link RequestContextStorage}. The {@link AutoCloseable} returned by {@code contextHook} will be called
+     * whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
+     * This method is useful when you need to propagate a custom context in this {@link RequestContext}'s scope.
+     *
+     * <p>Note that this operation is highly performance-sensitive operation, and thus
+     * it's not a good idea to run a time-consuming task.
+     */
+    @UnstableApi
     @Override
     public void hook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");

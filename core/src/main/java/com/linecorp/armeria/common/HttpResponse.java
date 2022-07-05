@@ -51,6 +51,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.AbortedHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
@@ -936,5 +937,67 @@ public interface HttpResponse extends Response, HttpMessage {
     default HttpResponse recover(Function<? super Throwable, ? extends HttpResponse> function) {
         requireNonNull(function, "function");
         return of(new RecoverableStreamMessage<>(this, function, /* allowResuming */ false));
+    }
+
+    /**
+     * Recovers a failed {@link HttpResponse} by switching to a returned fallback {@link HttpResponse}
+     * when the thrown {@link Throwable} is the same type or a subtype of the
+     * specified {@code causeClass}.
+     *
+     * <p>Example:<pre>{@code
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Oops..."));
+     * // The failed HttpResponse will be recovered by the fallback function.
+     * HttpResponse recovered =
+     *     response.recover(IllegalStateException.class, cause -> HttpResponse.of("Fallback"));
+     * assert recovered.aggregate().join().contentUtf8().equals("Fallback");
+     *
+     * // As HTTP headers and body were written already before an error occurred,
+     * // the fallback function could not be applied for the failed HttpResponse.
+     * HttpResponseWriter response = HttpResponse.streaming();
+     * response.write(ResponseHeaders.of(HttpStatus.OK));
+     * response.write(HttpData.ofUtf8("Hello"));
+     * response.close(new IllegalStateException("Oops..."));
+     * HttpResponse notRecovered =
+     *     response.recover(IllegalStateException.class, cause -> HttpResponse.of("Fallback"));
+     * // The IllegalStateException will be raised even though a fallback function was added.
+     * notRecovered.aggregate().join();
+     *
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Oops..."));
+     * // Use the shortcut recover method as a chain.
+     * HttpResponse recoverChain =
+     *     response.recover(RuntimeException.class, cause -> {
+     *         final IllegalArgumentException ex = new IllegalArgumentException("Oops2...");
+     *         // If a failed response is returned from the first chain
+     *         return HttpResponse.ofFailure(ex);
+     *     })
+     *     // If the shortcut exception type is correct, catch and recover in the second chain.
+     *     .recover(IllegalArgumentException.class, cause -> HttpResponse.of("fallback"));
+     * recoverChain.aggregate().join();
+     *
+     * HttpResponse response = HttpResponse.ofFailure(new IllegalStateException("Oops..."));
+     * // If the exception type does not match
+     * HttpResponse mismatchRecovered =
+     *     response.recover(IllegalArgumentException.class, cause -> HttpResponse.of("Fallback"));
+     * // In this case, CompletionException is thrown. (can't recover exception)
+     * mismatchRecovered.aggregate().join();
+     * }</pre>
+     */
+    @UnstableApi
+    default <T extends Throwable> HttpResponse recover(Class<T> causeClass,
+                                                       Function<? super T, ? extends HttpResponse> function) {
+        requireNonNull(causeClass, "causeClass");
+        requireNonNull(function, "function");
+        return recover(cause -> {
+            if (!causeClass.isInstance(cause)) {
+                return Exceptions.throwUnsafely(cause);
+            }
+            try {
+                final HttpResponse recoveredResponse = function.apply((T) cause);
+                requireNonNull(recoveredResponse, "recoveredResponse");
+                return recoveredResponse;
+            } catch (Throwable t) {
+                return Exceptions.throwUnsafely(t);
+            }
+        });
     }
 }

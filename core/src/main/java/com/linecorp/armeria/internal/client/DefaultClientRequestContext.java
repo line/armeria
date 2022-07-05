@@ -42,6 +42,7 @@ import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.AttributesGetters;
 import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.Flags;
@@ -72,6 +73,7 @@ import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -197,7 +199,8 @@ public final class DefaultClientRequestContext
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros, boolean hasBaseUri) {
         super(meterRegistry, sessionProtocol, id, method, path, query,
-              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING), req, rpcReq, root);
+              firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING), req, rpcReq,
+              getAttributes(root));
 
         this.eventLoop = eventLoop;
         this.hasBaseUri = hasBaseUri;
@@ -245,6 +248,15 @@ public final class DefaultClientRequestContext
             this.customizer = customizer;
         } else {
             this.customizer = customizer.andThen(threadLocalCustomizer);
+        }
+    }
+
+    @Nullable
+    private static AttributesGetters getAttributes(@Nullable ServiceRequestContext ctx) {
+        if (ctx instanceof DefaultServiceRequestContext) {
+            return ((DefaultServiceRequestContext) ctx).attributes();
+        } else {
+            return null;
         }
     }
 
@@ -317,7 +329,7 @@ public final class DefaultClientRequestContext
 
         // Use an arbitrary event loop for asynchronous Endpoint selection.
         final EventLoop temporaryEventLoop = options().factory().eventLoopSupplier().get();
-        return endpointGroup.select(this, temporaryEventLoop, connectTimeoutMillis()).handle((e, cause) -> {
+        return endpointGroup.select(this, temporaryEventLoop).handle((e, cause) -> {
             updateEndpoint(e);
             acquireEventLoop(endpointGroup);
 
@@ -454,7 +466,7 @@ public final class DefaultClientRequestContext
                                         SessionProtocol sessionProtocol, HttpMethod method,
                                         String path, @Nullable String query, @Nullable String fragment) {
         super(ctx.meterRegistry(), sessionProtocol, id, method, path, query, ctx.exchangeType(),
-              req, rpcReq, ctx.root());
+              req, rpcReq, getAttributes(ctx.root()));
 
         // The new requests cannot be null if it was previously non-null.
         if (ctx.request() != null) {

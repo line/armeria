@@ -63,11 +63,6 @@ final class ScalaRestClientPreparation private[scala] (delegate: RestClientPrepa
     delegate.execute(responseAs)
   }
 
-  override def exchangeType(exchangeType: ExchangeType): ScalaRestClientPreparation = {
-    delegate.exchangeType(exchangeType)
-    this
-  }
-
   override def requestOptions(requestOptions: RequestOptions): ScalaRestClientPreparation = {
     delegate.requestOptions(requestOptions)
     this
@@ -142,6 +137,11 @@ final class ScalaRestClientPreparation private[scala] (delegate: RestClientPrepa
 
   override def attr[V](key: AttributeKey[V], value: V): ScalaRestClientPreparation = {
     delegate.attr(key, value)
+    this
+  }
+
+  override def exchangeType(exchangeType: ExchangeType): ScalaRestClientPreparation = {
+    delegate.exchangeType(exchangeType)
     this
   }
 

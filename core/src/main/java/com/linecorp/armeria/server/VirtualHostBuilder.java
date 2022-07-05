@@ -62,6 +62,7 @@ import com.google.common.io.ByteStreams;
 import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -1011,7 +1012,7 @@ public final class VirtualHostBuilder {
      * Returns a newly-created {@link VirtualHost} based on the properties of this builder and the services
      * added to this builder.
      */
-    VirtualHost build(VirtualHostBuilder template) {
+    VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector) {
         requireNonNull(template, "template");
 
         if (defaultHostname == null) {
@@ -1092,10 +1093,10 @@ public final class VirtualHostBuilder {
                 .flatMap(cfgSetters -> {
                     if (cfgSetters instanceof VirtualHostAnnotatedServiceBindingBuilder) {
                         return ((VirtualHostAnnotatedServiceBindingBuilder) cfgSetters)
-                                .buildServiceConfigBuilder(extensions).stream();
+                                .buildServiceConfigBuilder(extensions, dependencyInjector).stream();
                     } else if (cfgSetters instanceof AnnotatedServiceBindingBuilder) {
                         return ((AnnotatedServiceBindingBuilder) cfgSetters)
-                                .buildServiceConfigBuilder(extensions).stream();
+                                .buildServiceConfigBuilder(extensions, dependencyInjector).stream();
                     } else if (cfgSetters instanceof ServiceConfigBuilder) {
                         return Stream.of((ServiceConfigBuilder) cfgSetters);
                     } else {

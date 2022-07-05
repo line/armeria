@@ -30,6 +30,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.Iterables;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
@@ -184,16 +185,17 @@ public final class DecoratorAnnotationUtil {
             return decoratorFactory;
         }
 
-        public Function<? super HttpService, ? extends HttpService> decorator() {
+        public Function<? super HttpService, ? extends HttpService> decorator(
+                DependencyInjector dependencyInjector) {
             if (decoratorFactory != null) {
                 @SuppressWarnings("unchecked")
                 final DecoratorFactoryFunction<Annotation> factory = AnnotatedObjectFactory
-                        .getInstance(decoratorFactory, DecoratorFactoryFunction.class);
+                        .getInstance(decoratorFactory, DecoratorFactoryFunction.class, dependencyInjector);
                 return factory.newDecorator(annotation);
             }
             assert decoratorAnnotation != null;
             return service -> service.decorate(AnnotatedObjectFactory.getInstance(
-                    decoratorAnnotation, DecoratingHttpServiceFunction.class));
+                    decoratorAnnotation, DecoratingHttpServiceFunction.class, dependencyInjector));
         }
 
         public int order() {

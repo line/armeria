@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.brave.RequestContextCurrentTraceContext;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 import brave.propagation.CurrentTraceContext;
 import brave.test.http.ITHttpServer;
@@ -109,6 +110,7 @@ public class BraveServiceIntegrationTest extends ITHttpServer {
         sb.service("/badrequest", (ctx, req) -> HttpResponse.of(BAD_REQUEST));
 
         sb.decorator(BraveService.newDecorator(httpTracing));
+        sb.decorator(LoggingService.newDecorator());
 
         server = sb.build();
         server.start().join();

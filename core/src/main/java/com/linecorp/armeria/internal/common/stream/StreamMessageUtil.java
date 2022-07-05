@@ -22,9 +22,9 @@ import org.reactivestreams.Subscription;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.BodyPart;
+import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -51,7 +51,7 @@ public final class StreamMessageUtil {
         }
 
         if (obj instanceof BodyPart) {
-            final StreamMessage<HttpData> content = ((BodyPart) obj).content();
+            final ByteStreamMessage content = ((BodyPart) obj).content();
             if (cause == null) {
                 content.abort();
             } else {

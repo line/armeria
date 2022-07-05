@@ -45,7 +45,7 @@ public final class ObjectCollectingUtil {
      * <a href="https://projectreactor.io/">Project Reactor</a>.
      */
     @Nullable
-    private static final Class<?> MONO_CLASS;
+    public static final Class<?> MONO_CLASS;
 
     static {
         Class<?> mono = null;
