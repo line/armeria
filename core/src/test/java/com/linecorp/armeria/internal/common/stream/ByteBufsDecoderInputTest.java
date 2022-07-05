@@ -33,14 +33,14 @@ import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.Unpooled;
 import io.netty.buffer.UnpooledByteBufAllocator;
 
-class ByteBufDecoderInputTest {
+class ByteBufsDecoderInputTest {
 
-    ByteBufDecoderInput input;
+    ByteBufsDecoderInput input;
     List<ByteBuf> byteBufs = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
-        input = new ByteBufDecoderInput(UnpooledByteBufAllocator.DEFAULT);
+        input = new ByteBufsDecoderInput(UnpooledByteBufAllocator.DEFAULT);
         final ByteBuf byteBuf1 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
         input.add(byteBuf1);
         byteBufs.add(byteBuf1);
@@ -95,7 +95,7 @@ class ByteBufDecoderInputTest {
             assertThat(input.readableBytes()).isEqualTo(9 - i);
         }
 
-        final ByteBufDecoderInput empty = new ByteBufDecoderInput(UnpooledByteBufAllocator.DEFAULT);
+        final ByteBufsDecoderInput empty = new ByteBufsDecoderInput(UnpooledByteBufAllocator.DEFAULT);
         assertThat(empty.readableBytes()).isEqualTo(0);
     }
 
@@ -143,7 +143,7 @@ class ByteBufDecoderInputTest {
 
     @Test
     void readUnsignedBytes() {
-        try (ByteBufDecoderInput input = new ByteBufDecoderInput(UnpooledByteBufAllocator.DEFAULT)) {
+        try (ByteBufsDecoderInput input = new ByteBufsDecoderInput(UnpooledByteBufAllocator.DEFAULT)) {
             input.add(Unpooled.wrappedBuffer(new byte[] { 1 }));
             input.add(Unpooled.wrappedBuffer(new byte[] { -1 }));
             assertThat(input.readUnsignedByte()).isEqualTo((byte) 1);
@@ -153,7 +153,7 @@ class ByteBufDecoderInputTest {
 
     @Test
     void readBytes() {
-        final ByteBufDecoderInput input = new ByteBufDecoderInput(UnpooledByteBufAllocator.DEFAULT);
+        final ByteBufsDecoderInput input = new ByteBufsDecoderInput(UnpooledByteBufAllocator.DEFAULT);
         final ByteBuf byteBuf1 = Unpooled.wrappedBuffer(new byte[] { 1, 2, 3, 4 });
         final ByteBuf byteBuf2 = Unpooled.buffer(4);
         byteBuf2.writeByte(5);

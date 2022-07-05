@@ -16,14 +16,19 @@
 
 package com.linecorp.armeria.client.endpoint;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
+import java.time.Duration;
+
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Sets properties for building {@link DynamicEndpointGroup}.
  */
 @UnstableApi
-@SuppressWarnings("InterfaceMayBeAnnotatedFunctional")
 public interface DynamicEndpointGroupSetters {
 
     /**
@@ -31,4 +36,25 @@ public interface DynamicEndpointGroupSetters {
      * If unspecified, an empty {@link Endpoint} list is allowed.
      */
     DynamicEndpointGroupSetters allowEmptyEndpoints(boolean allowEmptyEndpoints);
+
+    /**
+     * Sets the timeout to wait until a successful {@link Endpoint} selection.
+     * {@link Duration#ZERO} disables the timeout.
+     * If unspecified, {@link Flags#defaultConnectTimeoutMillis()} is used by default.
+     */
+    @UnstableApi
+    default DynamicEndpointGroupSetters selectionTimeout(Duration selectionTimeout) {
+        requireNonNull(selectionTimeout, "selectionTimeout");
+        checkArgument(!selectionTimeout.isNegative(), "selectionTimeout: %s (expected: >= 0)",
+                      selectionTimeout);
+        return selectionTimeoutMillis(selectionTimeout.toMillis());
+    }
+
+    /**
+     * Sets the timeout to wait until a successful {@link Endpoint} selection.
+     * {@code 0} disables the timeout.
+     * If unspecified, {@link Flags#defaultConnectTimeoutMillis()} is used by default.
+     */
+    @UnstableApi
+    DynamicEndpointGroupSetters selectionTimeoutMillis(long selectionTimeoutMillis);
 }

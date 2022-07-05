@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.common.stream.PathStreamMessage.DEFAULT_FILE_BUFFER_SIZE;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
@@ -44,6 +43,7 @@ import com.google.common.collect.Iterables;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.DecodedStreamMessage;
@@ -102,6 +102,7 @@ import io.netty.util.concurrent.EventExecutor;
  *
  * @param <T> the type of element signaled
  */
+@SuppressWarnings("OverloadMethodsDeclarationOrder")
 public interface StreamMessage<T> extends Publisher<T> {
     /**
      * Creates a new {@link StreamMessage} that will publish no objects, just a close event.
@@ -185,7 +186,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
      * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
      */
-    static StreamMessage<HttpData> of(File file) {
+    static ByteStreamMessage of(File file) {
         requireNonNull(file, "file");
         return of(file.toPath());
     }
@@ -197,9 +198,18 @@ public interface StreamMessage<T> extends Publisher<T> {
      * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
      * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
      */
-    static StreamMessage<HttpData> of(Path path) {
+    static ByteStreamMessage of(Path path) {
         requireNonNull(path, "path");
-        return of(path, DEFAULT_FILE_BUFFER_SIZE);
+        return builder(path).build();
+    }
+
+    /**
+     * Returns a new {@link PathStreamMessageBuilder} with the specified {@link Path}.
+     */
+    @UnstableApi
+    static PathStreamMessageBuilder builder(Path path) {
+        requireNonNull(path, "path");
+        return new PathStreamMessageBuilder(path);
     }
 
     /**
@@ -210,9 +220,12 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * @param path the path of the file
      * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
+     *
+     * @deprecated Use {@link #builder(Path)} with {@link PathStreamMessageBuilder#bufferSize(int)}
      */
-    static StreamMessage<HttpData> of(Path path, int bufferSize) {
-        return of(path, ByteBufAllocator.DEFAULT, bufferSize);
+    @Deprecated
+    static ByteStreamMessage of(Path path, int bufferSize) {
+        return builder(path).bufferSize(bufferSize).build();
     }
 
     /**
@@ -224,12 +237,16 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param path the path of the file
      * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer
      * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
+     *
+     * @deprecated Use {@link #builder(Path)} with {@link PathStreamMessageBuilder#alloc(ByteBufAllocator)} and
+     *             {@link PathStreamMessageBuilder#bufferSize(int)}.
      */
-    static StreamMessage<HttpData> of(Path path, ByteBufAllocator alloc, int bufferSize) {
+    @Deprecated
+    static ByteStreamMessage of(Path path, ByteBufAllocator alloc, int bufferSize) {
         requireNonNull(path, "path");
         requireNonNull(alloc, "alloc");
         checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
-        return new PathStreamMessage(path, alloc, null, bufferSize);
+        return builder(path).alloc(alloc).bufferSize(bufferSize).build();
     }
 
     /**
@@ -242,14 +259,22 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param executor the {@link ExecutorService} which performs blocking IO read
      * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer
      * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
+     *
+     * @deprecated Use {@link #builder(Path)} with
+     *             {@link PathStreamMessageBuilder#executor(ExecutorService)},
+     *             {@link PathStreamMessageBuilder#alloc(ByteBufAllocator)} and
+     *             {@link PathStreamMessageBuilder#bufferSize(int)}
      */
-    static StreamMessage<HttpData> of(Path path, ExecutorService executor, ByteBufAllocator alloc,
-                                      int bufferSize) {
+    @Deprecated
+    static ByteStreamMessage of(Path path, @Nullable ExecutorService executor, ByteBufAllocator alloc,
+                                int bufferSize) {
         requireNonNull(path, "path");
-        requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
-        return new PathStreamMessage(path, alloc, executor, bufferSize);
+        final PathStreamMessageBuilder builder = builder(path);
+        if (executor != null) {
+            builder.executor(executor);
+        }
+        return builder.alloc(alloc).bufferSize(bufferSize).build();
     }
 
     /**
