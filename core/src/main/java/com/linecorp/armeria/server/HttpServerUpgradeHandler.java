@@ -291,7 +291,7 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
         // Prepare and send the upgrade response. Wait for this write to complete before upgrading,
         // since we need the old codec in-place to properly encode the response.
         if (!upgradeCodec.prepareUpgradeResponse(ctx, request)) {
-            ctx.writeAndFlush(invalidSettingsHeaderResponse.retain()).addListener(CLOSE);
+            ctx.writeAndFlush(invalidSettingsHeaderResponse.duplicate()).addListener(CLOSE);
             handlingInvalidSettingsHeader = true;
             return false;
         }
