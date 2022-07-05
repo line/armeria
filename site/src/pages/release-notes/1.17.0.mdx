@@ -14,7 +14,7 @@ date: 2022-07-04
                   .execute(Customer.class);
     ```
   - Kotlin
-    ```kt
+    ```kotlin
     val restClient: RestClient = RestClient.of("...");
     val response: ResponseEntity<Customer> =
        restClient
@@ -166,7 +166,7 @@ date: 2022-07-04
 ### Kotlin
 - You can now use the Kotlin nullable type(`?`) to indicate a nullable parameter in
   an annotated service. #4144 #4225
-  ```kt
+  ```kotlin
   serverBuilder.apply {
     annotatedService(object {
       // Both `/foo` and `/foo?a=bar` are allowed.
