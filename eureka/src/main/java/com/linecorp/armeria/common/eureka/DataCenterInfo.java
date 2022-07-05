@@ -62,7 +62,7 @@ public final class DataCenterInfo {
     }
 
     /**
-     *  datacenter metadata.
+     * Returns the data center metadata.
      */
     public Map<String, String> getMetadata() {
         return metadata;
