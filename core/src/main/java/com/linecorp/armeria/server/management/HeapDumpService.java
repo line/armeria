@@ -55,12 +55,11 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.file.HttpFile;
 
@@ -140,8 +139,8 @@ enum HeapDumpService implements HttpService {
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
-        if (headers.method() == HttpMethod.GET) {
+    public ExchangeType exchangeType(RoutingContext routingContext) {
+        if (routingContext.headers().method() == HttpMethod.GET) {
             return ExchangeType.RESPONSE_STREAMING;
         } else {
             return ExchangeType.BIDI_STREAMING;

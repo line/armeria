@@ -384,21 +384,26 @@ public final class VirtualHost {
      *                           If {@code true}, the returned {@link Routed} will always be present.
      *
      * @return the {@link ServiceConfig} wrapped by a {@link Routed} if there's a match.
-     *         {@link Routed#empty()} if there's no match.
+     *         The fallback {@link ServiceConfig} wrapped by {@link Routed} if there's no match and
+     *         {@code useFallbackService} is {@code true}.
+     *         {@link Routed#empty()} if there's no match and {@code useFallbackService} is {@code false}.
      */
     public Routed<ServiceConfig> findServiceConfig(RoutingContext routingCtx, boolean useFallbackService) {
         final Routed<ServiceConfig> routed = router.find(requireNonNull(routingCtx, "routingCtx"));
         switch (routed.routingResultType()) {
             case MATCHED:
+                maybeSetRoutingResult(routingCtx, routed);
                 return routed;
             case NOT_MATCHED:
                 if (!useFallbackService) {
+                    maybeSetRoutingResult(routingCtx, routed);
                     return routed;
                 }
                 break;
             case CORS_PREFLIGHT:
                 assert routingCtx.status() == RoutingStatus.CORS_PREFLIGHT;
                 if (routed.value().handlesCorsPreflight()) {
+                    maybeSetRoutingResult(routingCtx, routed);
                     // CorsService will handle the preflight request
                     // even if the service does not handle an OPTIONS method.
                     return routed;
@@ -411,12 +416,21 @@ public final class VirtualHost {
 
         // Note that we did not implement this fallback mechanism inside a Router implementation like
         // CompositeRouter because we wanted to avoid caching non-existent mappings.
-        return Routed.of(fallbackServiceConfig.route(),
-                         RoutingResult.builder()
-                                      .path(routingCtx.path())
-                                      .query(routingCtx.query())
-                                      .build(),
-                         fallbackServiceConfig);
+        final Routed<ServiceConfig> fallbackRoute =
+                Routed.of(fallbackServiceConfig.route(),
+                          RoutingResult.builder()
+                                       .path(routingCtx.path())
+                                       .query(routingCtx.query())
+                                       .build(),
+                          fallbackServiceConfig);
+        maybeSetRoutingResult(routingCtx, fallbackRoute);
+        return fallbackRoute;
+    }
+
+    private static void maybeSetRoutingResult(RoutingContext routingContext, Routed<ServiceConfig> routed) {
+        if (!routingContext.hasResult()) {
+            routingContext.setResult(routed);
+        }
     }
 
     ServiceConfig fallbackServiceConfig() {

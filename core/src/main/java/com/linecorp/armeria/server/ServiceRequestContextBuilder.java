@@ -243,7 +243,10 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
         final RoutingResult routingResult =
                 this.routingResult != null ? this.routingResult
                                            : RoutingResult.builder().path(path()).query(query()).build();
-        final ExchangeType exchangeType = service.exchangeType(req.headers(), serviceCfg.route());
+        final Route route = Route.builder().path(path()).build();
+        final Routed<ServiceConfig> routed = Routed.of(route, routingResult, serviceCfg);
+        routingCtx.setResult(routed);
+        final ExchangeType exchangeType = service.exchangeType(routingCtx);
         final InetAddress clientAddress = server.config().clientAddressMapper().apply(proxiedAddresses)
                                                 .getAddress();
 

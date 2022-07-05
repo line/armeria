@@ -39,7 +39,6 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     private final InboundTrafficController inboundTrafficController;
     private final long maxRequestLength;
     private final RoutingContext routingCtx;
-    private final Routed<ServiceConfig> routed;
     private final ExchangeType exchangeType;
 
     @Nullable
@@ -52,8 +51,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
 
     StreamingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
-                                long maxRequestLength, RoutingContext routingCtx,
-                                Routed<ServiceConfig> routed, ExchangeType exchangeType) {
+                                long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType) {
         super(headers);
 
         this.eventLoop = eventLoop;
@@ -62,8 +60,8 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         this.keepAlive = keepAlive;
         this.inboundTrafficController = inboundTrafficController;
         this.maxRequestLength = maxRequestLength;
+        assert routingCtx.hasResult();
         this.routingCtx = routingCtx;
-        this.routed = routed;
         this.exchangeType = exchangeType;
     }
 
@@ -80,7 +78,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     @Nonnull
     @Override
     public Routed<ServiceConfig> route() {
-        return routed;
+        return routingCtx.result();
     }
 
     @Override

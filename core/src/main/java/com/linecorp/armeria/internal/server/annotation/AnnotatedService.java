@@ -18,6 +18,8 @@ package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
@@ -39,6 +41,7 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -50,7 +53,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -63,6 +65,7 @@ import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.Ag
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.ResolverContext;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
@@ -128,6 +131,7 @@ public final class AnnotatedService implements HttpService {
     @Nullable
     private final ExceptionHandlerFunction exceptionHandler;
     private final ResponseConverterFunction responseConverter;
+    private final Type actualReturnType;
 
     private final Route route;
     private final HttpStatus defaultStatus;
@@ -163,8 +167,9 @@ public final class AnnotatedService implements HttpService {
                                                                      method.getName(), exceptionHandlers);
         }
 
+        actualReturnType = getActualReturnType(method);
         responseConverter = responseConverter(
-                method, requireNonNull(responseConverters, "responseConverters"));
+                actualReturnType, requireNonNull(responseConverters, "responseConverters"));
         aggregationStrategy = AggregationStrategy.from(resolvers);
         this.route = requireNonNull(route, "route");
 
@@ -204,9 +209,8 @@ public final class AnnotatedService implements HttpService {
     }
 
     private static ResponseConverterFunction responseConverter(
-            Method method, List<ResponseConverterFunction> responseConverters) {
+            Type returnType, List<ResponseConverterFunction> responseConverters) {
 
-        final Type actualType = getActualReturnType(method);
         final ImmutableList<ResponseConverterFunction> backingConverters =
                 ImmutableList
                         .<ResponseConverterFunction>builder()
@@ -225,7 +229,7 @@ public final class AnnotatedService implements HttpService {
 
         for (final ResponseConverterFunctionProvider provider : responseConverterFunctionProviders) {
             final ResponseConverterFunction func =
-                    provider.createResponseConverterFunction(actualType, responseConverter);
+                    provider.createResponseConverterFunction(returnType, responseConverter);
             if (func != null) {
                 return func;
             }
@@ -489,12 +493,21 @@ public final class AnnotatedService implements HttpService {
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
-        // TODO(ikhoon): Support a non-streaming response type.
-        if (AnnotatedValueResolver.aggregationType(aggregationStrategy, headers) == AggregationType.ALL) {
-            return ExchangeType.RESPONSE_STREAMING;
+    public ExchangeType exchangeType(RoutingContext routingContext) {
+        final boolean isRequestStreaming =
+                AnnotatedValueResolver.aggregationType(aggregationStrategy,
+                                                       routingContext.headers()) != AggregationType.ALL;
+        Boolean isResponseStreaming =
+                responseConverter.isResponseStreaming(
+                        actualReturnType, routingContext.result().routingResult()
+                                                        .negotiatedResponseMediaType());
+        if (isResponseStreaming == null) {
+            isResponseStreaming = true;
+        }
+        if (isRequestStreaming) {
+            return isResponseStreaming ? ExchangeType.BIDI_STREAMING : ExchangeType.REQUEST_STREAMING;
         } else {
-            return ExchangeType.BIDI_STREAMING;
+            return isResponseStreaming ? ExchangeType.RESPONSE_STREAMING : ExchangeType.UNARY;
         }
     }
 
@@ -572,12 +585,30 @@ public final class AnnotatedService implements HttpService {
      * A response converter implementation which creates an {@link HttpResponse} with
      * the objects published from a {@link Publisher} or {@link Stream}.
      */
-    private static final class AggregatedResponseConverterFunction implements ResponseConverterFunction {
+    @VisibleForTesting
+    static final class AggregatedResponseConverterFunction implements ResponseConverterFunction {
 
         private final ResponseConverterFunction responseConverter;
 
         AggregatedResponseConverterFunction(ResponseConverterFunction responseConverter) {
             this.responseConverter = responseConverter;
+        }
+
+        @Override
+        public Boolean isResponseStreaming(Type returnType, @Nullable MediaType contentType) {
+            final Class<?> clazz = typeToClass(unwrapAsyncType(returnType));
+            if (clazz == null) {
+                return null;
+            }
+
+            if (HttpResponse.class.isAssignableFrom(clazz)) {
+                return true;
+            }
+            if (Publisher.class.isAssignableFrom(clazz) || Stream.class.isAssignableFrom(clazz)) {
+                return false;
+            }
+
+            return null;
         }
 
         @Override
