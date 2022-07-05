@@ -46,7 +46,6 @@ import com.google.common.base.Splitter;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
@@ -79,14 +78,12 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
 
     private static final FullHttpResponse UPGRADE_RESPONSE = newUpgradeResponse();
 
-    private static final ByteBuf INVALID_SETTINGS_HEADER_MESSAGE = Unpooled.unreleasableBuffer(
-            Unpooled.directBuffer()
-                    .writeBytes("Invalid HTTP2-Settings header\n".getBytes(StandardCharsets.UTF_8)));
-
     private static final Splitter COMMA_SPLITTER = Splitter.on(',').omitEmptyStrings().trimResults();
 
     private static final FullHttpResponse invalidSettingsHeaderResponse =
-            new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, INVALID_SETTINGS_HEADER_MESSAGE.duplicate());
+            new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, Unpooled.unreleasableBuffer(
+                    Unpooled.directBuffer()
+                            .writeBytes("Invalid HTTP2-Settings header\n".getBytes(StandardCharsets.UTF_8))));
 
     /**
      * A codec that the source can be upgraded to {@link SessionProtocol#H2C}.

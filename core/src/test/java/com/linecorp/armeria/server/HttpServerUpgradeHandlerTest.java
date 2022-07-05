@@ -213,7 +213,8 @@ class HttpServerUpgradeHandlerTest {
         channel.finishAndReleaseAll();
     }
 
-    @RepeatedTest(2)
+    // Repeat to check if an illegal reference cnt exception is raised while using the response multiple times.
+    @RepeatedTest(5)
     void upgradeFailWithInvalidSettingsHeader() throws Exception {
         try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
             socket.setSoTimeout(1000);
