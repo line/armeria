@@ -70,8 +70,9 @@ date: 2022-07-04
       }
   }
   ```
-  - Set `armeria.enable-auto-injection` to `true` to apply <type://SpringDependencyInjector> automatically.
-    ```yml
+  - Set `armeria.enable-auto-injection` to `true` to apply <type://SpringDependencyInjector> automatically
+    when using Spring Boot integration.
+    ```yaml
     // in application.yml
     armeria:
       ports:
@@ -95,20 +96,24 @@ date: 2022-07-04
 - You can now set attributes to an <type://Endpoint> using <type://Attributes> and
   <type://AttributesBuilder>. #4241
   ```java
-  AttributesBuilder attrs = Attributes.builder();
-  AttributeKey<String> region = AttributeKey.valueOf("region");
-  attrs.set(region, "arctic");
+  AttributeKey<String> region = AttributeKey.valueOf(MyAttrs.class, "region");
+  Attributes attrs =
+    Attributes
+      .builder()
+      .set(region, "us-west-1")
+      .build();
 
-  Endpoint endpoint = ...;
-  Endpoint endpointB = endpoint.withAttrs(attrs.build());
-  assert endpointB.attr(region).equals("arctic");
+  Endpoint endpointA = ...;
+  Endpoint endpointB = endpointA.withAttrs(attrs);
+  assert endpointB.attr(region).equals("us-west-1");
+  assert !endpointA.equals(endpointB)
   ```
 - You can now use <type://MultipartFile> to get the actual filename of an uploaded file
   through `multipart/form-data`. #4262
   ```java
   @Consumes(MediaTypeNames.MULTIPART_FORM_DATA)
   @Post("/upload")
-  public HttpResponse upload(@Param MultipartFile multipartFile) {
+  public HttpResponse upload(MultipartFile multipartFile) {
     // The name parameter of the "content-disposition" header
     String name = multipartFile.name();
     // The filename parameter of the "content-disposition" header
@@ -159,11 +164,11 @@ date: 2022-07-04
 - You can now add a hook to <type://Server> and <type://ClientFactory> that is called when the
   JVM shuts down. #4015 #4043
   ```java
-  Runnable whenClosing =
-      () -> System.err.println("Before stopping Server");
-  server.closeOnJvmShutdown(whenClosing).thenRun(() -> {
-      System.err.println("After Server stopped");
-   });
+  server.closeOnJvmShutdown(() -> {
+    System.err.println("Server is stopping soon.");
+  }).thenRun(() -> {
+    System.err.println("Server has stopped.");
+  });
   ```
 - You can now customize internal Netty `Pipeline` using
   <type://ClientFactoryOptions#CHANNEL_PIPELINE_CUSTOMIZER>. #3907 #4260
@@ -171,7 +176,7 @@ date: 2022-07-04
     Armeria and Netty internals.
 
 ### Kotlin
-- You can now use the Kotlin nullable type(`?`) to indicate a nullable parameter in
+- You can now use the Kotlin nullable type (`?`) to indicate a nullable parameter in
   an annotated service. #4144 #4225
   ```kotlin
   serverBuilder.apply {
@@ -188,11 +193,14 @@ date: 2022-07-04
 
 - The <type://EndpointSelectionTimeoutException> is thrown if timeout occurred when selecting
   an <type://Endpoint> from an <type://EndpointGroup>. #4269
-- You can now set multiple <type://AccessLogWriter> to <type://ServerBuilder>
+- You can now set multiple <typeplural://AccessLogWriter> to <type://ServerBuilder>
   and <type://ServiceBindingBuilder>. #4280
 - You can now give a performance optimization hint to a client by setting an <type://ExchangeType> to a
-  <type://RequestOptions>. The <type://ExchangeType> is automatically detected for a gRPC client and
-  a Thrift client, or <type://WebClient> when it's used with <type://ResponseAs>. #4236
+  <type://RequestOptions>.
+  The <type://ExchangeType> is configured automatically for:
+  - A gRPC client
+  - A Thrift client
+  - A <type://WebClient> when it's used with <type://ResponseAs>. #4236
 - Better performance for unary gRPC call by introducing `UnaryServerCall`. #4192
 - Annotated services perform better on unary responses. #4177
 
@@ -208,16 +216,19 @@ date: 2022-07-04
   in an environment where Spring integration module and Netty client are used together.
   (e.g. Spring Cloud Gateway) #4293
 - <type://ServerCacheControl#DISABLED> and <type://ServerCacheControl#REVALIDATED> now have
-  `max-age` set to `0`. #4290 #4291
+  `max-age` set to `0` for better compatibility with old browsers. #4290 #4291
 - You no longer see a `NullPointerException` from <type://Flags>
   when <type://RequestContextExportingAppender> is used. #4285
-- You no longer see hang by not requesting more data in `StreamMessageInputStream`. #4268 #4271
-- A <type://WriteTimeoutException> is thrown when a header only request times out. #4255 #4259
-- The request completes even when the content sanitizer throw an exception. #4248
+- You no longer see the `InputStream` returned by <type://StreamMessage#toInputStream(Function)> blocks
+  indefinitely in a certain situation. #4268 #4271
+- A <type://WriteTimeoutException> is now thrown when a header only request times out. #4255 #4259
+- The request now completes even when the content sanitizer throw an exception. #4248
 - A proxy client doesn't resolve a hostname anymore. #4244 #4245
-- <type://WebClient> is reused in the Spring integration module. #4240
-- Armeria server sends 400 Bad Request when an HTTP/2 upgrade request contains invalid headers. #4016 #4224
-- <type://EurekaUpdatingListener> registers itself with the `instanceId` which is `hostname:appname:port`. #4223
+- The Spring Boot integration module doesn't create a new <type://WebClient> anymore every time
+  it's injected. #4240
+- Armeria server sends now 400 Bad Request when an HTTP/2 upgrade request contains invalid headers. #4016 #4224
+- <type://EurekaUpdatingListener> now registers itself with the `instanceId` which is `hostname:appname:port`,
+  so it doesn't cause a conflict when more than one app are running in the same host. #4223
 - A ramping up <type://EndpointSelectionStrategy> now correctly works with
   <type://HealthCheckedEndpointGroup>. #4221
 - The information of a thrown exception in gRPC service is now propagated to the client via the
@@ -229,17 +240,17 @@ date: 2022-07-04
   is deprecated in favor of
   <type://AbstractEndpointSelector#select(ClientRequestContext,ScheduledExecutorService)?full>. #4246
 - <type://ThriftSerializationFormats#protocolFactory(SerializationFormat)?full> is deprecated in favor of
-  <type://ThriftSerializationFormats#protocolFactory(SerializationFormat,long,long)?full>.
+  <type://ThriftSerializationFormats#protocolFactory(SerializationFormat,int,int)?full>.
   #4226
 - `BINARY`, `COMPACT`, `JSON`, `TEXT`, and `TEXT_NAMED_ENUM` in <type://ThriftProtocolFactories> are deprecated
-  in favor of corresponding factory methods. $4226
+  in favor of corresponding factory methods. #4226
 - <type://StreamMessage#of(Path,int)?full>, <type://StreamMessage#of(Path,ByteBufAllocator,int)?full> and
   <type://StreamMessage#of(Path,ExecutorService,ByteBufAllocator,int)?full> are deprecated
   in favor of <type://StreamMessage#builder(Path)?full>. #4058
 - <type://ServiceConfig#shutdownBlockingTaskExecutorOnStop()>,
   <type://ServiceConfig#shutdownAccessLogWriterOnStop()>,
   <type://ServerConfig#shutdownBlockingTaskExecutorOnStop()> and
-  <type://ServerConfig.shutdownWorkerGroupOnStop()> are not used anymore. $4280
+  <type://ServerConfig#shutdownWorkerGroupOnStop()> are not used anymore. #4280
 
 ## ☢️ Breaking changes
 
