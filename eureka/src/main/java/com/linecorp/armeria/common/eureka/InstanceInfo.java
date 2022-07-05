@@ -374,7 +374,7 @@ public final class InstanceInfo {
         }
 
         /**
-         * return whether is enabled.
+         * Returns whether this port is enabled or not.
          */
         @JsonProperty("@enabled")
         @JsonSerialize(using = ToStringSerializer.class)
