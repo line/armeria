@@ -339,11 +339,4 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
         res.headers().add(HttpHeaderNames.UPGRADE, Http2CodecUtil.HTTP_UPGRADE_PROTOCOL_NAME);
         return res;
     }
-
-    /**
-     * Creates the 400 Bad Request response message.
-     */
-    private static FullHttpResponse newInvalidSettingsHeaderResponse() {
-        return new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, INVALID_SETTINGS_HEADER_MESSAGE.duplicate());
-    }
 }
