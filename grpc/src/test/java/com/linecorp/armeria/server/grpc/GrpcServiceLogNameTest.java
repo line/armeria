@@ -96,8 +96,7 @@ class GrpcServiceLogNameTest {
         rootLogger.detachAppender(appender);
     }
 
-    // TODO(ikhoon): Revert after CI build passes
-    @RepeatedTest(100)
+    @Test
     void logName() {
         final TestServiceBlockingStub client =
                 GrpcClients.builder(server.httpUri().resolve("/grpc/"))
