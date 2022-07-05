@@ -34,7 +34,7 @@ import com.linecorp.armeria.internal.server.rxjava3.ObservableResponseConverterF
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
+import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
 
 import io.reactivex.rxjava3.core.Observable;
 
@@ -42,14 +42,14 @@ class ObservableResponseConverterFunctionProviderTest {
 
     @Test
     void shouldBeLoaded() {
-        final ServiceLoader<ResponseConverterFunctionProvider> loader =
-                ServiceLoader.load(ResponseConverterFunctionProvider.class,
+        final ServiceLoader<DelegatingResponseConverterFunctionProvider> loader =
+                ServiceLoader.load(DelegatingResponseConverterFunctionProvider.class,
                                    ObservableResponseConverterFunctionProviderTest.class.getClassLoader());
 
         assertThat(loader).isNotNull();
-        final Iterator<ResponseConverterFunctionProvider> it = loader.iterator();
+        final Iterator<DelegatingResponseConverterFunctionProvider> it = loader.iterator();
         assertThat(it.hasNext()).isTrue();
-        assertThat(it.next()).isInstanceOf(ResponseConverterFunctionProvider.class);
+        assertThat(it.next()).isInstanceOf(DelegatingResponseConverterFunctionProvider.class);
         assertThat(it.hasNext()).isFalse();
     }
 

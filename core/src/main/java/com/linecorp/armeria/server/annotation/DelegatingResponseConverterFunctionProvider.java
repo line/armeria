@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 @FunctionalInterface
-public interface ResponseConverterFunctionProvider {
+public interface DelegatingResponseConverterFunctionProvider {
 
     /**
      * Returns a {@link ResponseConverterFunction} instance if there is a function which can convert

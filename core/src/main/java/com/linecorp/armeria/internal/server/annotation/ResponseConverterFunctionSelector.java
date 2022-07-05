@@ -30,7 +30,7 @@ import com.linecorp.armeria.server.annotation.HttpFileResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
+import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 
 import java.lang.reflect.Method;
@@ -54,13 +54,13 @@ final class ResponseConverterFunctionSelector {
     private static final Logger logger =
             LoggerFactory.getLogger(ResponseConverterFunctionSelector.class);
 
-    static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
-            ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
+    static final List<DelegatingResponseConverterFunctionProvider> responseConverterFunctionProviders =
+            ImmutableList.copyOf(ServiceLoader.load(DelegatingResponseConverterFunctionProvider.class,
                                                     AnnotatedService.class.getClassLoader()));
 
     static {
         if (!responseConverterFunctionProviders.isEmpty()) {
-            logger.debug("Available {}s: {}", ResponseConverterFunctionProvider.class.getSimpleName(),
+            logger.debug("Available {}s: {}", DelegatingResponseConverterFunctionProvider.class.getSimpleName(),
                          responseConverterFunctionProviders);
         }
     }
@@ -85,7 +85,7 @@ final class ResponseConverterFunctionSelector {
                                 new CompositeResponseConverterFunction(backingConverters)))
                         .build());
 
-        for (final ResponseConverterFunctionProvider provider : responseConverterFunctionProviders) {
+        for (final DelegatingResponseConverterFunctionProvider provider : responseConverterFunctionProviders) {
             final ResponseConverterFunction func =
                     provider.createResponseConverterFunction(actualType, responseConverter);
             if (func != null) {

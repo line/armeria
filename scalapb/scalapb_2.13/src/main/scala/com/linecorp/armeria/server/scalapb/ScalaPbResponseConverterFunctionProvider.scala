@@ -17,7 +17,7 @@
 package com.linecorp.armeria.server.scalapb
 
 import com.linecorp.armeria.common.annotation.{Nullable, UnstableApi}
-import com.linecorp.armeria.server.annotation.{ResponseConverterFunction, ResponseConverterFunctionProvider}
+import com.linecorp.armeria.server.annotation.{ResponseConverterFunction, DelegatingResponseConverterFunctionProvider}
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.{isSupportedGenericType, toResultType}
 import java.lang.reflect.Type
 
@@ -25,7 +25,7 @@ import java.lang.reflect.Type
  * Provides a [[com.linecorp.armeria.server.scalapb.ScalaPbResponseConverterFunction]] to annotated services.
  */
 @UnstableApi
-final class ScalaPbResponseConverterFunctionProvider extends ResponseConverterFunctionProvider {
+final class ScalaPbResponseConverterFunctionProvider extends DelegatingResponseConverterFunctionProvider {
 
   @Nullable
   override def createResponseConverterFunction(

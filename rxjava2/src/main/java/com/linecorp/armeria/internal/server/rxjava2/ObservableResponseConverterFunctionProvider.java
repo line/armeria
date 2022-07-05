@@ -21,7 +21,7 @@ import java.lang.reflect.Type;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
+import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.rxjava2.ObservableResponseConverterFunction;
 
 import io.reactivex.Completable;
@@ -33,7 +33,8 @@ import io.reactivex.Single;
  * Provides an {@link ObservableResponseConverterFunction} to annotated services.
  */
 @UnstableApi
-public final class ObservableResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
+public final class ObservableResponseConverterFunctionProvider implements
+                                                               DelegatingResponseConverterFunctionProvider {
 
     @Nullable
     @Override

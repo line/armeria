@@ -12,12 +12,12 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.ResponseConverterFunctionSelectorTest.TestClassToConvert;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
+import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
 
 /**
  * For use with ResponseConverterFunctionSelectorTest
  */
-public class TestSpiConverter implements ResponseConverterFunctionProvider {
+public class TestSpiConverter implements DelegatingResponseConverterFunctionProvider {
 
   @Override
   public @Nullable ResponseConverterFunction createResponseConverterFunction(Type responseType,
