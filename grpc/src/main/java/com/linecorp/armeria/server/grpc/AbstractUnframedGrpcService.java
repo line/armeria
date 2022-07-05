@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -83,15 +84,15 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
-        final MediaType contentType = headers.contentType();
+    public ExchangeType exchangeType(RoutingContext routingContext) {
+        final MediaType contentType = routingContext.headers().contentType();
         if (contentType == null) {
             return ExchangeType.BIDI_STREAMING;
         }
 
         for (SerializationFormat format : GrpcSerializationFormats.values()) {
             if (format.isAccepted(contentType)) {
-                return ((HttpService) unwrap()).exchangeType(headers, route);
+                return ((HttpService) unwrap()).exchangeType(routingContext);
             }
         }
 

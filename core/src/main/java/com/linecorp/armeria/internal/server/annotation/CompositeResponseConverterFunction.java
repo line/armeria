@@ -16,11 +16,14 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
+import java.lang.reflect.Type;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
@@ -37,6 +40,18 @@ final class CompositeResponseConverterFunction implements ResponseConverterFunct
 
     CompositeResponseConverterFunction(ImmutableList<ResponseConverterFunction> functions) {
         this.functions = functions;
+    }
+
+    @Override
+    @Nullable
+    public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
+        for (ResponseConverterFunction function : functions) {
+            final Boolean responseStreaming = function.isResponseStreaming(returnType, produceType);
+            if (responseStreaming != null) {
+                return responseStreaming;
+            }
+        }
+        return null;
     }
 
     @Override

@@ -16,8 +16,11 @@
 package com.linecorp.armeria.server.annotation;
 
 import static com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.stream.Stream;
@@ -66,6 +69,28 @@ public final class JacksonResponseConverterFunction implements ResponseConverter
      */
     public JacksonResponseConverterFunction(ObjectMapper mapper) {
         this.mapper = requireNonNull(mapper, "mapper");
+    }
+
+    @Override
+    public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
+        final Class<?> clazz = typeToClass(unwrapAsyncType(returnType));
+        if (clazz == null) {
+            return null;
+        }
+        if (JsonNode.class.isAssignableFrom(clazz)) {
+            return false;
+        }
+        if (produceType != null) {
+            if (produceType.isJson()) {
+                return false;
+            }
+
+            if (produceType.is(MediaType.JSON_SEQ) &&
+                (Publisher.class.isAssignableFrom(clazz) || Stream.class.isAssignableFrom(clazz))) {
+                return true;
+            }
+        }
+        return null;
     }
 
     @Override

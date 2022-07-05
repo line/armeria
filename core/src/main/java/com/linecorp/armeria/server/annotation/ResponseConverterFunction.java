@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.annotation;
 
+import java.lang.reflect.Type;
 import java.util.function.Consumer;
 
 import com.google.errorprone.annotations.CheckReturnValue;
@@ -26,6 +27,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -38,8 +40,35 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 public interface ResponseConverterFunction {
 
     /**
+     * Returns whether an {@link HttpResponse} of an annotated service should be streamed.
+     * {@code null} if this converter cannot convert the {@code responseType} to an {@link HttpResponse}.
+     * {@code true} can be returned if the response is a streaming type, or the
+     * {@link ResponseConverterFunction} has not been optimized for the {@code responseType} through overriding
+     * this method for backward compatibility.
+     *
+     * <p>This method is used as a performance optimization hint.
+     * If the {@code returnType} and {@code produceType} are not a streaming response,
+     * it is recommended to return {@code false} for the better performance.
+     *
+     * <p>Note that you should never return {@code false} for a streaming response.
+     * The non-streaming response is aggregated before being sent.
+     *
+     * @param returnType the return type of the annotated service.
+     * @param produceType the negotiated producible media type of the annotated service.
+     *                    {@code null} if the media type negotiation is not used for the service.
+     */
+    @UnstableApi
+    @Nullable
+    default Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
+        // TODO(ikhoon): Make this method an abstract method in Armeria 2.0 so that users always implement
+        //               this method to explicitly set whether to support response streaming for
+        //               the `returnType`.
+        return true;
+    }
+
+    /**
      * Returns {@link HttpResponse} instance corresponds to the given {@code result}.
-     * Calls {@link ResponseConverterFunction#fallthrough()} or throws a {@link FallthroughException} if
+     * Calls {@link ResponseConverterFunction#fallthrough()} if
      * this converter cannot convert the {@code result} to the {@link HttpResponse}.
      *
      * @param headers The HTTP headers that you might want to use to create the {@link HttpResponse}.

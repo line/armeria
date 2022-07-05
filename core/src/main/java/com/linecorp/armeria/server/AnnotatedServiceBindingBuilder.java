@@ -30,6 +30,7 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -307,8 +308,10 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
      * {@link AnnotatedServiceExtensions} to the {@link ServerBuilder}.
      *
      * @param extensions the {@link AnnotatedServiceExtensions} at the server level.
+     * @param dependencyInjector the {@link DependencyInjector} to inject dependencies.
      */
-    List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedServiceExtensions extensions) {
+    List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedServiceExtensions extensions,
+                                                         DependencyInjector dependencyInjector) {
         final List<RequestConverterFunction> requestConverterFunctions =
                 requestConverterFunctionBuilder.addAll(extensions.requestConverters()).build();
         final List<ResponseConverterFunction> responseConverterFunctions =
@@ -319,9 +322,9 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
         assert service != null;
 
         final List<AnnotatedServiceElement> elements =
-                AnnotatedServiceFactory.find(pathPrefix, service, useBlockingTaskExecutor, queryDelimiter,
+                AnnotatedServiceFactory.find(pathPrefix, service, useBlockingTaskExecutor,
                                              requestConverterFunctions, responseConverterFunctions,
-                                             exceptionHandlerFunctions);
+                                             exceptionHandlerFunctions, dependencyInjector, queryDelimiter);
         return elements.stream().map(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());

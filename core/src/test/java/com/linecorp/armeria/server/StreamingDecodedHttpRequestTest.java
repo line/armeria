@@ -111,10 +111,11 @@ public class StreamingDecodedHttpRequestTest {
 
     private static StreamingDecodedHttpRequest decodedHttpRequest(RequestHeaders headers,
                                                                   ServiceRequestContext sctx) {
+
         final StreamingDecodedHttpRequest
                 request = new StreamingDecodedHttpRequest(sctx.eventLoop(), 1, 1, headers, true,
                                                           InboundTrafficController.disabled(),
-                                                          sctx.maxRequestLength(), null, null,
+                                                          sctx.maxRequestLength(), sctx.routingContext(),
                                                           ExchangeType.BIDI_STREAMING);
         request.init(sctx);
         return request;
