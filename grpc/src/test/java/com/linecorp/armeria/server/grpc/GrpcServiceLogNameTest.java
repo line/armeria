@@ -102,7 +102,7 @@ class GrpcServiceLogNameTest {
                            .build(TestServiceBlockingStub.class);
         client.emptyCall(Empty.newBuilder().build());
 
-        final RequestLog log = capturedCtx.log().partial();
+        final RequestLog log = capturedCtx.log().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo(TestServiceGrpc.SERVICE_NAME);
         assertThat(log.name()).isEqualTo("EmptyCall");
         assertThat(log.fullName()).isEqualTo(TestServiceGrpc.getEmptyCallMethod().getFullMethodName());
@@ -115,7 +115,7 @@ class GrpcServiceLogNameTest {
                            .build(TestServiceBlockingStub.class);
         client.emptyCall(Empty.newBuilder().build());
 
-        final RequestLog log = capturedCtx.log().partial();
+        final RequestLog log = capturedCtx.log().whenComplete().join();
         assertThat(log.serviceName()).isEqualTo("DefaultServiceName");
         assertThat(log.name()).isEqualTo("DefaultName");
         assertThat(log.fullName()).isEqualTo("DefaultServiceName/DefaultName");
