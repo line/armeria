@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
-import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
+import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.common.util.StringUtil;
 
 /**
@@ -172,14 +172,14 @@ public final class RetryingRpcClient extends AbstractRetryingClient<RpcRequest, 
 
         final RpcResponse res;
 
+        final ClientRequestContextExtension ctxExtension = derivedCtx.as(ClientRequestContextExtension.class);
         final EndpointGroup endpointGroup = derivedCtx.endpointGroup();
-        if (!initialAttempt && derivedCtx instanceof DefaultClientRequestContext &&
+        if (!initialAttempt && ctxExtension != null &&
             endpointGroup != null && derivedCtx.endpoint() == null) {
             // clear the pending throwable to retry endpoint selection
             ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
-            final DefaultClientRequestContext casted = (DefaultClientRequestContext) derivedCtx;
-            res = initContextAndExecuteWithFallback(unwrap(), casted, endpointGroup, RpcResponse::from,
+            res = initContextAndExecuteWithFallback(unwrap(), ctxExtension, endpointGroup, RpcResponse::from,
                                                     (context, cause) -> RpcResponse.ofFailure(cause));
         } else {
             res = executeWithFallback(unwrap(), derivedCtx,
