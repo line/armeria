@@ -91,7 +91,7 @@ public interface Unwrappable {
     /**
      * TBU.
      */
-    default Unwrappable root() {
-        return this;
+    default <U extends Unwrappable> U root() {
+        return (U) this;
     }
 }

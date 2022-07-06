@@ -41,7 +41,8 @@ class AbstractUnwrappableTest {
         final Bar<Foo> bar = new Bar<>(foo);
         final Qux<Bar<Foo>> qux = new Qux<>(bar);
 
-        assertThat(qux.root()).isSameAs(foo);
+        final Foo root = qux.root();
+        assertThat(root).isSameAs(foo);
     }
 
     private static final class Foo implements Unwrappable {}

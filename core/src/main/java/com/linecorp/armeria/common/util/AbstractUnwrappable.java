@@ -45,7 +45,7 @@ public abstract class AbstractUnwrappable<T extends Unwrappable> implements Unwr
     }
 
     @Override
-    public Unwrappable root() {
+    public <U extends Unwrappable> U root() {
         return delegate.root();
     }
 
