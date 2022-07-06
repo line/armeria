@@ -87,4 +87,11 @@ public interface Unwrappable {
     default Unwrappable unwrap() {
         return this;
     }
+
+    /**
+     * TBU.
+     */
+    default Unwrappable root() {
+        return this;
+    }
 }

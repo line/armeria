@@ -35,6 +35,15 @@ class AbstractUnwrappableTest {
         assertThat(qux.unwrap().unwrap()).isSameAs(foo);
     }
 
+    @Test
+    void testUnwrapAll() {
+        final Foo foo = new Foo();
+        final Bar<Foo> bar = new Bar<>(foo);
+        final Qux<Bar<Foo>> qux = new Qux<>(bar);
+
+        assertThat(qux.root()).isSameAs(foo);
+    }
+
     private static final class Foo implements Unwrappable {}
 
     private static final class Bar<T extends Unwrappable> extends AbstractUnwrappable<T> {

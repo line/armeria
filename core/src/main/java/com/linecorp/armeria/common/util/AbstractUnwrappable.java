@@ -45,6 +45,11 @@ public abstract class AbstractUnwrappable<T extends Unwrappable> implements Unwr
     }
 
     @Override
+    public Unwrappable root() {
+        return delegate.root();
+    }
+
+    @Override
     public String toString() {
         final String simpleName = getClass().getSimpleName();
         final String name = simpleName.isEmpty() ? getClass().getName() : simpleName;
