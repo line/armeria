@@ -51,6 +51,7 @@ public abstract class RequestContextWrapper<T extends RequestContext>
     /**
      * Returns the delegate context.
      */
+    @Deprecated
     protected final T delegate() {
         return unwrap();
     }

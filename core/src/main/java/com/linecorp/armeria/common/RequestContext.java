@@ -465,6 +465,10 @@ public interface RequestContext extends Unwrappable {
     @MustBeClosed
     SafeCloseable push();
 
+    @Override
+    default RequestContext unwrap() {
+        return (RequestContext) Unwrappable.super.unwrap();
+    }
     /**
      * Immediately run a given {@link Runnable} with this context.
      */

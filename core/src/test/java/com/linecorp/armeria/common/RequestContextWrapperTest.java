@@ -91,4 +91,22 @@ class RequestContextWrapperTest {
         final RequestContextExtension extension = wrapped2.as(RequestContextExtension.class);
         assertThat(extension).isSameAs(ctx);
     }
+
+    @Test
+    void testUnwrappedTypes() {
+        final RequestContext requestContext =
+                ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
+        final RequestContext unwrappedRequestContext = requestContext.unwrap();
+        assertThat(unwrappedRequestContext).isSameAs(requestContext);
+
+        final ClientRequestContext clientRequestContext =
+                ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
+        final ClientRequestContext unwrappedClientRequestContext = clientRequestContext.unwrap();
+        assertThat(unwrappedClientRequestContext).isSameAs(clientRequestContext);
+
+        final ServiceRequestContext serviceRequestContext =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
+        final ServiceRequestContext unwrappedServiceRequestContext = serviceRequestContext.unwrap();
+        assertThat(unwrappedServiceRequestContext).isSameAs(serviceRequestContext);
+    }
 }

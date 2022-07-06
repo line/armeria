@@ -53,6 +53,8 @@ public final class ClientThreadLocalState {
     @Nullable
     private DefaultClientRequestContextCaptor pendingContextCaptor;
 
+    private ClientThreadLocalState() {}
+
     public void add(Consumer<? super ClientRequestContext> customizer) {
         if (customizers == null) {
             customizers = new ArrayList<>();

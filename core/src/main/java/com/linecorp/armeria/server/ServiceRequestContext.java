@@ -639,4 +639,9 @@ public interface ServiceRequestContext extends RequestContext {
      */
     @Override
     ExchangeType exchangeType();
+
+    @Override
+    default ServiceRequestContext unwrap() {
+        return (ServiceRequestContext) RequestContext.super.unwrap();
+    }
 }

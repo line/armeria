@@ -315,8 +315,9 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             // clear the pending throwable to retry endpoint selection
             ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
-            response = initContextAndExecuteWithFallback(unwrap(), ctxExtension, endpointGroup, HttpResponse::from,
-                                                         (context, cause) -> HttpResponse.ofFailure(cause));
+            response = initContextAndExecuteWithFallback(
+                    unwrap(), ctxExtension, endpointGroup, HttpResponse::from,
+                    (context, cause) -> HttpResponse.ofFailure(cause));
         } else {
             response = executeWithFallback(unwrap(), derivedCtx,
                                            (context, cause) -> HttpResponse.ofFailure(cause));
