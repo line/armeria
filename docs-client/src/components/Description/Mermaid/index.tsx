@@ -13,9 +13,9 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 import React, { useEffect } from 'react';
 import mermaid from 'mermaid';
+import mermaidAPI from 'mermaid/mermaidAPI';
 
 interface MermaidWrapperProps {
   docString: string;
@@ -28,6 +28,9 @@ interface MermaidProps {
 mermaid.initialize({
   startOnLoad: true,
   arrowMarkerAbsolute: false,
+  theme: 'base' as mermaidAPI.Theme,
+  logLevel: 5 as mermaidAPI.LogLevel,
+  securityLevel: 'strict' as mermaidAPI.SecurityLevel,
 });
 
 const Mermaid: React.FunctionComponent<MermaidProps> = ({ chart }) => {
