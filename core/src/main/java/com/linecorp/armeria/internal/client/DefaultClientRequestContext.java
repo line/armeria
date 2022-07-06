@@ -72,8 +72,8 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
-import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -253,11 +253,14 @@ public final class DefaultClientRequestContext
 
     @Nullable
     private static AttributesGetters getAttributes(@Nullable ServiceRequestContext ctx) {
-        if (ctx instanceof DefaultServiceRequestContext) {
-            return ((DefaultServiceRequestContext) ctx).attributes();
-        } else {
+        if (ctx == null) {
             return null;
         }
+        final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
+        if (ctxExtension == null) {
+            return null;
+        }
+        return ctxExtension.attributes();
     }
 
     @Nullable

@@ -247,6 +247,7 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
      * Returns the {@link AttributesGetters} which stores the pairs of an {@link AttributeKey} and an object
      * set via {@link #setAttr(AttributeKey, Object)}.
      */
+    @Override
     @UnstableApi
     public final AttributesGetters attributes() {
         return attrs;
