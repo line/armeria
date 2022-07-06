@@ -1,1 +1,1 @@
-com.linecorp.armeria.internal.server.annotation.TestSpiConverter
+com.linecorp.armeria.internal.server.annotation.TestDelegatingSpiConverterProvider

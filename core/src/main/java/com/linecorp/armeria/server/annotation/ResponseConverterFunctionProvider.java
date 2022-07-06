@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -17,30 +17,23 @@ package com.linecorp.armeria.server.annotation;
 
 import java.lang.reflect.Type;
 
-import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A {@link ResponseConverterFunction} provider interface which provides a
- * {@link ResponseConverterFunction} for converting an object of the given type.
+ * A {@link ResponseConverterFunction} provider interface which creates a new
+ * {@link ResponseConverterFunction} for converting an object of the given type and functions.
  */
 @UnstableApi
 @FunctionalInterface
-public interface DelegatingResponseConverterFunctionProvider {
+public interface ResponseConverterFunctionProvider {
 
     /**
-     * Returns a {@link ResponseConverterFunction} instance if the function can convert
+     * Returns a {@link ResponseConverterFunction} instance if there is a function which can convert
      * the {@code responseType}, otherwise return {@code null}.
      *
-     * The {@link ResponseConverterFunction} passed in is a delegate function which will be used to convert
-     * the {@code responseType}
-     *
      * @param responseType the return {@link Type} of the annotated HTTP service method
-     * @param responseConverter the delegate {@link ResponseConverterFunction} which converts an object
-     *                          into an {@link HttpResponse}
      */
     @Nullable
-    ResponseConverterFunction createResponseConverterFunction(Type responseType,
-                                                              ResponseConverterFunction responseConverter);
+    ResponseConverterFunction createResponseConverterFunction(Type responseType);
 }

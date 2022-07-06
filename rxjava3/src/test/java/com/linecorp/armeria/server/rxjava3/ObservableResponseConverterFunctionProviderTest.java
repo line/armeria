@@ -32,9 +32,9 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.rxjava3.ObservableResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
 
 import io.reactivex.rxjava3.core.Observable;
 

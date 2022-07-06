@@ -27,19 +27,18 @@ import com.google.protobuf.MessageLite;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 
 /**
  * Provides a {@link ProtobufResponseConverterFunction} to annotated services.
  */
 @UnstableApi
 public final class ProtobufResponseConverterFunctionProvider implements
-                                                             DelegatingResponseConverterFunctionProvider {
+                                                             ResponseConverterFunctionProvider {
 
     @Override
     public ResponseConverterFunction createResponseConverterFunction(
-            Type returnType,
-            ResponseConverterFunction responseConverter) {
+            Type returnType) {
         if (isSupportedType(returnType)) {
             return new ProtobufResponseConverterFunction();
         }

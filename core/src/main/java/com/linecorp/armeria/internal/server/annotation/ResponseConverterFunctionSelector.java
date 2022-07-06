@@ -16,6 +16,22 @@ under the License.
 
 package com.linecorp.armeria.internal.server.annotation;
 
+import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
+
+import java.lang.reflect.Method;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.util.List;
+import java.util.Objects;
+import java.util.ServiceLoader;
+import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
+import org.reactivestreams.Publisher;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -26,26 +42,13 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
+import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.HttpFileResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
-
-import java.lang.reflect.Method;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.util.List;
-import java.util.ServiceLoader;
-import java.util.concurrent.CompletableFuture;
-import java.util.stream.Stream;
-
-import org.reactivestreams.Publisher;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
 
 final class ResponseConverterFunctionSelector {
 
@@ -54,13 +57,23 @@ final class ResponseConverterFunctionSelector {
     private static final Logger logger =
             LoggerFactory.getLogger(ResponseConverterFunctionSelector.class);
 
-    static final List<DelegatingResponseConverterFunctionProvider> responseConverterFunctionProviders =
+    static final List<DelegatingResponseConverterFunctionProvider>
+            delegatingResponseConverterFunctionProviders =
             ImmutableList.copyOf(ServiceLoader.load(DelegatingResponseConverterFunctionProvider.class,
                                                     AnnotatedService.class.getClassLoader()));
 
+    static final List<ResponseConverterFunctionProvider>
+            responseConverterFunctionProviders =
+            ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
+                                                    AnnotatedService.class.getClassLoader()));
+
     static {
-        if (!responseConverterFunctionProviders.isEmpty()) {
+        if (!delegatingResponseConverterFunctionProviders.isEmpty()) {
             logger.debug("Available {}s: {}", DelegatingResponseConverterFunctionProvider.class.getSimpleName(),
+                         delegatingResponseConverterFunctionProviders);
+        }
+        if (!responseConverterFunctionProviders.isEmpty()) {
+            logger.debug("Available {}s: {}", ResponseConverterFunctionProvider.class.getSimpleName(),
                          responseConverterFunctionProviders);
         }
     }
@@ -69,12 +82,20 @@ final class ResponseConverterFunctionSelector {
             Method method, List<ResponseConverterFunction> responseConverters) {
 
         final Type actualType = getActualReturnType(method);
+
+        final List<ResponseConverterFunction> nonDelegatingSpiConverters =
+                responseConverterFunctionProviders.stream().map(
+                        provider -> provider.createResponseConverterFunction(actualType)
+                ).filter(Objects::nonNull).collect(Collectors.toList());
+
         final ImmutableList<ResponseConverterFunction> backingConverters =
                 ImmutableList
                         .<ResponseConverterFunction>builder()
                         .addAll(responseConverters)
+                        .addAll(nonDelegatingSpiConverters)
                         .addAll(defaultResponseConverters)
                         .build();
+
         final ResponseConverterFunction responseConverter = new CompositeResponseConverterFunction(
                 ImmutableList
                         .<ResponseConverterFunction>builder()
@@ -85,7 +106,7 @@ final class ResponseConverterFunctionSelector {
                                 new CompositeResponseConverterFunction(backingConverters)))
                         .build());
 
-        for (final DelegatingResponseConverterFunctionProvider provider : responseConverterFunctionProviders) {
+        for (final DelegatingResponseConverterFunctionProvider provider : delegatingResponseConverterFunctionProviders) {
             final ResponseConverterFunction func =
                     provider.createResponseConverterFunction(actualType, responseConverter);
             if (func != null) {

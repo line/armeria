@@ -1,5 +1,6 @@
 package com.linecorp.armeria.internal.server.annotation;
 
+import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.lang.reflect.Method;
@@ -26,50 +27,69 @@ class ResponseConverterFunctionSelectorTest {
             HttpRequest.of(HttpMethod.GET, "/")).build();
 
     @Test
-    void prioritisesPassedInResponseConverters() throws Exception {
+    void prioritisesSpiDelegatingResponseConverterProvider() throws Exception {
         final ResponseConverterFunction converterFunction =
                 ResponseConverterFunctionSelector.responseConverter(
-                        getMethod("testEndpoint"),
-                        Collections.singletonList(new MyResponseConverterFunctionProvider())
+                        getMethod("testEndpointForDelegatingProvider"),
+                        Collections.singletonList(new MyResponseConverterFunction())
                 );
 
-        final HttpResponse response = converterFunction.convertResponse(ctx, null, new TestClassToConvert(),
+        final HttpResponse response = converterFunction.convertResponse(ctx, null,
+                                                                        new TestClassWithDelegatingResponseConverterProvider(),
                                                                         null);
 
-        assertThat(response.aggregate().join().contentUtf8()).isEqualTo("my_response");
+        assertThat(response.aggregate().join().contentUtf8()).isEqualTo("testDelegatingResponse");
     }
 
     @Test
-    void usesSpiResponseConverterGivenNoResponseConverterSpecified() throws Exception {
+    void prioritisesPassedInResponseConvertersGivenNoDelegatingResponseConverterProviderAvailable()
+            throws Exception {
         final ResponseConverterFunction converterFunction =
                 ResponseConverterFunctionSelector.responseConverter(
-                        getMethod("testEndpoint"),
-                        Collections.emptyList()
+                        getMethod("testEndpointWithNonDelegatingProvider"),
+                        Collections.singletonList(new MyResponseConverterFunction())
                 );
 
-        final HttpResponse response = converterFunction.convertResponse(ctx, null, new TestClassToConvert(),
+        final HttpResponse response = converterFunction.convertResponse(ctx, null,
+                                                                        new TestClassWithNonDelegatingResponseConverterProvider(),
                                                                         null);
 
-        assertThat(response.aggregate().join().contentUtf8()).isEqualTo("testResponse");
+        assertThat(response.aggregate().join().contentUtf8()).isEqualTo("my_custom_converter_response");
+    }
+
+    @Test
+    void usesNonDelegatingSpiResponseConverterGivenNoResponseConverterSpecified() throws Exception {
+        final ResponseConverterFunction converterFunction =
+                ResponseConverterFunctionSelector.responseConverter(
+                        getMethod("testEndpointWithNonDelegatingProvider"),
+                        emptyList()
+                );
+
+        final HttpResponse response = converterFunction.convertResponse(ctx, null,
+                                                                        new TestClassWithNonDelegatingResponseConverterProvider(),
+                                                                        null);
+
+        assertThat(response.aggregate().join().contentUtf8()).isEqualTo("testNonDelegatingResponse");
     }
 
     private static Method getMethod(String methodName) throws NoSuchMethodException {
         return TestService.class.getMethod(methodName);
     }
 
-    private static class MyResponseConverterFunctionProvider implements ResponseConverterFunction {
+    private static class MyResponseConverterFunction implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
                                             @Nullable Object result, HttpHeaders trailers) throws Exception {
-            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, "my_response");
+            return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, "my_custom_converter_response");
         }
     }
 
-    @FunctionalInterface
     @SuppressWarnings("unused")
     private interface TestService {
-        HttpResult<TestClassToConvert> testEndpoint();
+        HttpResult<TestClassWithDelegatingResponseConverterProvider> testEndpointForDelegatingProvider();
+        HttpResult<TestClassWithNonDelegatingResponseConverterProvider> testEndpointWithNonDelegatingProvider();
     }
 
-    static class TestClassToConvert {}
+    static class TestClassWithDelegatingResponseConverterProvider {}
+    static class TestClassWithNonDelegatingResponseConverterProvider {}
 }

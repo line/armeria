@@ -20,8 +20,8 @@ import java.lang.reflect.Type;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.rxjava2.ObservableResponseConverterFunction;
 
 import io.reactivex.Completable;

@@ -9,7 +9,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.server.annotation.ResponseConverterFunctionSelectorTest.TestClassToConvert;
+import com.linecorp.armeria.internal.server.annotation.ResponseConverterFunctionSelectorTest.TestClassWithDelegatingResponseConverterProvider;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
@@ -17,14 +17,14 @@ import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctio
 /**
  * For use with ResponseConverterFunctionSelectorTest
  */
-public class TestSpiConverter implements DelegatingResponseConverterFunctionProvider {
+public class TestDelegatingSpiConverterProvider implements DelegatingResponseConverterFunctionProvider {
 
   @Override
   public @Nullable ResponseConverterFunction createResponseConverterFunction(Type responseType,
       ResponseConverterFunction responseConverter) {
     final Class<?> responseClass = toClass(responseType);
-    if(TestClassToConvert.class.isAssignableFrom(responseClass)) {
-      return new TestResponseConverterFunction();
+    if(TestClassWithDelegatingResponseConverterProvider.class.isAssignableFrom(responseClass)) {
+      return new TestDelegatingResponseConverterFunction(responseConverter);
     } else {
       return null;
     }
@@ -40,12 +40,18 @@ public class TestSpiConverter implements DelegatingResponseConverterFunctionProv
     }
   }
 
-  static class TestResponseConverterFunction implements ResponseConverterFunction {
+  static class TestDelegatingResponseConverterFunction implements ResponseConverterFunction {
+
+    public TestDelegatingResponseConverterFunction(ResponseConverterFunction responseConverter) {
+
+    }
+
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
         @Nullable Object result, HttpHeaders trailers) throws Exception {
-      if(result instanceof TestClassToConvert) {
-        return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, "testResponse");
+      if(result instanceof TestClassWithDelegatingResponseConverterProvider) {
+        // a real implementation would use the delegate responseConverter
+        return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, "testDelegatingResponse");
       }
       return ResponseConverterFunction.fallthrough();
     }
