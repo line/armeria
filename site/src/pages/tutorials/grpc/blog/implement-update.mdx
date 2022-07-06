@@ -71,7 +71,7 @@ updating a blog post, `updateBlogPost()`. Leave the exception throwing part empt
   }
  ```
 3. Add an exception handler class for the blog service.
-  ```java GrpcExceptionHandler.java
+  ```java filename=GrpcExceptionHandler.java
   import com.linecorp.armeria.common.RequestContext;
   import com.linecorp.armeria.common.annotation.Nullable;
   import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
@@ -108,7 +108,7 @@ updating a blog post, `updateBlogPost()`. Leave the exception throwing part empt
 
 ## 2. Implement client
 
-We'll continue using the `cb` instance that has the logging interceptor, as the client. Add a method `updateBlogPost()` to send a request to update a blog post.
+We'll continue using the `cb` instance from the previous step. Add a method `updateBlogPost()` to send a request to update a blog post.
 
 ```java filename=BlogClient.java
 import example.armeria.server.blog.grpc.Blog.UpdateBlogPostRequest;
@@ -202,17 +202,17 @@ To check our exception handler working, let's try updating a post we know for su
     updateBlogPost(10000, "New title", "New content."); // add this
   }
   ```
-2. While the server is running, run the client and see the message that you get. We threw the `BlogNotFoundException` and the exception handler returned the not found runtime exception for us.
-```bash
-Exception in thread "main" io.grpc.StatusRuntimeException: NOT_FOUND: The blog post does not exist. ID: 10000
-	at io.grpc.stub.ClientCalls.toStatusRuntimeException(ClientCalls.java:262)
-	at io.grpc.stub.ClientCalls.getUnchecked(ClientCalls.java:243)
-	at io.grpc.stub.ClientCalls.blockingUnaryCall(ClientCalls.java:156)
-	at example.armeria.server.blog.grpc.BlogServiceGrpc$BlogServiceBlockingStub.updateBlogPost(BlogServiceGrpc.java:390)
-	at example.armeria.client.blog.grpc.BlogClient.updateBlogPost(BlogClient.java:110)
-	at example.armeria.client.blog.grpc.BlogClient.testRun(BlogClient.java:53)
-	at example.armeria.client.blog.grpc.BlogClient.main(BlogClient.java:46)
-```
+2. While the server is running, run the client and see the message that you get. We threw the `BlogNotFoundException` and the exception handler returned the NOT_FOUND runtime exception for us.
+  ```bash
+  Exception in thread "main" io.grpc.StatusRuntimeException: NOT_FOUND: The blog post does not exist. ID: 10000
+    at io.grpc.stub.ClientCalls.toStatusRuntimeException(ClientCalls.java:262)
+    at io.grpc.stub.ClientCalls.getUnchecked(ClientCalls.java:243)
+    at io.grpc.stub.ClientCalls.blockingUnaryCall(ClientCalls.java:156)
+    at example.armeria.server.blog.grpc.BlogServiceGrpc$BlogServiceBlockingStub.updateBlogPost(BlogServiceGrpc.java:390)
+    at example.armeria.client.blog.grpc.BlogClient.updateBlogPost(BlogClient.java:110)
+    at example.armeria.client.blog.grpc.BlogClient.testRun(BlogClient.java:53)
+    at example.armeria.client.blog.grpc.BlogClient.main(BlogClient.java:46)
+  ```
 
 ## What's next
 

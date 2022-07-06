@@ -93,16 +93,16 @@ final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
 
 ## 2. Implement client
 
-This time, we'll build a client differently. We do already have a client instance we created for creating a blog post, created with the basic client creator, <type://Clients#newClient>. Now, we'll use  <type://Clients#builder>.
+This time, we'll use a different client instance. Instead of using the client instance created with the <type://Clients>, we'll use <type://GrpcClients>.
 
-1. Add another <type://BlogServiceBlockingStub> in the `ClientMain` class with a different name.
+1. Add another <type://BlogServiceBlockingStub> in the `BlogClient` class with a different name.
   ```java filename=BlogClient.java
   class BlogClient {
     static BlogServiceBlockingStub client;  // added before
     static BlogServiceBlockingStub cb;      // add this one here
   }
   ```
-2. Create a client instance with <type://Clients#builder>.
+2. Add a new client instance with <type://GrpcClients>.
   ```java filename=BlogClient.java
   class BlogClient {
     public static void main(String[] args) throws Exception {
@@ -111,12 +111,12 @@ This time, we'll build a client differently. We do already have a client instanc
                 "gproto+http://127.0.0.1:8080/",
                 BlogServiceBlockingStub.class);
       // add this one here
-      cb = Clients.builder("gproto+http://127.0.0.1:8080/")
-                  .build(BlogServiceBlockingStub.class);
+      cb = GrpcClients.builder("gproto+http://127.0.0.1:8080/")
+                      .build(BlogServiceBlockingStub.class);
     }
   }
   ```
-3. Add a method each for retrieving posts. Note, this time we're using `cb`, the client instance built with <type://Clients.builder>.
+3. Add a method each for retrieving posts. Note, this time we're using `cb`, the client instance created with <type://GrpcClients>.
 
   <Tabs>
   <TabPane tab="Single post" key="1">
@@ -152,7 +152,7 @@ This time, we'll build a client differently. We do already have a client instanc
   </TabPane>
   </Tabs>
 
-## 3. Test
+## 3. Test retrieving multiple posts
 
 Let's start off with retrieving all the blog posts there are:
 
@@ -171,9 +171,9 @@ Let's start off with retrieving all the blog posts there are:
 
 Since we haven't added any log messages, we can't tell if we've successfully retrieved blog posts or not. To check the result, we'll add in an interceptor as the next step. Not only can we see the blog posts retrieved, we can obtain IDs to retrieve a post later on.
 
-## 4. Add interceptor
+## 4. Decorate the client
 
-We want to retrieve a single blog post, but we don't have the post ID information. (Although we very much know how the IDs are generated in this tutorial.) Here, what we'll do is intercept the response from the server to get the ID.
+We want to retrieve a single blog post, but we don't have the post ID information. (Although we very much know how the IDs are generated in this tutorial.) Here, what we'll decorate the client the response from the server to get the ID.
 
 1. Add a decorator to the client instance, `cb`, to intercept response.
   ```java filename=BlogClient.java
@@ -182,13 +182,13 @@ We want to retrieve a single blog post, but we don't have the post ID informatio
   class BlogClient {
     public static void main(String[] args) throws Exception {
       ...
-      cb = Clients.builder("gproto+http://127.0.0.1:8080/")
-                  .decorator(LoggingClient.newDecorator())  // add this
-                  .build(BlogServiceBlockingStub.class);
+      cb = GrpcClients.builder("gproto+http://127.0.0.1:8080/")
+                      .decorator(LoggingClient.newDecorator())  // add this
+                      .build(BlogServiceBlockingStub.class);
     }
   }
   ```
-2. Set up to log intercepted messages:
+2. Set up to log messages:
     - Add a dependency in the build.gradle file.
       ```filename=build.gradle
       dependencies {
@@ -211,7 +211,7 @@ We want to retrieve a single blog post, but we don't have the post ID informatio
         </root>
       </configuration>
       ```
-3. Stop the server and run both the server and the client. If we succeed in intercepting the response, we'll see an output like the following.
+3. Stop the server and run both the server and the client. If we succeed,we'll see an output like the following.
   ```bash
   [armeria-common-worker-nio-2-1] DEBUG c.l.a.client.logging.LoggingClient - [creqId=2f0fef66, chanId=0b350a6d, laddr=127.0.0.1:50824, raddr=127.0.0.1:8080][http://127.0.0.1:8080/example.armeria.server.blog.grpc.BlogService/ListBlogPosts#POST] Response: {startTime=2022-03-22T23:36:22.945Z(1645572982945000), length=99B, duration=516µs(516443ns), totalDuration=43986µs(43986061ns), headers=[:status=200, content-type=application/grpc+proto, grpc-encoding=identity, grpc-accept-encoding=gzip, server=Armeria/1.13.1-SNAPSHOT, date=Tue, 03 Feb 2022 23:36:22 GMT], content=CompletableRpcResponse{blogs {
     title: "My first blog"
@@ -230,7 +230,7 @@ We want to retrieve a single blog post, but we don't have the post ID informatio
   ```
 Now that we have the ID information, we can now retrieve a single post.
 
-## 5. Test retrieving single post
+## 5. Test retrieving a single post
 
 Let's retrieve the second blog post.
 

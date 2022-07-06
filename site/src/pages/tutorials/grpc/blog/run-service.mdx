@@ -56,9 +56,9 @@ Build a service and server using Armeria's <type://ServerBuilder> to serve our s
       static Server newServer(int port) throws Exception {
         ...
         return Server.builder()
-                    .http(port)
-                    .service(grpcService)
-                    .build();
+                     .http(port)
+                     .service(grpcService)
+                     .build();
 
       }
   ```
@@ -106,9 +106,8 @@ We've only tested running the service on a server. This time, let's try calling 
     static BlogServiceBlockingStub client;
 
     public static void main(String[] args) throws Exception {
-      BlogServiceBlockingStub blogService = Clients.newClient(
-                                        "gproto+http://127.0.0.1:8080/",
-                                        BlogServiceBlockingStub.class);
+      client = Clients.newClient("gproto+http://127.0.0.1:8080/",
+                                 BlogServiceBlockingStub.class);
   }
   ```
 3. Although we haven't implemented any service method, we'll call one just to check our client can communicate with the server.
