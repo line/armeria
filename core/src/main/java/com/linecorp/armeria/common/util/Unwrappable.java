@@ -89,7 +89,9 @@ public interface Unwrappable {
     }
 
     /**
-     * Returns the innermost object decorated by this object. If this {@link Unwrappable} is the innermost
+     * Unwraps this object and returns the object being decorated. If {@code all} is true,
+     * then the innermost wrapped object is returned. If {@code all} is false, then the behavior is identical
+     * to {@link Unwrappable#unwrap()}. If this {@link Unwrappable} is the innermost
      * object, this method returns itself. For example:
      * <pre>{@code
      * class Foo implements Unwrappable {}
@@ -106,17 +108,20 @@ public interface Unwrappable {
      *     }
      * }
      *
-     * Foo foo = new Foo();
-     * assert foo.root() == foo;
+     * final Foo foo = new Foo();
+     * foo.unwrap(true) == foo;
+     * foo.unwrap(false) == foo;
      *
-     * Bar<Foo> bar = new Bar<>(foo);
-     * assert bar.root() == foo;
+     * final Bar<Foo> bar = new Bar<>(foo);
+     * bar.unwrap(true) == foo;
+     * bar.unwrap(false) == foo;
      *
-     * Qux<Bar<Foo>> qux = new Qux<>(bar);
-     * assert qux.root() == foo;
+     * final Qux<Bar<Foo>> qux = new Qux<>(bar);
+     * qux.unwrap(true) == foo;
+     * qux.unwrap(false) == bar;
      * }</pre>
      */
-    default Unwrappable root() {
+    default Unwrappable unwrap(boolean all) {
         return this;
     }
 }

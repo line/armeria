@@ -38,13 +38,16 @@ class AbstractUnwrappableTest {
     @Test
     void testUnwrapAll() {
         final Foo foo = new Foo();
-        assertThat(foo.root()).isSameAs(foo);
+        assertThat(foo.unwrap(true)).isSameAs(foo);
+        assertThat(foo.unwrap(false)).isSameAs(foo);
 
         final Bar<Foo> bar = new Bar<>(foo);
-        assertThat(bar.root()).isSameAs(foo);
+        assertThat(bar.unwrap(true)).isSameAs(foo);
+        assertThat(bar.unwrap(false)).isSameAs(foo);
 
         final Qux<Bar<Foo>> qux = new Qux<>(bar);
-        assertThat(qux.root()).isSameAs(foo);
+        assertThat(qux.unwrap(true)).isSameAs(foo);
+        assertThat(qux.unwrap(false)).isSameAs(bar);
     }
 
     private static final class Foo implements Unwrappable {}

@@ -45,8 +45,12 @@ public abstract class AbstractUnwrappable<T extends Unwrappable> implements Unwr
     }
 
     @Override
-    public Unwrappable root() {
-        return delegate.root();
+    public Unwrappable unwrap(boolean all) {
+        if (all) {
+            return delegate.unwrap(all);
+        } else {
+            return unwrap();
+        }
     }
 
     @Override
