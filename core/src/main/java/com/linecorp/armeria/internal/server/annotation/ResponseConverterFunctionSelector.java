@@ -17,6 +17,8 @@ under the License.
 package com.linecorp.armeria.internal.server.annotation;
 
 import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
 
 import java.lang.reflect.Method;
 import java.lang.reflect.ParameterizedType;
@@ -32,11 +34,13 @@ import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -79,13 +83,11 @@ final class ResponseConverterFunctionSelector {
     }
 
     static ResponseConverterFunction responseConverter(
-            Method method, List<ResponseConverterFunction> responseConverters) {
-
-        final Type actualType = getActualReturnType(method);
+            Type returnType, List<ResponseConverterFunction> responseConverters) {
 
         final List<ResponseConverterFunction> nonDelegatingSpiConverters =
                 responseConverterFunctionProviders.stream().map(
-                        provider -> provider.newResponseConverterFunction(actualType)
+                        provider -> provider.newResponseConverterFunction(returnType)
                 ).filter(Objects::nonNull).collect(Collectors.toList());
 
         final ImmutableList<ResponseConverterFunction> backingConverters =
@@ -108,7 +110,7 @@ final class ResponseConverterFunctionSelector {
 
         for (final DelegatingResponseConverterFunctionProvider provider : delegatingResponseConverterFunctionProviders) {
             final ResponseConverterFunction func =
-                    provider.createResponseConverterFunction(actualType, responseConverter);
+                    provider.createResponseConverterFunction(returnType, responseConverter);
             if (func != null) {
                 return func;
             }
@@ -170,13 +172,30 @@ final class ResponseConverterFunctionSelector {
      * A response converter implementation which creates an {@link HttpResponse} with
      * the objects published from a {@link Publisher} or {@link Stream}.
      */
-    private static final class AggregatedResponseConverterFunction
-            implements ResponseConverterFunction {
+    @VisibleForTesting
+    static final class AggregatedResponseConverterFunction implements ResponseConverterFunction {
 
         private final ResponseConverterFunction responseConverter;
 
         AggregatedResponseConverterFunction(ResponseConverterFunction responseConverter) {
             this.responseConverter = responseConverter;
+        }
+
+        @Override
+        public Boolean isResponseStreaming(Type returnType, @Nullable MediaType contentType) {
+            final Class<?> clazz = typeToClass(unwrapAsyncType(returnType));
+            if (clazz == null) {
+                return null;
+            }
+
+            if (HttpResponse.class.isAssignableFrom(clazz)) {
+                return true;
+            }
+            if (Publisher.class.isAssignableFrom(clazz) || Stream.class.isAssignableFrom(clazz)) {
+                return false;
+            }
+
+            return null;
         }
 
         @Override
