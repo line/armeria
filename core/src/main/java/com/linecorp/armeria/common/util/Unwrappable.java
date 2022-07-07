@@ -89,9 +89,34 @@ public interface Unwrappable {
     }
 
     /**
-     * TBU.
+     * Returns the innermost object decorated by this object. If this {@link Unwrappable} is the innermost
+     * object, this method returns itself. For example:
+     * <pre>{@code
+     * class Foo implements Unwrappable {}
+     *
+     * class Bar<T extends Unwrappable> extends AbstractUnwrappable<T> {
+     *     Bar(T delegate) {
+     *         super(delegate);
+     *     }
+     * }
+     *
+     * class Qux<T extends Unwrappable> extends AbstractUnwrappable<T> {
+     *     Qux(T delegate) {
+     *         super(delegate);
+     *     }
+     * }
+     *
+     * Foo foo = new Foo();
+     * assert foo.root() == foo;
+     *
+     * Bar<Foo> bar = new Bar<>(foo);
+     * assert bar.root() == foo;
+     *
+     * Qux<Bar<Foo>> qux = new Qux<>(bar);
+     * assert qux.root() == foo;
+     * }</pre>
      */
-    default <U extends Unwrappable> U root() {
-        return (U) this;
+    default Unwrappable root() {
+        return this;
     }
 }
