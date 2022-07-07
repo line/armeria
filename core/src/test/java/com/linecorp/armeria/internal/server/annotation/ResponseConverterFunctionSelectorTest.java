@@ -3,7 +3,6 @@ package com.linecorp.armeria.internal.server.annotation;
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.lang.reflect.Method;
 import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
@@ -17,7 +16,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 @SuppressWarnings("ConstantConditions")
@@ -30,7 +28,7 @@ class ResponseConverterFunctionSelectorTest {
     void prioritisesSpiDelegatingResponseConverterProvider() throws Exception {
         final ResponseConverterFunction converterFunction =
                 ResponseConverterFunctionSelector.responseConverter(
-                        getMethod("testEndpointForDelegatingProvider"),
+                        TestClassWithDelegatingResponseConverterProvider.class,
                         Collections.singletonList(new MyResponseConverterFunction())
                 );
 
@@ -46,7 +44,7 @@ class ResponseConverterFunctionSelectorTest {
             throws Exception {
         final ResponseConverterFunction converterFunction =
                 ResponseConverterFunctionSelector.responseConverter(
-                        getMethod("testEndpointWithNonDelegatingProvider"),
+                        TestClassWithNonDelegatingResponseConverterProvider.class,
                         Collections.singletonList(new MyResponseConverterFunction())
                 );
 
@@ -61,7 +59,7 @@ class ResponseConverterFunctionSelectorTest {
     void usesNonDelegatingSpiResponseConverterGivenNoResponseConverterSpecified() throws Exception {
         final ResponseConverterFunction converterFunction =
                 ResponseConverterFunctionSelector.responseConverter(
-                        getMethod("testEndpointWithNonDelegatingProvider"),
+                        TestClassWithNonDelegatingResponseConverterProvider.class,
                         emptyList()
                 );
 
@@ -72,22 +70,12 @@ class ResponseConverterFunctionSelectorTest {
         assertThat(response.aggregate().join().contentUtf8()).isEqualTo("testNonDelegatingResponse");
     }
 
-    private static Method getMethod(String methodName) throws NoSuchMethodException {
-        return TestService.class.getMethod(methodName);
-    }
-
     private static class MyResponseConverterFunction implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
                                             @Nullable Object result, HttpHeaders trailers) throws Exception {
             return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, "my_custom_converter_response");
         }
-    }
-
-    @SuppressWarnings("unused")
-    private interface TestService {
-        HttpResult<TestClassWithDelegatingResponseConverterProvider> testEndpointForDelegatingProvider();
-        HttpResult<TestClassWithNonDelegatingResponseConverterProvider> testEndpointWithNonDelegatingProvider();
     }
 
     static class TestClassWithDelegatingResponseConverterProvider {}
