@@ -119,46 +119,6 @@ final class ResponseConverterFunctionSelector {
         return responseConverter;
     }
 
-    private static Type getActualReturnType(Method method) {
-        final Class<?> returnType;
-        final Type genericReturnType;
-
-        if (KotlinUtil.isKFunction(method)) {
-            returnType = KotlinUtil.kFunctionReturnType(method);
-            if (KotlinUtil.isReturnTypeNothing(method)) {
-                genericReturnType = KotlinUtil.kFunctionReturnType(method);
-            } else {
-                genericReturnType = KotlinUtil.kFunctionGenericReturnType(method);
-            }
-        } else {
-            returnType = method.getReturnType();
-            genericReturnType = method.getGenericReturnType();
-        }
-
-        if (HttpResult.class.isAssignableFrom(returnType)) {
-            final ParameterizedType type = (ParameterizedType) genericReturnType;
-            warnIfHttpResponseArgumentExists(type, type);
-            return type.getActualTypeArguments()[0];
-        } else {
-            return genericReturnType;
-        }
-    }
-
-    private static void warnIfHttpResponseArgumentExists(Type returnType, ParameterizedType type) {
-        for (final Type arg : type.getActualTypeArguments()) {
-            if (arg instanceof ParameterizedType) {
-                warnIfHttpResponseArgumentExists(returnType, (ParameterizedType) arg);
-            } else if (arg instanceof Class) {
-                final Class<?> clazz = (Class<?>) arg;
-                if (HttpResponse.class.isAssignableFrom(clazz) ||
-                    AggregatedHttpResponse.class.isAssignableFrom(clazz)) {
-                    logger.warn("{} in the return type '{}' may take precedence over {}.",
-                                clazz.getSimpleName(), returnType, HttpResult.class.getSimpleName());
-                }
-            }
-        }
-    }
-
     /**
      * A default {@link ResponseConverterFunction}s.
      */
