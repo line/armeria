@@ -37,7 +37,7 @@ public final class ProtobufResponseConverterFunctionProvider implements
                                                              ResponseConverterFunctionProvider {
 
     @Override
-    public ResponseConverterFunction createResponseConverterFunction(
+    public ResponseConverterFunction newResponseConverterFunction(
             Type returnType) {
         if (isSupportedType(returnType)) {
             return new ProtobufResponseConverterFunction();

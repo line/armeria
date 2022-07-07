@@ -85,7 +85,7 @@ final class ResponseConverterFunctionSelector {
 
         final List<ResponseConverterFunction> nonDelegatingSpiConverters =
                 responseConverterFunctionProviders.stream().map(
-                        provider -> provider.createResponseConverterFunction(actualType)
+                        provider -> provider.newResponseConverterFunction(actualType)
                 ).filter(Objects::nonNull).collect(Collectors.toList());
 
         final ImmutableList<ResponseConverterFunction> backingConverters =

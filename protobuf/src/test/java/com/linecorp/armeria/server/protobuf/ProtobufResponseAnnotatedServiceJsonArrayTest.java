@@ -57,15 +57,6 @@ class ProtobufResponseAnnotatedServiceJsonArrayTest {
         client = WebClient.of(server.httpUri());
     }
 
-    private static class GreetingService {
-        @Get("/json")
-        @ProducesJson
-        @SuppressWarnings("unused")
-        public Messages.SimpleRepeatedResponse produceJsonWithRepeatedFields() {
-            return Messages.SimpleRepeatedResponse.newBuilder().addAllMessages(Collections.emptyList()).build();
-        }
-    }
-
     @Test
     void returnEmptyJsonArrayGivenCustomJsonPrinter() {
         final AggregatedHttpResponse response = client.get("/json").aggregate().join();
@@ -76,5 +67,14 @@ class ProtobufResponseAnnotatedServiceJsonArrayTest {
 
         final String expectedString = "{\"messages\":[]}";
         assertThat(responseString).isEqualToIgnoringWhitespace(expectedString);
+    }
+
+    private static class GreetingService {
+        @Get("/json")
+        @ProducesJson
+        @SuppressWarnings("unused")
+        public Messages.SimpleRepeatedResponse produceJsonWithRepeatedFields() {
+            return Messages.SimpleRepeatedResponse.newBuilder().addAllMessages(Collections.emptyList()).build();
+        }
     }
 }
