@@ -19,41 +19,42 @@ import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctio
  */
 public class TestDelegatingSpiConverterProvider implements DelegatingResponseConverterFunctionProvider {
 
-  @Override
-  public @Nullable ResponseConverterFunction createResponseConverterFunction(Type responseType,
-      ResponseConverterFunction responseConverter) {
-    final Class<?> responseClass = toClass(responseType);
-    if(TestClassWithDelegatingResponseConverterProvider.class.isAssignableFrom(responseClass)) {
-      return new TestDelegatingResponseConverterFunction(responseConverter);
-    } else {
-      return null;
-    }
-  }
-
-  private Class<?> toClass(Type type) {
-    if(type instanceof ParameterizedType) {
-      return (Class<?>) ((ParameterizedType) type).getRawType();
-    } else if (type instanceof Class<?>) {
-      return (Class<?>) type;
-    } else {
-      return null;
-    }
-  }
-
-  static class TestDelegatingResponseConverterFunction implements ResponseConverterFunction {
-
-    public TestDelegatingResponseConverterFunction(ResponseConverterFunction responseConverter) {
-
-    }
-
     @Override
-    public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
-        @Nullable Object result, HttpHeaders trailers) throws Exception {
-      if(result instanceof TestClassWithDelegatingResponseConverterProvider) {
-        // a real implementation would use the delegate responseConverter
-        return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, "testDelegatingResponse");
-      }
-      return ResponseConverterFunction.fallthrough();
+    public @Nullable ResponseConverterFunction createResponseConverterFunction(Type responseType,
+                                                                               ResponseConverterFunction responseConverter) {
+        final Class<?> responseClass = toClass(responseType);
+        if (responseClass != null && TestClassWithDelegatingResponseConverterProvider.class.isAssignableFrom(
+                responseClass)) {
+            return new TestDelegatingResponseConverterFunction(responseConverter);
+        } else {
+            return null;
+        }
     }
-  }
+
+    private Class<?> toClass(Type type) {
+        if (type instanceof ParameterizedType) {
+            return (Class<?>) ((ParameterizedType) type).getRawType();
+        } else if (type instanceof Class<?>) {
+            return (Class<?>) type;
+        } else {
+            return null;
+        }
+    }
+
+    static class TestDelegatingResponseConverterFunction implements ResponseConverterFunction {
+
+        public TestDelegatingResponseConverterFunction(ResponseConverterFunction responseConverter) {
+
+        }
+
+        @Override
+        public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
+                                            @Nullable Object result, HttpHeaders trailers) throws Exception {
+            if (result instanceof TestClassWithDelegatingResponseConverterProvider) {
+                // a real implementation would use the delegate responseConverter
+                return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, "testDelegatingResponse");
+            }
+            return ResponseConverterFunction.fallthrough();
+        }
+    }
 }

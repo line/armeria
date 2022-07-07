@@ -19,34 +19,35 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
  */
 public class TestSpiConverterProvider implements ResponseConverterFunctionProvider {
 
-  @Override
-  public @Nullable ResponseConverterFunction newResponseConverterFunction(Type responseType) {
-    final Class<?> responseClass = toClass(responseType);
-    if(TestClassWithNonDelegatingResponseConverterProvider.class.isAssignableFrom(responseClass)) {
-      return new TestResponseConverterFunction();
-    } else {
-      return null;
-    }
-  }
-
-  private Class<?> toClass(Type type) {
-    if(type instanceof ParameterizedType) {
-      return (Class<?>) ((ParameterizedType) type).getRawType();
-    } else if (type instanceof Class<?>) {
-      return (Class<?>) type;
-    } else {
-      return null;
-    }
-  }
-
-  static class TestResponseConverterFunction implements ResponseConverterFunction {
     @Override
-    public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
-        @Nullable Object result, HttpHeaders trailers) throws Exception {
-      if(result instanceof TestClassWithNonDelegatingResponseConverterProvider) {
-        return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, "testNonDelegatingResponse");
-      }
-      return ResponseConverterFunction.fallthrough();
+    public @Nullable ResponseConverterFunction newResponseConverterFunction(Type responseType) {
+        final Class<?> responseClass = toClass(responseType);
+        if (responseClass != null && TestClassWithNonDelegatingResponseConverterProvider.class.isAssignableFrom(
+                responseClass)) {
+            return new TestResponseConverterFunction();
+        } else {
+            return null;
+        }
     }
-  }
+
+    private Class<?> toClass(Type type) {
+        if (type instanceof ParameterizedType) {
+            return (Class<?>) ((ParameterizedType) type).getRawType();
+        } else if (type instanceof Class<?>) {
+            return (Class<?>) type;
+        } else {
+            return null;
+        }
+    }
+
+    static class TestResponseConverterFunction implements ResponseConverterFunction {
+        @Override
+        public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
+                                            @Nullable Object result, HttpHeaders trailers) throws Exception {
+            if (result instanceof TestClassWithNonDelegatingResponseConverterProvider) {
+                return HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT, "testNonDelegatingResponse");
+            }
+            return ResponseConverterFunction.fallthrough();
+        }
+    }
 }
