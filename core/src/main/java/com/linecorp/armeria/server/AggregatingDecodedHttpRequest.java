@@ -39,7 +39,6 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     private final long maxRequestLength;
     private final RequestHeaders headers;
     private final RoutingContext routingCtx;
-    private final Routed<ServiceConfig> routed;
     private final ExchangeType exchangeType;
 
     @Nullable
@@ -54,8 +53,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
 
     AggregatingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                   boolean keepAlive, long maxRequestLength,
-                                  RoutingContext routingCtx, Routed<ServiceConfig> routed,
-                                  ExchangeType exchangeType) {
+                                  RoutingContext routingCtx, ExchangeType exchangeType) {
         super(4);
         this.headers = headers;
         this.eventLoop = eventLoop;
@@ -63,8 +61,8 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         this.streamId = streamId;
         this.keepAlive = keepAlive;
         this.maxRequestLength = maxRequestLength;
+        assert routingCtx.hasResult();
         this.routingCtx = routingCtx;
-        this.routed = routed;
         this.exchangeType = exchangeType;
     }
 
@@ -85,7 +83,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Nonnull
     @Override
     public Routed<ServiceConfig> route() {
-        return routed;
+        return routingCtx.result();
     }
 
     @Override

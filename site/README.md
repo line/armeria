@@ -98,3 +98,7 @@ how much space using `source-map-explorer`.
 ```console
 $ npm run release-note <version>
 ```
+
+Note that you might encounter an API rate limit exceeded error from the GitHub response.
+Set `GITHUB_ACCESS_TOKEN` environment variable with the token that you have
+issued in https://github.com/settings/tokens to get a higher rate limit.

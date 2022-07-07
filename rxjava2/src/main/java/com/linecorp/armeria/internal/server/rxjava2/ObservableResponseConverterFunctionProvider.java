@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.internal.server.rxjava2;
 
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
+
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
@@ -73,20 +75,6 @@ public final class ObservableResponseConverterFunctionProvider implements
                Maybe.class.isAssignableFrom(clazz) ||
                Single.class.isAssignableFrom(clazz) ||
                Completable.class.isAssignableFrom(clazz);
-    }
-
-    /**
-     * Converts the specified {@link Type} to a {@link Class} instance.
-     */
-    @Nullable
-    private static Class<?> typeToClass(Type type) {
-        if (type instanceof Class) {
-            return (Class<?>) type;
-        }
-        if (type instanceof ParameterizedType) {
-            return (Class<?>) ((ParameterizedType) type).getRawType();
-        }
-        return null;
     }
 
     @Override

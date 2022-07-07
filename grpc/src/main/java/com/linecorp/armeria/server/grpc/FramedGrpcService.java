@@ -48,7 +48,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -67,6 +66,7 @@ import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -196,9 +196,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+    public ExchangeType exchangeType(RoutingContext routingContext) {
         // An invalid path will be handled later by 'doPost()'.
-        return firstNonNull(exchangeTypes.get(headers.path()), ExchangeType.BIDI_STREAMING);
+        return firstNonNull(exchangeTypes.get(routingContext.result().routingResult().path()),
+                            ExchangeType.BIDI_STREAMING);
     }
 
     @Override

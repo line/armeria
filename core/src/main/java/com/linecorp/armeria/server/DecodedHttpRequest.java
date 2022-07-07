@@ -31,25 +31,25 @@ interface DecodedHttpRequest extends HttpRequest {
     static DecodedHttpRequest of(boolean endOfStream, EventLoop eventLoop, int id, int streamId,
                                  RequestHeaders headers, boolean keepAlive,
                                  InboundTrafficController inboundTrafficController,
-                                 RoutingContext routingCtx, @Nullable Routed<ServiceConfig> routed) {
-        if (routed == null) {
+                                 RoutingContext routingCtx) {
+        if (!routingCtx.hasResult()) {
             return new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                      routingCtx, routed, ExchangeType.RESPONSE_STREAMING);
+                                                      routingCtx, ExchangeType.RESPONSE_STREAMING);
         } else {
-            final ServiceConfig config = routed.value();
+            final ServiceConfig config = routingCtx.result().value();
             final HttpService service = config.service();
-            final ExchangeType exchangeType = service.exchangeType(headers, routed.route());
+            final ExchangeType exchangeType = service.exchangeType(routingCtx);
             if (endOfStream) {
                 return new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                          routingCtx, routed, exchangeType);
+                                                          routingCtx,  exchangeType);
             } else {
                 if (exchangeType.isRequestStreaming()) {
                     return new StreamingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
                                                            inboundTrafficController, config.maxRequestLength(),
-                                                           routingCtx, routed, exchangeType);
+                                                           routingCtx, exchangeType);
                 } else {
                     return new AggregatingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                             config.maxRequestLength(), routingCtx, routed,
+                                                             config.maxRequestLength(), routingCtx,
                                                              exchangeType);
                 }
             }

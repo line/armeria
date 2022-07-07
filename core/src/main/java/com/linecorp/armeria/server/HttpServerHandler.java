@@ -614,11 +614,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                                                                    ProxiedAddresses proxiedAddresses,
                                                                    InetAddress clientAddress,
                                                                    RoutingContext routingCtx) {
+        final ServiceConfig serviceConfig = routingCtx.virtualHost().fallbackServiceConfig();
         final RoutingResult routingResult = RoutingResult.builder()
                                                          .path(routingCtx.path())
                                                          .build();
         return new DefaultServiceRequestContext(
-                routingCtx.virtualHost().fallbackServiceConfig(),
+                serviceConfig,
                 channel, NoopMeterRegistry.get(), protocol(),
                 nextRequestId(), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
