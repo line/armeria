@@ -178,7 +178,7 @@ com.spotify:
 
 # OkHttp is used only for testing in it:okhttp module.
 com.squareup.okhttp3:
-  okhttp: { version: &OKHTTP_VERSION '4.10.0' }
+  okhttp: { version: &OKHTTP_VERSION '3.14.9' }
   okhttp-tls: { version: *OKHTTP_VERSION }
 
 com.squareup.retrofit2:
