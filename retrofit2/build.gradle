@@ -2,11 +2,10 @@ dependencies {
     api 'com.squareup.retrofit2:retrofit'
 
     implementation 'com.github.ben-manes.caffeine:caffeine'
-    [ 'okhttp', 'okhttp-tls' ].each {
-        implementation("com.squareup.okhttp3:$it") {
-            version {
-                strictly '3.14.9'
-            }
+    implementation("com.squareup.okhttp3:okhttp") {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly '3.14.9'
         }
     }
 
