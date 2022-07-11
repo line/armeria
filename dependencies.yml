@@ -177,7 +177,7 @@ com.spotify:
   futures-extra: { version: '4.3.1' }
 
 com.squareup.okhttp3:
-  okhttp: { version: &OKHTTP_VERSION '4.10.10' }
+  okhttp: { version: &OKHTTP_VERSION '4.10.0' }
   okhttp-tls: { version: *OKHTTP_VERSION }
 
 com.squareup.retrofit2:
