@@ -17,9 +17,6 @@ module.exports = {
     {
       resolve: 'gatsby-source-build-date',
       options: {
-        // Generate ISO8601 date.
-        // See: https://stackoverflow.com/a/58633686/55808
-        locales: 'sv-SE',
         options: {
           timeZone: 'Asia/Seoul',
           year: 'numeric',
