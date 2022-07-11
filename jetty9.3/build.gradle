@@ -14,14 +14,11 @@ dependencies {
         }
     }
 
-    ['jetty-server', 'jetty-webapp', 'jetty-annotations', 'apache-jsp', 'apache-jstl'].each {
-        testImplementation("org.eclipse.jetty:$it") {
-            version {
-                // Will fail the build if the override doesn't work
-                strictly JETTY_VERSION
-            }
-        }
-    }
+    testImplementation libs.jetty93.server
+    testImplementation libs.jetty93.webapp
+    testImplementation libs.jetty93.annotations
+    testImplementation libs.jetty93.apache.jsp
+    testImplementation libs.jetty93.apache.jstl
 
     testImplementation("org.eclipse.jdt:ecj") {
         version {

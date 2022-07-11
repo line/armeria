@@ -1,3 +1,4 @@
 dependencies {
-    testImplementation 'org.jooq:joor'
+    testImplementation libs.joor
+    testRuntimeOnly libs.junit5.platform.commons
 }

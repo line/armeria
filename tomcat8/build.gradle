@@ -2,19 +2,9 @@ final def TOMCAT_VERSION = '8.5.78'
 
 dependencies {
     // Tomcat
-    api("org.apache.tomcat.embed:tomcat-embed-core") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly TOMCAT_VERSION
-        }
-    }
+    api libs.tomcat8.core
 
-    testImplementation("org.apache.tomcat.embed:tomcat-embed-jasper") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly TOMCAT_VERSION
-        }
-    }
+    testImplementation libs.tomcat8.jasper
 
     testImplementation("org.eclipse.jdt:ecj") {
         version {
@@ -24,7 +14,7 @@ dependencies {
     }
 
     // Replace commons-logging (Tomcat's logging API) with SLF4J.
-    runtimeOnly 'org.slf4j:jcl-over-slf4j'
+    runtimeOnly libs.slf4j.jcl.over.slf4j
 }
 
 // Use the sources from ':tomcat9' as well as ours.

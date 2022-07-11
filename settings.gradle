@@ -1,6 +1,9 @@
 rootProject.name = 'armeria'
 
 apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
+// version catalogs should be defined in the settings.gradle
+// https://docs.gradle.org/current/userguide/platforms.html#sub:version-catalog-declaration
+apply from: "${rootDir}/gradle/scripts/version-catalogs.gradle"
 
 // Published BOM projects
 includeWithFlags ':bom',                                 'bom', 'publish'

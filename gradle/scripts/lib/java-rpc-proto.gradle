@@ -32,10 +32,13 @@ configure(projectsWithFlags('java')) {
 
         protobuf {
             generatedFilesBaseDir = project.ext.genSrcDir
+            def protocVersion
             if (managedVersions.containsKey('com.google.protobuf:protoc')) {
-                protoc {
-                    artifact = "com.google.protobuf:protoc:${managedVersions['com.google.protobuf:protoc']}"
-                }
+                protocVersion = "com.google.protobuf:protoc:${managedVersions['com.google.protobuf:protoc']}"
+            }
+
+            protoc {
+                artifact = "com.google.protobuf:protoc:${managedVersions['com.google.protobuf:protoc']}"
             }
 
             def grpcVersion = managedVersions['io.grpc:grpc-bom'] ?: managedVersions['io.grpc:grpc-core']
