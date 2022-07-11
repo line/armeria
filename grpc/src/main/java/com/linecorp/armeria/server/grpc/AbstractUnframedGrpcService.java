@@ -182,6 +182,12 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
+        try {
+            requireNonNull(grpcStatusCode, "grpc-status header must exist");
+        } catch(NullPointerException e) {
+            res.completeExceptionally(e);
+            return;
+        }
         Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
         final String grpcMessage = trailers.get(GrpcHeaderNames.GRPC_MESSAGE);
         if (!Strings.isNullOrEmpty(grpcMessage)) {
