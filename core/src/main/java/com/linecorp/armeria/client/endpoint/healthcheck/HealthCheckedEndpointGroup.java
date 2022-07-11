@@ -189,9 +189,14 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         return contextGroupChain;
     }
 
-    private List<Endpoint> allHealthyEndpoints() {
-        final List<Endpoint> allHealthyEndpoints = new ArrayList<>();
+    @VisibleForTesting
+    List<Endpoint> allHealthyEndpoints() {
         synchronized (contextGroupChain) {
+            if (contextGroupChain.isEmpty()) {
+                return ImmutableList.of();
+            }
+
+            final List<Endpoint> allHealthyEndpoints = new ArrayList<>();
             final HealthCheckContextGroup newGroup = contextGroupChain.getLast();
             for (Endpoint candidate : newGroup.candidates()) {
                 if (healthyEndpoints.contains(candidate)) {
@@ -211,8 +216,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                     }
                 }
             }
+            return allHealthyEndpoints;
         }
-        return allHealthyEndpoints;
     }
 
     @Nullable
