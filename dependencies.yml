@@ -176,6 +176,10 @@ com.spotify:
       to: com.linecorp.armeria.internal.shaded.futures
   futures-extra: { version: '4.3.1' }
 
+com.squareup.okhttp3:
+  okhttp: { version: &OKHTTP_VERSION '4.10.10' }
+  okhttp-tls: { version: *OKHTTP_VERSION }
+
 com.squareup.retrofit2:
   retrofit:
     version: &RETROFIT2_VERSION '2.9.0'

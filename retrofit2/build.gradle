@@ -2,6 +2,13 @@ dependencies {
     api 'com.squareup.retrofit2:retrofit'
 
     implementation 'com.github.ben-manes.caffeine:caffeine'
+    [ 'okhttp', 'okhttp-tls' ].each {
+        implementation("com.squareup.okhttp3:$it") {
+            version {
+                strictly '3.14.9'
+            }
+        }
+    }
 
     testImplementation 'com.squareup.retrofit2:converter-jackson'
 }
