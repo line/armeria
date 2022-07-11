@@ -184,7 +184,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
         try {
             requireNonNull(grpcStatusCode, "grpc-status header must exist");
-        } catch(NullPointerException e) {
+        } catch (NullPointerException e) {
             res.completeExceptionally(e);
             return;
         }
