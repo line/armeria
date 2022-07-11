@@ -192,12 +192,12 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     @VisibleForTesting
     List<Endpoint> allHealthyEndpoints() {
         synchronized (contextGroupChain) {
-            if (contextGroupChain.isEmpty()) {
+            final HealthCheckContextGroup newGroup = contextGroupChain.pollLast();
+            if (newGroup == null) {
                 return ImmutableList.of();
             }
 
             final List<Endpoint> allHealthyEndpoints = new ArrayList<>();
-            final HealthCheckContextGroup newGroup = contextGroupChain.getLast();
             for (Endpoint candidate : newGroup.candidates()) {
                 if (healthyEndpoints.contains(candidate)) {
                     allHealthyEndpoints.add(candidate);
