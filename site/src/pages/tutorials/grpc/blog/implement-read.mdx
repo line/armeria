@@ -10,10 +10,10 @@ level: basic
 
 # Implementing READ operation
 
-Previously, we created and tested creating a blog post. In this step, we'll implement a read operation and make a call 
-to read blog posts. We'll write two service methods for reading a single post and multiple posts each.
+In the prior step, we tried to create a blog post. In this step, we'll implement a read operation and make a call
+to read blog posts. We'll write two service methods, one for reading a single post and another for multiple posts.
 
-One major difference to the earlier step is the client instance. Instead of using the client instance we created earlier, we'll use another one. Armeria offers various options to create client instances.
+One major difference to the earlier step is the client instance used. Instead of using the client instance we created, we'll create another one. Armeria offers various options to create client instances.
 
 <TutorialSteps current={4} />
 
@@ -33,7 +33,7 @@ another for multiple posts.
 <Tabs>
 <TabPane tab="Single post" key="1">
 
-Add a method in the BlogService.java to retrieve a single post.
+Add a service method in BlogService.java to retrieve a single post.
 
 ```java filename=BlogService.java
 import example.armeria.server.blog.grpc.Blog.GetBlogPostRequest;
@@ -58,7 +58,7 @@ public final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
 </TabPane>
 <TabPane tab="Multiple posts" key="2">
 
-Add a method in the BlogService.java to retrieve multiple posts.
+Add a service method in BlogService.java to retrieve multiple posts.
 
 ```java filename=BlogService.java
 import java.util.Collection;
@@ -93,16 +93,16 @@ final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
 
 ## 2. Implement client
 
-This time, we'll use a different client instance. Instead of using the client instance created with the <type://Clients>, we'll use <type://GrpcClients>.
+This time, we'll use a different client instance. Instead of using the client instance created with <type://Clients>, we'll use <type://GrpcClients>.
 
-1. Add another <type://BlogServiceBlockingStub> in the `BlogClient` class with a different name.
+1. Add another `BlogServiceBlockingStub` in the `BlogClient` class with a different name.
   ```java filename=BlogClient.java
   class BlogClient {
     static BlogServiceBlockingStub client;  // added before
     static BlogServiceBlockingStub cb;      // add this one here
   }
   ```
-2. Add a new client instance with <type://GrpcClients>.
+2. Add a new client instance using `GrpcClients`.
   ```java filename=BlogClient.java
   class BlogClient {
     public static void main(String[] args) throws Exception {
@@ -116,7 +116,7 @@ This time, we'll use a different client instance. Instead of using the client in
     }
   }
   ```
-3. Add a method each for retrieving posts. Note, this time we're using `cb`, the client instance created with <type://GrpcClients>.
+3. Add a method each for retrieving posts. Note to use `cb`, the client instance created with <type://GrpcClients>.
 
   <Tabs>
   <TabPane tab="Single post" key="1">
@@ -169,13 +169,19 @@ Let's start off with retrieving all the blog posts there are:
   ```
 3. Run the client.
 
-Since we haven't added any log messages, we can't tell if we've successfully retrieved blog posts or not. To check the result, we'll add in an interceptor as the next step. Not only can we see the blog posts retrieved, we can obtain IDs to retrieve a post later on.
+Since we haven't added any log messages, we can't tell if we've successfully retrieved blog posts or not. To check the result, we'll add in a decorator in the following step. Not only can we see the blog posts retrieved, we can obtain IDs to retrieve a post later on.
 
 ## 4. Decorate the client
 
-We want to retrieve a single blog post, but we don't have the post ID information. (Although we very much know how the IDs are generated in this tutorial.) Here, what we'll decorate the client the response from the server to get the ID.
+Retrieving a single blog post requires a post ID. We haven't saved any post ID returned by the server. (Although we very much know that our tutorial service issues incremental ID.). To check IDs, we'll use Armeria's <type://LoggingClient> to decorate the our blog client.
 
-1. Add a decorator to the client instance, `cb`, to intercept response.
+<Tip>
+
+  To use an interceptor instead, use <type://GrpcServiceBuilder#intercept()>.
+
+</Tip>
+
+1. Add a decorator to the client instance, `cb`.
   ```java filename=BlogClient.java
   import com.linecorp.armeria.client.logging.LoggingClient;
 
@@ -188,7 +194,7 @@ We want to retrieve a single blog post, but we don't have the post ID informatio
     }
   }
   ```
-2. Set up to log messages:
+2. Set up log messages:
     - Add a dependency in the build.gradle file.
       ```filename=build.gradle
       dependencies {
@@ -232,7 +238,7 @@ Now that we have the ID information, we can now retrieve a single post.
 
 ## 5. Test retrieving a single post
 
-Let's retrieve the second blog post.
+Let's retrieve the second blog post. Apparently, the ID to use is `1`.
 
 1. Call the `getBlogPost()` method.
   ```java filename=BlogClient.java
@@ -244,6 +250,7 @@ Let's retrieve the second blog post.
   ```
 2. If you've stopped your server, run it again and then the client.
   Because we haven't changed any code for creating blog posts, you'll be able to see the response for the `getBlogPost()` as below, whether you are re-running the server or not.
+  We have succeeded in reading a single blog post.
   ```bash
   [armeria-common-worker-nio-2-1] DEBUG c.l.a.client.logging.LoggingClient - [creqId=2f720d33, chanId=de1369e8, laddr=127.0.0.1:53868, raddr=127.0.0.1:8080][http://127.0.0.1:8080/example.armeria.server.blog.grpc.BlogService/GetBlogPost#POST] Response: {startTime=2022-02-23T02:22:50.689Z(1645582970689000), length=61B, duration=560µs(560871ns), totalDuration=6527µs(6527141ns), headers=[:status=200, content-type=application/grpc+proto, grpc-encoding=identity, grpc-accept-encoding=gzip, server=Armeria/1.13.1-SNAPSHOT, date=Wed, 23 Feb 2022 02:22:50 GMT], content=CompletableRpcResponse{id: 1
   title: "Another blog post"

@@ -9,9 +9,28 @@ import versions from '/gen-src/versions.json';
 
 Learn to build a gRPC service with Armeria by writing a blog service in gRPC. This tutorial is based on a [sample service](https://github.com/line/armeria-examples/tree/master/tutorials/grpc), a minimal blog service, with which you can create, read, update, and delete blog posts.
 
-To keep our focus on Armeria, this tutorial and the sample service use memory-based operations instead of using database.
+Before we get our hands on the tutorial, let's learn Armeria's gRPC features. Armeria brings you features that the upstream (gRPC-Java) does not support.
 
-Try writing a service yourself by following this tutorial or have a go at [running the sample service](#build-and-run-sample-service) right away.
+- Protocol
+  - HTTP/1
+  - HTTP/2 (upstream)
+- Serialization format - Framed
+  - gRPC protobuf: application/grpc+proto (upstream)
+  - gRPC JSON: application/grpc+json
+  - gRPC Web: application/grpc-web+proto
+  - gRPC Web JSON: application/grpc-web+json
+  - gRPC Web Text: application/grpc-web-text+proto
+- Serialization format - Unframed
+  - Protobuf: application/protobuf
+  - JSON: application/json
+- HTTP level decorator
+- Rich error handling
+- HTTP-to-JSON transcoding
+- Customizing service method paths
+- gRPC documentation service
+- gRPC status monitoring with <type://MetricCollectingService>
+
+To keep our focus on Armeria, this tutorial and the sample service implement memory-based operations instead of using database. Try writing a service yourself by following this tutorial or have a go at [running the sample service](#build-and-run-sample-service) right away.
 
 ## Assumptions
 
@@ -23,10 +42,7 @@ This tutorial assumes that you have:
 
 ## Prerequisites
 
-To run and develop the sample service, set your computer with the requirements:
-
-- JDK 11 or higher
-- Gradle: Set your Gradle to compile Java with the [-parameters](/docs/setup/#configure--parameters-javac-option) option
+To run and develop the sample service, you need JDK 11 or higher.
 
 ## Build and run sample service
 
@@ -46,7 +62,7 @@ Using Armeria's [Documentation Service](/docs/server-docservice), you can see a 
 
 ## Try writing blog service yourself
 
-Have a go at writing the blog service yourself, starting with [defining the service](/tutorials/grpc/blog/define-service). Use the sample service's build.gradle if you intend to start building the service from scracth.
+Have a go at writing the blog service yourself, starting with [defining the service](/tutorials/grpc/blog/define-service). Use the sample service's build.gradle to start building the service from scratch.
 
 <CodeBlock language="groovy" filename="build.gradle">{`
 apply plugin: 'java'
@@ -58,8 +74,7 @@ repositories {
 dependencies {
   implementation "com.linecorp.armeria:armeria:${versions['com.linecorp.armeria:armeria-bom']}"\n
   // Logging
-  runtimeOnly 'ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}'
-  runtimeOnly 'org.slf4j:log4j-over-slf4j:${versions['org.slf4j:log4j-over-slf4j']}'
+  runtimeOnly "ch.qos.logback:logback-classic:${versions['ch.qos.logback:logback-classic']}"
 }
 `}</CodeBlock>
 

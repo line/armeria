@@ -54,8 +54,8 @@ final class Main {
 }
 ```
 
-## 2. Enabled unframed requests
-To test making calls on the Documentation service, enable unframed requests by adding `.enableUnframedRequests(true)` to the GrpcService builder. This makes the blog service to support requests that are not framed in gRPC wire format. For us, this enables making calls on a web browser.
+## 2. Enable unframed requests
+To test making calls on the Documentation service, enable unframed requests by setting <type://GrpcServiceBuilder#enableUnframedRequests(boolean)> to true. This makes the blog service to support requests that are not framed in gRPC wire format. For us, this enables making calls on a web browser.
 
 ```java filename=Main.java
 private static Server newServer(int port) throws Exception {
@@ -79,7 +79,7 @@ final class Main {
     return Server.builder()
                  .http(port)
                  .service(grpcService)
-                 .serviceUnder("/docs", docService)
+                 .serviceUnder("/docs", docService) // add this
                  .build();
     }
 }
@@ -95,7 +95,7 @@ Now, re-run the server. The server and services are launched successfully if you
 
 Let's test and call our service operations, using Armeria's Documentation service.
 
-1. Click the URL `http://127.0.0.1:8080/docs` from the log message or open the URL on a web browser. If you see the Document service page, you've launched the <type://DocService> and server successfully.
+1. Click the URL `http://127.0.0.1:8080/docs` from the log message or open the URL on a web browser. If you see the Document service page, you've successfully launched the <type://DocService> and server.
 
 ![](../../../../images/tutorial_blogservice_grpc_docservice_start.png)
 

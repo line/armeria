@@ -27,7 +27,7 @@ You need to have the following obtained from previous steps:
 
 Let's implement a service method `createBlogPost()` in the BlogService.java from the earlier step.
 
-1. Create an ID generator for temporary post IDs and a map for containing blogs posts. Add in a logger for debugging.
+1. Create an ID generator to issue temporary post IDs and a map to contain blogs posts. Add in a logger for debugging.
   ```java filename=BlogService.java
   import java.util.Map;
   import java.util.concurrent.ConcurrentHashMap;
@@ -40,7 +40,7 @@ Let's implement a service method `createBlogPost()` in the BlogService.java from
   }
   ```
 2. Add a service method, `createBlogPost()`:
-    1. Create a `BlogPost` object with the request parameters.
+    1. Create a `BlogPost` object with request parameters.
     2. Save the post information in a map.
     3. Return the information of the post created.
   ```java filename=BlogService.java
@@ -53,12 +53,12 @@ Let's implement a service method `createBlogPost()` in the BlogService.java from
       final int id = idGenerator.getAndIncrement(); // Generate post ID
       final Instant now = Instant.now();            // Get current time
       final BlogPost updated = BlogPost.newBuilder()
-                                      .setId(id)
-                                      .setTitle(request.getTitle())
-                                      .setContent(request.getContent())
-                                      .setModifiedAt(now.toEpochMilli())
-                                      .setCreatedAt(now.toEpochMilli())
-                                      .build();
+                                       .setId(id)
+                                       .setTitle(request.getTitle())
+                                       .setContent(request.getContent())
+                                       .setModifiedAt(now.toEpochMilli())
+                                       .setCreatedAt(now.toEpochMilli())
+                                       .build();
       blogPosts.put(id, updated);
       final BlogPost stored = updated;
       responseObserver.onNext(stored);
@@ -69,7 +69,7 @@ Let's implement a service method `createBlogPost()` in the BlogService.java from
 
 ## 2. Implement client
 
-This time, let's add a proper method for creating a blog post. Previously, we made a call to create a blog post, from the client's `main()` method for testing. Leave the code inside the `main()` for testing purpose.
+This time, let's add a proper method for creating a blog post. Previously, we made a call to create a blog post, from the client's `main()` method for quick testing. Leave the code inside `main()` for testing purpose.
 
 Add a method `createBlogPost()` in BlogClient.java to send a request to create a blog post.
   ```java filename=BlogClient.java

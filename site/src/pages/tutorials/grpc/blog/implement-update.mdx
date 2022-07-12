@@ -25,8 +25,7 @@ You need to have the files obtained from previous steps:
 
 ## 1. Implement service
 
-1. In the BlogService.java file we've been working on, add a method for 
-updating a blog post, `updateBlogPost()`. Leave the exception throwing part empty for now.
+1. In the BlogService.java file we've been working on, add a service method for updating a blog post. Leave the exception throwing part empty for now.
   ```java filename=BlogService.java
   import example.armeria.server.blog.grpc.Blog.UpdateBlogPostRequest;
   
@@ -96,7 +95,7 @@ updating a blog post, `updateBlogPost()`. Leave the exception throwing part empt
     }
   }
   ```
-4. Bind the exception handler, <type://GrpcExceptionHandler>, to our service.
+4. Bind the exception handler `GrpcExceptionHandler` to our service.
   ```java filename=Main.java
   private static Server newServer(int port) throws Exception {
     final GrpcService grpcService = 
