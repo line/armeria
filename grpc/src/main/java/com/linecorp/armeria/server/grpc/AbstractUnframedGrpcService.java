@@ -185,6 +185,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         try {
             requireNonNull(grpcStatusCode, "grpc-status header must exist");
         } catch (NullPointerException e) {
+            PooledObjects.close(grpcResponse.content());
             res.completeExceptionally(e);
             return;
         }
