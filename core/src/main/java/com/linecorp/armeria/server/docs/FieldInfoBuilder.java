@@ -81,7 +81,7 @@ public final class FieldInfoBuilder {
      * Sets the description information of the field.
      */
     public FieldInfoBuilder descriptionInfo(DescriptionInfo descriptionInfo) {
-        this.descriptionInfo = descriptionInfo;
+        this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
         return this;
     }
 
