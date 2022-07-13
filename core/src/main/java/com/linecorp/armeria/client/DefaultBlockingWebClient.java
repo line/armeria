@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Scheme;
+import com.linecorp.armeria.common.util.Unwrappable;
 
 final class DefaultBlockingWebClient implements BlockingWebClient {
 
@@ -82,5 +83,10 @@ final class DefaultBlockingWebClient implements BlockingWebClient {
     @Override
     public HttpClient unwrap() {
         return delegate.unwrap();
+    }
+
+    @Override
+    public Unwrappable unwrapAll() {
+        return delegate.unwrapAll();
     }
 }
