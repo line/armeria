@@ -70,7 +70,7 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
                     gRpcUri, HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub.class);
 
     @Test
-    void testAuthenticatedRpcMethod() throws Throwable {
+    void testAuthenticatedRpcMethod() throws Exception {
         Transcoding.GetMessageRequestV1 requestMessage = Transcoding.GetMessageRequestV1.newBuilder().setName("messages/1").build();
         Throwable exception = assertThrows(Throwable.class, () -> gRpcClient.getMessageV1(requestMessage));
         assertThat(exception instanceof StatusRuntimeException).isTrue();
