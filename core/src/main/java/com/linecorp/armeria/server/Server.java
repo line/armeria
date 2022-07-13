@@ -558,8 +558,6 @@ public final class Server implements ListenableAsyncCloseable {
 
             meterRegistry.gauge("armeria.server.pending.responses", gracefulShutdownSupport,
                                 GracefulShutdownSupport::pendingResponses);
-            meterRegistry.gauge("armeria.server.connections", connectionLimitingHandler,
-                                ConnectionLimitingHandler::numConnections);
         }
 
         @Override

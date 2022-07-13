@@ -337,7 +337,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                             new Http1ClientKeepAliveHandler(
                                     channel, requestEncoder, responseDecoder,
                                     keepAliveTimer, idleTimeoutMillis, pingIntervalMillis,
-                                    maxConnectionAgeMillis, maxNumRequestsPerConnection);
+                                    maxConnectionAgeMillis, maxNumRequestsPerConnection,
+                                    clientFactory.options().meterRegistry());
                     requestEncoder.setKeepAliveHandler(keepAliveHandler);
                     responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
                 }

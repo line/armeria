@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.internal.common.Http1KeepAliveHandler;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -37,9 +38,10 @@ final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
 
     Http1ClientKeepAliveHandler(Channel channel, ClientHttp1ObjectEncoder encoder, Http1ResponseDecoder decoder,
                                 Timer keepAliveTimer, long idleTimeoutMillis, long pingIntervalMillis,
-                                long maxConnectionAgeMillis, int maxNumRequestsPerConnection) {
+                                long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
+                                MeterRegistry meterRegistry) {
         super(channel, "client", keepAliveTimer, idleTimeoutMillis,
-              pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
+              pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection, meterRegistry);
         httpSession = HttpSession.get(requireNonNull(channel, "channel"));
         this.encoder = requireNonNull(encoder, "encoder");
         this.decoder = requireNonNull(decoder, "decoder");

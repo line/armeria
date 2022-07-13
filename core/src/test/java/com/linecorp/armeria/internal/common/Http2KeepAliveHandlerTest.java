@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.internal.common.AbstractKeepAliveHandler.PingState;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
+import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelPromise;
 import io.netty.channel.embedded.EmbeddedChannel;
@@ -65,7 +66,8 @@ class Http2KeepAliveHandlerTest {
         keepAliveHandler = new Http2KeepAliveHandler(
                 channel, frameWriter, "test", NoopMeterRegistry.get().timer(""),
                 idleTimeoutMillis, pingIntervalMillis,
-                /* maxConnectionAgeMillis */ 0, /* maxNumRequestsPerConnection */ 0) {
+                /* maxConnectionAgeMillis */ 0, /* maxNumRequestsPerConnection */ 0,
+                new SimpleMeterRegistry()) {
             @Override
             protected boolean hasRequestsInProgress(ChannelHandlerContext ctx) {
                 return false;

@@ -20,6 +20,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,7 @@ import com.google.common.base.Stopwatch;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -45,6 +47,8 @@ import io.netty.channel.EventLoop;
 public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractKeepAliveHandler.class);
+
+    private static final AtomicInteger numActiveConnections = new AtomicInteger();
 
     @Nullable
     private final Stopwatch stopwatch = logger.isDebugEnabled() ? Stopwatch.createUnstarted() : null;
@@ -85,7 +89,8 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     protected AbstractKeepAliveHandler(Channel channel, String name, Timer keepAliveTimer,
                                        long idleTimeoutMillis, long pingIntervalMillis,
-                                       long maxConnectionAgeMillis, long maxNumRequestsPerConnection) {
+                                       long maxConnectionAgeMillis, long maxNumRequestsPerConnection,
+                                       MeterRegistry meterRegistry) {
         this.channel = channel;
         this.name = name;
         isServer = "server".equals(name);
@@ -109,6 +114,14 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         } else {
             maxConnectionAgeNanos = TimeUnit.MILLISECONDS.toNanos(maxConnectionAgeMillis);
         }
+
+        if (isServer) {
+            meterRegistry.gauge("armeria.server.connections", numActiveConnections,
+                                AtomicInteger::get);
+        } else {
+            meterRegistry.gauge("armeria.client.connections", numActiveConnections,
+                                AtomicInteger::get);
+        }
     }
 
     @Override
@@ -120,9 +133,12 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         }
         isInitialized = true;
 
+        numActiveConnections.incrementAndGet();
+
         final long connectionStartTimeNanos = System.nanoTime();
         ctx.channel().closeFuture().addListener(unused -> {
             keepAliveTimer.record(System.nanoTime() - connectionStartTimeNanos, TimeUnit.NANOSECONDS);
+            numActiveConnections.decrementAndGet();
         });
 
         lastConnectionIdleTime = lastPingIdleTime = connectionStartTimeNanos;

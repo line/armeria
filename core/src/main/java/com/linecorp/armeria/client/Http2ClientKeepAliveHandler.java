@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.internal.common.Http2KeepAliveHandler;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandlerContext;
@@ -26,10 +27,12 @@ import io.netty.handler.codec.http2.Http2FrameWriter;
 final class Http2ClientKeepAliveHandler extends Http2KeepAliveHandler {
     Http2ClientKeepAliveHandler(Channel channel, Http2FrameWriter frameWriter, Timer keepAliveTimer,
                                 long idleTimeoutMillis, long pingIntervalMillis,
-                                long maxConnectionAgeMillis, int maxNumRequestsPerConnection) {
+                                long maxConnectionAgeMillis, int maxNumRequestsPerConnection,
+                                MeterRegistry meterRegistry) {
 
         super(channel, frameWriter, "client", keepAliveTimer,
-              idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
+              idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
+              meterRegistry);
     }
 
     @Override

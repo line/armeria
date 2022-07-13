@@ -208,7 +208,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             final Timer keepAliveTimer = newKeepAliveTimer(H1C);
             keepAliveHandler = new Http1ServerKeepAliveHandler(p.channel(), keepAliveTimer, idleTimeoutMillis,
                                                                maxConnectionAgeMillis,
-                                                               maxNumRequestsPerConnection);
+                                                               maxNumRequestsPerConnection,
+                                                               config.meterRegistry());
         } else {
             keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
         }
@@ -514,7 +515,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
             if (needsKeepAliveHandler) {
                 keepAliveHandler = new Http1ServerKeepAliveHandler(ch, newKeepAliveTimer(H1), idleTimeoutMillis,
                                                                    maxConnectionAgeMillis,
-                                                                   maxNumRequestsPerConnection);
+                                                                   maxNumRequestsPerConnection,
+                                                                   config.meterRegistry());
             } else {
                 keepAliveHandler = NoopKeepAliveHandler.INSTANCE;
             }
