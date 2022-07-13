@@ -106,17 +106,18 @@ public interface Unwrappable {
      *     }
      * }
      *
-     * final Foo foo = new Foo();
-     * foo.unwrapAll() == foo;
+     * Foo foo = new Foo();
+     * assert foo.unwrapAll() == foo;
      *
-     * final Bar<Foo> bar = new Bar<>(foo);
-     * bar.unwrapAll() == foo;
+     * Bar<Foo> bar = new Bar<>(foo);
+     * assert bar.unwrapAll() == foo;
      *
-     * final Qux<Bar<Foo>> qux = new Qux<>(bar);
-     * qux.unwrapAll() == foo;
+     * Qux<Bar<Foo>> qux = new Qux<>(bar);
+     * assert qux.unwrap() == bar;
+     * assert qux.unwrapAll() == foo;
      * }</pre>
      */
     default Unwrappable unwrapAll() {
-        return this;
+        return unwrap();
     }
 }
