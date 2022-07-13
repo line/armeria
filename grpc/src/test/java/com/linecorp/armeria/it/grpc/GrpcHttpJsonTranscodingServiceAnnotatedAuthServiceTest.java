@@ -88,12 +88,12 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
     void testAuthenticatedHttpJsonTranscoding() throws Exception {
         final AggregatedHttpResponse failResponse = webClient.get("/v1/messages/1");
         assertThat(failResponse.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
         final AggregatedHttpResponse successResponse = webClient
                 .execute(RequestHeaders.of(HttpMethod.GET, "/v1/messages/1",
                         TEST_CREDENTIAL_KEY, "some-credential-string"));
         final JsonNode root = mapper.readTree(successResponse.contentUtf8());
         assertThat(root.get("text").asText()).isEqualTo("messages/1");
-
     }
 
     private static class AuthenticatedHttpJsonTranscodingTestService extends HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase {
