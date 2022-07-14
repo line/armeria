@@ -118,6 +118,13 @@ public interface Unwrappable {
      * }</pre>
      */
     default Unwrappable unwrapAll() {
-        return unwrap();
+        Unwrappable unwrapped = this;
+        while (true) {
+            final Unwrappable inner = unwrapped.unwrap();
+            if (inner == unwrapped) {
+                return inner;
+            }
+            unwrapped = inner;
+        }
     }
 }
