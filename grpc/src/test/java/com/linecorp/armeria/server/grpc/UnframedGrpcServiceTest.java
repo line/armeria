@@ -130,6 +130,18 @@ class UnframedGrpcServiceTest {
     }
 
     @Test
+    void shouldClosePooledObjectsForMissingGrpcStatus() {
+        final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
+        final ByteBuf byteBuf = Unpooled.buffer();
+        final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
+                .build();
+        final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
+                HttpData.wrap(byteBuf));
+        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(), null);
+        assertThat(byteBuf.refCnt()).isZero();
+    }
+
+    @Test
     void unframedGrpcStatusFunction() throws Exception {
         final TestService spyTestService = spy(testService);
         doThrow(Status.UNKNOWN.withDescription("grpc error message").asRuntimeException())
