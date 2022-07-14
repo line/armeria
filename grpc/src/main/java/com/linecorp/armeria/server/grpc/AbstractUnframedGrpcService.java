@@ -61,6 +61,9 @@ import io.grpc.ServerServiceDefinition;
 import io.grpc.Status;
 import io.grpc.Status.Code;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 /**
  * Common part of the {@link UnframedGrpcService} and {@link HttpJsonTranscodingService}.
  */
@@ -68,6 +71,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
 
     private final GrpcService delegate;
     private final UnframedGrpcErrorHandler unframedGrpcErrorHandler;
+
+    private static final Logger logger = LoggerFactory.getLogger(AbstractUnframedGrpcService.class);
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
@@ -182,11 +187,10 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
-        try {
-            requireNonNull(grpcStatusCode, "grpc-status header must exist");
-        } catch (NullPointerException e) {
+        if (grpcStatusCode == null) {
             PooledObjects.close(grpcResponse.content());
-            res.completeExceptionally(e);
+            res.completeExceptionally(new NullPointerException("grpcStatusCode must not be null"));
+            logger.warn("A gRPC response must have the {} header.", GrpcHeaderNames.GRPC_STATUS);
             return;
         }
         Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
