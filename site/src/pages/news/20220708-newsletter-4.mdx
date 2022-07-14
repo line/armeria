@@ -13,29 +13,31 @@ date: 2022-07-08
 <div class="noBullet">
 
 - ✨ We released several releases since our last newsletter with a bunch of new exciting features!
-  - [1.13.4](https://armeria.dev/release-notes/1.13.4/)
-    - Security fix(CWE-22)
-  - [1.14.0](https://armeria.dev/release-notes/1.14.0/)
-    - Experimental support for Scala 3
-    - Fluent conversion of <type://HttpResponse> into a desired type using <type://WebClient>
-    - Various build options for gRPC using <type://GrpcClientBuilder>
-  - [1.14.1](https://armeria.dev/release-notes/1.14.1/)
-    - Additional logs for <type://EmptyEndpointGroupException>
+  - [1.17.1](https://armeria.dev/release-notes/1.17.1/)
+    - Fixing a bug where Retrofit client calls hang indefinitely
+  - [1.17.0](https://armeria.dev/release-notes/1.17.0/)
+    - Easier way to send and receive RESTful APIs
+    - Ability to limit the maximum length of Thrift messages
+    - Injecting dependencies in annotations
+    - Support for Kotlin nullable type(`?`) in annotated services
+  - [1.16.0](https://armeria.dev/release-notes/1.16.0/)
+      - New metrics for TLS handshake results
+      - Handling <type://Decorator> annotation with <type://GrpcService> for your gRPC stubs
+      - Programmatic <type://Flags> configuration via Java SPI
   - [1.15.0](https://armeria.dev/release-notes/1.15.0/)
     - User-friendly gRPC health check protocol
     - Multipart file uploads in annotated services
     - Preliminary GraphQL support in <type://DocService>
     - Refactored DMS resolver cache with higher hit ratio and reduced traffic
     - New metrics that help you get alerts before your TLS certificates are expired
-  - [1.16.0](https://armeria.dev/release-notes/1.16.0/)
-    - New metrics for TLS handshake results
-    - Handling <type://Decorator> annotation with <type://GrpcService> for your gRPC stubs
-    - Programmatic <type://Flags> configuration via Java SPI
-  - [1.17.0](https://armeria.dev/release-notes/1.17.0/)
-    - Easier way to send and receive RESTful APIs
-    - Ability to limit the maximum length of Thrift messages
-    - Injecting dependencies in annotations
-    - Support for Kotlin nullable type(`?`) in annotated services
+  - [1.14.1](https://armeria.dev/release-notes/1.14.1/)
+    - Additional logs for <type://EmptyEndpointGroupException>
+  - [1.14.0](https://armeria.dev/release-notes/1.14.0/)
+    - Experimental support for Scala 3
+    - Fluent conversion of <type://HttpResponse> into a desired type using <type://WebClient>
+    - Various build options for gRPC using <type://GrpcClientBuilder>
+  - [1.13.4](https://armeria.dev/release-notes/1.13.4/)
+    - Security fix(CWE-22)
 
 </div>
 <div class="noBullet">
@@ -77,7 +79,18 @@ date: 2022-07-08
 <div class="noBullet">
 
 🔰 Want to contribute but not sure where to start from? Try one of these:
-  - (none)
+  - #4237 Support for request scoped DataLoader for GraphQL-Java
+  ```java
+  class GraphqlServiceBuilder {
+      public GraphqlServiceBuilder dataLoaderRegistry(
+        Function<ServiceRequestContext,
+        DataLoaderRegistry>dataLoaderRegistrySupplier) {
+           // This method will be mutually exclusive
+           // with configureDataLoaderRegistry(...)
+      }
+  }
+  ```
+  - #4347 Show the full stack trace of <type://CompositeException> when the system property verboseExceptions is `true`
 
 </div>
 
