@@ -1,17 +1,41 @@
+/*
+ * Copyright 2022 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
 package com.linecorp.armeria.it.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.grpc.GrpcClients;
-import com.linecorp.armeria.common.*;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc;
+import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
+import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.Transcoding;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.HttpService;
@@ -30,9 +54,6 @@ import io.grpc.Status;
 import io.grpc.StatusRuntimeException;
 import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
-
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
@@ -65,20 +86,23 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
 
     private final BlockingWebClient webClient = server.webClient().blocking();
 
-    private final HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub gRpcClient =
-            GrpcClients.newClient(
-                    gRpcUri, HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub.class);
+    private final HttpJsonTranscodingTestServiceBlockingStub gRpcClient =
+            GrpcClients.newClient(gRpcUri, HttpJsonTranscodingTestServiceBlockingStub.class);
 
     @Test
     void testAuthenticatedRpcMethod() throws Exception {
-        Transcoding.GetMessageRequestV1 requestMessage = Transcoding.GetMessageRequestV1.newBuilder().setName("messages/1").build();
-        Throwable exception = assertThrows(Throwable.class, () -> gRpcClient.getMessageV1(requestMessage));
-        assertThat(exception instanceof StatusRuntimeException).isTrue();
-        assertThat(((StatusRuntimeException) exception).getStatus().getCode()).isEqualTo(Status.UNAUTHENTICATED.getCode());
+        final Transcoding.GetMessageRequestV1 requestMessage = Transcoding.GetMessageRequestV1.newBuilder()
+                .setName("messages/1").build();
+        final Throwable exception = assertThrows(Throwable.class,
+                () -> gRpcClient.getMessageV1(requestMessage));
+        assertThat(exception).isInstanceOf(StatusRuntimeException.class);
+        assertThat(((StatusRuntimeException) exception).getStatus().getCode())
+                .isEqualTo(Status.UNAUTHENTICATED.getCode());
 
-        Metadata metadata = new Metadata();
-        metadata.put(Metadata.Key.of(TEST_CREDENTIAL_KEY, Metadata.ASCII_STRING_MARSHALLER), "some-credential-string");
-        Transcoding.Message result = gRpcClient.withInterceptors(
+        final Metadata metadata = new Metadata();
+        metadata.put(Metadata.Key.of(TEST_CREDENTIAL_KEY, Metadata.ASCII_STRING_MARSHALLER),
+                "some-credential-string");
+        final Transcoding.Message result = gRpcClient.withInterceptors(
                 MetadataUtils.newAttachHeadersInterceptor(metadata)
         ).getMessageV1(requestMessage);
         assertThat(result.getText()).isEqualTo("messages/1");
@@ -96,10 +120,12 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
         assertThat(root.get("text").asText()).isEqualTo("messages/1");
     }
 
-    private static class AuthenticatedHttpJsonTranscodingTestService extends HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase {
+    private static class AuthenticatedHttpJsonTranscodingTestService
+            extends HttpJsonTranscodingTestServiceImplBase {
         @Override
         @Authenticate
-        public void getMessageV1(Transcoding.GetMessageRequestV1 request, StreamObserver<Transcoding.Message> responseObserver) {
+        public void getMessageV1(Transcoding.GetMessageRequestV1 request,
+                                 StreamObserver<Transcoding.Message> responseObserver) {
             responseObserver.onNext(Transcoding.Message.newBuilder().setText(request.getName()).build());
             responseObserver.onCompleted();
         }
