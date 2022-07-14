@@ -12,32 +12,26 @@ date: 2022-07-14
 
 <div class="noBullet">
 
-- ✨ We've released 7 new versions since our last newsletter with a bunch of new exciting features!
-  - [1.17.1](https://armeria.dev/release-notes/1.17.1/)
-    - Fixing a bug where Retrofit client calls hang indefinitely
+- ✨ We've released several new versions since our last newsletter with a bunch of new exciting features!
   - [1.17.0](https://armeria.dev/release-notes/1.17.0/)
     - Easier way to send and receive RESTful APIs
     - Ability to limit the maximum length of Thrift messages
     - Injecting dependencies in annotations
     - Support for Kotlin nullable type(`?`) in annotated services
   - [1.16.0](https://armeria.dev/release-notes/1.16.0/)
-      - New metrics for TLS handshake results
-      - Handling <type://Decorator> annotation with <type://GrpcService> for your gRPC stubs
-      - Programmatic <type://Flags> configuration via Java SPI
+    - New metrics for TLS handshake results
+    - Handling <type://Decorator> annotation with <type://GrpcService> for your gRPC stubs
+    - Programmatic <type://Flags> configuration via Java SPI
   - [1.15.0](https://armeria.dev/release-notes/1.15.0/)
     - Support for gRPC health check protocol
     - Multipart file uploads in annotated services
     - GraphQL support in <type://DocService>
     - Refactored DNS resolver cache with higher hit ratio and reduced traffic
     - New metrics that help you get alerts before your TLS certificates are expired
-  - [1.14.1](https://armeria.dev/release-notes/1.14.1/)
-    - Additional logs for <type://EmptyEndpointGroupException>
   - [1.14.0](https://armeria.dev/release-notes/1.14.0/)
     - Experimental support for Scala 3
     - Fluent conversion of <type://HttpResponse> into a desired type using <type://WebClient>
     - Various build options for gRPC using <type://GrpcClientBuilder>
-  - [1.13.4](https://armeria.dev/release-notes/1.13.4/)
-    - Security fix(CWE-22)
 
 </div>
 <div class="noBullet">
@@ -83,8 +77,8 @@ date: 2022-07-14
   ```java
   class GraphqlServiceBuilder {
       public GraphqlServiceBuilder dataLoaderRegistry(
-        Function<ServiceRequestContext,
-        DataLoaderRegistry>dataLoaderRegistrySupplier) {
+        Function<ServiceRequestContext, DataLoaderRegistry>
+        dataLoaderRegistrySupplier) {
            // This method will be mutually exclusive
            // with configureDataLoaderRegistry(...)
       }
