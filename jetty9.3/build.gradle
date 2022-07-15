@@ -1,17 +1,8 @@
-final def JETTY_VERSION = '9.3.30.v20211001'
-
 dependencies {
     // Use the classes compiled with the latest Jetty,
     // but use an older version for test classes.
     testImplementation(project(':jetty9')) {
         exclude group: 'org.eclipse.jetty', module: 'jetty-server'
-    }
-
-    testImplementation(platform('org.eclipse.jetty:jetty-bom')) {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly JETTY_VERSION
-        }
     }
 
     testImplementation libs.jetty93.server

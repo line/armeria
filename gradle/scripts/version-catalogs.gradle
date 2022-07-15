@@ -16,7 +16,6 @@ def dependenciesTomlFile = new File("${rootProject.projectDir}/dependencies.toml
 if (dependenciesTomlFile.exists()) {
     def dependenciesYamlFile = new File("${rootProject.projectDir}/dependencies.yml")
     if (dependenciesYamlFile.exists()) {
-//        throw new IllegalStateException("Both dependencies.toml and dependencies.yml exist.")
         logger.quiet "Both 'dependencies.toml' and 'dependencies.yml' exist. " +
                 "'dependencies.toml' takes precedence over 'dependencies.yml'"
     }

@@ -4,6 +4,9 @@ import java.util.concurrent.ConcurrentHashMap
 
 import static java.util.Objects.requireNonNull
 
+// version catalogs should be defined in the settings.gradle or directly imported files.
+// https://docs.gradle.org/current/userguide/platforms.html#sub:version-catalog-declaration
+apply from: "${rootDir}/gradle/scripts/version-catalogs.gradle"
 
 // Ensure the Gradle version first of all.
 GradleVersion minimumSupportedGradleVersion = GradleVersion.version('6.0')
