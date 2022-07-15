@@ -26,7 +26,6 @@ import java.lang.annotation.Target;
 import java.util.concurrent.CompletionStage;
 import java.util.function.Function;
 
-import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -69,8 +68,8 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final GrpcService grpcService = GrpcService.builder().addService(
-                            new AuthenticatedHttpJsonTranscodingTestService())
+            final GrpcService grpcService = GrpcService.builder()
+                    .addService(new AuthenticatedHttpJsonTranscodingTestService())
                     .enableHttpJsonTranscoding(true)
                     .build();
             sb.requestTimeoutMillis(5000);
@@ -83,19 +82,18 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
 
     private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
-    private final String gRpcUri = server.httpUri(GrpcSerializationFormats.PROTO).toString();
-
     private final BlockingWebClient webClient = server.webClient().blocking();
 
-    private final HttpJsonTranscodingTestServiceBlockingStub gRpcClient =
-            GrpcClients.newClient(gRpcUri, HttpJsonTranscodingTestServiceBlockingStub.class);
+    private final HttpJsonTranscodingTestServiceBlockingStub grpcClient =
+            GrpcClients.newClient(server.httpUri(GrpcSerializationFormats.PROTO),
+                    HttpJsonTranscodingTestServiceBlockingStub.class);
 
     @Test
     void testAuthenticatedRpcMethod() throws Exception {
         final Transcoding.GetMessageRequestV1 requestMessage = Transcoding.GetMessageRequestV1.newBuilder()
                 .setName("messages/1").build();
         final Throwable exception = assertThrows(Throwable.class,
-                () -> gRpcClient.getMessageV1(requestMessage).getText());
+                () -> grpcClient.getMessageV1(requestMessage).getText());
         assertThat(exception).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) exception).getStatus().getCode())
                 .isEqualTo(Status.UNAUTHENTICATED.getCode());
@@ -103,7 +101,7 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
         final Metadata metadata = new Metadata();
         metadata.put(Metadata.Key.of(TEST_CREDENTIAL_KEY, Metadata.ASCII_STRING_MARSHALLER),
                 "some-credential-string");
-        final Transcoding.Message result = gRpcClient.withInterceptors(
+        final Transcoding.Message result = grpcClient.withInterceptors(
                 MetadataUtils.newAttachHeadersInterceptor(metadata)
         ).getMessageV1(requestMessage);
         assertThat(result.getText()).isEqualTo("messages/1");
@@ -138,20 +136,16 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
     private @interface Authenticate{}
 
     private static class AuthServiceDecoratorFactoryFunction implements DecoratorFactoryFunction<Authenticate> {
-        @NotNull
         @Override
         public Function<? super HttpService, ? extends HttpService>
-        newDecorator(@NotNull Authenticate parameter) {
-            return AuthService.newDecorator(
-                    new TestAuthorizer()
-            );
+        newDecorator(Authenticate parameter) {
+            return AuthService.newDecorator(new TestAuthorizer());
         }
     }
 
     private static class TestAuthorizer implements Authorizer<HttpRequest> {
-        @NotNull
         @Override
-        public CompletionStage<Boolean> authorize(@NotNull ServiceRequestContext ctx, HttpRequest data) {
+        public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, HttpRequest data) {
             return UnmodifiableFuture.completedFuture(
                     data.headers().contains(TEST_CREDENTIAL_KEY)
             );
