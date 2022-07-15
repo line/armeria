@@ -19,6 +19,14 @@ package com.linecorp.armeria.it.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import java.util.concurrent.CompletionStage;
+import java.util.function.Function;
+
+import org.jetbrains.annotations.NotNull;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -55,13 +63,6 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.stub.MetadataUtils;
 import io.grpc.stub.StreamObserver;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-import java.util.concurrent.CompletionStage;
-import java.util.function.Function;
-
 public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
 
     @RegisterExtension
@@ -94,7 +95,7 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
         final Transcoding.GetMessageRequestV1 requestMessage = Transcoding.GetMessageRequestV1.newBuilder()
                 .setName("messages/1").build();
         final Throwable exception = assertThrows(Throwable.class,
-                () -> gRpcClient.getMessageV1(requestMessage));
+                () -> gRpcClient.getMessageV1(requestMessage).getText());
         assertThat(exception).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) exception).getStatus().getCode())
                 .isEqualTo(Status.UNAUTHENTICATED.getCode());
@@ -137,8 +138,10 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
     private @interface Authenticate{}
 
     private static class AuthServiceDecoratorFactoryFunction implements DecoratorFactoryFunction<Authenticate> {
+        @NotNull
         @Override
-        public Function<? super HttpService, ? extends HttpService> newDecorator(Authenticate parameter) {
+        public Function<? super HttpService, ? extends HttpService>
+        newDecorator(@NotNull Authenticate parameter) {
             return AuthService.newDecorator(
                     new TestAuthorizer()
             );
@@ -146,8 +149,9 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
     }
 
     private static class TestAuthorizer implements Authorizer<HttpRequest> {
+        @NotNull
         @Override
-        public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, HttpRequest data) {
+        public CompletionStage<Boolean> authorize(@NotNull ServiceRequestContext ctx, HttpRequest data) {
             return UnmodifiableFuture.completedFuture(
                     data.headers().contains(TEST_CREDENTIAL_KEY)
             );
