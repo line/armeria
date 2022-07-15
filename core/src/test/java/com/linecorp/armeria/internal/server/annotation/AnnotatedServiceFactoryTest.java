@@ -16,6 +16,7 @@
 package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistryTest.noopDependencyInjector;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.create;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.find;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -59,9 +60,8 @@ class AnnotatedServiceFactoryTest {
     void testFindAnnotatedServiceElementsWithPathPrefixAnnotation() {
         final Object object = new PathPrefixServiceObject();
         final List<AnnotatedServiceElement> elements =
-                find("/", object, /* useBlockingTaskExecutor */ false, /* queryDelimiter */ null,
-                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
-
+                find("/", object, /* useBlockingTaskExecutor */ false,
+                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), noopDependencyInjector, null);
         final List<String> paths = elements.stream()
                                            .map(AnnotatedServiceElement::route)
                                            .map(route -> route.paths().get(0))
@@ -75,8 +75,7 @@ class AnnotatedServiceFactoryTest {
         final Object serviceObject = new ServiceObject();
         final List<AnnotatedServiceElement> elements =
                 find(HOME_PATH_PREFIX, serviceObject, /* useBlockingTaskExecutor */ false,
-                        /* queryDelimiter */ null, ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
-
+                     ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), noopDependencyInjector, null);
         final List<String> paths = elements.stream()
                                            .map(AnnotatedServiceElement::route)
                                            .map(route -> route.paths().get(0))
@@ -99,7 +98,8 @@ class AnnotatedServiceFactoryTest {
         final List<Route> actualRoutes = getMethods(ServiceObjectWithoutPathOnAnnotatedMethod.class,
                                                     HttpResponse.class)
                 .map(method -> create("/", serviceObject, method, /* useBlockingTaskExecutor */ false,
-                        /* queryDelimiter */ null, ImmutableList.of(), ImmutableList.of(), ImmutableList.of()))
+                                      ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                                      noopDependencyInjector, null))
                 .flatMap(Collection::stream)
                 .map(AnnotatedServiceElement::route)
                 .collect(toImmutableList());
@@ -188,7 +188,8 @@ class AnnotatedServiceFactoryTest {
         getMethods(MultiPathFailingService.class, HttpResponse.class).forEach(method -> {
             assertThatThrownBy(() -> {
                 create("/", serviceObject, method, /* useBlockingTaskExecutor */ false,
-                        /* queryDelimiter */ null, ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
+                       ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                       noopDependencyInjector, null);
             }, method.getName()).isInstanceOf(IllegalArgumentException.class);
         });
     }
@@ -225,8 +226,8 @@ class AnnotatedServiceFactoryTest {
                         method -> {
                             final List<AnnotatedServiceElement> AnnotatedServices = create(
                                     "/", service, method, /* useBlockingTaskExecutor */ false,
-                                    /* queryDelimiter */ null,
-                                    ImmutableList.of(), ImmutableList.of(), ImmutableList.of());
+                                    ImmutableList.of(), ImmutableList.of(), ImmutableList.of(),
+                                    noopDependencyInjector, null);
                             return AnnotatedServices.stream();
                         }
                 )

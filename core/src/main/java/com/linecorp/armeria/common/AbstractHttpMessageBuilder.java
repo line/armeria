@@ -29,10 +29,15 @@ import com.google.errorprone.annotations.FormatMethod;
 import com.google.errorprone.annotations.FormatString;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
+/**
+ * A skeletal builder implementation for {@link HttpMessage}.
+ */
 @SuppressWarnings("checkstyle:OverloadMethodsDeclarationOrder")
-abstract class AbstractHttpMessageBuilder {
+@UnstableApi
+public abstract class AbstractHttpMessageBuilder implements HttpMessageSetters {
 
     @Nullable
     private HttpData content;
@@ -43,13 +48,21 @@ abstract class AbstractHttpMessageBuilder {
     @Nullable
     private HttpHeadersBuilder httpTrailers;
 
+    /**
+     * Creates a new instance.
+     */
+    protected AbstractHttpMessageBuilder() {}
+
     @Nullable
     final HttpData content() {
         return content;
     }
 
+    /**
+     * Returns the {@link Publisher} that was set by {@link #content(MediaType, Publisher)}.
+     */
     @Nullable
-    final Publisher<? extends HttpData> publisher() {
+    protected final Publisher<? extends HttpData> publisher() {
         return publisher;
     }
 
@@ -60,24 +73,28 @@ abstract class AbstractHttpMessageBuilder {
 
     abstract HttpHeadersBuilder headersBuilder();
 
-    AbstractHttpMessageBuilder header(CharSequence name, Object value) {
+    @Override
+    public AbstractHttpMessageBuilder header(CharSequence name, Object value) {
         headersBuilder().addObject(requireNonNull(name, "name"),
                                    requireNonNull(value, "value"));
         return this;
     }
 
-    AbstractHttpMessageBuilder headers(
+    @Override
+    public AbstractHttpMessageBuilder headers(
             Iterable<? extends Entry<? extends CharSequence, String>> headers) {
         requireNonNull(headers, "headers");
         headersBuilder().add(headers);
         return this;
     }
 
-    AbstractHttpMessageBuilder content(String content) {
+    @Override
+    public AbstractHttpMessageBuilder content(String content) {
         return content(MediaType.PLAIN_TEXT_UTF_8, content);
     }
 
-    AbstractHttpMessageBuilder content(MediaType contentType, CharSequence content) {
+    @Override
+    public AbstractHttpMessageBuilder content(MediaType contentType, CharSequence content) {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
         return content(contentType,
@@ -85,20 +102,23 @@ abstract class AbstractHttpMessageBuilder {
                                    content));
     }
 
-    AbstractHttpMessageBuilder content(MediaType contentType, String content) {
+    @Override
+    public AbstractHttpMessageBuilder content(MediaType contentType, String content) {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
         return content(contentType, HttpData.of(contentType.charset(StandardCharsets.UTF_8),
                                                 content));
     }
 
+    @Override
     @FormatMethod
-    AbstractHttpMessageBuilder content(@FormatString String format, Object... content) {
+    public AbstractHttpMessageBuilder content(@FormatString String format, Object... content) {
         return content(MediaType.PLAIN_TEXT_UTF_8, format, content);
     }
 
+    @Override
     @FormatMethod
-    AbstractHttpMessageBuilder content(MediaType contentType, @FormatString String format,
+    public AbstractHttpMessageBuilder content(MediaType contentType, @FormatString String format,
                                        Object... content) {
         requireNonNull(contentType, "contentType");
         requireNonNull(format, "format");
@@ -107,12 +127,14 @@ abstract class AbstractHttpMessageBuilder {
                                                 format, content));
     }
 
-    AbstractHttpMessageBuilder content(MediaType contentType, byte[] content) {
+    @Override
+    public AbstractHttpMessageBuilder content(MediaType contentType, byte[] content) {
         requireNonNull(content, "content");
         return content(contentType, HttpData.wrap(content));
     }
 
-    AbstractHttpMessageBuilder content(MediaType contentType, HttpData content) {
+    @Override
+    public AbstractHttpMessageBuilder content(MediaType contentType, HttpData content) {
         requireNonNull(contentType, "contentType");
         requireNonNull(content, "content");
         checkState(publisher == null, "publisher has been set already");
@@ -121,7 +143,8 @@ abstract class AbstractHttpMessageBuilder {
         return this;
     }
 
-    AbstractHttpMessageBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
+    @Override
+    public AbstractHttpMessageBuilder content(MediaType contentType, Publisher<? extends HttpData> publisher) {
         requireNonNull(contentType, "contentType");
         requireNonNull(publisher, "publisher");
         checkState(content == null, "content has been set already");
@@ -130,7 +153,8 @@ abstract class AbstractHttpMessageBuilder {
         return this;
     }
 
-    AbstractHttpMessageBuilder contentJson(Object content) {
+    @Override
+    public AbstractHttpMessageBuilder contentJson(Object content) {
         requireNonNull(content, "content");
         checkState(publisher == null, "publisher has been set already");
         try {
@@ -140,7 +164,19 @@ abstract class AbstractHttpMessageBuilder {
         }
     }
 
-    AbstractHttpMessageBuilder trailers(
+    @Override
+    public AbstractHttpMessageBuilder trailer(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        if (httpTrailers == null) {
+            httpTrailers = HttpHeaders.builder();
+        }
+        httpTrailers.addObject(name, value);
+        return this;
+    }
+
+    @Override
+    public AbstractHttpMessageBuilder trailers(
             Iterable<? extends Entry<? extends CharSequence, String>> trailers) {
         requireNonNull(trailers, "trailers");
         if (httpTrailers == null) {

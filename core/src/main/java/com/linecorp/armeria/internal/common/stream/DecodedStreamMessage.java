@@ -66,7 +66,7 @@ public final class DecodedStreamMessage<I, O>
 
     private final StreamDecoder<I, O> decoder;
     private final boolean isHttpDecoder;
-    private final ByteBufDecoderInput input;
+    private final ByteBufsDecoderInput input;
     private final StreamMessage<? extends I> publisher;
 
     @Nullable
@@ -89,7 +89,7 @@ public final class DecodedStreamMessage<I, O>
         publisher = requireNonNull(streamMessage, "streamMessage");
         this.decoder = requireNonNull(decoder, "decoder");
         isHttpDecoder = decoder instanceof HttpDecoder;
-        input = new ByteBufDecoderInput(requireNonNull(alloc, "alloc"));
+        input = new ByteBufsDecoderInput(requireNonNull(alloc, "alloc"));
         if (publisher instanceof HttpRequest) {
             requestHeaders = ((HttpRequest) publisher).headers();
         }

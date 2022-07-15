@@ -25,6 +25,7 @@ import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRpcClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.client.retry.RetryRuleWithContent;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
@@ -34,11 +35,11 @@ class THttpClientUnwrapTest {
     @Test
     void test() {
         final HelloService.Iface client =
-                Clients.builder("tbinary+http://127.0.0.1:1/")
-                       .decorator(LoggingClient.newDecorator())
-                       .rpcDecorator(RetryingRpcClient.newDecorator(
-                               RetryRuleWithContent.<RpcResponse>builder().thenNoRetry()))
-                       .build(HelloService.Iface.class);
+                ThriftClients.builder("tbinary+http://127.0.0.1:1/")
+                             .decorator(LoggingClient.newDecorator())
+                             .rpcDecorator(RetryingRpcClient.newDecorator(
+                                     RetryRuleWithContent.<RpcResponse>builder().thenNoRetry()))
+                             .build(HelloService.Iface.class);
 
         assertThat(Clients.unwrap(client, HelloService.Iface.class)).isSameAs(client);
 

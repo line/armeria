@@ -163,11 +163,11 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     private volatile ScheduledFuture<?> scheduledFuture;
     private volatile boolean closed;
 
-    EurekaEndpointGroup(EndpointSelectionStrategy selectionStrategy,
-                        WebClient webClient, long registryFetchIntervalMillis, @Nullable String appName,
-                        @Nullable String instanceId, @Nullable String vipAddress,
+    EurekaEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
+                        long selectionTimeoutMillis, WebClient webClient, long registryFetchIntervalMillis,
+                        @Nullable String appName, @Nullable String instanceId, @Nullable String vipAddress,
                         @Nullable String secureVipAddress, @Nullable List<String> regions) {
-        super(selectionStrategy);
+        super(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis);
         this.webClient = webClient;
         this.registryFetchIntervalMillis = registryFetchIntervalMillis;
 

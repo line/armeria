@@ -19,13 +19,17 @@ package com.linecorp.armeria.server.grpc;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Iterator;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.Executors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.base.Strings;
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.ByteString;
 
 import com.linecorp.armeria.client.Clients;
@@ -35,6 +39,8 @@ import com.linecorp.armeria.common.grpc.protocol.ArmeriaStatusException;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.grpc.testing.Messages.Payload;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
+import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
+import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallResponse;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
@@ -61,12 +67,13 @@ class InvalidRequestMessageTest {
         }
     };
 
-    @Test
-    void invalidProto() throws InterruptedException {
+    @CsvSource({ "UnaryCall", "StreamingOutputCall" })
+    @ParameterizedTest
+    void invalidProto(String methodName) throws InterruptedException {
         final UnaryGrpcClient client = Clients.builder(server.httpUri(UnaryGrpcSerializationFormats.PROTO))
                                               .build(UnaryGrpcClient.class);
         assertThatThrownBy(() -> {
-            client.execute(TestServiceGrpc.getUnaryCallMethod().getFullMethodName(), "INVALID".getBytes())
+            client.execute('/' + TestServiceGrpc.SERVICE_NAME + '/' + methodName, "INVALID".getBytes())
                   .join();
         }).isInstanceOf(CompletionException.class)
           .hasCauseInstanceOf(ArmeriaStatusException.class)
@@ -75,7 +82,7 @@ class InvalidRequestMessageTest {
         final ServiceRequestContext ctx = server.requestContextCaptor().take();
         final RequestLog log = ctx.log().whenComplete().join();
         assertThat(log.requestCause())
-                .isInstanceOf(StatusException.class)
+                .isInstanceOf(StatusRuntimeException.class)
                 .hasMessageContaining("Invalid protobuf byte sequence");
     }
 
@@ -86,21 +93,33 @@ class InvalidRequestMessageTest {
         final Payload payload = Payload.newBuilder()
                                        .setBody(ByteString.copyFrom(Strings.repeat("A", 101).getBytes()))
                                        .build();
-        assertThatThrownBy(() -> {
-            client.unaryCall(SimpleRequest.newBuilder()
-                                          .setPayload(payload)
-                                          .build());
-        }).isInstanceOf(StatusRuntimeException.class)
-          .satisfies(ex -> {
-              assertThat(((StatusRuntimeException) ex).getStatus().getCode())
-                      .isEqualTo(Code.RESOURCE_EXHAUSTED);
-          })
-          .hasMessageContaining("exceeds maximum: 100.");
+        final ImmutableList<Runnable> actions = ImmutableList.of(() -> {
+            client.unaryCall(SimpleRequest.newBuilder().setPayload(payload).build());
+        }, () -> {
+            final Iterator<StreamingOutputCallResponse> response =
+                    client.streamingOutputCall(StreamingOutputCallRequest.newBuilder()
+                                                                         .setPayload(payload)
+                                                                         .build());
+            // Drain responses.
+            while (response.hasNext()) {
+                response.next();
+            }
+        });
 
-        final ServiceRequestContext ctx = server.requestContextCaptor().take();
-        final RequestLog log = ctx.log().whenComplete().join();
-        assertThat(log.requestCause())
-                .isInstanceOf(StatusException.class)
-                .hasMessageContaining("exceeds maximum: 100.");
+        for (Runnable action : actions) {
+            assertThatThrownBy(action::run)
+                    .isInstanceOf(StatusRuntimeException.class)
+                    .satisfies(ex -> {
+                        assertThat(((StatusRuntimeException) ex).getStatus().getCode())
+                                .isEqualTo(Code.RESOURCE_EXHAUSTED);
+                    })
+                    .hasMessageContaining("exceeds maximum: 100.");
+
+            final ServiceRequestContext ctx = server.requestContextCaptor().take();
+            final RequestLog log = ctx.log().whenComplete().join();
+            assertThat(log.requestCause())
+                    .isInstanceOfAny(StatusException.class, StatusRuntimeException.class)
+                    .hasMessageContaining("exceeds maximum: 100.");
+        }
     }
 }

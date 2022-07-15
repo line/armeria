@@ -65,8 +65,9 @@ import io.netty.channel.EventLoopGroup;
  *     excluded-user-agents: some-user-agent, another-user-agent
  *     min-response-size: 1KB
  *   internal-services:
- *     - port: 18080
- *     - include: docs, health, metrics
+ *     port: 18080
+ *     include: docs, health, metrics
+ *   enable-auto-injection: true
  * }</pre>
  */
 @ConfigurationProperties(prefix = "armeria")
@@ -574,6 +575,11 @@ public class ArmeriaSettings {
     private Boolean verboseResponses;
 
     /**
+     * Whether to inject dependencies in annotated services using {@link SpringDependencyInjector}.
+     */
+    private boolean enableAutoInjection;
+
+    /**
      * Returns the {@link Port}s of the {@link Server}.
      */
     public List<Port> getPorts() {
@@ -1035,5 +1041,19 @@ public class ArmeriaSettings {
      */
     public void setVerboseResponses(@Nullable Boolean verboseResponses) {
         this.verboseResponses = verboseResponses;
+    }
+
+    /**
+     * Returns whether to apply {@link SpringDependencyInjector} automatically.
+     */
+    public boolean enableAutoInjection() {
+        return enableAutoInjection;
+    }
+
+    /**
+     * Sets whether to apply {@link SpringDependencyInjector} automatically.
+     */
+    public void setEnableAutoInjection(boolean enableAutoInjection) {
+        this.enableAutoInjection = enableAutoInjection;
     }
 }

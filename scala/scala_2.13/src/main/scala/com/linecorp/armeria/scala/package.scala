@@ -28,5 +28,9 @@ package object scala {
    * in a project written in Scala. Read [[https://armeria.dev/docs/advanced-scala]] for more information.
    */
   @UnstableApi
-  object implicits extends CommonConversions with CollectionConverters with ServerConversions
+  object implicits
+      extends CommonConversions
+      with ClientConversions
+      with CollectionConverters
+      with ServerConversions
 }

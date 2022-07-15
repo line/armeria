@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client.endpoint;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 import static java.util.Objects.requireNonNull;
@@ -35,6 +36,7 @@ import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
@@ -65,6 +67,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new EventLoopCheckingFuture<>();
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
     private final boolean allowEmptyEndpoints;
+    private final long selectionTimeoutMillis;
 
     /**
      * Creates a new empty instance, using {@link EndpointSelectionStrategy#weightedRoundRobin()}
@@ -93,14 +96,46 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     }
 
     /**
+     * Creates a new empty instance, using {@link EndpointSelectionStrategy#weightedRoundRobin()}.
+     *
+     * @param allowEmptyEndpoints whether to allow an empty {@link Endpoint} list
+     * @param selectionTimeoutMillis the timeout to wait until a successful {@link Endpoint} selection.
+     *                               {@code 0} disables the timeout. If unspecified,
+     *                               {@link Flags#defaultConnectTimeoutMillis()} is used by default.
+     */
+    protected DynamicEndpointGroup(boolean allowEmptyEndpoints, long selectionTimeoutMillis) {
+        this(EndpointSelectionStrategy.weightedRoundRobin(), allowEmptyEndpoints, selectionTimeoutMillis);
+    }
+
+    /**
      * Creates a new empty instance.
      *
      * @param selectionStrategy the {@link EndpointSelectionStrategy} of this {@link EndpointGroup}
      * @param allowEmptyEndpoints whether to allow an empty {@link Endpoint} list
      */
     protected DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints) {
+        this(selectionStrategy, allowEmptyEndpoints, Flags.defaultConnectTimeoutMillis());
+    }
+
+    /**
+     * Creates a new empty instance.
+     *
+     * @param selectionStrategy the {@link EndpointSelectionStrategy} of this {@link EndpointGroup}
+     * @param allowEmptyEndpoints whether to allow an empty {@link Endpoint} list
+     * @param selectionTimeoutMillis the timeout to wait until a successful {@link Endpoint} selection.
+     *                               {@code 0} disables the timeout. If unspecified,
+     *                               {@link Flags#defaultConnectTimeoutMillis()} is used by default.
+     */
+    protected DynamicEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
+                                   long selectionTimeoutMillis) {
         this.selectionStrategy = requireNonNull(selectionStrategy, "selectionStrategy");
         this.allowEmptyEndpoints = allowEmptyEndpoints;
+        checkArgument(selectionTimeoutMillis >= 0, "selectionTimeoutMillis: %s (expected: >= 0)",
+                      selectionTimeoutMillis);
+        if (selectionTimeoutMillis == 0) {
+            selectionTimeoutMillis = Long.MAX_VALUE;
+        }
+        this.selectionTimeoutMillis = selectionTimeoutMillis;
     }
 
     /**
@@ -127,10 +162,22 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     }
 
     @Override
+    public long selectionTimeoutMillis() {
+        return selectionTimeoutMillis;
+    }
+
+    @Deprecated
+    @Override
     public final CompletableFuture<Endpoint> select(ClientRequestContext ctx,
                                                     ScheduledExecutorService executor,
                                                     long timeoutMillis) {
-        return maybeCreateSelector().select(ctx, executor, timeoutMillis);
+        return select(ctx, executor);
+    }
+
+    @Override
+    public final CompletableFuture<Endpoint> select(ClientRequestContext ctx,
+                                                    ScheduledExecutorService executor) {
+        return maybeCreateSelector().select(ctx, executor);
     }
 
     /**
@@ -233,7 +280,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         for (int i = 0; i < oldEndpoints.size(); i++) {
             final Endpoint a = oldEndpoints.get(i);
             final Endpoint b = newEndpoints.get(i);
-            if (!a.equals(b) || a.weight() != b.weight()) {
+            if (!a.equals(b) || a.weight() != b.weight() || !a.attrs().equals(b.attrs())) {
                 return true;
             }
         }

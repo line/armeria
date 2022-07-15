@@ -182,7 +182,7 @@ public abstract class AbstractThriftOverHttpTest {
         try (TTransport transport = newTransport("http", "/hello")) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
-                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+                            ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
 
             assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
         }
@@ -193,7 +193,7 @@ public abstract class AbstractThriftOverHttpTest {
         try (TTransport transport = newTransport("http", "/hellochild")) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
-                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+                            ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
 
             assertThat(client.hello("Trustin")).isEqualTo("Goodbye, Trustin!");
         }
@@ -206,7 +206,7 @@ public abstract class AbstractThriftOverHttpTest {
         try (TTransport transport = newTransport("http", "/hello_oneway_sync")) {
             final OnewayHelloService.Client client =
                     new OnewayHelloService.Client.Factory().getClient(
-                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+                            ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
             // Success
             client.hello("success");
             verifyOneWayInvocation(OnewayHelloService.Iface.class, "success");
@@ -215,7 +215,7 @@ public abstract class AbstractThriftOverHttpTest {
         try (TTransport transport = newTransport("http", "/hello_oneway_sync")) {
             final OnewayHelloService.Client client =
                     new OnewayHelloService.Client.Factory().getClient(
-                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+                            ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
             // Failure
             client.hello("failure");
             verifyOneWayInvocation(OnewayHelloService.Iface.class, "failure");
@@ -229,7 +229,7 @@ public abstract class AbstractThriftOverHttpTest {
         try (TTransport transport = newTransport("http", "/hello_oneway_async")) {
             final OnewayHelloService.Client client =
                     new OnewayHelloService.Client.Factory().getClient(
-                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+                            ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
             // Success
             client.hello("success");
             verifyOneWayInvocation(OnewayHelloService.AsyncIface.class, "success");
@@ -238,7 +238,7 @@ public abstract class AbstractThriftOverHttpTest {
         try (TTransport transport = newTransport("http", "/hello_oneway_async")) {
             final OnewayHelloService.Client client =
                     new OnewayHelloService.Client.Factory().getClient(
-                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+                            ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
             // Failure
             client.hello("failure");
             verifyOneWayInvocation(OnewayHelloService.AsyncIface.class, "failure");
@@ -265,7 +265,7 @@ public abstract class AbstractThriftOverHttpTest {
         try (TTransport transport = newTransport("https", "/hello")) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
-                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+                            ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
 
             assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
         }
@@ -276,7 +276,7 @@ public abstract class AbstractThriftOverHttpTest {
         try (TTransport transport = newTransport("https", "/large")) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
-                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+                            ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
 
             assertThat(client.hello("Trustin")).isEqualTo(LARGER_THAN_TLS);
         }
@@ -288,7 +288,7 @@ public abstract class AbstractThriftOverHttpTest {
                                                  HttpHeaders.of(HttpHeaderNames.ACCEPT, "text/plain, */*"))) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
-                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+                            ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
 
             assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
         }
@@ -304,7 +304,7 @@ public abstract class AbstractThriftOverHttpTest {
                                "application/x-thrift; protocol=TBINARY; q=0.5"))) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
-                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+                            ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
 
             assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
         }
@@ -320,7 +320,7 @@ public abstract class AbstractThriftOverHttpTest {
                                "application/x-thrift; protocol=TBINARY"))) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
-                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+                            ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
 
             assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
         }
@@ -336,7 +336,7 @@ public abstract class AbstractThriftOverHttpTest {
                                "application/x-thrift; protocol=TBINARY; q=0.2, text/plain"))) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
-                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+                            ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
 
             assertThat(client.hello("Trustin")).isEqualTo("Hello, Trustin!");
         }
@@ -347,7 +347,7 @@ public abstract class AbstractThriftOverHttpTest {
         try (TTransport transport = newTransport("http", "/hello")) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
-                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+                            ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
             recordMessageLogs = true;
             client.hello("Trustin");
         }
@@ -389,7 +389,7 @@ public abstract class AbstractThriftOverHttpTest {
         try (TTransport transport = newTransport("http", "/exception")) {
             final HelloService.Client client =
                     new HelloService.Client.Factory().getClient(
-                            ThriftProtocolFactories.BINARY.getProtocol(transport));
+                            ThriftProtocolFactories.binary(0, 0).getProtocol(transport));
             recordMessageLogs = true;
             assertThatThrownBy(() -> client.hello("Trustin")).isInstanceOf(TApplicationException.class);
         }
