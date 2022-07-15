@@ -1,35 +1,35 @@
 [versions]
 akka = "2.6.19"
 bouncycastle = "1.70"
-curator = "5.2.1"
-jmh = "1.35"
-kotlin = "1.7.0"
-kotlin-coroutine = "1.6.3"
-groovy = "3.0.5"
 brotli4j = "1.7.1"
-graphql-kotlin = "5.3.2"
+curator = "5.2.1"
 dagger = "2.42"
 dropwizard1 = "1.3.29"
 dropwizard2 = "2.1.0"
 errorprone = "2.14.0"
-guava = "31.1-jre"
+eureka = "1.10.17"
+graphql-kotlin = "5.3.2"
 grpc-kotlin = "1.3.0"
+groovy = "3.0.5"
+guava = "31.1-jre"
 hamcrest = "2.2"
 jetty93 = '9.3.30.v20211001'
 jetty94 = "9.4.46.v20220331"
-junit5 = "5.8.2"
+jmh = "1.35"
 json-unit = "2.35.0"
+junit5 = "5.8.2"
+kotlin = "1.7.0"
+kotlin-coroutine = "1.6.3"
 micrometer = "1.9.1"
 micrometer13 = "1.3.20"
 mockito = "4.6.1"
 monix = "3.4.1"
 munit = "0.7.29"
-protobuf = "3.19.2"
-eureka = "1.10.17"
-reactive-grpc = "1.2.3"
-reactive-streams = "1.0.4"
 okhttp4 = "4.10.0"
 opensaml = "3.4.6"
+protobuf = "3.19.2"
+reactive-grpc = "1.2.3"
+reactive-streams = "1.0.4"
 reactor = "3.4.19"
 resteasy = "5.0.2.Final"
 retrofit2 = "2.9.0"
@@ -38,27 +38,27 @@ sangria-slowlog = "2.0.4"
 scala-java8-compat = "1.0.2"
 scalapb = "0.11.11"
 scalapb-json = "0.12.0"
+slf4j = "1.7.36"
 spring-boot1 = "1.5.22.RELEASE"
 spring-boot2 = "2.7.1"
-slf4j = "1.7.36"
 tomcat8 = "8.5.78"
 tomcat9 = "9.0.62"
 
 [boms]
-jackson = { module = "com.fasterxml.jackson:jackson-bom", version = "2.13.3" }
+brave = { module = "io.zipkin.brave:brave-bom", version = "5.13.9" }
 dropwizard-metrics = { module = "io.dropwizard.metrics:metrics-bom", version = "4.2.10" }
 # Ensure that we use the same Protobuf version as what gRPC depends on.
 # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
 #      (Switch to the right tag and look for "protobufVersion" and "protocVersion".)
 grpc-java = { module = "io.grpc:grpc-bom", version = "1.47.0" }
-netty = { module = "io.netty:netty-bom", version = "4.1.78.Final" }
-brave = { module = "io.zipkin.brave:brave-bom", version = "5.13.9" }
+jackson = { module = "com.fasterxml.jackson:jackson-bom", version = "2.13.3" }
 junit5 = { module = "org.junit:junit-bom", version = "5.8.2" }
+netty = { module = "io.netty:netty-bom", version = "4.1.78.Final" }
 
 [libraries]
 # Akka is used only for testing in it:grpcweb module.
 [libraries.akka-http-cors_v213]
-module = "ch.memegard:akka-http-cors_2.13"
+module = "ch.megard:akka-http-cors_2.13"
 version = "1.0.0"
 [libraries.akka-grpc-runtime_v213]
 module = "com.lightbend.akka.grpc:akka-grpc-runtime_2.13"
@@ -105,11 +105,10 @@ module = "io.zipkin.brave:brave"
 javadocs = [
     "https://www.javadoc.io/doc/io.zipkin.brave/brave/5.6.3/",
     "https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/5.6.3/"]
-[libraries.brave-instrumentation-http]
-module = "io.zipkin.brave:brave-instrumentation-http"
-
 [libraries.brave-context-slf4j]
 module = 'io.zipkin.brave:brave-context-slf4j'
+[libraries.brave-instrumentation-http]
+module = "io.zipkin.brave:brave-instrumentation-http"
 [libraries.brave-instrumentation-http-tests]
 module = "io.zipkin.brave:brave-instrumentation-http-tests"
 
@@ -362,18 +361,14 @@ relocations = [
 [libraries.guava-testlib]
 module = "com.google.guava:guava-testlib"
 version.ref = "guava"
-exclusions = [
-    "com.google.errorprone:error_prone_annotations",
-    "com.google.j2objc:j2objc-annotations"]
-relocations = [{ from = "com.google.common", to = "com.linecorp.armeria.internal.shaded.guava" }]
+exclusions = ["com.google.errorprone:error_prone_annotations", "com.google.j2objc:j2objc-annotations"]
+relocations = { from = "com.google.common", to = "com.linecorp.armeria.internal.shaded.guava" }
 # A transitive dependency of Guava which needs relocation as well.
 [libraries.guava-failureaccess]
-module = "com.google.guava:guava-failureaccess"
+module = "com.google.guava:failureaccess"
 version.ref = "guava"
-exclusions = [
-    "com.google.errorprone:error_prone_annotations",
-    "com.google.j2objc:j2objc-annotations"]
-relocations = [{ from = "com.google.common", to = "com.linecorp.armeria.internal.shaded.guava" }]
+exclusions = ["com.google.errorprone:error_prone_annotations", "com.google.j2objc:j2objc-annotations"]
+relocations = { from = "com.google.common", to = "com.linecorp.armeria.internal.shaded.guava" }
 
 [libraries.hamcrest]
 module = "org.hamcrest:hamcrest"
@@ -427,14 +422,14 @@ version = "1.3.2"
 [libraries.javax-inject]
 module = "javax.inject:javax.inject"
 version = "1"
+[libraries.javax-jsr311]
+module = "javax.ws.rs:jsr311-api"
+version = "1.1.1"
 [libraries.javax-validation]
 module = "javax.validation:validation-api"
 version = "2.0.1.Final"
 # Ensure that we use the same javax.ws.rs version as what eureka-client depends on.
 # See: https://github.com/Netflix/eureka/blob/master/eureka-client/build.gradle
-[libraries.javax-jsr311]
-module = "javax.ws.rs:jsr311-api"
-version = "1.1.1"
 
 [libraries.jctools]
 module = "org.jctools:jctools-core"
@@ -746,17 +741,17 @@ version = "1.1.8.4"
 [libraries.opensaml-core]
 module = "org.opensaml:opensaml-core"
 version.ref = "opensaml"
-[libraries.opensaml-saml-api]
-module = "org.opensaml:opensaml-saml-api"
-version.ref = "opensaml"
-[libraries.opensaml-saml-impl]
-module = "org.opensaml:opensaml-saml-impl"
-version.ref = "opensaml"
 [libraries.opensaml-messaging-api]
 module = "org.opensaml:opensaml-messaging-api"
 version.ref = "opensaml"
 [libraries.opensaml-messaging-impl]
 module = "org.opensaml:opensaml-messaging-impl"
+version.ref = "opensaml"
+[libraries.opensaml-saml-api]
+module = "org.opensaml:opensaml-saml-api"
+version.ref = "opensaml"
+[libraries.opensaml-saml-impl]
+module = "org.opensaml:opensaml-saml-impl"
 version.ref = "opensaml"
 [libraries.opensaml-soap-api]
 module = "org.opensaml:opensaml-soap-api"
