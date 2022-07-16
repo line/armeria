@@ -9,9 +9,8 @@ import org.apache.thrift.TException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.thrift.ThriftFuture;
-import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -34,7 +33,8 @@ class HelloServiceTest {
 
     @Test
     void getReplyWithBlockingCall() throws TException {
-        final HelloService.Iface helloService = Clients.newClient(uri(), HelloService.Iface.class);
+        final HelloService.Iface helloService =
+                ThriftClients.newClient(server.httpUri(), HelloService.Iface.class);
         final HelloReply reply = helloService.hello(new HelloRequest("Armeria"));
         assertThat(reply.getMessage()).isEqualTo("Hello, Armeria!");
     }
@@ -57,10 +57,6 @@ class HelloServiceTest {
     }
 
     private static HelloService.AsyncIface helloService() {
-        return Clients.newClient(uri(), HelloService.AsyncIface.class);
-    }
-
-    private static String uri() {
-        return server.httpUri(ThriftSerializationFormats.BINARY).toString();
+        return ThriftClients.newClient(server.httpUri(), HelloService.AsyncIface.class);
     }
 }

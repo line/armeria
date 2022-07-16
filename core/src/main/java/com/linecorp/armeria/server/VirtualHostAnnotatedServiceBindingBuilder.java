@@ -29,8 +29,10 @@ import java.util.function.Function;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceElement;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory;
@@ -71,6 +73,8 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
 
+    @Nullable
+    private String queryDelimiter;
     private boolean useBlockingTaskExecutor;
     private String pathPrefix = "/";
     @Nullable
@@ -163,6 +167,25 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      */
     public VirtualHostAnnotatedServiceBindingBuilder useBlockingTaskExecutor(boolean useBlockingTaskExecutor) {
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
+        return this;
+    }
+
+    /**
+     * Sets the delimiter for a query parameter value. Multiple values delimited by the specified
+     * {@code delimiter} will be automatically split into a list of values.
+     *
+     * <p>It is disabled by default.
+     *
+     * <p>Note that this delimiter works only when the resolve target class type is collection and the number
+     * of values of the query parameter is one. For example with the query delimiter {@code ","}:
+     * <ul>
+     *     <li>{@code ?query=a,b,c} will be resolved to {@code "a"}, {@code "b"} and {@code "c"}</li>
+     *     <li>{@code ?query=a,b,c&query=d,e,f} will be resolved to {@code "a,b,c"} and {@code "d,e,f"}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public VirtualHostAnnotatedServiceBindingBuilder queryDelimiter(String delimiter) {
+        this.queryDelimiter = requireNonNull(delimiter, "delimiter");
         return this;
     }
 
@@ -290,8 +313,10 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      * {@link AnnotatedServiceExtensions} to the {@link VirtualHostBuilder}.
      *
      * @param extensions the {@link AnnotatedServiceExtensions} at the virtual host level.
+     * @param dependencyInjector the {@link DependencyInjector} to inject dependencies.
      */
-    List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedServiceExtensions extensions) {
+    List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedServiceExtensions extensions,
+                                                         DependencyInjector dependencyInjector) {
         final List<RequestConverterFunction> requestConverterFunctions =
                 requestConverterFunctionBuilder.addAll(extensions.requestConverters()).build();
         final List<ResponseConverterFunction> responseConverterFunctions =
@@ -303,8 +328,9 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
 
         final List<AnnotatedServiceElement> elements =
                 AnnotatedServiceFactory.find(
-                        pathPrefix, service, useBlockingTaskExecutor,
-                        requestConverterFunctions, responseConverterFunctions, exceptionHandlerFunctions);
+                        pathPrefix, service, useBlockingTaskExecutor, requestConverterFunctions,
+                        responseConverterFunctions, exceptionHandlerFunctions, dependencyInjector,
+                        queryDelimiter);
         return elements.stream().map(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());

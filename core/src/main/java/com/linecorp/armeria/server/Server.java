@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static java.util.Objects.requireNonNull;
@@ -29,7 +30,6 @@ import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -49,7 +49,6 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.net.ssl.SSLSession;
 
@@ -61,8 +60,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSet.Builder;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.Flags;
@@ -72,11 +71,11 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
+import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
-import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -103,7 +102,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  */
 public final class Server implements ListenableAsyncCloseable {
 
-    private static final Logger logger = LoggerFactory.getLogger(Server.class);
+    static final Logger logger = LoggerFactory.getLogger(Server.class);
 
     /**
      * Creates a new {@link ServerBuilder}.
@@ -473,6 +472,23 @@ public final class Server implements ListenableAsyncCloseable {
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
     }
 
+    /**
+     * Registers a JVM shutdown hook that closes this {@link Server} when the current JVM terminates.
+     */
+    public CompletableFuture<Void> closeOnJvmShutdown() {
+        return ShutdownHooks.addClosingTask(this);
+    }
+
+    /**
+     * Registers a JVM shutdown hook that closes this {@link Server} when the current JVM terminates.
+     *
+     * @param whenClosing the {@link Runnable} will be run before closing this {@link Server}
+     */
+    public CompletableFuture<Void> closeOnJvmShutdown(Runnable whenClosing) {
+        requireNonNull(whenClosing, "whenClosing");
+        return ShutdownHooks.addClosingTask(this, whenClosing);
+    }
+
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {
 
         @Nullable
@@ -657,45 +673,19 @@ public final class Server implements ListenableAsyncCloseable {
         private void finishDoStop(CompletableFuture<Void> future) {
             serverChannels.clear();
 
-            final Set<ScheduledExecutorService> executors =
-                    Stream.concat(config.virtualHosts()
-                                        .stream()
-                                        .filter(VirtualHost::shutdownBlockingTaskExecutorOnStop)
-                                        .map(VirtualHost::blockingTaskExecutor),
-                                  config.serviceConfigs()
-                                        .stream()
-                                        .filter(ServiceConfig::shutdownBlockingTaskExecutorOnStop)
-                                        .map(ServiceConfig::blockingTaskExecutor))
-                          .collect(Collectors.toSet());
-
-            if (config.shutdownBlockingTaskExecutorOnStop()) {
-                executors.add(config.blockingTaskExecutor());
+            final Builder<ShutdownSupport> builder = ImmutableList.builder();
+            builder.addAll(config.delegate().shutdownSupports());
+            for (VirtualHost virtualHost : config.virtualHosts()) {
+                builder.addAll(virtualHost.shutdownSupports());
+            }
+            for (ServiceConfig serviceConfig : config.serviceConfigs()) {
+                builder.addAll(serviceConfig.shutdownSupports());
             }
 
-            shutdownExecutor(executors);
-
-            final Builder<AccessLogWriter> builder = ImmutableSet.builder();
-            config.virtualHosts()
-                  .stream()
-                  .filter(VirtualHost::shutdownAccessLogWriterOnStop)
-                  .forEach(virtualHost -> builder.add(virtualHost.accessLogWriter()));
-            config.serviceConfigs()
-                  .stream()
-                  .filter(ServiceConfig::shutdownAccessLogWriterOnStop)
-                  .forEach(serviceConfig -> builder.add(serviceConfig.accessLogWriter()));
-
-            final Set<AccessLogWriter> writers = builder.build();
-            final List<CompletableFuture<Void>> completionFutures = new ArrayList<>(writers.size());
-            writers.forEach(accessLogWriter -> {
-                final CompletableFuture<Void> shutdownFuture = accessLogWriter.shutdown();
-                shutdownFuture.exceptionally(cause -> {
-                    logger.warn("Failed to close the {}:", AccessLogWriter.class.getSimpleName(), cause);
-                    return null;
-                });
-                completionFutures.add(shutdownFuture);
-            });
-
-            CompletableFutures.successfulAsList(completionFutures, cause -> null)
+            CompletableFutures.successfulAsList(builder.build()
+                                                       .stream()
+                                                       .map(ShutdownSupport::shutdown)
+                                                       .collect(toImmutableList()), cause -> null)
                               .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
         }
 

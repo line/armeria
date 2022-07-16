@@ -46,18 +46,26 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.linecorp.armeria.internal.server.grpc.GrpcMethodUtil.extractMethodName;
 import static java.util.Objects.requireNonNull;
+import static org.reflections.ReflectionUtils.withModifier;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
+import com.google.common.base.CaseFormat;
+import com.google.common.base.Converter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
+import com.linecorp.armeria.server.Route;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.ServerMethodDefinition;
@@ -68,21 +76,37 @@ import io.grpc.ServerServiceDefinition;
  * documentation generation.
  */
 final class HandlerRegistry {
-    private final ImmutableList<ServerServiceDefinition> services;
-    private final ImmutableMap<String, ServerMethodDefinition<?, ?>> methods;
-    private final ImmutableMap<MethodDescriptor<?, ?>, String> simpleMethodNames;
 
-    private HandlerRegistry(ImmutableList<ServerServiceDefinition> services,
-                            ImmutableMap<String, ServerMethodDefinition<?, ?>> methods,
-                            ImmutableMap<MethodDescriptor<?, ?>, String> simpleMethodNames) {
+    // e.g. UnaryCall -> unaryCall
+    private static final Converter<String, String> methodNameConverter =
+            CaseFormat.UPPER_CAMEL.converterTo(CaseFormat.LOWER_CAMEL);
+
+    private final List<ServerServiceDefinition> services;
+    private final Map<String, ServerMethodDefinition<?, ?>> methods;
+    private final Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute;
+    private final Map<MethodDescriptor<?, ?>, String> simpleMethodNames;
+    private final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators;
+
+    private HandlerRegistry(List<ServerServiceDefinition> services,
+                            Map<String, ServerMethodDefinition<?, ?>> methods,
+                            Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute,
+                            Map<MethodDescriptor<?, ?>, String> simpleMethodNames,
+                            Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
+        this.methodsByRoute = requireNonNull(methodsByRoute, "methodsByRoute");
         this.simpleMethodNames = requireNonNull(simpleMethodNames, "simpleMethodNames");
+        this.decorators = requireNonNull(decorators, "decorators");
     }
 
     @Nullable
     ServerMethodDefinition<?, ?> lookupMethod(String methodName) {
         return methods.get(methodName);
+    }
+
+    @Nullable
+    ServerMethodDefinition<?, ?> lookupMethod(Route route) {
+        return methodsByRoute.get(route);
     }
 
     String simpleMethodName(MethodDescriptor<?, ?> methodName) {
@@ -97,17 +121,26 @@ final class HandlerRegistry {
         return methods;
     }
 
+    Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute() {
+        return methodsByRoute;
+    }
+
+    Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators() {
+        return decorators;
+    }
+
     static final class Builder {
         private final List<Entry> entries = new ArrayList<>();
 
-        Builder addService(ServerServiceDefinition service) {
-            entries.add(new Entry(service.getServiceDescriptor().getName(), service, null));
+        Builder addService(ServerServiceDefinition service, @Nullable Class<?> type) {
+            entries.add(new Entry(service.getServiceDescriptor().getName(), service, null, type));
             return this;
         }
 
         Builder addService(String path, ServerServiceDefinition service,
-                           @Nullable MethodDescriptor<?, ?> methodDescriptor) {
-            entries.add(new Entry(normalizePath(path, methodDescriptor == null), service, methodDescriptor));
+                           @Nullable MethodDescriptor<?, ?> methodDescriptor, @Nullable Class<?> type) {
+            entries.add(new Entry(normalizePath(path, methodDescriptor == null),
+                                  service, methodDescriptor, type));
             return this;
         }
 
@@ -139,9 +172,13 @@ final class HandlerRegistry {
 
         HandlerRegistry build() {
             // Store per-service first, to make sure services are added/replaced atomically.
-            final Map<String, ServerServiceDefinition> services = new HashMap<>();
-            final Map<String, ServerMethodDefinition<?, ?>> methods = new HashMap<>();
-            final Map<MethodDescriptor<?, ?>, String> simpleMethodNames = new HashMap<>();
+            final ImmutableMap.Builder<String, ServerServiceDefinition> services = ImmutableMap.builder();
+            final ImmutableMap.Builder<String, ServerMethodDefinition<?, ?>> methods = ImmutableMap.builder();
+            final ImmutableMap.Builder<Route, ServerMethodDefinition<?, ?>> methodsByRoute =
+                    ImmutableMap.builder();
+            final ImmutableMap.Builder<MethodDescriptor<?, ?>, String> bareMethodNames = ImmutableMap.builder();
+            final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators =
+                    ImmutableMap.builder();
 
             for (Entry entry : entries) {
                 final ServerServiceDefinition service = entry.service();
@@ -149,28 +186,76 @@ final class HandlerRegistry {
                 services.put(path, service);
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 if (methodDescriptor == null) {
-                    for (ServerMethodDefinition<?, ?> method : service.getMethods()) {
-                        final MethodDescriptor<?, ?> methodDescriptor0 = method.getMethodDescriptor();
-                        final String fullMethodName = methodDescriptor0.getFullMethodName();
-                        final String simpleMethodName = extractMethodName(fullMethodName);
-                        methods.put(path + '/' + simpleMethodName, method);
-                        simpleMethodNames.put(methodDescriptor0, simpleMethodName);
+                    final Class<?> type = entry.type();
+                    final Map<String, Method> publicMethods = new HashMap<>();
+                    if (type != null) {
+                        for (Method method : InternalReflectionUtils.getAllSortedMethods(
+                                type, withModifier(Modifier.PUBLIC))) {
+                            final String methodName = method.getName();
+                            if (!publicMethods.containsKey(methodName)) {
+                                publicMethods.put(methodName, method);
+                            }
+                        }
+                    }
+
+                    for (ServerMethodDefinition<?, ?> methodDefinition : service.getMethods()) {
+                        final MethodDescriptor<?, ?> methodDescriptor0 = methodDefinition.getMethodDescriptor();
+                        final String bareMethodName = methodDescriptor0.getBareMethodName();
+                        assert bareMethodName != null;
+                        final String pathWithMethod = path + '/' + bareMethodName;
+                        methods.put(pathWithMethod, methodDefinition);
+                        methodsByRoute.put(Route.builder().exact('/' + pathWithMethod).build(),
+                                           methodDefinition);
+                        bareMethodNames.put(methodDescriptor0, bareMethodName);
+
+                        final String methodName = methodNameConverter.convert(bareMethodName);
+                        final Method method = publicMethods.get(methodName);
+                        if (method != null) {
+                            assert type != null;
+                            final List<DecoratorAndOrder> decoratorAndOrders =
+                                    DecoratorAnnotationUtil.collectDecorators(type, method);
+                            if (!decoratorAndOrders.isEmpty()) {
+                                decorators.put(methodDefinition, decoratorAndOrders);
+                            }
+                        }
                     }
                 } else {
-                    final ServerMethodDefinition<?, ?> method =
+                    final ServerMethodDefinition<?, ?> methodDefinition =
                             service.getMethods().stream()
                                    .filter(method0 -> method0.getMethodDescriptor() == methodDescriptor)
                                    .findFirst()
                                    .orElseThrow(() -> new IllegalArgumentException(
                                            "Failed to retrieve " + methodDescriptor + " in " + service));
-                    methods.put(path, method);
-                    final MethodDescriptor<?, ?> methodDescriptor0 = method.getMethodDescriptor();
-                    final String fullMethodName = methodDescriptor0.getFullMethodName();
-                    simpleMethodNames.put(methodDescriptor0, extractMethodName(fullMethodName));
+                    methods.put(path, methodDefinition);
+                    methodsByRoute.put(Route.builder().exact('/' + path).build(), methodDefinition);
+                    final MethodDescriptor<?, ?> methodDescriptor0 = methodDefinition.getMethodDescriptor();
+                    final String bareMethodName = methodDescriptor0.getBareMethodName();
+                    assert bareMethodName != null;
+                    bareMethodNames.put(methodDescriptor0, bareMethodName);
+                    final Class<?> type = entry.type();
+                    if (type != null) {
+                        final String methodName = methodNameConverter.convert(bareMethodName);
+                        final Optional<Method> method =
+                                InternalReflectionUtils.getAllSortedMethods(type, withModifier(Modifier.PUBLIC))
+                                                       .stream()
+                                                       .filter(m -> methodName.equals(m.getName()))
+                                                       .findFirst();
+                        if (method.isPresent()) {
+                            final List<DecoratorAndOrder> decoratorAndOrders =
+                                    DecoratorAnnotationUtil.collectDecorators(type, method.get());
+                            if (!decoratorAndOrders.isEmpty()) {
+                                decorators.put(methodDefinition, decoratorAndOrders);
+                            }
+                        }
+                    }
                 }
             }
-            return new HandlerRegistry(ImmutableList.copyOf(services.values()), ImmutableMap.copyOf(methods),
-                                       ImmutableMap.copyOf(simpleMethodNames));
+            final Map<String, ServerServiceDefinition> services0 = services.build();
+            return new HandlerRegistry(ImmutableList.copyOf(services0.values()),
+                                       methods.build(),
+                                       methodsByRoute.build(),
+                                       bareMethodNames.buildKeepingLast(),
+                                       decorators.build());
         }
     }
 
@@ -179,11 +264,15 @@ final class HandlerRegistry {
         private final ServerServiceDefinition service;
         @Nullable
         private final MethodDescriptor<?, ?> method;
+        @Nullable
+        private final Class<?> type;
 
-        Entry(String path, ServerServiceDefinition service, @Nullable MethodDescriptor<?, ?> method) {
+        Entry(String path, ServerServiceDefinition service,
+              @Nullable MethodDescriptor<?, ?> method, @Nullable Class<?> type) {
             this.path = path;
             this.service = service;
             this.method = method;
+            this.type = type;
         }
 
         String path() {
@@ -197,6 +286,11 @@ final class HandlerRegistry {
         @Nullable
         MethodDescriptor<?, ?> method() {
             return method;
+        }
+
+        @Nullable
+        Class<?> type() {
+            return type;
         }
     }
 }

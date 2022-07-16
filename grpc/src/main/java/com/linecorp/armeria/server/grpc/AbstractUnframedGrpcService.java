@@ -22,6 +22,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -39,6 +40,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
@@ -48,6 +50,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -81,15 +84,15 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
-        final MediaType contentType = headers.contentType();
+    public ExchangeType exchangeType(RoutingContext routingContext) {
+        final MediaType contentType = routingContext.headers().contentType();
         if (contentType == null) {
             return ExchangeType.BIDI_STREAMING;
         }
 
         for (SerializationFormat format : GrpcSerializationFormats.values()) {
             if (format.isAccepted(contentType)) {
-                return ((HttpService) unwrap()).exchangeType(headers, route);
+                return ((HttpService) unwrap()).exchangeType(routingContext);
             }
         }
 
@@ -111,6 +114,11 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
     }
 
     @Override
+    public Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute() {
+        return delegate.methodsByRoute();
+    }
+
+    @Override
     public List<ServerServiceDefinition> services() {
         return delegate.services();
     }
@@ -125,7 +133,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             ServiceRequestContext ctx,
             RequestHeaders grpcHeaders,
             HttpData content,
-            CompletableFuture<HttpResponse> res) {
+            CompletableFuture<HttpResponse> res,
+            @Nullable Function<HttpData, HttpData> responseBodyConverter) {
         final HttpRequest grpcRequest;
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                 ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE, false)) {
@@ -156,7 +165,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                         if (t != null) {
                             res.completeExceptionally(t);
                         } else {
-                            deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler);
+                            deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
+                                              responseBodyConverter);
                         }
                     }
                     return null;
@@ -167,7 +177,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
     static void deframeAndRespond(ServiceRequestContext ctx,
                                   AggregatedHttpResponse grpcResponse,
                                   CompletableFuture<HttpResponse> res,
-                                  UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+                                  UnframedGrpcErrorHandler unframedGrpcErrorHandler,
+                                  @Nullable Function<HttpData, HttpData> responseBodyConverter) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
@@ -202,12 +213,13 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                 // Max outbound message size is handled by the GrpcService, so we don't need to set it here.
                 Integer.MAX_VALUE);
         grpcResponse.toHttpResponse().decode(deframer, ctx.alloc())
-                    .subscribe(singleSubscriber(unframedHeaders, res), ctx.eventLoop(),
+                    .subscribe(singleSubscriber(unframedHeaders, res, responseBodyConverter), ctx.eventLoop(),
                                SubscriptionOption.WITH_POOLED_OBJECTS);
     }
 
-    static Subscriber<DeframedMessage> singleSubscriber(ResponseHeadersBuilder unframedHeaders,
-                                                        CompletableFuture<HttpResponse> res) {
+    static Subscriber<DeframedMessage> singleSubscriber(
+            ResponseHeadersBuilder unframedHeaders, CompletableFuture<HttpResponse> res,
+            @Nullable Function<HttpData, HttpData> responseBodyConverter) {
         return new Subscriber<DeframedMessage>() {
 
             @Override
@@ -218,7 +230,10 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             @Override
             public void onNext(DeframedMessage message) {
                 // We know that we don't support compression, so this is always a ByteBuf.
-                final HttpData unframedContent = HttpData.wrap(message.buf()).withEndOfStream();
+                HttpData unframedContent = HttpData.wrap(message.buf());
+                if (responseBodyConverter != null) {
+                    unframedContent = responseBodyConverter.apply(unframedContent);
+                }
                 unframedHeaders.contentLength(unframedContent.length());
                 res.complete(HttpResponse.of(unframedHeaders.build(), unframedContent));
             }

@@ -495,9 +495,6 @@ public final class SystemInfo {
 
         private static boolean isPreferredAddress(InetAddress address) {
             final Predicate<InetAddress> predicates = Flags.preferredIpV4Addresses();
-            if (predicates == null) {
-                return true;
-            }
             return predicates.test(address);
         }
     }

@@ -34,6 +34,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -44,6 +45,7 @@ import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
@@ -161,11 +163,11 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     private volatile ScheduledFuture<?> scheduledFuture;
     private volatile boolean closed;
 
-    EurekaEndpointGroup(EndpointSelectionStrategy selectionStrategy,
-                        WebClient webClient, long registryFetchIntervalMillis, @Nullable String appName,
-                        @Nullable String instanceId, @Nullable String vipAddress,
+    EurekaEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
+                        long selectionTimeoutMillis, WebClient webClient, long registryFetchIntervalMillis,
+                        @Nullable String appName, @Nullable String instanceId, @Nullable String vipAddress,
                         @Nullable String secureVipAddress, @Nullable List<String> regions) {
-        super(selectionStrategy);
+        super(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis);
         this.webClient = webClient;
         this.registryFetchIntervalMillis = registryFetchIntervalMillis;
 
@@ -181,16 +183,18 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void fetchRegistry() {
+        if (closed) {
+            return;
+        }
         final HttpResponse response;
         final ClientRequestContext ctx;
-        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-            response = webClient.execute(requestHeaders);
-            ctx = captor.get();
-        }
-
-        final EventLoop eventLoop = ctx.eventLoop().withoutContext();
-        response.aggregateWithPooledObjects(eventLoop, ctx.alloc()).handle((aggregatedRes, cause) -> {
-            try (HttpData content = aggregatedRes.content()) {
+        try {
+            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+                response = webClient.execute(requestHeaders);
+                ctx = captor.get();
+            }
+            final EventLoop eventLoop = ctx.eventLoop().withoutContext();
+            response.aggregateWithPooledObjects(eventLoop, ctx.alloc()).handle((aggregatedRes, cause) -> {
                 if (closed) {
                     return null;
                 }
@@ -198,28 +202,44 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                     logger.warn("Unexpected exception while fetching the registry from: {}." +
                                 " (requestHeaders: {})", webClient.uri(), requestHeaders, cause);
                 } else {
-                    final HttpStatus status = aggregatedRes.status();
-                    if (!status.isSuccess()) {
-                        logger.warn("Unexpected response from: {}. (status: {}, content: {}, " +
-                                    "requestHeaders: {})", webClient.uri(), status,
-                                    aggregatedRes.contentUtf8(), requestHeaders);
-                    } else {
-                        try {
-                            final List<Endpoint> endpoints = responseConverter.apply(content.array());
-                            setEndpoints(endpoints);
-                        } catch (Exception e) {
-                            logger.warn("Unexpected exception while parsing a response from: {}. " +
-                                        "(content: {}, responseConverter: {}, requestHeaders: {})",
-                                        webClient.uri(), content.toStringUtf8(),
-                                        responseConverter, requestHeaders, e);
+                    try (HttpData content = aggregatedRes.content()) {
+                        final HttpStatus status = aggregatedRes.status();
+                        if (!status.isSuccess()) {
+                            logger.warn("Unexpected response from: {}. (status: {}, content: {}, " +
+                                        "requestHeaders: {})", webClient.uri(), status,
+                                        aggregatedRes.contentUtf8(), requestHeaders);
+                        } else {
+                            try {
+                                final List<Endpoint> endpoints = responseConverter.apply(content.array());
+                                setEndpoints(endpoints);
+                            } catch (Exception e) {
+                                logger.warn("Unexpected exception while parsing a response from: {}. " +
+                                            "(content: {}, responseConverter: {}, requestHeaders: {})",
+                                            webClient.uri(), content.toStringUtf8(),
+                                            responseConverter, requestHeaders, e);
+                            }
                         }
                     }
                 }
-            }
-            scheduledFuture = eventLoop.schedule(this::fetchRegistry,
-                                                 registryFetchIntervalMillis, TimeUnit.MILLISECONDS);
-            return null;
-        });
+                scheduleNextFetch(eventLoop);
+                return null;
+            });
+        } catch (Exception e) {
+            logger.warn("Unexpected exception while fetching the registry from: {}." +
+                        " (requestHeaders: {})", webClient.uri(), requestHeaders, e);
+            scheduleNextFetch(CommonPools.workerGroup().next());
+        }
+    }
+
+    private void scheduleNextFetch(EventLoop executorService) {
+        scheduledFuture = executorService.schedule(this::fetchRegistry,
+                                                   registryFetchIntervalMillis, TimeUnit.MILLISECONDS);
+    }
+
+    @VisibleForTesting
+    @Nullable
+    ScheduledFuture<?> scheduledFuture() {
+        return scheduledFuture;
     }
 
     @Override

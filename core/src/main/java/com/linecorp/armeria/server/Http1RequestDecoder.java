@@ -29,6 +29,7 @@ import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequestWriter;
@@ -235,43 +236,42 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                         return;
                     }
 
+                    final EventLoop eventLoop = ctx.channel().eventLoop();
+                    final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
+
                     // Close the request early when it is certain there will be neither content nor trailers.
                     final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
-                    final Routed<ServiceConfig> routed;
                     if (routingCtx.status().routeMustExist()) {
                         try {
                             // Find the service that matches the path.
-                            routed = routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                            final Routed<ServiceConfig> routed =
+                                    routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                            assert routed.isPresent();
+                            final ServiceConfig serviceConfig = routingCtx.result().value();
+                            if (serviceConfig.service().as(WebSocketService.class) != null &&
+                                isHttp1WebSocketUpgradeRequest(headers)) {
+                                final StreamingDecodedHttpRequest request =
+                                        new StreamingDecodedHttpRequest(eventLoop, id, 1, headers, keepAlive,
+                                                                        inboundTrafficController,
+                                                                        serviceConfig.maxRequestLength(),
+                                                                        routingCtx,
+                                                                        ExchangeType.BIDI_STREAMING);
+                                this.req = request;
+                                webSocketUpgradeContext.setLastWebSocketUpgradeRequestId(id);
+                                WebSocketUtil.setWebSocketInboundStream(ctx.channel(), request);
+                                ctx.fireChannelRead(request);
+                                return;
+                            }
                         } catch (Throwable cause) {
                             logger.warn("{} Unexpected exception: {}", ctx.channel(), headers, cause);
                             fail(id, headers, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
                             return;
                         }
-                        assert routed.isPresent();
-                    } else {
-                        routed = null;
                     }
 
-                    final EventLoop eventLoop = ctx.channel().eventLoop();
-                    final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
                     final boolean endOfStream = contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq);
-                    if (routed != null && routed.value().service().as(WebSocketService.class) != null &&
-                        isHttp1WebSocketUpgradeRequest(headers)) {
-                        final StreamingDecodedHttpRequest request =
-                                new StreamingDecodedHttpRequest(eventLoop, id, 1, headers, keepAlive,
-                                                                inboundTrafficController,
-                                                                routed.value().maxRequestLength(),
-                                                                routingCtx, routed);
-                        this.req = request;
-                        webSocketUpgradeContext.setLastWebSocketUpgradeRequestId(id);
-                        WebSocketUtil.setWebSocketInboundStream(ctx.channel(), request);
-                        ctx.fireChannelRead(request);
-                        return;
-                    }
-
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
-                                                           keepAlive, inboundTrafficController, routingCtx,
-                                                           routed);
+                                                           keepAlive, inboundTrafficController, routingCtx);
 
                     // An aggregating request will be fired after all objects are collected.
                     if (!req.isAggregated()) {

@@ -1,0 +1,163 @@
+---
+date: 2022-07-14
+---
+
+# Armeria Newsletter vol. 4
+
+<video class="hideOnReducedMotion" src="../../images/armeria.m4v" preload="none" autoplay muted loop style="width: 282px; height: 112px;">
+  <img src="../../images/armeria.gif" loading="lazy" width="282" height="112" />
+</video>
+
+## From the devs
+
+<div class="noBullet">
+
+- ✨ We've released several new versions since our last newsletter with a bunch of new exciting features!
+  - [1.17.0](https://armeria.dev/release-notes/1.17.0/)
+    - Easier way to send and receive RESTful APIs
+    - Ability to limit the maximum length of Thrift messages
+    - Injecting dependencies in annotations
+    - Support for Kotlin nullable type (`?`) in annotated services
+  - [1.16.0](https://armeria.dev/release-notes/1.16.0/)
+    - New metrics for TLS handshake results
+    - Handling <type://Decorator> annotation with <type://GrpcService> for your gRPC stubs
+    - Programmatic <type://Flags> configuration via Java SPI
+  - [1.15.0](https://armeria.dev/release-notes/1.15.0/)
+    - Support for gRPC health check protocol
+    - Multipart file uploads in annotated services
+    - GraphQL support in <type://DocService>
+    - Refactored DNS resolver cache with higher hit ratio and reduced traffic
+    - New metrics that help you get alerts before your TLS certificates are expired
+  - [1.14.0](https://armeria.dev/release-notes/1.14.0/)
+    - Experimental support for Scala 3
+    - Fluent conversion of <type://HttpResponse> into a desired type using <type://WebClient>
+    - Various build options for gRPC using <type://GrpcClientBuilder>
+
+</div>
+<div class="noBullet">
+
+- 👂 Armeria team is hosting [bi-weekly virtual office hours](https://armeria.dev/community/office-hours/).
+  - It was great talking with all of you through the video chat. We hope we can see you again in the near future. :)
+
+</div>
+
+## From the community
+
+<div class="noBullet">
+
+- 🎓 Try out this guided [tutorial](https://armeria.dev/tutorials/rest/blog) for REST Service! This super friendly and simple tutorial will guide you to make a blog service, with which you can create, read, update and delete blog posts. In particular, you'll be using these Armeria features:
+  - Service annotations
+  - Request converter
+  - Parameter injection
+  - Exception handler
+  - Blocking task executor
+- 🦾 MSA(Microservices Architecture): Harder, Better, Faster, Stronger
+  - In the session, @cnabro introduces how [Series On](https://serieson.naver.com/) migrated their monoliths into microservices using Armeria, gRPC, and GraphQL. He also mentions about how they monitored microservices using [Zipkin](https://zipkin.io/) and [Elasticsearch](https://www.elastic.co/).
+  - Here are the [Video](https://youtu.be/1TsGYR1dves) and [Slides](https://speakerdeck.com/line_devday2021/msa-microservices-architecture-harder-better-faster-stronger) (also providing [Korean](https://youtu.be/95L-_82N1vg) and [Japanese](https://youtu.be/pXIdcgchvSU))
+
+</div>
+
+## We need your comments
+
+<div class="noBullet">
+
+- 🤔 Your opinion means a lot to us. Please let us know what you think about these proposals:
+  - #4289 Supporting Spring Cloud Gateway integration(also considering [GatewayAutoConfiguration](https://github.com/spring-cloud/spring-cloud-gateway/blob/main/spring-cloud-gateway-server/src/main/java/org/springframework/cloud/gateway/config/GatewayAutoConfiguration.java), [HttpClientFactory](https://github.com/spring-cloud/spring-cloud-gateway/blob/main/spring-cloud-gateway-server/src/main/java/org/springframework/cloud/gateway/config/HttpClientFactory.java), and [HttpClient](https://github.com/reactor/reactor-netty/blob/main/reactor-netty-http/src/main/java/reactor/netty/http/client/HttpClient.java#L101))
+  - #4286 Changing the insertion order of <type://ExceptionHandlerFunction>
+  - #3820 Providing a way to enable gRPC reflection service and making it enabled by default
+
+</div>
+
+## Good first issues
+
+<div class="noBullet">
+
+🔰 Want to contribute but not sure where to start from? Try one of these:
+  - #4237 Support for request scoped DataLoader for GraphQL-Java
+  ```java
+  class GraphqlServiceBuilder {
+      public GraphqlServiceBuilder dataLoaderRegistry(
+        Function<ServiceRequestContext, DataLoaderRegistry>
+        dataLoaderRegistrySupplier) {
+           // This method will be mutually exclusive
+           // with configureDataLoaderRegistry(...)
+      }
+  }
+  ```
+  - #4347 Show the full stack trace of <type://CompositeException> when the system property `verboseExceptions` is `true`
+
+</div>
+
+## Stay tuned
+
+Sign up for our newsletters to keep up-to-date with new releases and useful tips!
+
+<div style="max-width: 320px; margin-top: 0.5rem;">
+  <Mailchimp />
+</div>
+
+## Thank you!
+
+<ThankYou
+  message={() => <p>Since our last newsletter, we received awesome contributions from the following contributors:</p>}
+  usernames={[
+    'aboivin',
+    'ahnyujin',
+    'alexc-db',
+    'AmosDoan',
+    'AngerM',
+    'anuraaga',
+    'arhont375',
+    'be-hase',
+    'chris-ryan-square',
+    'clatisus',
+    'devdynam0507',
+    'di-seo',
+    'Dogacel',
+    'doppany',
+    'eisig',
+    'freevie',
+    'ghkim3221',
+    'gurudatta-carbon',
+    'heowc',
+    'hyangtack',
+    'icepeppermint',
+    'ikhoon',
+    'imasahiro',
+    'injae-kim',
+    'Jimexist',
+    'jrhee17',
+    'Jsing',
+    'jupiny',
+    'KarboniteKream',
+    'kezhenxu94',
+    'klurpicolo',
+    'kojilin',
+    'ks-yim',
+    'lan17',
+    'litols',
+    'LiYing2010',
+    'lucasamoroso',
+    'mauhiz',
+    'minwoox',
+    'natsumehu',
+    'ngyukman',
+    'nvidyala',
+    'pine',
+    'policeman-kh',
+    'r3mariano',
+    'sleeplesslord',
+    'syleeeee',
+    'ta7uw',
+    'techno',
+    'TheWeaVer',
+    'timothy-xflowpay',
+    'tobias-',
+    'tokuhirom',
+    'trustin',
+    'wasifaleem',
+    'woohhan',
+    'wooseongshin',
+    'wooyeong',
+  ]}
+/>

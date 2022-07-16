@@ -21,12 +21,15 @@ import static java.util.Objects.requireNonNull;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.retry.RetryingClient;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AsyncCloseable;
 import com.linecorp.armeria.common.util.Listenable;
 import com.linecorp.armeria.internal.client.endpoint.StaticEndpointGroup;
@@ -142,6 +145,18 @@ public interface EndpointGroup extends Listenable<List<Endpoint>>, EndpointSelec
      */
     @Override
     Endpoint selectNow(ClientRequestContext ctx);
+
+    /**
+     * Returns the timeout to wait until a successful {@link Endpoint} selection.
+     * If an {@link Endpoint} is not resolved by this {@link EndpointGroup} within the timeout, a null value
+     * will be returned by {@link EndpointSelector#select(ClientRequestContext, ScheduledExecutorService)}.
+     * The null {@link Endpoint} may cause a client request end with
+     * an {@link EndpointSelectionTimeoutException} if no {@link RetryingClient} is configured.
+     *
+     * <p>{@code 0} means {@link #selectNow(ClientRequestContext)} should always return an {@link Endpoint}.
+     */
+    @UnstableApi
+    long selectionTimeoutMillis();
 
     /**
      * Returns a {@link CompletableFuture} which is completed when the initial {@link Endpoint}s are ready.

@@ -18,12 +18,14 @@ package com.linecorp.armeria.internal.server.grpc;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.internal.server.grpc.GrpcMethodUtil.extractMethodName;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.endpointInfoBuilder;
 import static java.util.Objects.requireNonNull;
 
 import java.io.UncheckedIOException;
 import java.util.Collection;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -76,6 +78,7 @@ import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.grpc.GrpcService;
 
+import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.protobuf.ProtoFileDescriptorSupplier;
 
@@ -143,81 +146,117 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(filter, "filter");
 
+        final Set<GrpcService> addedService = new HashSet<>();
         final ImmutableList.Builder<HttpEndpoint> httpEndpoints = ImmutableList.builder();
         final ServiceInfosBuilder serviceInfosBuilder = new ServiceInfosBuilder();
         for (ServiceConfig serviceConfig : serviceConfigs) {
             final GrpcService grpcService = serviceConfig.service().as(GrpcService.class);
             assert grpcService != null;
 
+            if (addedService.add(grpcService)) {
+                addServiceDescriptor(serviceInfosBuilder, grpcService);
+            }
+
             if (grpcService instanceof HttpEndpointSupport) {
+                // grpcService is a HttpJsonTranscodingService.
+                // There are two routes for a method in HttpJsonTranscodingService:
+                // - The HTTP route is added below using the spec.
+                // - The auto generated route(e.g. /package.name/MethodName) is added using EndpointInfo.
                 final HttpEndpointSpecification spec =
-                        ((HttpEndpointSupport) grpcService).httpEndpointSpecification(serviceConfig.route());
-                if (spec != null && filter.test(NAME, spec.serviceName(), spec.methodName())) {
-                    httpEndpoints.add(new HttpEndpoint(serviceConfig, spec));
+                        ((HttpEndpointSupport) grpcService).httpEndpointSpecification(
+                                serviceConfig.mappedRoute()); // Use mappedRoute to find the specification.
+                if (spec != null) {
+                    if (filter.test(NAME, spec.serviceName(), spec.methodName())) {
+                        httpEndpoints.add(new HttpEndpoint(serviceConfig,
+                                                           // Use route which has the full path.
+                                                           spec.withRoute(serviceConfig.route())));
+                    }
+                    continue;
+                } else {
+                    // The current route is one of the routes from FramedGrpcService.routes()
+                    // so we add it below.
                 }
             }
 
-            final ImmutableSet.Builder<MediaType> supportedMediaTypesBuilder = ImmutableSet.builder();
-            supportedMediaTypesBuilder.addAll(grpcService.supportedSerializationFormats()
-                                                         .stream()
-                                                         .map(SerializationFormat::mediaType)::iterator);
-
-            if (!grpcService.isFramed()) {
-                if (grpcService.supportedSerializationFormats().contains(GrpcSerializationFormats.PROTO)) {
-                    // Normal clients of a GrpcService are not required to set a protocol when using unframed
-                    // requests but we set it here for clarity in DocService, where there may be multiple
-                    // services with similar mime types but different protocols.
-                    supportedMediaTypesBuilder.add(MediaType.PROTOBUF.withParameter("protocol", "gRPC"));
-                }
-                if (grpcService.supportedSerializationFormats().contains(GrpcSerializationFormats.JSON)) {
-                    supportedMediaTypesBuilder.add(MediaType.JSON_UTF_8.withParameter("protocol", "gRPC"));
-                }
-            }
-            final Set<MediaType> supportedMediaTypes = supportedMediaTypesBuilder.build();
-
-            // Find the ServiceDescriptors of all services and put them all into the 'map'
-            // after wrapping with ServiceEntryBuilder.
-            grpcService.services().stream()
-                       .map(ServerServiceDefinition::getServiceDescriptor)
-                       .filter(Objects::nonNull)
-                       .filter(desc -> desc.getSchemaDescriptor() instanceof ProtoFileDescriptorSupplier)
-                       .forEach(desc -> {
-                           final String serviceName = desc.getName();
-
-                           final ProtoFileDescriptorSupplier fileDescSupplier =
-                                   (ProtoFileDescriptorSupplier) desc.getSchemaDescriptor();
-                           final FileDescriptor fileDesc = fileDescSupplier.getFileDescriptor();
-                           final ServiceDescriptor serviceDesc =
-                                   fileDesc.getServices().stream()
-                                           .filter(sd -> sd.getFullName().equals(serviceName))
-                                           .findFirst()
-                                           .orElseThrow(IllegalStateException::new);
-                           serviceInfosBuilder.addService(serviceDesc);
-                       });
-
-            final String pathPrefix;
             final Route route = serviceConfig.route();
+            final Set<MediaType> supportedMediaTypes = supportedMediaTypes(grpcService);
             if (route.pathType() == RoutePathType.PREFIX) {
-                pathPrefix = route.paths().get(0);
-            } else {
-                pathPrefix = "/";
-            }
+                // The route is PREFIX type when the grpcService is set via route builder:
+                // - serverBuilder.route().pathPrefix("/prefix")...build(grpcService);
+                // So we add endpoints of all methods in the grpcService with the pathPrefix.
+                final String pathPrefix = route.paths().get(0);
+                grpcService.methodsByRoute().forEach((methodRoute, method) -> {
+                    final EndpointInfo endpointInfo =
+                            EndpointInfo.builder(serviceConfig.virtualHost().hostnamePattern(),
+                                                 concatPaths(pathPrefix, methodRoute.patternString()))
+                                        .availableMimeTypes(supportedMediaTypes)
+                                        .build();
 
-            grpcService.methods().forEach((path, method) -> {
+                    serviceInfosBuilder.addEndpoint(method.getMethodDescriptor(), endpointInfo);
+                });
+            } else if (route.pathType() == RoutePathType.EXACT) {
+                // The route is EXACT type when the grpcService is set via:
+                // - serverBuilder.service(grpcService);
+                // - serverBuilder.serviceUnder("/prefix", grpcService);
+                final ServerMethodDefinition<?, ?> methodDefinition =
+                        // Use mappedRoute to find the methodDefinition.
+                        grpcService.methodsByRoute().get(serviceConfig.mappedRoute());
+                assert methodDefinition != null;
                 final EndpointInfo endpointInfo =
                         EndpointInfo.builder(serviceConfig.virtualHost().hostnamePattern(),
-                                             pathPrefix + path)
+                                             route.patternString())
                                     .availableMimeTypes(supportedMediaTypes)
                                     .build();
-
-                serviceInfosBuilder.addEndpoint(method.getMethodDescriptor(), endpointInfo);
-            });
+                serviceInfosBuilder.addEndpoint(methodDefinition.getMethodDescriptor(), endpointInfo);
+            } else {
+                // Should never reach here.
+                throw new Error();
+            }
         }
 
         return generate(ImmutableList.<ServiceInfo>builder()
                                      .addAll(serviceInfosBuilder.build(filter))
                                      .addAll(buildHttpServiceInfos(httpEndpoints.build()))
                                      .build());
+    }
+
+    private static void addServiceDescriptor(ServiceInfosBuilder serviceInfosBuilder, GrpcService grpcService) {
+        grpcService.services().stream()
+                   .map(ServerServiceDefinition::getServiceDescriptor)
+                   .filter(Objects::nonNull)
+                   .filter(desc -> desc.getSchemaDescriptor() instanceof ProtoFileDescriptorSupplier)
+                   .forEach(desc -> {
+                       final String serviceName = desc.getName();
+                       final ProtoFileDescriptorSupplier fileDescSupplier =
+                               (ProtoFileDescriptorSupplier) desc.getSchemaDescriptor();
+                       final FileDescriptor fileDesc = fileDescSupplier.getFileDescriptor();
+                       final ServiceDescriptor serviceDesc =
+                               fileDesc.getServices().stream()
+                                       .filter(sd -> sd.getFullName().equals(serviceName))
+                                       .findFirst()
+                                       .orElseThrow(IllegalStateException::new);
+                       serviceInfosBuilder.addService(serviceDesc);
+                   });
+    }
+
+    private static Set<MediaType> supportedMediaTypes(GrpcService grpcService) {
+        final ImmutableSet.Builder<MediaType> supportedMediaTypesBuilder = ImmutableSet.builder();
+        supportedMediaTypesBuilder.addAll(grpcService.supportedSerializationFormats()
+                                                     .stream()
+                                                     .map(SerializationFormat::mediaType)::iterator);
+
+        if (!grpcService.isFramed()) {
+            if (grpcService.supportedSerializationFormats().contains(GrpcSerializationFormats.PROTO)) {
+                // Normal clients of a GrpcService are not required to set a protocol when using unframed
+                // requests but we set it here for clarity in DocService, where there may be multiple
+                // services with similar mime types but different protocols.
+                supportedMediaTypesBuilder.add(MediaType.PROTOBUF.withParameter("protocol", "gRPC"));
+            }
+            if (grpcService.supportedSerializationFormats().contains(GrpcSerializationFormats.JSON)) {
+                supportedMediaTypesBuilder.add(MediaType.JSON_UTF_8.withParameter("protocol", "gRPC"));
+            }
+        }
+        return supportedMediaTypesBuilder.build();
     }
 
     @VisibleForTesting
@@ -291,13 +330,14 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
             });
 
             final List<EndpointInfo> endpointInfos =
-                    sortedEndpoints.stream().map(httpEndpoint -> EndpointInfo
-                            .builder(httpEndpoint.config().virtualHost().hostnamePattern(),
-                                     httpEndpoint.spec().route().patternString())
-                            // DocService client works only if the media type equals to
-                            // 'application/json; charset=utf-8'.
-                            .availableMimeTypes(MediaType.JSON_UTF_8)
-                            .build()).collect(toImmutableList());
+                    sortedEndpoints.stream()
+                                   .map(httpEndpoint -> endpointInfoBuilder(
+                                           httpEndpoint.spec().route(),
+                                           httpEndpoint.config().virtualHost().hostnamePattern())
+                                           // DocService client works only if the media type equals to
+                                           // 'application/json; charset=utf-8'.
+                                           .availableMimeTypes(MediaType.JSON_UTF_8)
+                                           .build()).collect(toImmutableList());
 
             final List<String> examplePaths =
                     sortedEndpoints.stream().map(httpEndpoint -> httpEndpoint.spec().route().patternString())
@@ -561,7 +601,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
             assert service != null;
 
             final MethodDescriptor method =
-                    service.findMethodByName(extractMethodName(grpcMethod.getFullMethodName()));
+                    service.findMethodByName(grpcMethod.getBareMethodName());
             assert method != null;
 
             methods.put(service, method);

@@ -40,7 +40,7 @@ import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 public final class ByteBufBinaryData implements BinaryData, ResourceLeakHint {
 
     private final ByteBuf buf;
-    private final Boolean pooled;
+    private final boolean pooled;
     private boolean closed;
     @Nullable
     private byte[] array;

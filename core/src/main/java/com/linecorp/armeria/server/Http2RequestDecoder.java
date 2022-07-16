@@ -159,25 +159,23 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
 
             final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
-            final Routed<ServiceConfig> routed;
             if (routingCtx.status().routeMustExist()) {
                 try {
                     // Find the service that matches the path.
-                    routed = routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                    final Routed<ServiceConfig> routed =
+                            routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                    assert routed.isPresent();
                 } catch (Throwable cause) {
                     logger.warn("{} Unexpected exception: {}", ctx.channel(), headers, cause);
                     writeErrorResponse(streamId, headers, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
                     return;
                 }
-                assert routed.isPresent();
-            } else {
-                routed = null;
             }
 
             final int id = ++nextId;
             final EventLoop eventLoop = ctx.channel().eventLoop();
             req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, headers, true,
-                                        inboundTrafficController, routingCtx, routed);
+                                        inboundTrafficController, routingCtx);
             requests.put(streamId, req);
             // An aggregating request will be fired later after all objects are collected.
             if (!req.isAggregated()) {

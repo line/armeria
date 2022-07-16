@@ -23,6 +23,8 @@ import static org.mockito.Mockito.when;
 import org.assertj.core.util.Files;
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -35,11 +37,11 @@ class ServiceNamingTest {
     void fullTypeName_topClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), HealthCheckService.builder().build(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), HealthCheckService.builder().build(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(HealthCheckService.class.getName());
@@ -49,11 +51,11 @@ class ServiceNamingTest {
     void fullTypeName_nestedClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new NestedClass(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new NestedClass(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName)
@@ -64,11 +66,11 @@ class ServiceNamingTest {
     void fullTypeName_trimTrailingDollarSign() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getName() + "$TrailingDollarSign");
@@ -78,11 +80,11 @@ class ServiceNamingTest {
     void fullTypeName_trimTrailingDollarSignMany() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$$$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$$$(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getName() + "$TrailingDollarSign");
@@ -92,11 +94,11 @@ class ServiceNamingTest {
     void fullTypeName_trimTrailingDollarSignOnly() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new $$$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new $$$(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.fullTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getName());
@@ -106,11 +108,11 @@ class ServiceNamingTest {
     void simpleTypeName_topClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), HealthCheckService.builder().build(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), HealthCheckService.builder().build(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(HealthCheckService.class.getSimpleName());
@@ -120,11 +122,11 @@ class ServiceNamingTest {
     void simpleTypeName_nestedClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new NestedClass(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new NestedClass(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName)
@@ -135,11 +137,11 @@ class ServiceNamingTest {
     void simpleTypeName_trimTrailingDollarSign() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName() + "$TrailingDollarSign");
@@ -149,11 +151,11 @@ class ServiceNamingTest {
     void simpleTypeName_trimTrailingDollarSignMany() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$$$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$$$(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName() + "$TrailingDollarSign");
@@ -163,11 +165,11 @@ class ServiceNamingTest {
     void simpleTypeName_trimTrailingDollarSignOnly() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new $$$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new $$$(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.simpleTypeName().serviceName(ctx);
         assertThat(serviceName).isEqualTo(ServiceNamingTest.class.getSimpleName());
@@ -177,11 +179,11 @@ class ServiceNamingTest {
     void shorten_topClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), HealthCheckService.builder().build(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), HealthCheckService.builder().build(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName).isEqualTo("c.l.a.s.h." + HealthCheckService.class.getSimpleName());
@@ -191,11 +193,11 @@ class ServiceNamingTest {
     void shorten_nestedClass() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new NestedClass(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new NestedClass(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName).isEqualTo("c.l.a.s." + ServiceNamingTest.class.getSimpleName() + '$' +
@@ -206,11 +208,11 @@ class ServiceNamingTest {
     void shorten_trimTrailingDollarSign() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName)
@@ -221,11 +223,11 @@ class ServiceNamingTest {
     void shorten_trimTrailingDollarSignMany() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new TrailingDollarSign$$$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new TrailingDollarSign$$$(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName)
@@ -236,11 +238,11 @@ class ServiceNamingTest {
     void shorten_trimTrailingDollarSignOnly() {
         final ServiceRequestContext ctx = mock(ServiceRequestContext.class);
         final ServiceConfig config =
-                new ServiceConfig(Route.ofCatchAll(), new $$$(),
-                                  null, null, null, 0, 0, false, AccessLogWriter.common(), false,
-                                  CommonPools.blockingTaskExecutor(), true,
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), new $$$(),
+                                  null, null, ServiceNaming.fullTypeName(), 0, 0, false,
+                                  AccessLogWriter.common(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(),
-                                  Files.newTemporaryFolder().toPath());
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of());
         when(ctx.config()).thenReturn(config);
         final String serviceName = ServiceNaming.shorten().serviceName(ctx);
         assertThat(serviceName)

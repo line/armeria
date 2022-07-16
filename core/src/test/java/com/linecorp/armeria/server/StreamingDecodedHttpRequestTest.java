@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.ClassRule;
 import org.junit.Test;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -110,10 +111,12 @@ public class StreamingDecodedHttpRequestTest {
 
     private static StreamingDecodedHttpRequest decodedHttpRequest(RequestHeaders headers,
                                                                   ServiceRequestContext sctx) {
+
         final StreamingDecodedHttpRequest
                 request = new StreamingDecodedHttpRequest(sctx.eventLoop(), 1, 1, headers, true,
                                                           InboundTrafficController.disabled(),
-                                                          sctx.maxRequestLength(), null, null);
+                                                          sctx.maxRequestLength(), sctx.routingContext(),
+                                                          ExchangeType.BIDI_STREAMING);
         request.init(sctx);
         return request;
     }

@@ -17,9 +17,9 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.server.ServerBuilder.decorate;
 import static com.linecorp.armeria.server.ServerSslContextUtil.buildSslContext;
 import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
@@ -56,11 +56,13 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -97,6 +99,7 @@ public final class VirtualHostBuilder {
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
     private final List<ServiceConfigSetters> serviceConfigSetters = new ArrayList<>();
+    private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
 
     @Nullable
     private String defaultHostname;
@@ -128,12 +131,10 @@ public final class VirtualHostBuilder {
     private Boolean verboseResponses;
     @Nullable
     private AccessLogWriter accessLogWriter;
-    private boolean shutdownAccessLogWriterOnStop;
     @Nullable
     private AnnotatedServiceExtensions annotatedServiceExtensions;
     @Nullable
     private ScheduledExecutorService blockingTaskExecutor;
-    private boolean shutdownBlockingTaskExecutorOnStop;
     @Nullable
     private SuccessFunction successFunction;
     @Nullable
@@ -440,9 +441,41 @@ public final class VirtualHostBuilder {
 
     /**
      * Binds the specified {@link HttpService} under the specified directory.
+     * If the specified {@link HttpService} is an {@link HttpServiceWithRoutes}, the {@code pathPrefix} is added
+     * to each {@link Route} of {@link HttpServiceWithRoutes#routes()}. For example, the
+     * {@code serviceWithRoutes} in the following code will be bound to
+     * ({@code "/foo/bar"}) and ({@code "/foo/baz"}):
+     * <pre>{@code
+     * > HttpServiceWithRoutes serviceWithRoutes = new HttpServiceWithRoutes() {
+     * >     @Override
+     * >     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) { ... }
+     * >
+     * >     @Override
+     * >     public Set<Route> routes() {
+     * >         return Set.of(Route.builder().path("/bar").build(),
+     * >                       Route.builder().path("/baz").build());
+     * >     }
+     * > };
+     * >
+     * > Server.builder()
+     * >       .serviceUnder("/foo", serviceWithRoutes)
+     * >       .build();
+     * }</pre>
      */
     public VirtualHostBuilder serviceUnder(String pathPrefix, HttpService service) {
-        service(Route.builder().pathPrefix(pathPrefix).build(), service);
+        requireNonNull(pathPrefix, "pathPrefix");
+        requireNonNull(service, "service");
+        final HttpServiceWithRoutes serviceWithRoutes = service.as(HttpServiceWithRoutes.class);
+        if (serviceWithRoutes != null) {
+            serviceWithRoutes.routes().forEach(route -> {
+                final ServiceConfigBuilder serviceConfigBuilder =
+                        new ServiceConfigBuilder(route.withPrefix(pathPrefix), service);
+                serviceConfigBuilder.addMappedRoute(route);
+                addServiceConfigSetters(serviceConfigBuilder);
+            });
+        } else {
+            service(Route.builder().pathPrefix(pathPrefix).build(), service);
+        }
         return this;
     }
 
@@ -473,8 +506,7 @@ public final class VirtualHostBuilder {
     }
 
     /**
-     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
-     * of the default {@link VirtualHost}.
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s.
      *
      * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
@@ -486,21 +518,13 @@ public final class VirtualHostBuilder {
         requireNonNull(serviceWithRoutes.routes(), "serviceWithRoutes.routes()");
         requireNonNull(decorators, "decorators");
 
-        HttpService decorated = serviceWithRoutes;
-        for (Function<? super HttpService, ? extends HttpService> d : decorators) {
-            checkNotNull(d, "decorators contains null: %s", decorators);
-            decorated = d.apply(decorated);
-            checkNotNull(decorated, "A decorator returned null: %s", d);
-        }
-
-        final HttpService finalDecorated = decorated;
-        serviceWithRoutes.routes().forEach(route -> service(route, finalDecorated));
+        final HttpService decorated = decorate(serviceWithRoutes, decorators);
+        serviceWithRoutes.routes().forEach(route -> service(route, decorated));
         return this;
     }
 
     /**
-     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s
-     * of the default {@link VirtualHost}.
+     * Decorates and binds the specified {@link HttpServiceWithRoutes} at multiple {@link Route}s.
      *
      * @param serviceWithRoutes the {@link HttpServiceWithRoutes}.
      * @param decorators the decorator functions, which will be applied in the order specified.
@@ -893,8 +917,15 @@ public final class VirtualHostBuilder {
      * @param shutdownOnStop whether to shut down the {@link AccessLogWriter} when the {@link Server} stops
      */
     public VirtualHostBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
-        this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
-        shutdownAccessLogWriterOnStop = shutdownOnStop;
+        requireNonNull(accessLogWriter, "accessLogWriter");
+        if (this.accessLogWriter != null) {
+            this.accessLogWriter = this.accessLogWriter.andThen(accessLogWriter);
+        } else {
+            this.accessLogWriter = accessLogWriter;
+        }
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(accessLogWriter));
+        }
         return this;
     }
 
@@ -908,7 +939,9 @@ public final class VirtualHostBuilder {
     public VirtualHostBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
                                                    boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(blockingTaskExecutor));
+        }
         return this;
     }
 
@@ -979,7 +1012,7 @@ public final class VirtualHostBuilder {
      * Returns a newly-created {@link VirtualHost} based on the properties of this builder and the services
      * added to this builder.
      */
-    VirtualHost build(VirtualHostBuilder template) {
+    VirtualHost build(VirtualHostBuilder template, DependencyInjector dependencyInjector) {
         requireNonNull(template, "template");
 
         if (defaultHostname == null) {
@@ -1015,13 +1048,11 @@ public final class VirtualHostBuilder {
                 this.rejectedRouteHandler : template.rejectedRouteHandler;
 
         final AccessLogWriter accessLogWriter;
-        final boolean shutdownAccessLogWriterOnStop;
         if (this.accessLogWriter != null) {
             accessLogWriter = this.accessLogWriter;
-            shutdownAccessLogWriterOnStop = this.shutdownAccessLogWriterOnStop;
         } else {
-            accessLogWriter = template.accessLogWriter;
-            shutdownAccessLogWriterOnStop = template.shutdownAccessLogWriterOnStop;
+            accessLogWriter = template.accessLogWriter != null ?
+                              template.accessLogWriter : AccessLogWriter.disabled();
         }
 
         final Function<? super VirtualHost, ? extends Logger> accessLoggerMapper =
@@ -1033,13 +1064,10 @@ public final class VirtualHostBuilder {
                 annotatedServiceExtensions : template.annotatedServiceExtensions;
 
         final ScheduledExecutorService blockingTaskExecutor;
-        final boolean shutdownBlockingTaskExecutorOnStop;
         if (this.blockingTaskExecutor != null) {
             blockingTaskExecutor = this.blockingTaskExecutor;
-            shutdownBlockingTaskExecutorOnStop = this.shutdownBlockingTaskExecutorOnStop;
         } else {
             blockingTaskExecutor = template.blockingTaskExecutor;
-            shutdownBlockingTaskExecutorOnStop = template.shutdownBlockingTaskExecutorOnStop;
         }
 
         final SuccessFunction successFunction;
@@ -1054,7 +1082,6 @@ public final class VirtualHostBuilder {
                 this.multipartUploadsLocation : template.multipartUploadsLocation;
 
         assert rejectedRouteHandler != null;
-        assert accessLogWriter != null;
         assert accessLoggerMapper != null;
         assert extensions != null;
         assert blockingTaskExecutor != null;
@@ -1066,10 +1093,10 @@ public final class VirtualHostBuilder {
                 .flatMap(cfgSetters -> {
                     if (cfgSetters instanceof VirtualHostAnnotatedServiceBindingBuilder) {
                         return ((VirtualHostAnnotatedServiceBindingBuilder) cfgSetters)
-                                .buildServiceConfigBuilder(extensions).stream();
+                                .buildServiceConfigBuilder(extensions, dependencyInjector).stream();
                     } else if (cfgSetters instanceof AnnotatedServiceBindingBuilder) {
                         return ((AnnotatedServiceBindingBuilder) cfgSetters)
-                                .buildServiceConfigBuilder(extensions).stream();
+                                .buildServiceConfigBuilder(extensions, dependencyInjector).stream();
                     } else if (cfgSetters instanceof ServiceConfigBuilder) {
                         return Stream.of((ServiceConfigBuilder) cfgSetters);
                     } else {
@@ -1079,16 +1106,14 @@ public final class VirtualHostBuilder {
                     }
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
-                                            verboseResponses, accessLogWriter, shutdownAccessLogWriterOnStop,
-                                            blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop,
+                                            verboseResponses, accessLogWriter, blockingTaskExecutor,
                                             successFunction, multipartUploadsLocation);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
-                               accessLogWriter, shutdownAccessLogWriterOnStop, blockingTaskExecutor,
-                               shutdownBlockingTaskExecutorOnStop, successFunction,
+                               accessLogWriter, blockingTaskExecutor, successFunction,
                                multipartUploadsLocation);
 
         SslContext sslContext = null;
@@ -1152,13 +1177,16 @@ public final class VirtualHostBuilder {
                 checkState(sslContext.isServer(), "sslContextBuilder built a client SSL context.");
             }
 
+            final Builder<ShutdownSupport> builder = ImmutableList.builder();
+            builder.addAll(shutdownSupports);
+            builder.addAll(template.shutdownSupports);
+
             final VirtualHost virtualHost =
                     new VirtualHost(defaultHostname, hostnamePattern, port, sslContext,
                                     serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                     accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
                                     maxRequestLength, verboseResponses, accessLogWriter,
-                                    shutdownAccessLogWriterOnStop,
-                                    blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+                                    blockingTaskExecutor, builder.build());
 
             final Function<? super HttpService, ? extends HttpService> decorator =
                     getRouteDecoratingService(template);
@@ -1202,7 +1230,7 @@ public final class VirtualHostBuilder {
                           .add("maxRequestLength", maxRequestLength)
                           .add("verboseResponses", verboseResponses)
                           .add("accessLogWriter", accessLogWriter)
-                          .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
+                          .add("shutdownSupports", shutdownSupports)
                           .toString();
     }
 }

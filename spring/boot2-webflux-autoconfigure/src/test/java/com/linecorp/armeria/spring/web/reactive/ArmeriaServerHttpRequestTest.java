@@ -19,6 +19,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
@@ -83,6 +85,26 @@ class ArmeriaServerHttpRequestTest {
                     .verify();
 
         await().until(() -> httpRequest.whenComplete().isDone());
+    }
+
+    @Test
+    void springHeadersDoesNotHavePseudoHeaders() {
+        final HttpRequest httpRequest = HttpRequest.of(RequestHeaders.builder(HttpMethod.POST, "/")
+                                                                     .scheme("http")
+                                                                     .authority("127.0.0.1")
+                                                                     .build());
+        final ServiceRequestContext ctx = newRequestContext(httpRequest);
+        final ArmeriaServerHttpRequest req = request(ctx);
+        for (Entry<String, List<String>> header : req.getHeaders().entrySet()) {
+            assertThat(header.getKey()).doesNotStartWith(":");
+        }
+        // :authority header is converted to the HOST header.
+        assertThat(req.getHeaders().getFirst(HttpHeaderNames.HOST.toString())).isEqualTo("127.0.0.1");
+        final Object nativeRequest = req.getNativeRequest();
+        assertThat(nativeRequest).isInstanceOf(HttpRequest.class).isEqualTo(httpRequest);
+        assertThat(((HttpRequest) nativeRequest).headers().names())
+                .contains(HttpHeaderNames.METHOD, HttpHeaderNames.AUTHORITY,
+                          HttpHeaderNames.SCHEME, HttpHeaderNames.PATH);
     }
 
     @Test

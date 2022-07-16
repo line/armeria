@@ -50,7 +50,8 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
      * Returns a newly created {@link DnsTextEndpointGroup}.
      */
     public DnsTextEndpointGroup build() {
-        return new DnsTextEndpointGroup(selectionStrategy(), shouldAllowEmptyEndpoints(), buildResolver(),
+        return new DnsTextEndpointGroup(selectionStrategy(), shouldAllowEmptyEndpoints(),
+                                        selectionTimeoutMillis(), buildResolver(),
                                         eventLoop(), backoff(), minTtl(), maxTtl(),
                                         hostname(), mapping);
     }
@@ -216,5 +217,15 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
     @Override
     public DnsTextEndpointGroupBuilder allowEmptyEndpoints(boolean allowEmptyEndpoints) {
         return (DnsTextEndpointGroupBuilder) super.allowEmptyEndpoints(allowEmptyEndpoints);
+    }
+
+    @Override
+    public DnsTextEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
+        return (DnsTextEndpointGroupBuilder) super.selectionTimeout(selectionTimeout);
+    }
+
+    @Override
+    public DnsTextEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
+        return (DnsTextEndpointGroupBuilder) super.selectionTimeoutMillis(selectionTimeoutMillis);
     }
 }

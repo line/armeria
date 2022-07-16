@@ -27,6 +27,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
@@ -108,7 +109,12 @@ public interface ServerConfig {
 
     /**
      * Returns whether the worker {@link EventLoopGroup} is shut down when the {@link Server} stops.
+     *
+     * @deprecated This method will be hidden from public API. The {@link EventLoopGroup} is shut down if
+     *             the {@code shutdownOnStop} of
+     *             {@link ServerBuilder#workerGroup(EventLoopGroup, boolean)} is set to {@code true}.
      */
+    @Deprecated
     boolean shutdownWorkerGroupOnStop();
 
     /**
@@ -215,8 +221,16 @@ public interface ServerConfig {
 
     /**
      * Returns whether the worker {@link Executor} is shut down when the {@link Server} stops.
+     *
+     * @deprecated This method is not used anymore. The {@code blockingTaskExecutor} is shut down if
+     *             the {@code shutdownOnStop} of
+     *             {@link ServerBuilder#blockingTaskExecutor(ScheduledExecutorService, boolean)}
+     *             is set to {@code true}.
      */
-    boolean shutdownBlockingTaskExecutorOnStop();
+    @Deprecated
+    default boolean shutdownBlockingTaskExecutorOnStop() {
+        return false;
+    }
 
     /**
      * Returns the {@link MeterRegistry} that collects various stats.
@@ -282,4 +296,9 @@ public interface ServerConfig {
      * supports case sensitive HTTP/1 headers.
      */
     Http1HeaderNaming http1HeaderNaming();
+
+    /**
+     * Returns the {@link DependencyInjector} that injects dependencies in annotations.
+     */
+    DependencyInjector dependencyInjector();
 }

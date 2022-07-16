@@ -119,7 +119,7 @@ final class AnnotationUtil {
      */
     @Nullable
     static <T extends Annotation> T findFirstDeclared(AnnotatedElement element,
-                                                                Class<T> annotationType) {
+                                                      Class<T> annotationType) {
         final List<T> found = findDeclared(element, annotationType);
         return found.isEmpty() ? null : found.get(0);
     }

@@ -20,10 +20,7 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
-import com.google.protobuf.InvalidProtocolBufferException;
-import com.google.protobuf.util.JsonFormat;
 
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -52,21 +49,6 @@ class HelloServiceTest {
                 GrpcClients.newClient(uri(), HelloServiceBlockingStub.class);
         assertThat(helloService.hello(HelloRequest.newBuilder().setName("Armeria").build()).getMessage())
                 .isEqualTo("Hello, Armeria!");
-    }
-
-    @Test
-    void testsTheErrorUnframedResponseWithJsonContentType() throws InvalidProtocolBufferException {
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .addHeader("content-type",
-                                                     "application/json; charset=utf-8; protocol=gRPC")
-                                          .build();
-        final String response = client.post("example.grpc.hello.HelloService/Hello",
-                                            JsonFormat.printer().print(HelloRequest.getDefaultInstance()))
-                                      .aggregate()
-                                      .join()
-                                      .contentUtf8();
-        assertThat(response).isEqualTo(
-                "{\"grpc-code\":\"FAILED_PRECONDITION\",\"message\":\"Name cannot be empty\"}");
     }
 
     @Test

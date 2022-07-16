@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.catchThrowable;
 
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -28,7 +29,9 @@ import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
+import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.Metadata;
@@ -45,10 +48,22 @@ class GrpcServerInterceptorTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
             sb.service(GrpcService.builder()
-                                  .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
+                                  .addService(new TestServiceImpl(executor))
                                   .intercept(NoPassInterceptor.INSTANCE)
                                   .build());
+
+            sb.serviceUnder("/non-blocking", GrpcService.builder()
+                                                        .addService(new TestServiceImpl(executor))
+                                                        .intercept(new NonBlockingInterceptor())
+                                                        .build());
+
+            sb.serviceUnder("/blocking", GrpcService.builder()
+                                                    .addService(new TestServiceImpl(executor))
+                                                    .intercept(new BlockingInterceptor())
+                                                    .useBlockingTaskExecutor(true)
+                                                    .build());
         }
     };
 
@@ -60,6 +75,21 @@ class GrpcServerInterceptorTest {
         final Throwable cause = catchThrowable(() -> client.unaryCall(SimpleRequest.getDefaultInstance()));
         assertThat(cause).isInstanceOf(StatusRuntimeException.class);
         assertThat(((StatusRuntimeException) cause).getStatus()).isEqualTo(Status.PERMISSION_DENIED);
+    }
+
+    @Test
+    void runInterceptorOnBlockingExecutor() {
+        final TestServiceBlockingStub nonBlocking =
+                GrpcClients.builder(server.httpUri())
+                           .pathPrefix("/non-blocking")
+                           .build(TestServiceBlockingStub.class);
+        nonBlocking.emptyCall(Empty.getDefaultInstance());
+
+        final TestServiceBlockingStub blocking =
+                GrpcClients.builder(server.httpUri())
+                           .pathPrefix("/blocking")
+                           .build(TestServiceBlockingStub.class);
+        blocking.emptyCall(Empty.getDefaultInstance());
     }
 
     private static class NoPassInterceptor implements ServerInterceptor {
@@ -75,6 +105,30 @@ class GrpcServerInterceptorTest {
             @SuppressWarnings("unchecked")
             final Listener<I> cast = (Listener<I>) NOOP_LISTENER;
             return cast;
+        }
+    }
+
+    private static class BlockingInterceptor implements ServerInterceptor {
+
+        @Override
+        public <I, O> Listener<I> interceptCall(ServerCall<I, O> call, Metadata metadata,
+                                                ServerCallHandler<I, O> next) {
+            // Make sure the current thread is context-aware.
+            final ServiceRequestContext ctx = ServiceRequestContext.current();
+            assertThat(ctx.eventLoop().inEventLoop()).isFalse();
+            return next.startCall(call, metadata);
+        }
+    }
+
+    private static class NonBlockingInterceptor implements ServerInterceptor {
+
+        @Override
+        public <I, O> Listener<I> interceptCall(ServerCall<I, O> call, Metadata metadata,
+                                                ServerCallHandler<I, O> next) {
+            // Make sure the current thread is context-aware.
+            final ServiceRequestContext ctx = ServiceRequestContext.current();
+            assertThat(ctx.eventLoop().inEventLoop()).isTrue();
+            return next.startCall(call, metadata);
         }
     }
 }

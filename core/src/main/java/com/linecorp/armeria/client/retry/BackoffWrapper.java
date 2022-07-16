@@ -22,6 +22,9 @@ import com.linecorp.armeria.common.util.AbstractUnwrappable;
  */
 public class BackoffWrapper extends AbstractUnwrappable<Backoff> implements Backoff {
 
+    /**
+     * Creates a {@link BackoffWrapper} with the specified {@code delegate}.
+     */
     protected BackoffWrapper(Backoff delegate) {
         super(delegate);
     }

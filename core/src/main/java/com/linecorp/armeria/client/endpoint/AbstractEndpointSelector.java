@@ -25,14 +25,17 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 
 /**
  * A skeletal {@link EndpointSelector} implementation. This abstract class implements the
- * {@link #select(ClientRequestContext, ScheduledExecutorService, long)} method by listening to
+ * {@link #select(ClientRequestContext, ScheduledExecutorService)} method by listening to
  * the change events emitted by {@link EndpointGroup} specified at construction time.
  */
 public abstract class AbstractEndpointSelector implements EndpointSelector {
@@ -53,10 +56,17 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
         return endpointGroup;
     }
 
+    @Deprecated
     @Override
     public final CompletableFuture<Endpoint> select(ClientRequestContext ctx,
                                                     ScheduledExecutorService executor,
                                                     long timeoutMillis) {
+        return select(ctx, executor);
+    }
+
+    @Override
+    public final CompletableFuture<Endpoint> select(ClientRequestContext ctx,
+                                                    ScheduledExecutorService executor) {
         Endpoint endpoint = selectNow(ctx);
         if (endpoint != null) {
             return UnmodifiableFuture.completedFuture(endpoint);
@@ -73,25 +83,46 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
             return UnmodifiableFuture.completedFuture(endpoint);
         }
 
-        // Schedule the timeout task.
-        final ScheduledFuture<?> timeoutFuture =
-                executor.schedule(() -> listeningFuture.complete(null),
-                                  timeoutMillis, TimeUnit.MILLISECONDS);
-        listeningFuture.timeoutFuture = timeoutFuture;
+        final long selectionTimeoutMillis = endpointGroup.selectionTimeoutMillis();
+        if (selectionTimeoutMillis == 0) {
+            // A static EndpointGroup.
+            return UnmodifiableFuture.completedFuture(null);
+        }
+        long responseTimeoutMillis = ctx.responseTimeoutMillis();
+        if (responseTimeoutMillis == 0) {
+            responseTimeoutMillis = Long.MAX_VALUE;
+        }
 
-        // Cancel the timeout task if listeningFuture is done already.
-        // This guards against the following race condition:
-        // 1) (Current thread) Timeout task is scheduled.
-        // 2) ( Other thread ) listeningFuture is completed, but the timeout task is not cancelled
-        // 3) (Current thread) timeoutFuture is assigned to listeningFuture.timeoutFuture, but it's too late.
-        if (listeningFuture.isDone()) {
-            timeoutFuture.cancel(false);
+        final long timeoutMillis = Math.min(selectionTimeoutMillis, responseTimeoutMillis);
+
+        // Schedule the timeout task.
+        if (timeoutMillis < Long.MAX_VALUE) {
+            final ScheduledFuture<?> timeoutFuture = executor.schedule(() -> {
+                final EndpointSelectionTimeoutException ex =
+                        EndpointSelectionTimeoutException.get(endpointGroup, timeoutMillis);
+                ClientPendingThrowableUtil.setPendingThrowable(ctx, ex);
+                // Don't complete exceptionally so that the throwable
+                // can be handled after executing the attached decorators
+                listeningFuture.complete(null);
+            }, timeoutMillis, TimeUnit.MILLISECONDS);
+            listeningFuture.timeoutFuture = timeoutFuture;
+
+            // Cancel the timeout task if listeningFuture is done already.
+            // This guards against the following race condition:
+            // 1) (Current thread) Timeout task is scheduled.
+            // 2) ( Other thread ) listeningFuture is completed, but the timeout task is not cancelled
+            // 3) (Current thread) timeoutFuture is assigned to listeningFuture.timeoutFuture, but it's too
+            // late.
+            if (listeningFuture.isDone()) {
+                timeoutFuture.cancel(false);
+            }
         }
 
         return listeningFuture;
     }
 
-    private class ListeningFuture extends CompletableFuture<Endpoint> implements Consumer<List<Endpoint>> {
+    @VisibleForTesting
+    final class ListeningFuture extends CompletableFuture<Endpoint> implements Consumer<List<Endpoint>> {
         private final ClientRequestContext ctx;
         private final Executor executor;
         @Nullable
@@ -149,6 +180,12 @@ public abstract class AbstractEndpointSelector implements EndpointSelector {
                 this.timeoutFuture = null;
                 timeoutFuture.cancel(false);
             }
+        }
+
+        @Nullable
+        @VisibleForTesting
+        ScheduledFuture<?> timeoutFuture() {
+            return timeoutFuture;
         }
     }
 }

@@ -202,6 +202,11 @@ This product depends on JCTools, distributed by Nitsan Wakart and contributors:
   * License: licenses/LICENSE.jctools.al20.txt (Apache License v2.0)
   * Homepage: http://jctools.github.io/JCTools/
 
+This product depends on JUnit Pioneer, distributed by JUnit Pioneer Contributors:
+
+  * License: licenses/LICENSE.junit-pioneer.epl20.txt (Eclipse Public License v2.0)
+  * Homepage: https://junit-pioneer.org
+
 This product depends on FindBugs-JSR305, distributed by
 
   * License: licenses/LICENSE.jsr305.bsd.txt (New BSD License)

@@ -47,11 +47,13 @@ public abstract class NonWrappingRequestContext implements RequestContext {
             NonWrappingRequestContext.class, Supplier.class, "contextHook");
 
     private final MeterRegistry meterRegistry;
-    private final DefaultAttributeMap attrs;
+    private final ConcurrentAttributes attrs;
     private final SessionProtocol sessionProtocol;
     private final RequestId id;
     private final HttpMethod method;
     private final String path;
+    private final ExchangeType exchangeType;
+
     @Nullable
     private String decodedPath;
     @Nullable
@@ -73,17 +75,23 @@ public abstract class NonWrappingRequestContext implements RequestContext {
      */
     protected NonWrappingRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
-            RequestId id, HttpMethod method, String path, @Nullable String query,
+            RequestId id, HttpMethod method, String path, @Nullable String query, ExchangeType exchangeType,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
-            @Nullable RequestContext rootAttributeMap) {
+            @Nullable AttributesGetters rootAttributeMap) {
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
-        attrs = new DefaultAttributeMap(rootAttributeMap);
+        if (rootAttributeMap == null) {
+            attrs = ConcurrentAttributes.of();
+        } else {
+            attrs = ConcurrentAttributes.fromParent(rootAttributeMap);
+        }
+
         this.sessionProtocol = requireNonNull(sessionProtocol, "sessionProtocol");
         this.id = requireNonNull(id, "id");
         this.method = requireNonNull(method, "method");
         this.path = requireNonNull(path, "path");
         this.query = query;
+        this.exchangeType = requireNonNull(exchangeType, "exchangeType");
         this.req = req;
         this.rpcReq = rpcReq;
     }
@@ -188,6 +196,11 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     }
 
     @Override
+    public ExchangeType exchangeType() {
+        return exchangeType;
+    }
+
+    @Override
     public final MeterRegistry meterRegistry() {
         return meterRegistry;
     }
@@ -209,17 +222,27 @@ public abstract class NonWrappingRequestContext implements RequestContext {
     @Override
     public final <V> V setAttr(AttributeKey<V> key, @Nullable V value) {
         requireNonNull(key, "key");
-        return attrs.setAttr(key, value);
+        return attrs.getAndSet(key, value);
     }
 
     @Override
     public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
+        // TODO(ikhoon): Make this method return `AttributesGetters` in Armeria 2.x
         return attrs.attrs();
     }
 
     @Override
     public final Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
         return attrs.ownAttrs();
+    }
+
+    /**
+     * Returns the {@link AttributesGetters} which stores the pairs of an {@link AttributeKey} and an object
+     * set via {@link #setAttr(AttributeKey, Object)}.
+     */
+    @UnstableApi
+    public final AttributesGetters attributes() {
+        return attrs;
     }
 
     /**

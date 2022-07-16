@@ -46,8 +46,7 @@ final class ManagedTomcatService extends TomcatService {
     private final ServerListener configurator;
     private static final Set<String> activeEngines = new HashSet<>();
 
-    @Nullable
-    private org.apache.catalina.Server server;
+    private org.apache.catalina.@Nullable Server server;
     @Nullable
     private Server armeriaServer;
     @Nullable
