@@ -42,6 +42,7 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
@@ -63,9 +64,12 @@ public final class CompositeException extends RuntimeException {
     // Forked from RxJava 3.0.0 at e793bc1d1a29dca18be795cf4a7628e2d44a4234
 
     private static final long serialVersionUID = 3026362227162912146L;
+    private static final int maxStacktraceSize = 20;
+    private static final int disabledVerboseExceptionLoopCount = 1;
 
     private final List<Throwable> exceptions;
     private final String message;
+    private final Sampler<Class<? extends Throwable>> verboseExceptionFlag = Flags.verboseExceptionSampler();
 
     @Nullable
     private Throwable cause;
@@ -155,12 +159,18 @@ public final class CompositeException extends RuntimeException {
                             aggregateMessage.append(separator);
                         }
 
-                        for (int i = 0; i < depth + 2; i++) {
-                            aggregateMessage.append("  ");
-                        }
                         final StackTraceElement[] st = inner.getStackTrace();
                         if (st.length > 0) {
-                            aggregateMessage.append("at ").append(st[0]).append(separator);
+                            final boolean isEnableVerboseExceptionFlag =
+                                    verboseExceptionFlag.isSampled(inner.getClass());
+                            final int loopCount = isEnableVerboseExceptionFlag ?
+                                  Math.min(st.length, maxStacktraceSize) : disabledVerboseExceptionLoopCount;
+                            for (int i = 0; i < loopCount; i++) {
+                                for (int j = 0; j < depth + 2; j++) {
+                                    aggregateMessage.append("  ");
+                                }
+                                aggregateMessage.append("at ").append(st[i]).append(separator);
+                            }
                         }
 
                         if (!seenCauses.containsKey(inner)) {
