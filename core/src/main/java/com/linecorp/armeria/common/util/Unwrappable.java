@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.util;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Provides a way to unwrap an object in decorator pattern, similar to down-casting in an inheritance pattern.
@@ -117,6 +118,7 @@ public interface Unwrappable {
      * assert qux.unwrapAll() == foo;
      * }</pre>
      */
+    @UnstableApi
     default Unwrappable unwrapAll() {
         Unwrappable unwrapped = this;
         while (true) {
