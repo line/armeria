@@ -16,6 +16,12 @@ dependencies {
     implementation project(':thrift0.16')
     implementation project(':kotlin')
 
+    implementation("com.squareup.okhttp3:okhttp") {
+        version {
+            // Will fail the build if the override doesn't work
+            strictly '3.14.9'
+        }
+    }
     implementation 'com.squareup.retrofit2:converter-jackson'
     implementation 'com.google.protobuf:protobuf-java-util'
     implementation 'io.grpc:grpc-okhttp'
