@@ -176,11 +176,9 @@ com.spotify:
       to: com.linecorp.armeria.internal.shaded.futures
   futures-extra: { version: '4.3.1' }
 
-# The OkHttp version is aligned with Retrofit's transitive version
-# to avoid unexpected conflicts. This is a temporary measure that
-# will be improved with better dependency version management in the future.
+# OkHttp is used only for testing in it:okhttp module.
 com.squareup.okhttp3:
-  okhttp: { version: &OKHTTP_VERSION '3.14.9' }
+  okhttp: { version: &OKHTTP_VERSION '4.10.0' }
   okhttp-tls: { version: *OKHTTP_VERSION }
 
 com.squareup.retrofit2:
