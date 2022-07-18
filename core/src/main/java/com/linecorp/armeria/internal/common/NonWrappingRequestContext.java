@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.RpcRequest;
@@ -243,10 +244,6 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         return attrs.ownAttrs();
     }
 
-    /**
-     * Returns the {@link AttributesGetters} which stores the pairs of an {@link AttributeKey} and an object
-     * set via {@link #setAttr(AttributeKey, Object)}.
-     */
     @Override
     @UnstableApi
     public final AttributesGetters attributes() {

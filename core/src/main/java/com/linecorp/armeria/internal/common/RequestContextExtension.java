@@ -24,6 +24,8 @@ import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 
+import io.netty.util.AttributeKey;
+
 /**
  * This class exposes extension methods for {@link RequestContext}
  * which are used internally by Armeria but aren't intended for public usage.
@@ -49,5 +51,9 @@ public interface RequestContextExtension extends RequestContext {
     @Nullable
     Supplier<AutoCloseable> hook();
 
+    /**
+     * Returns the {@link AttributesGetters} which stores the pairs of an {@link AttributeKey} and an object
+     * set via {@link #setAttr(AttributeKey, Object)}.
+     */
     AttributesGetters attributes();
 }

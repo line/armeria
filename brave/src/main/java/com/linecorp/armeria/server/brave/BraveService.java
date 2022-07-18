@@ -104,7 +104,7 @@ public final class BraveService extends SimpleDecoratingHttpService {
         if (currentTraceContext.scopeDecoratorAdded() && !span.isNoop() && ctxExtension != null) {
             // Run the scope decorators when the ctx is pushed to the thread local.
             ctxExtension.hook(() -> currentTraceContext.decorateScope(span.context(),
-                                                                    SERVICE_REQUEST_DECORATING_SCOPE));
+                                                                      SERVICE_REQUEST_DECORATING_SCOPE));
         }
 
         maybeAddTagsToSpan(ctx, braveReq, span);
