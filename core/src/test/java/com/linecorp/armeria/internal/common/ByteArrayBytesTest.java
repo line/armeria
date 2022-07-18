@@ -26,12 +26,12 @@ import com.linecorp.armeria.common.ByteBufAccessMode;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
-class ByteArrayBinaryDataTest {
+class ByteArrayBytesTest {
 
     @Test
     void arrayBacked() {
         final byte[] array = { 1, 2, 3, 4 };
-        final ByteArrayBinaryData data = new ByteArrayBinaryData(array);
+        final ByteArrayBytes data = ByteArrayBytes.of(array);
         assertThat(data.array()).isSameAs(array);
         assertThat(data.byteBuf().array()).isSameAs(array);
         assertThat(data.isEmpty()).isFalse();
@@ -44,7 +44,7 @@ class ByteArrayBinaryDataTest {
     @EnumSource(value = ByteBufAccessMode.class, names = { "DUPLICATE", "RETAINED_DUPLICATE" })
     void duplicateOrSlice(ByteBufAccessMode mode) {
         final byte[] array = { 1, 2, 3, 4 };
-        final ByteArrayBinaryData data = new ByteArrayBinaryData(array);
+        final ByteArrayBytes data = ByteArrayBytes.of(array);
         final ByteBuf buf = data.byteBuf(mode);
         assertThat(buf.isDirect()).isFalse();
         assertThat(buf.readableBytes()).isEqualTo(4);
@@ -65,7 +65,7 @@ class ByteArrayBinaryDataTest {
 
     @Test
     void directCopy() {
-        final ByteArrayBinaryData data = new ByteArrayBinaryData(new byte[] { 1, 2, 3, 4 });
+        final ByteArrayBytes data = ByteArrayBytes.of(new byte[] { 1, 2, 3, 4 });
         final ByteBuf buf = data.byteBuf(ByteBufAccessMode.FOR_IO);
         assertThat(buf.isDirect()).isTrue();
         assertThat(buf.readableBytes()).isEqualTo(4);
@@ -81,24 +81,24 @@ class ByteArrayBinaryDataTest {
 
     @Test
     void hash() {
-        final ByteArrayBinaryData data = new ByteArrayBinaryData(new byte[] { 2, 3, 4, 5 });
+        final ByteArrayBytes data = ByteArrayBytes.of(new byte[] { 2, 3, 4, 5 });
         assertThat(data.hashCode()).isEqualTo(((2 * 31 + 3) * 31 + 4) * 31 + 5);
 
         // Ensure 33rd+ bytes are ignored.
         final byte[] bigArray = new byte[33];
         bigArray[32] = 1;
-        final ByteArrayBinaryData bigData = new ByteArrayBinaryData(bigArray);
+        final ByteArrayBytes bigData = ByteArrayBytes.of(bigArray);
         assertThat(bigData.hashCode()).isZero();
     }
 
     @Test
     void equals() {
-        final ByteArrayBinaryData a = new ByteArrayBinaryData(new byte[] { 1, 2, 3, 4 });
-        final ByteArrayBinaryData b = new ByteArrayBinaryData(new byte[] { 1, 2, 3, 4 });
-        final ByteArrayBinaryData c = new ByteArrayBinaryData(new byte[] { 1, 2, 3 });
-        final ByteArrayBinaryData d = new ByteArrayBinaryData(new byte[] { 4, 5, 6, 7 });
-        final ByteBufBinaryData bufData =
-                new ByteBufBinaryData(Unpooled.directBuffer().writeInt(0x01020304), true);
+        final ByteArrayBytes a = ByteArrayBytes.of(new byte[] { 1, 2, 3, 4 });
+        final ByteArrayBytes b = ByteArrayBytes.of(new byte[] { 1, 2, 3, 4 });
+        final ByteArrayBytes c = ByteArrayBytes.of(new byte[] { 1, 2, 3 });
+        final ByteArrayBytes d = ByteArrayBytes.of(new byte[] { 4, 5, 6, 7 });
+        final ByteBufBytes bufData =
+                ByteBufBytes.of(Unpooled.directBuffer().writeInt(0x01020304), true);
 
         assertThat(a).isEqualTo(a);
         assertThat(a).isEqualTo(b);
@@ -112,12 +112,12 @@ class ByteArrayBinaryDataTest {
 
     @Test
     void testToString() {
-        assertThat(ByteArrayBinaryData.empty()).hasToString("{0B}");
-        assertThat(new ByteArrayBinaryData(new byte[] { 'f', 'o', 'o' })).hasToString("{3B, text=foo}");
-        assertThat(new ByteArrayBinaryData(new byte[] { 1, 2, 3 })).hasToString("{3B, hex=010203}");
+        assertThat(ByteArrayBytes.empty()).hasToString("{0B}");
+        assertThat(ByteArrayBytes.of(new byte[] { 'f', 'o', 'o' })).hasToString("{3B, text=foo}");
+        assertThat(ByteArrayBytes.of(new byte[] { 1, 2, 3 })).hasToString("{3B, hex=010203}");
 
         // Longer than 16 bytes
-        assertThat(new ByteArrayBinaryData(new byte[] {
+        assertThat(ByteArrayBytes.of(new byte[] {
                 '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', -1
         })).hasToString("{17B, text=0123456789abcdef}");
     }

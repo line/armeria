@@ -61,7 +61,7 @@ public final class WebSocketProtocolViolationException extends ProtocolViolation
      */
     public WebSocketProtocolViolationException(WebSocketCloseStatus closeStatus, @Nullable String message,
                                                @Nullable Throwable cause) {
-        super(message != null ? message : closeStatus.reasonText(), cause);
+        super(message != null ? message : closeStatus.toString(), cause);
         this.closeStatus = requireNonNull(closeStatus, "closeStatus");
     }
 

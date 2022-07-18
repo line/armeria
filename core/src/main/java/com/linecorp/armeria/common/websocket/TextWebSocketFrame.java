@@ -22,10 +22,10 @@ import java.util.Objects;
 
 import com.google.common.base.MoreObjects.ToStringHelper;
 
-import com.linecorp.armeria.common.BinaryData;
+import com.linecorp.armeria.common.Bytes;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.ByteArrayBinaryData;
-import com.linecorp.armeria.internal.common.ByteBufBinaryData;
+import com.linecorp.armeria.internal.common.ByteArrayBytes;
+import com.linecorp.armeria.internal.common.ByteBufBytes;
 
 import io.netty.buffer.ByteBuf;
 
@@ -45,15 +45,15 @@ final class TextWebSocketFrame extends DefaultWebSocketFrame {
     }
 
     TextWebSocketFrame(byte[] text, boolean finalFragment) {
-        this(new ByteArrayBinaryData(text), finalFragment);
+        this(ByteArrayBytes.of(text), finalFragment);
     }
 
     TextWebSocketFrame(ByteBuf binary, boolean finalFragment) {
-        this(new ByteBufBinaryData(binary, true), finalFragment);
+        this(ByteBufBytes.of(binary, true), finalFragment);
     }
 
-    private TextWebSocketFrame(BinaryData binaryData, boolean finalFragment) {
-        super(WebSocketFrameType.TEXT, binaryData, finalFragment, true, false);
+    private TextWebSocketFrame(Bytes data, boolean finalFragment) {
+        super(WebSocketFrameType.TEXT, data, finalFragment, true, false);
     }
 
     @Override

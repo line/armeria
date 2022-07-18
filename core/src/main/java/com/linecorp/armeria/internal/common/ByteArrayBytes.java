@@ -21,8 +21,8 @@ import java.io.InputStream;
 import java.nio.charset.Charset;
 import java.util.Arrays;
 
-import com.linecorp.armeria.common.BinaryData;
 import com.linecorp.armeria.common.ByteBufAccessMode;
+import com.linecorp.armeria.common.Bytes;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 import io.netty.buffer.ByteBuf;
@@ -33,13 +33,13 @@ import io.netty.util.internal.EmptyArrays;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
 /**
- * A {@code byte[]}-based {@link BinaryData}.
+ * A {@code byte[]}-based {@link Bytes}.
  */
-public final class ByteArrayBinaryData implements BinaryData {
+public final class ByteArrayBytes implements Bytes {
 
-    private static final BinaryData empty = new ByteArrayBinaryData(EmptyArrays.EMPTY_BYTES);
+    private static final Bytes empty = new ByteArrayBytes(EmptyArrays.EMPTY_BYTES);
 
-    public static BinaryData empty() {
+    public static Bytes empty() {
         return empty;
     }
 
@@ -53,12 +53,16 @@ public final class ByteArrayBinaryData implements BinaryData {
         }
     }
 
+    public static ByteArrayBytes of(byte[] array) {
+        return new ByteArrayBytes(array);
+    }
+
     private final byte[] array;
 
     /**
      * Creates a new instance.
      */
-    public ByteArrayBinaryData(byte[] array) {
+    private ByteArrayBytes(byte[] array) {
         this.array = requireNonNull(array, "array");
     }
 
@@ -172,7 +176,7 @@ public final class ByteArrayBinaryData implements BinaryData {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof ByteArrayBinaryData)) {
+        if (!(obj instanceof ByteArrayBytes)) {
             return false;
         }
 
@@ -180,7 +184,7 @@ public final class ByteArrayBinaryData implements BinaryData {
             return true;
         }
 
-        final ByteArrayBinaryData that = (ByteArrayBinaryData) obj;
+        final ByteArrayBytes that = (ByteArrayBytes) obj;
         if (length() != that.length()) {
             return false;
         }

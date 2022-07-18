@@ -42,11 +42,11 @@ import io.netty.util.ResourceLeakDetector;
  * Represents binary data.
  */
 @UnstableApi
-public interface BinaryData extends SafeCloseable {
+public interface Bytes extends SafeCloseable {
 
     /**
-     * Returns the underlying byte array of this data. Any changes made in the returned array affects
-     * the content of this data.
+     * Returns the underlying byte array of this data. Do not modify the content of the returned byte array.
+     * Any changes made in the returned array may or may not affect the content of this data.
      */
     byte[] array();
 

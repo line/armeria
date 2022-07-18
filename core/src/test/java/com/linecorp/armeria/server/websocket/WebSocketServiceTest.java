@@ -196,7 +196,7 @@ class WebSocketServiceTest {
                                 assert frame instanceof CloseWebSocketFrame;
                                 final CloseWebSocketFrame closeWebSocketFrame =
                                         (CloseWebSocketFrame) frame;
-                                onClose(writer, closeWebSocketFrame.status(), closeWebSocketFrame.reason());
+                                onClose(writer, closeWebSocketFrame.status(), closeWebSocketFrame.reasonPhase());
                                 break;
                             default:
                                 // no-op

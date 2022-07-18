@@ -22,13 +22,15 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.Channel;
 
 /**
- * Specifies the way a {@link ByteBuf} is retrieved from an {@link HttpData} or {@link WebSocketFrame}.
+ * Specifies the way a {@link ByteBuf} is retrieved from a {@link Bytes}, such as {@link HttpData} or
+ * {@link WebSocketFrame}.
  */
 @UnstableApi
 public enum ByteBufAccessMode {
     /**
      * Gets the duplicate (or slice) of the underlying {@link ByteBuf}. This mode is useful when you access
-     * the {@link ByteBuf} within the life cycle of the {@link HttpData} or {@link WebSocketFrame}:
+     * the {@link ByteBuf} within the life cycle of the {@link Bytes}, such as {@link HttpData} or
+     * {@link WebSocketFrame}:
      * <pre>{@code
      * try (HttpData content = ...) {
      *     ByteBuf buf = content.byteBuf(ByteBufAccessMode.DUPLICATE);
@@ -47,8 +49,8 @@ public enum ByteBufAccessMode {
     DUPLICATE,
     /**
      * Gets the retained duplicate (or slice) of the underlying {@link ByteBuf}. This mode is useful when
-     * you access the {@link ByteBuf} beyond the life cycle of the {@link HttpData} or {@link WebSocketFrame},
-     * such as creating another {@link HttpData} or {@link WebSocketFrame} that shares the {@link ByteBuf}'s
+     * you access the {@link ByteBuf} beyond the life cycle of the {@link Bytes}, such as {@link HttpData} or
+     * {@link WebSocketFrame}, by creating another {@link Bytes} that shares the {@link ByteBuf}'s
      * memory region:
      * <pre>{@code
      * HttpData data1 = HttpData.wrap(byteBuf);

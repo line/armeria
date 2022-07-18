@@ -26,13 +26,13 @@ import com.linecorp.armeria.common.ByteBufAccessMode;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
-class ByteBufBinaryDataTest {
+class ByteBufBytesTest {
 
     @Test
     void unpooled() {
         final byte[] array = { 1, 2, 3, 4 };
         final ByteBuf buf = Unpooled.wrappedBuffer(array);
-        final ByteBufBinaryData data = new ByteBufBinaryData(buf, false);
+        final ByteBufBytes data = ByteBufBytes.of(buf, false);
         assertThat(data.isPooled()).isFalse();
         assertThat(data.length()).isEqualTo(4);
         assertThat(data.array()).isSameAs(buf.array());
@@ -48,7 +48,7 @@ class ByteBufBinaryDataTest {
     void unpooledSlicedArray() {
         final byte[] array = { 1, 2, 3, 4 };
         final ByteBuf buf = Unpooled.wrappedBuffer(array, 1, 2);
-        final ByteBufBinaryData data = new ByteBufBinaryData(buf, false);
+        final ByteBufBytes data = ByteBufBytes.of(buf, false);
         assertThat(data.length()).isEqualTo(2);
 
         final byte[] slicedArray = data.array();
@@ -60,7 +60,7 @@ class ByteBufBinaryDataTest {
     @Test
     void byteBuf() {
         final ByteBuf buf = Unpooled.buffer(4).writeInt(0x01020304);
-        final ByteBufBinaryData data = new ByteBufBinaryData(buf, true);
+        final ByteBufBytes data = ByteBufBytes.of(buf, true);
         assertThat(data.isPooled()).isTrue();
 
         // Test DUPLICATE mode.
@@ -98,7 +98,7 @@ class ByteBufBinaryDataTest {
     @Test
     void slicedByteBuf() {
         final ByteBuf buf = Unpooled.buffer(4).writeInt(0x01020304);
-        final ByteBufBinaryData data = new ByteBufBinaryData(buf, true);
+        final ByteBufBytes data = ByteBufBytes.of(buf, true);
         assertThat(data.isPooled()).isTrue();
 
         // Test DUPLICATE mode.
@@ -134,7 +134,7 @@ class ByteBufBinaryDataTest {
     @Test
     void directBufferShouldNotBeCopied() {
         final ByteBuf buf = Unpooled.directBuffer(4).writeInt(0x01020304);
-        final ByteBufBinaryData data = new ByteBufBinaryData(buf, true);
+        final ByteBufBytes data = ByteBufBytes.of(buf, true);
 
         final ByteBuf duplicate = data.byteBuf(ByteBufAccessMode.FOR_IO);
         final ByteBuf slice = data.byteBuf(1, 2, ByteBufAccessMode.FOR_IO);
@@ -153,7 +153,7 @@ class ByteBufBinaryDataTest {
     @Test
     void doubleFree() {
         final ByteBuf buf = Unpooled.directBuffer(4).writeInt(0x01020304).retain();
-        final ByteBufBinaryData data = new ByteBufBinaryData(buf, true);
+        final ByteBufBytes data = ByteBufBytes.of(buf, true);
         for (int i = 0; i < 2; i++) {
             data.close();
             assertThat(buf.refCnt()).isOne();
@@ -163,27 +163,27 @@ class ByteBufBinaryDataTest {
 
     @Test
     void hash() {
-        final ByteBufBinaryData data =
-                new ByteBufBinaryData(Unpooled.directBuffer().writeInt(0x02030405), true);
+        final ByteBufBytes data =
+                ByteBufBytes.of(Unpooled.directBuffer().writeInt(0x02030405), true);
         assertThat(data.hashCode()).isEqualTo(((2 * 31 + 3) * 31 + 4) * 31 + 5);
         data.close();
 
         // Ensure 33rd+ bytes are ignored.
-        final ByteBufBinaryData bigData = new ByteBufBinaryData(Unpooled.directBuffer()
-                                                                    .writeZero(32)
-                                                                    .writeByte(1),
-                                                            true);
+        final ByteBufBytes bigData = ByteBufBytes.of(Unpooled.directBuffer()
+                                                             .writeZero(32)
+                                                             .writeByte(1),
+                                                     true);
         assertThat(bigData.hashCode()).isZero();
         bigData.close();
     }
 
     @Test
     void equals() {
-        final ByteBufBinaryData a = new ByteBufBinaryData(Unpooled.directBuffer().writeInt(0x01020304), true);
-        final ByteBufBinaryData b = new ByteBufBinaryData(Unpooled.directBuffer().writeInt(0x01020304), true);
-        final ByteBufBinaryData c = new ByteBufBinaryData(Unpooled.directBuffer().writeMedium(0x010203), true);
-        final ByteBufBinaryData d = new ByteBufBinaryData(Unpooled.directBuffer().writeInt(0x04050607), true);
-        final ByteArrayBinaryData arrayData = new ByteArrayBinaryData(new byte[] { 1, 2, 3, 4 });
+        final ByteBufBytes a = ByteBufBytes.of(Unpooled.directBuffer().writeInt(0x01020304), true);
+        final ByteBufBytes b = ByteBufBytes.of(Unpooled.directBuffer().writeInt(0x01020304), true);
+        final ByteBufBytes c = ByteBufBytes.of(Unpooled.directBuffer().writeMedium(0x010203), true);
+        final ByteBufBytes d = ByteBufBytes.of(Unpooled.directBuffer().writeInt(0x04050607), true);
+        final ByteArrayBytes arrayData = ByteArrayBytes.of(new byte[] { 1, 2, 3, 4 });
 
         assertThat(a).isEqualTo(a);
         assertThat(a).isEqualTo(b);
@@ -200,35 +200,35 @@ class ByteBufBinaryDataTest {
 
     @Test
     void testToString() {
-        assertThat(new ByteBufBinaryData(Unpooled.copiedBuffer("foo", StandardCharsets.US_ASCII), false))
+        assertThat(ByteBufBytes.of(Unpooled.copiedBuffer("foo", StandardCharsets.US_ASCII), false))
                 .hasToString("{3B, text=foo}");
-        assertThat(new ByteBufBinaryData(Unpooled.copiedBuffer("\u0001\u0002", StandardCharsets.US_ASCII),
-                                         false))
+        assertThat(ByteBufBytes.of(Unpooled.copiedBuffer("\u0001\u0002", StandardCharsets.US_ASCII),
+                                   false))
                 .hasToString("{2B, hex=0102}");
 
         // pooled
-        assertThat(new ByteBufBinaryData(Unpooled.copiedBuffer("foo", StandardCharsets.US_ASCII), true))
+        assertThat(ByteBufBytes.of(Unpooled.copiedBuffer("foo", StandardCharsets.US_ASCII), true))
                 .hasToString("{3B, pooled, text=foo}");
-        assertThat(new ByteBufBinaryData(Unpooled.copiedBuffer("\u0001\u0002", StandardCharsets.US_ASCII),
-                                         true))
+        assertThat(ByteBufBytes.of(Unpooled.copiedBuffer("\u0001\u0002", StandardCharsets.US_ASCII),
+                                   true))
                 .hasToString("{2B, pooled, hex=0102}");
 
         // closed and freed
-        final ByteBufBinaryData data1 =
-                new ByteBufBinaryData(Unpooled.copiedBuffer("bar", StandardCharsets.US_ASCII), true);
+        final ByteBufBytes data1 =
+                ByteBufBytes.of(Unpooled.copiedBuffer("bar", StandardCharsets.US_ASCII), true);
         data1.close();
         assertThat(data1).hasToString("{3B, pooled, closed}");
 
         // closed but not freed
-        final ByteBufBinaryData data2 =
-                new ByteBufBinaryData(Unpooled.unreleasableBuffer(
+        final ByteBufBytes data2 =
+                ByteBufBytes.of(Unpooled.unreleasableBuffer(
                         Unpooled.copiedBuffer("bar", StandardCharsets.US_ASCII)), true);
         data2.close();
         assertThat(data2).hasToString("{3B, pooled, closed, text=bar}");
 
         // Longer than 16 bytes
-        assertThat(new ByteBufBinaryData(Unpooled.copiedBuffer("0123456789abcdef\u0001",
-                                                             StandardCharsets.US_ASCII), false))
+        assertThat(ByteBufBytes.of(Unpooled.copiedBuffer("0123456789abcdef\u0001",
+                                                         StandardCharsets.US_ASCII), false))
                 .hasToString("{17B, text=0123456789abcdef}");
     }
 }

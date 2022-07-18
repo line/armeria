@@ -104,7 +104,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
     @Override
     public void upgraded(boolean success) {
         if (!success) {
-            if (req instanceof StreamingDecodedHttpRequest) {
+            if (req != null) {
                 req.close();
             }
             req = null;

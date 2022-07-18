@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -135,7 +134,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                                 " (service: " + service() + ')'), true);
                         return;
                     }
-                    if (!isHttp1() || !isHttp1WebSocketUpgradeResponse(headers)) {
+                    if (!(reqCtx.sessionProtocol().isHttp1() && !isHttp1WebSocketUpgradeResponse(headers))) {
                         responseEncoder.writeHeaders(req.id(), req.streamId(), headers, false, false)
                                        .addListener(writeHeadersFutureListener(false));
                         break;
@@ -230,10 +229,6 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
         }
 
         ctx.flush();
-    }
-
-    private boolean isHttp1() {
-        return responseEncoder instanceof Http1ObjectEncoder;
     }
 
     @Override
@@ -453,7 +448,8 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                     // it is very likely that a client closed the connection after receiving the
                     // complete content, which is not really a problem.
                     isSuccess = endOfStream && wroteEmptyData &&
-                                future.cause() instanceof ClosedChannelException && isHttp1();
+                                future.cause() instanceof ClosedChannelException && reqCtx.sessionProtocol()
+                                                                                          .isHttp1();
                 }
                 handleWriteComplete(future, endOfStream, isSuccess);
             }

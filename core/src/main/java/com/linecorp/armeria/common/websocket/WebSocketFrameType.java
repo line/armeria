@@ -25,16 +25,34 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public enum WebSocketFrameType {
 
+    /**
+     * A continuation frame.
+     */
     CONTINUATION((byte) 0x0),
 
+    /**
+     * A text frame.
+     */
     TEXT((byte) 0x1),
 
+    /**
+     * A binary frame.
+     */
     BINARY((byte) 0x2),
 
+    /**
+     * A close frame.
+     */
     CLOSE((byte) 0x8),
 
+    /**
+     * A ping frame.
+     */
     PING((byte) 0x9),
 
+    /**
+     * A pong frame.
+     */
     PONG((byte) 0xA);
 
     private final byte opcode;

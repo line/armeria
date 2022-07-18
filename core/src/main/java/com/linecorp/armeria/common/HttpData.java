@@ -38,7 +38,7 @@ import io.netty.buffer.Unpooled;
 /**
  * HTTP/2 data that contains a chunk of bytes.
  */
-public interface HttpData extends HttpObject, BinaryData {
+public interface HttpData extends HttpObject, Bytes {
 
     /**
      * Returns an empty {@link HttpData}.

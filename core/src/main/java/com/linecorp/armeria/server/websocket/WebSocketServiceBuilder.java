@@ -25,8 +25,7 @@ import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.websocket.WebSocketDecoderConfig;
-import com.linecorp.armeria.common.websocket.WebSocketFrame;
+import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 
 /**
  * Builds a {@link WebSocketService}.
@@ -34,10 +33,12 @@ import com.linecorp.armeria.common.websocket.WebSocketFrame;
 @UnstableApi
 public final class WebSocketServiceBuilder {
 
-    private static final WebSocketDecoderConfig defaultDecoderConfig = WebSocketDecoderConfig.builder().build();
+    static final int DEFAULT_MAX_FRAME_PAYLOAD_LENGTH = 65535; // 64 * 1024 -1
 
     private final WebSocketHandler handler;
-    private WebSocketDecoderConfig decoderConfig = defaultDecoderConfig;
+
+    private int maxFramePayloadLength = DEFAULT_MAX_FRAME_PAYLOAD_LENGTH;
+    private boolean allowMaskMismatch;
     private Set<String> subprotocols = ImmutableSet.of();
     private Set<String> allowedOrigins = ImmutableSet.of();
     private long closeTimeoutMillis = Flags.defaultRequestTimeoutMillis();
@@ -47,10 +48,21 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
-     * Sets the {@link WebSocketDecoderConfig} to decode {@link WebSocketFrame}s.
+     * Sets the maximum length of a frame's payload. If the size of a payload data exceeds the value,
+     * {@link WebSocketCloseStatus#MESSAGE_TOO_BIG} is sent to the peer.
      */
-    public WebSocketServiceBuilder decoderConfig(WebSocketDecoderConfig decoderConfig) {
-        this.decoderConfig = requireNonNull(decoderConfig, "decoderConfig");
+    public WebSocketServiceBuilder maxFramePayloadLength(int maxFramePayloadLength) {
+        checkArgument(maxFramePayloadLength > 0,
+                      "maxFramePayloadLength: %s (expected: > 0)", maxFramePayloadLength);
+        this.maxFramePayloadLength = maxFramePayloadLength;
+        return this;
+    }
+
+    /**
+     * Sets whether the decoder allow to loose the masking requirement on received frames.
+     */
+    public WebSocketServiceBuilder allowMaskMismatch(boolean allowMaskMismatch) {
+        this.allowMaskMismatch = allowMaskMismatch;
         return this;
     }
 
@@ -120,6 +132,7 @@ public final class WebSocketServiceBuilder {
      * Returns a newly-created {@link WebSocketService} with the properties set so far.
      */
     public WebSocketService build() {
-        return new WebSocketService(handler, decoderConfig, subprotocols, allowedOrigins, closeTimeoutMillis);
+        return new WebSocketService(handler, maxFramePayloadLength, allowMaskMismatch,
+                                    subprotocols, allowedOrigins, closeTimeoutMillis);
     }
 }

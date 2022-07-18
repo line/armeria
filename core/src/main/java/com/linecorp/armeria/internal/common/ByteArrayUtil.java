@@ -76,7 +76,7 @@ public final class ByteArrayUtil {
             } catch (IllegalReferenceCountException e) {
                 // Shouldn't really happen when used ByteBuf correctly,
                 // but we just don't make toString() fail because of this.
-                strBuf.append("badRefCnt");
+                strBuf.append("<badRefCnt>");
                 return null;
             }
         } else {

@@ -24,24 +24,35 @@ import java.nio.charset.StandardCharsets;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 
-import com.linecorp.armeria.common.BinaryData;
 import com.linecorp.armeria.common.ByteBufAccessMode;
+import com.linecorp.armeria.common.Bytes;
+import com.linecorp.armeria.internal.common.ByteArrayBytes;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ResourceLeakHint;
 
 class DefaultWebSocketFrame implements WebSocketFrame, ResourceLeakHint {
 
+    static final WebSocketFrame emptyPing = new DefaultWebSocketFrame(
+            WebSocketFrameType.PING, ByteArrayBytes.empty());
+
+    static final WebSocketFrame emptyPong = new DefaultWebSocketFrame(
+            WebSocketFrameType.PONG, ByteArrayBytes.empty());
+
     private final WebSocketFrameType type;
-    private final BinaryData binaryData;
+    private final Bytes bytes;
     private final boolean finalFragment;
     private final boolean isText;
     private final boolean isBinary;
 
-    DefaultWebSocketFrame(WebSocketFrameType type, BinaryData binaryData, boolean finalFragment,
+    DefaultWebSocketFrame(WebSocketFrameType type, Bytes bytes) {
+        this(type, bytes, true, false, false);
+    }
+
+    DefaultWebSocketFrame(WebSocketFrameType type, Bytes bytes, boolean finalFragment,
                           boolean isText, boolean isBinary) {
         this.type = requireNonNull(type, "type");
-        this.binaryData = requireNonNull(binaryData, "binaryData");
+        this.bytes = requireNonNull(bytes, "bytes");
         this.finalFragment = finalFragment;
         this.isText = isText;
         this.isBinary = isBinary;
@@ -74,62 +85,62 @@ class DefaultWebSocketFrame implements WebSocketFrame, ResourceLeakHint {
 
     @Override
     public byte[] array() {
-        return binaryData.array();
+        return bytes.array();
     }
 
     @Override
     public int length() {
-        return binaryData.length();
+        return bytes.length();
     }
 
     @Override
     public InputStream toInputStream() {
-        return binaryData.toInputStream();
+        return bytes.toInputStream();
     }
 
     @Override
     public boolean isPooled() {
-        return binaryData.isPooled();
+        return bytes.isPooled();
     }
 
     @Override
     public ByteBuf byteBuf(ByteBufAccessMode mode) {
-        return binaryData.byteBuf(mode);
+        return bytes.byteBuf(mode);
     }
 
     @Override
     public ByteBuf byteBuf(int offset, int length, ByteBufAccessMode mode) {
-        return binaryData.byteBuf(offset, length, mode);
+        return bytes.byteBuf(offset, length, mode);
     }
 
     @Override
     public void close() {
-        binaryData.close();
+        bytes.close();
     }
 
     @Override
     public String toHintString() {
-        if (binaryData instanceof ResourceLeakHint) {
-            return toString(((ResourceLeakHint) binaryData).toHintString());
+        if (bytes instanceof ResourceLeakHint) {
+            return toString(((ResourceLeakHint) bytes).toHintString());
         }
-        return toString(binaryData.toString());
+        return toString(bytes.toString());
     }
 
     @Override
     public String toString(Charset charset) {
-        return binaryData.toString(charset);
+        return bytes.toString(charset);
     }
 
     @Override
     public String toString() {
-        return toString(binaryData.toString());
+        return toString(bytes.toString());
     }
 
-    private String toString(String binaryDataString) {
+    private String toString(String bytes) {
         final ToStringHelper toStringHelper = MoreObjects.toStringHelper(this).omitNullValues();
         toStringHelper.add("type", type())
                       .add("finalFragment", finalFragment)
-                      .add("binaryData", binaryDataString);
+                      .add("bytes", bytes);
         addToString(toStringHelper);
         return toStringHelper.toString();
     }

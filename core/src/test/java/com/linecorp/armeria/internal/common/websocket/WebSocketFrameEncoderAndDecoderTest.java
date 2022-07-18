@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
-import com.linecorp.armeria.common.websocket.WebSocketDecoderConfig;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -58,15 +57,15 @@ class WebSocketFrameEncoderAndDecoderTest {
 
     private static final BlockingQueue<WebSocketFrame> frameQueue = new LinkedBlockingQueue<>();
 
-    private static ByteBuf binaryData;
+    private static ByteBuf byteBuf;
     private static String textData;
 
     @BeforeAll
     static void setUp() {
-        binaryData = Unpooled.buffer(MAX_TEST_DATA_LENGTH);
+        byteBuf = Unpooled.buffer(MAX_TEST_DATA_LENGTH);
         byte j = 0;
         for (int i = 0; i < MAX_TEST_DATA_LENGTH; i++) {
-            binaryData.array()[i] = j;
+            byteBuf.array()[i] = j;
             j++;
         }
 
@@ -84,7 +83,7 @@ class WebSocketFrameEncoderAndDecoderTest {
 
     @AfterAll
     static void tearDown() {
-        binaryData.release();
+        byteBuf.release();
     }
 
     @BeforeEach
@@ -103,9 +102,9 @@ class WebSocketFrameEncoderAndDecoderTest {
         final CompletableFuture<Void> whenComplete = new CompletableFuture<>();
         requestWriter.decode(decoder, ctx.alloc()).subscribe(subscriber(whenComplete));
 
-        setBinaryDataWriterIndex(maxPayloadLength + 1);
+        setByteBufWriterIndex(maxPayloadLength + 1);
         requestWriter.write(HttpData.wrap(
-                encoder.encode(ctx, WebSocketFrame.ofPooledBinary(binaryData, true))));
+                encoder.encode(ctx, WebSocketFrame.ofPooledBinary(byteBuf, true))));
 
         whenComplete.handle((unused, cause) -> {
             assertThat(cause).isInstanceOf(WebSocketProtocolViolationException.class);
@@ -122,12 +121,9 @@ class WebSocketFrameEncoderAndDecoderTest {
                                                       HttpResponseWriter httpResponseWriter,
                                                       int maxPayloadLength,
                                                       boolean allowMaskMismatch, boolean maskPayload) {
-        final WebSocketDecoderConfig config = WebSocketDecoderConfig.builder()
-                                                                    .allowMaskMismatch(allowMaskMismatch)
-                                                                    .maxFramePayloadLength(maxPayloadLength)
-                                                                    .build();
         final WebSocketCloseHandler closeHandler = new WebSocketCloseHandler(ctx, httpResponseWriter, 1000);
-        return new WebSocketFrameDecoder(ctx, config, httpResponseWriter, encoder, closeHandler, maskPayload);
+        return new WebSocketFrameDecoder(ctx, maxPayloadLength, allowMaskMismatch, httpResponseWriter,
+                                         encoder, closeHandler, maskPayload);
     }
 
     @CsvSource({ "false, false", "false, true", "true, false", "true, true" })
@@ -186,21 +182,21 @@ class WebSocketFrameEncoderAndDecoderTest {
 
     private static void testBinaryWithLen(WebSocketFrameEncoder encoder, HttpRequestWriter requestWriter,
                                           int testDataLength) throws InterruptedException {
-        setBinaryDataWriterIndex(testDataLength);
-        requestWriter.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofPooledBinary(binaryData))));
+        setByteBufWriterIndex(testDataLength);
+        requestWriter.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofPooledBinary(byteBuf))));
         final WebSocketFrame decoded = frameQueue.take();
         assertThat(decoded.type()).isSameAs(WebSocketFrameType.BINARY);
         final ByteBuf decodedBuf = decoded.byteBuf();
         assertThat(decodedBuf.readableBytes()).isEqualTo(testDataLength);
         for (int i = 0; i < testDataLength; i++) {
-            assertThat(binaryData.getByte(i)).isSameAs(decodedBuf.getByte(i));
+            assertThat(byteBuf.getByte(i)).isSameAs(decodedBuf.getByte(i));
         }
         decodedBuf.release();
     }
 
-    private static void setBinaryDataWriterIndex(int writerIndex) {
-        binaryData.retain(); // need to retain for sending and still keeping it
-        binaryData.setIndex(0, writerIndex); // Send only len bytes
+    private static void setByteBufWriterIndex(int writerIndex) {
+        byteBuf.retain(); // need to retain for sending and still keeping it
+        byteBuf.setIndex(0, writerIndex); // Send only len bytes
     }
 
     private static Subscriber<WebSocketFrame> subscriber(CompletableFuture<Void> whenComplete) {

@@ -15,14 +15,16 @@
  */
 package com.linecorp.armeria.common.websocket;
 
-import static com.linecorp.armeria.common.websocket.PingWebSocketFrame.emptyPing;
-import static com.linecorp.armeria.common.websocket.PongWebSocketFrame.emptyPong;
+import static com.linecorp.armeria.common.websocket.DefaultWebSocketFrame.emptyPing;
+import static com.linecorp.armeria.common.websocket.DefaultWebSocketFrame.emptyPong;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
 
-import com.linecorp.armeria.common.BinaryData;
+import com.linecorp.armeria.common.Bytes;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.common.ByteArrayBytes;
+import com.linecorp.armeria.internal.common.ByteBufBytes;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
@@ -33,7 +35,7 @@ import io.netty.buffer.ByteBuf;
  * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5">Data framing</a>
  */
 @UnstableApi
-public interface WebSocketFrame extends BinaryData {
+public interface WebSocketFrame extends Bytes {
 
     /**
      * Returns a new text {@link WebSocketFrame} with the text whose {@code finalFragment}
@@ -41,7 +43,7 @@ public interface WebSocketFrame extends BinaryData {
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
      */
-    static TextWebSocketFrame ofText(String text) {
+    static WebSocketFrame ofText(String text) {
         return ofText(text, true);
     }
 
@@ -51,7 +53,7 @@ public interface WebSocketFrame extends BinaryData {
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
      */
-    static TextWebSocketFrame ofText(String text, boolean finalFragment) {
+    static WebSocketFrame ofText(String text, boolean finalFragment) {
         requireNonNull(text, "text");
         return new TextWebSocketFrame(text, finalFragment);
     }
@@ -62,7 +64,7 @@ public interface WebSocketFrame extends BinaryData {
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
      */
-    static TextWebSocketFrame ofText(byte[] text) {
+    static WebSocketFrame ofText(byte[] text) {
         requireNonNull(text, "text");
         return ofText(text, true);
     }
@@ -74,7 +76,7 @@ public interface WebSocketFrame extends BinaryData {
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
      */
-    static TextWebSocketFrame ofText(byte[] text, boolean finalFragment) {
+    static WebSocketFrame ofText(byte[] text, boolean finalFragment) {
         requireNonNull(text, "text");
         return new TextWebSocketFrame(text, finalFragment);
     }
@@ -107,7 +109,7 @@ public interface WebSocketFrame extends BinaryData {
      */
     static CloseWebSocketFrame ofClose(WebSocketCloseStatus status) {
         requireNonNull(status, "status");
-        return ofClose(status, status.reasonText());
+        return ofClose(status, status.reasonPhase());
     }
 
     /**
@@ -150,7 +152,7 @@ public interface WebSocketFrame extends BinaryData {
         if (binary.length == 0) {
             return emptyPing;
         }
-        return new PingWebSocketFrame(binary);
+        return new DefaultWebSocketFrame(WebSocketFrameType.PING, ByteArrayBytes.of(binary));
     }
 
     /**
@@ -172,7 +174,7 @@ public interface WebSocketFrame extends BinaryData {
         if (binary.length == 0) {
             return emptyPong;
         }
-        return new PongWebSocketFrame(binary);
+        return new DefaultWebSocketFrame(WebSocketFrameType.BINARY, ByteArrayBytes.of(binary));
     }
 
     /**
@@ -223,7 +225,7 @@ public interface WebSocketFrame extends BinaryData {
      * @see #ofText(byte[])
      * @see PooledObjects
      */
-    static TextWebSocketFrame ofPooledText(ByteBuf text) {
+    static WebSocketFrame ofPooledText(ByteBuf text) {
         requireNonNull(text, "text");
         return ofPooledText(text, true);
     }
@@ -236,7 +238,7 @@ public interface WebSocketFrame extends BinaryData {
      * @see #ofText(byte[])
      * @see PooledObjects
      */
-    static TextWebSocketFrame ofPooledText(ByteBuf text, boolean finalFragment) {
+    static WebSocketFrame ofPooledText(ByteBuf text, boolean finalFragment) {
         requireNonNull(text, "text");
         return new TextWebSocketFrame(text, finalFragment);
     }
@@ -289,7 +291,7 @@ public interface WebSocketFrame extends BinaryData {
             binary.release();
             return emptyPing;
         }
-        return new PingWebSocketFrame(binary);
+        return new DefaultWebSocketFrame(WebSocketFrameType.PING, ByteBufBytes.of(binary, true));
     }
 
     /**
@@ -304,7 +306,7 @@ public interface WebSocketFrame extends BinaryData {
             binary.release();
             return emptyPong;
         }
-        return new PongWebSocketFrame(binary);
+        return new DefaultWebSocketFrame(WebSocketFrameType.PONG, ByteBufBytes.of(binary, true));
     }
 
     /**

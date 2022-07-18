@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.stream.StreamMessageAndWriter;
 public interface WebSocketWriter extends WebSocket, StreamMessageAndWriter<WebSocketFrame> {
 
     /**
-     * Write a {@link TextWebSocketFrame} to this {@link WebSocket}.
+     * Write a text {@link WebSocketFrame} to this {@link WebSocket}.
      *
      * @see WebSocketFrame#ofText(String)
      */
@@ -35,7 +35,7 @@ public interface WebSocketWriter extends WebSocket, StreamMessageAndWriter<WebSo
     }
 
     /**
-     * Write a {@link TextWebSocketFrame} to this {@link WebSocket} whose
+     * Write a text {@link WebSocketFrame} to this {@link WebSocket} whose
      * {@link WebSocketFrame#isFinalFragment()} is set to {@code finalFragment}.
      *
      * @see WebSocketFrame#ofText(String, boolean)
@@ -101,7 +101,7 @@ public interface WebSocketWriter extends WebSocket, StreamMessageAndWriter<WebSo
     /**
      * Sends the closing handshake with the {@link WebSocketCloseStatus} and the reason.
      */
-    void close(WebSocketCloseStatus status, String reasonText);
+    void close(WebSocketCloseStatus status, String reasonPhase);
 
     /**
      * Sends the closing handshake with the {@link WebSocketCloseStatus#INTERNAL_SERVER_ERROR} and

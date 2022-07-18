@@ -21,8 +21,8 @@ import java.util.Objects;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.internal.common.ByteArrayBinaryData;
-import com.linecorp.armeria.internal.common.ByteBufBinaryData;
+import com.linecorp.armeria.internal.common.ByteArrayBytes;
+import com.linecorp.armeria.internal.common.ByteBufBytes;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ResourceLeakHint;
@@ -32,67 +32,67 @@ import io.netty.util.ResourceLeakHint;
  */
 final class DefaultHttpData implements HttpData, ResourceLeakHint {
 
-    static final DefaultHttpData empty = new DefaultHttpData(ByteArrayBinaryData.empty(), false);
-    static final DefaultHttpData emptyEos = new DefaultHttpData(ByteArrayBinaryData.empty(), true);
+    static final DefaultHttpData empty = new DefaultHttpData(ByteArrayBytes.empty(), false);
+    static final DefaultHttpData emptyEos = new DefaultHttpData(ByteArrayBytes.empty(), true);
 
-    static HttpData of(byte[] binaryData) {
-        return new DefaultHttpData(new ByteArrayBinaryData(binaryData));
+    static HttpData of(byte[] data) {
+        return new DefaultHttpData(ByteArrayBytes.of(data));
     }
 
-    static HttpData of(ByteBuf binaryData, boolean pooled) {
-        return new DefaultHttpData(new ByteBufBinaryData(binaryData, pooled));
+    static HttpData of(ByteBuf data, boolean pooled) {
+        return new DefaultHttpData(ByteBufBytes.of(data, pooled));
     }
 
-    private final BinaryData binaryData;
+    private final Bytes bytes;
     private final boolean endOfStream;
 
-    private DefaultHttpData(BinaryData binaryData) {
-        this(binaryData, false);
+    private DefaultHttpData(Bytes bytes) {
+        this(bytes, false);
     }
 
-    private DefaultHttpData(BinaryData binaryData, boolean endOfStream) {
-        this.binaryData = binaryData;
+    private DefaultHttpData(Bytes bytes, boolean endOfStream) {
+        this.bytes = bytes;
         this.endOfStream = endOfStream;
     }
 
     @Override
     public byte[] array() {
-        return binaryData.array();
+        return bytes.array();
     }
 
     @Override
     public int length() {
-        return binaryData.length();
+        return bytes.length();
     }
 
     @Override
     public String toHintString() {
-        if (binaryData instanceof ResourceLeakHint) {
-            return toString(((ResourceLeakHint) binaryData).toHintString());
+        if (bytes instanceof ResourceLeakHint) {
+            return toString(((ResourceLeakHint) bytes).toHintString());
         }
-        return toString(binaryData.toString());
+        return toString(bytes.toString());
     }
 
     @Override
     public String toString(Charset charset) {
-        return binaryData.toString(charset);
+        return bytes.toString(charset);
     }
 
     @Override
     public String toString() {
-        return toString(binaryData.toString());
+        return toString(bytes.toString());
     }
 
-    private String toString(String binaryData) {
+    private String toString(String bytes) {
         return MoreObjects.toStringHelper(this)
                           .add("endOfStream", endOfStream)
-                          .add("binaryData", binaryData)
+                          .add("bytes", bytes)
                           .toString();
     }
 
     @Override
     public InputStream toInputStream() {
-        return binaryData.toInputStream();
+        return bytes.toInputStream();
     }
 
     @Override
@@ -110,32 +110,32 @@ final class DefaultHttpData implements HttpData, ResourceLeakHint {
             return endOfStream ? emptyEos : empty;
         }
 
-        return new DefaultHttpData(binaryData, endOfStream);
+        return new DefaultHttpData(bytes, endOfStream);
     }
 
     @Override
     public boolean isPooled() {
-        return binaryData.isPooled();
+        return bytes.isPooled();
     }
 
     @Override
     public ByteBuf byteBuf(ByteBufAccessMode mode) {
-        return binaryData.byteBuf(mode);
+        return bytes.byteBuf(mode);
     }
 
     @Override
     public ByteBuf byteBuf(int offset, int length, ByteBufAccessMode mode) {
-        return binaryData.byteBuf(offset, length, mode);
+        return bytes.byteBuf(offset, length, mode);
     }
 
     @Override
     public void close() {
-        binaryData.close();
+        bytes.close();
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(endOfStream, binaryData);
+        return Objects.hash(endOfStream, bytes);
     }
 
     @Override
@@ -153,6 +153,6 @@ final class DefaultHttpData implements HttpData, ResourceLeakHint {
             return false;
         }
 
-        return endOfStream == that.isEndOfStream() && binaryData.equals(that.binaryData);
+        return endOfStream == that.isEndOfStream() && bytes.equals(that.bytes);
     }
 }

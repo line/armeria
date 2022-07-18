@@ -70,8 +70,8 @@ final class DefaultWebSocket extends DefaultStreamMessage<WebSocketFrame> implem
     }
 
     @Override
-    public void close(WebSocketCloseStatus status, String reasonText) {
-        close(WebSocketFrame.ofClose(status, reasonText));
+    public void close(WebSocketCloseStatus status, String reasonPhase) {
+        close(WebSocketFrame.ofClose(status, reasonPhase));
     }
 
     private void close(CloseWebSocketFrame closeFrame) {
@@ -82,12 +82,12 @@ final class DefaultWebSocket extends DefaultStreamMessage<WebSocketFrame> implem
 
     @Override
     public void close(Throwable cause) {
-        final String reasonText;
+        final String reasonPhase;
         if (cause.getMessage() != null) {
-            reasonText = cause.getMessage();
+            reasonPhase = cause.getMessage();
         } else {
-            reasonText = WebSocketCloseStatus.INTERNAL_SERVER_ERROR.reasonText();
+            reasonPhase = WebSocketCloseStatus.INTERNAL_SERVER_ERROR.reasonPhase();
         }
-        close(WebSocketFrame.ofClose(WebSocketCloseStatus.INTERNAL_SERVER_ERROR, reasonText));
+        close(WebSocketFrame.ofClose(WebSocketCloseStatus.INTERNAL_SERVER_ERROR, reasonPhase));
     }
 }

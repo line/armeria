@@ -20,10 +20,10 @@ import java.util.Objects;
 
 import com.google.common.base.MoreObjects.ToStringHelper;
 
-import com.linecorp.armeria.common.BinaryData;
+import com.linecorp.armeria.common.Bytes;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.ByteArrayBinaryData;
-import com.linecorp.armeria.internal.common.ByteBufBinaryData;
+import com.linecorp.armeria.internal.common.ByteArrayBytes;
+import com.linecorp.armeria.internal.common.ByteBufBytes;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -37,28 +37,29 @@ import io.netty.buffer.Unpooled;
 public final class CloseWebSocketFrame extends DefaultWebSocketFrame {
 
     private final WebSocketCloseStatus status;
-    private final String reason;
+    private final String reasonPhase;
 
-    CloseWebSocketFrame(byte[] binary) {
-        this(new ByteArrayBinaryData(binary), Unpooled.wrappedBuffer(binary));
+    CloseWebSocketFrame(byte[] data) {
+        this(ByteArrayBytes.of(data), Unpooled.wrappedBuffer(data));
     }
 
-    CloseWebSocketFrame(ByteBuf binary) {
-        this(new ByteBufBinaryData(binary, true), binary);
+    CloseWebSocketFrame(ByteBuf data) {
+        this(ByteBufBytes.of(data, true), data);
     }
 
-    CloseWebSocketFrame(WebSocketCloseStatus status, String reason) {
-        this(new ByteBufBinaryData(binary(validateStatusCode(status.code()), reason), false), status, reason);
+    CloseWebSocketFrame(WebSocketCloseStatus status, String reasonPhase) {
+        this(ByteBufBytes.of(byteBuf(validateStatusCode(status.code()), reasonPhase), false),
+             status, reasonPhase);
     }
 
-    private CloseWebSocketFrame(BinaryData binaryData, ByteBuf binary) {
-        this(binaryData, status(binary), reason(binary));
+    private CloseWebSocketFrame(Bytes bytes, ByteBuf data) {
+        this(bytes, status(data), reasonPhase(data));
     }
 
-    private CloseWebSocketFrame(BinaryData binaryData, WebSocketCloseStatus status, String reason) {
-        super(WebSocketFrameType.CLOSE, binaryData, true, false, false);
+    private CloseWebSocketFrame(Bytes bytes, WebSocketCloseStatus status, String reasonPhase) {
+        super(WebSocketFrameType.CLOSE, bytes, true, false, false);
         this.status = status;
-        this.reason = reason;
+        this.reasonPhase = reasonPhase;
     }
 
     /**
@@ -70,19 +71,19 @@ public final class CloseWebSocketFrame extends DefaultWebSocketFrame {
         return status;
     }
 
-    private static WebSocketCloseStatus status(ByteBuf binary) {
-        if (binary.capacity() == 0) {
-            binary.release();
-            throw new IllegalArgumentException("binary must have a close status.");
+    private static WebSocketCloseStatus status(ByteBuf data) {
+        if (data.capacity() == 0) {
+            data.release();
+            throw new IllegalArgumentException("data must have a close status.");
         }
 
-        final int index = binary.readerIndex();
-        final int statusCode = binary.getShort(0);
-        binary.readerIndex(index);
+        final int index = data.readerIndex();
+        final int statusCode = data.getShort(0);
+        data.readerIndex(index);
         try {
             validateStatusCode(statusCode);
         } catch (Throwable t) {
-            binary.release();
+            data.release();
             throw t;
         }
         return WebSocketCloseStatus.valueOf(statusCode);
@@ -93,20 +94,20 @@ public final class CloseWebSocketFrame extends DefaultWebSocketFrame {
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4">Status Codes</a>
      */
-    public String reason() {
-        return reason;
+    public String reasonPhase() {
+        return reasonPhase;
     }
 
-    private static String reason(ByteBuf binary) {
-        if (binary.capacity() <= 2) {
+    private static String reasonPhase(ByteBuf data) {
+        if (data.capacity() <= 2) {
             return "";
         }
 
-        final int index = binary.readerIndex();
-        binary.readerIndex(index + 2);
-        final String reason = binary.toString(StandardCharsets.UTF_8);
-        binary.readerIndex(index);
-        return reason;
+        final int index = data.readerIndex();
+        data.readerIndex(index + 2);
+        final String reasonPhase = data.toString(StandardCharsets.UTF_8);
+        data.readerIndex(index);
+        return reasonPhase;
     }
 
     private static int validateStatusCode(int statusCode) {
@@ -118,20 +119,20 @@ public final class CloseWebSocketFrame extends DefaultWebSocketFrame {
         }
     }
 
-    private static ByteBuf binary(int statusCode, String reason) {
-        final ByteBuf binary = Unpooled.buffer(2 + reason.length());
-        binary.writeShort(statusCode);
-        if (!reason.isEmpty()) {
-            binary.writeCharSequence(reason, StandardCharsets.UTF_8);
+    private static ByteBuf byteBuf(int statusCode, String reasonPhase) {
+        final ByteBuf byteBuf = Unpooled.buffer(2 + reasonPhase.length());
+        byteBuf.writeShort(statusCode);
+        if (!reasonPhase.isEmpty()) {
+            byteBuf.writeCharSequence(reasonPhase, StandardCharsets.UTF_8);
         }
 
-        binary.readerIndex(0);
-        return binary;
+        byteBuf.readerIndex(0);
+        return byteBuf;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(status, reason) * 31 + super.hashCode();
+        return Objects.hash(status, reasonPhase) * 31 + super.hashCode();
     }
 
     @Override
@@ -146,13 +147,13 @@ public final class CloseWebSocketFrame extends DefaultWebSocketFrame {
 
         final CloseWebSocketFrame that = (CloseWebSocketFrame) obj;
         return status.equals(that.status()) &&
-               reason.equals(that.reason()) &&
+               reasonPhase.equals(that.reasonPhase()) &&
                super.equals(obj);
     }
 
     @Override
     void addToString(ToStringHelper toStringHelper) {
         toStringHelper.add("status", status)
-                      .add("reason", reason);
+                      .add("reasonPhase", reasonPhase);
     }
 }

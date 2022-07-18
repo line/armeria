@@ -21,8 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.io.InputStream;
 import java.nio.charset.Charset;
 
-import com.linecorp.armeria.common.BinaryData;
 import com.linecorp.armeria.common.ByteBufAccessMode;
+import com.linecorp.armeria.common.Bytes;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -35,9 +35,9 @@ import io.netty.util.ResourceLeakHint;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
 /**
- * A {@link ByteBuf}-based {@link BinaryData}.
+ * A {@link ByteBuf}-based {@link Bytes}.
  */
-public final class ByteBufBinaryData implements BinaryData, ResourceLeakHint {
+public final class ByteBufBytes implements Bytes, ResourceLeakHint {
 
     private final ByteBuf buf;
     private final boolean pooled;
@@ -45,11 +45,15 @@ public final class ByteBufBinaryData implements BinaryData, ResourceLeakHint {
     @Nullable
     private byte[] array;
 
+    public static ByteBufBytes of(ByteBuf buf, boolean pooled) {
+        return new ByteBufBytes(buf, pooled);
+    }
+
     /**
      * Creates a new instance.
      */
-    public ByteBufBinaryData(ByteBuf buf, boolean pooled) {
-        this.buf = buf;
+    public ByteBufBytes(ByteBuf buf, boolean pooled) {
+        this.buf = requireNonNull(buf, "buf");
         this.pooled = pooled;
     }
 
@@ -140,8 +144,8 @@ public final class ByteBufBinaryData implements BinaryData, ResourceLeakHint {
                 offset = 0;
             }
 
-            return ByteArrayBinaryData.appendPreviews(strBuf, array, offset, previewLength)
-                                      .append('}').toString();
+            return ByteArrayBytes.appendPreviews(strBuf, array, offset, previewLength)
+                                 .append('}').toString();
         }
     }
 
@@ -246,7 +250,7 @@ public final class ByteBufBinaryData implements BinaryData, ResourceLeakHint {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof ByteBufBinaryData)) {
+        if (!(obj instanceof ByteBufBytes)) {
             return false;
         }
 
@@ -254,7 +258,7 @@ public final class ByteBufBinaryData implements BinaryData, ResourceLeakHint {
             return true;
         }
 
-        final ByteBufBinaryData that = (ByteBufBinaryData) obj;
+        final ByteBufBytes that = (ByteBufBytes) obj;
         if (buf.readableBytes() != that.length()) {
             return false;
         }

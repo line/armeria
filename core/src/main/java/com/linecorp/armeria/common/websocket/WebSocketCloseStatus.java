@@ -241,21 +241,21 @@ public final class WebSocketCloseStatus {
         new WebSocketCloseStatus(1015, "TLS handshake failed", false);
 
     private final int statusCode;
-    private final String reasonText;
+    private final String reasonPhase;
     @Nullable
     private String text;
 
-    private WebSocketCloseStatus(int statusCode, String reasonText) {
-        this(statusCode, reasonText, true);
+    private WebSocketCloseStatus(int statusCode, String reasonPhase) {
+        this(statusCode, reasonPhase, true);
     }
 
-    private WebSocketCloseStatus(int statusCode, String reasonText, boolean validate) {
+    private WebSocketCloseStatus(int statusCode, String reasonPhase, boolean validate) {
         if (validate && !isValidStatusCode(statusCode)) {
             throw new IllegalArgumentException(
                 "WebSocket close status code does NOT comply with RFC-6455: " + statusCode);
         }
         this.statusCode = statusCode;
-        this.reasonText = checkNotNull(reasonText, "reasonText");
+        this.reasonPhase = checkNotNull(reasonPhase, "reasonPhase");
     }
 
     /**
@@ -272,8 +272,8 @@ public final class WebSocketCloseStatus {
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4">Status Codes</a>
      */
-    public String reasonText() {
-        return reasonText;
+    public String reasonPhase() {
+        return reasonPhase;
     }
 
     /**
@@ -303,7 +303,7 @@ public final class WebSocketCloseStatus {
         String text = this.text;
         if (text == null) {
             // E.g.: "1000 Bye", "1009 Message too big"
-            this.text = text = code() + " " + reasonText();
+            this.text = text = code() + " " + reasonPhase();
         }
         return text;
     }
