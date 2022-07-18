@@ -215,9 +215,9 @@ static def findPlugin(Project rootProject, String alias) {
 /**
  * Returns the managed versions that associates a module with a version.
  * This method is added to support backward compatibility with 'dependencies.yml'
- * If a module is declared with different versions using multiple aliases,
- * the resolved version depends on how the version catalogs are indexed.
- * So it is not recommended to use managedVersion if the same module is defined multiple times.
+ * Note that it is not recommended to use `managedVersions` with the module defined multiple times with different
+ * aliases. Because if a module is declared with different versions, the version returned by `managedVersions`
+ * is determined by how the version catalogs are indexed.
  */
 static def getManagedVersions(Project rootProject) {
     def managedVersions = [:]
