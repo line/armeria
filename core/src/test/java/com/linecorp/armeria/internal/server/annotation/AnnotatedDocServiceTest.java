@@ -150,9 +150,8 @@ class AnnotatedDocServiceTest {
         addPeriodMethodInfo(methodInfos);
         addMarkdownDescriptionMethodInfo(methodInfos);
         addMermaidDescriptionMethodInfo(methodInfos);
-        final Map<Class<?>, DescriptionInfo> serviceDescription = ImmutableMap.of(MyService.class,
-                                                                                  DescriptionInfo.of(
-                                                                                          "My service class"));
+        final Map<Class<?>, DescriptionInfo> serviceDescription = ImmutableMap.of(
+                MyService.class, DescriptionInfo.of("My service class"));
 
         final JsonNode expectedJson = mapper.valueToTree(AnnotatedDocServicePlugin.generate(
                 serviceDescription, methodInfos));
