@@ -48,7 +48,7 @@ public final class FieldInfo {
     }
 
     /**
-     * Creates a new {@link FieldInfo} with the specified {@code name}, {@link TypeSignature} and DocString.
+     * Creates a new {@link FieldInfo} with the specified {@code name}, {@link TypeSignature} and description.
      * The {@link FieldLocation} and {@link FieldRequirement} of the {@link FieldInfo} will be
      * {@code UNSPECIFIED}.
      */
