@@ -35,11 +35,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
@@ -85,8 +82,7 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
     private final BlockingWebClient webClient = server.webClient().blocking();
 
     private final HttpJsonTranscodingTestServiceBlockingStub grpcClient =
-            GrpcClients.newClient(server.httpUri(GrpcSerializationFormats.PROTO),
-                    HttpJsonTranscodingTestServiceBlockingStub.class);
+            GrpcClients.newClient(server.httpUri(), HttpJsonTranscodingTestServiceBlockingStub.class);
 
     @Test
     void testAuthenticatedRpcMethod() throws Exception {
@@ -101,7 +97,8 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
         final Metadata metadata = new Metadata();
         metadata.put(Metadata.Key.of(TEST_CREDENTIAL_KEY, Metadata.ASCII_STRING_MARSHALLER),
                 "some-credential-string");
-        final Transcoding.Message result = grpcClient.withInterceptors(
+        final Transcoding.Message result =
+                grpcClient.withInterceptors(
                 MetadataUtils.newAttachHeadersInterceptor(metadata)
         ).getMessageV1(requestMessage);
         assertThat(result.getText()).isEqualTo("messages/1");
@@ -112,10 +109,12 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
         final AggregatedHttpResponse failResponse = webClient.get("/v1/messages/1");
         assertThat(failResponse.status()).isEqualTo(HttpStatus.UNAUTHORIZED);
 
-        final AggregatedHttpResponse successResponse = webClient
-                .execute(RequestHeaders.of(HttpMethod.GET, "/v1/messages/1",
-                        TEST_CREDENTIAL_KEY, "some-credential-string"));
-        final JsonNode root = mapper.readTree(successResponse.contentUtf8());
+        final JsonNode root = webClient.prepare()
+                .get("/v1/messages/1")
+                .header(TEST_CREDENTIAL_KEY, "some-credential-string")
+                .asJson(JsonNode.class)
+                .execute()
+                .content();
         assertThat(root.get("text").asText()).isEqualTo("messages/1");
     }
 
@@ -133,7 +132,7 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
     @DecoratorFactory(AuthServiceDecoratorFactoryFunction.class)
     @Retention(RetentionPolicy.RUNTIME)
     @Target({ ElementType.TYPE, ElementType.METHOD })
-    private @interface Authenticate{}
+    private @interface Authenticate {}
 
     private static class AuthServiceDecoratorFactoryFunction implements DecoratorFactoryFunction<Authenticate> {
         @Override
@@ -145,9 +144,9 @@ public class GrpcHttpJsonTranscodingServiceAnnotatedAuthServiceTest {
 
     private static class TestAuthorizer implements Authorizer<HttpRequest> {
         @Override
-        public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, HttpRequest data) {
+        public CompletionStage<Boolean> authorize(ServiceRequestContext ctx, HttpRequest req) {
             return UnmodifiableFuture.completedFuture(
-                    data.headers().contains(TEST_CREDENTIAL_KEY)
+                    req.headers().contains(TEST_CREDENTIAL_KEY)
             );
         }
     }

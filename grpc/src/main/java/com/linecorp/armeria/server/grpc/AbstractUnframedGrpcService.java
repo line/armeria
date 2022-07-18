@@ -189,7 +189,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         if (grpcStatusCode == null) {
             PooledObjects.close(grpcResponse.content());
             res.completeExceptionally(new NullPointerException("grpcStatusCode must not be null"));
-            logger.warn("A gRPC response must have the {} header.", GrpcHeaderNames.GRPC_STATUS);
+            logger.warn("{} A gRPC response must have the {} header. response: {}",
+                    ctx, GrpcHeaderNames.GRPC_STATUS, grpcResponse);
             return;
         }
         Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
