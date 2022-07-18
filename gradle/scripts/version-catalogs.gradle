@@ -47,7 +47,7 @@ if (dependenciesTomlFile.exists()) {
                             break
                         default:
                             throw new IllegalStateException("Unknown version catalog: '$key'. " +
-                                    "(expected: one of 'versions', 'libraries', 'bundles', 'plungins' and 'boms'")
+                                    "(expected: one of 'versions', 'libraries', 'bundles', 'plungins' and 'boms')")
                     }
                 }
             }

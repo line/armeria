@@ -1,4 +1,3 @@
 dependencies {
     testImplementation libs.joor
-    testRuntimeOnly libs.junit5.platform.commons
 }

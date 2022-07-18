@@ -55,7 +55,6 @@ jackson = { module = "com.fasterxml.jackson:jackson-bom", version = "2.13.3" }
 junit5 = { module = "org.junit:junit-bom", version = "5.8.2" }
 netty = { module = "io.netty:netty-bom", version = "4.1.78.Final" }
 
-[libraries]
 # Akka is used only for testing in it:grpcweb module.
 [libraries.akka-http-cors_v213]
 module = "ch.megard:akka-http-cors_2.13"
