@@ -46,8 +46,8 @@ public interface NamedTypeInfoProvider {
      *        {@code org.apache.thrift.TException} for {@code ThriftDocServicePlugin}</li>
      * </ul>
      *
-     * @return a new {@link StructInfo}. {@code null} if this {@link NamedTypeInfoProvider} cannot convert the
-     *         {@code typeDescriptor} to the {@link NamedTypeInfo}.
+     * @return a new {@link NamedTypeInfo}. {@code null} if this {@link NamedTypeInfoProvider} cannot convert
+     *         the {@code typeDescriptor} to the {@link NamedTypeInfo}.
      */
     @Nullable
     NamedTypeInfo newNamedTypeInfo(Object typeDescriptor);

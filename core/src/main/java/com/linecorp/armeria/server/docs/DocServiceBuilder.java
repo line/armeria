@@ -453,7 +453,7 @@ public final class DocServiceBuilder {
     }
 
     /**
-     * Adds the specified {@link NamedTypeInfoProvider}s used to create a {@link NamedTypeInfo} from
+     * Adds the specified {@link NamedTypeInfoProvider} used to create a {@link NamedTypeInfo} from
      * a type descriptor.
      */
     public DocServiceBuilder namedTypeInfoProvider(NamedTypeInfoProvider namedTypeInfoProvider) {

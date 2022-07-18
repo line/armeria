@@ -134,6 +134,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                                                       NamedTypeInfoProvider namedTypeInfoProvider) {
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(filter, "filter");
+        requireNonNull(namedTypeInfoProvider, "namedTypeInfoProvider");
 
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
         final Map<Class<?>, String> serviceDescription = new HashMap<>();

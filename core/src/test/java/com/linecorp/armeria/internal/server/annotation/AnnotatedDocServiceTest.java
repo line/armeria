@@ -154,9 +154,6 @@ class AnnotatedDocServiceTest {
 
         final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
-        System.out.println(res.contentUtf8());
-        System.out.println("###########");
-        System.out.println(expectedJson);
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CACHE_CONTROL))
                 .isEqualTo("no-cache, max-age=0, must-revalidate");

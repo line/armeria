@@ -79,16 +79,6 @@ class JsonNamedTypeInfoProviderTest {
         }
     };
 
-    @RegisterExtension
-    static ServerExtension serverWithCustomProvider = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            sb.annotatedService(new JsonService());
-
-            sb.decorator(LoggingService.newDecorator());
-        }
-    };
-
     final JsonNamedTypeInfoProvider requestStructInfoProvider = new JsonNamedTypeInfoProvider(true);
     final JsonNamedTypeInfoProvider responseStructInfoProvider = new JsonNamedTypeInfoProvider(false);
 
@@ -177,7 +167,6 @@ class JsonNamedTypeInfoProviderTest {
                                       .asJson(JsonNode.class)
                                       .execute()
                                       .content();
-        System.out.println(response);
         final JsonNode param = response.get("services").get(0).get("methods").get(0)
                                        .get("parameters").get(0);
         assertThat(param.get("name").textValue()).isEqualTo("CustomFooRequestInfo");

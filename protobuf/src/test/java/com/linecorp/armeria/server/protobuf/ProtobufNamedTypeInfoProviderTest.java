@@ -45,9 +45,12 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.protobuf.testing.Messages.CompressionType;
 import com.linecorp.armeria.protobuf.testing.Messages.ReconnectInfo;
+import com.linecorp.armeria.protobuf.testing.Messages.SimpleRequest;
+import com.linecorp.armeria.protobuf.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.protobuf.testing.Messages.StreamingOutputCallRequest;
 import com.linecorp.armeria.protobuf.testing.Messages.TestMessage;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -59,6 +62,8 @@ import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldRequirement;
+import com.linecorp.armeria.server.docs.NamedTypeInfo;
+import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -69,9 +74,19 @@ class ProtobufNamedTypeInfoProviderTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.http(8080);
             sb.annotatedService(new ProtobufService());
             sb.serviceUnder("/docs", new DocService());
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension customProviderServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.annotatedService(new SimpleService());
+            sb.serviceUnder("/docs", DocService.builder()
+                                               .namedTypeInfoProvider(new CustomNamedTypeInfoProvider())
+                                               .build());
         }
     };
 
@@ -167,8 +182,6 @@ class ProtobufNamedTypeInfoProviderTest {
                                         .asJson(JsonNode.class)
                                         .execute()
                                         .content();
-        System.out.println(response);
-
         final InputStream resourceAsStream = ProtobufNamedTypeInfoProviderTest.class.getResourceAsStream(
                 "ProtobufNamedTypeInfoProviderTest_specification.json5");
         final JsonMapper json5Mapper = JsonMapper.builder()
@@ -185,12 +198,55 @@ class ProtobufNamedTypeInfoProviderTest {
         assertThatJson(response.get("structs")).isEqualTo(expected.get("structs"));
     }
 
+    @Test
+    void customStructInfo() {
+        final BlockingWebClient client = customProviderServer.blockingWebClient();
+
+        final JsonNode response = client.prepare()
+                                        .get("/docs/specification.json")
+                                        .asJson(JsonNode.class)
+                                        .execute()
+                                        .content();
+        final JsonNode param = response.get("services").get(0).get("methods").get(0)
+                                       .get("parameters").get(0);
+        assertThat(param.get("name").textValue()).isEqualTo("CustomSimpleRequest");
+        final JsonNode fieldInfos = param.get("childFieldInfos");
+        assertThat(fieldInfos.size()).isEqualTo(1);
+        assertThat(fieldInfos.get(0).get("name").textValue()).isEqualTo("foo");
+        assertThat(fieldInfos.get(0).get("typeSignature").textValue()).isEqualTo("foo");
+        // Make sure that the default `NamedTypeInfoProvider`s are set as the fallback of the custom provider.
+        assertThat(response.get("structs").get(0).get("name").textValue())
+                .isEqualTo("armeria.protobuf.testing.SimpleResponse");
+    }
+
     private static final class ProtobufService {
         @Post("/json")
         @ConsumesJson
         @ProducesJson
         public CompletableFuture<TestMessage> json(TestMessage req) {
             return UnmodifiableFuture.completedFuture(null);
+        }
+    }
+
+    private static final class SimpleService {
+        @Post("/simple")
+        @ConsumesJson
+        @ProducesJson
+        public CompletableFuture<SimpleResponse> json(SimpleRequest req) {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+    }
+
+    private static final class CustomNamedTypeInfoProvider implements NamedTypeInfoProvider {
+
+        @Nullable
+        @Override
+        public NamedTypeInfo newNamedTypeInfo(Object typeDescriptor) {
+            if (SimpleRequest.class.isAssignableFrom((Class<?>) typeDescriptor)) {
+                return new StructInfo("CustomSimpleRequest",
+                                      ImmutableList.of(FieldInfo.of("foo", TypeSignature.ofBase("foo"))));
+            }
+            return null;
         }
     }
 }

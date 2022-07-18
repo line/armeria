@@ -119,7 +119,6 @@ public final class DocService extends SimpleDecoratingHttpService {
     private final Map<String, ListMultimap<String, String>> exampleQueries;
     private final List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers;
     private final DocServiceFilter filter;
-    @Nullable
     private final NamedTypeInfoProvider namedTypeInfoProvider;
 
     @Nullable
@@ -172,7 +171,10 @@ public final class DocService extends SimpleDecoratingHttpService {
         return typeDescriptor -> {
             if (namedTypeInfoProvider != null) {
                 // Respect user-defined provider first.
-                return namedTypeInfoProvider.newNamedTypeInfo(typeDescriptor);
+                final NamedTypeInfo namedTypeInfo = namedTypeInfoProvider.newNamedTypeInfo(typeDescriptor);
+                if (namedTypeInfo != null) {
+                    return namedTypeInfo;
+                }
             }
 
             for (NamedTypeInfoProvider provider : spiNamedTypeInfoProviders) {
