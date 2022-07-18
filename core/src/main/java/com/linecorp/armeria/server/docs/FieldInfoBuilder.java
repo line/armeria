@@ -46,7 +46,7 @@ public final class FieldInfoBuilder {
     FieldInfoBuilder(String name, TypeSignature typeSignature) {
         this.name = requireNonNull(name, "name");
         this.typeSignature = requireNonNull(typeSignature, "typeSignature");
-        this.childFieldInfos = ImmutableList.of();
+        childFieldInfos = ImmutableList.of();
     }
 
     FieldInfoBuilder(String name, TypeSignature typeSignature, FieldInfo... childFieldInfos) {
