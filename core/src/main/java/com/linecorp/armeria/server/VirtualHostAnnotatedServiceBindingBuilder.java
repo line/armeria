@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
@@ -65,7 +64,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  * @see VirtualHostBuilder
  * @see AnnotatedServiceBindingBuilder
  */
-public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceConfigSetters {
+public final class VirtualHostAnnotatedServiceBindingBuilder implements AnnotatedServiceConfigSetters {
 
     private final DefaultServiceConfigSetters defaultServiceConfigSetters = new DefaultServiceConfigSetters();
     private final VirtualHostBuilder virtualHostBuilder;
@@ -84,19 +83,13 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         this.virtualHostBuilder = virtualHostBuilder;
     }
 
-    /**
-     * Sets the path prefix to be used for this {@link VirtualHostAnnotatedServiceBindingBuilder}.
-     * @param pathPrefix string representing the path prefix.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder pathPrefix(String pathPrefix) {
         this.pathPrefix = requireNonNull(pathPrefix, "pathPrefix");
         return this;
     }
 
-    /**
-     * Adds the given {@link ExceptionHandlerFunction}s to this
-     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder exceptionHandlers(
             ExceptionHandlerFunction... exceptionHandlerFunctions) {
         requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
@@ -104,10 +97,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
-    /**
-     * Adds the given {@link ExceptionHandlerFunction}s to this
-     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder exceptionHandlers(
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
         requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
@@ -115,10 +105,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
-    /**
-     * Adds the given {@link ResponseConverterFunction}s to this
-     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder responseConverters(
             ResponseConverterFunction... responseConverterFunctions) {
         requireNonNull(responseConverterFunctions, "responseConverterFunctions");
@@ -126,10 +113,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
-    /**
-     * Adds the given {@link ResponseConverterFunction}s to this
-     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder responseConverters(
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
         requireNonNull(responseConverterFunctions, "responseConverterFunctions");
@@ -137,10 +121,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
-    /**
-     * Adds the given {@link RequestConverterFunction}s to this
-     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder requestConverters(
             RequestConverterFunction... requestConverterFunctions) {
         requireNonNull(requestConverterFunctions, "requestConverterFunctions");
@@ -148,10 +129,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
-    /**
-     * Adds the given {@link RequestConverterFunction}s to this
-     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder requestConverters(
             Iterable<? extends RequestConverterFunction> requestConverterFunctions) {
         requireNonNull(requestConverterFunctions, "requestConverterFunctions");
@@ -159,12 +137,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
-    /**
-     * Sets whether the service executes service methods using the blocking executor. By default, service
-     * methods are executed directly on the event loop for implementing fully asynchronous services. If your
-     * service uses blocking logic, you should either execute such logic in a separate thread using something
-     * like {@link Executors#newCachedThreadPool()} or enable this setting.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder useBlockingTaskExecutor(boolean useBlockingTaskExecutor) {
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         return this;
