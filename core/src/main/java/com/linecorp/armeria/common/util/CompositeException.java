@@ -66,10 +66,11 @@ public final class CompositeException extends RuntimeException {
     private static final long serialVersionUID = 3026362227162912146L;
     private static final int maxStacktraceSize = 20;
     private static final int disabledVerboseExceptionLoopCount = 1;
+    private static final Sampler<Class<? extends Throwable>> verboseExceptionFlag =
+            Flags.verboseExceptionSampler();
 
     private final List<Throwable> exceptions;
     private final String message;
-    private final Sampler<Class<? extends Throwable>> verboseExceptionFlag = Flags.verboseExceptionSampler();
 
     @Nullable
     private Throwable cause;

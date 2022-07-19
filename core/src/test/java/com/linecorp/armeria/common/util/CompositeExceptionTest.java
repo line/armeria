@@ -20,6 +20,7 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -55,7 +56,7 @@ class CompositeExceptionTest {
         final Field samplerField =
                 compositeException.getClass().getDeclaredField("verboseExceptionFlag");
         final ReflectionMemberAccessor mockitoMemberAccessor = new ReflectionMemberAccessor();
-        mockitoMemberAccessor.set(samplerField, compositeException, verboseExceptionFlag);
+        modifyFinalStaticFieldForSampler(samplerField, verboseExceptionFlag);
     }
 
     @Test
@@ -88,5 +89,14 @@ class CompositeExceptionTest {
         // Expected: if verboseException option enabled, max output stacktrace is 20
         // this case is occurred 2 exceptions (20 * 2)
         assertThat(separatedStacktrace.size()).isEqualTo(40);
+    }
+
+    private static void modifyFinalStaticFieldForSampler(final Field field,
+                                                         final Object newValue) throws Exception {
+        field.setAccessible(true);
+        final Field modifiersField = Field.class.getDeclaredField("modifiers");
+        modifiersField.setAccessible(true);
+        modifiersField.setInt(field, field.getModifiers() & ~Modifier.FINAL);
+        field.set(null, newValue);
     }
 }
