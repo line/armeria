@@ -119,7 +119,7 @@ public interface Unwrappable {
      * }</pre>
      */
     @UnstableApi
-    default Unwrappable unwrapAll() {
+    default Object unwrapAll() {
         Unwrappable unwrapped = this;
         while (true) {
             final Unwrappable inner = unwrapped.unwrap();

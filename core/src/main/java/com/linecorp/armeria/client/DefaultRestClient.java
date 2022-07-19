@@ -23,7 +23,6 @@ import java.net.URI;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.Scheme;
-import com.linecorp.armeria.common.util.Unwrappable;
 
 final class DefaultRestClient implements RestClient {
 
@@ -79,7 +78,7 @@ final class DefaultRestClient implements RestClient {
     }
 
     @Override
-    public Unwrappable unwrapAll() {
+    public Object unwrapAll() {
         return delegate.unwrapAll();
     }
 }
