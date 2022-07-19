@@ -76,4 +76,9 @@ final class DefaultRestClient implements RestClient {
     public HttpClient unwrap() {
         return delegate.unwrap();
     }
+
+    @Override
+    public Object unwrapAll() {
+        return delegate.unwrapAll();
+    }
 }
