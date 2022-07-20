@@ -533,7 +533,7 @@ class AnnotatedDocServiceTest {
         @Description(value = "## Description method with markdown", markup = Markup.MARKDOWN)
         @Get("/markdown")
         public String description(@Param @Description(value = "DESCRIPTION `PARAM`", markup = Markup.MARKDOWN)
-                                          DescriptionEnum descriptionEnum) {
+                                  DescriptionEnum descriptionEnum) {
             return descriptionEnum.name();
         }
 
