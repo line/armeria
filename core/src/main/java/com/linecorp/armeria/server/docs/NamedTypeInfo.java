@@ -39,7 +39,7 @@ public interface NamedTypeInfo {
     String name();
 
     /**
-     * Returns the description object. If not available, an null value is returned.
+     * Returns the description information. If not available, a null value is returned.
      */
     @JsonProperty
     @JsonInclude(Include.NON_NULL)
