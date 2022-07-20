@@ -25,15 +25,15 @@ import com.linecorp.armeria.server.annotation.Description;
 @UnstableApi
 public enum Markup {
     /**
-     * The field is not support markup types.
+     * No markup.
      */
     NONE,
     /**
-     * The field is support the markdown.
+     * <a href="https://en.wikipedia.org/wiki/Markdown">Markdown</a>.
      */
     MARKDOWN,
     /**
-     * The field is support the mermaid.
+     * <a href="https://mermaid-js.github.io/mermaid/#/">Mermaid</a>.
      */
     MERMAID
 }
