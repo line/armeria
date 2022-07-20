@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Description of a type, a field, a method or a parameter.
  */
