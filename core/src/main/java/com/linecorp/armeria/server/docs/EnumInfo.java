@@ -101,7 +101,7 @@ public final class EnumInfo implements NamedTypeInfo {
     }
 
     /**
-     * Returns description information of the enum.
+     * Returns the description information of the enum.
      */
     @Override
     public DescriptionInfo descriptionInfo() {
