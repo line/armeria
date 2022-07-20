@@ -33,17 +33,17 @@ const removeIndentDocString = (docString: string) => {
 
     const lines = docString
       .replace(/@param .*[\n\r]*/gim, '')
-      .split(/(?:\r\n|\n|\r)/gim);
+      .split(/\r\n|\n|\r/gm);
 
     const firstContentfulLine = lines[0].trim() ? lines[0] : lines[1];
-    const indent = firstContentfulLine.match(/^\s*/)?[0].length || 0;
+    const indent = firstContentfulLine?.match(/^\s*/)?.[0].length || 0;
 
     return lines
       .map((l) => l.slice(indent))
       .join('\n')
       .trim();
   } catch (e) {
-    return docString as string;
+    return docString;
   }
 };
 
