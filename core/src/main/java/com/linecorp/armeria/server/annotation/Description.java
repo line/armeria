@@ -41,7 +41,7 @@ public @interface Description {
     String value() default DefaultValues.UNSPECIFIED;
 
     /**
-     * The supported markup type in doc service.
+     * The supported markup type in {@link DocService}.
      */
     Markup markup() default Markup.NONE;
 }
