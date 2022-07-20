@@ -24,6 +24,7 @@ import com.google.common.base.MoreObjects;
 /**
  * Description of a type, a field, a method or a parameter.
  */
+@UnstableApi
 public final class DescriptionInfo {
     /**
      * Creates a new {@link DescriptionInfo} with the docStrings and specific markup.
