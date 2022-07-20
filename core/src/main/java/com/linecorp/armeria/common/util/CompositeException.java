@@ -58,6 +58,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
  *
  * <p>If you invoke {@link #getCause()}, it will lazily create the causal chain but will stop if it finds any
  * Throwable in the chain that it has already seen.
+ *
+ * <p>If the {@link Flags#verboseExceptionSampler()} is true, more detailed StackTrace are printed when
+ * exceptions are thrown.
  */
 public final class CompositeException extends RuntimeException {
 
