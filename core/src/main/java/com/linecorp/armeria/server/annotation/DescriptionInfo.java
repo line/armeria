@@ -22,7 +22,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 
 /**
- * Description information used in Annotated Service when using {@link Description}.
+ * Description of a type, a field, a method or a parameter.
  */
 public final class DescriptionInfo {
     final String docString;
