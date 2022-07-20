@@ -52,7 +52,7 @@ public final class DescriptionInfo {
      * @param docString the documentation string
      * @param markup the supported markup string
      */
-    DescriptionInfo(String docString, Markup markup) {
+    private DescriptionInfo(String docString, Markup markup) {
         this.docString = requireNonNull(docString, "docString");
         this.markup = requireNonNull(markup, "markup");
     }
