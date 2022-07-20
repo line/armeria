@@ -76,7 +76,6 @@ public final class DescriptionInfo {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .omitNullValues()
                           .add("docString", docString)
                           .add("markup", markup)
                           .toString();
