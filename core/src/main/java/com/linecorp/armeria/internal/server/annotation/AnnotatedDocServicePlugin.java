@@ -442,7 +442,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
 
                           return new EnumValueInfo(f.getName(), null);
                       })
-                      .collect(Collectors.toList());
+                      .collect(toImmutableList());
 
         if (description != null) {
             return new EnumInfo(name, values, DescriptionInfo.of(description.value(), description.markup()));
