@@ -55,7 +55,7 @@ const renderDefaultDocString = (docString: string): JSX.Element => {
 
   const lines = docString
     .replace(/@param .*[\n\r]*/gim, '')
-    .split(/(?:\r\n|\n|\r)/gim);
+    .split(/\r\n|\n|\r/gm);
 
   return (
     <>
