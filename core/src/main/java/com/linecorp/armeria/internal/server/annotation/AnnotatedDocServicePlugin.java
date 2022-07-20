@@ -470,7 +470,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
 
                           return FieldInfo.of(f.getName(), toTypeSignature(f.getGenericType()));
                       })
-                      .collect(Collectors.toList());
+                      .collect(toImmutableList());
 
         if (description != null) {
             return new StructInfo(name, fields, DescriptionInfo.of(description.value(), description.markup()));
