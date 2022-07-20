@@ -75,7 +75,7 @@ public final class StructInfo implements NamedTypeInfo {
     }
 
     /**
-     * Returns the description information of the struct.
+     * Returns the description information of this struct.
      */
     @JsonProperty
     @Override
