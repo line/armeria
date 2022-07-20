@@ -36,8 +36,7 @@ const removeIndentDocString = (docString: string) => {
       .split(/(?:\r\n|\n|\r)/gim);
 
     const firstContentfulLine = lines[0].trim() ? lines[0] : lines[1];
-    // @ts-ignore
-    const indent = firstContentfulLine.match(/^\s*/)[0].length;
+    const indent = firstContentfulLine.match(/^\s*/)?[0].length || 0;
 
     return lines
       .map((l) => l.slice(indent))
