@@ -211,7 +211,7 @@ public final class MethodInfo {
     }
 
     /**
-     * Returns the description information object of the function.
+     * Returns the description information of the function.
      */
     @JsonProperty
     @JsonInclude(Include.NON_NULL)
