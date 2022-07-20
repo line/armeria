@@ -18,8 +18,8 @@ package example.armeria.server.annotated.kotlin
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.server.annotation.Description
 import com.linecorp.armeria.server.annotation.Get
-import com.linecorp.armeria.server.annotation.Markup
 import com.linecorp.armeria.server.annotation.Param
+import com.linecorp.armeria.server.docs.Markup
 
 @CoroutineNameDecorator(name = "default")
 class MermaidDescriptionService {

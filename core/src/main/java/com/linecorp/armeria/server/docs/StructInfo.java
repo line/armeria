@@ -32,7 +32,6 @@ import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.annotation.DescriptionInfo;
 
 /**
  * Metadata about a struct type.

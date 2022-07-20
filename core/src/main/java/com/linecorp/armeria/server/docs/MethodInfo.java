@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.Service;
-import com.linecorp.armeria.server.annotation.DescriptionInfo;
 
 /**
  * Metadata about a function of a {@link Service}.

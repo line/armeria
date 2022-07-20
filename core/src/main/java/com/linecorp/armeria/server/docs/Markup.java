@@ -14,16 +14,26 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.annotation;
+package com.linecorp.armeria.server.docs;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.annotation.Description;
 
 /**
  * Supported markup types in {@link Description}.
  */
 @UnstableApi
 public enum Markup {
+    /**
+     * The field is not support markup types.
+     */
     NONE,
+    /**
+     * The field is support the markdown.
+     */
     MARKDOWN,
+    /**
+     * The field is support the mermaid.
+     */
     MERMAID
 }

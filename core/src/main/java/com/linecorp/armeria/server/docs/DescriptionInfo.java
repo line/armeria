@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.annotation;
+package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
@@ -25,9 +25,6 @@ import com.google.common.base.MoreObjects;
  * Description of a type, a field, a method or a parameter.
  */
 public final class DescriptionInfo {
-    final String docString;
-    final Markup markup;
-
     /**
      * Creates a new {@link DescriptionInfo} with the docStrings and specific markup.
      *
@@ -46,6 +43,9 @@ public final class DescriptionInfo {
     public static DescriptionInfo of(String docString) {
         return new DescriptionInfo(docString, Markup.NONE);
     }
+
+    private final String docString;
+    private final Markup markup;
 
     /**
      * Creates a new instance.

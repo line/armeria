@@ -64,7 +64,6 @@ import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.VirtualHost;
-import com.linecorp.armeria.server.annotation.DescriptionInfo;
 import com.linecorp.armeria.server.file.AbstractHttpVfs;
 import com.linecorp.armeria.server.file.AggregatedHttpFile;
 import com.linecorp.armeria.server.file.FileService;

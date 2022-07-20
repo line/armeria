@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.annotation.Delete;
 import com.linecorp.armeria.server.annotation.Description;
-import com.linecorp.armeria.server.annotation.DescriptionInfo;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
 import com.linecorp.armeria.server.annotation.Options;
@@ -51,6 +50,7 @@ import com.linecorp.armeria.server.annotation.PathPrefix;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.Trace;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 
 class AnnotatedServiceFactoryTest {
 

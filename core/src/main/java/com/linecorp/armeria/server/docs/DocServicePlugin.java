@@ -26,7 +26,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
-import com.linecorp.armeria.server.annotation.DescriptionInfo;
 
 /**
  * Generates the {@link ServiceSpecification}s of the supported {@link Service}s.

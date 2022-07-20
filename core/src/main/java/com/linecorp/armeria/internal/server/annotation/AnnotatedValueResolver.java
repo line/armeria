@@ -85,7 +85,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
 import com.linecorp.armeria.server.annotation.Default;
 import com.linecorp.armeria.server.annotation.Delimiter;
-import com.linecorp.armeria.server.annotation.DescriptionInfo;
 import com.linecorp.armeria.server.annotation.FallthroughException;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.JacksonRequestConverterFunction;
@@ -95,6 +94,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 
 import io.netty.handler.codec.http.HttpConstants;
 import scala.concurrent.ExecutionContext;

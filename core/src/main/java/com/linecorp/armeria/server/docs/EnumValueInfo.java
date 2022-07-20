@@ -26,7 +26,6 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.annotation.DescriptionInfo;
 
 /**
  * Metadata about an enum value.

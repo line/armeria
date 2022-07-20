@@ -26,7 +26,6 @@ import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.annotation.DescriptionInfo;
 
 /**
  * Creates a new {@link FieldInfo} using the builder pattern.

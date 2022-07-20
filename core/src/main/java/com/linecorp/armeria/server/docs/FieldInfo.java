@@ -27,7 +27,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.server.annotation.DescriptionInfo;
 
 /**
  * Metadata about a field of a struct or an exception.
