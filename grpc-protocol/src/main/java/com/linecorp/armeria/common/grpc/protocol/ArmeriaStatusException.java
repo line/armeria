@@ -29,20 +29,37 @@ public final class ArmeriaStatusException extends RuntimeException {
 
     private final int code;
 
+    private final byte[] details;
+
     /**
      * Constructs an {@link ArmeriaStatusException} for the given gRPC status code and message.
      */
     public ArmeriaStatusException(int code, @Nullable String message) {
-        super(message);
-        this.code = code;
+        this(code, message, null, null);
+    }
+
+    /**
+     * Constructs an {@link ArmeriaStatusException} for the given gRPC status code, message and details.
+     */
+    public ArmeriaStatusException(int code, @Nullable String message, @Nullable byte[] details) {
+        this(code, message, details, null);
     }
 
     /**
      * Constructs an {@link ArmeriaStatusException} for the given gRPC status code, message and cause.
      */
     public ArmeriaStatusException(int code, @Nullable String message, @Nullable Throwable cause) {
+        this(code, message, null, cause);
+    }
+
+    /**
+     * Constructs an {@link ArmeriaStatusException} for the given gRPC status code, message, details and cause.
+     */
+    public ArmeriaStatusException(int code, @Nullable String message, @Nullable byte[] details,
+                                  @Nullable Throwable cause) {
         super(message, cause);
         this.code = code;
+        this.details = details;
     }
 
     /**
@@ -50,5 +67,13 @@ public final class ArmeriaStatusException extends RuntimeException {
      */
     public int getCode() {
         return code;
+    }
+
+    /**
+     * Returns the gRPC details for this {@link ArmeriaStatusException}.
+     */
+    @Nullable
+    public byte[] getDetails() {
+        return details;
     }
 }

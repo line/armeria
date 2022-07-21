@@ -133,7 +133,8 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                     if (cause == null) {
                         try {
                             final HttpHeadersBuilder trailersBuilder = HttpHeaders.builder();
-                            GrpcTrailersUtil.addStatusMessageToTrailers(trailersBuilder, StatusCodes.OK, null);
+                            GrpcTrailersUtil.addStatusMessageToTrailers(trailersBuilder, StatusCodes.OK,
+                                                                        null, null);
                             final HttpHeaders trailers = trailersBuilder.build();
                             GrpcWebTrailers.set(ctx, trailers);
                             final ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
@@ -162,10 +163,11 @@ public abstract class AbstractUnsafeUnaryGrpcService extends AbstractHttpService
                     if (cause instanceof ArmeriaStatusException) {
                         final ArmeriaStatusException statusException = (ArmeriaStatusException) cause;
                         GrpcTrailersUtil.addStatusMessageToTrailers(
-                                trailersBuilder, statusException.getCode(), statusException.getMessage());
+                                trailersBuilder, statusException.getCode(), statusException.getMessage(),
+                                statusException.getDetails());
                     } else {
                         GrpcTrailersUtil.addStatusMessageToTrailers(
-                                trailersBuilder, StatusCodes.INTERNAL, cause.getMessage());
+                                trailersBuilder, StatusCodes.INTERNAL, cause.getMessage(), null);
                     }
                     final ResponseHeaders trailers = trailersBuilder.build();
                     GrpcWebTrailers.set(ctx, trailers);

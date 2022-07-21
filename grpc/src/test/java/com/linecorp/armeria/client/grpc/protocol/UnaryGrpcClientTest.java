@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.util.concurrent.CompletionException;
 import java.util.stream.Stream;
@@ -79,8 +80,8 @@ class UnaryGrpcClientTest {
                             .build();
     }
 
-    private static String getUri(SerializationFormat serializationFormat) {
-        return String.format("%s+%s", serializationFormat, server.httpUri());
+    private static URI getUri(SerializationFormat serializationFormat) {
+        return server.httpUri(serializationFormat);
     }
 
     @ParameterizedTest

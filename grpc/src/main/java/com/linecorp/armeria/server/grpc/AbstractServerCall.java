@@ -524,7 +524,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     static HttpHeaders statusToTrailers(
             ServiceRequestContext ctx, HttpHeadersBuilder trailersBuilder, Status status, Metadata metadata) {
         GrpcTrailersUtil.addStatusMessageToTrailers(
-                trailersBuilder, status.getCode().value(), status.getDescription());
+                trailersBuilder, status.getCode().value(), status.getDescription(), null);
 
         MetadataUtil.fillHeaders(metadata, trailersBuilder);
 

@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.common.grpc.protocol;
 
 import static io.netty.util.AsciiString.c2b;
 
+import java.util.Base64;
 import java.util.Map;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -43,11 +44,16 @@ public final class GrpcTrailersUtil {
      * as {@code true}.
      */
     public static void addStatusMessageToTrailers(
-            HttpHeadersBuilder trailersBuilder, int code, @Nullable String message) {
+            HttpHeadersBuilder trailersBuilder, int code, @Nullable String message,
+            @Nullable byte[] details) {
         trailersBuilder.endOfStream(true);
         trailersBuilder.add(GrpcHeaderNames.GRPC_STATUS, StringUtil.toString(code));
         if (message != null) {
             trailersBuilder.add(GrpcHeaderNames.GRPC_MESSAGE, StatusMessageEscaper.escape(message));
+        }
+        if (details != null && details.length > 0) {
+            final String encodedDetails = Base64.getEncoder().encodeToString(details);
+            trailersBuilder.add(GrpcHeaderNames.ARMERIA_GRPC_DETAILS, encodedDetails);
         }
     }
 
