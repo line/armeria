@@ -97,7 +97,7 @@ We've only tested running the service on a server. This time, let's try calling 
     public static void main(String[] args) throws Exception {}
   }
   ```
-2. Create a client using Armeria's <type://Clients>. We're running the server locally and have set the port to 8080 in our server code. Let's access the server at http://127.0.0.1:8080.
+2. Create a client using Armeria's <type://GrpcClients>. We're running the server locally and have set the port to 8080 in our server code. Let's access the server at http://127.0.0.1:8080.
   ```java filename=BlogClient.java
   import com.linecorp.armeria.client.Clients;
   import example.armeria.server.blog.grpc.BlogServiceGrpc.BlogServiceBlockingStub;
