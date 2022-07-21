@@ -35,6 +35,14 @@ import example.armeria.server.blog.grpc.Blog.DeleteBlogPostRequest;
 public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
   @Override
   public void deleteBlogPost(DeleteBlogPostRequest request, StreamObserver<Empty> responseObserver) {
+    try {
+      // Simulate a blocking API call.
+      Thread.sleep(100);
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    }
+   
+    
     final BlogPost removed = blogPosts.remove(request.getId());
     if (removed == null) {
       responseObserver.onError(
