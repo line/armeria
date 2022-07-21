@@ -83,4 +83,9 @@ final class DefaultBlockingWebClient implements BlockingWebClient {
     public HttpClient unwrap() {
         return delegate.unwrap();
     }
+
+    @Override
+    public Object unwrapAll() {
+        return delegate.unwrapAll();
+    }
 }

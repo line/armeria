@@ -189,10 +189,15 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         return contextGroupChain;
     }
 
-    private List<Endpoint> allHealthyEndpoints() {
-        final List<Endpoint> allHealthyEndpoints = new ArrayList<>();
+    @VisibleForTesting
+    List<Endpoint> allHealthyEndpoints() {
         synchronized (contextGroupChain) {
-            final HealthCheckContextGroup newGroup = contextGroupChain.getLast();
+            final HealthCheckContextGroup newGroup = contextGroupChain.peekLast();
+            if (newGroup == null) {
+                return ImmutableList.of();
+            }
+
+            final List<Endpoint> allHealthyEndpoints = new ArrayList<>();
             for (Endpoint candidate : newGroup.candidates()) {
                 if (healthyEndpoints.contains(candidate)) {
                     allHealthyEndpoints.add(candidate);
@@ -211,8 +216,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                     }
                 }
             }
+            return allHealthyEndpoints;
         }
-        return allHealthyEndpoints;
     }
 
     @Nullable
@@ -293,11 +298,14 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
             }
             stopFutures = CompletableFutures.allAsList(completionFutures.build());
-            contextGroupChain.clear();
         }
 
-        stopFutures.handle((unused1, unused2) -> delegate.closeAsync())
-                   .handle((unused1, unused2) -> future.complete(null));
+        stopFutures.handle((unused1, unused2) -> {
+            synchronized (contextGroupChain) {
+                contextGroupChain.clear();
+            }
+            return delegate.closeAsync();
+        }).handle((unused1, unused2) -> future.complete(null));
     }
 
     /**
