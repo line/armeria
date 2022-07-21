@@ -60,8 +60,7 @@ Let's implement a service method `createBlogPost()` in the `BlogService.java` fr
                                        .setCreatedAt(now.toEpochMilli())
                                        .build();
       blogPosts.put(id, updated);
-      final BlogPost stored = updated;
-      responseObserver.onNext(stored);
+      responseObserver.onNext(updated);
       responseObserver.onCompleted();
     }
   }
