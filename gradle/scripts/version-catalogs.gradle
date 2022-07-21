@@ -249,3 +249,37 @@ static def addPlugin(VersionCatalogBuilder libs, String alias, TomlTable plugin)
         libs.plugin(alias, plugin["id"]).version(plugin['version'])
     }
 }
+
+gradle.projectsLoaded {
+    gradle.rootProject { p ->
+        // Prints all versions registered through 'dependencies.toml'
+        p.tasks.register("printVersionCatalogs") {
+            def catalogs = p.extensions.getByType(VersionCatalogsExtension)
+            doLast {
+                catalogs.catalogNames.forEach { name ->
+                    def catalog = catalogs.named(name)
+                    catalog.libraryAliases.forEach {
+                        def library = catalog.findLibrary(it).get().get()
+                        println "$name / library / $it / $library"
+                    }
+
+                    catalog.pluginAliases.forEach {
+                        def plugin = catalog.findPlugin(it).get().get()
+                        println "$name / plugin / $it / $plugin"
+                    }
+
+                    catalog.versionAliases.forEach {
+                        def version = catalog.findVersion(it).get()
+                        println "$name / version / $it / $version"
+                    }
+
+                    catalog.bundleAliases.forEach {
+                        def bundle = catalog.findBundle(it).get().get()
+                        println "$name / bundle / $it / $bundle"
+                    }
+                }
+            }
+        }
+
+    }
+}

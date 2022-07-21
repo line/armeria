@@ -487,10 +487,6 @@ version = "2.0.10"
 module = "pl.project13.scala:sbt-jmh-extras"
 version = "0.3.7"
 
-[libraries.jmh-gradle-plugins]
-module = "me.champeau.jmh:jmh-gradle-plugin"
-version = "0.6.6"
-
 [libraries.joor]
 module = "org.jooq:joor"
 version = "0.9.14"
@@ -645,7 +641,6 @@ module = "io.netty:netty-transport-native-epoll"
 module = 'io.netty:netty-tcnative-boringssl-static'
 [libraries.netty-io_uring]
 module = "io.netty.incubator:netty-incubator-transport-native-io_uring"
-module = "io.netty.incubator:netty-incubator-transport-native-io_uring"
 version = "0.0.14.Final"
 
 [libraries.prometheus]
@@ -762,6 +757,9 @@ version.ref = "opensaml"
 [libraries.okhttp2]
 module = "com.squareup.okhttp:okhttp"
 version = "2.7.5"
+[libraries.okhttp3]
+module = "com.squareup.okhttp:okhttp"
+version = { strictly = "3.14.9" }
 [libraries.okhttp4]
 module = "com.squareup.okhttp3:okhttp"
 version.ref = "okhttp4"
@@ -940,42 +938,42 @@ version = "7.5"
 
 [libraries.thrift09]
 module = "org.apache.thrift:libthrift"
-version = "0.9.3-1"
+version = { strictly = "0.9.3-1" }
 exclusions = [
     "javax.annotation:javax.annotation-api",
     "org.apache.httpcomponents:httpcore",
     "org.apache.httpcomponents:httpclient"]
 [libraries.thrift012]
 module = "org.apache.thrift:libthrift"
-version = "0.12.0"
+version = { strictly = "0.12.0" }
 exclusions = [
     "javax.annotation:javax.annotation-api",
     "org.apache.httpcomponents:httpcore",
     "org.apache.httpcomponents:httpclient"]
 [libraries.thrift013]
 module = "org.apache.thrift:libthrift"
-version = "0.13.0"
+version = { strictly = "0.13.0" }
 exclusions = [
     "javax.annotation:javax.annotation-api",
     "org.apache.httpcomponents:httpcore",
     "org.apache.httpcomponents:httpclient"]
 [libraries.thrift014]
 module = "org.apache.thrift:libthrift"
-version = "0.14.2"
+version = { strictly = "0.14.2" }
 exclusions = [
     "javax.annotation:javax.annotation-api",
     "org.apache.httpcomponents:httpcore",
     "org.apache.httpcomponents:httpclient"]
 [libraries.thrift015]
 module = "org.apache.thrift:libthrift"
-version = "0.15.0"
+version = { strictly = "0.15.0" }
 exclusions = [
     "javax.annotation:javax.annotation-api",
     "org.apache.httpcomponents:httpcore",
     "org.apache.httpcomponents:httpclient"]
 [libraries.thrift016]
 module = "org.apache.thrift:libthrift"
-version = "0.16.0"
+version = { strictly = "0.16.0" }
 javadocs = "https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.16.0/"
 exclusions = [
     "javax.annotation:javax.annotation-api",
@@ -1021,7 +1019,7 @@ module = "org.dmonix.junit:zookeeper-junit"
 version = "1.2"
 
 [plugins]
-jmh = { id = "me.champeau.jmh", version = "0.6.5" }
+jmh = { id = "me.champeau.jmh", version = "0.6.6" }
 osdetector = { id = "com.google.osdetector", version = "1.6.2" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }

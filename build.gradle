@@ -310,32 +310,3 @@ class TestsReportTask extends DefaultTask {
         }
     }
 }
-
-// Prints all versions registered through 'dependencies.toml'
-tasks.register("printVersionCatalogs") {
-    def catalogs = project.extensions.getByType(VersionCatalogsExtension)
-    doLast {
-        catalogs.catalogNames.forEach { name ->
-            def catalog = catalogs.named(name)
-            catalog.libraryAliases.forEach {
-                def library = catalog.findLibrary(it).get().get()
-                println "$name / library / $it / $library"
-            }
-
-            catalog.pluginAliases.forEach {
-                def plugin = catalog.findPlugin(it).get().get()
-                println "$name / plugin / $it / $plugin"
-            }
-
-            catalog.versionAliases.forEach {
-                def version = catalog.findVersion(it).get()
-                println "$name / version / $it / $version"
-            }
-
-            catalog.bundleAliases.forEach {
-                def bundle = catalog.findBundle(it).get().get()
-                println "$name / bundle / $it / $bundle"
-            }
-        }
-    }
-}
