@@ -78,10 +78,11 @@ Add a method `createBlogPost()` in BlogClient.java to send a request to create a
   class BlogClient {
     private static final Logger logger = LoggerFactory.getLogger(BlogClient.class);
     void createBlogPost(String title, String content) {
-      final CreateBlogPostRequest request = CreateBlogPostRequest.newBuilder()
-                                                                 .setTitle(title)
-                                                                 .setContent(content)
-                                                                 .build();
+      final CreateBlogPostRequest request = 
+        CreateBlogPostRequest.newBuilder()
+                             .setTitle(title)
+                             .setContent(content)
+                             .build();
       final BlogPost response = client.createBlogPost(request);
       logger.info("[Create response] Title: {} Content: {}",
                     response.getTitle(), response.getContent());
