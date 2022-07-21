@@ -15,14 +15,17 @@
  */
 package com.linecorp.armeria.server.graphql;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -40,7 +43,6 @@ import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import graphql.com.google.common.collect.ImmutableList;
 import graphql.schema.DataFetcher;
 import graphql.schema.idl.errors.SchemaProblem;
 
@@ -69,25 +71,29 @@ class GraphqlServiceMultipartTest {
     };
 
     private static DataFetcher<String> fileUploadFetcher() {
-        return environment -> {
-            final Path path = environment.getArgument("path");
-            return Files.asCharSource(path.toFile(), StandardCharsets.UTF_8).read();
-        };
+        return environment -> CompletableFuture.supplyAsync(() -> {
+            try {
+                final Path path = environment.getArgument("path");
+                return Files.asCharSource(path.toFile(), StandardCharsets.UTF_8).read();
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }, GraphqlServiceContexts.get(environment).blockingTaskExecutor()).join();
     }
 
     private static DataFetcher<List<String>> fileUploadsFetcher() {
-        return environment -> {
+        return environment -> CompletableFuture.supplyAsync(() -> {
             final List<Path> paths = environment.getArgument("path");
             return paths.stream()
-                    .map(path -> {
-                        try {
-                            return Files.asCharSource(path.toFile(), StandardCharsets.UTF_8).read();
-                        } catch (IOException ignored) {
-                            return null;
-                        }
-                    })
-                    .collect(ImmutableList.toImmutableList());
-        };
+                        .map(path -> {
+                            try {
+                                return Files.asCharSource(path.toFile(), StandardCharsets.UTF_8).read();
+                            } catch (IOException e) {
+                                throw new UncheckedIOException(e);
+                            }
+                        })
+                        .collect(toImmutableList());
+        }, GraphqlServiceContexts.get(environment).blockingTaskExecutor()).join();
     }
 
     @Test

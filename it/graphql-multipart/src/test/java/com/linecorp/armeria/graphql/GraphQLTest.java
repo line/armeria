@@ -16,14 +16,18 @@
 
 package com.linecorp.armeria.graphql;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
+import com.linecorp.armeria.server.graphql.GraphqlServiceContexts;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.http.HttpStatus;
@@ -71,25 +75,29 @@ class GraphQLTest {
     };
 
     private static DataFetcher<String> fileUploadFetcher() {
-        return environment -> {
-            final Path path = environment.getArgument("path");
-            return Files.asCharSource(path.toFile(), StandardCharsets.UTF_8).read();
-        };
+        return environment -> CompletableFuture.supplyAsync(() -> {
+            try {
+                final Path path = environment.getArgument("path");
+                return Files.asCharSource(path.toFile(), StandardCharsets.UTF_8).read();
+            } catch (IOException e) {
+                throw new UncheckedIOException(e);
+            }
+        }, GraphqlServiceContexts.get(environment).blockingTaskExecutor()).join();
     }
 
     private static DataFetcher<List<String>> fileUploadsFetcher() {
-        return environment -> {
+        return environment -> CompletableFuture.supplyAsync(() -> {
             final List<Path> paths = environment.getArgument("path");
             return paths.stream()
                         .map(path -> {
                             try {
                                 return Files.asCharSource(path.toFile(), StandardCharsets.UTF_8).read();
-                            } catch (IOException ignored) {
-                                return null;
+                            } catch (IOException e) {
+                                throw new UncheckedIOException(e);
                             }
                         })
-                        .collect(ImmutableList.toImmutableList());
-        };
+                        .collect(toImmutableList());
+        }, GraphqlServiceContexts.get(environment).blockingTaskExecutor()).join();
     }
 
     @Test
