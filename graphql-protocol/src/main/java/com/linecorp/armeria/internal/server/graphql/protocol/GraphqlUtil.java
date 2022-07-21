@@ -33,8 +33,8 @@ public final class GraphqlUtil {
     /**
      * Returns the negotiated {@link MediaType}. {@link MediaType#JSON} and {@link MediaType#GRAPHQL_JSON}
      * are commonly used for the Content-Type of a GraphQL response.
-     * If {@link HttpHeaderNames#ACCEPT} is not specified, {@link MediaType#GRAPHQL_JSON} is used by default.
-     * Exceptionally, for a multi-part request, {@link MediaType#GRAPHQL_JSON} is used.
+     * {@link MediaType#GRAPHQL_JSON} is used by default when {@link HttpHeaderNames#ACCEPT} is not specified or
+     * the {@link RequestHeaders} contains {@link MediaType#MULTIPART_FORM_DATA}.
      *
      * <p>Note that the negotiated {@link MediaType} could not be used by the implementation of
      * {@link AbstractGraphqlService} which may choose to respond in one of several ways

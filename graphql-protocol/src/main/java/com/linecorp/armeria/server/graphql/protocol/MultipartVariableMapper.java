@@ -91,7 +91,7 @@ final class MultipartVariableMapper {
    static void mapVariable(String objectPath, Map<String, Object> variables, Path path) {
       final List<String> segments = ImmutableList.copyOf(SPLITTER.split(objectPath));
       if (segments.size() < 2) {
-         throw new IllegalArgumentException("object-path in map must have at least two segments");
+         throw new IllegalArgumentException("Invalid object-path: " + objectPath);
       }
       if (!"variables".equals(segments.get(0))) {
          throw new IllegalArgumentException("can only map into variables");

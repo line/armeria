@@ -108,30 +108,23 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                     final String operationsParam = getValueFromMultipartParam("operations", multipartParams);
                     final String mapParam = getValueFromMultipartParam("map", multipartParams);
 
-                    final Map<String, Object> operation = parseJsonString(operationsParam, JSON_MAP);
+                    final Map<String, Object> operations = parseJsonString(operationsParam, JSON_MAP);
                     final Map<String, List<String>> map = parseJsonString(mapParam, MAP_PARAM);
-                    final String query = toStringFromJson("query", operation.get("query"));
+                    final String query = toStringFromJson("query", operations.get("query"));
                     if (Strings.isNullOrEmpty(query)) {
                         return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
                                                "Missing query");
                     }
-                    final String operationName =
-                            toStringFromJson("operationName", operation.get("operationName"));
-                    final Map<String, Object> variables = toMapFromJson(operation.get("variables"));
-                    final Map<String, Object> extensions = toMapFromJson(operation.get("extensions"));
+                    final Map<String, Object> variables = toMapFromJson(operations.get("variables"));
+                    final Map<String, Object> extensions = toMapFromJson(operations.get("extensions"));
                     for (Map.Entry<String, List<String>> entry : map.entrySet()) {
                         final String key = entry.getKey();
                         final List<String> value = entry.getValue();
                         final List<Path> paths = multipart.files().get(key);
-                        if (!paths.isEmpty()) {
-                            for (int i = 0; i < value.size(); i++) {
-                                MultipartVariableMapper.mapVariable(value.get(i), variables, paths.get(i));
-                            }
-                        }
+                        bindMultipartVariable(variables, value, paths);
                     }
 
-                    return executeGraphql(ctx, GraphqlRequest.of(query, operationName,
-                                                                 variables, extensions));
+                    return executeGraphql(ctx, GraphqlRequest.of(query, null, variables, extensions));
                 } catch (JsonProcessingException ex) {
                     return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
                                            "Failed to parse a JSON document");
@@ -199,6 +192,17 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         return unsupportedMediaType();
     }
 
+    private void bindMultipartVariable(Map<String, Object> variables, List<String> value, List<Path> paths) {
+        if (paths.isEmpty()) {
+            return;
+        }
+        for (Path path : paths) {
+            for (String objectPath : value) {
+                MultipartVariableMapper.mapVariable(objectPath, variables, path);
+            }
+        }
+    }
+
     @Override
     public ExchangeType exchangeType(RequestHeaders headers, Route route) {
         // Response stream will be supported via WebSocket.
@@ -220,14 +224,10 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
 
     private static String getValueFromMultipartParam(String name, ListMultimap<String, String> params) {
         final List<String> list = params.get(name);
-        if (list.isEmpty()) {
+        if (list.isEmpty() || Strings.isNullOrEmpty(list.get(0))) {
             throw new IllegalArgumentException("Missing request BodyPart[name=" + name + ']');
         }
-        final String param = list.get(0);
-        if (Strings.isNullOrEmpty(param)) {
-            throw new IllegalArgumentException("Missing request BodyPart[name=" + name + ']');
-        }
-        return param;
+        return list.get(0);
     }
 
     @Nullable

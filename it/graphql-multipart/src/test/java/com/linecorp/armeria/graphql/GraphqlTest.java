@@ -48,7 +48,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import graphql.com.google.common.collect.ImmutableList;
 import graphql.schema.DataFetcher;
 
-class GraphQLTest {
+class GraphqlTest {
 
     private final RestTemplate restTemplate = new RestTemplate();
 
