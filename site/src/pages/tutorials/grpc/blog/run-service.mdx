@@ -89,7 +89,7 @@ Create a server instance and run the blog service.
 
 ## 4. Write a client
 
-We've only tested running the service on a server. This time, let's try calling the service. To test, we'll write a simple client using Armeria's <type://Clients#newClient(Scheme,EndpointGroup,Class)> and the Java code generated from [Defining a service](/tutorials/grpc/blog/define-service).
+We've only tested running the service on a server. This time, let's try calling the service. To test, we'll write a simple client using Armeria's <type://GrpcClients#newClient(String,Class)> and the Java code generated from [Defining a service](/tutorials/grpc/blog/define-service).
 
 1. Create another main class for the client. We'll name the file `BlogClient.java`.
   ```java filename=BlogClient.java
