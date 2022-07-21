@@ -34,22 +34,25 @@ import io.grpc.reflection.v1alpha.ServerReflectionGrpc;
 
 final class Main {
   private static Server newServer(int port) throws Exception {
-    final BlogPost exampleRequest = BlogPost.newBuilder()
-                                            .setTitle("Example title")
-                                            .setContent("Example content")
-                                            .build();
+    final BlogPost exampleRequest = 
+      BlogPost.newBuilder()
+               .setTitle("Example title")
+               .setContent("Example content")
+               .build();
                                             
-    final DocService docService = DocService.builder()
-                                            .exampleRequests(BlogServiceGrpc.SERVICE_NAME,
-                                                             "CreateBlogPost", exampleRequest)
-                                            .exclude(DocServiceFilter.ofServiceName(
-                                                    ServerReflectionGrpc.SERVICE_NAME))
-                                            .build();
+    final DocService docService = 
+      DocService.builder()
+                .exampleRequests(BlogServiceGrpc.SERVICE_NAME,
+                                 "CreateBlogPost", exampleRequest)
+                .exclude(DocServiceFilter.ofServiceName(
+                   ServerReflectionGrpc.SERVICE_NAME))
+                .build();
                     
-    final BlogPost exampleRequest = BlogPost.newBuilder()
-                                            .setTitle("Example title")
-                                            .setContent("Example content")
-                                            .build();
+    final BlogPost exampleRequest = 
+      BlogPost.newBuilder()
+              .setTitle("Example title")
+              .setContent("Example content")
+              .build();
   }
 }
 ```
