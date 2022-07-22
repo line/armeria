@@ -52,6 +52,8 @@ class CompositeExceptionTest {
                       .collect(Collectors.toList());
 
         final int sumStackTraceOutputLength = ex1.getStackTrace().length + ex2.getStackTrace().length;
+        // Expected: if verboseException option enabled, output full stacktrace
+        // this case is occurred 2 exceptions (ex1 stacktrace length + ex2 stacktrace length)
         assertThat(separatedStacktrace.size()).isEqualTo(sumStackTraceOutputLength);
     }
 
@@ -71,6 +73,8 @@ class CompositeExceptionTest {
                       .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
                       .collect(Collectors.toList());
 
+        // Expected: if verboseException option disabled, max output stacktrace is 20
+        // this case is occurred 2 exceptions (20 * 2)
         assertThat(separatedStacktrace.size()).isEqualTo(40);
     }
 }
