@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -39,8 +40,7 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private final int streamId;
     private final boolean keepAlive;
     private final RoutingContext routingContext;
-    @Nullable
-    private final Routed<ServiceConfig> routed;
+    private final ExchangeType exchangeType;
     @Nullable
     private ServiceRequestContext ctx;
 
@@ -50,14 +50,14 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
 
     EmptyContentDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                    boolean keepAlive, RoutingContext routingContext,
-                                   @Nullable Routed<ServiceConfig> routed) {
+                                   ExchangeType exchangeType) {
         delegate = HttpRequest.of(headers);
         this.eventLoop = eventLoop;
         this.id = id;
         this.streamId = streamId;
         this.keepAlive = keepAlive;
         this.routingContext = routingContext;
-        this.routed = routed;
+        this.exchangeType = exchangeType;
     }
 
     @Override
@@ -72,7 +72,10 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
 
     @Override
     public Routed<ServiceConfig> route() {
-        return routed;
+        if (routingContext.hasResult()) {
+            return routingContext.result();
+        }
+        return null;
     }
 
     @Override
@@ -182,5 +185,10 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     @Override
     public boolean isAggregated() {
         return false;
+    }
+
+    @Override
+    public ExchangeType exchangeType() {
+        return exchangeType;
     }
 }

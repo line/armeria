@@ -20,6 +20,7 @@ import java.net.URI;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Scheme;
 
@@ -35,8 +36,11 @@ final class DefaultBlockingWebClient implements BlockingWebClient {
 
     @Override
     public AggregatedHttpResponse execute(HttpRequest req, RequestOptions options) {
-        // TODO(ikhoon): Specify 'ExchangeType' to 'RequestOptions' after
-        //               https://github.com/line/armeria/pull/3956 is merged.
+        if (options.exchangeType() == null) {
+            options = options.toBuilder()
+                             .exchangeType(ExchangeType.UNARY)
+                             .build();
+        }
         return ResponseAs.blocking().as(delegate.execute(req, options));
     }
 
@@ -78,5 +82,10 @@ final class DefaultBlockingWebClient implements BlockingWebClient {
     @Override
     public HttpClient unwrap() {
         return delegate.unwrap();
+    }
+
+    @Override
+    public Object unwrapAll() {
+        return delegate.unwrapAll();
     }
 }

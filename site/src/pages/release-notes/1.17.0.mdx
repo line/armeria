@@ -1,0 +1,309 @@
+---
+date: 2022-07-06
+---
+
+## 🌟 New features
+
+- You can now easily send and receive RESTful APIs using <type://RestClient>. #4263
+  - Java
+    ```java
+    RestClient restClient = RestClient.of("...");
+    CompletableFuture<ResponseEntity<Customer>> response =
+        restClient.get("/api/v1/customers/{customerId}")
+                  .pathParam("customerId", "0000001")
+                  .execute(Customer.class);
+    ```
+  - Kotlin
+    ```kotlin
+    val restClient: RestClient = RestClient.of("...");
+    val response: ResponseEntity<Customer> =
+       restClient
+         .get("/api/v1/customers/{customerId}")
+         .pathParam("customerId", "0000001")
+         .execute<Customer>()  // a suspend function
+    ```
+  - Scala
+    ```scala
+    val restClient: ScalaRestClient = ScalaRestClient("...")
+    val response: Future[ResponseEntity[Result]] =
+      restClient.post("/api/v1/customers")
+                .contentJson(new Customer(...))
+                .execute[Result]()
+    ```
+- You can now configure a timeout for an <type://Endpoint> selection of an
+  <type://DynamicEndpointGroup>. #4246
+  ```java
+  DnsAddressEndpointGroup delegate = DnsAddressEndpointGroup.of(...);
+  HealthCheckedEndpointGroup healthGroup =
+    HealthCheckedEndpointGroup
+      .builder(delegate, "/health")
+      .selectionTimeout(Duration.ofSeconds(10)) // 👈👈👈
+      .build();
+  ```
+- You can now inject dependencies in an annotation using <type://DependencyInjector>. #4006 #4202
+  ```java
+  // Inject authClient that is needed to create the AuthDecorator.
+  WebClient authClient = ...
+  DependencyInjector injector =
+      DependencyInjector.ofSingletons(new AuthDecorator(authClient));
+  serverBuilder.dependencyInjector(dependencyInjector, true);
+
+  // An annotated service that uses AuthDecorator.
+  @Get("/foo")
+  @Decorator(AuthDecorator.class)
+  public FooResponse foo(FooRequest req) {
+      // Authrorized request.
+      ...
+  }
+
+  // authClient is injected.
+  class AuthDecorator implements DecoratingHttpServiceFunction {
+      AuthDecorator(WebClient authClient) { ... }
+
+      @Override
+      public HttpResponse serve(HttpService delegate,
+                                ServiceRequestContext ctx,
+                                HttpRequest req)
+              throws Exception {
+          // Authorize the request.
+          ...
+      }
+  }
+  ```
+  - Set `armeria.enable-auto-injection` to `true` to apply <type://SpringDependencyInjector> automatically
+    when using Spring Boot integration.
+    ```yaml
+    // in application.yml
+    armeria:
+      ports:
+        ...
+      enable-auto-injection: true  // 👈👈👈
+    ```
+- You can now customize the length of string fields or container fields
+  of Thrift messages using <type://THttpServiceBuilder> or <type://ThriftClientBuilder>. #4024 #4226
+  ```java
+  THttpService.builder()
+              .addService(new MyThriftService())
+              .maxRequestStringLength(MAX_STRING_LENGTH)
+              .maxRequestContainerLength(MAX_CONTAINER_LENGTH)
+              .build();
+  ThriftClients.builder("https://my.server.com")
+               .path("/thrift")
+               .maxResponseStringLength(MAX_STRING_LENGTH)
+               .maxResponseContainerLength(MAX_CONTAINER_LENGTH)
+               .build(HelloService.AsyncIface.class);
+  ```
+- You can now set attributes to an <type://Endpoint> using <type://Attributes> and
+  <type://AttributesBuilder>. #4241
+  ```java
+  AttributeKey<String> region = AttributeKey.valueOf(MyAttrs.class, "region");
+  Attributes attrs =
+    Attributes
+      .builder()
+      .set(region, "us-west-1")
+      .build();
+
+  Endpoint endpointA = ...;
+  Endpoint endpointB = endpointA.withAttrs(attrs);
+  assert endpointB.attr(region).equals("us-west-1");
+  assert !endpointA.equals(endpointB)
+  ```
+- You can now use <type://MultipartFile> to get the actual filename of an uploaded file
+  through `multipart/form-data`. #4262
+  ```java
+  @Consumes(MediaTypeNames.MULTIPART_FORM_DATA)
+  @Post("/upload")
+  public HttpResponse upload(MultipartFile multipartFile) {
+    // The name parameter of the "content-disposition" header
+    String name = multipartFile.name();
+    // The filename parameter of the "content-disposition" header
+    String filename = multipartFile.filename();
+    // The file that stores the multipart content.
+    File file = multipartFile.file();
+    ...
+  }
+  ```
+- You can now read a range of bytes using <type://ByteStreamMessage>. #4058
+  ```java
+  Path path = ...;
+  // Fluently build a `StreamMessage` for a `Path`.
+  ByteStreamMessage pathContent =
+      StreamMessage.builder(path)
+                   .bufferSize(1024)
+                   .alloc(alloc)
+                   .executor(executor)
+                   .build();
+  // Slice a range of a file data
+  ByteStreamMessage partialContent = pathContent.range(100, 200);
+  ```
+- You can now map a specific exception to a `LogLevel` in <type://LoggingService> and
+  <type://LoggingClient>. #3400 #4090
+  ```java
+  LoggingService.builder()
+                .responseLogLevel(IllegalStateException.class,
+                                  LogLevel.WARN)
+                .responseLogLevel(IllegalArgumentException.class,
+                                  LogLevel.ERROR)
+                ...
+  ```
+- You can now map a specific exception to an <type://HttpResponse>. #4279 #4283
+  ```java
+  HttpResponse recovered =
+      response.recover(IllegalStateException.class,
+                       cause -> HttpResponse.of("Fallback"));
+  ```
+- You can now enable automatic compression for a gRPC response. #4258 #4266
+  ```java
+  GrpcService.builder()
+             .addService(new MyGrpcService())
+             .autoCompression(true)
+             .build();
+  ```
+  - This only works when the client sends a `grpc-accept-encoding` header and
+    the `CompressorRegistry` has the compressor.
+- You can now add a hook to <type://Server> and <type://ClientFactory> that is called when the
+  JVM shuts down. #4015 #4043
+  ```java
+  server.closeOnJvmShutdown(() -> {
+    System.err.println("Server is stopping soon.");
+  }).thenRun(() -> {
+    System.err.println("Server has stopped.");
+  });
+  ```
+- You can now customize internal Netty `ChannelPipeline` using
+  <type://ClientFactoryOptions#CHANNEL_PIPELINE_CUSTOMIZER>. #3907 #4260
+  - This is an advanced feature and not recommended to use if you are not familiar with
+    Armeria and Netty internals.
+
+### Kotlin
+- You can now use the Kotlin nullable type (`?`) to indicate a nullable parameter in
+  an annotated service. #4144 #4225
+  ```kotlin
+  serverBuilder.apply {
+    annotatedService(object {
+      // Both `/foo` and `/foo?a=bar` are allowed.
+      @Get("/foo")
+      fun foo(@Param a: String?) = // 👈👈👈
+        HttpResponse.of("a: $a")
+    })
+  }
+  ```
+
+## 📈 Improvements
+
+- The <type://EndpointSelectionTimeoutException> is thrown if timeout occurred when selecting
+  an <type://Endpoint> from an <type://EndpointGroup>. #4269
+- You can now set multiple <typeplural://AccessLogWriter> to <type://ServerBuilder>
+  and <type://ServiceBindingBuilder>. #4280
+- You can now give a performance optimization hint to a client by setting an <type://ExchangeType> to a
+  <type://RequestOptions>.
+  The <type://ExchangeType> is configured automatically for:
+  - A gRPC client
+  - A Thrift client
+  - A <type://WebClient> when it's used with <type://ResponseAs>. #4236
+- Better performance for unary gRPC call. #4192
+- Annotated services perform better on unary responses. #4177
+
+## 🛠️ Bug fixes
+
+- You can now run `ServerInterceptors` in a blocking task executor when
+  <type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)> is enabled. #4275 #4331
+- <type://Multiparts#getBoundary(MediaType)> now throws an `IllegalStateException` instead
+  of `NullPointerException` when a boundary is missing. #4193 #4325
+- Armeria retrofit streaming mode now requests data to upstream when it does not have one. #4319
+- You no longer see deep recursive calls in <type://PublisherBasedStreamMessage>. #4298
+- You no longer see `IllegalArgumentException` indicating the prohibited character of a header name
+  in an environment where Spring integration module and Netty client are used together.
+  (e.g. Spring Cloud Gateway) #4293
+- <type://ServerCacheControl#DISABLED> and <type://ServerCacheControl#REVALIDATED> now have
+  `max-age` set to `0` for better compatibility with old browsers. #4290 #4291
+- You no longer see a `NullPointerException` from <type://Flags>
+  when <type://RequestContextExportingAppender> is used. #4285
+- You no longer see the `InputStream` returned by <type://StreamMessage#toInputStream(Function)> blocks
+  indefinitely in a certain situation. #4268 #4271
+- A <type://WriteTimeoutException> is now thrown when a header only request times out. #4255 #4259
+- The request now completes even when the content sanitizer throws an exception. #4248
+- A proxy client doesn't resolve a hostname anymore. #4244 #4245
+- The Spring Boot integration module doesn't create a new <type://WebClient> anymore every time
+  it's injected. #4240
+- Armeria server sends now 400 Bad Request when an HTTP/2 upgrade request contains invalid headers. #4016 #4224
+- <type://EurekaUpdatingListener> now registers itself with the `instanceId` which is `hostname:appname:port`,
+  so it doesn't cause a conflict when more than one app with the same name are running in the same host. #4223
+- A ramping up <type://EndpointSelectionStrategy> now works correctly in combination with
+  <type://HealthCheckedEndpointGroup>. #4221
+- The information of a thrown exception in gRPC service is now propagated to the client via the
+  `grpc-status-details-bin` header. #4203 #4204
+
+## 🏚️ Deprecations
+
+- <type://AbstractEndpointSelector#select(ClientRequestContext,ScheduledExecutorService,long)?full>
+  is deprecated in favor of
+  <type://AbstractEndpointSelector#select(ClientRequestContext,ScheduledExecutorService)?full>. #4246
+- <type://ThriftSerializationFormats#protocolFactory(SerializationFormat)?full> is deprecated in favor of
+  <type://ThriftSerializationFormats#protocolFactory(SerializationFormat,int,int)?full>.
+  #4226
+- `BINARY`, `COMPACT`, `JSON`, `TEXT`, and `TEXT_NAMED_ENUM` in <type://ThriftProtocolFactories> are deprecated
+  in favor of corresponding factory methods. #4226
+- <type://StreamMessage#of(Path,int)?full>, <type://StreamMessage#of(Path,ByteBufAllocator,int)?full> and
+  <type://StreamMessage#of(Path,ExecutorService,ByteBufAllocator,int)?full> are deprecated
+  in favor of <type://StreamMessage#builder(Path)?full>. #4058
+- <type://ServiceConfig#shutdownBlockingTaskExecutorOnStop()>,
+  <type://ServiceConfig#shutdownAccessLogWriterOnStop()>,
+  <type://ServerConfig#shutdownBlockingTaskExecutorOnStop()> and
+  <type://ServerConfig#shutdownWorkerGroupOnStop()> are not used anymore. #4280
+
+## ☢️ Breaking changes
+
+- <type://ByteStreamMessage> is returned instead of `StreamMessage<HttpData>`. #4058
+  - e.g <type://StreamMessage#of(File)?full>, <type://SplitHttpMessage#body()>,
+    <type://Multipart#toStreamMessage()> and <type://BodyPart#content()>
+- `HttpService.exchangeType(RequestHeaders, Route)` is now
+  <type://HttpService#exchangeType(RoutingContext)>. #4177
+
+## ⛓ Dependencies
+
+- Brave 5.13.8 → 5.13.9
+- Bucket4J 7.4.0 → 7.5.0
+- Dropwizard metrics 4.2.9 → 4.2.10
+- GraphQL 1.8.0 → 1.8.2
+- gRPC-Java 1.45.1 → 1.47.0
+- gRPC-Kotlin 1.2.1 → 1.3.0
+- Jackson 2.13.2.1 → 2.13.3
+- Kotlin 1.6.20 → 1.7.0
+- Kotlinx 1.6.1 → 1.6.3
+- Micrometer 1.8.5 → 1.9.1
+- Netty 4.1.76.Final → 4.1.78.Final
+- Netty incubator 0.0.13.Final → 0.0.14.Final
+- Project Reactor 3.4.17 → 3.4.19
+- Prometheus Simpleclient 0.15.0 → 0.16.0
+- Reactive Streams 1.0.3 → 1.0.4
+- RxJava 3.1.4 → 3.1.5
+- ScalaPB 0.11.10 → 0.11.11
+- Spring 5.3.19 → 5.3.21
+- Spring Boot 2.6.6 → 2.7.1
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'ahnyujin',
+  'be-hase',
+  'devdynam0507',
+  'eisig',
+  'ghkim3221',
+  'ikhoon',
+  'injae-kim',
+  'Jimexist',
+  'jrhee17',
+  'kezhenxu94',
+  'kojilin',
+  'ks-yim',
+  'litols',
+  'mauhiz',
+  'minwoox',
+  'natsumehu',
+  'ngyukman',
+  'ta7uw',
+  'timothy-xflowpay',
+  'tobias-',
+  'trustin'
+]} />

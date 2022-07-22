@@ -113,8 +113,7 @@ final class MimeParser {
     /**
      * The publisher that emits body part contents.
      */
-    @Nullable
-    private MultipartDecoder.BodyPartPublisher bodyPartPublisher;
+    private MultipartDecoder.@Nullable BodyPartPublisher bodyPartPublisher;
 
     /**
      * Read and process body parts until we see the terminating boundary line.

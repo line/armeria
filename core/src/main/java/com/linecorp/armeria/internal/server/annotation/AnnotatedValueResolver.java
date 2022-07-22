@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.findName;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
@@ -61,10 +62,12 @@ import com.google.common.base.Ascii;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.Cookies;
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -75,6 +78,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.Multipart;
+import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.server.FileAggregatedMultipart;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
@@ -193,18 +197,23 @@ final class AnnotatedValueResolver {
     static List<AnnotatedValueResolver> ofServiceMethod(Method method, Set<String> pathParams,
                                                         List<RequestObjectResolver> objectResolvers,
                                                         boolean useBlockingExecutor,
+                                                        DependencyInjector dependencyInjector,
                                                         @Nullable String queryDelimiter) {
-        return of(method, pathParams, objectResolvers, true, true, useBlockingExecutor, queryDelimiter);
+        return of(method, pathParams, objectResolvers, true, true,
+                  useBlockingExecutor, dependencyInjector, queryDelimiter);
     }
 
     /**
      * Returns a list of {@link AnnotatedValueResolver} which is constructed with the specified
      * {@code constructorOrMethod}, {@code pathParams} and {@code objectResolvers}.
      */
-    static List<AnnotatedValueResolver> ofBeanConstructorOrMethod(Executable constructorOrMethod,
-                                                                  Set<String> pathParams,
-                                                                  List<RequestObjectResolver> objectResolvers) {
-        return of(constructorOrMethod, pathParams, objectResolvers, false, false, false, null);
+    static List<AnnotatedValueResolver> ofBeanConstructorOrMethod(
+            Executable constructorOrMethod,
+            Set<String> pathParams,
+            List<RequestObjectResolver> objectResolvers,
+            DependencyInjector dependencyInjector) {
+        return of(constructorOrMethod, pathParams, objectResolvers,
+                  false, false, false, dependencyInjector, null);
     }
 
     /**
@@ -213,10 +222,12 @@ final class AnnotatedValueResolver {
      */
     @Nullable
     static AnnotatedValueResolver ofBeanField(Field field, Set<String> pathParams,
-                                              List<RequestObjectResolver> objectResolvers) {
+                                              List<RequestObjectResolver> objectResolvers,
+                                              DependencyInjector dependencyInjector) {
         // 'Field' is only used for converting a bean.
         // So we always need to pass 'implicitRequestObjectAnnotation' as false.
-        return of(field, field, field.getType(), pathParams, objectResolvers, false, false, null);
+        return of(field, field, field.getType(), pathParams,
+                  objectResolvers, false, false, dependencyInjector, null);
     }
 
     /**
@@ -232,6 +243,7 @@ final class AnnotatedValueResolver {
                                                    boolean implicitRequestObjectAnnotation,
                                                    boolean isServiceMethod,
                                                    boolean useBlockingExecutor,
+                                                   DependencyInjector dependencyInjector,
                                                    @Nullable String queryDelimiter) {
         final ImmutableList<Parameter> parameters =
                 Arrays.stream(constructorOrMethod.getParameters())
@@ -280,7 +292,8 @@ final class AnnotatedValueResolver {
 
             resolver = of(constructorOrMethod,
                           headParameter, headParameter.getType(), pathParams, objectResolvers,
-                          implicitRequestObjectAnnotation, useBlockingExecutor, queryDelimiter);
+                          implicitRequestObjectAnnotation, useBlockingExecutor,
+                          dependencyInjector, queryDelimiter);
         } else if (!isServiceMethod && parametersSize == 1 &&
                    !AnnotationUtil.findDeclared(constructorOrMethod, RequestConverter.class).isEmpty()) {
             //
@@ -299,8 +312,8 @@ final class AnnotatedValueResolver {
             // @RequestConverter(BeanConverter.class)
             // void setter(Bean bean) { ... }
             //
-            resolver = of(headParameter, pathParams, objectResolvers, true, useBlockingExecutor,
-                          queryDelimiter);
+            resolver = of(headParameter, pathParams, objectResolvers, true,
+                          useBlockingExecutor, dependencyInjector, queryDelimiter);
         } else {
             //
             // There's no annotation. So there should be no @Default annotation, too.
@@ -328,8 +341,8 @@ final class AnnotatedValueResolver {
             list = ImmutableList.of(resolver);
         } else {
             list = parameters.stream()
-                             .map(p -> of(p, pathParams, objectResolvers,
-                                          implicitRequestObjectAnnotation, useBlockingExecutor, queryDelimiter))
+                             .map(p -> of(p, pathParams, objectResolvers, implicitRequestObjectAnnotation,
+                                          useBlockingExecutor, dependencyInjector, queryDelimiter))
                              .filter(Objects::nonNull)
                              .collect(toImmutableList());
         }
@@ -386,10 +399,12 @@ final class AnnotatedValueResolver {
     @Nullable
     static AnnotatedValueResolver of(Parameter parameter, Set<String> pathParams,
                                      List<RequestObjectResolver> objectResolvers,
-                                     boolean implicitRequestObjectAnnotation, boolean useBlockingExecutor,
+                                     boolean implicitRequestObjectAnnotation,
+                                     boolean useBlockingExecutor,
+                                     DependencyInjector dependencyInjector,
                                      @Nullable String queryDelimiter) {
         return of(parameter, parameter, parameter.getType(), pathParams, objectResolvers,
-                  implicitRequestObjectAnnotation, useBlockingExecutor, queryDelimiter);
+                  implicitRequestObjectAnnotation, useBlockingExecutor, dependencyInjector, queryDelimiter);
     }
 
     /**
@@ -417,18 +432,20 @@ final class AnnotatedValueResolver {
                                              List<RequestObjectResolver> objectResolvers,
                                              boolean implicitRequestObjectAnnotation,
                                              boolean useBlockingExecutor,
+                                             DependencyInjector dependencyInjector,
                                              @Nullable String queryDelimiter) {
         requireNonNull(annotatedElement, "annotatedElement");
         requireNonNull(typeElement, "typeElement");
         requireNonNull(type, "type");
         requireNonNull(pathParams, "pathParams");
         requireNonNull(objectResolvers, "objectResolvers");
+        requireNonNull(dependencyInjector, "dependencyInjector");
 
         final String description = findDescription(annotatedElement);
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
             final String name = findName(param, typeElement);
-            if (type == File.class || type == Path.class) {
+            if (type == File.class || type == Path.class || type == MultipartFile.class) {
                 return ofFileParam(name, annotatedElement, typeElement, type, description);
             }
             if (pathParams.contains(name)) {
@@ -450,7 +467,8 @@ final class AnnotatedValueResolver {
             final List<RequestConverter> converters =
                     AnnotationUtil.findDeclared(typeElement, RequestConverter.class);
             return ofRequestObject(annotatedElement, type, pathParams,
-                                   addToFirstIfExists(objectResolvers, converters), description);
+                                   addToFirstIfExists(objectResolvers, converters, dependencyInjector),
+                                   dependencyInjector, description);
         }
 
         // There should be no '@Default' annotation on 'annotatedElement' if 'annotatedElement' is
@@ -470,25 +488,29 @@ final class AnnotatedValueResolver {
         if (!converters.isEmpty()) {
             // Apply @RequestObject implicitly when a @RequestConverter is specified.
             return ofRequestObject(annotatedElement, type, pathParams,
-                                   addToFirstIfExists(objectResolvers, converters), description);
+                                   addToFirstIfExists(objectResolvers, converters, dependencyInjector),
+                                   dependencyInjector, description);
         }
 
         if (implicitRequestObjectAnnotation) {
-            return ofRequestObject(annotatedElement, type, pathParams, objectResolvers, description);
+            return ofRequestObject(annotatedElement, type, pathParams, objectResolvers,
+                                   dependencyInjector, description);
         }
 
         return null;
     }
 
     static List<RequestObjectResolver> addToFirstIfExists(List<RequestObjectResolver> resolvers,
-                                                          List<RequestConverter> converters) {
+                                                          List<RequestConverter> converters,
+                                                          DependencyInjector dependencyInjector) {
         if (converters.isEmpty()) {
             return resolvers;
         }
 
         final ImmutableList.Builder<RequestObjectResolver> builder = new ImmutableList.Builder<>();
-        converters.forEach(
-                c -> builder.add(RequestObjectResolver.of(AnnotatedObjectFactory.getInstance(c.value()))));
+        converters.forEach(c -> builder.add(RequestObjectResolver.of(
+                AnnotatedObjectFactory.getInstance(c, RequestConverterFunction.class,
+                                                   dependencyInjector))));
         builder.addAll(resolvers);
         return builder.build();
     }
@@ -585,11 +607,12 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofRequestObject(AnnotatedElement annotatedElement,
                                                           Class<?> type, Set<String> pathParams,
                                                           List<RequestObjectResolver> objectResolvers,
+                                                          DependencyInjector dependencyInjector,
                                                           @Nullable String description) {
         // To do recursive resolution like a bean inside another bean, the original object resolvers should
         // be passed into the AnnotatedBeanFactoryRegistry#register.
-        final BeanFactoryId beanFactoryId = AnnotatedBeanFactoryRegistry.register(type, pathParams,
-                                                                                  objectResolvers);
+        final BeanFactoryId beanFactoryId = AnnotatedBeanFactoryRegistry.register(
+                type, pathParams, objectResolvers, dependencyInjector);
         return new Builder(annotatedElement, type)
                 .annotationType(RequestObject.class)
                 .description(description)
@@ -657,6 +680,16 @@ final class AnnotatedValueResolver {
         if (actual == Multipart.class) {
             return new Builder(annotatedElement, type)
                     .resolver((unused, ctx) -> Multipart.from(ctx.request()))
+                    .build();
+        }
+
+        if (actual == MultipartFile.class) {
+            return new Builder(annotatedElement, type)
+                    .resolver((unused, ctx) -> {
+                        final String filename = getName(annotatedElement);
+                        return Iterables.getFirst(ctx.aggregatedMultipart().files().get(filename), null);
+                    })
+                    .aggregation(AggregationStrategy.ALWAYS)
                     .build();
         }
 
@@ -789,14 +822,18 @@ final class AnnotatedValueResolver {
             if (fileAggregatedMultipart == null) {
                 return resolver.defaultOrException();
             }
-            final Function<? super Path, Object> mapper;
-            if (resolver.elementType() == File.class) {
-                mapper = Path::toFile;
-            } else {
+            final Function<? super MultipartFile, Object> mapper;
+            final Class<?> elementType = resolver.elementType();
+            if (elementType == File.class) {
+                mapper = MultipartFile::file;
+            } else if (elementType == MultipartFile.class) {
                 mapper = Function.identity();
+            } else {
+                assert elementType == Path.class;
+                mapper = multipartFile -> multipartFile.file().toPath();
             }
             final String name = resolver.httpElementName();
-            final List<Path> values = fileAggregatedMultipart.files().get(name);
+            final List<MultipartFile> values = fileAggregatedMultipart.files().get(name);
             if (!resolver.hasContainer()) {
                 if (values != null && !values.isEmpty()) {
                     return mapper.apply(values.get(0));
@@ -1129,12 +1166,23 @@ final class AnnotatedValueResolver {
             checkArgument(resolver != null, "'resolver' should be specified");
 
             final boolean isOptional = type == Optional.class;
-            final boolean isNullable = isNullable();
+            final boolean isAnnotatedNullable = isAnnotatedNullable(typeElement);
+            final boolean isMarkedNullable = KotlinUtil.isMarkedNullable(typeElement);
+            final boolean isNullable = isAnnotatedNullable || isMarkedNullable;
             final Type originalParameterizedType = parameterizedTypeOf(typeElement);
             final Type unwrappedParameterizedType = isOptional ? unwrapOptional(originalParameterizedType)
                                                                : originalParameterizedType;
+
+            // Used only for warning message.
+            final String nullableRepresentation =
+                    isMarkedNullable && !isAnnotatedNullable ? "?(Kotlin nullable type)"
+                                                             : "@Nullable";
+
+            if (isAnnotatedNullable && isMarkedNullable) {
+                warnRedundantUse("@Nullable", "?(Kotlin nullable type)");
+            }
             if (isOptional && isNullable) {
-                warnRedundantUse("Optional", "@Nullable");
+                warnRedundantUse("Optional", nullableRepresentation);
             }
 
             final boolean shouldExist;
@@ -1147,7 +1195,7 @@ final class AnnotatedValueResolver {
                     if (isOptional) {
                         warnRedundantUse("@Default", "Optional");
                     } else if (isNullable) {
-                        warnRedundantUse("@Default", "@Nullable");
+                        warnRedundantUse("@Default", nullableRepresentation);
                     }
 
                     shouldExist = false;
@@ -1176,7 +1224,7 @@ final class AnnotatedValueResolver {
                 if (isOptional) {
                     warnRedundantUse("a path variable", "Optional");
                 } else {
-                    warnRedundantUse("a path variable", "@Nullable");
+                    warnRedundantUse("a path variable", nullableRepresentation);
                 }
             }
 
@@ -1249,16 +1297,6 @@ final class AnnotatedValueResolver {
             logger.warn(buf.toString());
         }
 
-        private boolean isNullable() {
-            for (Annotation a : annotatedElement.getAnnotations()) {
-                final String annotationTypeName = a.annotationType().getName();
-                if (annotationTypeName.endsWith(".Nullable")) {
-                    return true;
-                }
-            }
-            return false;
-        }
-
         @Nullable
         private Class<?> getContainerType(Type parameterizedType) {
             final Class<?> rawType = toRawType(parameterizedType);
@@ -1314,6 +1352,16 @@ final class AnnotatedValueResolver {
                         "Unsupported or invalid parameter type: " + parameterizedType, cause);
             }
             return toRawType(elementType);
+        }
+
+        private static boolean isAnnotatedNullable(AnnotatedElement annotatedElement) {
+            for (Annotation a : annotatedElement.getAnnotations()) {
+                final String annotationTypeName = a.annotationType().getName();
+                if (annotationTypeName.endsWith(".Nullable")) {
+                    return true;
+                }
+            }
+            return false;
         }
 
         @Nullable

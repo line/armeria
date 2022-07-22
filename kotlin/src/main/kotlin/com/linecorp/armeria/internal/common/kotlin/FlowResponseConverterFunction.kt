@@ -18,6 +18,7 @@ package com.linecorp.armeria.internal.common.kotlin
 
 import com.linecorp.armeria.common.HttpHeaders
 import com.linecorp.armeria.common.HttpResponse
+import com.linecorp.armeria.common.MediaType
 import com.linecorp.armeria.common.ResponseHeaders
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.filterNotNull
 import org.reactivestreams.Publisher
+import java.lang.reflect.Type
 
 /**
  * A [ResponseConverterFunction] which converts the given [Flow] into [Publisher] and subsequently into
@@ -38,6 +40,12 @@ import org.reactivestreams.Publisher
 class FlowResponseConverterFunction(
     private val responseConverter: ResponseConverterFunction
 ) : ResponseConverterFunction {
+
+    override fun isResponseStreaming(returnType: Type, produceType: MediaType?): Boolean {
+        // This convert is used only when the return type of an annotated service is `Flow`.
+        return true
+    }
+
     override fun convertResponse(
         ctx: ServiceRequestContext,
         headers: ResponseHeaders,

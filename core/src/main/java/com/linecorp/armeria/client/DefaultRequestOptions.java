@@ -22,24 +22,30 @@ import java.util.Objects;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.common.ExchangeType;
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.netty.util.AttributeKey;
 
 final class DefaultRequestOptions implements RequestOptions {
 
-    static final DefaultRequestOptions EMPTY =
-            new DefaultRequestOptions(-1, -1, -1, ImmutableMap.of());
+    static final DefaultRequestOptions EMPTY = new DefaultRequestOptions(-1, -1, -1, ImmutableMap.of(), null);
 
     private final long responseTimeoutMillis;
     private final long writeTimeoutMillis;
     private final long maxResponseLength;
     private final Map<AttributeKey<?>, Object> attributeMap;
+    @Nullable
+    private final ExchangeType exchangeType;
 
     DefaultRequestOptions(long responseTimeoutMillis, long writeTimeoutMillis,
-                          long maxResponseLength, Map<AttributeKey<?>, Object> attributeMap) {
+                          long maxResponseLength, Map<AttributeKey<?>, Object> attributeMap,
+                          @Nullable ExchangeType exchangeType) {
         this.responseTimeoutMillis = responseTimeoutMillis;
         this.writeTimeoutMillis = writeTimeoutMillis;
         this.maxResponseLength = maxResponseLength;
         this.attributeMap = attributeMap;
+        this.exchangeType = exchangeType;
     }
 
     @Override
@@ -63,6 +69,11 @@ final class DefaultRequestOptions implements RequestOptions {
     }
 
     @Override
+    public ExchangeType exchangeType() {
+        return exchangeType;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
@@ -77,21 +88,24 @@ final class DefaultRequestOptions implements RequestOptions {
         return responseTimeoutMillis == that.responseTimeoutMillis &&
                writeTimeoutMillis == that.writeTimeoutMillis &&
                maxResponseLength == that.maxResponseLength &&
-               attributeMap.equals(that.attributeMap);
+               attributeMap.equals(that.attributeMap) &&
+               exchangeType == that.exchangeType;
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(responseTimeoutMillis, writeTimeoutMillis, maxResponseLength, attributeMap);
+        return Objects.hash(responseTimeoutMillis, writeTimeoutMillis, maxResponseLength,
+                            attributeMap, exchangeType);
     }
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("responseTimeoutMillis", responseTimeoutMillis)
                           .add("writeTimeoutMillis", writeTimeoutMillis)
                           .add("maxResponseLength", maxResponseLength)
                           .add("attributeMap", attributeMap)
+                          .add("exchangeType", exchangeType)
                           .toString();
     }
 }

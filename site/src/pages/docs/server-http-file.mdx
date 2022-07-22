@@ -139,6 +139,16 @@ fsb.serveCompressedFiles(true);
 FileService fs = fsb.build();
 ```
 
+If you set <type://FileServiceBuilder#autoDecompress(boolean)> to `true`, the <type://FileService> automatically
+decompresses the pre-compressed file when a client does not send an `Accept-Encoding` header.
+```java
+FileServiceBuilder fsb = ...
+fsb.serveCompressedFiles(true);
+fsb.autoDecompress(true);
+
+FileService fs = fsb.build();
+```
+
 ## Serving an individual file
 You can also serve an individual file using <type://HttpFile>. Like <type://FileService> does, <type://HttpFile>
 supports `GET` and `HEAD` HTTP methods and will auto-fill `Date`, `Last-Modified`, `ETag` and

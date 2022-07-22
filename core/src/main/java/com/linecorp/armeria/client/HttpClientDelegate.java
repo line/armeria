@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.ClientConnectionTimingsBuilder;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.ProxiedAddresses;
@@ -57,6 +58,11 @@ final class HttpClientDelegate implements HttpClient {
 
     @Override
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
+        final Throwable throwable = ClientPendingThrowableUtil.pendingThrowable(ctx);
+        if (throwable != null) {
+            return earlyFailedResponse(throwable, ctx, req);
+        }
+
         final Endpoint endpoint = ctx.endpoint();
         if (endpoint == null) {
             // It is possible that we reach here even when `EndpointGroup` is not empty,
@@ -69,34 +75,40 @@ final class HttpClientDelegate implements HttpClient {
             // and response created here will be exposed only when `EndpointGroup.select()` returned `null`.
             //
             // See `DefaultClientRequestContext.init()` for more information.
-            final UnprocessedRequestException cause =
-                    UnprocessedRequestException.of(EmptyEndpointGroupException.get(ctx.endpointGroup()));
-            handleEarlyRequestException(ctx, req, cause);
-            return HttpResponse.ofFailure(cause);
+            return earlyFailedResponse(EmptyEndpointGroupException.get(ctx.endpointGroup()), ctx, req);
         }
 
         if (!isValidPath(req)) {
-            final UnprocessedRequestException cause = UnprocessedRequestException.of(
-                    new IllegalArgumentException("invalid path: " + req.path()));
-            handleEarlyRequestException(ctx, req, cause);
-            return HttpResponse.ofFailure(cause);
+            return earlyFailedResponse(new IllegalArgumentException("invalid path: " + req.path()), ctx, req);
+        }
+
+        final SessionProtocol protocol = ctx.sessionProtocol();
+        final ProxyConfig proxyConfig;
+        try {
+            proxyConfig = getProxyConfig(protocol, endpoint);
+        } catch (Throwable t) {
+            final UnprocessedRequestException wrapped = UnprocessedRequestException.of(t);
+            handleEarlyRequestException(ctx, req, wrapped);
+            return HttpResponse.ofFailure(wrapped);
         }
 
         final Endpoint endpointWithPort = endpoint.withDefaultPort(ctx.sessionProtocol().defaultPort());
         final EventLoop eventLoop = ctx.eventLoop().withoutContext();
+        // TODO(ikhoon) Use ctx.exchangeType() to create an optimized HttpResponse for non-streaming response.
         final DecodedHttpResponse res = new DecodedHttpResponse(eventLoop);
 
         final ClientConnectionTimingsBuilder timingsBuilder = ClientConnectionTimings.builder();
 
-        if (endpointWithPort.hasIpAddr()) {
-            // IP address has been resolved already.
-            acquireConnectionAndExecute(ctx, endpointWithPort, req, res, timingsBuilder);
+        if (endpointWithPort.hasIpAddr() || proxyConfig.proxyType().isForwardProxy()) {
+            // There is no need to resolve the IP address either because it is already known,
+            // or it isn't needed for forward proxies.
+            acquireConnectionAndExecute(ctx, endpointWithPort, req, res, timingsBuilder, proxyConfig);
         } else {
             resolveAddress(endpointWithPort, ctx, (resolved, cause) -> {
                 timingsBuilder.dnsResolutionEnd();
                 if (cause == null) {
                     assert resolved != null;
-                    acquireConnectionAndExecute(ctx, resolved, req, res, timingsBuilder);
+                    acquireConnectionAndExecute(ctx, resolved, req, res, timingsBuilder, proxyConfig);
                 } else {
                     ctx.logBuilder().session(null, ctx.sessionProtocol(), timingsBuilder.build());
                     final UnprocessedRequestException wrappedCause = UnprocessedRequestException.of(cause);
@@ -136,36 +148,25 @@ final class HttpClientDelegate implements HttpClient {
 
     private void acquireConnectionAndExecute(ClientRequestContext ctx, Endpoint endpoint,
                                              HttpRequest req, DecodedHttpResponse res,
-                                             ClientConnectionTimingsBuilder timingsBuilder) {
+                                             ClientConnectionTimingsBuilder timingsBuilder,
+                                             ProxyConfig proxyConfig) {
         if (ctx.eventLoop().inEventLoop()) {
-            acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder);
+            acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder, proxyConfig);
         } else {
             ctx.eventLoop().execute(() -> {
-                acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder);
+                acquireConnectionAndExecute0(ctx, endpoint, req, res, timingsBuilder, proxyConfig);
             });
         }
     }
 
     private void acquireConnectionAndExecute0(ClientRequestContext ctx, Endpoint endpoint,
                                               HttpRequest req, DecodedHttpResponse res,
-                                              ClientConnectionTimingsBuilder timingsBuilder) {
-        // IP address should be resolved already.
-        assert endpoint.hasIpAddr();
-
+                                              ClientConnectionTimingsBuilder timingsBuilder,
+                                              ProxyConfig proxyConfig) {
+        final String ipAddr = endpoint.ipAddr();
         final SessionProtocol protocol = ctx.sessionProtocol();
+        final PoolKey key = new PoolKey(endpoint.host(), ipAddr, endpoint.port(), proxyConfig);
         final HttpChannelPool pool = factory.pool(ctx.eventLoop().withoutContext());
-
-        final ProxyConfig proxyConfig;
-        try {
-            proxyConfig = getProxyConfig(protocol, endpoint);
-        } catch (Throwable t) {
-            final UnprocessedRequestException wrapped = UnprocessedRequestException.of(t);
-            handleEarlyRequestException(ctx, req, wrapped);
-            res.close(wrapped);
-            return;
-        }
-
-        final PoolKey key = new PoolKey(endpoint.host(), endpoint.ipAddr(), endpoint.port(), proxyConfig);
         final PooledChannel pooledChannel = pool.acquireNow(protocol, key);
         if (pooledChannel != null) {
             logSession(ctx, pooledChannel, null);
@@ -219,6 +220,12 @@ final class HttpClientDelegate implements HttpClient {
 
     private static boolean isValidPath(HttpRequest req) {
         return PathAndQuery.parse(req.path()) != null;
+    }
+
+    private static HttpResponse earlyFailedResponse(Throwable t, ClientRequestContext ctx, HttpRequest req) {
+        final UnprocessedRequestException cause = UnprocessedRequestException.of(t);
+        handleEarlyRequestException(ctx, req, cause);
+        return HttpResponse.ofFailure(cause);
     }
 
     private static void handleEarlyRequestException(ClientRequestContext ctx,

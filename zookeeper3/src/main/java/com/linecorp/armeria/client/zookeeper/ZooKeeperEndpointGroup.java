@@ -113,10 +113,10 @@ public final class ZooKeeperEndpointGroup extends DynamicEndpointGroup {
     private final CuratorFramework client;
     private final PathChildrenCache pathChildrenCache;
 
-    ZooKeeperEndpointGroup(EndpointSelectionStrategy selectionStrategy,
-                           CuratorFramework client, String znodePath,
+    ZooKeeperEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
+                           long selectionTimeoutMillis, CuratorFramework client, String znodePath,
                            ZooKeeperDiscoverySpec discoverySpec, boolean internalClient) {
-        super(selectionStrategy);
+        super(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis);
         this.internalClient = internalClient;
         this.client = requireNonNull(client, "client");
 

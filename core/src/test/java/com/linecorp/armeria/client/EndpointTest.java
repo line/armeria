@@ -26,7 +26,13 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.google.common.collect.Maps;
+
+import com.linecorp.armeria.common.Attributes;
+import com.linecorp.armeria.common.AttributesBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
+
+import io.netty.util.AttributeKey;
 
 class EndpointTest {
 
@@ -118,7 +124,7 @@ class EndpointTest {
             "192.168.0.1, 192.168.0.1, INET"
     })
     void hostWithIpAddr(String specifiedIpAddr, String normalizedIpAddr,
-                         StandardProtocolFamily expectedIpFamily) {
+                        StandardProtocolFamily expectedIpFamily) {
         final Endpoint foo = Endpoint.of("foo.com");
         assertThat(foo.withIpAddr(specifiedIpAddr).authority()).isEqualTo("foo.com");
         assertThat(foo.withIpAddr(specifiedIpAddr).ipAddr()).isEqualTo(normalizedIpAddr);
@@ -444,5 +450,79 @@ class EndpointTest {
         assertThat(endpointWithIpv6.hasIpAddr()).isTrue();
         assertThat(endpointWithIpv6.ipFamily()).isEqualTo(StandardProtocolFamily.INET6);
         assertThat(endpointWithIpv6.ipAddr()).isEqualTo("0:0:0:0:0:0:0:1");
+    }
+
+    @Test
+    void setAndGetAttr() {
+        final Endpoint endpointA = Endpoint.parse("a");
+
+        final AttributeKey<String> key1 = AttributeKey.valueOf("key1");
+        final AttributeKey<String> key2 = AttributeKey.valueOf("value2");
+        final AttributeKey<Object> objKey = AttributeKey.valueOf("objKey");
+        final Object objValue = new Object();
+        final Endpoint endpointB = endpointA.withAttr(key1, "value1")
+                                            .withAttr(key2, "value2")
+                                            .withAttr(objKey, objValue)
+                                            .withAttr(key1, "value1-1");
+
+        assertThat(endpointB).isNotSameAs(endpointA);
+        assertThat(endpointA.attr(key1)).isNull();
+        assertThat(endpointB.attr(key1)).isEqualTo("value1-1");
+        assertThat(endpointB.attr(key2)).isEqualTo("value2");
+
+        // key with same value
+        assertThat(endpointB.withAttr(objKey, objValue)).isSameAs(endpointB);
+        assertThat(endpointB.withAttr(AttributeKey.valueOf("keyNotFound"), null)).isSameAs(endpointB);
+
+        // value remove
+        final Endpoint endpointC = endpointB.withAttr(AttributeKey.valueOf("key1"), null);
+        assertThat(endpointC).isNotSameAs(endpointB);
+        assertThat(endpointC.attr(key1)).isNull();
+    }
+
+    @Test
+    void attrs() {
+        final Endpoint endpoint = Endpoint.parse("a");
+        assertThat(endpoint.attrs().attrs()).isExhausted();
+
+        final AttributesBuilder attrs = Attributes.builder();
+        final AttributeKey<String> key1 = AttributeKey.valueOf("key1");
+        final AttributeKey<String> key2 = AttributeKey.valueOf("key2");
+
+        attrs.set(key1, "value1");
+        attrs.set(key2, "value2");
+
+        final AttributesBuilder attrs2 = Attributes.builder();
+        final AttributeKey<String> key3 = AttributeKey.valueOf("key3");
+        attrs2.set(key1, "value1-2");
+        attrs2.set(key3, "value3");
+
+        final Endpoint endpointB = endpoint.withAttrs(attrs.build());
+        final Endpoint endpointC = endpointB.withAttrs(attrs2.build());
+
+        assertThat(endpointB.attr(key1))
+                .isEqualTo("value1");
+        assertThat(endpointB.attr(key2))
+                .isEqualTo("value2");
+        assertThat(endpointB.attrs().attrs())
+                .toIterable()
+                .containsExactlyInAnyOrder(Maps.immutableEntry(key1, "value1"),
+                                           Maps.immutableEntry(key2, "value2"));
+
+        // `attrs` should be replaced with `attrs2`
+        assertThat(endpointC.attr(key1)).isEqualTo("value1-2");
+        assertThat(endpointC.attr(key2)).isNull();
+        assertThat(endpointC.attr(key3)).isEqualTo("value3");
+        assertThat(endpointC.attrs().attrs())
+                .toIterable()
+                .containsExactlyInAnyOrder(Maps.immutableEntry(key1, "value1-2"),
+                                           Maps.immutableEntry(key3, "value3"));
+
+        // Reset attrs with an empty attributes.
+        final Endpoint newEndpointB = endpointB.withAttrs(Attributes.of());
+        assertThat(newEndpointB.attrs().isEmpty()).isTrue();
+
+        final Endpoint sameEndpoint = endpoint.withAttrs(Attributes.of());
+        assertThat(sameEndpoint).isSameAs(endpoint);
     }
 }

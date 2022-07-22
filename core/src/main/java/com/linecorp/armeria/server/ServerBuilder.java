@@ -64,6 +64,7 @@ import com.google.common.collect.Sets;
 import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
@@ -77,6 +78,8 @@ import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
+import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
@@ -202,10 +205,12 @@ public final class ServerBuilder {
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
+    @Nullable
+    private DependencyInjector dependencyInjector;
+    private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
 
     ServerBuilder() {
         // Set the default host-level properties.
-        virtualHostTemplate.accessLogWriter(AccessLogWriter.disabled(), true);
         virtualHostTemplate.rejectedRouteHandler(RejectedRouteHandler.WARN);
         virtualHostTemplate.defaultServiceNaming(ServiceNaming.fullTypeName());
         virtualHostTemplate.requestTimeoutMillis(Flags.defaultRequestTimeoutMillis());
@@ -468,6 +473,7 @@ public final class ServerBuilder {
      */
     public ServerBuilder workerGroup(EventLoopGroup workerGroup, boolean shutdownOnStop) {
         this.workerGroup = requireNonNull(workerGroup, "workerGroup");
+        // We don't use ShutdownSupport to shutdown with other instances because we shut down workerGroup first.
         shutdownWorkerGroupOnStop = shutdownOnStop;
         return this;
     }
@@ -864,7 +870,7 @@ public final class ServerBuilder {
      */
     public ServerBuilder accessLogFormat(String accessLogFormat) {
         return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
-                               true);
+                               false);
     }
 
     /**
@@ -1739,6 +1745,26 @@ public final class ServerBuilder {
     }
 
     /**
+     * Sets the {@link DependencyInjector} to inject dependencies in annotated services.
+     *
+     * @param dependencyInjector the {@link DependencyInjector} to inject dependencies
+     * @param shutdownOnStop whether to shut down the {@link DependencyInjector} when the {@link Server} stops
+     */
+    @UnstableApi
+    public ServerBuilder dependencyInjector(DependencyInjector dependencyInjector, boolean shutdownOnStop) {
+        requireNonNull(dependencyInjector, "dependencyInjector");
+        if (this.dependencyInjector == null) {
+            // Apply BuiltInDependencyInjector at first if a DependencyInjector is set.
+            this.dependencyInjector = BuiltInDependencyInjector.INSTANCE;
+        }
+        this.dependencyInjector = this.dependencyInjector.orElse(dependencyInjector);
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(dependencyInjector));
+        }
+        return this;
+    }
+
+    /**
      * Sets the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
      * another HTTP/1 header name. This is useful when communicating with a legacy system that only supports
      * case sensitive HTTP/1 headers.
@@ -1765,14 +1791,14 @@ public final class ServerBuilder {
     private DefaultServerConfig buildServerConfig(List<ServerPort> serverPorts) {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
-
         assert extensions != null;
+        final DependencyInjector dependencyInjector = dependencyInjectorOrReflective();
 
         final VirtualHost defaultVirtualHost =
-                defaultVirtualHostBuilder.build(virtualHostTemplate);
+                defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector);
         final List<VirtualHost> virtualHosts =
                 virtualHostBuilders.stream()
-                                   .map(vhb -> vhb.build(virtualHostTemplate))
+                                   .map(vhb -> vhb.build(virtualHostTemplate, dependencyInjector))
                                    .collect(toImmutableList());
         // Pre-populate the domain name mapping for later matching.
         final Mapping<String, SslContext> sslContexts;
@@ -1868,8 +1894,6 @@ public final class ServerBuilder {
         }
 
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
-        final boolean shutdownOnStop = defaultVirtualHost.shutdownBlockingTaskExecutorOnStop();
-
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
                 virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
@@ -1878,11 +1902,11 @@ public final class ServerBuilder {
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor, shutdownOnStop,
+                blockingTaskExecutor,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
-                http1HeaderNaming);
+                http1HeaderNaming, dependencyInjector, ImmutableList.copyOf(shutdownSupports));
     }
 
     /**
@@ -1915,6 +1939,15 @@ public final class ServerBuilder {
             }
         }
         return Collections.unmodifiableList(distinctPorts);
+    }
+
+    private DependencyInjector dependencyInjectorOrReflective() {
+        if (dependencyInjector != null) {
+            return dependencyInjector;
+        }
+        final ReflectiveDependencyInjector reflectiveDependencyInjector = new ReflectiveDependencyInjector();
+        shutdownSupports.add(ShutdownSupport.of(reflectiveDependencyInjector));
+        return reflectiveDependencyInjector;
     }
 
     private static VirtualHost setSslContextIfAbsent(VirtualHost h,
@@ -1965,9 +1998,9 @@ public final class ServerBuilder {
                 maxNumConnections, idleTimeoutMillis, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection, http2MaxFrameSize,
                 http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize, http1MaxChunkSize,
-                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null, false,
+                proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null,
                 meterRegistry, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader);
+                enableServerHeader, enableDateHeader, dependencyInjector);
     }
 }

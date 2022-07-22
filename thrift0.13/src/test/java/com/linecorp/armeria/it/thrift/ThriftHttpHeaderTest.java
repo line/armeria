@@ -16,7 +16,6 @@
 package com.linecorp.armeria.it.thrift;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.AUTHORIZATION;
-import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -30,6 +29,7 @@ import org.junit.ClassRule;
 import org.junit.Test;
 
 import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
@@ -113,8 +113,8 @@ public class ThriftHttpHeaderTest {
 
     @Test
     public void testSimpleManipulationAsync() throws Exception {
-        final HelloService.AsyncIface client = Clients.newClient(
-                server.httpUri(BINARY) + "/hello", HelloService.AsyncIface.class);
+        final HelloService.AsyncIface client = ThriftClients.newClient(
+                server.httpUri() + "/hello", HelloService.AsyncIface.class);
 
         final BlockingQueue<Object> result = new ArrayBlockingQueue<>(1);
         final Callback callback = new Callback(result);
@@ -141,20 +141,20 @@ public class ThriftHttpHeaderTest {
     @Test
     public void httpResponseHeaderContainsFoo() throws TException {
         final Iface client =
-                Clients.builder(server.httpUri(BINARY) + "/hello")
-                       .decorator((delegate, ctx, req) -> {
-                           return delegate.execute(ctx, req).peekHeaders(headers -> {
-                               assertThat(headers.get("foo")).isEqualTo("bar");
-                           });
-                       })
-                       .build(Iface.class);
+                ThriftClients.builder(server.httpUri() + "/hello")
+                             .decorator((delegate, ctx, req) -> {
+                                 return delegate.execute(ctx, req).peekHeaders(headers -> {
+                                     assertThat(headers.get("foo")).isEqualTo("bar");
+                                 });
+                             })
+                             .build(Iface.class);
         try (SafeCloseable ignored = Clients.withHeader(AUTHORIZATION, SECRET)) {
             assertThat(client.hello("trustin")).isEqualTo("Hello, trustin!");
         }
     }
 
     private static Iface newClient() {
-        return Clients.newClient(server.httpUri(BINARY) + "/hello", HelloService.Iface.class);
+        return ThriftClients.newClient(server.httpUri() + "/hello", HelloService.Iface.class);
     }
 
     private static void assertAuthorizationFailure(Iface client, String expectedSecret) {

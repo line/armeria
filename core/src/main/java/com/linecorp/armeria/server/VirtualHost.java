@@ -81,9 +81,8 @@ public final class VirtualHost {
     private final long maxRequestLength;
     private final boolean verboseResponses;
     private final AccessLogWriter accessLogWriter;
-    private final boolean shutdownAccessLogWriterOnStop;
     private final ScheduledExecutorService blockingTaskExecutor;
-    private final boolean shutdownBlockingTaskExecutorOnStop;
+    private final List<ShutdownSupport> shutdownSupports;
 
     VirtualHost(String defaultHostname, String hostnamePattern, int port,
                 @Nullable SslContext sslContext,
@@ -91,12 +90,12 @@ public final class VirtualHost {
                 ServiceConfig fallbackServiceConfig,
                 RejectedRouteHandler rejectionHandler,
                 Function<? super VirtualHost, ? extends Logger> accessLoggerMapper,
-                @Nullable ServiceNaming defaultServiceNaming,
+                ServiceNaming defaultServiceNaming,
                 long requestTimeoutMillis,
                 long maxRequestLength, boolean verboseResponses,
-                AccessLogWriter accessLogWriter, boolean shutdownAccessLogWriterOnStop,
+                AccessLogWriter accessLogWriter,
                 ScheduledExecutorService blockingTaskExecutor,
-                boolean shutdownBlockingTaskExecutorOnStop) {
+                List<ShutdownSupport> shutdownSupports) {
         originalDefaultHostname = defaultHostname;
         originalHostnamePattern = hostnamePattern;
         if (port > 0) {
@@ -113,9 +112,8 @@ public final class VirtualHost {
         this.maxRequestLength = maxRequestLength;
         this.verboseResponses = verboseResponses;
         this.accessLogWriter = accessLogWriter;
-        this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
         this.blockingTaskExecutor = blockingTaskExecutor;
-        this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
+        this.shutdownSupports = shutdownSupports;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(fallbackServiceConfig, "fallbackServiceConfig");
@@ -133,11 +131,10 @@ public final class VirtualHost {
 
     VirtualHost withNewSslContext(SslContext sslContext) {
         return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext,
-                               serviceConfigs(), fallbackServiceConfig, RejectedRouteHandler.DISABLED,
-                               host -> accessLogger, defaultServiceNaming(), requestTimeoutMillis(),
-                               maxRequestLength(), verboseResponses(),
-                               accessLogWriter(), shutdownAccessLogWriterOnStop(),
-                               blockingTaskExecutor(), shutdownBlockingTaskExecutorOnStop());
+                               serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
+                               host -> accessLogger, defaultServiceNaming, requestTimeoutMillis,
+                               maxRequestLength, verboseResponses,
+                               accessLogWriter, blockingTaskExecutor, shutdownSupports);
     }
 
     /**
@@ -335,10 +332,14 @@ public final class VirtualHost {
     /**
      * Tells whether the {@link AccessLogWriter} is shut down when the {@link Server} stops.
      *
-     * @see ServiceConfig#shutdownAccessLogWriterOnStop()
+     * @deprecated This method is not used anymore. The {@link AccessLogWriter} is shut down if
+     *             the {@code shutdownOnStop} of
+     *             {@link VirtualHostBuilder#accessLogWriter(AccessLogWriter, boolean)}
+     *             is set to {@code true}.
      */
+    @Deprecated
     public boolean shutdownAccessLogWriterOnStop() {
-        return shutdownAccessLogWriterOnStop;
+        return false;
     }
 
     /**
@@ -353,10 +354,14 @@ public final class VirtualHost {
     /**
      * Returns whether the blocking task {@link Executor} is shut down when the {@link Server} stops.
      *
-     * @see ServiceConfig#shutdownBlockingTaskExecutorOnStop()
+     * @deprecated This method is not used anymore. The {@code blockingTaskExecutor} is shut down if
+     *             the {@code shutdownOnStop} of
+     *             {@link VirtualHostBuilder#blockingTaskExecutor(ScheduledExecutorService, boolean)}
+     *             is set to {@code true}.
      */
+    @Deprecated
     public boolean shutdownBlockingTaskExecutorOnStop() {
-        return shutdownBlockingTaskExecutorOnStop;
+        return false;
     }
 
     /**
@@ -379,21 +384,26 @@ public final class VirtualHost {
      *                           If {@code true}, the returned {@link Routed} will always be present.
      *
      * @return the {@link ServiceConfig} wrapped by a {@link Routed} if there's a match.
-     *         {@link Routed#empty()} if there's no match.
+     *         The fallback {@link ServiceConfig} wrapped by {@link Routed} if there's no match and
+     *         {@code useFallbackService} is {@code true}.
+     *         {@link Routed#empty()} if there's no match and {@code useFallbackService} is {@code false}.
      */
     public Routed<ServiceConfig> findServiceConfig(RoutingContext routingCtx, boolean useFallbackService) {
         final Routed<ServiceConfig> routed = router.find(requireNonNull(routingCtx, "routingCtx"));
         switch (routed.routingResultType()) {
             case MATCHED:
+                maybeSetRoutingResult(routingCtx, routed);
                 return routed;
             case NOT_MATCHED:
                 if (!useFallbackService) {
+                    maybeSetRoutingResult(routingCtx, routed);
                     return routed;
                 }
                 break;
             case CORS_PREFLIGHT:
                 assert routingCtx.status() == RoutingStatus.CORS_PREFLIGHT;
                 if (routed.value().handlesCorsPreflight()) {
+                    maybeSetRoutingResult(routingCtx, routed);
                     // CorsService will handle the preflight request
                     // even if the service does not handle an OPTIONS method.
                     return routed;
@@ -406,16 +416,29 @@ public final class VirtualHost {
 
         // Note that we did not implement this fallback mechanism inside a Router implementation like
         // CompositeRouter because we wanted to avoid caching non-existent mappings.
-        return Routed.of(fallbackServiceConfig.route(),
-                         RoutingResult.builder()
-                                      .path(routingCtx.path())
-                                      .query(routingCtx.query())
-                                      .build(),
-                         fallbackServiceConfig);
+        final Routed<ServiceConfig> fallbackRoute =
+                Routed.of(fallbackServiceConfig.route(),
+                          RoutingResult.builder()
+                                       .path(routingCtx.path())
+                                       .query(routingCtx.query())
+                                       .build(),
+                          fallbackServiceConfig);
+        maybeSetRoutingResult(routingCtx, fallbackRoute);
+        return fallbackRoute;
+    }
+
+    private static void maybeSetRoutingResult(RoutingContext routingContext, Routed<ServiceConfig> routed) {
+        if (!routingContext.hasResult()) {
+            routingContext.setResult(routed);
+        }
     }
 
     ServiceConfig fallbackServiceConfig() {
         return fallbackServiceConfig;
+    }
+
+    List<ShutdownSupport> shutdownSupports() {
+        return shutdownSupports;
     }
 
     VirtualHost decorate(@Nullable Function<? super HttpService, ? extends HttpService> decorator) {
@@ -431,12 +454,11 @@ public final class VirtualHost {
         final ServiceConfig fallbackServiceConfig =
                 this.fallbackServiceConfig.withDecoratedService(decorator);
 
-        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext(),
+        return new VirtualHost(originalDefaultHostname, originalHostnamePattern, port, sslContext,
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
-                               host -> accessLogger, defaultServiceNaming(), requestTimeoutMillis(),
-                               maxRequestLength(), verboseResponses(),
-                               accessLogWriter(), shutdownAccessLogWriterOnStop(),
-                               blockingTaskExecutor(), shutdownBlockingTaskExecutorOnStop());
+                               host -> accessLogger, defaultServiceNaming, requestTimeoutMillis,
+                               maxRequestLength, verboseResponses,
+                               accessLogWriter, blockingTaskExecutor, shutdownSupports);
     }
 
     @Override
@@ -470,12 +492,8 @@ public final class VirtualHost {
         buf.append(verboseResponses());
         buf.append(", accessLogWriter: ");
         buf.append(accessLogWriter());
-        buf.append(", shutdownAccessLogWriterOnStop: ");
-        buf.append(shutdownAccessLogWriterOnStop());
         buf.append(", blockingTaskExecutor: ");
         buf.append(blockingTaskExecutor());
-        buf.append(", shutdownBlockingTaskExecutorOnStop: ");
-        buf.append(shutdownBlockingTaskExecutorOnStop());
         buf.append(')');
         return buf.toString();
     }

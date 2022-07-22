@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
@@ -43,7 +42,7 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.server.FileAggregatedMultipart;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpResponseException;
-import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -204,7 +203,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+    public ExchangeType exchangeType(RoutingContext routingContext) {
         // Response stream will be supported via WebSocket.
         return ExchangeType.UNARY;
     }

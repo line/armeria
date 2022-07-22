@@ -203,27 +203,24 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     // Close the request early when it is certain there will be neither content nor trailers.
                     final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
-                    final Routed<ServiceConfig> routed;
                     if (routingCtx.status().routeMustExist()) {
                         try {
                             // Find the service that matches the path.
-                            routed = routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                            final Routed<ServiceConfig> routed =
+                                    routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                            assert routed.isPresent();
                         } catch (Throwable cause) {
                             logger.warn("{} Unexpected exception: {}", ctx.channel(), headers, cause);
                             fail(id, headers, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
                             return;
                         }
-                        assert routed.isPresent();
-                    } else {
-                        routed = null;
                     }
 
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
                     final boolean endOfStream = contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq);
                     final EventLoop eventLoop = ctx.channel().eventLoop();
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
-                                                           keepAlive, inboundTrafficController, routingCtx,
-                                                           routed);
+                                                           keepAlive, inboundTrafficController, routingCtx);
 
                     // An aggregating request will be fired after all objects are collected.
                     if (!req.isAggregated()) {

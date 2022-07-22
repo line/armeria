@@ -32,6 +32,7 @@ import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -41,6 +42,7 @@ import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
@@ -522,4 +524,14 @@ public interface ClientRequestContext extends RequestContext {
      * @param mutator the {@link Consumer} that mutates the additional request headers
      */
     void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator);
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Note that an {@link HttpRequest} will be aggregated before being written if
+     * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set.
+     */
+    @Override
+    @UnstableApi
+    ExchangeType exchangeType();
 }
