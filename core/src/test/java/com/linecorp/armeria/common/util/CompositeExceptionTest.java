@@ -77,4 +77,34 @@ class CompositeExceptionTest {
         // this case is occurred 2 exceptions (20 * 2)
         assertThat(separatedStacktrace.size()).isEqualTo(40);
     }
+
+    @Test
+    void verboseExceptionDisabledTestIfStackTraceLengthLessThan20() {
+        final IllegalStateException ex1 = new IllegalStateException();
+        final IllegalArgumentException ex2 = new IllegalArgumentException();
+        final String className = getClass().getSimpleName();
+        final String methodName = "verboseExceptionDisabledTestIfStackTraceLengthLessThan20";
+        final String fileName = "CompositeExceptionTest.java";
+        final StackTraceElement[] customStackTrace = new StackTraceElement[] {
+                new StackTraceElement(className, methodName, fileName, 1),
+                new StackTraceElement(className, methodName, fileName, 2),
+                new StackTraceElement(className, methodName, fileName, 3),
+        };
+        ex2.setStackTrace(customStackTrace);
+        final CompositeException compositeException = new CompositeException(
+                Arrays.asList(ex1, ex2), sampler);
+
+        when(sampler.isSampled(any())).thenReturn(false);
+
+        final CompositeException.ExceptionOverview exceptionOverview =
+                (CompositeException.ExceptionOverview) compositeException.getCause();
+        final List<String> separatedStacktrace =
+                Arrays.stream(exceptionOverview.getMessage().split(separator))
+                        .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
+                        .collect(Collectors.toList());
+
+        // Expected: if verboseException option disabled, max output stacktrace is 20
+        // but this case, one exception has 3 stacktrace (less than 20)
+        assertThat(separatedStacktrace.size()).isEqualTo(23);
+    }
 }

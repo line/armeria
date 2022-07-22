@@ -68,12 +68,11 @@ public final class CompositeException extends RuntimeException {
     // Forked from RxJava 3.0.0 at e793bc1d1a29dca18be795cf4a7628e2d44a4234
 
     private static final long serialVersionUID = 3026362227162912146L;
-    private static final int maxStacktraceSize = 20;
     private static final int disabledVerboseExceptionLoopCount = 20;
 
-    private final Sampler<Class<? extends Throwable>> verboseExceptionFlag;
     private final List<Throwable> exceptions;
     private final String message;
+    private final Sampler<Class<? extends Throwable>> verboseExceptionFlag;
 
     @Nullable
     private Throwable cause;
@@ -119,8 +118,8 @@ public final class CompositeException extends RuntimeException {
         if (deDupedExceptions.isEmpty()) {
             throw new IllegalArgumentException("errors is empty.");
         }
-        this.exceptions = ImmutableList.copyOf(deDupedExceptions);
-        this.message = exceptions.size() + " exceptions occurred. ";
+        exceptions = ImmutableList.copyOf(deDupedExceptions);
+        message = exceptions.size() + " exceptions occurred. ";
         this.verboseExceptionFlag = verboseExceptionFlag;
     }
 
@@ -177,7 +176,8 @@ public final class CompositeException extends RuntimeException {
                             final boolean isEnableVerboseExceptionFlag =
                                     verboseExceptionFlag.isSampled(inner.getClass());
                             final int loopCount = isEnableVerboseExceptionFlag ?
-                                                  st.length : disabledVerboseExceptionLoopCount;
+                                                  st.length : Math.min(
+                                                          disabledVerboseExceptionLoopCount, st.length);
                             for (int i = 0; i < loopCount; i++) {
                                 for (int j = 0; j < depth + 2; j++) {
                                     aggregateMessage.append("  ");
