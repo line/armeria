@@ -94,7 +94,7 @@ final class MultipartVariableMapper {
          throw new IllegalArgumentException("Invalid object-path: " + objectPath);
       }
       if (!"variables".equals(segments.get(0))) {
-         throw new IllegalArgumentException("can only map into variables");
+         throw new IllegalArgumentException("Can only map into variables: " + objectPath);
       }
 
       Object currentLocation = variables;
@@ -103,11 +103,11 @@ final class MultipartVariableMapper {
          if (i == segments.size() - 1) {
             if (currentLocation instanceof Map) {
                if (MAP_MAPPER.set((Map<String, Object>) currentLocation, segmentName, path) != null) {
-                  throw new IllegalArgumentException("expected null value when mapping " + objectPath);
+                  throw new IllegalArgumentException("Expected null value when mapping: " + objectPath);
                }
             } else {
                if (LIST_MAPPER.set((List<Object>) currentLocation, segmentName, path) != null) {
-                  throw new IllegalArgumentException("expected null value when mapping " + objectPath);
+                  throw new IllegalArgumentException("Expected null value when mapping: " + objectPath);
                }
             }
          } else {
@@ -118,7 +118,7 @@ final class MultipartVariableMapper {
             }
             if (currentLocation == null) {
                throw new IllegalArgumentException(
-                       "found null intermediate value when trying to map " + objectPath);
+                       "Found null intermediate value when trying to map: " + objectPath);
             }
          }
       }
