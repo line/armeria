@@ -35,12 +35,10 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
  * Provides a {@link ProtobufResponseConverterFunction} to annotated services.
  */
 @UnstableApi
-public final class ProtobufResponseConverterFunctionProvider implements
-                                                             ResponseConverterFunctionProvider {
+public final class ProtobufResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
 
     @Override
-    public ResponseConverterFunction newResponseConverterFunction(
-            Type returnType) {
+    public ResponseConverterFunction newResponseConverterFunction(Type returnType) {
         if (isSupportedType(returnType)) {
             return new ProtobufResponseConverterFunction();
         }
@@ -61,9 +59,8 @@ public final class ProtobufResponseConverterFunctionProvider implements
             final ParameterizedType parameterizedType = (ParameterizedType) type;
             final Class<?> rawType = (Class<?>) parameterizedType.getRawType();
 
-            if (Iterable.class.isAssignableFrom(rawType) ||
-                Stream.class.isAssignableFrom(rawType) ||
-                Publisher.class.isAssignableFrom(rawType)) {
+            if (Iterable.class.isAssignableFrom(rawType) || Stream.class.isAssignableFrom(rawType)
+                || Publisher.class.isAssignableFrom(rawType)) {
                 final Class<?> typeArgument = (Class<?>) parameterizedType.getActualTypeArguments()[0];
                 return Message.class.isAssignableFrom(typeArgument);
             }
