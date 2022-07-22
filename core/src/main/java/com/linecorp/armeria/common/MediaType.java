@@ -662,6 +662,8 @@ public final class MediaType {
      * <a href="https://developers.google.com/protocol-buffers">Protocol buffers</a>.
      */
     public static final MediaType PROTOBUF = createConstant(APPLICATION_TYPE, "protobuf");
+    public static final MediaType X_PROTOBUF = createConstant(APPLICATION_TYPE, "x-protobuf");
+    public static final MediaType X_GOOGLE_PROTOBUF = createConstant(APPLICATION_TYPE, "x-google-protobuf");
 
     /**
      * <a href="https://en.wikipedia.org/wiki/RDF/XML">RDF/XML</a> documents, which are XML
@@ -1050,6 +1052,20 @@ public final class MediaType {
      */
     public boolean isJson() {
         return is(JSON) || subtype().endsWith("+json");
+    }
+
+    /**
+     * Returns {@code true} when the subtype is in [{@link MediaType#PROTOBUF}, {@link MediaType#X_PROTOBUF}, {@link MediaType#X_GOOGLE_PROTOBUF}].
+     * Otherwise {@code false}.
+     *
+     * <pre>{@code
+     * PROTOBUF.isProtobuf() // true
+     * X_PROTOBUF.isProtobuf() // true
+     * X_GOOGLE_PROTOBUF.isProtobuf() // true
+     * }</pre>
+     */
+    public boolean isProtobuf() {
+        return is(PROTOBUF) || is(X_PROTOBUF)|| is(X_GOOGLE_PROTOBUF);
     }
 
     /**

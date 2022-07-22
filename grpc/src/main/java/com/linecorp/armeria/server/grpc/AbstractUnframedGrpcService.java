@@ -138,7 +138,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             RequestHeaders grpcHeaders,
             HttpData content,
             CompletableFuture<HttpResponse> res,
-            @Nullable Function<HttpData, HttpData> responseBodyConverter) {
+            @Nullable Function<HttpData, HttpData> responseBodyConverter,
+            MediaType originalContentType) {
         final HttpRequest grpcRequest;
         try (ArmeriaMessageFramer framer = new ArmeriaMessageFramer(
                 ctx.alloc(), ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE, false)) {
@@ -170,7 +171,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                             res.completeExceptionally(t);
                         } else {
                             deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
-                                              responseBodyConverter);
+                                              responseBodyConverter, originalContentType);
                         }
                     }
                     return null;
@@ -182,7 +183,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
                                   AggregatedHttpResponse grpcResponse,
                                   CompletableFuture<HttpResponse> res,
                                   UnframedGrpcErrorHandler unframedGrpcErrorHandler,
-                                  @Nullable Function<HttpData, HttpData> responseBodyConverter) {
+                                  @Nullable Function<HttpData, HttpData> responseBodyConverter,
+                                  MediaType originalContentType) {
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
@@ -213,11 +215,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         final ResponseHeadersBuilder unframedHeaders = grpcResponse.headers().toBuilder();
         unframedHeaders.set(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode); // grpcStatusCode is 0 which is OK.
         if (grpcMediaType != null) {
-            if (grpcMediaType.is(GrpcSerializationFormats.PROTO.mediaType())) {
-                unframedHeaders.contentType(MediaType.PROTOBUF);
-            } else if (grpcMediaType.is(GrpcSerializationFormats.JSON.mediaType())) {
-                unframedHeaders.contentType(MediaType.JSON_UTF_8);
-            }
+            unframedHeaders.contentType(originalContentType);
         }
 
         final ArmeriaMessageDeframer deframer = new ArmeriaMessageDeframer(
