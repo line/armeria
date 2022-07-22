@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Flags;
@@ -59,8 +60,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * <p>If you invoke {@link #getCause()}, it will lazily create the causal chain but will stop if it finds any
  * Throwable in the chain that it has already seen.
  *
- * <p>If the {@link Flags#verboseExceptionSampler()} is true, more detailed StackTrace are printed when
- * exceptions are thrown.
+ * <p>If the inner exception is sampled by {@link Flags#verboseExceptionSampler()},
+ * full stack traces are captured. Otherwise, only 20 stack frames are preserved by default.
  */
 public final class CompositeException extends RuntimeException {
 
@@ -68,10 +69,9 @@ public final class CompositeException extends RuntimeException {
 
     private static final long serialVersionUID = 3026362227162912146L;
     private static final int maxStacktraceSize = 20;
-    private static final int disabledVerboseExceptionLoopCount = 1;
-    private static final Sampler<Class<? extends Throwable>> verboseExceptionFlag =
-            Flags.verboseExceptionSampler();
+    private static final int disabledVerboseExceptionLoopCount = 20;
 
+    private final Sampler<Class<? extends Throwable>> verboseExceptionFlag;
     private final List<Throwable> exceptions;
     private final String message;
 
@@ -97,8 +97,16 @@ public final class CompositeException extends RuntimeException {
      * @throws IllegalArgumentException if {@code errors} is empty.
      */
     public CompositeException(Iterable<? extends Throwable> errors) {
+        this(errors, Flags.verboseExceptionSampler());
+    }
+
+    @VisibleForTesting
+    CompositeException(Iterable<? extends Throwable> errors,
+                       Sampler<Class<? extends Throwable>> verboseExceptionFlag) {
         requireNonNull(errors, "errors");
+        requireNonNull(verboseExceptionFlag, "verboseExceptionFlag");
         final Set<Throwable> deDupedExceptions = new LinkedHashSet<>();
+
         for (Throwable ex : errors) {
             if (ex instanceof CompositeException) {
                 deDupedExceptions.addAll(((CompositeException) ex).getExceptions());
@@ -111,8 +119,9 @@ public final class CompositeException extends RuntimeException {
         if (deDupedExceptions.isEmpty()) {
             throw new IllegalArgumentException("errors is empty.");
         }
-        exceptions = ImmutableList.copyOf(deDupedExceptions);
-        message = exceptions.size() + " exceptions occurred. ";
+        this.exceptions = ImmutableList.copyOf(deDupedExceptions);
+        this.message = exceptions.size() + " exceptions occurred. ";
+        this.verboseExceptionFlag = verboseExceptionFlag;
     }
 
     /**
@@ -168,7 +177,7 @@ public final class CompositeException extends RuntimeException {
                             final boolean isEnableVerboseExceptionFlag =
                                     verboseExceptionFlag.isSampled(inner.getClass());
                             final int loopCount = isEnableVerboseExceptionFlag ?
-                                  Math.min(st.length, maxStacktraceSize) : disabledVerboseExceptionLoopCount;
+                                                  st.length : disabledVerboseExceptionLoopCount;
                             for (int i = 0; i < loopCount; i++) {
                                 for (int j = 0; j < depth + 2; j++) {
                                     aggregateMessage.append("  ");
