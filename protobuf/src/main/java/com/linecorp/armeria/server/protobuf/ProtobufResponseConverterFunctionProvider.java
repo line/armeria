@@ -59,8 +59,8 @@ public final class ProtobufResponseConverterFunctionProvider implements Response
             final ParameterizedType parameterizedType = (ParameterizedType) type;
             final Class<?> rawType = (Class<?>) parameterizedType.getRawType();
 
-            if (Iterable.class.isAssignableFrom(rawType) || Stream.class.isAssignableFrom(rawType)
-                || Publisher.class.isAssignableFrom(rawType)) {
+            if (Iterable.class.isAssignableFrom(rawType) || Stream.class.isAssignableFrom(rawType) ||
+                Publisher.class.isAssignableFrom(rawType)) {
                 final Class<?> typeArgument = (Class<?>) parameterizedType.getActualTypeArguments()[0];
                 return Message.class.isAssignableFrom(typeArgument);
             }
