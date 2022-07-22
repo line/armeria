@@ -138,7 +138,7 @@ public final class AnnotatedService implements HttpService {
         }
 
         actualReturnType = getActualReturnType(method);
-        responseConverter = ResponseConverterFunctionSelector.responseConverter(
+        responseConverter = ResponseConverterFunctionUtil.responseConverter(
                 actualReturnType, requireNonNull(responseConverters, "responseConverters"));
         aggregationStrategy = AggregationStrategy.from(resolvers);
         this.route = requireNonNull(route, "route");

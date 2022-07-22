@@ -19,14 +19,14 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 @SuppressWarnings("ConstantConditions")
-class ResponseConverterFunctionSelectorTest {
+class ResponseConverterFunctionUtilTest {
 
     private static final ServiceRequestContext ctx = ServiceRequestContext.builder(
             HttpRequest.of(HttpMethod.GET, "/")).build();
 
     @Test
     void prioritisesSpiDelegatingResponseConverterProvider() throws Exception {
-        final ResponseConverterFunction converterFunction = ResponseConverterFunctionSelector.responseConverter(
+        final ResponseConverterFunction converterFunction = ResponseConverterFunctionUtil.responseConverter(
                 TestClassWithDelegatingResponseConverterProvider.class,
                 Collections.singletonList(new MyResponseConverterFunction()));
 
@@ -40,7 +40,7 @@ class ResponseConverterFunctionSelectorTest {
     @Test
     void prioritisesPassedInResponseConvertersGivenNoDelegatingResponseConverterProviderAvailable()
             throws Exception {
-        final ResponseConverterFunction converterFunction = ResponseConverterFunctionSelector.responseConverter(
+        final ResponseConverterFunction converterFunction = ResponseConverterFunctionUtil.responseConverter(
                 TestClassWithNonDelegatingResponseConverterProvider.class,
                 Collections.singletonList(new MyResponseConverterFunction()));
 
@@ -53,7 +53,7 @@ class ResponseConverterFunctionSelectorTest {
 
     @Test
     void usesNonDelegatingSpiResponseConverterGivenNoResponseConverterSpecified() throws Exception {
-        final ResponseConverterFunction converterFunction = ResponseConverterFunctionSelector.responseConverter(
+        final ResponseConverterFunction converterFunction = ResponseConverterFunctionUtil.responseConverter(
                 TestClassWithNonDelegatingResponseConverterProvider.class, emptyList());
 
         final HttpResponse response = converterFunction.convertResponse(ctx, null,

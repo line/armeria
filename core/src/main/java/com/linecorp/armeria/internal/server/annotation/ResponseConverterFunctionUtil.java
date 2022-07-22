@@ -50,9 +50,9 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 
-final class ResponseConverterFunctionSelector {
+final class ResponseConverterFunctionUtil {
 
-    private static final Logger logger = LoggerFactory.getLogger(ResponseConverterFunctionSelector.class);
+    private static final Logger logger = LoggerFactory.getLogger(ResponseConverterFunctionUtil.class);
 
     static final List<DelegatingResponseConverterFunctionProvider>
             delegatingResponseConverterFunctionProviders = ImmutableList.copyOf(
@@ -111,7 +111,7 @@ final class ResponseConverterFunctionSelector {
         return responseConverter;
     }
 
-    private ResponseConverterFunctionSelector() {}
+    private ResponseConverterFunctionUtil() {}
 
     /**
      * A response converter implementation which creates an {@link HttpResponse} with

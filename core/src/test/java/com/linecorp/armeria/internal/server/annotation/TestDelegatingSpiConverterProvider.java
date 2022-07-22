@@ -9,7 +9,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.server.annotation.ResponseConverterFunctionSelectorTest.TestClassWithDelegatingResponseConverterProvider;
+import com.linecorp.armeria.internal.server.annotation.ResponseConverterFunctionUtilTest.TestClassWithDelegatingResponseConverterProvider;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
