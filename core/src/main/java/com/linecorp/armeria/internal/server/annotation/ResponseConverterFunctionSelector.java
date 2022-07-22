@@ -52,8 +52,6 @@ import com.linecorp.armeria.server.annotation.StringResponseConverterFunction;
 
 final class ResponseConverterFunctionSelector {
 
-    private ResponseConverterFunctionSelector() {}
-
     private static final Logger logger = LoggerFactory.getLogger(ResponseConverterFunctionSelector.class);
 
     static final List<DelegatingResponseConverterFunctionProvider>
@@ -112,6 +110,8 @@ final class ResponseConverterFunctionSelector {
 
         return responseConverter;
     }
+
+    private ResponseConverterFunctionSelector() {}
 
     /**
      * A response converter implementation which creates an {@link HttpResponse} with
