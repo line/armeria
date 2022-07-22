@@ -20,8 +20,6 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -46,15 +44,15 @@ class CompositeExceptionTest {
 
         final CompositeException.ExceptionOverview exceptionOverview =
                 (CompositeException.ExceptionOverview) compositeException.getCause();
-        final List<String> separatedStacktrace =
-                Arrays.stream(exceptionOverview.getMessage().split(separator))
-                      .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-                      .collect(Collectors.toList());
+        final int separatedStacktraceLength =
+                (int) Arrays.stream(exceptionOverview.getMessage().split(separator))
+                        .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
+                        .count();
 
         final int sumStackTraceOutputLength = ex1.getStackTrace().length + ex2.getStackTrace().length;
         // Expected: if verboseException option enabled, output full stacktrace
         // this case is occurred 2 exceptions (ex1 stacktrace length + ex2 stacktrace length)
-        assertThat(separatedStacktrace.size()).isEqualTo(sumStackTraceOutputLength);
+        assertThat(separatedStacktraceLength).isEqualTo(sumStackTraceOutputLength);
     }
 
     @Test
@@ -68,14 +66,14 @@ class CompositeExceptionTest {
 
         final CompositeException.ExceptionOverview exceptionOverview =
                 (CompositeException.ExceptionOverview) compositeException.getCause();
-        final List<String> separatedStacktrace =
-                Arrays.stream(exceptionOverview.getMessage().split(separator))
-                      .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-                      .collect(Collectors.toList());
+        final int separatedStacktraceLength =
+                (int) Arrays.stream(exceptionOverview.getMessage().split(separator))
+                        .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
+                        .count();
 
         // Expected: if verboseException option disabled, max output stacktrace is 20
         // this case is occurred 2 exceptions (20 * 2)
-        assertThat(separatedStacktrace.size()).isEqualTo(40);
+        assertThat(separatedStacktraceLength).isEqualTo(40);
     }
 
     @Test
@@ -98,13 +96,13 @@ class CompositeExceptionTest {
 
         final CompositeException.ExceptionOverview exceptionOverview =
                 (CompositeException.ExceptionOverview) compositeException.getCause();
-        final List<String> separatedStacktrace =
-                Arrays.stream(exceptionOverview.getMessage().split(separator))
+        final int separatedStacktraceLength =
+                (int) Arrays.stream(exceptionOverview.getMessage().split(separator))
                         .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-                        .collect(Collectors.toList());
+                        .count();
 
         // Expected: if verboseException option disabled, max output stacktrace is 20
         // but this case, one exception has 3 stacktrace (less than 20)
-        assertThat(separatedStacktrace.size()).isEqualTo(23);
+        assertThat(separatedStacktraceLength).isEqualTo(23);
     }
 }
