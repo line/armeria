@@ -61,6 +61,13 @@ final class ResponseConverterFunctionSelector {
             ServiceLoader.load(DelegatingResponseConverterFunctionProvider.class,
                                AnnotatedService.class.getClassLoader()));
 
+    /**
+     * The default {@link ResponseConverterFunction}s.
+     */
+    private static final List<ResponseConverterFunction> defaultResponseConverters = ImmutableList.of(
+            new JacksonResponseConverterFunction(), new StringResponseConverterFunction(),
+            new ByteArrayResponseConverterFunction(), new HttpFileResponseConverterFunction());
+
     static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
             ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
                                                     AnnotatedService.class.getClassLoader()));
@@ -105,13 +112,6 @@ final class ResponseConverterFunctionSelector {
 
         return responseConverter;
     }
-
-    /**
-     * A default {@link ResponseConverterFunction}s.
-     */
-    private static final List<ResponseConverterFunction> defaultResponseConverters = ImmutableList.of(
-            new JacksonResponseConverterFunction(), new StringResponseConverterFunction(),
-            new ByteArrayResponseConverterFunction(), new HttpFileResponseConverterFunction());
 
     /**
      * A response converter implementation which creates an {@link HttpResponse} with
