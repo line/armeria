@@ -69,6 +69,9 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     static {
         final EnumMap<MethodType, RequestOptions> requestOptionsMap = new EnumMap<>(MethodType.class);
         for (MethodType methodType : MethodType.values()) {
+            if (methodType == MethodType.UNKNOWN) {
+                continue;
+            }
             requestOptionsMap.put(methodType, newRequestOptions(toExchangeType(methodType)));
         }
         REQUEST_OPTIONS_MAP = Maps.immutableEnumMap(requestOptionsMap);
