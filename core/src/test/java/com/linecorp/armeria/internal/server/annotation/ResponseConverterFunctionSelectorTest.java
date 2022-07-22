@@ -26,11 +26,9 @@ class ResponseConverterFunctionSelectorTest {
 
     @Test
     void prioritisesSpiDelegatingResponseConverterProvider() throws Exception {
-        final ResponseConverterFunction converterFunction =
-                ResponseConverterFunctionSelector.responseConverter(
-                        TestClassWithDelegatingResponseConverterProvider.class,
-                        Collections.singletonList(new MyResponseConverterFunction())
-                );
+        final ResponseConverterFunction converterFunction = ResponseConverterFunctionSelector.responseConverter(
+                TestClassWithDelegatingResponseConverterProvider.class,
+                Collections.singletonList(new MyResponseConverterFunction()));
 
         final HttpResponse response = converterFunction.convertResponse(ctx, null,
                                                                         new TestClassWithDelegatingResponseConverterProvider(),
@@ -42,11 +40,9 @@ class ResponseConverterFunctionSelectorTest {
     @Test
     void prioritisesPassedInResponseConvertersGivenNoDelegatingResponseConverterProviderAvailable()
             throws Exception {
-        final ResponseConverterFunction converterFunction =
-                ResponseConverterFunctionSelector.responseConverter(
-                        TestClassWithNonDelegatingResponseConverterProvider.class,
-                        Collections.singletonList(new MyResponseConverterFunction())
-                );
+        final ResponseConverterFunction converterFunction = ResponseConverterFunctionSelector.responseConverter(
+                TestClassWithNonDelegatingResponseConverterProvider.class,
+                Collections.singletonList(new MyResponseConverterFunction()));
 
         final HttpResponse response = converterFunction.convertResponse(ctx, null,
                                                                         new TestClassWithNonDelegatingResponseConverterProvider(),
@@ -57,11 +53,8 @@ class ResponseConverterFunctionSelectorTest {
 
     @Test
     void usesNonDelegatingSpiResponseConverterGivenNoResponseConverterSpecified() throws Exception {
-        final ResponseConverterFunction converterFunction =
-                ResponseConverterFunctionSelector.responseConverter(
-                        TestClassWithNonDelegatingResponseConverterProvider.class,
-                        emptyList()
-                );
+        final ResponseConverterFunction converterFunction = ResponseConverterFunctionSelector.responseConverter(
+                TestClassWithNonDelegatingResponseConverterProvider.class, emptyList());
 
         final HttpResponse response = converterFunction.convertResponse(ctx, null,
                                                                         new TestClassWithNonDelegatingResponseConverterProvider(),
@@ -79,5 +72,6 @@ class ResponseConverterFunctionSelectorTest {
     }
 
     static class TestClassWithDelegatingResponseConverterProvider {}
+
     static class TestClassWithNonDelegatingResponseConverterProvider {}
 }

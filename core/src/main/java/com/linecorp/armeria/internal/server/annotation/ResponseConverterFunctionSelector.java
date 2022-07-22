@@ -54,16 +54,14 @@ final class ResponseConverterFunctionSelector {
 
     private ResponseConverterFunctionSelector() {}
 
-    private static final Logger logger =
-            LoggerFactory.getLogger(ResponseConverterFunctionSelector.class);
+    private static final Logger logger = LoggerFactory.getLogger(ResponseConverterFunctionSelector.class);
 
     static final List<DelegatingResponseConverterFunctionProvider>
-            delegatingResponseConverterFunctionProviders =
-            ImmutableList.copyOf(ServiceLoader.load(DelegatingResponseConverterFunctionProvider.class,
-                                                    AnnotatedService.class.getClassLoader()));
+            delegatingResponseConverterFunctionProviders = ImmutableList.copyOf(
+            ServiceLoader.load(DelegatingResponseConverterFunctionProvider.class,
+                               AnnotatedService.class.getClassLoader()));
 
-    static final List<ResponseConverterFunctionProvider>
-            responseConverterFunctionProviders =
+    static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
             ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
                                                     AnnotatedService.class.getClassLoader()));
 
@@ -78,35 +76,28 @@ final class ResponseConverterFunctionSelector {
         }
     }
 
-    static ResponseConverterFunction responseConverter(
-            Type returnType, List<ResponseConverterFunction> responseConverters) {
+    static ResponseConverterFunction responseConverter(Type returnType,
+                                                       List<ResponseConverterFunction> responseConverters) {
 
         final List<ResponseConverterFunction> nonDelegatingSpiConverters =
                 responseConverterFunctionProviders.stream().map(
-                        provider -> provider.newResponseConverterFunction(returnType)
-                ).filter(Objects::nonNull).collect(Collectors.toList());
+                                                          provider -> provider.newResponseConverterFunction(returnType)).filter(Objects::nonNull)
+                                                  .collect(Collectors.toList());
 
         final ImmutableList<ResponseConverterFunction> backingConverters =
-                ImmutableList
-                        .<ResponseConverterFunction>builder()
-                        .addAll(responseConverters)
-                        .addAll(nonDelegatingSpiConverters)
-                        .addAll(defaultResponseConverters)
-                        .build();
+                ImmutableList.<ResponseConverterFunction>builder().addAll(responseConverters).addAll(
+                        nonDelegatingSpiConverters).addAll(defaultResponseConverters).build();
 
         final ResponseConverterFunction responseConverter = new CompositeResponseConverterFunction(
-                ImmutableList
-                        .<ResponseConverterFunction>builder()
-                        .addAll(backingConverters)
-                        // It is the last converter to try to convert the result object into an HttpResponse
-                        // after aggregating the published object from a Publisher or Stream.
-                        .add(new AggregatedResponseConverterFunction(
-                                new CompositeResponseConverterFunction(backingConverters)))
-                        .build());
+                ImmutableList.<ResponseConverterFunction>builder().addAll(backingConverters)
+                             // It is the last converter to try to convert the result object into an HttpResponse
+                             // after aggregating the published object from a Publisher or Stream.
+                             .add(new AggregatedResponseConverterFunction(
+                                     new CompositeResponseConverterFunction(backingConverters))).build());
 
         for (final DelegatingResponseConverterFunctionProvider provider : delegatingResponseConverterFunctionProviders) {
-            final ResponseConverterFunction func =
-                    provider.createResponseConverterFunction(returnType, responseConverter);
+            final ResponseConverterFunction func = provider.createResponseConverterFunction(returnType,
+                                                                                            responseConverter);
             if (func != null) {
                 return func;
             }
@@ -118,11 +109,9 @@ final class ResponseConverterFunctionSelector {
     /**
      * A default {@link ResponseConverterFunction}s.
      */
-    private static final List<ResponseConverterFunction> defaultResponseConverters =
-            ImmutableList.of(new JacksonResponseConverterFunction(),
-                             new StringResponseConverterFunction(),
-                             new ByteArrayResponseConverterFunction(),
-                             new HttpFileResponseConverterFunction());
+    private static final List<ResponseConverterFunction> defaultResponseConverters = ImmutableList.of(
+            new JacksonResponseConverterFunction(), new StringResponseConverterFunction(),
+            new ByteArrayResponseConverterFunction(), new HttpFileResponseConverterFunction());
 
     /**
      * A response converter implementation which creates an {@link HttpResponse} with
@@ -156,10 +145,8 @@ final class ResponseConverterFunctionSelector {
 
         @Override
         @SuppressWarnings("unchecked")
-        public HttpResponse convertResponse(ServiceRequestContext ctx,
-                                            ResponseHeaders headers,
-                                            @Nullable Object result,
-                                            HttpHeaders trailers) throws Exception {
+        public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
+                                            @Nullable Object result, HttpHeaders trailers) throws Exception {
             final CompletableFuture<?> f;
             if (result instanceof Publisher) {
                 f = collectFrom((Publisher<Object>) result, ctx);
