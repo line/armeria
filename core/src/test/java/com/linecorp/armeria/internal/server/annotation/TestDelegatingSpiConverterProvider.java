@@ -26,17 +26,18 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.ResponseConverterFunctionUtilTest.TestClassWithDelegatingResponseConverterProvider;
 import com.linecorp.armeria.server.ServiceRequestContext;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
- * For use with ResponseConverterFunctionSelectorTest
+ * For use with ResponseConverterFunctionSelectorTest.
  */
 public class TestDelegatingSpiConverterProvider implements DelegatingResponseConverterFunctionProvider {
 
     @Override
-    public @Nullable ResponseConverterFunction createResponseConverterFunction(Type responseType,
-                                                                               ResponseConverterFunction responseConverter) {
+    public @Nullable ResponseConverterFunction createResponseConverterFunction(
+            Type responseType,
+            ResponseConverterFunction responseConverter) {
         final Class<?> responseClass = toClass(responseType);
         if (responseClass != null && TestClassWithDelegatingResponseConverterProvider.class.isAssignableFrom(
                 responseClass)) {
@@ -58,8 +59,7 @@ public class TestDelegatingSpiConverterProvider implements DelegatingResponseCon
 
     static class TestDelegatingResponseConverterFunction implements ResponseConverterFunction {
 
-        public TestDelegatingResponseConverterFunction(ResponseConverterFunction responseConverter) {
-
+        TestDelegatingResponseConverterFunction(ResponseConverterFunction responseConverter) {
         }
 
         @Override

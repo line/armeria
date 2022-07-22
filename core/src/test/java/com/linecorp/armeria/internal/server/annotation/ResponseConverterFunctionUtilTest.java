@@ -45,9 +45,11 @@ class ResponseConverterFunctionUtilTest {
                 TestClassWithDelegatingResponseConverterProvider.class,
                 Collections.singletonList(new MyResponseConverterFunction()));
 
-        final HttpResponse response = converterFunction.convertResponse(ctx, null,
-                                                                        new TestClassWithDelegatingResponseConverterProvider(),
-                                                                        null);
+        final HttpResponse response = converterFunction.convertResponse(
+                ctx,
+                null,
+                new TestClassWithDelegatingResponseConverterProvider(),
+                null);
 
         assertThat(response.aggregate().join().contentUtf8()).isEqualTo("testDelegatingResponse");
     }
@@ -59,9 +61,11 @@ class ResponseConverterFunctionUtilTest {
                 TestClassWithNonDelegatingResponseConverterProvider.class,
                 Collections.singletonList(new MyResponseConverterFunction()));
 
-        final HttpResponse response = converterFunction.convertResponse(ctx, null,
-                                                                        new TestClassWithNonDelegatingResponseConverterProvider(),
-                                                                        null);
+        final HttpResponse response = converterFunction.convertResponse(
+                ctx,
+                null,
+                new TestClassWithNonDelegatingResponseConverterProvider(),
+                null);
 
         assertThat(response.aggregate().join().contentUtf8()).isEqualTo("my_custom_converter_response");
     }
@@ -71,9 +75,11 @@ class ResponseConverterFunctionUtilTest {
         final ResponseConverterFunction converterFunction = ResponseConverterFunctionUtil.responseConverter(
                 TestClassWithNonDelegatingResponseConverterProvider.class, emptyList());
 
-        final HttpResponse response = converterFunction.convertResponse(ctx, null,
-                                                                        new TestClassWithNonDelegatingResponseConverterProvider(),
-                                                                        null);
+        final HttpResponse response = converterFunction.convertResponse(
+                ctx,
+                null,
+                new TestClassWithNonDelegatingResponseConverterProvider(),
+                null);
 
         assertThat(response.aggregate().join().contentUtf8()).isEqualTo("testNonDelegatingResponse");
     }

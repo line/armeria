@@ -86,7 +86,9 @@ final class ResponseConverterFunctionUtil {
 
         final List<ResponseConverterFunction> nonDelegatingSpiConverters =
                 responseConverterFunctionProviders.stream().map(
-                                                          provider -> provider.newResponseConverterFunction(returnType)).filter(Objects::nonNull)
+                                                          provider -> provider.newResponseConverterFunction(
+                                                                  returnType)
+                                                  ).filter(Objects::nonNull)
                                                   .collect(Collectors.toList());
 
         final ImmutableList<ResponseConverterFunction> backingConverters =
@@ -95,12 +97,13 @@ final class ResponseConverterFunctionUtil {
 
         final ResponseConverterFunction responseConverter = new CompositeResponseConverterFunction(
                 ImmutableList.<ResponseConverterFunction>builder().addAll(backingConverters)
-                             // It is the last converter to try to convert the result object into an HttpResponse
-                             // after aggregating the published object from a Publisher or Stream.
+                             // It is the last converter to try to convert the result object into an
+                             // HttpResponse after aggregating the published object from a Publisher or Stream.
                              .add(new AggregatedResponseConverterFunction(
                                      new CompositeResponseConverterFunction(backingConverters))).build());
 
-        for (final DelegatingResponseConverterFunctionProvider provider : delegatingResponseConverterFunctionProviders) {
+        for (final DelegatingResponseConverterFunctionProvider provider
+                : delegatingResponseConverterFunctionProviders) {
             final ResponseConverterFunction func = provider.createResponseConverterFunction(returnType,
                                                                                             responseConverter);
             if (func != null) {

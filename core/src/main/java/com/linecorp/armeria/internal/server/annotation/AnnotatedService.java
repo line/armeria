@@ -82,12 +82,10 @@ public final class AnnotatedService implements HttpService {
      */
     private static final String CGLIB_CLASS_SEPARATOR = "$$";
 
-
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
     private static final CompletableFuture<AggregatedResult>
             NO_AGGREGATION_FUTURE = UnmodifiableFuture.completedFuture(AggregatedResult.EMPTY);
-
 
     private final Object object;
     private final Method method;
@@ -177,7 +175,6 @@ public final class AnnotatedService implements HttpService {
         // following must be called only after method.setAccessible(true)
         methodHandle = asMethodHandle(method, object);
     }
-
 
     private static Type getActualReturnType(Method method) {
         final Class<?> returnType;

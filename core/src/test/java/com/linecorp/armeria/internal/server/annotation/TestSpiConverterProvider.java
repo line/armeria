@@ -30,7 +30,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 
 /**
- * For use with ResponseConverterFunctionSelectorTest
+ * For use with ResponseConverterFunctionSelectorTest.
  */
 public class TestSpiConverterProvider implements ResponseConverterFunctionProvider {
 
