@@ -29,41 +29,44 @@ You need to have the files obtained from previous steps:
 Let's implement a service method `deleteBlogPost()` in the BlogService.java we've been working on.
 
 1. Add a service method, `deleteBlogPost()`.
-```java filename=BlogService.java
-import example.armeria.server.blog.grpc.Blog.DeleteBlogPostRequest;
 
-public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
-  @Override
-  public void deleteBlogPost(DeleteBlogPostRequest request, StreamObserver<Empty> responseObserver) {
-    try {
-      // Simulate a blocking API call.
-      Thread.sleep(100);
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    }
-   
-    
-    final BlogPost removed = blogPosts.remove(request.getId());
-    if (removed == null) {
-      responseObserver.onError(
-        throw new IllegalArgumentException("The post with ID": " + "does not exist");
-     } else {
-        responseObserver.onNext(Empty.getDefaultInstance());
-        responseObserver.onCompleted();
-     }
- }
-}
-```
+  ```java filename=BlogService.java
+  import example.armeria.server.blog.grpc.Blog.DeleteBlogPostRequest;
+
+  public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+    @Override
+    public void deleteBlogPost(DeleteBlogPostRequest request, StreamObserver<Empty> responseObserver) {
+      try {
+        // Simulate a blocking API call.
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+
+      final BlogPost removed = blogPosts.remove(request.getId());
+      if (removed == null) {
+        responseObserver.onError(
+          throw new IllegalArgumentException("The post with ID": " + "does not exist");
+       } else {
+          responseObserver.onNext(Empty.getDefaultInstance());
+          responseObserver.onCompleted();
+       }
+   }
+  }
+  ```
 2. Add Armeria's <type://GrpcServiceBuilder>'s blocking task executor to make all gRPC methods executed in the blocking task executor's thread pool.
-```java filename=Main.java
-private static Server newServer(int port) throws Exception {
-  final GrpcService grpcService =
-          GrpcService.builder().addService(new BlogService())
-                               .exceptionMapping(new GrpcExceptionHandler())
-                               .useBlockingTaskExecutor(true)
-                               .build();
-}
-```
+
+  By default, service methods are executed on the event loop, without thread switching, for fully asynchronous implementation. To implement blocking logic, call `useBlockingTaskExecutor(true)`.
+
+  ```java filename=Main.java
+  private static Server newServer(int port) throws Exception {
+    final GrpcService grpcService =
+            GrpcService.builder().addService(new BlogService())
+                                 .exceptionMapping(new GrpcExceptionHandler())
+                                 .useBlockingTaskExecutor(true)
+                                 .build();
+  }
+  ```
 
 ## 2. Implement client
 
