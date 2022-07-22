@@ -70,7 +70,7 @@ Let's implement a service method `deleteBlogPost()` in the BlogService.java we'v
 
 ## 2. Implement client
 
-This time, let's use the first client instance we created, `client`. Add a method `deleteBlogPost()` to send a request to update a blog post.
+Add a method `deleteBlogPost()` to send a request to update a blog post.
 
 ```java filename=BlogClient.java
 import example.armeria.server.blog.grpc.Blog.DeleteBlogPostRequest;
@@ -111,22 +111,8 @@ Let's test deleting a blog. We know that our client creates a blog post by defau
    id: 1
    ```
 4. Now, while keeping the server running, run the client again, attempting to delete the post with the ID `0`, which does not exist any longer.
-
-   This time, we can't tell if the blog post was deleted or if an error has occurred. (Although we anticipate an error to occur.) This is because we haven't added anything in the exception block.
-  ```java filename=BlogClient.java
-    catch(StatusRuntimeException statusException) { 
-      // Handle exception
-    }
-  ```
-   Suppose we have no time and just want to know if an error has occurred. One way we can check is using the decorator again. So, change the client instance from `client` to `cb` in the `deleteBlogPost()` method and run the client again.
-
-   ```java filename=BlogClient.java
-   try {
-     cb.deleteBlogPost(request);
-   }
-   ```
    
-   Now you'll see the exception logged as the following.
+   You should see the exception logged as the following.
    ```bash
    io.grpc.StatusException: NOT_FOUND: The blog post does not exist. ID: 0
    ```

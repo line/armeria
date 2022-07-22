@@ -107,7 +107,7 @@ You need to have the files obtained from previous steps:
 
 ## 2. Implement client
 
-We'll continue using the `cb` instance from the previous step. Add a method `updateBlogPost()` to send a request to update a blog post.
+Add a method `updateBlogPost()` to send a request to update a blog post.
 
 ```java filename=BlogClient.java
 import example.armeria.server.blog.grpc.Blog.UpdateBlogPostRequest;
@@ -119,7 +119,7 @@ class BlogClient {
                                                                .setTitle(newTitle)
                                                                .setContent(newContent)
                                                                .build();
-    final BlogPost updated = cb.updateBlogPost(request);
+    final BlogPost updated = client.updateBlogPost(request);
   }
 }
 ```

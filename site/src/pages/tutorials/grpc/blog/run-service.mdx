@@ -104,7 +104,7 @@ We've only tested running the service on a server. This time, let's try calling 
   import com.linecorp.armeria.client.grpc.GrpcClients;
   import example.armeria.server.blog.grpc.BlogServiceGrpc.BlogServiceBlockingStub;
 
-  final class BlogClient {
+  class BlogClient {
     static BlogServiceBlockingStub client;
 
     public static void main(String[] args) throws Exception {

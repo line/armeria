@@ -10,10 +10,7 @@ level: basic
 
 # Implementing READ operation
 
-In the prior step, we tried to create a blog post. In this step, we'll implement a read operation and make a call
-to read blog posts. We'll write two service methods, one for reading a single post and another for multiple posts.
-
-One major difference to the earlier step is the client instance used. Instead of using the client instance we created, we'll create another one. Armeria offers various options to create client instances.
+In the prior step, we tried to create a blog post. In this step, we'll implement a read operation and make a call to read blog posts. We'll write two service methods, one for reading a single post and another for multiple posts.
 
 <TutorialSteps current={4} />
 
@@ -93,30 +90,7 @@ final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
 
 ## 2. Implement client
 
-This time, we'll use a different client instance. Instead of using the client instance created with <type://Clients>, we'll use <type://GrpcClients>.
-
-1. Add another `BlogServiceBlockingStub` in the `BlogClient` class with a different name.
-  ```java filename=BlogClient.java
-  class BlogClient {
-    static BlogServiceBlockingStub client;  // added before
-    static BlogServiceBlockingStub cb;      // add this one here
-  }
-  ```
-2. Add a new client instance using `GrpcClients`.
-  ```java filename=BlogClient.java
-  class BlogClient {
-    public static void main(String[] args) throws Exception {
-      // added before
-      client = Clients.newClient(
-                "gproto+http://127.0.0.1:8080/",
-                BlogServiceBlockingStub.class);
-      // add this one here
-      cb = GrpcClients.builder("gproto+http://127.0.0.1:8080/")
-                      .build(BlogServiceBlockingStub.class);
-    }
-  }
-  ```
-3. Add a method each for retrieving posts. Note to use `cb`, the client instance created with <type://GrpcClients>.
+This time, we'll add a method each for retrieving posts.
 
   <Tabs>
   <TabPane tab="Single post" key="1">
@@ -127,7 +101,7 @@ This time, we'll use a different client instance. Instead of using the client in
   import example.armeria.server.blog.grpc.Blog.GetBlogPostRequest;
   ...
   static void getBlogPost(Integer id){
-    final BlogPost blogPost = cb.getBlogPost(GetBlogPostRequest.newBuilder().setId(id).build());
+    final BlogPost blogPost = client.getBlogPost(GetBlogPostRequest.newBuilder().setId(id).build());
   }
   ```
 
@@ -143,7 +117,7 @@ This time, we'll use a different client instance. Instead of using the client in
   ...
   static void listBlogPosts() {
     final ListBlogPostsResponse
-            response = cb.listBlogPosts(ListBlogPostsRequest.newBuilder().setOrderBy("asc").build());
+            response = client.listBlogPosts(ListBlogPostsRequest.newBuilder().setOrderBy("asc").build());
 
     final List<BlogPost> blogs = response.getBlogsList();
   }
@@ -181,16 +155,17 @@ Retrieving a single blog post requires a post ID. We haven't saved any post ID r
 
 </Tip>
 
-1. Add a decorator to the client instance, `cb`.
+1. Add a decorator to the client instance.
   ```java filename=BlogClient.java
+  import com.linecorp.armeria.client.logging.LoggingClient;
   import com.linecorp.armeria.client.logging.LoggingClient;
 
   class BlogClient {
     public static void main(String[] args) throws Exception {
       ...
-      cb = GrpcClients.builder("gproto+http://127.0.0.1:8080/")
-                      .decorator(LoggingClient.newDecorator())  // add this
-                      .build(BlogServiceBlockingStub.class);
+      client = GrpcClients.builder("gproto+http://127.0.0.1:8080/")
+                          .decorator(LoggingClient.newDecorator())  // add this
+                          .build(BlogServiceBlockingStub.class);
     }
   }
   ```
