@@ -214,7 +214,7 @@ final class DefaultUnframedGrpcErrorHandler {
                         rpcStatus = decodeGrpcStatusDetailsBin(grpcStatusDetailsBin);
                     } catch (InvalidProtocolBufferException e) {
                         logger.warn("Unexpected exception while decoding grpc-status-details-bin: {}",
-                                    grpcStatusDetailsBin);
+                                    grpcStatusDetailsBin, e);
                     }
                     if (rpcStatus != null) {
                         jsonGenerator.writeFieldName("details");
@@ -226,13 +226,17 @@ final class DefaultUnframedGrpcErrorHandler {
                 jsonGenerator.flush();
                 success = true;
             } catch (IOException e) {
-                logger.warn("Unexpected exception while generating json response");
+                logger.warn("Unexpected exception while generating a JSON response", e);
             } finally {
                 if (!success) {
                     buffer.release();
                 }
             }
-            return HttpResponse.of(responseHeaders, HttpData.wrap(buffer));
+            if (success) {
+                return HttpResponse.of(responseHeaders, HttpData.wrap(buffer));
+            } else {
+                return HttpResponse.of(responseHeaders);
+            }
         };
     }
 
@@ -257,7 +261,7 @@ final class DefaultUnframedGrpcErrorHandler {
             try {
                 ERROR_DETAILS_MARSHALLER.writeValue(detail, jsonGenerator);
             } catch (IOException e) {
-                logger.warn("Unexpected exception while writing error detail {} to json", detail);
+                logger.warn("Unexpected exception while writing an error detail to JSON. detail: {}", detail, e);
             }
         }
         jsonGenerator.writeEndArray();
