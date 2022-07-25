@@ -163,7 +163,7 @@ Retrieving a single blog post requires a post ID. We haven't saved any post ID r
   class BlogClient {
     public static void main(String[] args) throws Exception {
       ...
-      client = GrpcClients.builder("gproto+http://127.0.0.1:8080/")
+      client = GrpcClients.builder("http://127.0.0.1:8080/")
                           .decorator(LoggingClient.newDecorator())  // add this
                           .build(BlogServiceBlockingStub.class);
     }
