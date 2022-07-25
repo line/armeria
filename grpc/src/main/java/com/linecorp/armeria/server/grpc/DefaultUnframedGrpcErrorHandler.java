@@ -261,7 +261,8 @@ final class DefaultUnframedGrpcErrorHandler {
             try {
                 ERROR_DETAILS_MARSHALLER.writeValue(detail, jsonGenerator);
             } catch (IOException e) {
-                logger.warn("Unexpected exception while writing an error detail to JSON. detail: {}", detail, e);
+                logger.warn("Unexpected exception while writing an error detail to JSON. detail: {}",
+                            detail, e);
             }
         }
         jsonGenerator.writeEndArray();
