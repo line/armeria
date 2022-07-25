@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.graphql.protocol;
 
-import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +36,7 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
+import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.server.FileAggregatedMultipart;
@@ -119,8 +119,8 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                     for (Map.Entry<String, List<String>> entry : map.entrySet()) {
                         final String key = entry.getKey();
                         final List<String> value = entry.getValue();
-                        final List<Path> paths = multipart.files().get(key);
-                        bindMultipartVariable(variables, value, paths);
+                        final List<MultipartFile> multipartFiles = multipart.files().get(key);
+                        bindMultipartVariable(variables, value, multipartFiles);
                     }
 
                     return executeGraphql(ctx, GraphqlRequest.of(query, null, variables, extensions));
@@ -191,13 +191,14 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         return unsupportedMediaType();
     }
 
-    private void bindMultipartVariable(Map<String, Object> variables, List<String> value, List<Path> paths) {
-        if (paths.isEmpty()) {
+    private void bindMultipartVariable(Map<String, Object> variables, List<String> value,
+                                       List<MultipartFile> multipartFiles) {
+        if (multipartFiles.isEmpty()) {
             return;
         }
-        for (Path path : paths) {
+        for (MultipartFile multipartFile : multipartFiles) {
             for (String objectPath : value) {
-                MultipartVariableMapper.mapVariable(objectPath, variables, path);
+                MultipartVariableMapper.mapVariable(objectPath, variables, multipartFile);
             }
         }
     }

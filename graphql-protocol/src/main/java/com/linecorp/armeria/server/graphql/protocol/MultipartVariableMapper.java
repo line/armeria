@@ -31,7 +31,6 @@
 
 package com.linecorp.armeria.server.graphql.protocol;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +38,7 @@ import com.google.common.base.Splitter;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.multipart.MultipartFile;
 
 /**
  * Mapper for handling populating the query variables with the files specified by object paths
@@ -52,8 +52,8 @@ final class MultipartVariableMapper {
    private static final Splitter SPLITTER = Splitter.on(".");
    private static final Mapper<Map<String, Object>> MAP_MAPPER = new Mapper<Map<String, Object>>() {
       @Override
-      public Object set(Map<String, Object> location, String target, Path path) {
-         return location.put(target, path);
+      public Object set(Map<String, Object> location, String target, MultipartFile multipartFile) {
+         return location.put(target, multipartFile);
       }
 
       @Override
@@ -64,7 +64,7 @@ final class MultipartVariableMapper {
 
    private static final Mapper<List<Object>> LIST_MAPPER = new Mapper<List<Object>>() {
       @Override
-      public Object set(List<Object> location, String target, Path path) {
+      public Object set(List<Object> location, String target, MultipartFile multipartFile) {
          final int value = parseUnsignedInt(target);
          if (value == INVALID_INT) {
             return location;
@@ -72,7 +72,7 @@ final class MultipartVariableMapper {
          if (value >= location.size()) {
             return location;
          }
-         return location.set(value, path);
+         return location.set(value, multipartFile);
       }
 
       @Override
@@ -88,7 +88,7 @@ final class MultipartVariableMapper {
       }
    };
 
-   static void mapVariable(String objectPath, Map<String, Object> variables, Path path) {
+   static void mapVariable(String objectPath, Map<String, Object> variables, MultipartFile multipartFile) {
       final List<String> segments = ImmutableList.copyOf(SPLITTER.split(objectPath));
       if (segments.size() < 2) {
          throw new IllegalArgumentException("Invalid object-path: " + objectPath);
@@ -102,11 +102,11 @@ final class MultipartVariableMapper {
          final String segmentName = segments.get(i);
          if (i == segments.size() - 1) {
             if (currentLocation instanceof Map) {
-               if (MAP_MAPPER.set((Map<String, Object>) currentLocation, segmentName, path) != null) {
+               if (MAP_MAPPER.set((Map<String, Object>) currentLocation, segmentName, multipartFile) != null) {
                   throw new IllegalArgumentException("Expected null value when mapping: " + objectPath);
                }
             } else {
-               if (LIST_MAPPER.set((List<Object>) currentLocation, segmentName, path) != null) {
+               if (LIST_MAPPER.set((List<Object>) currentLocation, segmentName, multipartFile) != null) {
                   throw new IllegalArgumentException("Expected null value when mapping: " + objectPath);
                }
             }
@@ -126,7 +126,7 @@ final class MultipartVariableMapper {
 
    interface Mapper<T> {
       @Nullable
-      Object set(T location, String target, Path path);
+      Object set(T location, String target, MultipartFile multipartFile);
 
       @Nullable
       Object recurse(T location, String target);

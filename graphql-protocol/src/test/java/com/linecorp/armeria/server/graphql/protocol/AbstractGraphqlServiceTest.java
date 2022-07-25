@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
+import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -194,8 +195,8 @@ class AbstractGraphqlServiceTest {
         ).toHttpRequest("/graphql");
         final ServiceRequestContext ctx = ServiceRequestContext.of(request);
         testGraphqlService.serve(ctx, request).aggregate().join();
-        final Path path = (Path) testGraphqlService.graphqlRequest.variables().get("file");
-        assertThat(path).hasContent("Hello!");
+        final MultipartFile multipartFile = (MultipartFile) testGraphqlService.graphqlRequest.variables().get("file");
+        assertThat(multipartFile.path()).hasContent("Hello!");
     }
 
     @Test
@@ -214,9 +215,9 @@ class AbstractGraphqlServiceTest {
         ).toHttpRequest("/graphql");
         final ServiceRequestContext ctx = ServiceRequestContext.of(request);
         testGraphqlService.serve(ctx, request).aggregate().join();
-        final List<Path> paths = (List<Path>) testGraphqlService.graphqlRequest.variables().get("files");
-        assertThat(paths.get(0)).hasContent("foo");
-        assertThat(paths.get(1)).hasContent("bar");
+        final List<MultipartFile> multipartFiles = (List<MultipartFile>) testGraphqlService.graphqlRequest.variables().get("files");
+        assertThat(multipartFiles.get(0).path()).hasContent("foo");
+        assertThat(multipartFiles.get(1).path()).hasContent("bar");
     }
 
     private static class MediaTypeProvider implements ArgumentsProvider {
@@ -265,7 +266,6 @@ class AbstractGraphqlServiceTest {
 
     private static Stream<Arguments> provideThrowsExceptionMultipartPostMethodArguments() {
         return Stream.of(
-                Arguments.of(ImmutableList.of()),
                 Arguments.of(ImmutableList.of(
                         BodyPart.of(ContentDisposition.of("form-data", "operations"),
                                     "")

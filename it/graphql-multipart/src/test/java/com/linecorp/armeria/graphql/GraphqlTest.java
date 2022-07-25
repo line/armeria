@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -61,7 +60,7 @@ class GraphqlTest {
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
                                   .runtimeWiring(c -> {
-                                      c.scalar(MoreScalars.path());
+                                      c.scalar(MoreScalars.multipartFile());
                                       final DataFetcher<String> fileUpload = fileUploadFetcher();
                                       c.type("Mutation",
                                              typeWiring -> typeWiring.dataFetcher("fileUpload", fileUpload));
@@ -77,8 +76,9 @@ class GraphqlTest {
     private static DataFetcher<String> fileUploadFetcher() {
         return environment -> CompletableFuture.supplyAsync(() -> {
             try {
-                final Path path = environment.getArgument("path");
-                return Files.asCharSource(path.toFile(), StandardCharsets.UTF_8).read();
+                final com.linecorp.armeria.common.multipart.MultipartFile multipartFile =
+                        environment.getArgument("file");
+                return Files.asCharSource(multipartFile.file(), StandardCharsets.UTF_8).read();
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
@@ -87,11 +87,12 @@ class GraphqlTest {
 
     private static DataFetcher<List<String>> fileUploadsFetcher() {
         return environment -> CompletableFuture.supplyAsync(() -> {
-            final List<Path> paths = environment.getArgument("path");
-            return paths.stream()
-                        .map(path -> {
+            final List<com.linecorp.armeria.common.multipart.MultipartFile> multipartFiles =
+                    environment.getArgument("files");
+            return multipartFiles.stream()
+                        .map(it -> {
                             try {
-                                return Files.asCharSource(path.toFile(), StandardCharsets.UTF_8).read();
+                                return Files.asCharSource(it.file(), StandardCharsets.UTF_8).read();
                             } catch (IOException e) {
                                 throw new UncheckedIOException(e);
                             }
@@ -103,7 +104,7 @@ class GraphqlTest {
     @Test
     void multipartSingleFile() {
         final MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        final String query = "mutation FileUpload($file: Path) {fileUpload(path: $file)}";
+        final String query = "mutation FileUpload($file: MultipartFile) {fileUpload(file: $file)}";
         final String variables = "{\"file\": null}";
         body.put("operations", ImmutableList.of(String.format("{ \"query\": \"%s\", \"variables\": %s}",
                                                               query, variables)));
@@ -123,7 +124,7 @@ class GraphqlTest {
     @Test
     void multipartFileList() {
         final MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
-        final String query = "mutation FileUploads($files: [Path]) {fileUploads(path: $files)}";
+        final String query = "mutation FileUploads($files: [MultipartFile]) {fileUploads(files: $files)}";
         final String variables = "{\"files\": [null]}";
         body.put("operations", ImmutableList.of(String.format("{ \"query\": \"%s\", \"variables\": %s}",
                                                               query, variables)));

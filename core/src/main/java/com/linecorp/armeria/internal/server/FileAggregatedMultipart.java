@@ -38,7 +38,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.channel.EventLoop;
 
-final class FileAggregatedMultipart {
 public final class FileAggregatedMultipart {
     private final ListMultimap<String, String> params;
     private final ListMultimap<String, MultipartFile> files;

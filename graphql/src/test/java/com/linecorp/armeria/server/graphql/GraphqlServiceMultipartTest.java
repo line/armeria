@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Path;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -40,6 +39,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.graphql.scalar.MoreScalars;
 import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
+import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -57,7 +57,7 @@ class GraphqlServiceMultipartTest {
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
                                   .runtimeWiring(c -> {
-                                      c.scalar(MoreScalars.path());
+                                      c.scalar(MoreScalars.multipartFile());
                                       final DataFetcher<String> fileUpload = fileUploadFetcher();
                                       c.type("Mutation",
                                              typeWiring -> typeWiring.dataFetcher("fileUpload", fileUpload));
@@ -73,8 +73,8 @@ class GraphqlServiceMultipartTest {
     private static DataFetcher<String> fileUploadFetcher() {
         return environment -> CompletableFuture.supplyAsync(() -> {
             try {
-                final Path path = environment.getArgument("path");
-                return Files.asCharSource(path.toFile(), StandardCharsets.UTF_8).read();
+                final MultipartFile multipartFile = environment.getArgument("file");
+                return Files.asCharSource(multipartFile.file(), StandardCharsets.UTF_8).read();
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
@@ -83,11 +83,11 @@ class GraphqlServiceMultipartTest {
 
     private static DataFetcher<List<String>> fileUploadsFetcher() {
         return environment -> CompletableFuture.supplyAsync(() -> {
-            final List<Path> paths = environment.getArgument("path");
-            return paths.stream()
-                        .map(path -> {
+            final List<MultipartFile> multipartFiles = environment.getArgument("files");
+            return multipartFiles.stream()
+                        .map(it -> {
                             try {
-                                return Files.asCharSource(path.toFile(), StandardCharsets.UTF_8).read();
+                                return Files.asCharSource(it.file(), StandardCharsets.UTF_8).read();
                             } catch (IOException e) {
                                 throw new UncheckedIOException(e);
                             }
@@ -98,7 +98,7 @@ class GraphqlServiceMultipartTest {
 
     @Test
     void multipartSingleFile() {
-        final String query = "mutation FileUpload($file: Path) {fileUpload(path: $file)}";
+        final String query = "mutation FileUpload($file: MultipartFile) {fileUpload(file: $file)}";
         final String variables = "{\"file\": null}";
         final HttpRequest request = Multipart.of(
                 BodyPart.of(ContentDisposition.of("form-data", "operations"),
@@ -117,7 +117,7 @@ class GraphqlServiceMultipartTest {
 
     @Test
     void multipartFileList() {
-        final String query = "mutation FileUploads($files: [Path]) {fileUploads(path: $files)}";
+        final String query = "mutation FileUploads($files: [MultipartFile]) {fileUploads(files: $files)}";
         final String variables = "{\"files\": [null]}";
         final HttpRequest request = Multipart.of(
                 BodyPart.of(ContentDisposition.of("form-data", "operations"),
@@ -144,6 +144,6 @@ class GraphqlServiceMultipartTest {
                           .schemaFile(graphqlSchemaFile)
                           .build();
         }).isInstanceOf(SchemaProblem.class)
-          .hasMessageContaining("There is no scalar implementation for the named  'Path' scalar type");
+          .hasMessageContaining("There is no scalar implementation for the named  'MultipartFile' scalar type");
     }
 }

@@ -1,10 +1,10 @@
-scalar Path
+scalar MultipartFile
 
 type Query {
     foo: String
 }
 
 type Mutation {
-    fileUpload(path: Path): String
-    fileUploads(path: [Path]): [String]
+    fileUpload(file: MultipartFile): String
+    fileUploads(files: [MultipartFile]): [String]
 }

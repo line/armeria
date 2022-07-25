@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.common.graphql.scalar;
 
-import java.nio.file.Path;
+import com.linecorp.armeria.common.multipart.MultipartFile;
 
 import graphql.schema.Coercing;
 import graphql.schema.CoercingParseLiteralException;
@@ -24,42 +24,44 @@ import graphql.schema.CoercingSerializeException;
 import graphql.schema.GraphQLScalarType;
 
 /**
- * A path scalar that converts a file path string into a {@link Path}.
+ * A multipart-file scalar that converts a file path string into a
+ * {@link com.linecorp.armeria.common.multipart.MultipartFile}.
  */
-final class PathScalar {
+final class MultipartFileScalar {
 
     static final GraphQLScalarType INSTANCE;
 
     static {
-        final Coercing<Path, Void> coercing = new Coercing<Path, Void>() {
+        final Coercing<MultipartFile, Void> coercing = new Coercing<MultipartFile, Void>() {
             @Override
             public Void serialize(Object dataFetcherResult)
                     throws CoercingSerializeException {
-                throw new CoercingSerializeException("Path is an input-only type");
+                throw new CoercingSerializeException("MultipartFile is an input-only type");
             }
 
             @Override
-            public Path parseValue(Object input) throws CoercingParseValueException {
-                if (input instanceof Path) {
-                    return (Path) input;
+            public MultipartFile parseValue(Object input) throws CoercingParseValueException {
+                if (input instanceof MultipartFile) {
+                    return (MultipartFile) input;
                 } else {
                     throw new CoercingParseValueException(String.format("Expected type '%s' but was '%s'",
-                                                                        Path.class, input.getClass()));
+                                                                        MultipartFile.class, input.getClass()));
                 }
             }
 
             @Override
-            public Path parseLiteral(Object input) throws CoercingParseLiteralException {
-                throw new CoercingParseLiteralException("Must use variables to specify Path values");
+            public MultipartFile parseLiteral(Object input) throws CoercingParseLiteralException {
+                throw new CoercingParseLiteralException("Must use variables to specify MultipartFile values");
             }
         };
 
         INSTANCE = GraphQLScalarType.newScalar()
-                                    .name("Path")
-                                    .description("A file part in a multipart request")
+                                    .name("MultipartFile")
+                                    .description("A multipart-file in a multipart request")
                                     .coercing(coercing)
                                     .build();
     }
 
-    private PathScalar() {}
+    private MultipartFileScalar() {
+    }
 }

@@ -15,8 +15,6 @@
  */
 package com.linecorp.armeria.common.graphql.scalar;
 
-import java.nio.file.Path;
-
 import graphql.schema.GraphQLScalarType;
 
 /**
@@ -25,10 +23,10 @@ import graphql.schema.GraphQLScalarType;
 public final class MoreScalars {
 
     /**
-     * Returns {@link GraphQLScalarType} defined as a {@link Path} type.
+     * Returns {@link GraphQLScalarType} defined as a {@link com.linecorp.armeria.common.multipart.MultipartFile} type.
      */
-    public static GraphQLScalarType path() {
-        return PathScalar.INSTANCE;
+    public static GraphQLScalarType multipartFile() {
+        return MultipartFileScalar.INSTANCE;
     }
 
     private MoreScalars() {}
