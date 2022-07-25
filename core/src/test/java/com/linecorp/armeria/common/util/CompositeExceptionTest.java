@@ -16,31 +16,27 @@
 package com.linecorp.armeria.common.util;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.Mockito.any;
-import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 
-import com.linecorp.armeria.common.Flags;
+import com.google.common.collect.ImmutableList;
 
 class CompositeExceptionTest {
 
     private static final String separator = System.getProperty("line.separator");
-
-    @Mock
-    Sampler<Class<? extends Throwable>> sampler = Flags.verboseExceptionSampler();
+    private static final Sampler<Class<? extends Throwable>> alwaysVerboseExceptionSampler =
+            Sampler.always();
+    private static final Sampler<Class<? extends Throwable>> neverVerboseExceptionSampler =
+            Sampler.never();
 
     @Test
     void verboseExceptionEnabledTest() {
         final IllegalStateException ex1 = new IllegalStateException();
         final IllegalArgumentException ex2 = new IllegalArgumentException();
-        final CompositeException compositeException = new CompositeException(
-                Arrays.asList(ex1, ex2), sampler);
-
-        when(sampler.isSampled(any())).thenReturn(true);
+        final CompositeException compositeException =
+                new CompositeException(ImmutableList.of(ex1, ex2), alwaysVerboseExceptionSampler);
 
         final CompositeException.ExceptionOverview exceptionOverview =
                 (CompositeException.ExceptionOverview) compositeException.getCause();
@@ -59,10 +55,8 @@ class CompositeExceptionTest {
     void verboseExceptionDisabledTest() {
         final IllegalStateException ex1 = new IllegalStateException();
         final IllegalArgumentException ex2 = new IllegalArgumentException();
-        final CompositeException compositeException = new CompositeException(
-                Arrays.asList(ex1, ex2), sampler);
-
-        when(sampler.isSampled(any())).thenReturn(false);
+        final CompositeException compositeException =
+                new CompositeException(ImmutableList.of(ex1, ex2), neverVerboseExceptionSampler);
 
         final CompositeException.ExceptionOverview exceptionOverview =
                 (CompositeException.ExceptionOverview) compositeException.getCause();
@@ -89,10 +83,8 @@ class CompositeExceptionTest {
                 new StackTraceElement(className, methodName, fileName, 3),
         };
         ex2.setStackTrace(customStackTrace);
-        final CompositeException compositeException = new CompositeException(
-                Arrays.asList(ex1, ex2), sampler);
-
-        when(sampler.isSampled(any())).thenReturn(false);
+        final CompositeException compositeException =
+                new CompositeException(ImmutableList.of(ex1, ex2), neverVerboseExceptionSampler);
 
         final CompositeException.ExceptionOverview exceptionOverview =
                 (CompositeException.ExceptionOverview) compositeException.getCause();

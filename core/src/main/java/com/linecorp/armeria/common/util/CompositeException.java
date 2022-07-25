@@ -41,6 +41,7 @@ import java.util.Map;
 import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Flags;
@@ -61,18 +62,19 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * Throwable in the chain that it has already seen.
  *
  * <p>If the inner exception is sampled by {@link Flags#verboseExceptionSampler()},
- * full stack traces are captured. Otherwise, only 20 stack frames are preserved by default.
+ * full stack traces are captured. Otherwise, only {@value DEFAULT_MAX_NUM_STACK_TRACES}
+ * stack frames are preserved by default.
  */
 public final class CompositeException extends RuntimeException {
 
     // Forked from RxJava 3.0.0 at e793bc1d1a29dca18be795cf4a7628e2d44a4234
 
     private static final long serialVersionUID = 3026362227162912146L;
-    private static final int disabledVerboseExceptionLoopCount = 20;
+    private static final int DEFAULT_MAX_NUM_STACK_TRACES = 20;
 
     private final List<Throwable> exceptions;
     private final String message;
-    private final Sampler<Class<? extends Throwable>> verboseExceptionFlag;
+    private final Sampler<Class<? extends Throwable>> verboseExceptionSampler;
 
     @Nullable
     private Throwable cause;
@@ -101,9 +103,9 @@ public final class CompositeException extends RuntimeException {
 
     @VisibleForTesting
     CompositeException(Iterable<? extends Throwable> errors,
-                       Sampler<Class<? extends Throwable>> verboseExceptionFlag) {
+                       Sampler<Class<? extends Throwable>> verboseExceptionSampler) {
         requireNonNull(errors, "errors");
-        requireNonNull(verboseExceptionFlag, "verboseExceptionFlag");
+        requireNonNull(verboseExceptionSampler, "verboseExceptionSampler");
         final Set<Throwable> deDupedExceptions = new LinkedHashSet<>();
 
         for (Throwable ex : errors) {
@@ -120,7 +122,7 @@ public final class CompositeException extends RuntimeException {
         }
         exceptions = ImmutableList.copyOf(deDupedExceptions);
         message = exceptions.size() + " exceptions occurred. ";
-        this.verboseExceptionFlag = verboseExceptionFlag;
+        this.verboseExceptionSampler = verboseExceptionSampler;
     }
 
     /**
@@ -158,13 +160,11 @@ public final class CompositeException extends RuntimeException {
                         aggregateMessage.append("|-- ");
                         aggregateMessage.append(inner.getClass().getCanonicalName()).append(": ");
                         final String innerMessage = inner.getMessage();
+                        final String messagePadding = Strings.repeat("  ", depth + 2);
                         if (innerMessage != null && innerMessage.contains(separator)) {
                             aggregateMessage.append(separator);
                             for (String line : innerMessage.split(separator)) {
-                                for (int i = 0; i < depth + 2; i++) {
-                                    aggregateMessage.append("  ");
-                                }
-                                aggregateMessage.append(line).append(separator);
+                                aggregateMessage.append(messagePadding).append(line).append(separator);
                             }
                         } else {
                             aggregateMessage.append(innerMessage);
@@ -173,16 +173,13 @@ public final class CompositeException extends RuntimeException {
 
                         final StackTraceElement[] st = inner.getStackTrace();
                         if (st.length > 0) {
-                            final boolean isEnableVerboseExceptionFlag =
-                                    verboseExceptionFlag.isSampled(inner.getClass());
-                            final int loopCount = isEnableVerboseExceptionFlag ?
-                                                  st.length : Math.min(
-                                                          disabledVerboseExceptionLoopCount, st.length);
-                            for (int i = 0; i < loopCount; i++) {
-                                for (int j = 0; j < depth + 2; j++) {
-                                    aggregateMessage.append("  ");
-                                }
-                                aggregateMessage.append("at ").append(st[i]).append(separator);
+                            final boolean isVerboseException =
+                                    verboseExceptionSampler.isSampled(inner.getClass());
+                            final int maxStackTraceSize = isVerboseException ? st.length : Math.min(
+                                                          DEFAULT_MAX_NUM_STACK_TRACES, st.length);
+                            for (int i = 0; i < maxStackTraceSize; i++) {
+                                aggregateMessage.append(messagePadding).append("at ").append(st[i]).append(
+                                        separator);
                             }
                         }
 
@@ -194,9 +191,7 @@ public final class CompositeException extends RuntimeException {
                         } else {
                             inner = inner.getCause();
                             if (inner != null) {
-                                for (int i = 0; i < depth + 2; i++) {
-                                    aggregateMessage.append("  ");
-                                }
+                                aggregateMessage.append(messagePadding);
                                 aggregateMessage.append("|-- ");
                                 aggregateMessage.append("(cause not expanded again) ");
                                 aggregateMessage.append(inner.getClass().getCanonicalName()).append(": ");
