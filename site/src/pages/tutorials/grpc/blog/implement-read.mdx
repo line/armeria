@@ -243,8 +243,6 @@ Let's retrieve the second blog post. Apparently, the ID to use is `1`.
   ```
   We can see that our `getBlogPost()` method returns the not found error as a runtime exception.
   ```bash
-  DEBUG c.l.a.i.common.Http2GoAwayHandler - [id: 0xcf258efc, L:/127.0.0.1:61768 - 
-  R:127.0.0.1/127.0.0.1:8080] Sent a GOAWAY frame: lastStreamId=0, errorCode=NO_ERROR(0)
   Exception in thread "main" io.grpc.StatusRuntimeException: NOT_FOUND: The blog post does not exist. ID: 100
     at io.grpc.stub.ClientCalls.toStatusRuntimeException(ClientCalls.java:262)
     at io.grpc.stub.ClientCalls.getUnchecked(ClientCalls.java:243)
