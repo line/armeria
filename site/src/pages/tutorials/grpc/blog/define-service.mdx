@@ -38,7 +38,7 @@ message BlogPost {
 
 ## 3. Add service methods
 
-Add service methods to our blog service. We have an extra method for retrieving blog posts; one is for retrieving a single post and another for multiple posts.
+Add service methods to the blog service. We have two methods for retrieving blog posts; one is for retrieving a single post and another for multiple posts.
 
 ```protobuf filename=blog.proto
 import "google/protobuf/empty.proto";
@@ -93,7 +93,7 @@ message ListBlogPostsResponse {
 
 ## 6. Compile proto file
 
-Compile the blog.proto file to generate Java code.
+Compile the `blog.proto` file to generate Java code.
 
 ```bash
 ./gradlew generateProto

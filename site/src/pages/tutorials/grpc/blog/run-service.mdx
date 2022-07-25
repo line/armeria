@@ -20,7 +20,7 @@ You need to have the [Java code generated](/tutorials/grpc/blog/define-service#c
 
 ## 1. Declare an empty service
 
-Create a file BlogService.java and declare an empty blog service. We'll implement the service methods later on in this file. For now, leave it empty.
+Create a file `BlogService.java` and declare an empty blog service. We'll implement the service methods later on in this file. For now, leave it empty.
 
 ```java filename=BlogService.java
 package example.armeria.server.blog.grpc;
@@ -32,7 +32,7 @@ final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {}
 
 Build a service and server using Armeria's <type://ServerBuilder> to serve our service.
 
-1. Create a main class for our server. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/rest-api-annotated-service/src/main/java/example/armeria/server/blog/Main.java).
+1. Create a main class for our server. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/grpc/src/main/java/example/armeria/server/blog/grpc/BlogService.java).
 
   ```java filename=Main.java
   package example.armeria.server.blog.grpc;
@@ -135,7 +135,7 @@ While the server is running, run the client's `main()` method. You'll get an exc
 Exception in thread "main" io.grpc.StatusRuntimeException: UNIMPLEMENTED: Method example.armeria.server.blog.grpc.BlogService/CreateBlogPost is unimplemented
 ```
 
-The message says "UNIMPLEMENTED". This is because we are yet to implement the service method to create a blog post. One thing we've checked is that our service does return something to a client call.
+The message says "UNIMPLEMENTED". This is because we are yet to implement the service method to create a blog post. One thing we did check is that our service does return something to a client call.
 
 ## What's next
 

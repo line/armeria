@@ -10,7 +10,7 @@ level: basic
 
 # Implementing READ operation
 
-In the prior step, we tried to create a blog post. In this step, we'll implement a read operation and make a call to read blog posts. We'll write two service methods, one for reading a single post and another for multiple posts.
+In the earlier step, we tried to create a blog post. In this step, we'll implement a read operation and make a call to read blog posts. We'll write two service methods, one for reading a single post and another for multiple posts.
 
 <TutorialSteps current={4} />
 
@@ -55,7 +55,7 @@ public final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
 </TabPane>
 <TabPane tab="Multiple posts" key="2">
 
-Add a service method in BlogService.java to retrieve multiple posts.
+Add a service method in `BlogService.java` to retrieve multiple posts.
 
 ```java filename=BlogService.java
 import java.util.Collection;
@@ -95,7 +95,7 @@ This time, we'll add a method each for retrieving posts.
   <Tabs>
   <TabPane tab="Single post" key="1">
 
-  Add a method in the BlogClient.java to retrieve a single post.
+  Add a method in the `BlogClient.java` to retrieve a single post.
 
   ```java filename=BlogClient.java
   import example.armeria.server.blog.grpc.Blog.GetBlogPostRequest;
@@ -108,7 +108,7 @@ This time, we'll add a method each for retrieving posts.
   </TabPane>
   <TabPane tab="Multiple posts" key="2">
 
-  Add a method in the BlogClient.java to retrieve a list of posts.
+  Add a method in the `BlogClient.java` to retrieve a list of posts.
 
   ```java filename=BlogClient.java
   import example.armeria.server.blog.grpc.Blog.ListBlogPostsRequest;
@@ -147,7 +147,7 @@ Since we haven't added any log messages, we can't tell if we've successfully ret
 
 ## 4. Decorate the client
 
-Retrieving a single blog post requires a post ID. We haven't saved any post ID returned by the server. (Although we very much know that our tutorial service issues incremental ID.). To check IDs, we'll use Armeria's <type://LoggingClient> to decorate the our blog client. Likewise, you can decorate your service also. To decorate your service, use the [server decorator](https://armeria.dev/docs/server-decorator) or annotate your gRPC stub class with <type://@LoggingClient>.
+Retrieving a single blog post requires a post ID. We haven't saved any post ID returned by the server. (Although we very much know that our tutorial service issues incremental ID.). To check IDs, we'll decorate the client with Armeria's <type://LoggingClient>. Likewise, you can decorate your service also. To decorate your service, use the [server decorator](https://armeria.dev/docs/server-decorator) or annotate your gRPC stub class with <type://@LoggingClient>.
 
 <Tip>
 
@@ -192,7 +192,7 @@ Retrieving a single blog post requires a post ID. We haven't saved any post ID r
         </root>
       </configuration>
       ```
-3. Stop the server and run both the server and the client. If we succeed,we'll see an output like the following.
+3. Stop the server and run both the server and the client. If we succeed, we'll see an output like the following.
   ```bash
   [armeria-common-worker-nio-2-1] DEBUG c.l.a.client.logging.LoggingClient - [creqId=2f0fef66, chanId=0b350a6d, laddr=127.0.0.1:50824, raddr=127.0.0.1:8080][http://127.0.0.1:8080/example.armeria.server.blog.grpc.BlogService/ListBlogPosts#POST] Response: {startTime=2022-03-22T23:36:22.945Z(1645572982945000), length=99B, duration=516µs(516443ns), totalDuration=43986µs(43986061ns), headers=[:status=200, content-type=application/grpc+proto, grpc-encoding=identity, grpc-accept-encoding=gzip, server=Armeria/1.13.1-SNAPSHOT, date=Tue, 03 Feb 2022 23:36:22 GMT], content=CompletableRpcResponse{blogs {
     title: "My first blog"
