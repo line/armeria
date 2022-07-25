@@ -147,7 +147,7 @@ Since we haven't added any log messages, we can't tell if we've successfully ret
 
 ## 4. Decorate the client
 
-Retrieving a single blog post requires a post ID. We haven't saved any post ID returned by the server. (Although we very much know that our tutorial service issues incremental ID.). To check IDs, we'll decorate the client with Armeria's <type://LoggingClient>. Likewise, you can decorate your service also. To decorate your service, use the [server decorator](https://armeria.dev/docs/server-decorator) or annotate your gRPC stub class with <type://@LoggingClient>.
+Retrieving a single blog post requires a post ID. We haven't saved any post ID returned by the server. (Although we very much know that our tutorial service issues incremental ID.). To check IDs, we'll decorate the client with Armeria's <type://LoggingClient>. Likewise, you can decorate your service also. To decorate your service, use the [server decorator](https://armeria.dev/docs/server-decorator) or annotate your gRPC stub class with <type://@LoggingDecorator>.
 
 <Tip>
 
