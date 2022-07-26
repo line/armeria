@@ -74,17 +74,17 @@ const Description: React.FunctionComponent<DescriptionInfoProps> = ({
 }) => {
   return (
     <>
-      {descriptionInfo.markup === 'MARKDOWN' && (
+      {descriptionInfo && descriptionInfo.markup === 'MARKDOWN' && (
         <MarkdownWrapper
           docString={removeIndentDocString(descriptionInfo.docString)}
         />
       )}
-      {descriptionInfo.markup === 'MERMAID' && (
+      {descriptionInfo && descriptionInfo.markup === 'MERMAID' && (
         <MermaidWrapper
           docString={removeIndentDocString(descriptionInfo.docString)}
         />
       )}
-      {(!descriptionInfo.markup || descriptionInfo.markup === 'NONE') && (
+      {descriptionInfo && descriptionInfo.markup === 'NONE' && (
         <Typography variant="body2">
           {renderDefaultDocString(descriptionInfo.docString)}
         </Typography>
