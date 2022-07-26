@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
+import static com.linecorp.armeria.internal.common.HttpMessageAggregator.aggregateRequest;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
@@ -48,7 +49,6 @@ import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpRequest;
-import com.linecorp.armeria.internal.common.HttpMessageAggregator;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -454,6 +454,15 @@ public interface HttpRequest extends Request, HttpMessage {
     /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the request is received fully.
+     *
+     * <p>The {@link AggregatedHttpRequest} is cached by default. So you can repeatedly call this method get the
+     * cached value after the first aggregation.
+     * <pre>{@code
+     * HttpRequest request = ...;
+     * AggregatedHttpRequest aggregated0 = request.aggregate().join();
+     * AggregatedHttpRequest aggregated1 = request.aggregate().join();
+     * assert aggregated0 == aggregated1;
+     * }</pre>
      */
     default CompletableFuture<AggregatedHttpRequest> aggregate() {
         return aggregate(defaultSubscriberExecutor());
@@ -462,10 +471,22 @@ public interface HttpRequest extends Request, HttpMessage {
     /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the request is received fully.
+     *
+     * <p>The {@link AggregatedHttpRequest} is cached by default. So you can repeatedly call this method get the
+     * cached value after the first aggregation.
+     * <pre>{@code
+     * HttpRequest request = ...;
+     * AggregatedHttpRequest aggregated0 = request.aggregate(executor).join();
+     * AggregatedHttpRequest aggregated1 = request.aggregate(executor).join();
+     * assert aggregated0 == aggregated1;
+     * }</pre>
      */
     default CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
         requireNonNull(executor, "executor");
-        return HttpMessageAggregator.aggregateRequest(this, executor, null);
+        return aggregate(AggregationOptions.builderForRequest(headers())
+                                           .executor(executor)
+                                           .cacheResult(true)
+                                           .build());
     }
 
     /**
@@ -473,6 +494,15 @@ public interface HttpRequest extends Request, HttpMessage {
      * when the content and the trailers of the request is received fully.
      * {@link AggregatedHttpRequest#content()} will return a pooled object, and the caller must ensure
      * to release it. If you don't know what this means, use {@link #aggregate()}.
+     *
+     * <p>The pooled {@link AggregatedHttpRequest} is not cached. So it is NOT allowed to access the
+     * {@link AggregatedHttpRequest} from this method after the first aggregation.
+     * <pre>{@code
+     * HttpRequest request = ...;
+     * AggregatedHttpRequest aggregated = request.aggregateWithPooledObjects(alloc).join();
+     * // An `IllegalStateException` will be raised.
+     * request.aggregateWithPooledObjects(alloc).join();
+     * }</pre>
      *
      * @see PooledObjects
      */
@@ -486,12 +516,24 @@ public interface HttpRequest extends Request, HttpMessage {
      * the trailers of the request is received fully. {@link AggregatedHttpRequest#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
      * use {@link #aggregate()}.
+     *
+     * <p>The pooled {@link AggregatedHttpRequest} is not cached. So it is NOT allowed to access the
+     * {@link AggregatedHttpRequest} from this method after the first aggregation.
+     * <pre>{@code
+     * HttpRequest request = ...;
+     * AggregatedHttpRequest aggregated = request.aggregateWithPooledObjects(executor, alloc).join();
+     * // An `IllegalStateException` will be raised.
+     * request.aggregateWithPooledObjects(executor, alloc).join();
+     * }</pre>
      */
     default CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        return HttpMessageAggregator.aggregateRequest(this, executor, alloc);
+        return aggregate(AggregationOptions.builderForRequest(headers())
+                                           .executor(executor)
+                                           .alloc(alloc)
+                                           .build());
     }
 
     @Override

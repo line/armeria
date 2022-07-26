@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -142,6 +143,11 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     @Override
     public CompletableFuture<List<HttpObject>> collect(EventExecutor executor, SubscriptionOption... options) {
         return delegate.collect(executor, options);
+    }
+
+    @Override
+    public <U> CompletableFuture<U> aggregate(AggregationOptions<HttpObject, U> options) {
+        return delegate.aggregate(options);
     }
 
     @Override

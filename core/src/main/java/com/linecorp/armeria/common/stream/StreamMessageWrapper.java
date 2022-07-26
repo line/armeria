@@ -25,6 +25,8 @@ import org.reactivestreams.Subscriber;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.AggregationOptions;
+
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -97,6 +99,13 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
         @SuppressWarnings("unchecked")
         final StreamMessage<T> delegate = (StreamMessage<T>) delegate();
         return delegate.collect(executor, options);
+    }
+
+    @Override
+    public <U> CompletableFuture<U> aggregate(AggregationOptions<T, U> options) {
+        @SuppressWarnings("unchecked")
+        final StreamMessage<T> delegate = (StreamMessage<T>) delegate();
+        return delegate.aggregate(options);
     }
 
     @SuppressWarnings("unchecked")

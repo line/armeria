@@ -28,11 +28,12 @@ import com.google.common.math.IntMath;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
+final class AsyncMapStreamMessage<T, U> extends AbstractStreamMessage<U> {
     private final StreamMessage<T> source;
     private final Function<T, CompletableFuture<U>> function;
     private final int maxConcurrency;

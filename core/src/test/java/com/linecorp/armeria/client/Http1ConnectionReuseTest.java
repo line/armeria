@@ -28,6 +28,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -120,6 +121,11 @@ class Http1ConnectionReuseTest {
 
             @Override
             public void abort(Throwable cause) {}
+
+            @Override
+            public <U> CompletableFuture<U> aggregate(AggregationOptions<HttpObject, U> options) {
+                return null;
+            }
         };
     }
 

@@ -27,6 +27,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 import com.linecorp.armeria.internal.common.stream.SubscriptionArbiter;
 
@@ -36,7 +37,7 @@ import io.netty.util.concurrent.EventExecutor;
  * Relay items in order from a {@link StreamMessage} of {@link StreamMessage}s as a single {@link StreamMessage}
  * source.
  */
-final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
+final class ConcatPublisherStreamMessage<T> extends AbstractStreamMessage<T> {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<ConcatPublisherStreamMessage, OuterSubscriber>

@@ -24,13 +24,12 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 
 import io.netty.util.concurrent.EventExecutor;
 
-public class AbortedStreamMessage<T> implements StreamMessage<T>, Subscription {
+public class AbortedStreamMessage<T> extends AbstractStreamMessage<T> implements Subscription {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<AbortedStreamMessage> subscribedUpdater =

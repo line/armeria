@@ -33,12 +33,13 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.internal.common.stream.NonOverridableStreamMessageWrapper;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
+final class FuseableStreamMessage<T, U> extends AbstractStreamMessage<U> {
 
     static <T> FuseableStreamMessage<T, T> of(StreamMessage<? extends T> source,
                                               Predicate<? super T> predicate) {

@@ -630,6 +630,15 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
+     *
+     * <p>The {@link AggregatedHttpResponse} is cached by default. So it is allowed to repeatedly call this 
+     * method get the cached value after the first aggregation.
+     * <pre>{@code
+     * HttpResponse response = ...;
+     * AggregatedHttpResponse aggregated0 = response.aggregate().join();
+     * AggregatedHttpResponse aggregated1 = response.aggregate().join();
+     * assert aggregated0 == aggregated1;
+     * }</pre>
      */
     default CompletableFuture<AggregatedHttpResponse> aggregate() {
         return aggregate(defaultSubscriberExecutor());
@@ -638,9 +647,22 @@ public interface HttpResponse extends Response, HttpMessage {
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
+     *
+     * <p>The {@link AggregatedHttpResponse} is cached by default. So it is allowed to repeatedly call this 
+     * method get the cached value after the first aggregation.
+     * <pre>{@code
+     * HttpResponse response = ...;
+     * AggregatedHttpResponse aggregated0 = response.aggregate(executor).join();
+     * AggregatedHttpResponse aggregated1 = response.aggregate(executor).join();
+     * assert aggregated0 == aggregated1;
+     * }</pre>
      */
     default CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor) {
-        return HttpMessageAggregator.aggregateResponse(this, executor, null);
+        requireNonNull(executor, "executor");
+        return aggregate(AggregationOptions.builderForResponse()
+                                           .executor(executor)
+                                           .cacheResult(true)
+                                           .build());
     }
 
     /**
@@ -648,6 +670,15 @@ public interface HttpResponse extends Response, HttpMessage {
      * when the content and the trailers of the response are received fully.
      * {@link AggregatedHttpResponse#content()} will return a pooled object, and the caller must ensure
      * to release it. If you don't know what this means, use {@link #aggregate()}.
+     *
+     * <p>The pooled {@link AggregatedHttpResponse} is not cached. So it is NOT allowed to access the
+     * {@link AggregatedHttpResponse} from this method after the first aggregation.
+     * <pre>{@code
+     * HttpResponse response = ...;
+     * AggregatedHttpResponse aggregated = response.aggregateWithPooledObjects(alloc).join();
+     * // An `IllegalStateException` will be raised.
+     * response.aggregateWithPooledObjects(alloc).join();
+     * }</pre>
      *
      * @see PooledObjects
      */
@@ -658,15 +689,27 @@ public interface HttpResponse extends Response, HttpMessage {
 
     /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the request is received fully. {@link AggregatedHttpResponse#content()} will
+     * the trailers of the response is received fully. {@link AggregatedHttpResponse#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
      * use {@link #aggregate()}.
+     *
+     * <p>The pooled {@link AggregatedHttpResponse} is not cached. So it is NOT allowed to access the
+     * {@link AggregatedHttpResponse} from this method after the first aggregation.
+     * <pre>{@code
+     * HttpResponse response = ...;
+     * AggregatedHttpResponse aggregated = response.aggregateWithPooledObjects(executor, alloc).join();
+     * // An `IllegalStateException` will be raised.
+     * response.aggregateWithPooledObjects(executor, alloc).join();
+     * }</pre>
      */
     default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        return HttpMessageAggregator.aggregateResponse(this, executor, alloc);
+        return aggregate(AggregationOptions.builderForResponse()
+                                           .executor(executor)
+                                           .alloc(alloc)
+                                           .build());
     }
 
     @Override

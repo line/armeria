@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -48,7 +49,7 @@ import io.netty.util.concurrent.EventExecutor;
  * will happen from an I/O thread, meaning the order of the filtering will match the
  * order that the {@code delegate} processes the objects in.
  */
-public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
+public abstract class FilteredStreamMessage<T, U> extends AbstractStreamMessage<U> {
 
     private static final Logger logger = LoggerFactory.getLogger(FilteredStreamMessage.class);
 

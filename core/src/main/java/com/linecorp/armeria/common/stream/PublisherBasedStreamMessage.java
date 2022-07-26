@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
+import com.linecorp.armeria.internal.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.internal.common.stream.SubscriberUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -58,7 +59,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * @param <T> the type of element signaled
  */
 @UnstableApi
-public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
+public class PublisherBasedStreamMessage<T> extends AbstractStreamMessage<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(PublisherBasedStreamMessage.class);
 
@@ -184,7 +185,7 @@ public class PublisherBasedStreamMessage<T> implements StreamMessage<T> {
             //noinspection unchecked
             return ((StreamMessage<T>) publisher).collect(executor, options);
         } else {
-            return StreamMessage.super.collect(executor, options);
+            return super.collect(executor, options);
         }
     }
 

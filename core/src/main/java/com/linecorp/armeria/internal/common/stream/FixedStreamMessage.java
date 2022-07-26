@@ -45,7 +45,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 /**
  * A {@link StreamMessage} which only publishes a fixed number of objects known at construction time.
  */
-public abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
+public abstract class FixedStreamMessage<T> extends AbstractStreamMessage<T> implements Subscription {
 
     private static final Logger logger = LoggerFactory.getLogger(FixedStreamMessage.class);
 

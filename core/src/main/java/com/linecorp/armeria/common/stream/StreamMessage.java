@@ -40,6 +40,8 @@ import org.reactivestreams.Subscription;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
+import com.linecorp.armeria.common.AggregationOptions;
+import com.linecorp.armeria.common.AggregationOptionsBuilder;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
@@ -580,6 +582,35 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Aggregates the elements published by this {@link StreamMessage} with the specified
+     * {@link AggregationOptions}.
+     *
+     * <p>Example:
+     * <pre>{@code
+     * StreamMessage stream = StreamMessage.of(1, 2, 3, 4);
+     * int sum = stream.aggregate(AggregationOptions.of((nums -> nums.stream().reduce(0, Integer::sum))))
+     *                 .join();
+     * assert sum == 10;
+     * }</pre>
+     */
+    <U> CompletableFuture<U> aggregate(AggregationOptions<T, U> options);
+
+    /**
+     * Aggregates the elements published by this {@link StreamMessage} with the specified
+     * {@link Function}.
+     *
+     * <p>Example:
+     * <pre>{@code
+     * StreamMessage stream = StreamMessage.of(1, 2, 3, 4);
+     * int sum = stream.aggregate(nums -> nums.stream().reduce(0, Integer::sum)).join();
+     * assert sum == 10;
+     * }</pre>
+     */
+    default <U> CompletableFuture<U> aggregate(Function<? super List<T>, ? extends U> aggregator) {
+        return aggregate(AggregationOptions.of(aggregator));
+    }
+
+    /**
      * Filters values emitted by this {@link StreamMessage}.
      * If the {@link Predicate} test succeeds, the value is emitted.
      * If the {@link Predicate} test fails, the value is ignored and a request of {@code 1} is made to upstream.
@@ -844,7 +875,8 @@ public interface StreamMessage<T> extends Publisher<T> {
      */
     @UnstableApi
     default <E extends Throwable> StreamMessage<T> recoverAndResume(Class<E> causeClass,
-            Function<? super E, ? extends StreamMessage<T>> function) {
+                                                                    Function<? super E, ?
+                                                                            extends StreamMessage<T>> function) {
         requireNonNull(causeClass, "causeClass");
         requireNonNull(function, "function");
         return recoverAndResume(cause -> {

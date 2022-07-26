@@ -44,7 +44,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * @param <T> the type of element signaled
  */
 @UnstableApi
-public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
+public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, SubscriptionImpl>

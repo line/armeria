@@ -37,14 +37,15 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
+import com.linecorp.armeria.internal.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.internal.common.stream.NeverInvokedSubscriber;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 
-abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
+abstract class CancellableStreamMessage<T> extends AbstractStreamMessage<T> {
 
-    static final Logger logger = LoggerFactory.getLogger(AbstractStreamMessage.class);
+    static final Logger logger = LoggerFactory.getLogger(CancellableStreamMessage.class);
 
     static final CloseEvent SUCCESSFUL_CLOSE = new CloseEvent(null);
     static final CloseEvent CANCELLED_CLOSE = new CloseEvent(CancelledSubscriptionException.INSTANCE);
@@ -149,7 +150,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
     static final class SubscriptionImpl implements Subscription {
 
-        private final AbstractStreamMessage<?> publisher;
+        private final CancellableStreamMessage<?> publisher;
         private Subscriber<Object> subscriber;
         private final EventExecutor executor;
         private final SubscriptionOption[] options;
@@ -159,7 +160,7 @@ abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
         private volatile boolean cancelRequested;
 
         @SuppressWarnings("unchecked")
-        SubscriptionImpl(AbstractStreamMessage<?> publisher, Subscriber<?> subscriber,
+        SubscriptionImpl(CancellableStreamMessage<?> publisher, Subscriber<?> subscriber,
                          EventExecutor executor, SubscriptionOption[] options) {
             this.publisher = publisher;
             this.subscriber = (Subscriber<Object>) subscriber;

@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -53,7 +54,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.concurrent.EventExecutor;
 
-final class PathStreamMessage implements ByteStreamMessage {
+final class PathStreamMessage extends AbstractStreamMessage<HttpData> implements ByteStreamMessage {
 
     private static final Logger logger = LoggerFactory.getLogger(PathStreamMessage.class);
 
