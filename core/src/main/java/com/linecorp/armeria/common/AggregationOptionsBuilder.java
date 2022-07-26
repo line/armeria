@@ -71,26 +71,7 @@ public final class AggregationOptionsBuilder<T, U> {
     }
 
     /**
-     * Returns whether to cache the aggregation result.
-     *
-     * <p>This option is enabled by default if {@link #alloc(ByteBufAllocator)} is not specified.
-     * This option is disabled by default if {@link #alloc(ByteBufAllocator)} is specified.
-     * <pre>{@code
-     * AggregationOptions options =
-     *    AggregationOptions.builder(objects -> .. )
-     *                      .alloc(ByteBufAllocator.DEFAULT)
-     *                      .build();
-     * // The cache options is automatically disabled by default.
-     * assert !options.cacheResult();
-     *
-     * AggregationOptions cacheableOptions =
-     *    AggregationOptions.builder(objects -> .. )
-     *                      .executor(executor)
-     *                      .build();
-     * // The cache options is automatically enabled by default.
-     * assert cacheableOptions.cacheResult();
-     * }</pre>
-     *
+     * Returns whether to cache the aggregation result. This option is disabled by default.
      * <p>As this method and {@link #alloc(ByteBufAllocator)} are mutually exclusive.
      * If {@link #cacheResult(boolean)} is set {@code true} and an {@link ByteBufAllocator} is set together,
      * an {@link IllegalStateException} will be raised when {@link #build()} is being called.
