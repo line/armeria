@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common;
 
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
-import static com.linecorp.armeria.internal.common.HttpMessageAggregator.aggregateRequest;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;

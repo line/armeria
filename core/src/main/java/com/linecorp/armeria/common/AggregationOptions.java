@@ -96,7 +96,7 @@ public interface AggregationOptions<T, U> {
      * Returns a new {@link AggregationOptionsBuilder} that builds an {@link AggregationOptions} with various
      * options to aggregate an {@link HttpRequest} into an {@link AggregatedHttpRequest}.
      *
-     * Example:
+     * <p>Example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
      * HttpRequest request = ...;
@@ -123,7 +123,7 @@ public interface AggregationOptions<T, U> {
      * Returns a new {@link AggregationOptionsBuilder} that builds an {@link AggregationOptions} with various
      * options to aggregate an {@link HttpResponse} into an {@link AggregatedHttpResponse}.
      *
-     * Example:
+     * <p>Example:
      * <pre>{@code
      * ServiceRequestContext ctx = ...;
      * HttpResponse response = ...;

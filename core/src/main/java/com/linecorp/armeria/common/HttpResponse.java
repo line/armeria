@@ -55,7 +55,6 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.AbortedHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultHttpResponse;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpResponse;
-import com.linecorp.armeria.internal.common.HttpMessageAggregator;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
@@ -631,7 +630,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
      *
-     * <p>The {@link AggregatedHttpResponse} is cached by default. So it is allowed to repeatedly call this 
+     * <p>The {@link AggregatedHttpResponse} is cached by default. So it is allowed to repeatedly call this
      * method get the cached value after the first aggregation.
      * <pre>{@code
      * HttpResponse response = ...;
@@ -648,7 +647,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
      *
-     * <p>The {@link AggregatedHttpResponse} is cached by default. So it is allowed to repeatedly call this 
+     * <p>The {@link AggregatedHttpResponse} is cached by default. So it is allowed to repeatedly call this
      * method get the cached value after the first aggregation.
      * <pre>{@code
      * HttpResponse response = ...;

@@ -29,7 +29,6 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 
 import io.netty.buffer.ByteBufAllocator;
 
-
 public abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
     private static final AtomicReferenceFieldUpdater<AbstractStreamMessage, CompletableFuture>
@@ -54,7 +53,6 @@ public abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             //noinspection unchecked
             return (CompletableFuture<U>) aggregation;
         }
-
 
         final CompletableFuture<U> future =
                 collect(options.executor(), subscriptionOptions).thenApply(options.aggregator());

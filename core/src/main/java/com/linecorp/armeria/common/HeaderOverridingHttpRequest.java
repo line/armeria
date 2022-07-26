@@ -89,11 +89,6 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     }
 
     @Override
-    public <U> CompletableFuture<U> aggregate(AggregationOptions<HttpObject, U> options) {
-        return delegate.aggregate(options);
-    }
-
-    @Override
     public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         delegate.subscribe(subscriber, executor, options);
@@ -150,6 +145,11 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     @Nullable
     public MediaType contentType() {
         return headers.contentType();
+    }
+
+    @Override
+    public <U> CompletableFuture<U> aggregate(AggregationOptions<HttpObject, U> options) {
+        return delegate.aggregate(options);
     }
 
     @Override
