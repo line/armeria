@@ -243,41 +243,42 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
     @Override
     public void onError(Throwable cause) {
         isSubscriptionCompleted = true;
+        final Throwable peeled = Exceptions.peel(cause);
         if (!isWritable()) {
             // A session or stream is currently being closing or is closed already.
-            fail(cause);
+            fail(peeled);
             return;
         }
 
-        if (cause instanceof HttpResponseException) {
+        if (peeled instanceof HttpResponseException) {
             // Timeout may occur when the aggregation of the error response takes long.
             // If timeout occurs, the response is sent by newCancellationTask().
-            toAggregatedHttpResponse((HttpResponseException) cause).handleAsync((res, throwable) -> {
+            toAggregatedHttpResponse((HttpResponseException) peeled).handleAsync((res, throwable) -> {
                 if (throwable != null) {
                     failAndRespond(throwable,
                                    internalServerErrorResponse,
                                    Http2Error.CANCEL, false);
                 } else {
-                    failAndRespond(cause, res, Http2Error.CANCEL, false);
+                    failAndRespond(peeled, res, Http2Error.CANCEL, false);
                 }
                 return null;
             }, ctx.executor());
-        } else if (cause instanceof HttpStatusException) {
-            final Throwable cause0 = firstNonNull(cause.getCause(), cause);
-            final AggregatedHttpResponse res = toAggregatedHttpResponse((HttpStatusException) cause);
+        } else if (peeled instanceof HttpStatusException) {
+            final Throwable cause0 = firstNonNull(peeled.getCause(), peeled);
+            final AggregatedHttpResponse res = toAggregatedHttpResponse((HttpStatusException) peeled);
             failAndRespond(cause0, res, Http2Error.CANCEL, false);
-        } else if (Exceptions.isStreamCancelling(cause)) {
-            failAndReset(cause);
+        } else if (Exceptions.isStreamCancelling(peeled)) {
+            failAndReset(peeled);
         } else {
-            if (!(cause instanceof CancellationException)) {
+            if (!(peeled instanceof CancellationException)) {
                 logger.warn("{} Unexpected exception from a service or a response publisher: {}",
-                            ctx.channel(), service(), cause);
+                            ctx.channel(), service(), peeled);
             } else {
                 // Ignore CancellationException and its subtypes, which can be triggered when the request
                 // was cancelled or timed out even before the subscription attempt is made.
             }
 
-            failAndRespond(cause, internalServerErrorResponse, Http2Error.INTERNAL_ERROR, false);
+            failAndRespond(peeled, internalServerErrorResponse, Http2Error.INTERNAL_ERROR, false);
         }
     }
 

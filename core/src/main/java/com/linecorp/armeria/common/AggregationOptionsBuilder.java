@@ -72,7 +72,7 @@ public final class AggregationOptionsBuilder<T, U> {
 
     /**
      * Returns whether to cache the aggregation result. This option is disabled by default.
-     * <p>As this method and {@link #alloc(ByteBufAllocator)} are mutually exclusive.
+     * Note that this method and {@link #alloc(ByteBufAllocator)} are mutually exclusive.
      * If {@link #cacheResult(boolean)} is set {@code true} and an {@link ByteBufAllocator} is set together,
      * an {@link IllegalStateException} will be raised when {@link #build()} is being called.
      *

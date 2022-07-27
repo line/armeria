@@ -128,11 +128,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
 
         if (!collectingFutureUpdater.compareAndSet(this, null, NO_COLLECTING_FUTURE)) {
             upstream.collect(collectingExecutor, collectionOptions).handle((result, cause) -> {
-                if (cause == null) {
-                    collectingFuture.complete(result);
-                } else {
-                    collectingFuture.completeExceptionally(cause);
-                }
+                completeCollectingFuture(result, cause);
                 return null;
             });
         }
@@ -322,6 +318,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
             upstream.abort(cause);
             return;
         }
+        completeCollectingFuture(null, cause);
 
         final CloseEvent closeEvent = newCloseEvent(cause);
         final SubscriptionImpl downstreamSubscription = this.downstreamSubscription;
@@ -331,6 +328,29 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
         } else {
             downstreamSubscription.executor().execute(
                     () -> closeEvent.notifySubscriber(downstreamSubscription, whenComplete()));
+        }
+    }
+
+    private void completeCollectingFuture(@Nullable List<T> result, @Nullable Throwable cause) {
+        final CompletableFuture<List<T>> collectingFuture = this.collectingFuture;
+        if (collectingFuture != null && !collectingFuture.isDone()) {
+            final EventExecutor collectingExecutor = this.collectingExecutor;
+            assert collectingExecutor != null;
+            if (collectingExecutor.inEventLoop()) {
+                if (result != null) {
+                    collectingFuture.complete(result);
+                } else {
+                    collectingFuture.completeExceptionally(cause);
+                }
+            } else {
+                collectingExecutor.execute(() -> {
+                    if (result != null) {
+                        collectingFuture.complete(result);
+                    } else {
+                        collectingFuture.completeExceptionally(cause);
+                    }
+                });
+            }
         }
     }
 
@@ -356,6 +376,10 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
         collectingExecutor = executor;
         collectionOptions = options;
         if (collectingFutureUpdater.compareAndSet(this, null, collectingFuture)) {
+            final Throwable abortCause = this.abortCause;
+            if (abortCause != null) {
+                completeCollectingFuture(null, abortCause);
+            }
             return collectingFuture;
         } else {
             final StreamMessage<T> upstream0 = this.upstream;

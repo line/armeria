@@ -38,7 +38,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 

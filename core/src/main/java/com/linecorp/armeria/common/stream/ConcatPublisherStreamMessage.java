@@ -27,7 +27,6 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 import com.linecorp.armeria.internal.common.stream.SubscriptionArbiter;
 

@@ -30,7 +30,6 @@ import com.google.common.math.LongMath;
 import com.linecorp.armeria.common.ByteBufAccessMode;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.stream.AbstractStreamMessage;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.util.concurrent.EventExecutor;

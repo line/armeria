@@ -30,12 +30,14 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -145,6 +147,11 @@ public final class RecoverableStreamMessage<T> extends AbstractStreamMessage<T> 
 
     @Override
     public CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
+        if (allowResuming) {
+            // As the optimized `collect()` method gathers all elements into a list, resuming is unsupported.
+            return super.collect(executor, options);
+        }
+
         if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
             return UnmodifiableFuture.exceptionallyCompletedFuture(
                     new IllegalStateException("subscribed by other subscriber already"));
@@ -152,11 +159,21 @@ public final class RecoverableStreamMessage<T> extends AbstractStreamMessage<T> 
 
         return upstream.collect(executor, options).handle((objects, cause) -> {
             if (cause != null) {
+                cause = Exceptions.peel(cause);
                 // Switch the upstream to a fallback stream and resume subscribing.
                 final StreamMessage<T> fallback = errorFunction.apply(cause);
                 requireNonNull(fallback, "errorFunction.apply() returned null");
-                return fallback.collect(executor, options);
+                return fallback.collect(executor, options).handle((res, fallbackCause) -> {
+                    if (fallbackCause != null) {
+                        fallbackCause = Exceptions.peel(fallbackCause);
+                        completionFuture.completeExceptionally(fallbackCause);
+                        return Exceptions.throwUnsafely(fallbackCause);
+                    }
+                    completionFuture.complete(null);
+                    return res;
+                });
             }
+            completionFuture.complete(null);
             return UnmodifiableFuture.completedFuture(objects);
         }).thenCompose(Function.identity());
     }

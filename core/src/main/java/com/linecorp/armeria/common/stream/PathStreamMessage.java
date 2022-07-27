@@ -45,7 +45,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 import com.linecorp.armeria.server.ServiceRequestContext;
 

@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;

@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.stream;
+package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.POOLED_OBJECTS;
@@ -24,13 +24,17 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.buffer.ByteBufAllocator;
 
+/**
+ * A skeletal {@link StreamMessage} implementation.
+ */
+@UnstableApi
 public abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
+    @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<AbstractStreamMessage, CompletableFuture>
             aggregationUpdater = AtomicReferenceFieldUpdater.newUpdater(
             AbstractStreamMessage.class, CompletableFuture.class, "aggregation");
@@ -38,6 +42,9 @@ public abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     @Nullable
     private volatile CompletableFuture<?> aggregation;
 
+    /**
+     * Creates a new instance.
+     */
     protected AbstractStreamMessage() {}
 
     @Override

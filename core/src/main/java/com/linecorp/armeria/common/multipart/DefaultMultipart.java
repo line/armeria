@@ -40,11 +40,11 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
-import com.linecorp.armeria.internal.common.stream.AbstractStreamMessage;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
