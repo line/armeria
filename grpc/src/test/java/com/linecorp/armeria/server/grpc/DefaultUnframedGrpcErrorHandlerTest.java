@@ -103,8 +103,7 @@ class DefaultUnframedGrpcErrorHandlerTest {
                                                                   .build();
 
         final Status status = Status.newBuilder()
-                                    .setCode(
-                                              Code.UNKNOWN.getNumber())
+                                    .setCode(Code.UNKNOWN.getNumber())
                                     .setMessage("Unknown Exceptions Test")
                                     .addDetails(Any.pack(errorInfo))
                                     .addDetails(Any.pack(retryInfo))
