@@ -188,7 +188,7 @@ class DefaultUnframedGrpcErrorHandlerTest {
                 "    \"@type\":\"type.googleapis.com/google.rpc.LocalizedMessage\",\n" +
                 "    \"message\":\"message\"\n" +
                 "  }\n" +
-                "]";
+                ']';
         assertThatJson(mapper.readTree(jsonObjectWriter.toString())).isEqualTo(expectedJsonString);
     }
 
