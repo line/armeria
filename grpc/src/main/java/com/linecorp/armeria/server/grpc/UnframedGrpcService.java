@@ -145,14 +145,21 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
                                RequestLogProperty.RESPONSE_CONTENT);
 
+        final MediaType responseContentType;
+        if (clientHeaders.accept().isEmpty() || clientHeaders.accept().contains(contentType)) {
+            responseContentType = contentType;
+        } else {
+            responseContentType = null;
+        }
+
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((clientRequest, t) -> {
             try (SafeCloseable ignore = ctx.push()) {
                 if (t != null) {
                     responseFuture.completeExceptionally(t);
                 } else {
-                    frameAndServe(unwrap(), ctx, grpcHeaders.build(),
-                                  clientRequest.content(), responseFuture, null, contentType);
+                    frameAndServe(unwrap(), ctx, grpcHeaders.build(), clientRequest.content(),
+                            responseFuture, null, responseContentType);
                 }
             }
             return null;

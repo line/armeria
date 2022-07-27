@@ -557,9 +557,9 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                    "gRPC encoding is not supported for non-framed requests.");
         }
 
-        final MediaType contentType = GrpcSerializationFormats.JSON.mediaType();
+        final MediaType jsonContentType = GrpcSerializationFormats.JSON.mediaType();
         grpcHeaders.method(HttpMethod.POST)
-                   .contentType(contentType);
+                   .contentType(jsonContentType);
         // All clients support no encoding, and we don't support gRPC encoding for non-framed requests, so just
         // clear the header if it's present.
         grpcHeaders.remove(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
@@ -577,7 +577,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, spec.method);
                         frameAndServe(unwrap(), ctx, grpcHeaders.build(),
                                       convertToJson(ctx, clientRequest, spec),
-                                      responseFuture, generateResponseBodyConverter(spec), contentType);
+                                      responseFuture, generateResponseBodyConverter(spec), jsonContentType);
                     } catch (IllegalArgumentException iae) {
                         responseFuture.completeExceptionally(
                                 HttpStatusException.of(HttpStatus.BAD_REQUEST, iae));

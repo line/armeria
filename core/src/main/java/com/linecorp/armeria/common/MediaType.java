@@ -1055,7 +1055,7 @@ public final class MediaType {
     }
 
     /**
-     * Returns {@code true} when the subtype is in [{@link MediaType#PROTOBUF}, {@link MediaType#X_PROTOBUF}, {@link MediaType#X_GOOGLE_PROTOBUF}].
+     * Returns {@code true} when the subtype is one of {@link MediaType#PROTOBUF}, {@link MediaType#X_PROTOBUF} and {@link MediaType#X_GOOGLE_PROTOBUF}.
      * Otherwise {@code false}.
      *
      * <pre>{@code
