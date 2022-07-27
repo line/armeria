@@ -22,11 +22,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import org.apache.http.client.methods.HttpRequestWrapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpMethod;
@@ -37,6 +39,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -74,24 +77,26 @@ class Http1ConnectionReuseTest {
 
     private static HttpRequest httpRequest(CompletableFuture<Void> future) {
         return new HttpRequest() {
+            private final HttpRequest delegate = HttpRequest.of(HttpMethod.GET, "/");
+
             @Override
             public RequestHeaders headers() {
-                return RequestHeaders.of(HttpMethod.GET, "/");
+                return delegate.headers();
             }
 
             @Override
             public boolean isOpen() {
-                return false;
+                return delegate.isOpen();
             }
 
             @Override
             public boolean isEmpty() {
-                return true;
+                return delegate.isEmpty();
             }
 
             @Override
             public long demand() {
-                return 0;
+                return delegate.demand();
             }
 
             @Override
@@ -100,31 +105,24 @@ class Http1ConnectionReuseTest {
             }
 
             @Override
-            public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor) {}
-
-            @Override
             public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
                                   SubscriptionOption... options) {
-                final Subscription subscription = new Subscription() {
-                    @Override
-                    public void request(long n) {}
-
-                    @Override
-                    public void cancel() {}
-                };
-                executor.execute(() -> subscriber.onSubscribe(subscription));
-                executor.execute(subscriber::onComplete);
+                delegate.subscribe(subscriber, executor, options);
             }
 
             @Override
-            public void abort() {}
+            public void abort() {
+                delegate.abort();
+            }
 
             @Override
-            public void abort(Throwable cause) {}
+            public void abort(Throwable cause) {
+                delegate.abort(cause);
+            }
 
             @Override
             public <U> CompletableFuture<U> aggregate(AggregationOptions<HttpObject, U> options) {
-                return null;
+                return delegate.aggregate(options);
             }
         };
     }
