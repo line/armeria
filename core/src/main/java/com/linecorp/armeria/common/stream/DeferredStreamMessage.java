@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -128,7 +129,12 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
 
         if (!collectingFutureUpdater.compareAndSet(this, null, NO_COLLECTING_FUTURE)) {
             upstream.collect(collectingExecutor, collectionOptions).handle((result, cause) -> {
-                completeCollectingFuture(result, cause);
+                final EventExecutor collectingExecutor = this.collectingExecutor;
+                if (collectingExecutor.inEventLoop()) {
+                    completeCollectingFuture(result, cause);
+                } else {
+                    collectingExecutor.execute(() -> completeCollectingFuture(result, cause));
+                }
                 return null;
             });
         }
@@ -145,6 +151,21 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
         }
 
         safeOnSubscribeToUpstream();
+    }
+
+    private void completeCollectingFuture(@Nullable List<T> objs, @Nullable Throwable cause) {
+        final CompletableFuture<List<T>> collectingFuture = this.collectingFuture;
+        assert collectingFuture != null;
+        if (cause != null) {
+            collectingFuture.completeExceptionally(cause);
+        } else {
+            // `collectingFuture` can be completed exceptionally by `abort()`
+            if (!collectingFuture.complete(objs)) {
+                for (final T obj : objs) {
+                    PooledObjects.close(obj);
+                }
+            }
+        }
     }
 
     /**
@@ -318,7 +339,13 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
             upstream.abort(cause);
             return;
         }
-        completeCollectingFuture(null, cause);
+
+        //noinspection unchecked
+        final CompletableFuture<List<?>> collectingFuture =
+                (CompletableFuture<List<?>>)(CompletableFuture<?>) this.collectingFuture;
+        if (collectingFuture != null && collectingFuture != NO_COLLECTING_FUTURE) {
+            collectingFuture.completeExceptionally(cause);
+        }
 
         final CloseEvent closeEvent = newCloseEvent(cause);
         final SubscriptionImpl downstreamSubscription = this.downstreamSubscription;
@@ -328,29 +355,6 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
         } else {
             downstreamSubscription.executor().execute(
                     () -> closeEvent.notifySubscriber(downstreamSubscription, whenComplete()));
-        }
-    }
-
-    private void completeCollectingFuture(@Nullable List<T> result, @Nullable Throwable cause) {
-        final CompletableFuture<List<T>> collectingFuture = this.collectingFuture;
-        if (collectingFuture != null && !collectingFuture.isDone()) {
-            final EventExecutor collectingExecutor = this.collectingExecutor;
-            assert collectingExecutor != null;
-            if (collectingExecutor.inEventLoop()) {
-                if (result != null) {
-                    collectingFuture.complete(result);
-                } else {
-                    collectingFuture.completeExceptionally(cause);
-                }
-            } else {
-                collectingExecutor.execute(() -> {
-                    if (result != null) {
-                        collectingFuture.complete(result);
-                    } else {
-                        collectingFuture.completeExceptionally(cause);
-                    }
-                });
-            }
         }
     }
 
@@ -378,7 +382,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
         if (collectingFutureUpdater.compareAndSet(this, null, collectingFuture)) {
             final Throwable abortCause = this.abortCause;
             if (abortCause != null) {
-                completeCollectingFuture(null, abortCause);
+                collectingFuture.completeExceptionally(abortCause);
             }
             return collectingFuture;
         } else {

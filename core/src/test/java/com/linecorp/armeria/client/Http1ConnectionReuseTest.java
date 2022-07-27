@@ -22,13 +22,10 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import org.apache.http.client.methods.HttpRequestWrapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpMethod;
@@ -39,7 +36,6 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
