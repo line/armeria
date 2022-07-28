@@ -343,9 +343,9 @@ class RetryingClientTest {
     @Test
     void retryWhenStatusMatchedWithContent() {
         final WebClient client = client(RetryRuleWithContent.<HttpResponse>builder()
-                                                .onServerErrorStatus()
-                                                .onException()
-                                                .thenBackoff(), 10000, 0, 100);
+                                                            .onServerErrorStatus()
+                                                            .onException()
+                                                            .thenBackoff(), 10000, 0, 100);
         final AggregatedHttpResponse res = client.get("/503-then-success").aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Succeeded after retry");
     }
@@ -635,6 +635,7 @@ class RetryingClientTest {
                                  context.set(ctx);
                                  return delegate.execute(ctx, req);
                              })
+                             .decorator(LoggingClient.newDecorator())
                              .build();
             final HttpResponse httpResponse = client.get("/response-abort");
             if (abortCause == null) {
@@ -644,18 +645,26 @@ class RetryingClientTest {
             }
 
             final RequestLog log = context.get().log().whenComplete().join();
-            assertThat(responseAbortServiceCallCounter.get()).isOne();
-            assertThat(log.requestCause()).isNull();
+            final int callCounter = responseAbortServiceCallCounter.get();
+            final Throwable requestCause = log.requestCause();
             if (abortCause == null) {
                 assertThat(log.responseCause()).isExactlyInstanceOf(AbortedStreamException.class);
+                if (requestCause != null) {
+                    // A request can either successfully complete or fail depending on timing.
+                    assertThat(requestCause).isExactlyInstanceOf(AbortedStreamException.class);
+                }
             } else {
                 assertThat(log.responseCause()).isSameAs(abortCause);
+                if (requestCause != null) {
+                    // A request can either successfully complete or fail depending on timing.
+                    assertThat(requestCause).isSameAs(abortCause);
+                }
             }
 
             // Sleep 3 more seconds to check if there was another retry.
             TimeUnit.SECONDS.sleep(3);
-            assertThat(responseAbortServiceCallCounter.get()).isOne();
-            responseAbortServiceCallCounter.decrementAndGet();
+            assertThat(responseAbortServiceCallCounter).hasValue(callCounter);
+            responseAbortServiceCallCounter.set(0);
         }
     }
 
@@ -804,10 +813,10 @@ class RetryingClientTest {
                              long responseTimeoutForEach, int maxTotalAttempts) {
         final Function<? super HttpClient, RetryingClient> retryingDecorator =
                 RetryingClient.builder(
-                        RetryConfig.<HttpResponse>builder0(retryRule)
-                                .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
-                                .maxTotalAttempts(maxTotalAttempts)
-                                .build())
+                                      RetryConfig.<HttpResponse>builder0(retryRule)
+                                                 .responseTimeoutMillisForEachAttempt(responseTimeoutForEach)
+                                                 .maxTotalAttempts(maxTotalAttempts)
+                                                 .build())
                               .useRetryAfter(true)
                               .newDecorator();
 

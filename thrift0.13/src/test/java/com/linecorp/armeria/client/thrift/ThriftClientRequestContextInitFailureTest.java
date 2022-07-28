@@ -57,16 +57,16 @@ class ThriftClientRequestContextInitFailureTest {
         final AtomicBoolean rpcDecoratorRan = new AtomicBoolean();
         final AtomicReference<ClientRequestContext> capturedCtx = new AtomicReference<>();
         final HelloService.Iface client =
-                Clients.builder("tbinary+http", endpointGroup)
-                       .decorator((delegate, ctx, req) -> {
-                           capturedCtx.set(ctx);
-                           return delegate.execute(ctx, req);
-                       })
-                       .rpcDecorator((delegate, ctx, req) -> {
-                           rpcDecoratorRan.set(true);
-                           return delegate.execute(ctx, req);
-                       })
-                       .build(HelloService.Iface.class);
+                ThriftClients.builder("http", endpointGroup)
+                             .decorator((delegate, ctx, req) -> {
+                                 capturedCtx.set(ctx);
+                                 return delegate.execute(ctx, req);
+                             })
+                             .rpcDecorator((delegate, ctx, req) -> {
+                                 rpcDecoratorRan.set(true);
+                                 return delegate.execute(ctx, req);
+                             })
+                             .build(HelloService.Iface.class);
 
         final Throwable actualCause = catchThrowable(() -> client.hello(""));
         assertThat(actualCause).isInstanceOf(UnprocessedRequestException.class);

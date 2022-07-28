@@ -34,7 +34,7 @@ public interface RequestConverterFunction {
 
     /**
      * Converts the specified {@code request} to an object of {@code expectedResultType}.
-     * Calls {@link RequestConverterFunction#fallthrough()} or throws a {@link FallthroughException} if
+     * Calls {@link RequestConverterFunction#fallthrough()} if
      * this converter cannot convert the {@code request} to an object.
      *
      * @param ctx the {@link ServiceRequestContext} of {@code request}.

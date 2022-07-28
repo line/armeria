@@ -98,6 +98,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     final EndpointGroup delegate;
+    private final long initialSelectionTimeoutMillis;
+    private final long selectionTimeoutMillis;
     private final SessionProtocol protocol;
     private final int port;
     private final Backoff retryBackoff;
@@ -119,7 +121,9 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      * Creates a new instance.
      */
     HealthCheckedEndpointGroup(
-            EndpointGroup delegate, boolean allowEmptyEndpoints, SessionProtocol protocol, int port,
+            EndpointGroup delegate, boolean allowEmptyEndpoints,
+            long initialSelectionTimeoutMillis, long selectionTimeoutMillis,
+            SessionProtocol protocol, int port,
             Backoff retryBackoff, ClientOptions clientOptions,
             Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory,
             HealthCheckStrategy healthCheckStrategy) {
@@ -127,6 +131,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         super(requireNonNull(delegate, "delegate").selectionStrategy(), allowEmptyEndpoints);
 
         this.delegate = delegate;
+        this.initialSelectionTimeoutMillis = initialSelectionTimeoutMillis;
+        this.selectionTimeoutMillis = selectionTimeoutMillis;
         this.protocol = requireNonNull(protocol, "protocol");
         this.port = port;
         this.retryBackoff = requireNonNull(retryBackoff, "retryBackoff");
@@ -183,10 +189,15 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         return contextGroupChain;
     }
 
-    private List<Endpoint> allHealthyEndpoints() {
-        final List<Endpoint> allHealthyEndpoints = new ArrayList<>();
+    @VisibleForTesting
+    List<Endpoint> allHealthyEndpoints() {
         synchronized (contextGroupChain) {
-            final HealthCheckContextGroup newGroup = contextGroupChain.getLast();
+            final HealthCheckContextGroup newGroup = contextGroupChain.peekLast();
+            if (newGroup == null) {
+                return ImmutableList.of();
+            }
+
+            final List<Endpoint> allHealthyEndpoints = new ArrayList<>();
             for (Endpoint candidate : newGroup.candidates()) {
                 if (healthyEndpoints.contains(candidate)) {
                     allHealthyEndpoints.add(candidate);
@@ -205,8 +216,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                     }
                 }
             }
+            return allHealthyEndpoints;
         }
-        return allHealthyEndpoints;
     }
 
     @Nullable
@@ -259,6 +270,11 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     @Override
+    public long selectionTimeoutMillis() {
+        return initialized ? selectionTimeoutMillis : initialSelectionTimeoutMillis;
+    }
+
+    @Override
     protected void doCloseAsync(CompletableFuture<?> future) {
         // Stop the health checkers in parallel.
         final CompletableFuture<?> stopFutures;
@@ -282,11 +298,14 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
             }
             stopFutures = CompletableFutures.allAsList(completionFutures.build());
-            contextGroupChain.clear();
         }
 
-        stopFutures.handle((unused1, unused2) -> delegate.closeAsync())
-                   .handle((unused1, unused2) -> future.complete(null));
+        stopFutures.handle((unused1, unused2) -> {
+            synchronized (contextGroupChain) {
+                contextGroupChain.clear();
+            }
+            return delegate.closeAsync();
+        }).handle((unused1, unused2) -> future.complete(null));
     }
 
     /**

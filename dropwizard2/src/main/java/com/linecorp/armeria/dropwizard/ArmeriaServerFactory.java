@@ -121,8 +121,8 @@ class ArmeriaServerFactory extends AbstractServerFactory {
         final HealthCheckRegistry healthChecks = environment.healthChecks();
         try {
             final Method method = AbstractServerFactory.class.getDeclaredMethod(
-                "createAdminServlet", Server.class, MutableServletContextHandler.class,
-                MetricRegistry.class, HealthCheckRegistry.class, AdminEnvironment.class);
+                    "createAdminServlet", Server.class, MutableServletContextHandler.class,
+                    MetricRegistry.class, HealthCheckRegistry.class, AdminEnvironment.class);
             logger.debug("createAdminServlet resolves to Dropwizard v2.1.");
             final AdminEnvironment adminEnvironment = environment.admin();
             return (Handler) method.invoke(this, server, adminContext, metrics, healthChecks, adminEnvironment);
@@ -135,8 +135,8 @@ class ArmeriaServerFactory extends AbstractServerFactory {
         try {
             //noinspection JavaReflectionMemberAccess - this is false warning on dropwizard2 module
             final Method method = AbstractServerFactory.class.getDeclaredMethod(
-                "createAdminServlet", Server.class, MutableServletContextHandler.class,
-                MetricRegistry.class, HealthCheckRegistry.class);
+                    "createAdminServlet", Server.class, MutableServletContextHandler.class,
+                    MetricRegistry.class, HealthCheckRegistry.class);
             logger.debug("createAdminServlet resolves to Dropwizard v1 or v2.0.");
             return (Handler) method.invoke(this, server, adminContext, metrics, healthChecks);
         } catch (IllegalAccessException | NoSuchMethodException | InvocationTargetException e) {

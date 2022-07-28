@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.linecorp.armeria.internal.common.grpc.GrpcExchangeTypeUtil.toExchangeType;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Duration;
@@ -27,6 +28,8 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
@@ -36,6 +39,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.primitives.Ints;
+import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
@@ -43,7 +48,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -62,6 +66,7 @@ import com.linecorp.armeria.internal.common.grpc.TimeoutHeaderUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.RequestTimeoutException;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -70,8 +75,10 @@ import io.grpc.CompressorRegistry;
 import io.grpc.DecompressorRegistry;
 import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
+import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.Server;
 import io.grpc.ServerCall;
+import io.grpc.ServerCall.Listener;
 import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.ServiceDescriptor;
@@ -84,6 +91,7 @@ import io.netty.util.AttributeKey;
 final class FramedGrpcService extends AbstractHttpService implements GrpcService {
 
     private static final Logger logger = LoggerFactory.getLogger(FramedGrpcService.class);
+    static final Listener<?> EMPTY_LISTENER = new EmptyListener<>();
 
     static final AttributeKey<ServerMethodDefinition<?, ?>> RESOLVED_GRPC_METHOD =
             AttributeKey.valueOf(FramedGrpcService.class, "RESOLVED_GRPC_METHOD");
@@ -132,6 +140,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
 
     private int maxRequestMessageLength;
     private final boolean lookupMethodFromAttribute;
+    private final boolean autoCompression;
 
     FramedGrpcService(HandlerRegistry registry,
                       DecompressorRegistry decompressorRegistry,
@@ -145,12 +154,14 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                       boolean unsafeWrapRequestBuffers,
                       boolean useClientTimeoutHeader,
                       boolean lookupMethodFromAttribute,
-                      @Nullable GrpcHealthCheckService grpcHealthCheckService) {
+                      @Nullable GrpcHealthCheckService grpcHealthCheckService,
+                      boolean autoCompression) {
         this.registry = requireNonNull(registry, "registry");
         routes = ImmutableSet.copyOf(registry.methodsByRoute().keySet());
         exchangeTypes = registry.methods().entrySet().stream()
                                 .collect(toImmutableMap(e -> '/' + e.getKey(),
-                                                        e -> toExchangeType(e.getValue())));
+                                                        e -> toExchangeType(
+                                                                e.getValue().getMethodDescriptor().getType())));
         this.decompressorRegistry = requireNonNull(decompressorRegistry, "decompressorRegistry");
         this.compressorRegistry = requireNonNull(compressorRegistry, "compressorRegistry");
         this.supportedSerializationFormats = supportedSerializationFormats;
@@ -163,6 +174,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
         this.unsafeWrapRequestBuffers = unsafeWrapRequestBuffers;
         this.lookupMethodFromAttribute = lookupMethodFromAttribute;
+        this.autoCompression = autoCompression;
 
         advertisedEncodingsHeader = String.join(",", decompressorRegistry.getAdvertisedMessageEncodings());
 
@@ -184,23 +196,10 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+    public ExchangeType exchangeType(RoutingContext routingContext) {
         // An invalid path will be handled later by 'doPost()'.
-        return firstNonNull(exchangeTypes.get(headers.path()), ExchangeType.BIDI_STREAMING);
-    }
-
-    private static ExchangeType toExchangeType(ServerMethodDefinition<?, ?> methodDefinition) {
-        switch (methodDefinition.getMethodDescriptor().getType()) {
-            case UNARY:
-                return ExchangeType.UNARY;
-            case CLIENT_STREAMING:
-                return ExchangeType.REQUEST_STREAMING;
-            case SERVER_STREAMING:
-                return ExchangeType.RESPONSE_STREAMING;
-            case BIDI_STREAMING:
-            default:
-                return ExchangeType.BIDI_STREAMING;
-        }
+        return firstNonNull(exchangeTypes.get(routingContext.result().routingResult().path()),
+                            ExchangeType.BIDI_STREAMING);
     }
 
     @Override
@@ -218,7 +217,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         final ServerMethodDefinition<?, ?> method = methodDefinition(ctx);
         if (method == null) {
             return HttpResponse.of(
-                    (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
+                    (ResponseHeaders) AbstractServerCall.statusToTrailers(
                             ctx,
                             defaultHeaders.get(serializationFormat).toBuilder(),
                             Status.UNIMPLEMENTED.withDescription(
@@ -239,7 +238,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                 } catch (IllegalArgumentException e) {
                     final Metadata metadata = new Metadata();
                     return HttpResponse.of(
-                            (ResponseHeaders) ArmeriaServerCall.statusToTrailers(
+                            (ResponseHeaders) AbstractServerCall.statusToTrailers(
                                     ctx, defaultHeaders.get(serializationFormat).toBuilder(),
                                     GrpcStatus.fromThrowable(statusFunction, ctx, e, metadata), metadata));
                 }
@@ -249,61 +248,62 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT,
                                RequestLogProperty.RESPONSE_CONTENT);
 
-        final HttpResponseWriter res = HttpResponse.streaming();
-        final ArmeriaServerCall<?, ?> call = startCall(
-                registry.simpleMethodName(method.getMethodDescriptor()), method, ctx, req, res,
-                serializationFormat);
-        if (call != null) {
-            ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-                Status status = Status.CANCELLED.withCause(cancellationCause);
-                if (cancellationCause instanceof RequestTimeoutException) {
-                    status = status.withDescription("Request timed out");
-                }
-                call.close(status, new Metadata());
-                return null;
-            });
-            call.startDeframing();
+        final HttpResponse res;
+        if (method.getMethodDescriptor().getType() == MethodType.UNARY) {
+            final CompletableFuture<HttpResponse> resFuture = new CompletableFuture<>();
+            res = HttpResponse.from(resFuture);
+            startCall(registry.simpleMethodName(method.getMethodDescriptor()), method, ctx, req, res,
+                      resFuture, serializationFormat);
+        } else {
+            res = HttpResponse.streaming();
+            startCall(registry.simpleMethodName(method.getMethodDescriptor()), method, ctx, req, res, null,
+                      serializationFormat);
         }
         return res;
     }
 
-    @Nullable
-    private <I, O> ArmeriaServerCall<I, O> startCall(
+    private <I, O> void startCall(
             String simpleMethodName,
             ServerMethodDefinition<I, O> methodDef,
             ServiceRequestContext ctx,
             HttpRequest req,
-            HttpResponseWriter res,
+            HttpResponse res,
+            @Nullable CompletableFuture<HttpResponse> resFuture,
             SerializationFormat serializationFormat) {
         final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
-        final ArmeriaServerCall<I, O> call = new ArmeriaServerCall<>(
-                req,
-                methodDescriptor,
-                simpleMethodName,
-                compressorRegistry,
-                decompressorRegistry,
-                res,
-                maxRequestMessageLength,
-                maxResponseMessageLength,
-                ctx,
-                serializationFormat,
-                jsonMarshallers.get(methodDescriptor.getServiceName()),
-                unsafeWrapRequestBuffers,
-                useBlockingTaskExecutor,
-                defaultHeaders.get(serializationFormat),
-                statusFunction);
-        final ServerCall.Listener<I> listener;
-        try (SafeCloseable ignored = ctx.push()) {
+        final Executor blockingExecutor;
+        if (useBlockingTaskExecutor) {
+            blockingExecutor = MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor());
+        } else {
+            blockingExecutor = null;
+        }
+        final AbstractServerCall<I, O> call = newServerCall(simpleMethodName, methodDef, ctx, req,
+                                                            res, resFuture, serializationFormat,
+                                                            blockingExecutor);
+        if (blockingExecutor != null) {
+            blockingExecutor.execute(() -> startCall(methodDef, ctx, req, methodDescriptor, call));
+        } else {
+            try (SafeCloseable ignored = ctx.push()) {
+                startCall(methodDef, ctx, req, methodDescriptor, call);
+            }
+        }
+    }
+
+    private <I, O> void startCall(ServerMethodDefinition<I, O> methodDef, ServiceRequestContext ctx,
+                                  HttpRequest req, MethodDescriptor<I, O> methodDescriptor,
+                                  AbstractServerCall<I, O> call) {
+        final Listener<I> listener;
+        try {
             listener = methodDef.getServerCallHandler()
                                 .startCall(call, MetadataUtil.copyFromHeaders(req.headers()));
         } catch (Throwable t) {
-            call.setListener(new EmptyListener<>());
+            call.setListener((Listener<I>) EMPTY_LISTENER);
             final Metadata metadata = new Metadata();
             call.close(GrpcStatus.fromThrowable(statusFunction, ctx, t, metadata), metadata);
             logger.warn(
                     "Exception thrown from streaming request stub method before processing any request data" +
                     " - this is likely a bug in the stub implementation.", t);
-            return null;
+            return;
         }
         if (listener == null) {
             // This will never happen for normal generated stubs but could conceivably happen for manually
@@ -311,14 +311,70 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             throw new NullPointerException(
                     "startCall() returned a null listener for method " + methodDescriptor.getFullMethodName());
         }
+
         call.setListener(listener);
-        return call;
+        call.startDeframing();
+        ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
+            Status status = Status.CANCELLED.withCause(cancellationCause);
+            if (cancellationCause instanceof RequestTimeoutException) {
+                status = status.withDescription("Request timed out");
+            }
+            call.close(status, new Metadata());
+            return null;
+        });
+    }
+
+    private <I, O> AbstractServerCall<I, O> newServerCall(
+            String simpleMethodName, ServerMethodDefinition<I, O> methodDef,
+            ServiceRequestContext ctx, HttpRequest req,
+            HttpResponse res, @Nullable CompletableFuture<HttpResponse> resFuture,
+            SerializationFormat serializationFormat, @Nullable Executor blockingExecutor) {
+        final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
+        if (methodDescriptor.getType() == MethodType.UNARY) {
+            assert resFuture != null;
+            return new UnaryServerCall<>(
+                    req,
+                    methodDescriptor,
+                    simpleMethodName,
+                    compressorRegistry,
+                    decompressorRegistry,
+                    res,
+                    resFuture,
+                    maxRequestMessageLength,
+                    maxResponseMessageLength,
+                    ctx,
+                    serializationFormat,
+                    jsonMarshallers.get(methodDescriptor.getServiceName()),
+                    unsafeWrapRequestBuffers,
+                    defaultHeaders.get(serializationFormat),
+                    statusFunction,
+                    blockingExecutor,
+                    autoCompression);
+        } else {
+            return new StreamingServerCall<>(
+                    req,
+                    methodDescriptor,
+                    simpleMethodName,
+                    compressorRegistry,
+                    decompressorRegistry,
+                    (HttpResponseWriter) res,
+                    maxRequestMessageLength,
+                    maxResponseMessageLength,
+                    ctx,
+                    serializationFormat,
+                    jsonMarshallers.get(methodDescriptor.getServiceName()),
+                    unsafeWrapRequestBuffers,
+                    defaultHeaders.get(serializationFormat),
+                    statusFunction,
+                    blockingExecutor,
+                    autoCompression);
+        }
     }
 
     @Override
     public void serviceAdded(ServiceConfig cfg) {
         if (maxRequestMessageLength == ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE) {
-            maxRequestMessageLength = (int) Math.min(cfg.maxRequestLength(), Integer.MAX_VALUE);
+            maxRequestMessageLength = Ints.saturatedCast(cfg.maxRequestLength());
         }
 
         if (protoReflectionServiceInterceptor != null) {

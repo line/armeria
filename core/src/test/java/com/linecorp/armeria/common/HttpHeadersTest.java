@@ -100,7 +100,7 @@ class HttpHeadersTest {
         assertThat(headers.get(DATE)).isEqualTo(expectedDate);
         assertThat(headers.get(LAST_MODIFIED)).isEqualTo(expectedDate);
         assertThat(headers.get(IF_MODIFIED_SINCE)).isEqualTo(expectedDate);
-        assertThat(headers.get(CACHE_CONTROL)).isEqualTo("no-cache, no-store, must-revalidate");
+        assertThat(headers.get(CACHE_CONTROL)).isEqualTo("no-cache, no-store, max-age=0, must-revalidate");
         assertThat(headers.get(CONTENT_TYPE)).isEqualTo("text/plain; charset=utf-8");
     }
 }

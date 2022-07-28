@@ -1,5 +1,6 @@
 dependencies {
     testImplementation project(':grpc')
+    testImplementation 'com.squareup.okhttp:okhttp:2.7.5'
     testImplementation 'io.grpc:grpc-core'
     testImplementation 'io.grpc:grpc-interop-testing'
     testImplementation 'io.grpc:grpc-okhttp'

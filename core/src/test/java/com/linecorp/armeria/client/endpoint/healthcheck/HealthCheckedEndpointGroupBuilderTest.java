@@ -37,9 +37,8 @@ public class HealthCheckedEndpointGroupBuilderTest {
 
     @Test
     void defaultHealthCheckStrategy() {
-        final HealthCheckedEndpointGroup group1 = new HealthCheckedEndpointGroupBuilder(delegate, PATH).build();
-        final HealthCheckedEndpointGroup group2 = new HealthCheckedEndpointGroupBuilder(delegate, PATH).build();
-        assertThat(group1.healthCheckStrategy).isSameAs(HealthCheckStrategy.all());
+        final HealthCheckedEndpointGroup group = new HealthCheckedEndpointGroupBuilder(delegate, PATH).build();
+        assertThat(group.healthCheckStrategy).isSameAs(HealthCheckStrategy.all());
     }
 
     @Test

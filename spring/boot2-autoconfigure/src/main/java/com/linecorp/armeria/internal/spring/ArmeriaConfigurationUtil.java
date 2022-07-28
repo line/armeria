@@ -51,6 +51,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.math.LongMath;
 import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -68,6 +69,7 @@ import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.InternalServiceId;
 import com.linecorp.armeria.spring.InternalServices;
 import com.linecorp.armeria.spring.MetricCollectingServiceConfigurator;
+import com.linecorp.armeria.spring.SpringDependencyInjector;
 import com.linecorp.armeria.spring.Ssl;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -102,6 +104,7 @@ public final class ArmeriaConfigurationUtil {
             MeterRegistry meterRegistry,
             MeterIdPrefixFunction meterIdPrefixFunction,
             List<MetricCollectingServiceConfigurator> metricCollectingServiceConfigurators,
+            List<DependencyInjector> dependencyInjectors,
             BeanFactory beanFactory) {
 
         requireNonNull(server, "server");
@@ -187,6 +190,13 @@ public final class ArmeriaConfigurationUtil {
             server.decorator(contentEncodingDecorator(compression.getMimeTypes(),
                                                       compression.getExcludedUserAgents(),
                                                       minBytesToForceChunkedAndEncoding));
+        }
+
+        dependencyInjectors.forEach(injector -> {
+            server.dependencyInjector(injector, false); // The injector is closed by Spring.
+        });
+        if (settings.enableAutoInjection()) {
+            server.dependencyInjector(SpringDependencyInjector.of(beanFactory), false);
         }
     }
 

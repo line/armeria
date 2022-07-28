@@ -193,12 +193,19 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             });
         }
 
-        final HttpRequestSubscriber reqSubscriber =
-                new HttpRequestSubscriber(channel, requestEncoder, responseDecoder,
-                                          req, res, ctx, writeTimeoutMillis);
-        // StreamMessage of an request body uses RequestContext to get the default SubscriberExecutor.
-        try (SafeCloseable ignored = ctx.push()) {
-            req.subscribe(reqSubscriber, channel.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+        if (ctx.exchangeType().isRequestStreaming()) {
+            final HttpRequestSubscriber reqSubscriber = new HttpRequestSubscriber(
+                    channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
+            // A StreamMessage of a request body uses RequestContext to get the default SubscriberExecutor.
+            try (SafeCloseable ignored = ctx.push()) {
+                req.subscribe(reqSubscriber, channel.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS);
+            }
+        } else {
+            final AggregatedHttpRequestHandler reqHandler = new AggregatedHttpRequestHandler(
+                    channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
+            try (SafeCloseable ignored = ctx.push()) {
+                req.aggregateWithPooledObjects(channel.eventLoop(), ctx.alloc()).handle(reqHandler);
+            }
         }
     }
 
@@ -434,7 +441,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (cause instanceof ProxyConnectException) {
             final SessionProtocol protocol = this.protocol != null ? this.protocol : desiredProtocol;
             final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
-            channelPool.invokeProxyConnectFailed(protocol, poolKey, wrapped);
+            channelPool.maybeHandleProxyFailure(protocol, poolKey, wrapped);
             sessionPromise.tryFailure(wrapped);
             return;
         }

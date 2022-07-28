@@ -42,6 +42,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.Unwrappable;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -369,4 +370,18 @@ public interface ClientFactory extends Unwrappable, ListenableAsyncCloseable {
         }
         return params;
     }
+
+    /**
+     * Registers a JVM shutdown hook that closes this {@link ClientFactory} when the current JVM terminates.
+     */
+    default CompletableFuture<Void> closeOnJvmShutdown() {
+        return ShutdownHooks.addClosingTask(this);
+    }
+
+    /**
+     * Registers a JVM shutdown hook that closes this {@link ClientFactory} when the current JVM terminates.
+     *
+     * @param whenClosing the {@link Runnable} will be run before closing this {@link ClientFactory}
+     */
+    CompletableFuture<Void> closeOnJvmShutdown(Runnable whenClosing);
 }
