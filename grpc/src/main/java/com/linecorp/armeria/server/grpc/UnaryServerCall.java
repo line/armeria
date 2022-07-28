@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,6 +59,9 @@ import io.grpc.Status;
 final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(UnaryServerCall.class);
+    @SuppressWarnings("rawtypes")
+    private static final AtomicIntegerFieldUpdater<UnaryServerCall> deframingStartedUpdater =
+            AtomicIntegerFieldUpdater.newUpdater(UnaryServerCall.class, "deframingStarted");
 
     private final HttpRequest req;
     private final CompletableFuture<HttpResponse> resFuture;
@@ -67,7 +71,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
     // Only set once.
     @Nullable
     private O responseMessage;
-    private boolean deframingStarted;
+    private volatile int deframingStarted;
 
     UnaryServerCall(HttpRequest req, MethodDescriptor<I, O> method, String simpleMethodName,
                     CompressorRegistry compressorRegistry, DecompressorRegistry decompressorRegistry,
@@ -111,10 +115,9 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     @Override
     void startDeframing() {
-        if (deframingStarted) {
+        if (!deframingStartedUpdater.compareAndSet(this, 0, 1)) {
             return;
         }
-        deframingStarted = true;
         req.collect(ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS).handle((objects, cause) -> {
             if (cause != null) {
                 onError(cause);
