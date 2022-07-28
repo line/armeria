@@ -112,6 +112,7 @@ class AggregationOptionsTest {
         assertThat(agg0.method()).isEqualTo(HttpMethod.GET);
         assertThat(agg0.path()).isEqualTo("/abc");
         assertThat(agg0.content().toStringUtf8()).isEqualTo("12");
+        agg0.content().close();
 
         assertThatThrownBy(() -> request.aggregateWithPooledObjects(alloc).join())
                 .isInstanceOf(CompletionException.class)
@@ -139,6 +140,7 @@ class AggregationOptionsTest {
         final AggregatedHttpResponse agg0 = response.aggregateWithPooledObjects(alloc).join();
         assertThat(agg0.status()).isEqualTo(HttpStatus.OK);
         assertThat(agg0.content().toStringUtf8()).isEqualTo("12");
+        agg0.content().close();
 
         assertThatThrownBy(() -> response.aggregateWithPooledObjects(alloc).join())
                 .isInstanceOf(CompletionException.class)
