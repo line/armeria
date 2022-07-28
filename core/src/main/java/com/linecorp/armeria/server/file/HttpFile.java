@@ -204,7 +204,7 @@ public interface HttpFile {
                    "bundle".equals(url.getProtocol())) {
             return new ClassPathHttpFileBuilder(url);
         }
-        throw new IllegalArgumentException("Unsupported URL: " + url + " (must start with "
+        throw new IllegalArgumentException("Unsupported URL: " + url + " (must start with " +
                                            "'file:', 'jar:file', 'jrt:' or 'bundle:')");
     }
 
