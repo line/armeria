@@ -345,7 +345,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 serviceCfg, channel, config.meterRegistry(), protocol,
                 nextRequestId(), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
-                System.nanoTime(), SystemInfo.currentTimeMicros());
+                req.requestStartTimeNanos(), req.requestStartTimeMicros());
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
