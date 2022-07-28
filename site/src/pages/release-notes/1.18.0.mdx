@@ -1,0 +1,159 @@
+---
+date: 2022-07-29
+---
+
+## 🌟 New features
+
+- You can now repeatedly aggregate an `HttpRequest` and `HttpResonse`.
+  If an `HttpRequest` and `HttpResonse` is aggregated, the cached value
+  is returned for the next calls.
+  ```java
+  HttpRequest request = ...;
+  AggregatedHttpRequest aggregatedReq0 = request.aggregate().join();
+  AggregatedHttpRequest aggregatedReq1 = request.aggregate().join();
+  assert aggregatedReq0 == aggregatedReq1;
+  HttpResponse response = ...;
+  AggregatedHttpResponse aggregatedRes0 = response.aggregate().join();
+  AggregatedHttpResponse aggregatedRes1 = response.aggregate().join();
+  assert aggregatedRes0 == aggregatedRes1;
+  ``` #3789 #4366
+- You can now conveniently aggregate a `StreamMessage` using
+  `StreamMessage.aggregate(Function)`.
+  ```java
+  StreamMessage stream = StreamMessage.of(1, 2, 3, 4);
+  int sum = stream.aggregate(nums -> nums.stream().reduce(0, Integer::sum))
+                  .join();
+  assert sum == 10;
+  ``` #3789 #4366
+- Users can extract the innermost wrapped object conveniently #4338
+- You can now see the specification of an annotated service made of a JSON
+  object or protobuf can be viewed in `DocService`. #4309 #4322
+- Users can decorate a service using a builder method like the following
+```java
+GrpcService.builder()
+           .addService(myGrpcService1Impl, List.of(LoggingService.newDecorator()))
+           .addService(myGrpcService2Impl, List.of(LoggingService.newDecorator(), MetricCollectingService.newDecorator()))             
+           .addService(myGrpcService3Impl, List.of(delegate -> delegate.decorate(new CustomDecorator())
+           .build();
+``` #4311 #4316
+- Support Markdown Description  #4304
+- Support Enums&Return Types documentation in annotated service #4304
+- Users can customize the log format by setting `LogFormat` to `Logging{Service,Client}`.
+```java
+LoggingService.builder()
+              // Customize the log message format using LogFormat
+              .logFormat(LogFormat.ofJson())
+...
+LoggingClient.builder()
+             // Customize the log message format using LogFormat
+             .logFormat(LogFormat.ofJson())
+             .build(delegate);
+``` #3918 #4267
+- EurekaEndpointGroup add InstanceInfo to  endpoint attributes. #4243
+- You can have a richer error model as described by [google error model](https://cloud.google.com/apis/design/errors#error_model) 
+eg.   #4231
+-  #4231
+- if you throw exceptions like 
+ ```
+           final ErrorInfo errorInfo = ErrorInfo.newBuilder()
+                                                 .setDomain("test")
+                                                 .setReason("Unknown Exception").build();
+            final com.google.rpc.Status
+                    status = com.google.rpc.Status.newBuilder()
+                                                  .setCode(
+                                                          Code.UNKNOWN.getNumber())
+                                                  .setMessage("Unknown Exceptions Test")
+                                                  .addDetails(
+                                                          Any.pack(errorInfo))
+                                                  .build();
+            responseObserver.onError(StatusProto.toStatusRuntimeException(status));
+```
+You can use this error handler by doing
+``` 
+sb.service(GrpcService.builder()   
+                              .addService(grpcService)   
+                              .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.ofRichJson())   
+                              .build());
+```
+You can get a response 
+```
+{
+	"error": {
+		"code": 500,
+		"status": "UNKNOWN",
+		"message": "Unknown Exceptions Test",
+		"details": [{
+			"@type": "type.googleapis.com/google.rpc.ErrorInfo",
+			"reason": "Unknown Exception",
+			"domain": "test"
+		}]
+	}
+}
+``` #4231
+- Support file upload for GraphQL #3971 #4199
+- You can now use `StreamMessage.toOutputStream()` to adapt `StreamMessage` to `OutputStream` #3092 #4186
+
+## 📈 Improvements
+
+- Developers may add more utility functions to `RequestContext` without worrying about public API exposure #4308
+- Armeria tries to unwrap `RequestContext` instead of simply checking the type. #4308
+- Add AnnotatedServiceConfigSetters, Replace Interface #4205 #4210
+
+## 🛠️ Bug fixes
+
+- You no longer see `IllegalStateException` when a gRPC service run on a
+  blocking take executor. #4367 #4374
+- `requestStartTimeNanos` and `requestStartTimeMicros` are now correctly
+  recoded when `RequestHeaders` is received. #4365 #4372
+- You no longer see a false positive warning for unknown `MethodType` when using gRPC clients. #4363
+- You no longer see a `NoSuchElementException` while an `HealthEndpointGroup` is closing. #4349
+- Please Recommend a Test file to put it in (or a name for a new test file)~~ Integration tests added #4337 #4348
+- You will now be able to use a custom JsonFormat.Printer for ProtobufResponseConverterFunction  #4301 #4336
+- You will have to update any custom SPI implementations to conform to either `ResponseConverterFunctionProvider` or `DelegatingResponseConverterFunctionProvider` #4301 #4336
+
+## 📃 Documentation
+
+- WIP #3987
+
+## 🏚️ Deprecations
+
+- N/A
+
+## ☢️ Breaking changes
+
+- N/A
+
+## ⛓ Dependencies
+
+- N/A
+
+## 🗑 Maybe ignore
+
+- no warnings! #4368
+- Migrate `dependencies.yml` to Gradle's version catalogs #4120 #4353
+- Set okhttp version explicitly in `retrofit2` module #4345 #4346
+- Developers may add more utility functions to `RequestContext` without worrying about public API exposure #4308
+- Armeria tries to unwrap `RequestContext` instead of simply checking the type. #4308
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'CLAassistant',
+  'anuraaga',
+  'cnabro',
+  'eisig',
+  'freevie',
+  'ghkim3221',
+  'heowc',
+  'ikhoon',
+  'injae-kim',
+  'j-min5u',
+  'jrhee17',
+  'mauhiz',
+  'minwoox',
+  'natsumehu',
+  'proceane',
+  'resquivel-squareup',
+  'ta7uw',
+  'trustin'
+]} />
