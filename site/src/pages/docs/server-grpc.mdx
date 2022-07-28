@@ -121,6 +121,36 @@ server.start();
 ```
 See [Decorating `ServiceWithRoutes`](/docs/server-decorator#decorating-servicewithroutes) for more information about <type://HttpServiceWithRoutes>.
 
+
+There are two ways to decorate an individual gRPC service:
+
+- bind a decorator using the builder method of <type://GrpcService>
+
+```java
+GrpcService.builder()
+           .addService(new MyHelloServiceImpl(),
+                       List.of(delegate -> delegate.decorate(new FirstDecorator()),
+                               delegate -> delegate.decorate(new SecondDecorator())))
+           .build()
+```
+
+- bind a decorator using <type://@Decorator>
+
+```java
+@Decorator(ClassDecorator.class)
+class MyHelloServiceImpl extends MyHelloServiceImplBase {
+
+    @Decorator(MethodDecorator.class)
+    @Override
+    public void sayHello(HelloRequest request, StreamObserver<HelloResponse> responseObserver) {
+        ...
+    }
+}
+```
+
+If you use the above at the same time, the decorators will be applied in the order of
+FirstDecorator, SecondDecorator, ClassDecorator, and MethodDecorator.
+
 ## `gRPC-Web`
 
 <type://GrpcService> supports the [gRPC-Web][gRPC-Web] protocol,

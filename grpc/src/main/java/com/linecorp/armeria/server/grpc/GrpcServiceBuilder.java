@@ -331,26 +331,9 @@ public final class GrpcServiceBuilder {
     /**
      * Adds a gRPC {@link BindableService} with functions to this {@link GrpcServiceBuilder}.
      * The functions will be applied in the specified order and before functions decorated with the service.
-     * In the following sample code, these functions will be applied
-     * in the order of FirstDecorator, SecondDecorator, ClassDecorator, and MethodDecorator.
-     * <pre>{@code
-     * @Decorator(ClassDecorator.class)
-     * class SimpleServiceImpl extends SimpleServiceImplBase {
+     * For more details, please refer to the following document.
      *
-     *     @Decorator(MethodDecorator.class)
-     *     @Override
-     *     public void simpleCall(SimpleRequest request,
-     *                            StreamObserver<SimpleResponse> responseObserver) {
-     *         ...
-     *     }
-     * }
-     * ...
-     * GrpcService.builder()
-     *            .addService(new SimpleServiceImpl(),
-     *                        List.of(delegate -> delegate.decorate(new FirstDecorator()),
-     *                                delegate -> delegate.decorate(new SecondDecorator())))
-     *            .build()
-     * }</pre>
+     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
      */
     @UnstableApi
     public GrpcServiceBuilder addService(
@@ -358,9 +341,7 @@ public final class GrpcServiceBuilder {
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(bindableService, "bindableService");
         if (bindableService instanceof ProtoReflectionService) {
-            final ServerServiceDefinition interceptor =
-                    ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
-            return addService(interceptor);
+            throw new IllegalArgumentException("ProtoReflectionService should not be used with decorators.");
         }
         requireNonNull(decorators, "decorators");
         registryBuilder.addService(bindableService.bindService(), bindableService.getClass(), decorators);
@@ -369,6 +350,7 @@ public final class GrpcServiceBuilder {
 
     /**
      * Adds an implementation of gRPC service with functions to this {@link GrpcServiceBuilder}.
+     *
      * @see #addService(Object, Function)
      * @see #addService(BindableService, Iterable)
      */
@@ -388,6 +370,7 @@ public final class GrpcServiceBuilder {
 
     /**
      * Adds a gRPC {@link BindableService} with functions to this {@link GrpcServiceBuilder}.
+     *
      * @see #addService(String, BindableService)
      * @see #addService(BindableService, Iterable)
      */
@@ -398,9 +381,7 @@ public final class GrpcServiceBuilder {
         requireNonNull(path, "path");
         requireNonNull(bindableService, "bindableService");
         if (bindableService instanceof ProtoReflectionService) {
-            final ServerServiceDefinition interceptor =
-                    ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
-            return addService(path, interceptor);
+            throw new IllegalArgumentException("ProtoReflectionService should not be used with decorators.");
         }
         requireNonNull(decorators, "decorators");
         registryBuilder.addService(path, bindableService.bindService(), null, bindableService.getClass(),
@@ -412,6 +393,7 @@ public final class GrpcServiceBuilder {
      * Adds a {@linkplain MethodDescriptor method} of gRPC {@link BindableService} to this
      * {@link GrpcServiceBuilder}. You can get {@link MethodDescriptor}s from the enclosing class of
      * your generated stub.
+     *
      * @see #addService(String, ServerServiceDefinition, MethodDescriptor)
      * @see #addService(BindableService, Iterable)
      */
@@ -423,9 +405,7 @@ public final class GrpcServiceBuilder {
         requireNonNull(bindableService, "bindableService");
         requireNonNull(methodDescriptor, "methodDescriptor");
         if (bindableService instanceof ProtoReflectionService) {
-            final ServerServiceDefinition interceptor =
-                    ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
-            return addService(path, interceptor, methodDescriptor);
+            throw new IllegalArgumentException("ProtoReflectionService should not be used with decorators.");
         }
         requireNonNull(decorators, "decorators");
         registryBuilder.addService(path, bindableService.bindService(), methodDescriptor,
