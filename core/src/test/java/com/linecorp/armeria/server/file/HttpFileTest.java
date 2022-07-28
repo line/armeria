@@ -123,12 +123,4 @@ class HttpFileTest {
         assertThatThrownBy(() -> HttpFile.builder(jarHttpUrl)).isInstanceOf(IllegalArgumentException.class)
             .hasMessageContaining(exMsg);
     }
-
-    @Test
-    void createFromOsgiBundle() throws Exception {
-        final URL bundleFileUrl = new URL("bundle://6.0:0/myfile");
-        assertThat(bundleFileUrl.getProtocol()).isEqualTo("bundle");
-        final HttpFileBuilder builder = HttpFile.builder(bundleFileUrl);
-        assertThat(builder).isInstanceOf(HttpFileBuilder.ClassPathHttpFileBuilder.class);
-    }
 }
