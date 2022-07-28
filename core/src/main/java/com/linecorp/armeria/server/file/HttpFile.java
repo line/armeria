@@ -200,11 +200,12 @@ public interface HttpFile {
 
             return builder(f.toPath());
         } else if ("jar".equals(url.getProtocol()) && url.getPath().startsWith("file:") ||
-                   "jrt".equals(url.getProtocol())) {
+                   "jrt".equals(url.getProtocol()) ||
+                   "bundle".equals(url.getProtocol())) {
             return new ClassPathHttpFileBuilder(url);
         }
-        throw new IllegalArgumentException("Unsupported URL: " + url +
-                                           " (must start with 'file:', 'jar:file' or 'jrt:')");
+        throw new IllegalArgumentException("Unsupported URL: " + url + " (must start with "
+                                           "'file:', 'jar:file', 'jrt:' or 'bundle:')");
     }
 
     /**
