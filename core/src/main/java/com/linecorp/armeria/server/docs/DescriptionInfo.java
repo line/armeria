@@ -20,14 +20,19 @@ import static java.util.Objects.requireNonNull;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
+import com.google.common.base.Objects;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.annotation.Description;
 
 /**
  * Description of a type, a field, a method or a parameter.
  */
 @UnstableApi
 public final class DescriptionInfo {
+
+    private static final DescriptionInfo EMPTY = new DescriptionInfo("", Markup.NONE);
+
     /**
      * Creates a new {@link DescriptionInfo} with the docStrings and specific markup.
      *
@@ -45,6 +50,21 @@ public final class DescriptionInfo {
      */
     public static DescriptionInfo of(String docString) {
         return new DescriptionInfo(docString, Markup.NONE);
+    }
+
+    /**
+     * Creates a new {@link DescriptionInfo} from the specified {@link Description}.
+     */
+    public static DescriptionInfo from(Description description) {
+        requireNonNull(description, "description");
+        return of(description.value(), description.markup());
+    }
+
+    /**
+     * Returns an empty {@link DescriptionInfo}.
+     */
+    public static DescriptionInfo empty() {
+        return EMPTY;
     }
 
     private final String docString;
@@ -74,6 +94,23 @@ public final class DescriptionInfo {
     @JsonProperty
     public Markup markup() {
         return markup;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof DescriptionInfo)) {
+            return false;
+        }
+        final DescriptionInfo that = (DescriptionInfo) o;
+        return docString.equals(that.docString) && markup == that.markup;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hashCode(docString, markup);
     }
 
     @Override

@@ -26,8 +26,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
@@ -50,7 +48,6 @@ public final class ServiceInfo {
     private final String name;
     private final Set<MethodInfo> methods;
     private final List<HttpHeaders> exampleHeaders;
-    @Nullable
     private final DescriptionInfo descriptionInfo;
 
     /**
@@ -58,7 +55,7 @@ public final class ServiceInfo {
      */
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods) {
-        this(name, methods, null);
+        this(name, methods, DescriptionInfo.empty());
     }
 
     /**
@@ -66,7 +63,7 @@ public final class ServiceInfo {
      */
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods,
-                       @Nullable DescriptionInfo descriptionInfo) {
+                       DescriptionInfo descriptionInfo) {
         this(name, methods, ImmutableList.of(), descriptionInfo);
     }
 
@@ -76,12 +73,12 @@ public final class ServiceInfo {
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods,
                        Iterable<HttpHeaders> exampleHeaders,
-                       @Nullable DescriptionInfo descriptionInfo) {
+                       DescriptionInfo descriptionInfo) {
 
         this.name = requireNonNull(name, "name");
         this.methods = mergeEndpoints(requireNonNull(methods));
         this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
-        this.descriptionInfo = descriptionInfo;
+        this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
     }
 
     /**
@@ -157,10 +154,9 @@ public final class ServiceInfo {
 
     /**
      * Returns the description information of the service.
+     * If not available, {@link DescriptionInfo#empty()} is returned.
      */
     @JsonProperty
-    @JsonInclude(Include.NON_NULL)
-    @Nullable
     public DescriptionInfo descriptionInfo() {
         return descriptionInfo;
     }

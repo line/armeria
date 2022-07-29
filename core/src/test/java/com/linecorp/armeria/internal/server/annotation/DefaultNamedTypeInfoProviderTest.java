@@ -50,12 +50,15 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.ConsumesJson;
+import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldRequirement;
+import com.linecorp.armeria.server.docs.Markup;
 import com.linecorp.armeria.server.docs.NamedTypeInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
 import com.linecorp.armeria.server.docs.StructInfo;
@@ -63,7 +66,7 @@ import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class JsonNamedTypeInfoProviderTest {
+class DefaultNamedTypeInfoProviderTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -79,8 +82,8 @@ class JsonNamedTypeInfoProviderTest {
         }
     };
 
-    final JsonNamedTypeInfoProvider requestStructInfoProvider = new JsonNamedTypeInfoProvider(true);
-    final JsonNamedTypeInfoProvider responseStructInfoProvider = new JsonNamedTypeInfoProvider(false);
+    final DefaultNamedTypeInfoProvider requestStructInfoProvider = new DefaultNamedTypeInfoProvider(true);
+    final DefaultNamedTypeInfoProvider responseStructInfoProvider = new DefaultNamedTypeInfoProvider(false);
 
     @Test
     void requestObject() {
@@ -134,15 +137,85 @@ class JsonNamedTypeInfoProviderTest {
     }
 
     @Test
+    void requestDescriptor() {
+        StructInfo structInfo =
+                (StructInfo) requestStructInfoProvider.newNamedTypeInfo(RequestConstructor.class);
+        assertThat(structInfo.fields()).containsExactly(
+                FieldInfo.builder("constructorField1", STRING)
+                         .requirement(FieldRequirement.REQUIRED)
+                         .descriptionInfo(DescriptionInfo.of("constructor description1", Markup.NONE))
+                         .build(),
+                FieldInfo.builder("constructorField2", STRING)
+                         .requirement(FieldRequirement.OPTIONAL)
+                         .descriptionInfo(DescriptionInfo.of("constructor description2", Markup.NONE))
+                         .build());
+
+        structInfo = (StructInfo) requestStructInfoProvider.newNamedTypeInfo(RequestSetters.class);
+        assertThat(structInfo.fields()).containsExactlyInAnyOrder(
+                FieldInfo.builder("setterField1", STRING)
+                         .requirement(FieldRequirement.REQUIRED)
+                         .descriptionInfo(DescriptionInfo.of("setter description1", Markup.NONE))
+                         .build(),
+                FieldInfo.builder("setterField2", STRING)
+                         .requirement(FieldRequirement.OPTIONAL)
+                         .descriptionInfo(DescriptionInfo.of("setter description2", Markup.NONE))
+                         .build());
+
+        structInfo = (StructInfo) requestStructInfoProvider.newNamedTypeInfo(RequestWithSettersNonPrefix.class);
+        assertThat(structInfo.fields()).containsExactlyInAnyOrder(
+                FieldInfo.builder("nonPrefixSetterField1", STRING)
+                         .requirement(FieldRequirement.REQUIRED)
+                         .descriptionInfo(DescriptionInfo.of("non prefix setter description1", Markup.NONE))
+                         .build(),
+                FieldInfo.builder("nonPrefixSetterField2", STRING)
+                         .requirement(FieldRequirement.OPTIONAL)
+                         .descriptionInfo(DescriptionInfo.of("non prefix setter description2", Markup.NONE))
+                         .build());
+    }
+
+    @Test
+    void responseDescriptor() {
+        StructInfo structInfo =
+                (StructInfo) responseStructInfoProvider.newNamedTypeInfo(ResponseGetters.class);
+        assertThat(structInfo.fields()).containsExactly(
+                FieldInfo.builder("getterField1", STRING)
+                         .requirement(FieldRequirement.REQUIRED)
+                         .descriptionInfo(DescriptionInfo.of("getter description1", Markup.NONE))
+                         .build(),
+                FieldInfo.builder("getterField2", STRING)
+                         .requirement(FieldRequirement.OPTIONAL)
+                         .descriptionInfo(DescriptionInfo.of("getter description2", Markup.NONE))
+                         .build());
+
+        structInfo =
+                (StructInfo) responseStructInfoProvider.newNamedTypeInfo(ResponseGettersWithNonPrefix.class);
+        assertThat(structInfo.fields()).containsExactly(
+                FieldInfo.builder("nonPrefixGetterField1", STRING)
+                         .requirement(FieldRequirement.REQUIRED)
+                         .descriptionInfo(DescriptionInfo.of("getter description1", Markup.NONE))
+                         .build(),
+                FieldInfo.builder("nonPrefixGetterField2", STRING)
+                         .requirement(FieldRequirement.REQUIRED)
+                         .descriptionInfo(DescriptionInfo.of("getter description2", Markup.NONE))
+                         .build());
+    }
+
+    @Test
     void specification() throws Exception {
         final BlockingWebClient client = server.blockingWebClient();
 
+        final String responseString = client.prepare()
+                                            .get("/docs/specification.json")
+                                            .asString()
+                                            .execute()
+                                            .content();
+        System.out.println(responseString);
         final JsonNode response = client.prepare()
                                         .get("/docs/specification.json")
                                         .asJson(JsonNode.class)
                                         .execute()
                                         .content();
-        final InputStream resourceAsStream = JsonNamedTypeInfoProviderTest.class.getResourceAsStream(
+        final InputStream resourceAsStream = DefaultNamedTypeInfoProviderTest.class.getResourceAsStream(
                 "JsonNamedTypeInfoProviderTest_specification.json5");
         final JsonMapper json5Mapper = JsonMapper.builder()
                                                  .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS.mappedFeature())
@@ -163,10 +236,10 @@ class JsonNamedTypeInfoProviderTest {
         final BlockingWebClient client = server.blockingWebClient();
 
         final JsonNode response = client.prepare()
-                                      .get("/docs-custom/specification.json")
-                                      .asJson(JsonNode.class)
-                                      .execute()
-                                      .content();
+                                        .get("/docs-custom/specification.json")
+                                        .asJson(JsonNode.class)
+                                        .execute()
+                                        .content();
         final JsonNode param = response.get("services").get(0).get("methods").get(0)
                                        .get("parameters").get(0);
         assertThat(param.get("name").textValue()).isEqualTo("CustomFooRequestInfo");
@@ -336,6 +409,87 @@ class JsonNamedTypeInfoProviderTest {
         @JsonProperty("innerValue")
         public boolean innerValue() {
             return innerValue;
+        }
+    }
+
+    private static final class RequestConstructor {
+        private final String constructorField1;
+        private final String constructorField2;
+
+        @JsonCreator
+        RequestConstructor(@JsonProperty("constructorField1")
+                           @Description("constructor description1") String constructorField1,
+                           @JsonProperty("constructorField2")
+                           @Description("constructor description1") @Nullable String constructorField2) {
+            this.constructorField1 = constructorField1;
+            this.constructorField2 = constructorField2;
+        }
+    }
+
+    private static final class RequestSetters {
+        private String setterField1;
+        private String setterField2;
+
+        @Description(value = "setter description1")
+        public void setSetterField1(String setterField1) {
+            this.setterField1 = setterField1;
+        }
+
+        @Description(value = "setter description2")
+        public void setSetterField2(@Nullable String setterField2) {
+            this.setterField2 = setterField2;
+        }
+    }
+
+    private static final class RequestWithSettersNonPrefix {
+        @Description("non prefix setter description1")
+        private String nonPrefixSetterField1;
+        private String nonPrefixSetterField2;
+
+        @JsonProperty("nonPrefixSetterField1")
+        public void nonPrefixSetterField1(String nonPrefixSetterField1) {
+            this.nonPrefixSetterField1 = nonPrefixSetterField1;
+        }
+
+        @Description("non prefix setter description2")
+        @JsonProperty("nonPrefixSetterField2")
+        public void nonPrefixSetterField2(@Nullable String nonPrefixSetterField2) {
+            this.nonPrefixSetterField2 = nonPrefixSetterField2;
+        }
+    }
+
+    private static final class ResponseGetters {
+        private String getterField1;
+        @Description("getter description2")
+        @Nullable
+        private String getterField2;
+
+        @Description("getter description1")
+        public String getGetterField1() {
+            return getterField1;
+        }
+
+        @Nullable
+        public String getGetterField2() {
+            return getterField2;
+        }
+    }
+
+    private static final class ResponseGettersWithNonPrefix {
+        @Nullable
+        @Description("non prefix getter description1")
+        private String nonPrefixGetterField1;
+        private String nonPrefixGetterField2;
+
+        @JsonProperty("nonPrefixGetterField1")
+        public String nonPrefixGetterField1() {
+            return nonPrefixGetterField1;
+        }
+
+        @Description("non prefix getter description2")
+        @JsonProperty("nonPrefixGetterField2")
+        public String nonPrefixGetterField2() {
+            return nonPrefixGetterField2;
         }
     }
 }

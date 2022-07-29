@@ -43,7 +43,7 @@ public final class FieldInfo {
      */
     public static FieldInfo of(String name, TypeSignature typeSignature) {
         return new FieldInfo(name, FieldLocation.UNSPECIFIED, FieldRequirement.UNSPECIFIED, typeSignature,
-                             ImmutableList.of(), null);
+                             ImmutableList.of(), DescriptionInfo.empty());
     }
 
     /**
@@ -51,8 +51,7 @@ public final class FieldInfo {
      * The {@link FieldLocation} and {@link FieldRequirement} of the {@link FieldInfo} will be
      * {@code UNSPECIFIED}.
      */
-    public static FieldInfo of(String name, TypeSignature typeSignature,
-                               @Nullable DescriptionInfo descriptionInfo) {
+    public static FieldInfo of(String name, TypeSignature typeSignature, DescriptionInfo descriptionInfo) {
         return new FieldInfo(name, FieldLocation.UNSPECIFIED, FieldRequirement.UNSPECIFIED, typeSignature,
                              ImmutableList.of(), descriptionInfo);
     }
@@ -86,7 +85,6 @@ public final class FieldInfo {
     private final TypeSignature typeSignature;
     private final List<FieldInfo> childFieldInfos;
 
-    @Nullable
     private final DescriptionInfo descriptionInfo;
 
     /**
@@ -94,7 +92,7 @@ public final class FieldInfo {
      */
     FieldInfo(String name, FieldLocation location, FieldRequirement requirement,
               TypeSignature typeSignature, List<FieldInfo> childFieldInfos,
-              @Nullable DescriptionInfo descriptionInfo) {
+              DescriptionInfo descriptionInfo) {
         this.name = name;
         this.location = location;
         this.requirement = requirement;

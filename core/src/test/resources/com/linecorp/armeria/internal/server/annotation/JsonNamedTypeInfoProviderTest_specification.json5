@@ -1,14 +1,14 @@
 {
   "services": [
     {
-      "name": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$JsonService",
+      "name": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$JsonService",
       "methods": [
         {
           "name": "json",
-          "returnTypeSignature": "CompletableFuture<com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$BarResponse>",
+          "returnTypeSignature": "CompletableFuture<com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$BarResponse>",
           "parameters": [
             {
-              "name": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$FooRequest",
+              "name": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$FooRequest",
               "location": "UNSPECIFIED",
               "requirement": "REQUIRED",
               "typeSignature": "object",
@@ -18,76 +18,123 @@
                   "location": "UNSPECIFIED",
                   "requirement": "REQUIRED",
                   "typeSignature": "int", // A primitive type
-                  "childFieldInfos": [ ]
+                  "childFieldInfos": [ ],
+                  "descriptionInfo": {
+                    "docString": "",
+                    "markup": "NONE"
+                  }
                 }, {
                   "name": "stringField",
                   "location": "UNSPECIFIED",
                   "requirement": "REQUIRED",
                   "typeSignature": "string",
-                  "childFieldInfos": [ ]
+                  "childFieldInfos": [ ],
+                  "descriptionInfo": {
+                    "docString": "",
+                    "markup": "NONE"
+                  }
                 }, {
                   "name": "sameName",
                   "location": "UNSPECIFIED",
                   "requirement": "REQUIRED", // Non-null is assumed by default.
-                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner",
+                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner",
                   "childFieldInfos": [
                     {
                       "name": "innerValue",
                       "location": "UNSPECIFIED",
                       "requirement": "REQUIRED",
                       "typeSignature": "boolean",
-                      "childFieldInfos": [ ]
+                      "childFieldInfos": [ ],
+                      "descriptionInfo": {
+                        "docString": "",
+                        "markup": "NONE"
+                      }
                     }
-                  ]
+                  ],
+                  "descriptionInfo": {
+                    "docString": "",
+                    "markup": "NONE"
+                  }
                 }, {
                   "name": "rename",
                   "location": "UNSPECIFIED",
                   "requirement": "UNSPECIFIED", // requirement is unspecified if no field information is given.
-                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner",
+                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner",
                   "childFieldInfos": [
-                    // Nested fields
                     {
                       "name": "innerValue",
                       "location": "UNSPECIFIED",
                       "requirement": "REQUIRED",
                       "typeSignature": "boolean",
-                      "childFieldInfos": [ ]
+                      "childFieldInfos": [ ],
+                      "descriptionInfo": {
+                        "docString": "",
+                        "markup": "NONE"
+                      }
                     }
-                  ]
+                  ],
+                  "descriptionInfo": {
+                    "docString": "",
+                    "markup": "NONE"
+                  }
                 }, {
                   "name": "collection",
                   "location": "UNSPECIFIED",
                   "requirement": "REQUIRED",
-                  "typeSignature": "list<com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner>",
-                  "childFieldInfos": [ ]
+                  "typeSignature": "list<com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner>",
+                  "childFieldInfos": [ ],
+                  "descriptionInfo": {
+                    "docString": "",
+                    "markup": "NONE"
+                  }
                 }, {
                   "name": "nullableField",
                   "location": "UNSPECIFIED",
                   "requirement": "OPTIONAL", // A `@Nullable` object
                   "typeSignature": "string",
-                  "childFieldInfos": [ ]
+                  "childFieldInfos": [ ],
+                  "descriptionInfo": {
+                    "docString": "",
+                    "markup": "NONE"
+                  }
                 }, {
                   "name": "optionalField",
                   "location": "UNSPECIFIED",
                   "requirement": "OPTIONAL", // An `Optional` object
-                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner",
+                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner",
                   "childFieldInfos": [
                     {
                       "name": "innerValue",
                       "location": "UNSPECIFIED",
                       "requirement": "REQUIRED",
                       "typeSignature": "boolean",
-                      "childFieldInfos": [ ]
+                      "childFieldInfos": [ ],
+                      "descriptionInfo": {
+                        "docString": "",
+                        "markup": "NONE"
+                      }
                     }
-                  ]
+                  ],
+                  "descriptionInfo": {
+                    "docString": "",
+                    "markup": "NONE"
+                  }
                 }, {
                   "name": "circular",
                   "location": "UNSPECIFIED",
                   "requirement": "REQUIRED",
-                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$FooRequest",
-                  "childFieldInfos": [ ] // Stop traversing if a circular field is detected.
+                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$FooRequest",
+                  "childFieldInfos": [ ], // Stop traversing if a circular field is detected.
+                  "descriptionInfo": {
+                    "docString": "",
+                    "markup": "NONE"
+                  }
                 }
-              ]
+              ],
+              "descriptionInfo": {
+                "docString": "",
+                "markup": "NONE"
+              }
             }
           ],
           "exceptionTypeSignatures": [ ],
@@ -102,100 +149,166 @@
           "exampleRequests": [ ],
           "examplePaths": [ ],
           "exampleQueries": [ ],
-          "httpMethod": "POST"
+          "httpMethod": "POST",
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
         }
       ],
-      "exampleHeaders": [ ]
+      "exampleHeaders": [ ],
+      "descriptionInfo": {
+        "docString": "",
+        "markup": "NONE"
+      }
     }
   ],
   "enums": [ ],
   "structs": [
     {
-      "name": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$BarResponse",
+      "name": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$BarResponse",
       "fields": [
         {
           "name": "getterField",
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
           "typeSignature": "string",
-          "childFieldInfos": [ ]
+          "childFieldInfos": [ ],
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
         }, {
           "name": "getterNullableField",
           "location": "UNSPECIFIED",
           "requirement": "OPTIONAL",
           "typeSignature": "string",
-          "childFieldInfos": [ ]
+          "childFieldInfos": [ ],
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
         }, {
           "name": "intField",
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
           "typeSignature": "int",
-          "childFieldInfos": [ ]
+          "childFieldInfos": [ ],
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
         }, {
           "name": "sameName",
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
-          "typeSignature": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner",
+          "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner",
           "childFieldInfos": [
             {
               "name": "innerValue",
               "location": "UNSPECIFIED",
               "requirement": "REQUIRED",
               "typeSignature": "boolean",
-              "childFieldInfos": [ ]
+              "childFieldInfos": [ ],
+              "descriptionInfo": {
+                "docString": "",
+                "markup": "NONE"
+              }
             }
-          ]
+          ],
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
         }, {
           "name": "rename",
           "location": "UNSPECIFIED",
           "requirement": "UNSPECIFIED",
-          "typeSignature": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner",
+          "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner",
           "childFieldInfos": [
             {
               "name": "innerValue",
               "location": "UNSPECIFIED",
               "requirement": "REQUIRED",
               "typeSignature": "boolean",
-              "childFieldInfos": [ ]
+              "childFieldInfos": [ ],
+              "descriptionInfo": {
+                "docString": "",
+                "markup": "NONE"
+              }
             }
-          ]
+          ],
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
         }, {
           "name": "collection",
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
-          "typeSignature": "list<com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner>",
-          "childFieldInfos": [ ]
+          "typeSignature": "list<com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner>",
+          "childFieldInfos": [ ],
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
         }, {
           "name": "nullableField",
           "location": "UNSPECIFIED",
           "requirement": "OPTIONAL",
           "typeSignature": "string",
-          "childFieldInfos": [ ]
+          "childFieldInfos": [ ],
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
         }, {
           "name": "optionalField",
           "location": "UNSPECIFIED",
           "requirement": "OPTIONAL",
           "typeSignature": "string",
-          "childFieldInfos": [ ]
+          "childFieldInfos": [ ],
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
         }, {
           "name": "circular",
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
-          "typeSignature": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$BarResponse",
-          "childFieldInfos": [ ]
+          "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$BarResponse",
+          "childFieldInfos": [ ],
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
         }
-      ]
+      ],
+      "descriptionInfo": {
+        "docString": "",
+        "markup": "NONE"
+      }
     }, {
-      "name": "com.linecorp.armeria.internal.server.annotation.JsonNamedTypeInfoProviderTest$Inner",
+      "name": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner",
       "fields": [
         {
           "name": "innerValue",
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
           "typeSignature": "boolean",
-          "childFieldInfos": [ ]
+          "childFieldInfos": [ ],
+          "descriptionInfo": {
+            "docString": "",
+            "markup": "NONE"
+          }
         }
-      ]
+      ],
+      "descriptionInfo": {
+        "docString": "",
+        "markup": "NONE"
+      }
     }
-  ]
+  ],
+  "exceptions": [ ],
+  "exampleHeaders": [ ]
 }

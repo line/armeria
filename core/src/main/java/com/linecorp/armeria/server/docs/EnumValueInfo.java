@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public final class EnumValueInfo {
 
     private final String name;
-    @Nullable
     private final DescriptionInfo descriptionInfo;
     @Nullable
     private final Integer intValue;
@@ -45,7 +44,7 @@ public final class EnumValueInfo {
      * @param name the name of the enum value
      */
     public EnumValueInfo(String name) {
-        this(name, null, null);
+        this(name, null, DescriptionInfo.empty());
     }
 
     /**
@@ -55,7 +54,7 @@ public final class EnumValueInfo {
      * @param intValue the integer value of the enum value
      */
     public EnumValueInfo(String name, @Nullable Integer intValue) {
-        this(name, intValue, null);
+        this(name, intValue, DescriptionInfo.empty());
     }
 
     /**
@@ -66,7 +65,7 @@ public final class EnumValueInfo {
      * @param descriptionInfo the description object that describes the enum value
      */
     public EnumValueInfo(String name, @Nullable Integer intValue,
-                         @Nullable DescriptionInfo descriptionInfo) {
+                         DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
         this.intValue = intValue;
         this.descriptionInfo = descriptionInfo;
@@ -95,7 +94,6 @@ public final class EnumValueInfo {
      */
     @JsonProperty
     @JsonInclude(Include.NON_NULL)
-    @Nullable
     public DescriptionInfo descriptionInfo() {
         return descriptionInfo;
     }

@@ -358,14 +358,18 @@ public final class DocService extends SimpleDecoratingHttpService {
                              descriptionInfo);
     }
 
-    @Nullable
-    private static DescriptionInfo findDescription(String key, @Nullable DescriptionInfo currentDescriptionInfo,
+    private static DescriptionInfo findDescription(String key, DescriptionInfo currentDescriptionInfo,
                                                    Map<String, DescriptionInfo> descriptionInfos) {
         if (currentDescriptionInfo != null) {
             return currentDescriptionInfo;
         }
 
-        return descriptionInfos.get(key);
+        final DescriptionInfo descriptionInfo = descriptionInfos.get(key);
+        if (descriptionInfo != null) {
+            return descriptionInfo;
+        } else {
+            return DescriptionInfo.empty();
+        }
     }
 
     private ServiceSpecification addExamples(ServiceSpecification spec) {

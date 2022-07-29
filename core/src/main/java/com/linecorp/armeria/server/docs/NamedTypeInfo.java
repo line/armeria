@@ -17,12 +17,9 @@ package com.linecorp.armeria.server.docs;
 
 import java.util.Set;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.collect.ImmutableSet;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -38,11 +35,9 @@ public interface NamedTypeInfo {
     String name();
 
     /**
-     * Returns the description information. If not available, a null value is returned.
+     * Returns the description information. If not available, {@link DescriptionInfo#empty()} is returned.
      */
     @JsonProperty
-    @JsonInclude(Include.NON_NULL)
-    @Nullable
     DescriptionInfo descriptionInfo();
 
     /**

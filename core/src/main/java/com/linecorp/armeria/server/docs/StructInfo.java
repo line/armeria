@@ -24,9 +24,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 
@@ -41,20 +40,19 @@ public final class StructInfo implements NamedTypeInfo {
 
     private final String name;
     private final List<FieldInfo> fields;
-    @Nullable
     private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
      */
     public StructInfo(String name, Iterable<FieldInfo> fields) {
-        this(name, fields, null);
+        this(name, fields, DescriptionInfo.empty());
     }
 
     /**
      * Creates a new instance.
      */
-    public StructInfo(String name, Iterable<FieldInfo> fields, @Nullable DescriptionInfo descriptionInfo) {
+    public StructInfo(String name, Iterable<FieldInfo> fields, DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
         this.fields = ImmutableList.copyOf(requireNonNull(fields, "fields"));
         this.descriptionInfo = descriptionInfo;
@@ -78,8 +76,6 @@ public final class StructInfo implements NamedTypeInfo {
      */
     @JsonProperty
     @Override
-    @JsonInclude(Include.NON_NULL)
-    @Nullable
     public DescriptionInfo descriptionInfo() {
         return descriptionInfo;
     }
@@ -102,16 +98,22 @@ public final class StructInfo implements NamedTypeInfo {
         }
 
         final StructInfo that = (StructInfo) o;
-        return name.equals(that.name) && fields.equals(that.fields);
+        return name.equals(that.name) &&
+               fields.equals(that.fields) &&
+               descriptionInfo.equals(that.descriptionInfo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, fields);
+        return Objects.hash(name, fields, descriptionInfo);
     }
 
     @Override
     public String toString() {
-        return name;
+        return MoreObjects.toStringHelper(this)
+                          .add("name", name)
+                          .add("fields", fields)
+                          .add("descriptionInfo", descriptionInfo)
+                          .toString();
     }
 }

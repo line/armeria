@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.scalapb
 import com.google.common.collect.ImmutableSet
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin
 import com.linecorp.armeria.server.docs.{
+  DescriptionInfo,
   DocServiceFilter,
   DocServicePlugin,
   NamedTypeInfoProvider,

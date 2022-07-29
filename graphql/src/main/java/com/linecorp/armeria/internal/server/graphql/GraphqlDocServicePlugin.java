@@ -145,7 +145,7 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
                 .map(entry -> {
                     final Class<?> service = entry.getKey();
                     return new ServiceInfo(service.getName(), entry.getValue(),
-                                           serviceDescription.get(service));
+                                           serviceDescription.getOrDefault(service, DescriptionInfo.empty()));
                 })
                 .collect(toImmutableSet());
 

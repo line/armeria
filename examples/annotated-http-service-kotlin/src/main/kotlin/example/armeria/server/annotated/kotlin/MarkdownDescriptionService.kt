@@ -22,7 +22,8 @@ import com.linecorp.armeria.server.docs.Markup
 
 @CoroutineNameDecorator(name = "default")
 class MarkdownDescriptionService {
-    @Description(value = """
+    @Description(
+        value = """
         ## Support markdown
         ### Support header
         - Support lists
@@ -50,7 +51,8 @@ class MarkdownDescriptionService {
           .build()
           .start();
         ```
-        """, markup = Markup.MARKDOWN)
+        """, markup = Markup.MARKDOWN
+    )
     @Get("/markdown")
     fun markdown(
         @Description(value = "`Param` description", markup = Markup.MARKDOWN)
@@ -72,12 +74,11 @@ class MarkdownDescriptionService {
         > Support blockquotes
     """, markup = Markup.MARKDOWN)
     data class MarkdownDescriptionResult(
-        @field:Description(value = "result1 description (default)", markup = Markup.MARKDOWN)
+        @Description(value = "result1 description (default)", markup = Markup.MARKDOWN)
         val result1: String,
-        @field:Description(value = "`result2` **description** (use markdown)", markup = Markup.MARKDOWN)
+        @Description(value = "`result2` **description** (use markdown)", markup = Markup.MARKDOWN)
         val result2: String,
-        @field:Description(value = "`result3` see https://armeria.dev/ (add links)",
-                markup = Markup.MARKDOWN)
+        @Description(value = "`result3` see https://armeria.dev/ (add links)", markup = Markup.MARKDOWN)
         val result3: String
     )
 
