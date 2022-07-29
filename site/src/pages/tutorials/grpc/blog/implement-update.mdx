@@ -23,7 +23,7 @@ You need to have the files obtained from previous steps:
 - BlogService.java
 - BlogClient.java
 
-## 1. Implement service
+## 1. Implement server-side
 
 1. In `BlogService.java` we've been working on, add a service method for updating a blog post. Leave the exception throwing part empty for now.
   ```java filename=BlogService.java
@@ -105,7 +105,7 @@ You need to have the files obtained from previous steps:
                   .build();
   ```
 
-## 2. Implement client
+## 2. Implement client-side
 
 Add a method `updateBlogPost()` to send a request to update a blog post.
 
@@ -141,7 +141,7 @@ Let's test updating a blog post. Since we know we are giving an incremental inde
     getBlogPost(1);
   }
   ```
-2. [Re-run the server](/tutorials/grpc/blog/run-service#3-serve-the-service), since we've modified the server-side in [1. Implement service](#1-implement-service).
+2. [Re-run the server](/tutorials/grpc/blog/run-service#3-serve-the-service), since we've modified the server-side in [1. Implement service](#1-implement-server-side).
 3. Run the client and check the blog information before updating. Confirm that the ID of the post to update is indeed `1`.
    ```bash
    [main] INFO  e.a.client.blog.grpc.BlogClient - [Create response] Title: Another blog post Content: Creating a post via createBlogPost().
