@@ -50,8 +50,7 @@ public final class Main {
                            .enableUnframedRequests(true)
                            // You can set useBlockingTaskExecutor(true) in order to execute all gRPC
                            // methods in the blockingTaskExecutor thread pool.
-                           // TODO(ikhoon): Revert when CI builds pass
-                           .useBlockingTaskExecutor(true)
+                           // .useBlockingTaskExecutor(true)
                            .build();
         sb.service(grpcService)
           .service("prefix:/prefix", grpcService)

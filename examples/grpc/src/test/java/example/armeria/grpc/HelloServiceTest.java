@@ -12,7 +12,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -44,8 +43,7 @@ class HelloServiceTest {
         }
     };
 
-    // TODO(ikhoon): Revert when CI builds pass
-    @RepeatedTest(10000)
+    @Test
     void getReply() {
         final HelloServiceBlockingStub helloService =
                 GrpcClients.newClient(uri(), HelloServiceBlockingStub.class);
