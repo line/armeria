@@ -347,6 +347,7 @@ class UnaryServerCallTest {
             }
         });
         unaryCall.request(1);
+        unaryCall.startDeframing();
         await().untilTrue(completed);
 
         assertThat(requestCaptor).hasValue(GrpcTestUtil.REQUEST_MESSAGE);
