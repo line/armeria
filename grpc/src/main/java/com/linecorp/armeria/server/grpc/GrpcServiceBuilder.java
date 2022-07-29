@@ -329,9 +329,8 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Adds a gRPC {@link BindableService} with functions to this {@link GrpcServiceBuilder}.
-     * The functions will be applied in the specified order and before functions decorated with the service.
-     * For more details, please refer to the following document.
+     * Decorates a gRPC {@link BindableService} with the given decorators, in the order of iteration.
+     * For more details on decorator behavior, please refer to the following document.
      *
      * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
      */
@@ -353,6 +352,7 @@ public final class GrpcServiceBuilder {
      *
      * @see #addService(Object, Function)
      * @see #addService(BindableService, Iterable)
+     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
      */
     @UnstableApi
     public <T> GrpcServiceBuilder addService(
@@ -373,9 +373,10 @@ public final class GrpcServiceBuilder {
      *
      * @see #addService(String, BindableService)
      * @see #addService(BindableService, Iterable)
+     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
      */
     @UnstableApi
-    public <T> GrpcServiceBuilder addService(
+    public GrpcServiceBuilder addService(
             String path, BindableService bindableService,
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(path, "path");
@@ -396,6 +397,7 @@ public final class GrpcServiceBuilder {
      *
      * @see #addService(String, ServerServiceDefinition, MethodDescriptor)
      * @see #addService(BindableService, Iterable)
+     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
      */
     @UnstableApi
     public GrpcServiceBuilder addService(

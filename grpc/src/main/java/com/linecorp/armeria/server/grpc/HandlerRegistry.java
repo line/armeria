@@ -194,8 +194,8 @@ final class HandlerRegistry {
             final ImmutableMap.Builder<Route, ServerMethodDefinition<?, ?>> methodsByRoute =
                     ImmutableMap.builder();
             final ImmutableMap.Builder<MethodDescriptor<?, ?>, String> bareMethodNames = ImmutableMap.builder();
-            final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> decorators =
-                    ImmutableMap.builder();
+            final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>>
+                    annotationDecorators = ImmutableMap.builder();
             final ImmutableMap.Builder<ServerMethodDefinition<?, ?>,
                     Iterable<? extends Function<? super HttpService, ? extends HttpService>>>
                     additionalDecoratorsBuilder = ImmutableMap.builder();
@@ -239,7 +239,7 @@ final class HandlerRegistry {
                             final List<DecoratorAndOrder> decoratorAndOrders =
                                     DecoratorAnnotationUtil.collectDecorators(type, method);
                             if (!decoratorAndOrders.isEmpty()) {
-                                decorators.put(methodDefinition, decoratorAndOrders);
+                                annotationDecorators.put(methodDefinition, decoratorAndOrders);
                             }
                         }
                     }
@@ -271,7 +271,7 @@ final class HandlerRegistry {
                             final List<DecoratorAndOrder> decoratorAndOrders =
                                     DecoratorAnnotationUtil.collectDecorators(type, method.get());
                             if (!decoratorAndOrders.isEmpty()) {
-                                decorators.put(methodDefinition, decoratorAndOrders);
+                                annotationDecorators.put(methodDefinition, decoratorAndOrders);
                             }
                         }
                     }
@@ -282,7 +282,7 @@ final class HandlerRegistry {
                                        methods.build(),
                                        methodsByRoute.build(),
                                        bareMethodNames.buildKeepingLast(),
-                                       decorators.build(),
+                                       annotationDecorators.build(),
                                        additionalDecoratorsBuilder.build());
         }
     }
