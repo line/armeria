@@ -253,6 +253,7 @@ class HealthCheckedEndpointGroupTest {
 
         try (HealthCheckedEndpointGroup group =
                      new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -282,6 +283,7 @@ class HealthCheckedEndpointGroupTest {
 
         try (HealthCheckedEndpointGroup group =
                      new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -312,6 +314,7 @@ class HealthCheckedEndpointGroupTest {
 
         try (HealthCheckedEndpointGroup unused =
                      new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -335,6 +338,7 @@ class HealthCheckedEndpointGroupTest {
 
         try (HealthCheckedEndpointGroup endpointGroup =
                      new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -384,6 +388,29 @@ class HealthCheckedEndpointGroupTest {
 
         // No more than one checker must be created.
         assertThat(newCheckerCount).hasValue(1);
+    }
+
+    @Test
+    void setHealthyEndpointsAfterEndpointIsClosed() {
+        final Endpoint delegate = Endpoint.of("foo");
+        final AsyncCloseableSupport checkerCloseable = AsyncCloseableSupport.of();
+        final AtomicReference<HealthCheckerContext> checkerContextRef = new AtomicReference<>();
+        final HealthCheckedEndpointGroup group = new AbstractHealthCheckedEndpointGroupBuilder(delegate) {
+            @Override
+            protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+                return ctx -> {
+                    checkerContextRef.set(ctx);
+                    return checkerCloseable;
+                };
+            }
+        }.build();
+
+        checkerContextRef.get().updateHealth(1, null, null, null);
+        assertThat(group.whenReady().join()).containsExactly(delegate);
+        group.close();
+        // If an inflight health check request can invoke `allHealthyEndpoints`
+        // while a `HealthCheckedEndpointGroup` is closing or closed.
+        assertThat(group.allHealthyEndpoints()).isEmpty();
     }
 
     @Test
@@ -494,6 +521,13 @@ class HealthCheckedEndpointGroupTest {
     }
 
     static final class MockEndpointGroup extends DynamicEndpointGroup {
+
+        MockEndpointGroup() {}
+
+        MockEndpointGroup(long selectionTimeoutMillis) {
+            super(true, selectionTimeoutMillis);
+        }
+
         void set(Endpoint... endpoints) {
             setEndpoints(ImmutableList.copyOf(endpoints));
         }

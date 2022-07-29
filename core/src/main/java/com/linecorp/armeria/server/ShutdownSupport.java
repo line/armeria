@@ -66,5 +66,17 @@ interface ShutdownSupport {
         };
     }
 
+    static ShutdownSupport of(AutoCloseable autoCloseable) {
+        requireNonNull(autoCloseable, "autoCloseable");
+        return () -> {
+            try {
+                autoCloseable.close();
+            } catch (Exception e) {
+                logger.warn("Unexpected exception while closing: {}", autoCloseable, e);
+            }
+            return UnmodifiableFuture.completedFuture(null);
+        };
+    }
+
     CompletableFuture<Void> shutdown();
 }

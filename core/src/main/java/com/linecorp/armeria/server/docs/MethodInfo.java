@@ -28,7 +28,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Iterables;
@@ -59,7 +58,7 @@ public final class MethodInfo {
     private final List<String> exampleQueries;
     private final HttpMethod httpMethod;
     @Nullable
-    private final String docString;
+    private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
@@ -70,11 +69,11 @@ public final class MethodInfo {
                       Iterable<TypeSignature> exceptionTypeSignatures,
                       Iterable<EndpointInfo> endpoints,
                       HttpMethod httpMethod,
-                      @Nullable String docString) {
+                      @Nullable DescriptionInfo descriptionInfo) {
         this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
-             /* exampleHeaders */ ImmutableList.of(), /* exampleRequests */ ImmutableList.of(),
-             /* examplePaths */ ImmutableList.of(), /* exampleQueries */ ImmutableList.of(),
-             httpMethod, docString);
+                /* exampleHeaders */ ImmutableList.of(), /* exampleRequests */ ImmutableList.of(),
+                /* examplePaths */ ImmutableList.of(), /* exampleQueries */ ImmutableList.of(),
+             httpMethod, descriptionInfo);
     }
 
     /**
@@ -90,7 +89,7 @@ public final class MethodInfo {
                       Iterable<String> examplePaths,
                       Iterable<String> exampleQueries,
                       HttpMethod httpMethod,
-                      @Nullable String docString) {
+                      @Nullable DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
 
         this.returnTypeSignature = requireNonNull(returnTypeSignature, "returnTypeSignature");
@@ -126,7 +125,7 @@ public final class MethodInfo {
         this.exampleQueries = exampleQueriesBuilder.build();
 
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
-        this.docString = Strings.emptyToNull(docString);
+        this.descriptionInfo = descriptionInfo;
     }
 
     /**
@@ -211,13 +210,13 @@ public final class MethodInfo {
     }
 
     /**
-     * Returns the documentation string of the function.
+     * Returns the description information of the function.
      */
     @JsonProperty
     @JsonInclude(Include.NON_NULL)
     @Nullable
-    public String docString() {
-        return docString;
+    public DescriptionInfo descriptionInfo() {
+        return descriptionInfo;
     }
 
     @Override

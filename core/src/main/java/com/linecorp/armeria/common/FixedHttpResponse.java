@@ -58,7 +58,7 @@ final class FixedHttpResponse {
             super(objs);
             checkArgument(objs.length > 0, "There must be at least one ResponseHeaders.");
             checkArgument(objs[0] instanceof ResponseHeaders,
-                          "The first HttpObject must be a ResponseHeaders: " + objs[0]);
+                          "The first HttpObject must be a ResponseHeaders: %s", objs[0]);
         }
     }
 

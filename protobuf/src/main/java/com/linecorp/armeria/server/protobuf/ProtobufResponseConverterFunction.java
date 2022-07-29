@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.protobuf;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
 import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction.isJson;
 import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction.isProtobuf;
 import static java.util.Objects.requireNonNull;
@@ -25,6 +27,7 @@ import static java.util.Objects.requireNonNull;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.reflect.Method;
+import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
@@ -140,6 +143,30 @@ public final class ProtobufResponseConverterFunction implements ResponseConverte
      */
     public ProtobufResponseConverterFunction(Printer jsonPrinter) {
         this.jsonPrinter = requireNonNull(jsonPrinter, "jsonPrinter");
+    }
+
+    @Override
+    public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
+        final Class<?> clazz = typeToClass(unwrapAsyncType(returnType));
+        if (clazz == null) {
+            return null;
+        }
+
+        // Non-streaming types.
+        if (isJson(produceType)) {
+            return false;
+        }
+        if (Message.class.isAssignableFrom(clazz) && isProtobuf(produceType)) {
+            return false;
+        }
+
+        // Streaming types
+        if (isJsonSeq(produceType) &&
+            (Publisher.class.isAssignableFrom(clazz) || Stream.class.isAssignableFrom(clazz))) {
+            return true;
+        }
+
+        return null;
     }
 
     @Override

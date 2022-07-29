@@ -28,6 +28,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -63,6 +64,10 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
     @Override
     public void serviceAdded(ServiceConfig cfg) throws Exception {
         super.serviceAdded(cfg);
+        final DependencyInjector dependencyInjector = cfg.server()
+                                                         .config()
+                                                         .dependencyInjector();
+
         final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> registryDecorators =
                 handlerRegistry.decorators();
 
@@ -73,7 +78,7 @@ final class GrpcDecoratingService extends SimpleDecoratingHttpService implements
             final List<? extends Function<? super HttpService, ? extends HttpService>> decorators =
                     entry.getValue()
                          .stream()
-                         .map(DecoratorAndOrder::decorator)
+                         .map(decoratorAndOrder -> decoratorAndOrder.decorator(dependencyInjector))
                          .collect(toImmutableList());
             builder.put(entry.getKey(), applyDecorators(decorators, delegate));
         }

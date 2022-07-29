@@ -24,8 +24,9 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 
@@ -41,7 +42,7 @@ public final class StructInfo implements NamedTypeInfo {
     private final String name;
     private final List<FieldInfo> fields;
     @Nullable
-    private final String docString;
+    private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
@@ -53,10 +54,10 @@ public final class StructInfo implements NamedTypeInfo {
     /**
      * Creates a new instance.
      */
-    public StructInfo(String name, Iterable<FieldInfo> fields, @Nullable String docString) {
+    public StructInfo(String name, Iterable<FieldInfo> fields, @Nullable DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
         this.fields = ImmutableList.copyOf(requireNonNull(fields, "fields"));
-        this.docString = Strings.emptyToNull(docString);
+        this.descriptionInfo = descriptionInfo;
     }
 
     @Override
@@ -72,9 +73,15 @@ public final class StructInfo implements NamedTypeInfo {
         return fields;
     }
 
+    /**
+     * Returns the description information of this struct.
+     */
+    @JsonProperty
     @Override
-    public String docString() {
-        return docString;
+    @JsonInclude(Include.NON_NULL)
+    @Nullable
+    public DescriptionInfo descriptionInfo() {
+        return descriptionInfo;
     }
 
     @Override

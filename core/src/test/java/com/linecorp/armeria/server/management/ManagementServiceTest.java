@@ -21,18 +21,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Arrays;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.primitives.Bytes;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ContentDisposition;
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -43,8 +40,6 @@ import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
-
-import reactor.core.publisher.Flux;
 
 class ManagementServiceTest {
     private static final ObjectMapper mapper = new ObjectMapper();
@@ -100,12 +95,10 @@ class ManagementServiceTest {
         assertThat(filename).endsWith(".hprof");
 
         final byte[] fileHeader = "JAVA PROFILE".getBytes(StandardCharsets.UTF_8);
-        final AtomicInteger counter = new AtomicInteger();
-        final byte[] actual = Flux.from(splitHttpResponse.body())
-                                  .map(HttpData::array)
-                                  .takeUntil(bytes -> fileHeader.length <= counter.addAndGet(bytes.length))
-                                  .reduce(Bytes::concat)
-                                  .block();
+        final byte[] actual = splitHttpResponse.body()
+                                               .range(0, fileHeader.length)
+                                               .collectBytes()
+                                               .join();
 
         // Make sure that the returned file has a valid hprof format
         assertThat(Arrays.copyOf(actual, fileHeader.length)).isEqualTo(fileHeader);

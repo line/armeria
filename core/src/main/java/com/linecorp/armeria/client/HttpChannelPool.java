@@ -403,16 +403,20 @@ final class HttpChannelPool implements AsyncCloseable {
             try {
                 final Channel channel = registerFuture.channel();
                 configureProxy(channel, poolKey.proxyConfig, desiredProtocol);
+
+                // should be invoked right before channel.connect() is invoked as defined in javadocs
+                clientFactory.channelPipelineCustomizer().accept(channel.pipeline());
+
                 channel.connect(remoteAddress).addListener((ChannelFuture connectFuture) -> {
                     if (connectFuture.isSuccess()) {
                         initSession(desiredProtocol, poolKey, connectFuture, sessionPromise);
                     } else {
-                        invokeProxyConnectFailed(desiredProtocol, poolKey, connectFuture.cause());
+                        maybeHandleProxyFailure(desiredProtocol, poolKey, connectFuture.cause());
                         sessionPromise.tryFailure(connectFuture.cause());
                     }
                 });
             } catch (Throwable cause) {
-                invokeProxyConnectFailed(desiredProtocol, poolKey, cause);
+                maybeHandleProxyFailure(desiredProtocol, poolKey, cause);
                 sessionPromise.tryFailure(cause);
             }
         });
@@ -425,7 +429,7 @@ final class HttpChannelPool implements AsyncCloseable {
         return allChannels.size();
     }
 
-    void invokeProxyConnectFailed(SessionProtocol protocol, PoolKey poolKey, Throwable cause) {
+    void maybeHandleProxyFailure(SessionProtocol protocol, PoolKey poolKey, Throwable cause) {
         try {
             final ProxyConfig proxyConfig = poolKey.proxyConfig;
             if (proxyConfig.proxyType() != ProxyType.DIRECT) {
@@ -540,7 +544,7 @@ final class HttpChannelPool implements AsyncCloseable {
             } else {
                 final Throwable throwable = future.cause();
                 if (throwable instanceof ProxyConnectException) {
-                    invokeProxyConnectFailed(desiredProtocol, key, throwable);
+                    maybeHandleProxyFailure(desiredProtocol, key, throwable);
                 }
                 promise.completeExceptionally(UnprocessedRequestException.of(throwable));
             }

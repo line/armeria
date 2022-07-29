@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 
@@ -55,6 +56,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.ChannelFactory;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
@@ -100,6 +102,7 @@ final class HttpClientFactory implements ClientFactory {
     private MeterRegistry meterRegistry;
     private final ProxyConfigSelector proxyConfigSelector;
     private final Http1HeaderNaming http1HeaderNaming;
+    private final Consumer<? super ChannelPipeline> channelPipelineCustomizer;
 
     private final ConcurrentMap<EventLoop, HttpChannelPool> pools = new MapMaker().weakKeys().makeMap();
     private final HttpClientDelegate clientDelegate;
@@ -158,6 +161,7 @@ final class HttpClientFactory implements ClientFactory {
         http1HeaderNaming = options.http1HeaderNaming();
         maxConnectionAgeMillis = options.maxConnectionAgeMillis();
         maxNumRequestsPerConnection = options.maxNumRequestsPerConnection();
+        channelPipelineCustomizer = options.channelPipelineCustomizer();
 
         this.options = options;
 
@@ -239,6 +243,10 @@ final class HttpClientFactory implements ClientFactory {
     @VisibleForTesting
     AddressResolverGroup<InetSocketAddress> addressResolverGroup() {
         return addressResolverGroup;
+    }
+
+    Consumer<? super ChannelPipeline> channelPipelineCustomizer() {
+        return channelPipelineCustomizer;
     }
 
     @Override
@@ -379,6 +387,12 @@ final class HttpClientFactory implements ClientFactory {
     @Override
     public int numConnections() {
         return pools.values().stream().mapToInt(HttpChannelPool::numConnections).sum();
+    }
+
+    @Override
+    public CompletableFuture<Void> closeOnJvmShutdown(Runnable whenClosing) {
+        requireNonNull(whenClosing, "whenClosing");
+        return ShutdownHooks.addClosingTask(this, whenClosing);
     }
 
     HttpChannelPool pool(EventLoop eventLoop) {

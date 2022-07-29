@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMessage;
 import com.linecorp.armeria.common.SplitHttpMessage;
+import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
@@ -55,8 +56,8 @@ abstract class AbstractSplitHttpMessage implements SplitHttpMessage, StreamMessa
     }
 
     @Override
-    public final StreamMessage<HttpData> body() {
-        return this;
+    public final ByteStreamMessage body() {
+        return ByteStreamMessage.of(this);
     }
 
     @Override

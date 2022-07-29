@@ -61,13 +61,17 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.RequestObject;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.EndpointInfoBuilder;
+import com.linecorp.armeria.server.docs.EnumInfo;
+import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldLocation;
@@ -137,7 +141,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         requireNonNull(namedTypeInfoProvider, "namedTypeInfoProvider");
 
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
-        final Map<Class<?>, String> serviceDescription = new HashMap<>();
+        final Map<Class<?>, DescriptionInfo> serviceDescription = new HashMap<>();
         serviceConfigs.forEach(sc -> {
             final AnnotatedService service = sc.service().as(AnnotatedService.class);
             if (service != null) {
@@ -154,7 +158,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         return generate(serviceDescription, methodInfos, namedTypeInfoProvider);
     }
 
-    private static void addServiceDescription(Map<Class<?>, String> serviceDescription,
+    private static void addServiceDescription(Map<Class<?>, DescriptionInfo> serviceDescription,
                                               AnnotatedService service) {
         final Class<?> clazz = service.object().getClass();
         serviceDescription.computeIfAbsent(clazz, AnnotatedServiceFactory::findDescription);
@@ -174,8 +178,9 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 httpMethod -> {
                     final MethodInfo methodInfo = new MethodInfo(
                             name, returnTypeSignature, fieldInfos, ImmutableList.of(), // Ignore exceptions.
-                            ImmutableList.of(endpoint), httpMethod, AnnotatedServiceFactory
-                                    .findDescription(method));
+                            ImmutableList.of(endpoint), httpMethod,
+                            AnnotatedServiceFactory.findDescription(method));
+
                     methodInfos.computeIfAbsent(clazz, unused -> new HashSet<>()).add(methodInfo);
                 });
     }
@@ -311,8 +316,9 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                          .location(location(resolver))
                          .requirement(resolver.shouldExist() ? FieldRequirement.REQUIRED
                                                              : FieldRequirement.OPTIONAL);
-        if (resolver.description() != null) {
-            builder.docString(resolver.description());
+        final DescriptionInfo description = resolver.description();
+        if (description != null) {
+            builder.descriptionInfo(description);
         }
         return builder.build();
     }
@@ -405,6 +411,10 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             return TypeSignature.ofList(toTypeSignature(clazz.getComponentType()));
         }
 
+        if (clazz.isEnum()) {
+            return TypeSignature.ofNamed(clazz);
+        }
+
         return TypeSignature.ofNamed(clazz);
     }
 
@@ -441,7 +451,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    static ServiceSpecification generate(Map<Class<?>, String> serviceDescription,
+    static ServiceSpecification generate(Map<Class<?>, DescriptionInfo> serviceDescription,
                                          Map<Class<?>, Set<MethodInfo>> methodInfos,
                                          NamedTypeInfoProvider namedTypeInfoProvider) {
         final Set<ServiceInfo> serviceInfos = methodInfos
@@ -463,6 +473,12 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             throw new IllegalArgumentException("cannot create a named type from: " + typeSignature);
         }
 
+        // TODO(ikhoon): Handle @Description with NamedTypeProvider
+        // if (type.isEnum()) {
+        //     return newEnumInfo(type);
+        // }
+        // return newStructInfo(type);
+
         NamedTypeInfo namedTypeInfo = provider.newNamedTypeInfo(typeDescriptor);
         if (namedTypeInfo != null) {
             return namedTypeInfo;
@@ -478,6 +494,61 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             // An unresolved StructInfo.
             return new StructInfo(typeSignature.name(), ImmutableList.of());
         }
+    }
+
+    private static EnumInfo newEnumInfo(Class<?> enumClass) {
+        final String name = enumClass.getName();
+        final Description description = AnnotationUtil.findFirst(enumClass, Description.class);
+
+        final Field[] declaredFields = enumClass.getDeclaredFields();
+        final List<EnumValueInfo> values =
+                Stream.of(declaredFields)
+                      .filter(Field::isEnumConstant)
+                      .map(f -> {
+                          final Description valueDescription = AnnotationUtil.findFirst(f, Description.class);
+                          if (valueDescription != null) {
+                              return new EnumValueInfo(f.getName(), null,
+                                                       DescriptionInfo.of(valueDescription.value(),
+                                                                          valueDescription.markup()));
+                          }
+
+                          return new EnumValueInfo(f.getName(), null);
+                      })
+                      .collect(toImmutableList());
+
+        if (description != null) {
+            return new EnumInfo(name, values, DescriptionInfo.of(description.value(), description.markup()));
+        }
+
+        return new EnumInfo(name, values);
+    }
+
+    private static StructInfo newStructInfo(Class<?> structClass) {
+        final String name = structClass.getName();
+        final Description description = AnnotationUtil.findFirst(structClass, Description.class);
+
+        final Field[] declaredFields = structClass.getDeclaredFields();
+        final List<FieldInfo> fields =
+                Stream.of(declaredFields)
+                      .map(f -> {
+                          final Description fieldDescription = AnnotationUtil.findFirst(f, Description.class);
+                          if (fieldDescription != null) {
+                              return FieldInfo.of(
+                                      f.getName(),
+                                      toTypeSignature(f.getGenericType()),
+                                      DescriptionInfo.of(fieldDescription.value(), fieldDescription.markup())
+                              );
+                          }
+
+                          return FieldInfo.of(f.getName(), toTypeSignature(f.getGenericType()));
+                      })
+                      .collect(toImmutableList());
+
+        if (description != null) {
+            return new StructInfo(name, fields, DescriptionInfo.of(description.value(), description.markup()));
+        }
+
+        return new StructInfo(name, fields);
     }
 
     @Override

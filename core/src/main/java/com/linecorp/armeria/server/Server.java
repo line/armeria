@@ -71,6 +71,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
+import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.PathAndQuery;
@@ -471,6 +472,23 @@ public final class Server implements ListenableAsyncCloseable {
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
     }
 
+    /**
+     * Registers a JVM shutdown hook that closes this {@link Server} when the current JVM terminates.
+     */
+    public CompletableFuture<Void> closeOnJvmShutdown() {
+        return ShutdownHooks.addClosingTask(this);
+    }
+
+    /**
+     * Registers a JVM shutdown hook that closes this {@link Server} when the current JVM terminates.
+     *
+     * @param whenClosing the {@link Runnable} will be run before closing this {@link Server}
+     */
+    public CompletableFuture<Void> closeOnJvmShutdown(Runnable whenClosing) {
+        requireNonNull(whenClosing, "whenClosing");
+        return ShutdownHooks.addClosingTask(this, whenClosing);
+    }
+
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {
 
         @Nullable
@@ -656,10 +674,10 @@ public final class Server implements ListenableAsyncCloseable {
             serverChannels.clear();
 
             final Builder<ShutdownSupport> builder = ImmutableList.builder();
+            builder.addAll(config.delegate().shutdownSupports());
             for (VirtualHost virtualHost : config.virtualHosts()) {
                 builder.addAll(virtualHost.shutdownSupports());
             }
-
             for (ServiceConfig serviceConfig : config.serviceConfigs()) {
                 builder.addAll(serviceConfig.shutdownSupports());
             }

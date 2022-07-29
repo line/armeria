@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -145,7 +146,7 @@ public interface BodyPart {
      * Returns the reactive representation of the part content.
      */
     @CheckReturnValue
-    StreamMessage<HttpData> content();
+    ByteStreamMessage content();
 
     /**
      * Writes this {@link BodyPart} to the given {@link Path} with {@link OpenOption}s.

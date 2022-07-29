@@ -49,7 +49,7 @@ class ScalaPbGrpcDocServicePlugin extends DocServicePlugin {
       namedTypeInfoProvider: NamedTypeInfoProvider): ServiceSpecification =
     grpcDocServicePlugin.generateSpecification(serviceConfigs, filter, namedTypeInfoProvider)
 
-  override def loadDocStrings(serviceConfigs: JSet[ServiceConfig]): JMap[String, String] =
+  override def loadDocStrings(serviceConfigs: JSet[ServiceConfig]): JMap[String, DescriptionInfo] =
     grpcDocServicePlugin.loadDocStrings(serviceConfigs)
 
   override def supportedExampleRequestTypes: JSet[Class[_]] =

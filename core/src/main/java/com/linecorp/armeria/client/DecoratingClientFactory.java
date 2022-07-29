@@ -146,4 +146,9 @@ public class DecoratingClientFactory extends AbstractUnwrappable<ClientFactory> 
     public int numConnections() {
         return unwrap().numConnections();
     }
+
+    @Override
+    public CompletableFuture<Void> closeOnJvmShutdown(Runnable whenClosing) {
+        return unwrap().closeOnJvmShutdown(whenClosing);
+    }
 }

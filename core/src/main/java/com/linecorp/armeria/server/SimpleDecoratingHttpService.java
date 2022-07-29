@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.RequestHeaders;
 
 /**
  * An {@link HttpService} that decorates another {@link HttpService}.
@@ -37,7 +36,7 @@ public abstract class SimpleDecoratingHttpService extends SimpleDecoratingServic
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
-        return ((HttpService) unwrap()).exchangeType(headers, route);
+    public ExchangeType exchangeType(RoutingContext routingContext) {
+        return ((HttpService) unwrap()).exchangeType(routingContext);
     }
 }

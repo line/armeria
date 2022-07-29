@@ -16,6 +16,7 @@
 *.bd
 *.beget.app
 *.build.run
+*.builder.code.com
 *.bzz.dapps.earth
 *.ck
 *.cloud.metacentrum.cz
@@ -30,6 +31,7 @@
 *.customer-oci.com
 *.dapps.earth
 *.database.run
+*.dev-builder.code.com
 *.dev.adobeaemcloud.com
 *.devcdnaccesso.com
 *.developer.app
@@ -89,6 +91,7 @@
 *.sensiosite.cloud
 *.spectrum.myjino.ru
 *.statics.cloud
+*.stg-builder.code.com
 *.stg.dev
 *.stgstage.dev
 *.stolos.io
@@ -1080,7 +1083,6 @@ bu.no
 budejju.no
 bugatti
 build
-builder.code.com
 builders
 building.museum
 builtwithdark.com
@@ -1932,7 +1934,6 @@ deta.app
 deta.dev
 detroit.museum
 dev
-dev-builder.code.com
 dev-myqnapcloud.com
 dev.br
 dev.static.land
@@ -3553,6 +3554,7 @@ ibaraki.osaka.jp
 ibestad.no
 ibigawa.gifu.jp
 ibm
+ibxos.it
 ic.gov.pl
 icbc
 ice
@@ -3613,6 +3615,7 @@ il
 il.eu.org
 il.us
 ilawa.pl
+iliadboxos.it
 illustration.museum
 ilovecollege.info
 im
@@ -3873,6 +3876,7 @@ isehara.kanagawa.jp
 isen.kagoshima.jp
 isernia.it
 iserv.dev
+iservschule.de
 isesaki.gunma.jp
 ishigaki.okinawa.jp
 ishikari.hokkaido.jp
@@ -4741,6 +4745,7 @@ logoip.de
 lohmus.me
 lol
 lolipop.io
+lolipopmc.jp
 lolitapunk.jp
 lom.it
 lom.no
@@ -5000,6 +5005,7 @@ meraker.no
 merckmsd
 merseine.nu
 mesaverde.museum
+messerli.app
 messina.it
 messwithdns.com
 meteorapp.com
@@ -7193,6 +7199,7 @@ school.za
 schoolbus.jp
 schools.nsw.edu.au
 schule
+schulplattform.de
 schulserver.de
 schwarz
 schweiz.museum
@@ -7641,7 +7648,6 @@ steam.museum
 steiermark.museum
 steigen.no
 steinkjer.no
-stg-builder.code.com
 sth.ac.at
 stjohn.museum
 stjordal.no

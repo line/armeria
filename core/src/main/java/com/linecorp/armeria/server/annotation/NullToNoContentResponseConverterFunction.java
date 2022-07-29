@@ -15,9 +15,12 @@
  */
 package com.linecorp.armeria.server.annotation;
 
+import java.lang.reflect.Type;
+
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -27,6 +30,11 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * when the specified {@code result} is {@code null}.
  */
 public final class NullToNoContentResponseConverterFunction implements ResponseConverterFunction {
+
+    @Override
+    public Boolean isResponseStreaming(Type returnType, @Nullable MediaType contentType) {
+        return null;
+    }
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,

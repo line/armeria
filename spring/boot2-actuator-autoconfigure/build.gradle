@@ -23,6 +23,7 @@ task generateSources(type: Copy) {
     include '**/ArmeriaServerConfigurator.java'
     include '**/ArmeriaSettings.java'
     include '**/InternalServiceId.java'
+    include '**/SpringDependencyInjector.java'
     include '**/Ssl.java'
 }
 

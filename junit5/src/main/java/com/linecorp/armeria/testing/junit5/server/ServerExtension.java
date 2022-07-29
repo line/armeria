@@ -28,6 +28,7 @@ import org.junit.jupiter.api.extension.ExtensionContext;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.RestClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -338,7 +339,7 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
      */
     @UnstableApi
     public BlockingWebClient blockingWebClient() {
-        return delegate.webClient().blocking();
+        return delegate.blockingWebClient();
     }
 
     /**
@@ -348,7 +349,25 @@ public abstract class ServerExtension extends AbstractAllOrEachExtension {
     @UnstableApi
     public BlockingWebClient blockingWebClient(Consumer<WebClientBuilder> webClientCustomizer) {
         requireNonNull(webClientCustomizer, "webClientCustomizer");
-        return delegate.webClient(webClientCustomizer).blocking();
+        return delegate.blockingWebClient(webClientCustomizer);
+    }
+
+    /**
+     * Returns the {@link RestClient} configured by {@link #configureWebClient(WebClientBuilder)}.
+     */
+    @UnstableApi
+    public RestClient restClient() {
+        return delegate.restClient();
+    }
+
+    /**
+     * Returns a newly created {@link RestClient} configured by
+     * {@link #configureWebClient(WebClientBuilder)} and then the specified customizer.
+     */
+    @UnstableApi
+    public RestClient restClient(Consumer<WebClientBuilder> webClientCustomizer) {
+        requireNonNull(webClientCustomizer, "webClientCustomizer");
+        return delegate.restClient(webClientCustomizer);
     }
 
     /**

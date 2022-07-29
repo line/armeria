@@ -297,7 +297,7 @@ final class HttpHealthChecker implements AsyncCloseable {
                 pingCheckFuture.cancel(false);
             }
 
-            if (updatedHealth) {
+            if (closeable.isClosing() || updatedHealth) {
                 return;
             }
 
