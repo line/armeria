@@ -50,6 +50,7 @@ import com.linecorp.armeria.server.annotation.PathPrefix;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.Trace;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 
 class AnnotatedServiceFactoryTest {
 
@@ -198,14 +199,16 @@ class AnnotatedServiceFactoryTest {
     void testDescriptionLoadingPriority() throws NoSuchMethodException {
         final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod1", String.class)
                                                                        .getParameters()[0];
-        assertThat(AnnotatedServiceFactory.findDescription(parameter)).isEqualTo(ANNOTATED_DESCRIPTION);
+        final DescriptionInfo descriptionInfo = AnnotatedServiceFactory.findDescription(parameter);
+        assertThat(descriptionInfo.docString()).isEqualTo(ANNOTATED_DESCRIPTION);
     }
 
     @Test
     void testDescriptionLoadFromFile() throws NoSuchMethodException {
         final Parameter parameter = DescriptionAnnotatedTestClass.class.getMethod("testMethod2", String.class)
                                                                        .getParameters()[0];
-        assertThat(AnnotatedServiceFactory.findDescription(parameter))
+        final DescriptionInfo descriptionInfo = AnnotatedServiceFactory.findDescription(parameter);
+        assertThat(descriptionInfo.docString())
                 .isEqualTo("This is a description from the properties file");
     }
 

@@ -18,7 +18,10 @@ package com.linecorp.armeria.server.scalapb
 
 import com.google.common.collect.ImmutableSet
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin
-import com.linecorp.armeria.server.docs.{DocServiceFilter, DocServicePlugin, ServiceSpecification}
+import com.linecorp.armeria.server.docs.DescriptionInfo
+import com.linecorp.armeria.server.docs.DocServiceFilter
+import com.linecorp.armeria.server.docs.DocServicePlugin
+import com.linecorp.armeria.server.docs.ServiceSpecification
 import com.linecorp.armeria.server.{Service, ServiceConfig}
 import java.util.{Map => JMap, Set => JSet}
 import scalapb.GeneratedMessage
@@ -43,7 +46,7 @@ class ScalaPbGrpcDocServicePlugin extends DocServicePlugin {
       filter: DocServiceFilter): ServiceSpecification =
     grpcDocServicePlugin.generateSpecification(serviceConfigs, filter)
 
-  override def loadDocStrings(serviceConfigs: JSet[ServiceConfig]): JMap[String, String] =
+  override def loadDocStrings(serviceConfigs: JSet[ServiceConfig]): JMap[String, DescriptionInfo] =
     grpcDocServicePlugin.loadDocStrings(serviceConfigs)
 
   override def supportedExampleRequestTypes: JSet[Class[_]] =

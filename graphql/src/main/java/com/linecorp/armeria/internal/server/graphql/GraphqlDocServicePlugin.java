@@ -35,6 +35,7 @@ import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
@@ -77,7 +78,7 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
         requireNonNull(filter, "filter");
 
         final Map<Class<?>, Set<MethodInfo>> methodInfos = new HashMap<>();
-        final Map<Class<?>, String> serviceDescription = new HashMap<>();
+        final Map<Class<?>, DescriptionInfo> serviceDescription = new HashMap<>();
         serviceConfigs.forEach(sc -> {
             final AbstractGraphqlService service = sc.service().as(AbstractGraphqlService.class);
             if (service != null) {
@@ -135,7 +136,7 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    static ServiceSpecification generate(Map<Class<?>, String> serviceDescription,
+    static ServiceSpecification generate(Map<Class<?>, DescriptionInfo> serviceDescription,
                                          Map<Class<?>, Set<MethodInfo>> methodInfos) {
         final Set<ServiceInfo> serviceInfos = methodInfos
                 .entrySet().stream()
