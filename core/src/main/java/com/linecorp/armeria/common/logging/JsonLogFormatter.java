@@ -28,8 +28,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import com.linecorp.armeria.common.RequestHeaders;
-import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.internal.common.JacksonUtil;
@@ -54,9 +53,9 @@ final class JsonLogFormatter implements LogFormatter {
     }
 
     @Override
-    public String formatRequest(RequestLog log, LogSanitizers<RequestHeaders> sanitizers) {
+    public String formatRequest(RequestLog log, LogSanitizer sanitizer) {
         requireNonNull(log, "log,");
-        requireNonNull(sanitizers, "sanitizers,");
+        requireNonNull(sanitizer, "sanitizer,");
 
         final Set<RequestLogProperty> availableProperties = log.availableProperties();
         if (!availableProperties.contains(RequestLogProperty.REQUEST_START_TIME)) {
@@ -70,16 +69,17 @@ final class JsonLogFormatter implements LogFormatter {
             requestCauseString = null;
         }
 
+        final RequestContext ctx = log.context();
         final String sanitizedHeaders;
         if (availableProperties.contains(RequestLogProperty.REQUEST_HEADERS) && log.requestHeaders() != null) {
-            sanitizedHeaders = sanitize(log, sanitizers.headersSanitizer(), log.requestHeaders());
+            sanitizedHeaders = sanitizer.sanitizeHeaders(ctx, log.requestHeaders());
         } else {
             sanitizedHeaders = null;
         }
 
         final String sanitizedContent;
         if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT) && log.requestContent() != null) {
-            sanitizedContent = sanitize(log, sanitizers.contentSanitizer(), log.requestContent());
+            sanitizedContent = sanitizer.sanitizeContent(ctx, log.requestContent());
         } else {
             sanitizedContent = null;
         }
@@ -87,7 +87,7 @@ final class JsonLogFormatter implements LogFormatter {
         final String sanitizedTrailers;
         if (availableProperties.contains(RequestLogProperty.REQUEST_TRAILERS) &&
             !log.requestTrailers().isEmpty()) {
-            sanitizedTrailers = sanitize(log, sanitizers.trailersSanitizer(), log.requestTrailers());
+            sanitizedTrailers = sanitizer.sanitizeTrailers(ctx, log.requestTrailers());
         } else {
             sanitizedTrailers = null;
         }
@@ -148,9 +148,9 @@ final class JsonLogFormatter implements LogFormatter {
     }
 
     @Override
-    public String formatResponse(RequestLog log, LogSanitizers<ResponseHeaders> sanitizers) {
+    public String formatResponse(RequestLog log, LogSanitizer sanitizer) {
         requireNonNull(log, "log,");
-        requireNonNull(sanitizers, "sanitizers,");
+        requireNonNull(sanitizer, "sanitizer,");
 
         final Set<RequestLogProperty> availableProperties = log.availableProperties();
         if (!availableProperties.contains(RequestLogProperty.RESPONSE_START_TIME)) {
@@ -164,10 +164,11 @@ final class JsonLogFormatter implements LogFormatter {
             responseCauseString = null;
         }
 
+        final RequestContext ctx = log.context();
         final String sanitizedHeaders;
         if (availableProperties.contains(RequestLogProperty.RESPONSE_HEADERS) &&
             log.responseHeaders() != null) {
-            sanitizedHeaders = sanitize(log, sanitizers.headersSanitizer(), log.responseHeaders());
+            sanitizedHeaders = sanitizer.sanitizeHeaders(ctx, log.responseHeaders());
         } else {
             sanitizedHeaders = null;
         }
@@ -175,7 +176,7 @@ final class JsonLogFormatter implements LogFormatter {
         final String sanitizedContent;
         if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT) &&
             log.responseContent() != null) {
-            sanitizedContent = sanitize(log, sanitizers.contentSanitizer(), log.responseContent());
+            sanitizedContent = sanitizer.sanitizeContent(ctx, log.responseContent());
         } else {
             sanitizedContent = null;
         }
@@ -183,7 +184,7 @@ final class JsonLogFormatter implements LogFormatter {
         final String sanitizedTrailers;
         if (availableProperties.contains(RequestLogProperty.RESPONSE_TRAILERS) &&
             !log.responseTrailers().isEmpty()) {
-            sanitizedTrailers = sanitize(log, sanitizers.trailersSanitizer(), log.responseTrailers());
+            sanitizedTrailers = sanitizer.sanitizeTrailers(ctx, log.responseTrailers());
         } else {
             sanitizedTrailers = null;
         }

@@ -1449,9 +1449,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return requestStr;
         }
 
-        final LogSanitizers<RequestHeaders> logSanitizers = new LogSanitizers<>(
+        final LogSanitizer sanitizer = LogSanitizer.ofRequestLogSanitizer(
                 headersSanitizer, contentSanitizer, trailersSanitizer);
-        requestStr = logFormatter.formatRequest(this, logSanitizers);
+        requestStr = logFormatter.formatRequest(this, sanitizer);
         requestStrHeadersSanitizer = headersSanitizer;
         requestStrContentSanitizer = contentSanitizer;
         requestStrTrailersSanitizer = trailersSanitizer;
@@ -1484,10 +1484,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             return responseStr;
         }
 
-        final LogSanitizers<ResponseHeaders> logSanitizers = new LogSanitizers<>(
+        final LogSanitizer logSanitizer = LogSanitizer.ofResponseLogSanitizer(
                 headersSanitizer,
                 contentSanitizer, trailersSanitizer);
-        responseStr = logFormatter.formatResponse(this, logSanitizers);
+        responseStr = logFormatter.formatResponse(this, logSanitizer);
         responseStrHeadersSanitizer = headersSanitizer;
         responseStrContentSanitizer = contentSanitizer;
         responseStrTrailersSanitizer = trailersSanitizer;
