@@ -136,7 +136,7 @@ Let's test updating a blog post. Since we know we are giving an incremental inde
     // Check the existing title and content
     getBlogPost(1);
     // Update the blog with the ID, 1
-    updateBlogPost(1, "Updated title", "Updated content.");
+    updateBlogPost(1, "New title", "New content.");
     // Check the updated blog detail
     getBlogPost(1);
   }
@@ -192,7 +192,7 @@ Let's test updating a blog post. Since we know we are giving an incremental inde
 
 ## 4. Test error case
 
-To check our exception handler working, let's try updating a post we know for sure does not exist.
+To check that our exception handler is working, let's try updating a post we know for sure does not exist.
 
 1. Add a method to test run the update method we just implemented.
   ```java filename=BlogClient.java
@@ -216,6 +216,6 @@ To check our exception handler working, let's try updating a post we know for su
 ## What's next
 
 Here, we've implemented a service method and client method for updating a 
-blog post. Plus, we added exception handling. Next, we'll implement a method for [deleting a blog post](/tutorials/grpc/blog/implement-delete).
+blog post. We've also added exception handling. Next, we'll implement a method for [deleting a blog post](/tutorials/grpc/blog/implement-delete).
 
 <TutorialSteps current={5} />

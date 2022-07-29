@@ -15,7 +15,7 @@ Take advantage of Armeria's [Documentation service](/docs/server-docservice) whi
 
 ## What you need
 
-You need to have the all the files you created for the server-side. No client files are required for this step.
+You need to have all the files you created for the server-side. No client files are required for this step.
 
 - [Java code generated](/tutorials/grpc/blog/define-service#compile-proto-file)
 - Main.java
@@ -23,7 +23,7 @@ You need to have the all the files you created for the server-side. No client fi
 - GrpcExceptionHandler.java
 - BlogNotFoundException.java
 
-## 1. Create DocService instance
+## 1. Create a DocService instance
 
 Create a <type://DocService> instance in `Main.java`.
 
@@ -36,16 +36,16 @@ final class Main {
   private static Server newServer(int port) throws Exception {
     final BlogPost exampleRequest = 
       BlogPost.newBuilder()
-               .setTitle("Example title")
-               .setContent("Example content")
-               .build();
+              .setTitle("Example title")
+              .setContent("Example content")
+              .build();
                                             
     final DocService docService = 
       DocService.builder()
                 .exampleRequests(BlogServiceGrpc.SERVICE_NAME,
                                  "CreateBlogPost", exampleRequest)
                 .exclude(DocServiceFilter.ofServiceName(
-                   ServerReflectionGrpc.SERVICE_NAME))
+                         ServerReflectionGrpc.SERVICE_NAME))
                 .build();
                     
     final BlogPost exampleRequest = 
@@ -58,7 +58,7 @@ final class Main {
 ```
 
 ## 2. Enable unframed requests
-To test making calls on the Documentation service, enable unframed requests by setting <type://GrpcServiceBuilder#enableUnframedRequests(boolean)> to true. This makes the blog service to support requests that are not framed in gRPC wire format. For us, this enables making calls on a web browser.
+To test making calls on the Documentation service, enable unframed requests by setting <type://GrpcServiceBuilder#enableUnframedRequests(boolean)> to true. This makes the blog service support requests that are not framed in gRPC wire format. For us, this enables making calls from a web browser.
 
 ```java filename=Main.java
 private static Server newServer(int port) throws Exception {

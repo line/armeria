@@ -56,7 +56,7 @@ Let's implement a service method `deleteBlogPost()` in `BlogService.java` we've 
   ```
 2. Add Armeria's <type://GrpcServiceBuilder>'s blocking task executor to make all gRPC methods executed in the blocking task executor's thread pool.
 
-  By default, service methods are executed on the event loop, without thread switching, for fully asynchronous implementation. To implement blocking logic, call `useBlockingTaskExecutor(true)`.
+  By default, service methods are executed on the event loop and are expected to be implemented asynchronously. To implement blocking logic, call `useBlockingTaskExecutor(true)`.
 
   ```java filename=Main.java
   private static Server newServer(int port) throws Exception {
