@@ -26,11 +26,11 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
- * A formatter that convert {@link RequestLog} into text message.
+ * A formatter that converts {@link RequestLog} into text message.
  */
-final class DefaultTextLogFormatter implements LogFormatter {
+enum DefaultTextLogFormatter implements LogFormatter {
 
-    static final DefaultTextLogFormatter DEFAULT_INSTANCE = new DefaultTextLogFormatter();
+    INSTANCE;
 
     @Override
     public String formatRequest(RequestLog log, LogSanitizer logSanitizer) {
@@ -214,6 +214,4 @@ final class DefaultTextLogFormatter implements LogFormatter {
             return buf.toString();
         }
     }
-
-    private DefaultTextLogFormatter() {}
 }

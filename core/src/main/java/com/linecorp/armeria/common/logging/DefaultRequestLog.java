@@ -17,6 +17,7 @@ package com.linecorp.armeria.common.logging;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -28,7 +29,6 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.function.BiFunction;
-import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
 
@@ -351,7 +351,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         final int flags = this.flags;
         return Arrays.stream(RequestLogProperty.values())
                      .filter(requestLogProperty -> hasInterestedFlags(flags, requestLogProperty))
-                     .collect(Collectors.toSet());
+                     .collect(toImmutableSet());
     }
 
     // Methods required for updating availability and notifying listeners.
@@ -1668,7 +1668,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         public Set<RequestLogProperty> availableProperties() {
             return Sets.immutableEnumSet(Arrays.stream(RequestLogProperty.values())
                                                .filter(this::isAvailable)
-                                               .collect(Collectors.toSet()));
+                                               .collect(toImmutableSet()));
         }
 
         @Override

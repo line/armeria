@@ -27,7 +27,7 @@ public interface LogFormatter {
      * Returns {@link DefaultTextLogFormatter}.
      */
     static LogFormatter ofText() {
-        return DefaultTextLogFormatter.DEFAULT_INSTANCE;
+        return DefaultTextLogFormatter.INSTANCE;
     }
 
     /**
