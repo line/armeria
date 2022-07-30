@@ -454,8 +454,8 @@ public interface HttpRequest extends Request, HttpMessage {
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the request is received fully.
      *
-     * <p>The {@link AggregatedHttpRequest} is cached by default. So you can repeatedly call this method get the
-     * cached value after the first aggregation.
+     * <p>The {@link AggregatedHttpRequest} is cached by default. So you can repeatedly call this method and
+     * get the cached value after the first aggregation.
      * <pre>{@code
      * HttpRequest request = ...;
      * AggregatedHttpRequest aggregated0 = request.aggregate().join();
@@ -471,8 +471,8 @@ public interface HttpRequest extends Request, HttpMessage {
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the request is received fully.
      *
-     * <p>The {@link AggregatedHttpRequest} is cached by default. So you can repeatedly call this method get the
-     * cached value after the first aggregation.
+     * <p>The {@link AggregatedHttpRequest} is cached by default. So you can repeatedly call this method and
+     * get the cached value after the first aggregation.
      * <pre>{@code
      * HttpRequest request = ...;
      * AggregatedHttpRequest aggregated0 = request.aggregate(executor).join();
@@ -482,10 +482,10 @@ public interface HttpRequest extends Request, HttpMessage {
      */
     default CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
         requireNonNull(executor, "executor");
-        return aggregate(AggregationOptions.builderForRequest(headers())
-                                           .executor(executor)
-                                           .cacheResult(true)
-                                           .build());
+        return aggregate(HttpAggregationOptions.builderForRequest(headers())
+                                               .executor(executor)
+                                               .cacheResult(true)
+                                               .build());
     }
 
     /**
@@ -529,10 +529,10 @@ public interface HttpRequest extends Request, HttpMessage {
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        return aggregate(AggregationOptions.builderForRequest(headers())
-                                           .executor(executor)
-                                           .alloc(alloc)
-                                           .build());
+        return aggregate(HttpAggregationOptions.builderForRequest(headers())
+                                               .executor(executor)
+                                               .withPooledObjects(true, alloc)
+                                               .build());
     }
 
     @Override

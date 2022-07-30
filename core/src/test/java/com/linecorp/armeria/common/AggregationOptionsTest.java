@@ -34,6 +34,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.stream.AggregationOptions;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -85,8 +86,8 @@ class AggregationOptionsTest {
     @Test
     void disallowPooledObjectWithCache() {
         assertThatThrownBy(() -> {
-            AggregationOptions.<Integer, Integer>builder(nums -> 1)
-                              .alloc(ByteBufAllocator.DEFAULT)
+            HttpAggregationOptions.builderForResponse()
+                              .withPooledObjects(true, ByteBufAllocator.DEFAULT)
                               .cacheResult(true)
                               .build();
         }).isInstanceOf(IllegalStateException.class)

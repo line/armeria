@@ -25,8 +25,6 @@ import org.reactivestreams.Subscriber;
 
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.common.AggregationOptions;
-
 import io.netty.util.concurrent.EventExecutor;
 
 /**

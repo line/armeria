@@ -24,8 +24,8 @@ import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
-import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.stream.AbstractStreamMessage;
+import com.linecorp.armeria.common.stream.AggregationOptions;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;

@@ -14,34 +14,38 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.stream;
 
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.function.BiFunction;
 
+import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A builder for {@link AggregationOptions}.
  */
 @UnstableApi
-public final class AggregationOptionsBuilder<T, U> {
+public class AggregationOptionsBuilder<T, U> {
 
     private final BiFunction<? super AggregationOptions<T, U>, ? super List<T>, ? extends U> aggregator;
     @Nullable
-    private ByteBufAllocator alloc;
-    @Nullable
     private EventExecutor executor;
     private boolean cacheResult;
+    private boolean withPooledObjects;
 
-    AggregationOptionsBuilder(
+    /**
+     * Creates an instance.
+     */
+    protected AggregationOptionsBuilder(
             BiFunction<? super AggregationOptions<T, U>, ? super List<T>, ? extends U> aggregator) {
         this.aggregator = requireNonNull(aggregator, "aggregator");
     }
@@ -56,26 +60,18 @@ public final class AggregationOptionsBuilder<T, U> {
     }
 
     /**
-     * (Advanced users only) Sets the {@link ByteBufAllocator} to create a {@link PooledObjects} without
-     * making a copy. If not specified, a {@code byte[]}-based is used to create a {@link HttpData}.
-     *
-     * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
-     * So this method and {@link #cacheResult(boolean)} are mutually exclusive.
-     * If {@link #cacheResult(boolean)} is set {@code true} and an {@link ByteBufAllocator} is set together,
-     * an {@link IllegalStateException} will be raised when {@link #build()} is being called.
+     * Returns the {@link EventExecutor} set via {@link #executor(EventExecutor)}.
      */
-    public AggregationOptionsBuilder<T, U> alloc(ByteBufAllocator alloc) {
-        requireNonNull(alloc, "alloc");
-        this.alloc = alloc;
-        return this;
+    @Nullable
+    protected final EventExecutor executor() {
+        return executor;
     }
 
     /**
      * Returns whether to cache the aggregation result. This option is disabled by default.
-     * Note that this method and {@link #alloc(ByteBufAllocator)} are mutually exclusive.
-     * If {@link #cacheResult(boolean)} is set {@code true} and an {@link ByteBufAllocator} is set together,
+     * Note that this method and {@link #withPooledObjects(boolean)} are mutually exclusive.
+     * If this option is enabled and {@link #withPooledObjects(boolean)} is set true,
      * an {@link IllegalStateException} will be raised when {@link #build()} is being called.
-     *
      */
     public AggregationOptionsBuilder<T, U> cacheResult(boolean cache) {
         cacheResult = cache;
@@ -83,10 +79,35 @@ public final class AggregationOptionsBuilder<T, U> {
     }
 
     /**
+     * Sets whether to cache the aggregation result.
+     */
+    protected final boolean cacheResult() {
+        return cacheResult;
+    }
+
+    /**
+     * (Advanced users only) Sets whether to receive the pooled {@link HttpData} as is, without making a copy.
+     * If you don't know what this means, do not enable this option.
+     * This option is disabled by default.
+     *
+     * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
+     * So this method and {@link #cacheResult(boolean)} are mutually exclusive.
+     * If {@link #cacheResult(boolean)} is set {@code true} and this option is enabled,
+     * an {@link IllegalStateException} will be raised when {@link #build()} is being called.
+     *
+     * @see PooledObjects
+     * @see SubscriptionOption#WITH_POOLED_OBJECTS
+     */
+    public AggregationOptionsBuilder<T, U> withPooledObjects(boolean withPooledObjects) {
+        this.withPooledObjects = withPooledObjects;
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link AggregationOptions} with the properties set so far.
      */
     public AggregationOptions<T, U> build() {
-        if (alloc != null && cacheResult) {
+        if (withPooledObjects && cacheResult) {
             throw new IllegalStateException("Can't cache pooled objects");
         }
 
@@ -97,6 +118,6 @@ public final class AggregationOptionsBuilder<T, U> {
             assert executor != null;
         }
 
-        return new DefaultAggregationOptions<>(aggregator, alloc, executor, cacheResult);
+        return new DefaultAggregationOptions<>(aggregator, executor, cacheResult, withPooledObjects);
     }
 }

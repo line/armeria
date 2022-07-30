@@ -658,10 +658,10 @@ public interface HttpResponse extends Response, HttpMessage {
      */
     default CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor) {
         requireNonNull(executor, "executor");
-        return aggregate(AggregationOptions.builderForResponse()
-                                           .executor(executor)
-                                           .cacheResult(true)
-                                           .build());
+        return aggregate(HttpAggregationOptions.builderForResponse()
+                                               .executor(executor)
+                                               .cacheResult(true)
+                                               .build());
     }
 
     /**
@@ -705,10 +705,10 @@ public interface HttpResponse extends Response, HttpMessage {
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        return aggregate(AggregationOptions.builderForResponse()
-                                           .executor(executor)
-                                           .alloc(alloc)
-                                           .build());
+        return aggregate(HttpAggregationOptions.builderForResponse()
+                                               .executor(executor)
+                                               .withPooledObjects(true, alloc)
+                                               .build());
     }
 
     @Override

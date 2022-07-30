@@ -14,22 +14,18 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.internal.common.HttpMessageAggregator.aggregateRequest;
-import static com.linecorp.armeria.internal.common.HttpMessageAggregator.aggregateResponse;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -93,60 +89,6 @@ public interface AggregationOptions<T, U> {
     }
 
     /**
-     * Returns a new {@link AggregationOptionsBuilder} that builds an {@link AggregationOptions} with various
-     * options to aggregate an {@link HttpRequest} into an {@link AggregatedHttpRequest}.
-     *
-     * <p>Example:
-     * <pre>{@code
-     * ServiceRequestContext ctx = ...;
-     * HttpRequest request = ...;
-     * AggregateOptions options =
-     *     AggregateOptions.builderForRequest(request.headers())
-     *                     // Specify an event loop to execute the aggregation function on.
-     *                     .executor(ctx.eventLoop())
-     *                     // Cache the aggregated `HttpRequest`.
-     *                     .cacheResult(true);
-     *                     .build();
-     *
-     * AggregatedHttpRequest aggregated0 = request.aggregate(options).join();
-     * AggregatedHttpRequest aggregated1 = request.aggregate(options).join();
-     * assert aggregated0 == aggregated1;
-     * }</pre>
-     */
-    static AggregationOptionsBuilder<HttpObject, AggregatedHttpRequest> builderForRequest(
-            RequestHeaders headers) {
-        requireNonNull(headers, "headers");
-        return builder((options, objects) -> aggregateRequest(headers, objects, options.alloc()));
-    }
-
-    /**
-     * Returns a new {@link AggregationOptionsBuilder} that builds an {@link AggregationOptions} with various
-     * options to aggregate an {@link HttpResponse} into an {@link AggregatedHttpResponse}.
-     *
-     * <p>Example:
-     * <pre>{@code
-     * ServiceRequestContext ctx = ...;
-     * HttpResponse response = ...;
-     * AggregateOptions options =
-     *     AggregateOptions.builderForResponse()
-     *                     // Pooled objects are used to aggregated the `HttpResponse`.
-     *                     .alloc(ctx.alloc())
-     *                     // Specify an event loop to execute the aggregation function on.
-     *                     .executor(ctx.eventLoop())
-     *                     // Cache the aggregated `HttpResponse`.
-     *                     .cacheResult(true);
-     *                     .build();
-     *
-     * AggregatedHttpResponse aggregated0 = response.aggregate(options).join();
-     * AggregatedHttpResponse aggregated1 = response.aggregate(options).join();
-     * assert aggregated0 == aggregated1;
-     * }</pre>
-     */
-    static AggregationOptionsBuilder<HttpObject, AggregatedHttpResponse> builderForResponse() {
-        return builder((options, objects) -> aggregateResponse(objects, options.alloc()));
-    }
-
-    /**
      * Returns the aggregation {@link Function} that aggregates a list of {@code T} type objects into
      * a {code U} type object.
      */
@@ -158,18 +100,16 @@ public interface AggregationOptions<T, U> {
     EventExecutor executor();
 
     /**
-     * (Advanced users only) Returns the {@link ByteBufAllocator} that can be used to create a
-     * {@link PooledObjects} without making a copy. If {@code null}, a {@code byte[]}-based is used to create
-     * a {@link HttpData}.
-     *
-     * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
-     * Therefore, if {@link #cacheResult()} is set to {@code true}, this method always returns {@code null}.
-     */
-    @Nullable
-    ByteBufAllocator alloc();
-
-    /**
      * Returns whether to cache the aggregation result.
      */
     boolean cacheResult();
+
+    /**
+     * Returns {@code true} if an {@link HttpData} is passed to the aggregation function as is, without
+     * making a copy.
+     *
+     * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
+     * Therefore, if {@link #cacheResult()} is set to {@code true}, this method always returns {@code false}.
+     */
+    boolean withPooledObjects();
 }

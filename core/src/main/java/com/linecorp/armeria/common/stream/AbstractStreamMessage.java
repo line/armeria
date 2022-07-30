@@ -22,11 +22,8 @@ import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageU
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
-import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-
-import io.netty.buffer.ByteBufAllocator;
 
 /**
  * A skeletal {@link StreamMessage} implementation.
@@ -49,8 +46,8 @@ public abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
 
     @Override
     public <U> CompletableFuture<U> aggregate(AggregationOptions<T, U> options) {
-        final ByteBufAllocator alloc = options.alloc();
-        final SubscriptionOption[] subscriptionOptions = alloc != null ? POOLED_OBJECTS : EMPTY_OPTIONS;
+        final boolean withPooledObjects = options.withPooledObjects();
+        final SubscriptionOption[] subscriptionOptions = withPooledObjects ? POOLED_OBJECTS : EMPTY_OPTIONS;
         if (!options.cacheResult()) {
             return collect(options.executor(), subscriptionOptions).thenApply(options.aggregator());
         }
