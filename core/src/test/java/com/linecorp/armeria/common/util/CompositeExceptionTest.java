@@ -26,22 +26,15 @@ import com.google.common.collect.ImmutableList;
 class CompositeExceptionTest {
 
     private static final String separator = System.getProperty("line.separator");
-    private static final Sampler<Class<? extends Throwable>> alwaysVerboseExceptionSampler =
-            Sampler.always();
-    private static final Sampler<Class<? extends Throwable>> neverVerboseExceptionSampler =
-            Sampler.never();
 
     @Test
     void verboseExceptionEnabledTest() {
         final IllegalStateException ex1 = new IllegalStateException();
         final IllegalArgumentException ex2 = new IllegalArgumentException();
         final CompositeException compositeException =
-                new CompositeException(ImmutableList.of(ex1, ex2), alwaysVerboseExceptionSampler);
-
-        final CompositeException.ExceptionOverview exceptionOverview =
-                (CompositeException.ExceptionOverview) compositeException.getCause();
+                new CompositeException(ImmutableList.of(ex1, ex2), Sampler.always());
         final int separatedStacktraceLength =
-                (int) Arrays.stream(exceptionOverview.getMessage().split(separator))
+                (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
                         .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
                         .count();
 
@@ -56,18 +49,16 @@ class CompositeExceptionTest {
         final IllegalStateException ex1 = new IllegalStateException();
         final IllegalArgumentException ex2 = new IllegalArgumentException();
         final CompositeException compositeException =
-                new CompositeException(ImmutableList.of(ex1, ex2), neverVerboseExceptionSampler);
-
-        final CompositeException.ExceptionOverview exceptionOverview =
-                (CompositeException.ExceptionOverview) compositeException.getCause();
+                new CompositeException(ImmutableList.of(ex1, ex2), Sampler.never());
         final int separatedStacktraceLength =
-                (int) Arrays.stream(exceptionOverview.getMessage().split(separator))
+                (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
                         .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
                         .count();
 
         // Expected: if verboseException option disabled, max output stacktrace is 20
         // this case is occurred 2 exceptions (20 * 2)
-        assertThat(separatedStacktraceLength).isEqualTo(40);
+        assertThat(separatedStacktraceLength).isEqualTo(
+                CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 2);
     }
 
     @Test
@@ -77,24 +68,22 @@ class CompositeExceptionTest {
         final String className = getClass().getSimpleName();
         final String methodName = "verboseExceptionDisabledTestIfStackTraceLengthLessThan20";
         final String fileName = "CompositeExceptionTest.java";
-        final StackTraceElement[] customStackTrace = new StackTraceElement[] {
+        final StackTraceElement[] customStackTrace = {
                 new StackTraceElement(className, methodName, fileName, 1),
                 new StackTraceElement(className, methodName, fileName, 2),
                 new StackTraceElement(className, methodName, fileName, 3),
         };
         ex2.setStackTrace(customStackTrace);
         final CompositeException compositeException =
-                new CompositeException(ImmutableList.of(ex1, ex2), neverVerboseExceptionSampler);
-
-        final CompositeException.ExceptionOverview exceptionOverview =
-                (CompositeException.ExceptionOverview) compositeException.getCause();
+                new CompositeException(ImmutableList.of(ex1, ex2), Sampler.never());
         final int separatedStacktraceLength =
-                (int) Arrays.stream(exceptionOverview.getMessage().split(separator))
+                (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
                         .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
                         .count();
 
         // Expected: if verboseException option disabled, max output stacktrace is 20
         // but this case, one exception has 3 stacktrace (less than 20)
-        assertThat(separatedStacktraceLength).isEqualTo(23);
+        assertThat(separatedStacktraceLength).isEqualTo(
+                CompositeException.DEFAULT_MAX_NUM_STACK_TRACES + 3);
     }
 }

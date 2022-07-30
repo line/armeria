@@ -70,7 +70,7 @@ public final class CompositeException extends RuntimeException {
     // Forked from RxJava 3.0.0 at e793bc1d1a29dca18be795cf4a7628e2d44a4234
 
     private static final long serialVersionUID = 3026362227162912146L;
-    private static final int DEFAULT_MAX_NUM_STACK_TRACES = 20;
+    public static final int DEFAULT_MAX_NUM_STACK_TRACES = 20;
 
     private final List<Throwable> exceptions;
     private final String message;
