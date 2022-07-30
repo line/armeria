@@ -23,6 +23,8 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.internal.testing.AnticipatedException;
+
 class CompositeExceptionTest {
 
     private static final String separator = System.getProperty("line.separator");
@@ -39,7 +41,7 @@ class CompositeExceptionTest {
                         .count();
 
         final int sumStackTraceOutputLength = ex1.getStackTrace().length + ex2.getStackTrace().length;
-        // Expected: if verboseException option enabled, output full stacktrace
+        // if verboseException option enabled, output full stacktrace
         // this case is occurred 2 exceptions (ex1 stacktrace length + ex2 stacktrace length)
         assertThat(separatedStacktraceLength).isEqualTo(sumStackTraceOutputLength);
     }
@@ -55,7 +57,8 @@ class CompositeExceptionTest {
                         .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
                         .count();
 
-        // Expected: if verboseException option disabled, max output stacktrace is 20
+        // if verboseException option disabled, max output stacktrace is
+        // CompositeException.DEFAULT_MAX_NUM_STACK_TRACES.
         // this case is occurred 2 exceptions (20 * 2)
         assertThat(separatedStacktraceLength).isEqualTo(
                 CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 2);
@@ -81,9 +84,104 @@ class CompositeExceptionTest {
                         .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
                         .count();
 
-        // Expected: if verboseException option disabled, max output stacktrace is 20
+        // if verboseException option disabled, max output stacktrace is
+        // CompositeException.DEFAULT_MAX_NUM_STACK_TRACES.
         // but this case, one exception has 3 stacktrace (less than 20)
         assertThat(separatedStacktraceLength).isEqualTo(
                 CompositeException.DEFAULT_MAX_NUM_STACK_TRACES + 3);
+    }
+
+    @Test
+    void verboseExceptionEnabledTestComposite() {
+        final IllegalStateException ex1 = new IllegalStateException();
+        final IllegalArgumentException ex2 = new IllegalArgumentException();
+        final AnticipatedException ex3 = new AnticipatedException(ex2);
+        final CompositeException compositeException =
+                new CompositeException(ImmutableList.of(ex1, ex3), Sampler.always());
+        final int separatedStacktraceLength =
+                (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
+                            .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
+                            .count();
+        final int sumStackTraceOutputLength = ex1.getStackTrace().length + ex2.getStackTrace().length +
+                                              ex3.getStackTrace().length;
+
+        // if verboseException option enabled, test for composite exceptions.
+        // Expected: ex1 StackTraces + ex2 StackTraces + ex3 StackTraces
+        assertThat(separatedStacktraceLength).isEqualTo(sumStackTraceOutputLength);
+    }
+
+    @Test
+    void verboseExceptionEnabledTestMultipleContainsCustomStackTraces() {
+        final IllegalStateException ex1 = new IllegalStateException();
+        final IllegalArgumentException ex2 = new IllegalArgumentException();
+        final AnticipatedException ex3 = new AnticipatedException(ex2);
+        final String className = getClass().getSimpleName();
+        final String methodName = "verboseExceptionDisabledTestIfStackTraceLengthLessThan20";
+        final String fileName = "CompositeExceptionTest.java";
+        final StackTraceElement[] customStackTrace = {
+                new StackTraceElement(className, methodName, fileName, 1),
+                new StackTraceElement(className, methodName, fileName, 2),
+                new StackTraceElement(className, methodName, fileName, 3),
+        };
+        ex2.setStackTrace(customStackTrace);
+        final CompositeException compositeException =
+                new CompositeException(ImmutableList.of(ex1, ex3), Sampler.always());
+        final int separatedStacktraceLength =
+                (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
+                            .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
+                            .count();
+        final int sumStackTraceOutputLength = ex1.getStackTrace().length + ex2.getStackTrace().length +
+                                              ex3.getStackTrace().length;
+
+        // if verboseException option enabled, test for composite exceptions.
+        // Expected: ex1 StackTraces + ex2 StackTraces(3) + ex3 StackTraces
+        assertThat(separatedStacktraceLength).isEqualTo(
+                sumStackTraceOutputLength);
+    }
+
+    @Test
+    void verboseExceptionDisabledTestMultiple() {
+        final IllegalStateException ex1 = new IllegalStateException();
+        final IllegalArgumentException ex2 = new IllegalArgumentException();
+        final AnticipatedException ex3 = new AnticipatedException(ex2);
+        final CompositeException compositeException =
+                new CompositeException(ImmutableList.of(ex1, ex3), Sampler.never());
+        final int separatedStacktraceLength =
+                (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
+                            .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
+                            .count();
+
+        // if verboseException option enabled, test for composite exceptions.
+        // Expected: CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 3
+        assertThat(separatedStacktraceLength).isEqualTo(
+                CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 3);
+    }
+
+    @Test
+    void verboseExceptionDisabledTestMultipleContainsCustomStackTraces() {
+        final IllegalStateException ex1 = new IllegalStateException();
+        final IllegalArgumentException ex2 = new IllegalArgumentException();
+        final AnticipatedException ex3 = new AnticipatedException(ex2);
+        final String className = getClass().getSimpleName();
+        final String methodName = "verboseExceptionDisabledTestIfStackTraceLengthLessThan20";
+        final String fileName = "CompositeExceptionTest.java";
+        final StackTraceElement[] customStackTrace = {
+                new StackTraceElement(className, methodName, fileName, 1),
+                new StackTraceElement(className, methodName, fileName, 2),
+                new StackTraceElement(className, methodName, fileName, 3),
+                };
+        ex2.setStackTrace(customStackTrace);
+        final CompositeException compositeException =
+                new CompositeException(ImmutableList.of(ex1, ex3), Sampler.never());
+        final int separatedStacktraceLength =
+                (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
+                            .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
+                            .count();
+        System.out.println(compositeException.getCause().getMessage());
+
+        // if verboseException option enabled, test for composite exceptions.
+        // Expected: CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 3 + ex2 StackTraces(3)
+        assertThat(separatedStacktraceLength).isEqualTo(
+                CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 2 + 3);
     }
 }
