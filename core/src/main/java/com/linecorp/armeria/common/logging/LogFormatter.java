@@ -18,9 +18,12 @@ package com.linecorp.armeria.common.logging;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A formatter that convert {@link RequestLog} into {@link String log message} using {@link LogSanitizer}.
  */
+@UnstableApi
 public interface LogFormatter {
 
     /**

@@ -30,12 +30,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
  * A formatter that convert {@link RequestLog} into json format message.
  */
+@UnstableApi
 final class JsonLogFormatter implements LogFormatter {
 
     static final JsonLogFormatter DEFAULT_INSTANCE = new JsonLogFormatter();
@@ -71,7 +73,7 @@ final class JsonLogFormatter implements LogFormatter {
 
         final RequestContext ctx = log.context();
         final String sanitizedHeaders;
-        if (availableProperties.contains(RequestLogProperty.REQUEST_HEADERS) && log.requestHeaders() != null) {
+        if (availableProperties.contains(RequestLogProperty.REQUEST_HEADERS)) {
             sanitizedHeaders = sanitizer.sanitizeHeaders(ctx, log.requestHeaders());
         } else {
             sanitizedHeaders = null;
@@ -111,16 +113,18 @@ final class JsonLogFormatter implements LogFormatter {
                 gen.writeStringField("cause", requestCauseString);
             }
 
-            if (availableProperties.contains(RequestLogProperty.SCHEME) && log.scheme() != null) {
+            if (availableProperties.contains(RequestLogProperty.SCHEME)) {
                 gen.writeStringField("scheme", log.scheme().uriText());
             } else if (availableProperties.contains(RequestLogProperty.SESSION)) {
                 gen.writeStringField("scheme",
                                      SerializationFormat.UNKNOWN.uriText() + '+' +
-                                     log.sessionProtocol() != null ? log.sessionProtocol().uriText() :
-                                     "unknown");
+                                     log.sessionProtocol());
+            } else {
+                gen.writeStringField("scheme",
+                                     SerializationFormat.UNKNOWN.uriText() + "+unknown");
             }
 
-            if (availableProperties.contains(RequestLogProperty.NAME) && log.name() != null) {
+            if (availableProperties.contains(RequestLogProperty.NAME)) {
                 gen.writeStringField("name", log.name());
             }
 
@@ -166,8 +170,7 @@ final class JsonLogFormatter implements LogFormatter {
 
         final RequestContext ctx = log.context();
         final String sanitizedHeaders;
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_HEADERS) &&
-            log.responseHeaders() != null) {
+        if (availableProperties.contains(RequestLogProperty.RESPONSE_HEADERS)) {
             sanitizedHeaders = sanitizer.sanitizeHeaders(ctx, log.responseHeaders());
         } else {
             sanitizedHeaders = null;

@@ -22,12 +22,14 @@ import java.util.Set;
 
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * A formatter that converts {@link RequestLog} into text message.
  */
+@UnstableApi
 enum DefaultTextLogFormatter implements LogFormatter {
 
     INSTANCE;
@@ -51,7 +53,7 @@ enum DefaultTextLogFormatter implements LogFormatter {
 
         final RequestContext ctx = log.context();
         final String sanitizedHeaders;
-        if (availableProperties.contains(RequestLogProperty.REQUEST_HEADERS) && log.requestHeaders() != null) {
+        if (availableProperties.contains(RequestLogProperty.REQUEST_HEADERS)) {
             sanitizedHeaders = logSanitizer.sanitizeHeaders(ctx, log.requestHeaders());
         } else {
             sanitizedHeaders = null;
@@ -92,15 +94,19 @@ enum DefaultTextLogFormatter implements LogFormatter {
             }
 
             buf.append(", scheme=");
-            if (availableProperties.contains(RequestLogProperty.SCHEME) && log.scheme() != null) {
+            if (availableProperties.contains(RequestLogProperty.SCHEME)) {
                 buf.append(log.scheme().uriText());
             } else if (availableProperties.contains(RequestLogProperty.SESSION)) {
                 buf.append(SerializationFormat.UNKNOWN.uriText())
                    .append('+')
-                   .append(log.sessionProtocol() != null ? log.sessionProtocol().uriText() : "unknown");
+                   .append(log.sessionProtocol());
+            } else {
+                buf.append(SerializationFormat.UNKNOWN.uriText())
+                   .append('+')
+                   .append("unknown");
             }
 
-            if (availableProperties.contains(RequestLogProperty.NAME) && log.name() != null) {
+            if (availableProperties.contains(RequestLogProperty.NAME)) {
                 buf.append(", name=").append(log.name());
             }
 
@@ -143,8 +149,7 @@ enum DefaultTextLogFormatter implements LogFormatter {
 
         final RequestContext ctx = log.context();
         final String sanitizedHeaders;
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_HEADERS) &&
-            log.responseHeaders() != null) {
+        if (availableProperties.contains(RequestLogProperty.RESPONSE_HEADERS)) {
             sanitizedHeaders = sanitizer.sanitizeHeaders(ctx, log.responseHeaders());
         } else {
             sanitizedHeaders = null;

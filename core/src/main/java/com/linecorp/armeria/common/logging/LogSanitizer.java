@@ -23,10 +23,12 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A sanitizer for HTTP headers, content, and trailers.
  */
+@UnstableApi
 public interface LogSanitizer {
 
     static LogSanitizer ofRequestLogSanitizer(
