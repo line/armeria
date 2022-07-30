@@ -28,6 +28,7 @@ import com.linecorp.armeria.internal.testing.AnticipatedException;
 class CompositeExceptionTest {
 
     private static final String separator = System.getProperty("line.separator");
+    private static final String PADDING = "  ";
 
     @Test
     void verboseExceptionEnabledTest() {
@@ -169,7 +170,7 @@ class CompositeExceptionTest {
                 new StackTraceElement(className, methodName, fileName, 1),
                 new StackTraceElement(className, methodName, fileName, 2),
                 new StackTraceElement(className, methodName, fileName, 3),
-                };
+        };
         ex2.setStackTrace(customStackTrace);
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex3), Sampler.never());
@@ -177,11 +178,83 @@ class CompositeExceptionTest {
                 (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
                             .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
                             .count();
-        System.out.println(compositeException.getCause().getMessage());
+        Arrays.stream(compositeException.getCause().getMessage().split(separator))
+                      .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
+                      .forEach(System.out::println);
 
         // if verboseException option enabled, test for composite exceptions.
         // Expected: CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 3 + ex2 StackTraces(3)
         assertThat(separatedStacktraceLength).isEqualTo(
                 CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 2 + 3);
+    }
+
+    @Test
+    public void paddingTest() {
+        final IllegalStateException ex1 = new IllegalStateException();
+        final IllegalArgumentException ex2 = new IllegalArgumentException();
+        final String className = getClass().getSimpleName();
+        final String methodName = "verboseExceptionDisabledTestIfStackTraceLengthLessThan20";
+        final String fileName = "CompositeExceptionTest.java";
+        final StackTraceElement[] customStackTrace = {
+                new StackTraceElement(className, methodName, fileName, 1),
+                new StackTraceElement(className, methodName, fileName, 2),
+                new StackTraceElement(className, methodName, fileName, 3),
+        };
+        ex1.setStackTrace(customStackTrace);
+        ex2.setStackTrace(customStackTrace);
+        final CompositeException compositeException =
+                new CompositeException(ImmutableList.of(ex1, ex2), Sampler.never());
+        final int paddingCount = Arrays.stream(compositeException.getCause().getMessage().split(separator))
+              .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
+              .mapToInt(line -> {
+                  int padding = 0;
+                  final int paddingLength = PADDING.length();
+                  while (line.startsWith(PADDING)) {
+                      line = line.substring(paddingLength);
+                      padding += paddingLength;
+                  }
+                  return padding;
+              })
+              .sum();
+
+        // padding * stack trace length * exception length
+        final int expectPaddingCount = 4 * 3 * 2;
+        assertThat(paddingCount).isEqualTo(expectPaddingCount);
+    }
+
+    @Test
+    public void compositeExceptionPaddingTest() {
+        final IllegalStateException ex1 = new IllegalStateException();
+        final IllegalArgumentException ex2 = new IllegalArgumentException();
+        final AnticipatedException ex3 = new AnticipatedException(ex2);
+        final String className = getClass().getSimpleName();
+        final String methodName = "verboseExceptionDisabledTestIfStackTraceLengthLessThan20";
+        final String fileName = "CompositeExceptionTest.java";
+        final StackTraceElement[] customStackTrace = {
+                new StackTraceElement(className, methodName, fileName, 1),
+                new StackTraceElement(className, methodName, fileName, 2),
+                new StackTraceElement(className, methodName, fileName, 3),
+        };
+        ex1.setStackTrace(customStackTrace);
+        ex2.setStackTrace(customStackTrace);
+        ex3.setStackTrace(customStackTrace);
+        final CompositeException compositeException =
+                new CompositeException(ImmutableList.of(ex1, ex3), Sampler.never());
+        final int paddingCount = Arrays.stream(compositeException.getCause().getMessage().split(separator))
+             .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
+             .mapToInt(line -> {
+                 int padding = 0;
+                 final int paddingLength = PADDING.length();
+                 while (line.startsWith(PADDING)) {
+                     line = line.substring(paddingLength);
+                     padding += paddingLength;
+                 }
+                 return padding;
+             })
+             .sum();
+        // padding * custom stack trace length * exception length + ( composite exception padding *
+        // custom stack trace length )
+        final int expectPaddingCount = 4 * 3 * 2 + (6 * 3);
+        assertThat(paddingCount).isEqualTo(expectPaddingCount);
     }
 }
