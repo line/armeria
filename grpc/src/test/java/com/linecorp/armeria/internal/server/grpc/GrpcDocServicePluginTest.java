@@ -55,6 +55,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
@@ -241,7 +242,7 @@ class GrpcDocServicePluginTest {
         assertThat(methodInfo.parameters().get(0).typeSignature().namedTypeDescriptor())
                 .isEqualTo(SimpleRequest.getDescriptor());
         assertThat(methodInfo.exceptionTypeSignatures()).isEmpty();
-        assertThat(methodInfo.descriptionInfo()).isNull();
+        assertThat(methodInfo.descriptionInfo()).isSameAs(DescriptionInfo.empty());
         assertThat(methodInfo.endpoints()).containsExactlyInAnyOrder(
                 EndpointInfo.builder("*", "/foo")
                             .availableFormats(GrpcSerializationFormats.PROTO)

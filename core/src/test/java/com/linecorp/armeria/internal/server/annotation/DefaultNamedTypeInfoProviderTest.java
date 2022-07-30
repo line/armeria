@@ -140,7 +140,7 @@ class DefaultNamedTypeInfoProviderTest {
     void requestDescriptor() {
         StructInfo structInfo =
                 (StructInfo) requestStructInfoProvider.newNamedTypeInfo(RequestConstructor.class);
-        assertThat(structInfo.fields()).containsExactly(
+        assertThat(structInfo.fields()).containsExactlyInAnyOrder(
                 FieldInfo.builder("constructorField1", STRING)
                          .requirement(FieldRequirement.REQUIRED)
                          .descriptionInfo(DescriptionInfo.of("constructor description1", Markup.NONE))
@@ -192,11 +192,11 @@ class DefaultNamedTypeInfoProviderTest {
         assertThat(structInfo.fields()).containsExactly(
                 FieldInfo.builder("nonPrefixGetterField1", STRING)
                          .requirement(FieldRequirement.REQUIRED)
-                         .descriptionInfo(DescriptionInfo.of("getter description1", Markup.NONE))
+                         .descriptionInfo(DescriptionInfo.of("non prefix getter description1", Markup.NONE))
                          .build(),
                 FieldInfo.builder("nonPrefixGetterField2", STRING)
                          .requirement(FieldRequirement.REQUIRED)
-                         .descriptionInfo(DescriptionInfo.of("getter description2", Markup.NONE))
+                         .descriptionInfo(DescriptionInfo.of("non prefix getter description2", Markup.NONE))
                          .build());
     }
 
@@ -420,7 +420,7 @@ class DefaultNamedTypeInfoProviderTest {
         RequestConstructor(@JsonProperty("constructorField1")
                            @Description("constructor description1") String constructorField1,
                            @JsonProperty("constructorField2")
-                           @Description("constructor description1") @Nullable String constructorField2) {
+                           @Description("constructor description2") @Nullable String constructorField2) {
             this.constructorField1 = constructorField1;
             this.constructorField2 = constructorField2;
         }

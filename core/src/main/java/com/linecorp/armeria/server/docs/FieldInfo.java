@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 import java.util.Objects;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -93,12 +93,12 @@ public final class FieldInfo {
     FieldInfo(String name, FieldLocation location, FieldRequirement requirement,
               TypeSignature typeSignature, List<FieldInfo> childFieldInfos,
               DescriptionInfo descriptionInfo) {
-        this.name = name;
-        this.location = location;
-        this.requirement = requirement;
-        this.typeSignature = typeSignature;
-        this.childFieldInfos = childFieldInfos;
-        this.descriptionInfo = descriptionInfo;
+        this.name = requireNonNull(name, "name");
+        this.location = requireNonNull(location, "name");
+        this.requirement = requireNonNull(requirement, "requirement");
+        this.typeSignature = requireNonNull(typeSignature, "typeSignature");
+        this.childFieldInfos = requireNonNull(childFieldInfos, "childFieldInfos");
+        this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
     }
 
     /**
@@ -145,10 +145,20 @@ public final class FieldInfo {
      * Returns the description information object of the field.
      */
     @JsonProperty
-    @JsonInclude(Include.NON_NULL)
-    @Nullable
     public DescriptionInfo descriptionInfo() {
         return descriptionInfo;
+    }
+
+    /**
+     * Returns a new {@link FieldInfo} with the specified {@link DescriptionInfo}.
+     * Returns {@code this} if this {@link FieldInfo} has the same {@link DescriptionInfo}.
+     */
+    public FieldInfo withDescriptionInfo(DescriptionInfo descriptionInfo) {
+        requireNonNull(descriptionInfo, "descriptionInfo");
+        if (descriptionInfo.equals(this.descriptionInfo)) {
+            return this;
+        }
+        return new FieldInfo(name, location, requirement, typeSignature, childFieldInfos, descriptionInfo);
     }
 
     @Override
@@ -166,12 +176,13 @@ public final class FieldInfo {
                location == that.location &&
                requirement == that.requirement &&
                typeSignature.equals(that.typeSignature) &&
-               childFieldInfos.equals(that.childFieldInfos);
+               childFieldInfos.equals(that.childFieldInfos) &&
+               descriptionInfo.equals(that.descriptionInfo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, location, requirement, typeSignature, childFieldInfos);
+        return Objects.hash(name, location, requirement, typeSignature, childFieldInfos, descriptionInfo);
     }
 
     @Override
@@ -182,6 +193,7 @@ public final class FieldInfo {
                           .add("requirement", requirement)
                           .add("typeSignature", typeSignature)
                           .add("childFieldInfos", childFieldInfos)
+                          .add("descriptionInfo", descriptionInfo)
                           .add("descriptionInfo", descriptionInfo)
                           .toString();
     }

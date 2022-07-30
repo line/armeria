@@ -93,14 +93,26 @@ public final class EnumValueInfo {
      * Returns the description information that describes the enum value.
      */
     @JsonProperty
-    @JsonInclude(Include.NON_NULL)
     public DescriptionInfo descriptionInfo() {
         return descriptionInfo;
     }
 
+    /**
+     * Returns a new {@link EnumValueInfo} with the specified {@link DescriptionInfo}.
+     * Returns {@code this} if this {@link EnumValueInfo} has the same {@link DescriptionInfo}.
+     */
+    public EnumValueInfo withDescriptionInfo(DescriptionInfo descriptionInfo) {
+        requireNonNull(descriptionInfo, "descriptionInfo");
+        if (descriptionInfo.equals(this.descriptionInfo)) {
+            return this;
+        }
+
+        return new EnumValueInfo(name, intValue, descriptionInfo);
+    }
+
     @Override
     public int hashCode() {
-        return Objects.hash(name, intValue);
+        return Objects.hash(name, intValue, descriptionInfo);
     }
 
     @Override
@@ -113,7 +125,9 @@ public final class EnumValueInfo {
         }
 
         final EnumValueInfo that = (EnumValueInfo) o;
-        return name.equals(that.name) && Objects.equals(intValue, that.intValue);
+        return name.equals(that.name) &&
+               Objects.equals(intValue, that.intValue) &&
+               descriptionInfo.equals(that.descriptionInfo);
     }
 
     @Override

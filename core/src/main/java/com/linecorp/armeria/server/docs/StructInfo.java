@@ -55,7 +55,7 @@ public final class StructInfo implements NamedTypeInfo {
     public StructInfo(String name, Iterable<FieldInfo> fields, DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
         this.fields = ImmutableList.copyOf(requireNonNull(fields, "fields"));
-        this.descriptionInfo = descriptionInfo;
+        this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
     }
 
     @Override
@@ -72,12 +72,38 @@ public final class StructInfo implements NamedTypeInfo {
     }
 
     /**
+     * Returns a new {@link StructInfo} with the specified {@link FieldInfo}s.
+     * Returns {@code this} if this {@link StructInfo} has the same {@link FieldInfo}s.
+     */
+    public StructInfo withFields(Iterable<FieldInfo> fields) {
+        requireNonNull(fields, "fields");
+        if (fields.equals(this.fields)) {
+            return this;
+        }
+
+        return new StructInfo(name, fields, descriptionInfo);
+    }
+
+    /**
      * Returns the description information of this struct.
      */
     @JsonProperty
     @Override
     public DescriptionInfo descriptionInfo() {
         return descriptionInfo;
+    }
+
+    /**
+     * Returns a new {@link StructInfo} with the specified {@link DescriptionInfo}.
+     * Returns {@code this} if this {@link StructInfo} has the same {@link DescriptionInfo}.
+     */
+    public StructInfo withDescriptionInfo(DescriptionInfo descriptionInfo) {
+        requireNonNull(descriptionInfo, "descriptionInfo");
+        if (descriptionInfo.equals(this.descriptionInfo)) {
+            return this;
+        }
+
+        return new StructInfo(name, fields, descriptionInfo);
     }
 
     @Override

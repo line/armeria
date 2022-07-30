@@ -333,7 +333,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                     examplePaths,
                     exampleQueries,
                     firstEndpoint.httpMethod(),
-                    /* docString */ null));
+                    DescriptionInfo.empty()));
         });
         return new ServiceInfo(serviceName, methodInfos.build());
     }
@@ -408,7 +408,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 /* examplePaths */ ImmutableList.of(),
                 /* exampleQueries */ ImmutableList.of(),
                 HttpMethod.POST,
-                /* docString */ null);
+                DescriptionInfo.empty());
     }
 
     private static List<String> defaultExamples(MethodDescriptor method) {

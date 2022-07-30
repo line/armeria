@@ -98,11 +98,37 @@ public final class EnumInfo implements NamedTypeInfo {
     }
 
     /**
+     * Returns a new {@link EnumInfo} with the specified {@link DescriptionInfo}.
+     * Returns {@code this} if this {@link EnumInfo} has the same {@link DescriptionInfo}.
+     */
+    public EnumInfo withValues(Iterable<EnumValueInfo> values) {
+        requireNonNull(values, "values");
+        if (values.equals(this.values)) {
+            return this;
+        }
+
+        return new EnumInfo(name, values, descriptionInfo);
+    }
+
+    /**
      * Returns the description information of the enum.
      */
     @Override
     public DescriptionInfo descriptionInfo() {
         return descriptionInfo;
+    }
+
+    /**
+     * Returns a new {@link EnumInfo} with the specified {@link DescriptionInfo}.
+     * Returns {@code this} if this {@link EnumInfo} has the same {@link DescriptionInfo}.
+     */
+    public EnumInfo withDescriptionInfo(DescriptionInfo descriptionInfo) {
+        requireNonNull(descriptionInfo, "descriptionInfo");
+        if (descriptionInfo.equals(this.descriptionInfo)) {
+            return this;
+        }
+
+        return new EnumInfo(name, values, descriptionInfo);
     }
 
     private static Iterable<EnumValueInfo> toEnumValues(Class<? extends Enum<?>> enumType) {

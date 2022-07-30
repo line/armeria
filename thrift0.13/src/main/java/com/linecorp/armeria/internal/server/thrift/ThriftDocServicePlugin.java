@@ -271,7 +271,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                               ImmutableList.of(),
                               ImmutableList.of(),
                               ImmutableList.of(),
-                              HttpMethod.POST, null);
+                              HttpMethod.POST, DescriptionInfo.empty());
     }
 
     private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature,

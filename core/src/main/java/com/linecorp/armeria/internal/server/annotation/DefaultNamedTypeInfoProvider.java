@@ -269,11 +269,11 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
 
     private static DescriptionInfo classDescriptionInfo(Class<?> clazz) {
         final Description description = AnnotationUtil.findFirst(clazz, Description.class);
-        DescriptionInfo descriptionInfo = DescriptionInfo.empty();
         if (description != null) {
-            descriptionInfo = DescriptionInfo.from(description);
+            return DescriptionInfo.from(description);
+        } else {
+            return DescriptionInfo.empty();
         }
-        return descriptionInfo;
     }
 
     private DescriptionInfo fieldDescriptionInfo(JavaType classType, JavaType fieldType, String fieldName) {

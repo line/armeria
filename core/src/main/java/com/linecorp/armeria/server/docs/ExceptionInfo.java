@@ -71,9 +71,35 @@ public final class ExceptionInfo implements NamedTypeInfo {
         return fields;
     }
 
+    /**
+     * Returns a new {@link ExceptionInfo} with the specified {@link FieldInfo}s.
+     * Returns {@code this} if this {@link ExceptionInfo} has the same {@link FieldInfo}s.
+     */
+    public ExceptionInfo withFields(Iterable<FieldInfo> fields) {
+        requireNonNull(fields, "fields");
+        if (fields.equals(this.fields)) {
+            return this;
+        }
+
+        return new ExceptionInfo(name, fields, descriptionInfo);
+    }
+
     @Override
     public DescriptionInfo descriptionInfo() {
         return descriptionInfo;
+    }
+
+    /**
+     * Returns a new {@link ExceptionInfo} with the specified {@link DescriptionInfo}.
+     * Returns {@code this} if this {@link ExceptionInfo} has the same {@link DescriptionInfo}.
+     */
+    public ExceptionInfo withDescriptionInfo(DescriptionInfo descriptionInfo) {
+        requireNonNull(descriptionInfo, "descriptionInfo");
+        if (descriptionInfo.equals(this.descriptionInfo)) {
+            return this;
+        }
+
+        return new ExceptionInfo(name, fields, descriptionInfo);
     }
 
     @Override
@@ -94,7 +120,8 @@ public final class ExceptionInfo implements NamedTypeInfo {
         }
 
         final ExceptionInfo that = (ExceptionInfo) o;
-        return name.equals(that.name) && fields.equals(that.fields) &&
+        return name.equals(that.name) &&
+               fields.equals(that.fields) &&
                descriptionInfo.equals(that.descriptionInfo);
     }
 

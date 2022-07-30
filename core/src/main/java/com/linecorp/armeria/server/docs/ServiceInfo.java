@@ -98,6 +98,19 @@ public final class ServiceInfo {
     }
 
     /**
+     * Returns a new {@link ServiceInfo} with the specified {@link MethodInfo}s.
+     * Returns {@code this} if this {@link ServiceInfo} has the same {@link MethodInfo}s.
+     */
+    public ServiceInfo withMethods(Iterable<MethodInfo> methods) {
+        requireNonNull(methods, "methods");
+        if (methods.equals(this.methods)) {
+            return this;
+        }
+
+        return new ServiceInfo(name, methods, exampleHeaders, descriptionInfo);
+    }
+
+    /**
      * Merges the {@link MethodInfo}s with the same method name and {@link HttpMethod} pair
      * into a single {@link MethodInfo}. Note that only the {@link EndpointInfo}s are merged
      * because the {@link MethodInfo}s being merged always have the same
@@ -162,11 +175,37 @@ public final class ServiceInfo {
     }
 
     /**
+     * Returns a new {@link ServiceInfo} with the specified {@link DescriptionInfo}.
+     * Returns {@code this} if this {@link ServiceInfo} has the same {@link DescriptionInfo}.
+     */
+    public ServiceInfo withDescriptionInfo(DescriptionInfo descriptionInfo) {
+        requireNonNull(descriptionInfo, "descriptionInfo");
+        if (descriptionInfo.equals(this.descriptionInfo)) {
+            return this;
+        }
+
+        return new ServiceInfo(name, methods, exampleHeaders, descriptionInfo);
+    }
+
+    /**
      * Returns the example HTTP headers of the service.
      */
     @JsonProperty
     public List<HttpHeaders> exampleHeaders() {
         return exampleHeaders;
+    }
+
+    /**
+     * Returns a new {@link ServiceInfo} with the specified example headers.
+     * Returns {@code this} if this {@link ServiceInfo} has the same example headers.
+     */
+    public ServiceInfo withExampleHeaders(Iterable<HttpHeaders> exampleHeaders) {
+        requireNonNull(exampleHeaders, "exampleHeaders");
+        if (exampleHeaders.equals(this.exampleHeaders)) {
+            return this;
+        }
+
+        return new ServiceInfo(name, methods, exampleHeaders, descriptionInfo);
     }
 
     @Override

@@ -104,7 +104,7 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
         final Class<?> clazz = service.getClass();
         final MethodInfo methodInfo = new MethodInfo(
                 name, JSON, fieldInfos, ImmutableList.of(), // Ignore exceptions.
-                ImmutableList.of(endpoint), HttpMethod.POST, null);
+                ImmutableList.of(endpoint), HttpMethod.POST, DescriptionInfo.empty());
         methodInfos.computeIfAbsent(clazz, unused -> new HashSet<>()).add(methodInfo);
     }
 

@@ -213,9 +213,9 @@ public final class DocService extends SimpleDecoratingHttpService {
                               .filter(se -> virtualHosts.contains(se.virtualHost()))
                               .collect(toImmutableList());
 
+                final DocStringSupport docStringSupport = new DocStringSupport(services);
                 ServiceSpecification spec = generate(services);
-
-                spec = addDocStrings(spec, services);
+                spec = docStringSupport.addDocStrings(spec);
                 spec = addExamples(spec);
 
                 final List<Version> versions = ImmutableList.copyOf(
@@ -237,149 +237,15 @@ public final class DocService extends SimpleDecoratingHttpService {
                        .collect(toImmutableList()));
     }
 
-    private static ServiceSpecification addDocStrings(ServiceSpecification spec, List<ServiceConfig> services) {
-        final Map<String, DescriptionInfo> descriptionInfos =
-                plugins.stream()
-                       .flatMap(plugin -> plugin.loadDocStrings(findSupportedServices(plugin, services))
-                                                .entrySet().stream())
-                       .collect(toImmutableMap(Entry::getKey, Entry::getValue, (a, b) -> a));
-
-        return new ServiceSpecification(
-                spec.services().stream()
-                    .map(service -> addServiceDocStrings(service, descriptionInfos))
-                    .collect(toImmutableList()),
-                spec.enums().stream()
-                    .map(e -> addEnumDocStrings(e, descriptionInfos))
-                    .collect(toImmutableList()),
-                spec.structs().stream()
-                    .map(s -> addStructDocStrings(s, descriptionInfos))
-                    .collect(toImmutableList()),
-                spec.exceptions().stream()
-                    .map(e -> addExceptionDocStrings(e, descriptionInfos))
-                    .collect(toImmutableList()),
-                spec.exampleHeaders());
-    }
-
-    private static ServiceInfo addServiceDocStrings(ServiceInfo service,
-                                                    Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(service.name(), service.descriptionInfo(), descriptionInfos);
-        return new ServiceInfo(
-                service.name(),
-                service.methods().stream()
-                       .map(method -> addMethodDocStrings(service, method, descriptionInfos))
-                       .collect(toImmutableList()),
-                service.exampleHeaders(),
-                descriptionInfo);
-    }
-
-    private static MethodInfo addMethodDocStrings(ServiceInfo service, MethodInfo method,
-                                                  Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(service.name() + '/' + method.name(), method.descriptionInfo(),
-                                descriptionInfos);
-        return new MethodInfo(method.name(),
-                              method.returnTypeSignature(),
-                              method.parameters().stream()
-                                    .map(field -> addParameterDocString(service, method,
-                                                                        field, descriptionInfos))
-                                    .collect(toImmutableList()),
-                              method.exceptionTypeSignatures(),
-                              method.endpoints(),
-                              method.exampleHeaders(),
-                              method.exampleRequests(),
-                              method.examplePaths(),
-                              method.exampleQueries(),
-                              method.httpMethod(),
-                              descriptionInfo);
-    }
-
-    private static FieldInfo addParameterDocString(ServiceInfo service, MethodInfo method, FieldInfo field,
-                                                   Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(service.name() + '/' + method.name() + '/' + field.name(),
-                                field.descriptionInfo(), descriptionInfos);
-        return new FieldInfo(field.name(),
-                             field.location(),
-                             field.requirement(),
-                             field.typeSignature(),
-                             field.childFieldInfos(),
-                             descriptionInfo);
-    }
-
-    private static EnumInfo addEnumDocStrings(EnumInfo e, Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(e.name(), e.descriptionInfo(), descriptionInfos);
-        return new EnumInfo(e.name(),
-                            e.values().stream()
-                             .map(v -> addEnumValueDocString(e, v, descriptionInfos))
-                             .collect(toImmutableList()),
-                            descriptionInfo);
-    }
-
-    private static EnumValueInfo addEnumValueDocString(EnumInfo e, EnumValueInfo v,
-                                                       Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(e.name() + '/' + v.name(), v.descriptionInfo(), descriptionInfos);
-        return new EnumValueInfo(v.name(), v.intValue(), descriptionInfo);
-    }
-
-    private static StructInfo addStructDocStrings(StructInfo struct,
-                                                  Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(struct.name(), struct.descriptionInfo(), descriptionInfos);
-        return new StructInfo(struct.name(),
-                              struct.fields().stream()
-                                    .map(field -> addFieldDocString(struct, field, descriptionInfos))
-                                    .collect(toImmutableList()),
-                              descriptionInfo);
-    }
-
-    private static ExceptionInfo addExceptionDocStrings(ExceptionInfo e,
-                                                        Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(e.name(), e.descriptionInfo(), descriptionInfos);
-        return new ExceptionInfo(e.name(),
-                                 e.fields().stream()
-                                  .map(field -> addFieldDocString(e, field, descriptionInfos))
-                                  .collect(toImmutableList()), descriptionInfo);
-    }
-
-    private static FieldInfo addFieldDocString(NamedTypeInfo parent, FieldInfo field,
-                                               Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(parent.name() + '/' + field.name(), field.descriptionInfo(),
-                                descriptionInfos);
-        return new FieldInfo(field.name(),
-                             field.location(),
-                             field.requirement(),
-                             field.typeSignature(),
-                             field.childFieldInfos(),
-                             descriptionInfo);
-    }
-
-    private static DescriptionInfo findDescription(String key, DescriptionInfo currentDescriptionInfo,
-                                                   Map<String, DescriptionInfo> descriptionInfos) {
-        if (currentDescriptionInfo != null) {
-            return currentDescriptionInfo;
-        }
-
-        final DescriptionInfo descriptionInfo = descriptionInfos.get(key);
-        if (descriptionInfo != null) {
-            return descriptionInfo;
-        } else {
-            return DescriptionInfo.empty();
-        }
-    }
-
     private ServiceSpecification addExamples(ServiceSpecification spec) {
-        return new ServiceSpecification(
-                spec.services().stream()
-                    .map(this::addServiceExamples)
-                    .collect(toImmutableList()),
-                spec.enums(), spec.structs(), spec.exceptions(),
+        final List<ServiceInfo> serviceWithExample =
+                spec.services().stream().map(this::addServiceExamples).collect(toImmutableList());
+        final Iterable<HttpHeaders> exampleHeaders =
                 Iterables.concat(spec.exampleHeaders(),
-                                 exampleHeaders.getOrDefault("", ImmutableListMultimap.of()).get("")));
+                                 this.exampleHeaders.getOrDefault("", ImmutableListMultimap.of()).get(""));
+
+        return new ServiceSpecification(serviceWithExample, spec.enums(), spec.structs(),
+                                        spec.exceptions(), exampleHeaders);
     }
 
     private ServiceInfo addServiceExamples(ServiceInfo service) {
@@ -392,22 +258,24 @@ public final class DocService extends SimpleDecoratingHttpService {
         final ListMultimap<String, String> exampleQueries =
                 this.exampleQueries.getOrDefault(service.name(), ImmutableListMultimap.of());
 
-        // Reconstruct ServiceInfo with the examples.
-        return new ServiceInfo(
-                service.name(),
-                // Reconstruct MethodInfos with the examples.
-                service.methods().stream().map(m -> new MethodInfo(
-                        m.name(), m.returnTypeSignature(), m.parameters(), m.exceptionTypeSignatures(),
-                        m.endpoints(),
-                        // Show the examples added via `DocServiceBuilder` before the examples
-                        // generated by the plugin.
-                        concatAndDedup(exampleHeaders.get(m.name()), m.exampleHeaders()),
-                        concatAndDedup(exampleRequests.get(m.name()), m.exampleRequests()),
-                        concatAndDedup(examplePaths.get(m.name()), m.examplePaths()),
-                        concatAndDedup(exampleQueries.get(m.name()), m.exampleQueries()),
-                        m.httpMethod(), m.descriptionInfo()))::iterator,
-                Iterables.concat(service.exampleHeaders(), exampleHeaders.get("")),
-                service.descriptionInfo());
+        final List<MethodInfo> methodsWithExamples =
+                service.methods().stream()
+                       .map(m -> new MethodInfo(
+                               m.name(), m.returnTypeSignature(), m.parameters(), m.exceptionTypeSignatures(),
+                               m.endpoints(),
+                               // Show the examples added via `DocServiceBuilder` before the examples
+                               // generated by the plugin.
+                               concatAndDedup(exampleHeaders.get(m.name()), m.exampleHeaders()),
+                               concatAndDedup(exampleRequests.get(m.name()), m.exampleRequests()),
+                               concatAndDedup(examplePaths.get(m.name()), m.examplePaths()),
+                               concatAndDedup(exampleQueries.get(m.name()), m.exampleQueries()),
+                               m.httpMethod(), m.descriptionInfo()))
+                       .collect(toImmutableList());
+        final Iterable<HttpHeaders> serviceExampleHeaders =
+                Iterables.concat(service.exampleHeaders(), exampleHeaders.get(""));
+
+        return service.withMethods(methodsWithExamples)
+                      .withExampleHeaders(serviceExampleHeaders);
     }
 
     private static <T> Iterable<T> concatAndDedup(Iterable<T> first, Iterable<T> second) {
@@ -419,7 +287,7 @@ public final class DocService extends SimpleDecoratingHttpService {
         return (DocServiceVfs) ((FileService) unwrap()).config().vfs();
     }
 
-    private static Set<ServiceConfig> findSupportedServices(
+    static Set<ServiceConfig> findSupportedServices(
             DocServicePlugin plugin, List<ServiceConfig> services) {
         final Set<Class<? extends Service<?, ?>>> supportedServiceTypes = plugin.supportedServiceTypes();
         return services.stream()
