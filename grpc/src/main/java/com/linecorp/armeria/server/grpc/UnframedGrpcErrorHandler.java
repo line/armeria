@@ -84,7 +84,8 @@ public interface UnframedGrpcErrorHandler {
 
     /**
      * Returns a rich error JSON response based on Google APIs.
-     * Please refer <a href="https://cloud.google.com/apis/design/errors#error_model">Google error model</a>
+     * See <a href="https://cloud.google.com/apis/design/errors#error_model">Google error model</a>
+     * for more information.
      */
     static UnframedGrpcErrorHandler ofRichJson() {
         return DefaultUnframedGrpcErrorHandler.ofRichJson(UnframedGrpcStatusMappingFunction.of());
