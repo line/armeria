@@ -348,10 +348,9 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Adds an implementation of gRPC service with functions to this {@link GrpcServiceBuilder}.
+     * Decorates an implementation of gRPC service with the given decorators, in the order of iteration.
+     * For more details on decorator behavior, please refer to the following document.
      *
-     * @see #addService(Object, Function)
-     * @see #addService(BindableService, Iterable)
      * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
      */
     @UnstableApi
@@ -369,10 +368,9 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Adds a gRPC {@link BindableService} with functions to this {@link GrpcServiceBuilder}.
+     * Decorates a gRPC {@link BindableService} with the given decorators, in the order of iteration.
+     * For more details on decorator behavior, please refer to the following document.
      *
-     * @see #addService(String, BindableService)
-     * @see #addService(BindableService, Iterable)
      * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
      */
     @UnstableApi
@@ -391,12 +389,10 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Adds a {@linkplain MethodDescriptor method} of gRPC {@link BindableService} to this
-     * {@link GrpcServiceBuilder}. You can get {@link MethodDescriptor}s from the enclosing class of
-     * your generated stub.
+     * Decorates a {@linkplain MethodDescriptor method} of gRPC {@link BindableService}
+     * with the given decorators, in the order of iteration.
+     * For more details on decorator behavior, please refer to the following document.
      *
-     * @see #addService(String, ServerServiceDefinition, MethodDescriptor)
-     * @see #addService(BindableService, Iterable)
      * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
      */
     @UnstableApi
