@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,9 +40,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -113,10 +110,7 @@ public final class DocService extends SimpleDecoratingHttpService {
         return new DocServiceBuilder();
     }
 
-    private final Map<String, ListMultimap<String, HttpHeaders>> exampleHeaders;
-    private final Map<String, ListMultimap<String, String>> exampleRequests;
-    private final Map<String, ListMultimap<String, String>> examplePaths;
-    private final Map<String, ListMultimap<String, String>> exampleQueries;
+    private final ExampleSupport exampleSupport;
     private final List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers;
     private final DocServiceFilter filter;
     private final NamedTypeInfoProvider namedTypeInfoProvider;
@@ -148,11 +142,10 @@ public final class DocService extends SimpleDecoratingHttpService {
                          .serveCompressedFiles(true)
                          .autoDecompress(true)
                          .build());
-
-        this.exampleHeaders = immutableCopyOf(exampleHeaders, "exampleHeaders");
-        this.exampleRequests = immutableCopyOf(exampleRequests, "exampleRequests");
-        this.examplePaths = immutableCopyOf(examplePaths, "examplePaths");
-        this.exampleQueries = immutableCopyOf(exampleQueries, "exampleQueries");
+        exampleSupport = new ExampleSupport(immutableCopyOf(exampleHeaders, "exampleHeaders"),
+                                            immutableCopyOf(exampleRequests, "exampleRequests"),
+                                            immutableCopyOf(examplePaths, "examplePaths"),
+                                            immutableCopyOf(exampleQueries, "exampleQueries"));
         this.injectedScriptSuppliers = requireNonNull(injectedScriptSuppliers, "injectedScriptSuppliers");
         this.filter = requireNonNull(filter, "filter");
         this.namedTypeInfoProvider = composeNamedTypeInfoProvider(namedTypeInfoProvider);
@@ -216,7 +209,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                 final DocStringSupport docStringSupport = new DocStringSupport(services);
                 ServiceSpecification spec = generate(services);
                 spec = docStringSupport.addDocStrings(spec);
-                spec = addExamples(spec);
+                spec = exampleSupport.addExamples(spec);
 
                 final List<Version> versions = ImmutableList.copyOf(
                         Version.getAll(DocService.class.getClassLoader()).values());
@@ -235,52 +228,6 @@ public final class DocService extends SimpleDecoratingHttpService {
                        .map(plugin -> plugin.generateSpecification(
                                findSupportedServices(plugin, services), filter, namedTypeInfoProvider))
                        .collect(toImmutableList()));
-    }
-
-    private ServiceSpecification addExamples(ServiceSpecification spec) {
-        final List<ServiceInfo> serviceWithExample =
-                spec.services().stream().map(this::addServiceExamples).collect(toImmutableList());
-        final Iterable<HttpHeaders> exampleHeaders =
-                Iterables.concat(spec.exampleHeaders(),
-                                 this.exampleHeaders.getOrDefault("", ImmutableListMultimap.of()).get(""));
-
-        return new ServiceSpecification(serviceWithExample, spec.enums(), spec.structs(),
-                                        spec.exceptions(), exampleHeaders);
-    }
-
-    private ServiceInfo addServiceExamples(ServiceInfo service) {
-        final ListMultimap<String, HttpHeaders> exampleHeaders =
-                this.exampleHeaders.getOrDefault(service.name(), ImmutableListMultimap.of());
-        final ListMultimap<String, String> exampleRequests =
-                this.exampleRequests.getOrDefault(service.name(), ImmutableListMultimap.of());
-        final ListMultimap<String, String> examplePaths =
-                this.examplePaths.getOrDefault(service.name(), ImmutableListMultimap.of());
-        final ListMultimap<String, String> exampleQueries =
-                this.exampleQueries.getOrDefault(service.name(), ImmutableListMultimap.of());
-
-        final List<MethodInfo> methodsWithExamples =
-                service.methods().stream()
-                       .map(m -> new MethodInfo(
-                               m.name(), m.returnTypeSignature(), m.parameters(), m.exceptionTypeSignatures(),
-                               m.endpoints(),
-                               // Show the examples added via `DocServiceBuilder` before the examples
-                               // generated by the plugin.
-                               concatAndDedup(exampleHeaders.get(m.name()), m.exampleHeaders()),
-                               concatAndDedup(exampleRequests.get(m.name()), m.exampleRequests()),
-                               concatAndDedup(examplePaths.get(m.name()), m.examplePaths()),
-                               concatAndDedup(exampleQueries.get(m.name()), m.exampleQueries()),
-                               m.httpMethod(), m.descriptionInfo()))
-                       .collect(toImmutableList());
-        final Iterable<HttpHeaders> serviceExampleHeaders =
-                Iterables.concat(service.exampleHeaders(), exampleHeaders.get(""));
-
-        return service.withMethods(methodsWithExamples)
-                      .withExampleHeaders(serviceExampleHeaders);
-    }
-
-    private static <T> Iterable<T> concatAndDedup(Iterable<T> first, Iterable<T> second) {
-        return Stream.concat(Streams.stream(first), Streams.stream(second)).distinct()
-                     .collect(toImmutableList());
     }
 
     private DocServiceVfs vfs() {
