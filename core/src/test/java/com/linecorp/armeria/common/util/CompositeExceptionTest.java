@@ -178,9 +178,6 @@ class CompositeExceptionTest {
                 (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
                             .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
                             .count();
-        Arrays.stream(compositeException.getCause().getMessage().split(separator))
-                      .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-                      .forEach(System.out::println);
 
         // if verboseException option enabled, test for composite exceptions.
         // Expected: CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 3 + ex2 StackTraces(3)
