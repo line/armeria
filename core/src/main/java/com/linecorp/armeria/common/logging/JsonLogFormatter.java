@@ -106,7 +106,8 @@ final class JsonLogFormatter implements LogFormatter {
             }
 
             if (availableProperties.contains(RequestLogProperty.REQUEST_END_TIME)) {
-                gen.writeStringField("duration", TextFormatter.elapsed(log.requestDurationNanos()).toString());
+                gen.writeStringField("duration",
+                                     TextFormatter.elapsed(log.requestDurationNanos()).toString());
             }
 
             if (requestCauseString != null) {

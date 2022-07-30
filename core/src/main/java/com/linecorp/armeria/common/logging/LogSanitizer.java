@@ -31,6 +31,9 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public interface LogSanitizer {
 
+    /**
+     * Returns a newly created {@link LogSanitizer} for HTTP request.
+     */
     static LogSanitizer ofRequestLogSanitizer(
             BiFunction<? super RequestContext, ? super RequestHeaders,
                     ? extends @Nullable Object> headersSanitizer,
@@ -42,6 +45,9 @@ public interface LogSanitizer {
         return new RequestLogSanitizer(headersSanitizer, contentSanitizer, trailersSanitizer);
     }
 
+    /**
+     * Returns a newly created {@link LogSanitizer} for HTTP response.
+     */
     static LogSanitizer ofResponseLogSanitizer(
             BiFunction<? super RequestContext, ? super ResponseHeaders,
                     ? extends @Nullable Object> headersSanitizer,
@@ -53,9 +59,18 @@ public interface LogSanitizer {
         return new ResponseLogSanitizer(headersSanitizer, contentSanitizer, trailersSanitizer);
     }
 
+    /**
+     * Sanitizes HTTP headers.
+     */
     String sanitizeHeaders(RequestContext ctx, HttpHeaders headers);
 
+    /**
+     * Sanitizes HTTP content.
+     */
     String sanitizeContent(RequestContext ctx, Object object);
 
+    /**
+     * Sanitizes HTTP trailers.
+     */
     String sanitizeTrailers(RequestContext ctx, HttpHeaders trailers);
 }
