@@ -168,7 +168,7 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
         if (!mapper.canSerialize(javaType.getRawClass())) {
             return ImmutableList.of();
         }
-        
+
         if (!visiting.add(javaType)) {
             return ImmutableList.of();
         }
