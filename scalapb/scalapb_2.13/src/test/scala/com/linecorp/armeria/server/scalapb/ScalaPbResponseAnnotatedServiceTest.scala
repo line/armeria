@@ -79,7 +79,7 @@ class ScalaPbResponseAnnotatedServiceTest {
   }
 
   @AfterEach
-  private def tearDown(): Unit = {
+  def tearDown(): Unit = {
     server.stop
     ScalaPbResponseAnnotatedServiceTest.cause = None
   }
