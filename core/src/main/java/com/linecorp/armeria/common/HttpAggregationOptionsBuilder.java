@@ -101,7 +101,7 @@ public final class HttpAggregationOptionsBuilder<T extends HttpObject, U extends
                                                  CommonPools.workerGroup()::next);
         }
 
-        return new DefaultHttpAggregationOptions<>(aggregator, executor, cacheResult(), 
+        return new DefaultHttpAggregationOptions<>(aggregator, executor, cacheResult(),
                                                    withPooledObjects(), alloc);
     }
 }
