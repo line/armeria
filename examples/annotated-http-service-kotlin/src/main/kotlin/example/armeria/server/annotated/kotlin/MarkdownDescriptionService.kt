@@ -84,7 +84,7 @@ class MarkdownDescriptionService {
 
     @Description("MarkdownEnumParam")
     enum class MarkdownEnumParam {
-        @field:Description(value = "Description for `ENUM_1`", markup = Markup.MARKDOWN)
+        @Description(value = "Description for `ENUM_1`", markup = Markup.MARKDOWN)
         ENUM_1,
         ENUM_2,
         ENUM_3

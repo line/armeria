@@ -24,7 +24,6 @@ import static com.linecorp.armeria.internal.server.thrift.ThriftNameTypeInfoProv
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.thrift.TFieldRequirementType;
@@ -53,10 +52,11 @@ class ThriftNamedTypeInfoProviderTest {
     void testNewEnumInfo() {
         final EnumInfo enumInfo = newEnumInfo(FooEnum.class);
 
-        assertThat(enumInfo).isEqualTo(new EnumInfo(FooEnum.class.getName(),
-                                                    Arrays.asList(new EnumValueInfo("VAL1", 1),
-                                                                  new EnumValueInfo("VAL2", 2),
-                                                                  new EnumValueInfo("VAL3", 3))));
+        assertThat(enumInfo).isEqualTo(
+                new EnumInfo(FooEnum.class.getName(),
+                             ImmutableList.of(new EnumValueInfo("VAL1", 1),
+                                              new EnumValueInfo("VAL2", 2),
+                                              new EnumValueInfo("VAL3", 3))));
     }
 
     @Test
