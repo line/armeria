@@ -127,7 +127,7 @@ need to put the version numbers in `build.gradle`.
 The `dependencies.toml` file supports the same syntax as Gradle's [`libs.versions.toml`](https://docs.gradle.org/current/userguide/platforms.html#sub:conventional-dependencies-toml).
 In addition, it also supports additional properties such as:
 - `boms`: A table to manages a list of BOM dependencies.
-- `relocations`: A string or an array of tables to relocate specific dependencies to a new location.
+- `relocations`: A table or an array of tables to relocate specific dependencies to a new location.
 - `exclusions`: A string or an array of strings to exclude specific dependencies from the module.
 - `javadocs`: A string or an array of strings to link to external Javadocs.
 
@@ -192,10 +192,11 @@ configure(projectsWithFlags('java')) {
 }
 
 // In case you need to get the version number of an artifact:
-println "Guava version: ${managedVersions['com.google.guava:guava']}"
+println "Guava version: ${libs.guava.get().versionConstraint.requiredVersion}"
 // Note that it is not recommended to use `managedVersions` with the module defined multiple times with 
 // different aliases. Because if a module is declared with different versions, the version returned by 
 // `managedVersions` is determined by how the version catalogs are indexed.
+println "Guava version: ${managedVersions['com.google.guava:guava']}"
 ```
 
 ### Importing Maven BOM (Bill of Materials)
