@@ -707,7 +707,7 @@ version.ref = "resteasy"
 [libraries.resteasy-jboss-logging]
 module = "org.jboss.logging:jboss-logging"
 version = "3.5.0.Final"
-javadocs = "https://javadoc.io/doc/org.jboss.logging/jboss-logging/3.5.0.Final/"
+javadocs = "https://javadoc.io/doc/org.jboss.logging/jboss-logging/3.5.3.Final/"
 [libraries.resteasy-jboss-logging-annotations]
 module = "org.jboss.logging:jboss-logging-annotations"
 version = "2.2.1.Final"
