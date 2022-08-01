@@ -43,6 +43,8 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 /**
  * A builder class for binding an {@link HttpService} fluently. This class can be instantiated through
  * {@link ServerBuilder#annotatedService()}.
@@ -283,6 +285,19 @@ public final class AnnotatedServiceBindingBuilder implements ServiceConfigSetter
     @Override
     public AnnotatedServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                             boolean shutdownOnStop) {
+        defaultServiceConfigSetters.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        defaultServiceConfigSetters.serviceWorkerGroup(numThreads);
         return this;
     }
 

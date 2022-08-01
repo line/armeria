@@ -68,6 +68,7 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
@@ -139,6 +140,8 @@ public final class VirtualHostBuilder {
     private SuccessFunction successFunction;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private EventLoopGroup serviceWorkerGroup;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -982,6 +985,35 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Sets the {@link EventLoopGroup} dedicated to the execution of services' methods.
+     * If not set, the work group of the belonging channel is used.
+     *
+     * @param shutdownOnStop whether to shut down the {@link EventLoopGroup} when the
+     *                       {@link Server} stops
+     */
+    public VirtualHostBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                 boolean shutdownOnStop) {
+        this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(serviceWorkerGroup));
+        }
+        return this;
+    }
+
+    /**
+     * Uses a newly created {@link EventLoopGroup} with the specified number of threads dedicated to
+     * the execution of services' methods.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of threads in the executor
+     */
+    public VirtualHostBuilder serviceWorkerGroup(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(numThreads);
+        return serviceWorkerGroup(workerGroup, true);
+    }
+
+    /**
      * Sets the {@link RequestConverterFunction}s, {@link ResponseConverterFunction}
      * and {@link ExceptionHandlerFunction}s for creating an {@link AnnotatedServiceExtensions}.
      *
@@ -1081,12 +1113,20 @@ public final class VirtualHostBuilder {
                 this.multipartUploadsLocation != null ?
                 this.multipartUploadsLocation : template.multipartUploadsLocation;
 
+        final EventLoopGroup serviceWorkerGroup;
+        if (this.serviceWorkerGroup != null) {
+            serviceWorkerGroup = this.serviceWorkerGroup;
+        } else {
+            serviceWorkerGroup = template.serviceWorkerGroup;
+        }
+
         assert rejectedRouteHandler != null;
         assert accessLoggerMapper != null;
         assert extensions != null;
         assert blockingTaskExecutor != null;
         assert successFunction != null;
         assert multipartUploadsLocation != null;
+        assert serviceWorkerGroup != null;
 
         final List<ServiceConfig> serviceConfigs = getServiceConfigSetters(template)
                 .stream()
@@ -1107,14 +1147,16 @@ public final class VirtualHostBuilder {
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, blockingTaskExecutor,
-                                            successFunction, multipartUploadsLocation);
+                                            successFunction, multipartUploadsLocation,
+                                            serviceWorkerGroup);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
-                               multipartUploadsLocation);
+                               multipartUploadsLocation,
+                               serviceWorkerGroup);
 
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;
@@ -1186,7 +1228,7 @@ public final class VirtualHostBuilder {
                                     serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                     accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
                                     maxRequestLength, verboseResponses, accessLogWriter,
-                                    blockingTaskExecutor, builder.build());
+                                    blockingTaskExecutor, serviceWorkerGroup, builder.build());
 
             final Function<? super HttpService, ? extends HttpService> decorator =
                     getRouteDecoratingService(template);

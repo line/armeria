@@ -62,7 +62,8 @@ public class ServiceTest {
                                                     AccessLogWriter.disabled(),
                                                     CommonPools.blockingTaskExecutor(),
                                                     SuccessFunction.always(),
-                                                    Files.newTemporaryFolder().toPath(), ImmutableList.of());
+                                                    Files.newTemporaryFolder().toPath(),
+                                                    CommonPools.workerGroup(), ImmutableList.of());
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }

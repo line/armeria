@@ -33,8 +33,11 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+
+import io.netty.channel.EventLoopGroup;
 
 /**
  * A default implementation of {@link ServiceConfigSetters} that stores service related settings
@@ -65,6 +68,8 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private SuccessFunction successFunction;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private EventLoopGroup serviceWorkerGroup;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
 
     @Override
@@ -198,6 +203,23 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         return this;
     }
 
+    @Override
+    public ServiceConfigSetters serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                   boolean shutdownOnStop) {
+        this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(serviceWorkerGroup));
+        }
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters serviceWorkerGroup(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(numThreads);
+        return serviceWorkerGroup(workerGroup, true);
+    }
+
     /**
      * Note: {@link ServiceConfigBuilder} built by this method is not decorated with the decorator function
      * which can be configured using {@link DefaultServiceConfigSetters#decorator()} because
@@ -256,6 +278,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         }
         if (multipartUploadsLocation != null) {
             serviceConfigBuilder.multipartUploadsLocation(multipartUploadsLocation);
+        }
+        if (serviceWorkerGroup != null) {
+            serviceConfigBuilder.serviceWorkerGroup(serviceWorkerGroup, false);
         }
         serviceConfigBuilder.shutdownSupports(shutdownSupports);
         return serviceConfigBuilder;

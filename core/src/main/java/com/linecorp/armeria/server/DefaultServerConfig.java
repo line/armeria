@@ -93,6 +93,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final Duration gracefulShutdownTimeout;
 
     private final ScheduledExecutorService blockingTaskExecutor;
+    private final EventLoopGroup serviceWorkerGroup;
 
     private final MeterRegistry meterRegistry;
 
@@ -130,6 +131,7 @@ final class DefaultServerConfig implements ServerConfig {
             long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
             int http1MaxChunkSize, Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
             ScheduledExecutorService blockingTaskExecutor,
+            EventLoopGroup serviceWorkerGroup,
             MeterRegistry meterRegistry, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
             Map<ChannelOption<?>, Object> childChannelOptions,
@@ -180,6 +182,8 @@ final class DefaultServerConfig implements ServerConfig {
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         this.blockingTaskExecutor = monitorBlockingTaskExecutor(blockingTaskExecutor, meterRegistry);
+
+        this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.channelOptions = Collections.unmodifiableMap(

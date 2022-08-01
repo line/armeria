@@ -30,6 +30,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 /**
  * A builder class for binding an {@link HttpService} fluently. This class can be instantiated through
  * {@link VirtualHostBuilder#route()}. You can also configure an {@link HttpService} using
@@ -284,6 +286,17 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     @Override
     public VirtualHostServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         return (VirtualHostServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                               boolean shutdownOnStop) {
+        return (VirtualHostServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+    }
+
+    @Override
+    public VirtualHostServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        return (VirtualHostServiceBindingBuilder) super.serviceWorkerGroup(numThreads);
     }
 
     /**

@@ -70,6 +70,7 @@ import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2Exception;
@@ -306,6 +307,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final RequestHeaders headers = req.headers();
         final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(channel, headers);
         final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
+        final EventLoop eventLoop = channel.eventLoop();
 
         // Handle max connection age for HTTP/1.
         if (!protocol.isMultiplex() &&
@@ -318,7 +320,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final RoutingStatus routingStatus = routingCtx.status();
         if (!routingStatus.routeMustExist()) {
             final ServiceRequestContext reqCtx =
-                    newEarlyRespondingRequestContext(channel, req, proxiedAddresses, clientAddress, routingCtx);
+                    newEarlyRespondingRequestContext(channel, req, proxiedAddresses,
+                                                     clientAddress, routingCtx, eventLoop);
             switch (routingStatus) {
                 case OPTIONS:
                     // Handle 'OPTIONS * HTTP/1.1'.
@@ -340,20 +343,54 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final RoutingResult routingResult = routed.routingResult();
         final ServiceConfig serviceCfg = routed.value();
         final HttpService service = serviceCfg.service();
-
+        final EventLoop serviceEventLoop;
+        final EventLoopGroup serviceWorkerGroup = serviceCfg.serviceWorkerGroup();
+        if (serviceWorkerGroup == config.workerGroup()) {
+            serviceEventLoop = eventLoop;
+        } else {
+            serviceEventLoop = serviceWorkerGroup.next();
+        }
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
-                serviceCfg, channel, config.meterRegistry(), protocol,
+                serviceCfg, channel, serviceEventLoop, config.meterRegistry(), protocol,
                 nextRequestId(), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros());
 
+        final boolean needsDirectExecution = serviceEventLoop == config.workerGroup();
+
+        if (needsDirectExecution) {
+            serveRequest(ctx, req, serviceCfg, service, routingCtx, routingResult,
+                         routed, eventLoop, reqCtx, serviceWorkerGroup);
+        } else {
+            serviceEventLoop.execute(() -> serveRequest(ctx, req, serviceCfg, service, routingCtx,
+                                                        routingResult, routed, eventLoop, reqCtx,
+                                                        serviceWorkerGroup));
+        }
+    }
+
+    private void serveRequest(ChannelHandlerContext ctx,
+                              DecodedHttpRequest req,
+                              ServiceConfig serviceCfg,
+                              HttpService service,
+                              RoutingContext routingCtx,
+                              RoutingResult routingResult,
+                              Routed<ServiceConfig> routed,
+                              EventLoop eventLoop,
+                              DefaultServiceRequestContext reqCtx,
+                              EventLoopGroup serviceWorkerGroup) {
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
             final ServerErrorHandler serverErrorHandler = config.errorHandler();
             HttpResponse serviceResponse;
             try {
                 req.init(reqCtx);
-                serviceResponse = service.serve(reqCtx, req);
+                serviceResponse = HttpResponse.from(() -> {
+                    try {
+                        return service.serve(reqCtx, req);
+                    } catch (Exception cause) {
+                        return HttpResponse.ofFailure(cause);
+                    }
+                }, serviceWorkerGroup);
             } catch (Throwable cause) {
                 // No need to consume further since the response is ready.
                 if (cause instanceof HttpResponseException || cause instanceof HttpStatusException) {
@@ -371,7 +408,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 return serverErrorHandler.onServiceException(reqCtx, cause);
             });
             final HttpResponse res = serviceResponse;
-            final EventLoop eventLoop = channel.eventLoop();
 
             // Keep track of the number of unfinished requests and
             // clean up the request stream when response stream ends.
@@ -613,14 +649,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private ServiceRequestContext newEarlyRespondingRequestContext(Channel channel, DecodedHttpRequest req,
                                                                    ProxiedAddresses proxiedAddresses,
                                                                    InetAddress clientAddress,
-                                                                   RoutingContext routingCtx) {
+                                                                   RoutingContext routingCtx,
+                                                                   EventLoop eventLoop) {
         final ServiceConfig serviceConfig = routingCtx.virtualHost().fallbackServiceConfig();
         final RoutingResult routingResult = RoutingResult.builder()
                                                          .path(routingCtx.path())
                                                          .build();
         return new DefaultServiceRequestContext(
                 serviceConfig,
-                channel, NoopMeterRegistry.get(), protocol(),
+                channel, eventLoop, NoopMeterRegistry.get(), protocol(),
                 nextRequestId(), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros());

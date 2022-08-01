@@ -32,7 +32,10 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+
+import io.netty.channel.EventLoopGroup;
 
 final class ServiceConfigBuilder implements ServiceConfigSetters {
 
@@ -61,6 +64,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private SuccessFunction successFunction;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private EventLoopGroup serviceWorkerGroup;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
 
     ServiceConfigBuilder(Route route, HttpService service) {
@@ -185,6 +190,23 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         return this;
     }
 
+    @Override
+    public ServiceConfigBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                   boolean shutdownOnStop) {
+        this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(serviceWorkerGroup));
+        }
+        return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder serviceWorkerGroup(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        final EventLoopGroup workerGroup = EventLoopGroups.newEventLoopGroup(numThreads);
+        return serviceWorkerGroup(workerGroup, true);
+    }
+
     void shutdownSupports(List<ShutdownSupport> shutdownSupports) {
         requireNonNull(shutdownSupports, "shutdownSupports");
         this.shutdownSupports.addAll(shutdownSupports);
@@ -197,7 +219,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         AccessLogWriter defaultAccessLogWriter,
                         ScheduledExecutorService defaultBlockingTaskExecutor,
                         SuccessFunction defaultSuccessFunction,
-                        Path defaultMultipartUploadsLocation) {
+                        Path defaultMultipartUploadsLocation,
+                        EventLoopGroup defaultServiceWorkerGroup) {
         return new ServiceConfig(
                 route, mappedRoute == null ? route : mappedRoute,
                 service, defaultLogName, defaultServiceName,
@@ -209,6 +232,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 blockingTaskExecutor != null ? blockingTaskExecutor : defaultBlockingTaskExecutor,
                 successFunction != null ? successFunction : defaultSuccessFunction,
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
+                serviceWorkerGroup != null ? serviceWorkerGroup : defaultServiceWorkerGroup,
                 ImmutableList.copyOf(shutdownSupports));
     }
 
@@ -225,6 +249,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                           .add("blockingTaskExecutor", blockingTaskExecutor)
                           .add("successFunction", successFunction)
                           .add("multipartUploadsLocation", multipartUploadsLocation)
+                          .add("serviceWorkerGroup", serviceWorkerGroup)
                           .add("shutdownSupports", shutdownSupports)
                           .toString();
     }

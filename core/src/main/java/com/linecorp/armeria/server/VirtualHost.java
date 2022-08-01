@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
+import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
 
@@ -82,6 +83,7 @@ public final class VirtualHost {
     private final boolean verboseResponses;
     private final AccessLogWriter accessLogWriter;
     private final ScheduledExecutorService blockingTaskExecutor;
+    private final EventLoopGroup serviceWorkerGroup;
     private final List<ShutdownSupport> shutdownSupports;
 
     VirtualHost(String defaultHostname, String hostnamePattern, int port,
@@ -95,6 +97,7 @@ public final class VirtualHost {
                 long maxRequestLength, boolean verboseResponses,
                 AccessLogWriter accessLogWriter,
                 ScheduledExecutorService blockingTaskExecutor,
+                EventLoopGroup serviceWorkerGroup,
                 List<ShutdownSupport> shutdownSupports) {
         originalDefaultHostname = defaultHostname;
         originalHostnamePattern = hostnamePattern;
@@ -113,6 +116,7 @@ public final class VirtualHost {
         this.verboseResponses = verboseResponses;
         this.accessLogWriter = accessLogWriter;
         this.blockingTaskExecutor = blockingTaskExecutor;
+        this.serviceWorkerGroup = serviceWorkerGroup;
         this.shutdownSupports = shutdownSupports;
 
         requireNonNull(serviceConfigs, "serviceConfigs");
@@ -134,7 +138,7 @@ public final class VirtualHost {
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
-                               accessLogWriter, blockingTaskExecutor, shutdownSupports);
+                               accessLogWriter, blockingTaskExecutor, serviceWorkerGroup, shutdownSupports);
     }
 
     /**
@@ -365,6 +369,15 @@ public final class VirtualHost {
     }
 
     /**
+     * Returns the service {@link EventLoopGroup}.
+     *
+     * @see ServiceConfig#serviceWorkerGroup()
+     */
+    public EventLoopGroup serviceWorkerGroup() {
+        return serviceWorkerGroup;
+    }
+
+    /**
      * Finds the {@link HttpService} whose {@link Router} matches the {@link RoutingContext}.
      *
      * @param routingCtx a context to find the {@link HttpService}.
@@ -458,7 +471,8 @@ public final class VirtualHost {
                                serviceConfigs, fallbackServiceConfig, RejectedRouteHandler.DISABLED,
                                host -> accessLogger, defaultServiceNaming, requestTimeoutMillis,
                                maxRequestLength, verboseResponses,
-                               accessLogWriter, blockingTaskExecutor, shutdownSupports);
+                               accessLogWriter, blockingTaskExecutor, serviceWorkerGroup,
+                               shutdownSupports);
     }
 
     @Override

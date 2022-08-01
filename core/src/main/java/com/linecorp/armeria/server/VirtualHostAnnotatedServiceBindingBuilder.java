@@ -41,6 +41,8 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 /**
  * A builder class for binding an {@link HttpService} to a virtual host fluently. This class can be instantiated
  * through {@link VirtualHostBuilder#annotatedService()}.
@@ -289,6 +291,19 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     @Override
     public VirtualHostAnnotatedServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                                        boolean shutdownOnStop) {
+        defaultServiceConfigSetters.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        defaultServiceConfigSetters.serviceWorkerGroup(numThreads);
         return this;
     }
 

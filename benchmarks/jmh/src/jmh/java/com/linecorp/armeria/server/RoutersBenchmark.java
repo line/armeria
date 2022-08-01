@@ -57,22 +57,25 @@ public class RoutersBenchmark {
                 new ServiceConfig(route1, route1,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(), multipartUploadsLocation, ImmutableList.of()),
+                                  SuccessFunction.always(), multipartUploadsLocation, CommonPools.workerGroup(),
+                                  ImmutableList.of()),
                 new ServiceConfig(route2, route2,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
-                                  SuccessFunction.always(), multipartUploadsLocation, ImmutableList.of())
+                                  SuccessFunction.always(), multipartUploadsLocation, CommonPools.workerGroup(),
+                                  ImmutableList.of())
         );
         FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), SERVICE,
                                              defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
                                              CommonPools.blockingTaskExecutor(),
                                              SuccessFunction.always(), multipartUploadsLocation,
-                                             ImmutableList.of());
+                                             CommonPools.workerGroup(), ImmutableList.of());
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,
-                AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), ImmutableList.of());
+                AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), CommonPools.workerGroup(),
+                ImmutableList.of());
         ROUTER = Routers.ofVirtualHost(HOST, SERVICES, RejectedRouteHandler.DISABLED);
     }
 

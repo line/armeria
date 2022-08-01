@@ -267,10 +267,12 @@ public final class ServiceRequestContextBuilder extends AbstractRequestContextBu
             }
         }
 
+        final EventLoop serviceWorkerGroup = eventLoop();
+
         // Build the context with the properties set by a user and the fake objects.
         return new DefaultServiceRequestContext(
-                serviceCfg, fakeChannel(), meterRegistry(), sessionProtocol(), id(), routingCtx,
-                routingResult, exchangeType, req, sslSession(), proxiedAddresses, clientAddress,
+                serviceCfg, fakeChannel(), serviceWorkerGroup, meterRegistry(), sessionProtocol(), id(),
+                routingCtx, routingResult, exchangeType, req, sslSession(), proxiedAddresses, clientAddress,
                 requestCancellationScheduler,
                 isRequestStartTimeSet() ? requestStartTimeNanos() : System.nanoTime(),
                 isRequestStartTimeSet() ? requestStartTimeMicros() : SystemInfo.currentTimeMicros(),

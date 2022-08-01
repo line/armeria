@@ -31,6 +31,8 @@ import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 /**
  * A builder class for binding an {@link HttpService} fluently. This class can be instantiated through
  * {@link ServerBuilder#route()}. You can also configure an {@link HttpService} using
@@ -268,6 +270,17 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     @Override
     public ServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         return (ServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
+    }
+
+    @Override
+    public ServiceBindingBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup,
+                                                    boolean shutdownOnStop) {
+        return (ServiceBindingBuilder) super.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+    }
+
+    @Override
+    public ServiceBindingBuilder serviceWorkerGroup(int numThreads) {
+        return (ServiceBindingBuilder) super.serviceWorkerGroup(numThreads);
     }
 
     @Override

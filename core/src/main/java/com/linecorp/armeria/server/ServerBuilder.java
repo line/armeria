@@ -172,7 +172,7 @@ public final class ServerBuilder {
     private final VirtualHostBuilder defaultVirtualHostBuilder = new VirtualHostBuilder(this, true);
     private final List<VirtualHostBuilder> virtualHostBuilders = new ArrayList<>();
 
-    private EventLoopGroup workerGroup = CommonPools.workerGroup();
+    EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
     private Executor startStopExecutor = GlobalEventExecutor.INSTANCE;
     private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
@@ -225,6 +225,7 @@ public final class ServerBuilder {
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
+        virtualHostTemplate.serviceWorkerGroup(CommonPools.workerGroup(), false);
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -489,6 +490,32 @@ public final class ServerBuilder {
         checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
         workerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
         return this;
+    }
+
+    /**
+     * Sets the worker {@link EventLoopGroup} which is responsible for running
+     * {@link Service#serve(ServiceRequestContext, Request)}.
+     * If not set, the value set via {@linkplain #workerGroup(EventLoopGroup, boolean)}
+     * or {@linkplain #workerGroup(int)} is used.
+     *
+     * @param shutdownOnStop whether to shut down the worker {@link EventLoopGroup}
+     *                       when the {@link Server} stops
+     */
+    public ServerBuilder serviceWorkerGroup(EventLoopGroup serviceWorkerGroup, boolean shutdownOnStop) {
+        virtualHostTemplate.serviceWorkerGroup(serviceWorkerGroup, shutdownOnStop);
+        return this;
+    }
+
+    /**
+     * Uses a newly created {@link EventLoopGroup} with the specified number of threads for
+     * running {@link Service#serve(ServiceRequestContext, Request)}.
+     * The worker {@link EventLoopGroup} will be shut down when the {@link Server} stops.
+     *
+     * @param numThreads the number of event loop threads
+     */
+    public ServerBuilder serviceWorkerGroup(int numThreads) {
+        checkArgument(numThreads >= 0, "numThreads: %s (expected: >= 0)", numThreads);
+        return serviceWorkerGroup(EventLoopGroups.newEventLoopGroup(numThreads), true);
     }
 
     /**
@@ -1894,15 +1921,18 @@ public final class ServerBuilder {
         }
 
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
+        final EventLoopGroup serviceWorkerGroup = defaultVirtualHost.serviceWorkerGroup();
+
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
-                virtualHosts, workerGroup, shutdownWorkerGroupOnStop, startStopExecutor, maxNumConnections,
+                virtualHosts, workerGroup, shutdownWorkerGroupOnStop,
+                startStopExecutor, maxNumConnections,
                 idleTimeoutMillis, pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection,
                 connectionDrainDurationMicros, http2InitialConnectionWindowSize,
                 http2InitialStreamWindowSize, http2MaxStreamsPerConnection,
                 http2MaxFrameSize, http2MaxHeaderListSize, http1MaxInitialLineLength, http1MaxHeaderSize,
                 http1MaxChunkSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout,
-                blockingTaskExecutor,
+                blockingTaskExecutor, serviceWorkerGroup,
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,

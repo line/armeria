@@ -37,6 +37,8 @@ import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 import com.linecorp.armeria.server.cors.CorsService;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
+import io.netty.channel.EventLoopGroup;
+
 /**
  * An {@link HttpService} configuration.
  *
@@ -69,6 +71,8 @@ public final class ServiceConfig {
     private final ScheduledExecutorService blockingTaskExecutor;
 
     private final Path multipartUploadsLocation;
+    private final EventLoopGroup serviceWorkerGroup;
+
     private final List<ShutdownSupport> shutdownSupports;
 
     /**
@@ -80,12 +84,15 @@ public final class ServiceConfig {
                   boolean verboseResponses, AccessLogWriter accessLogWriter,
                   ScheduledExecutorService blockingTaskExecutor,
                   SuccessFunction successFunction,
-                  Path multipartUploadsLocation, List<ShutdownSupport> shutdownSupports) {
+                  Path multipartUploadsLocation,
+                  EventLoopGroup serviceWorkerGroup,
+                  List<ShutdownSupport> shutdownSupports) {
         this(null, route, mappedRoute, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              extractTransientServiceOptions(service),
              blockingTaskExecutor, successFunction,
-             multipartUploadsLocation, shutdownSupports);
+             multipartUploadsLocation, serviceWorkerGroup,
+             shutdownSupports);
     }
 
     /**
@@ -100,6 +107,7 @@ public final class ServiceConfig {
                           ScheduledExecutorService blockingTaskExecutor,
                           SuccessFunction successFunction,
                           Path multipartUploadsLocation,
+                          EventLoopGroup serviceWorkerGroup,
                           List<ShutdownSupport> shutdownSupports) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
@@ -116,6 +124,7 @@ public final class ServiceConfig {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         this.successFunction = requireNonNull(successFunction, "successFunction");
         this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
+        this.serviceWorkerGroup = requireNonNull(serviceWorkerGroup, "serviceWorkerGroup");
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
@@ -154,7 +163,9 @@ public final class ServiceConfig {
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
-                                 multipartUploadsLocation, shutdownSupports);
+                                 multipartUploadsLocation,
+                                 serviceWorkerGroup,
+                                 shutdownSupports);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -164,7 +175,9 @@ public final class ServiceConfig {
                                  maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
-                                 multipartUploadsLocation, shutdownSupports);
+                                 multipartUploadsLocation,
+                                 serviceWorkerGroup,
+                                 shutdownSupports);
     }
 
     ServiceConfig withRoute(Route route) {
@@ -173,7 +186,9 @@ public final class ServiceConfig {
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
-                                 multipartUploadsLocation, shutdownSupports);
+                                 multipartUploadsLocation,
+                                 serviceWorkerGroup,
+                                 shutdownSupports);
     }
 
     /**
@@ -388,6 +403,13 @@ public final class ServiceConfig {
 
     List<ShutdownSupport> shutdownSupports() {
         return shutdownSupports;
+    }
+
+    /**
+     * Returns the {@link EventLoopGroup} dedicated to the execution of services' methods.
+     */
+    public EventLoopGroup serviceWorkerGroup() {
+        return serviceWorkerGroup;
     }
 
     @Override
