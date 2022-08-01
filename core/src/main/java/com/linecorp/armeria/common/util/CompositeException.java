@@ -70,6 +70,7 @@ public final class CompositeException extends RuntimeException {
     // Forked from RxJava 3.0.0 at e793bc1d1a29dca18be795cf4a7628e2d44a4234
 
     private static final long serialVersionUID = 3026362227162912146L;
+    @VisibleForTesting
     static final int DEFAULT_MAX_NUM_STACK_TRACES = 20;
 
     private final List<Throwable> exceptions;
@@ -148,8 +149,8 @@ public final class CompositeException extends RuntimeException {
                 final Map<Throwable, Boolean> seenCauses = new IdentityHashMap<>();
 
                 final StringBuilder aggregateMessage = new StringBuilder();
-                aggregateMessage.append("Multiple exceptions (").append(exceptions.size()).append(')').append(
-                        separator);
+                aggregateMessage.append("Multiple exceptions (").append(exceptions.size())
+                        .append(')').append(separator);
 
                 for (Throwable inner : exceptions) {
                     int depth = 0;
@@ -175,11 +176,11 @@ public final class CompositeException extends RuntimeException {
                         if (st.length > 0) {
                             final boolean isVerboseException =
                                     verboseExceptionSampler.isSampled(inner.getClass());
-                            final int maxStackTraceSize = isVerboseException ? st.length : Math.min(
-                                                          DEFAULT_MAX_NUM_STACK_TRACES, st.length);
+                            final int maxStackTraceSize = isVerboseException ? st.length
+                                    : Math.min(DEFAULT_MAX_NUM_STACK_TRACES, st.length);
                             for (int i = 0; i < maxStackTraceSize; i++) {
-                                aggregateMessage.append(messagePadding).append("at ").append(st[i]).append(
-                                        separator);
+                                aggregateMessage.append(messagePadding).append("at ")
+                                        .append(st[i]).append(separator);
                             }
                         }
 

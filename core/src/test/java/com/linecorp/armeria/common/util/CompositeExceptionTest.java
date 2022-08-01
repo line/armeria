@@ -165,7 +165,7 @@ class CompositeExceptionTest {
     }
 
     @Test
-    public void paddingTest() {
+    void paddingTest() {
         final IllegalStateException ex1 = new IllegalStateException();
         final IllegalArgumentException ex2 = new IllegalArgumentException();
         final String className = getClass().getSimpleName();
@@ -182,13 +182,13 @@ class CompositeExceptionTest {
                 new CompositeException(ImmutableList.of(ex1, ex2), Sampler.never());
         final int paddingCount = paddingCount(compositeException);
 
-        // padding * stack trace length * exception length
+        // padding length * stack trace length * exception amount
         final int expectPaddingCount = 4 * 3 * 2;
         assertThat(paddingCount).isEqualTo(expectPaddingCount);
     }
 
     @Test
-    public void compositeExceptionPaddingTest() {
+    void compositeExceptionPaddingTest() {
         final IllegalStateException ex1 = new IllegalStateException();
         final IllegalArgumentException ex2 = new IllegalArgumentException();
         final AnticipatedException ex3 = new AnticipatedException(ex2);
@@ -206,30 +206,30 @@ class CompositeExceptionTest {
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex3), Sampler.never());
         final int paddingCount = paddingCount(compositeException);
-        // padding * custom stack trace length * exception length + ( composite exception padding *
-        // custom stack trace length )
+        // padding * custom stack trace length * exception amount + ( composite exception padding length *
+        // composite exception custom stack trace length )
         final int expectPaddingCount = 4 * 3 * 2 + (6 * 3);
         assertThat(paddingCount).isEqualTo(expectPaddingCount);
     }
 
     private static long stackTraceLength(final CompositeException exception) {
         return Arrays.stream(exception.getCause().getMessage().split(separator))
-                        .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-                        .count();
+                     .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
+                     .count();
     }
 
     private static int paddingCount(final CompositeException exception) {
         return Arrays.stream(exception.getCause().getMessage().split(separator))
-                .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-                .mapToInt(line -> {
-                    int padding = 0;
-                    final int paddingLength = PADDING.length();
-                    while (line.startsWith(PADDING)) {
-                        line = line.substring(paddingLength);
-                        padding += paddingLength;
-                    }
-                    return padding;
-                })
-                .sum();
+                     .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
+                     .mapToInt(line -> {
+                         int padding = 0;
+                         final int paddingLength = PADDING.length();
+                         while (line.startsWith(PADDING)) {
+                             line = line.substring(paddingLength);
+                             padding += paddingLength;
+                         }
+                         return padding;
+                     })
+                     .sum();
     }
 }
