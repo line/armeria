@@ -36,10 +36,7 @@ class CompositeExceptionTest {
         final IllegalArgumentException ex2 = new IllegalArgumentException();
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex2), Sampler.always());
-        final int separatedStacktraceLength =
-                (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
-                        .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-                        .count();
+        final long separatedStacktraceLength = stackTraceLength(compositeException);
 
         final int sumStackTraceOutputLength = ex1.getStackTrace().length + ex2.getStackTrace().length;
         // if verboseException option enabled, output full stacktrace
@@ -53,10 +50,7 @@ class CompositeExceptionTest {
         final IllegalArgumentException ex2 = new IllegalArgumentException();
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex2), Sampler.never());
-        final int separatedStacktraceLength =
-                (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
-                        .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-                        .count();
+        final long separatedStacktraceLength = stackTraceLength(compositeException);
 
         // if verboseException option disabled, max output stacktrace is
         // CompositeException.DEFAULT_MAX_NUM_STACK_TRACES.
@@ -80,10 +74,7 @@ class CompositeExceptionTest {
         ex2.setStackTrace(customStackTrace);
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex2), Sampler.never());
-        final int separatedStacktraceLength =
-                (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
-                        .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-                        .count();
+        final long separatedStacktraceLength = stackTraceLength(compositeException);
 
         // if verboseException option disabled, max output stacktrace is
         // CompositeException.DEFAULT_MAX_NUM_STACK_TRACES.
@@ -99,10 +90,7 @@ class CompositeExceptionTest {
         final AnticipatedException ex3 = new AnticipatedException(ex2);
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex3), Sampler.always());
-        final int separatedStacktraceLength =
-                (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
-                            .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-                            .count();
+        final long separatedStacktraceLength = stackTraceLength(compositeException);
         final int sumStackTraceOutputLength = ex1.getStackTrace().length + ex2.getStackTrace().length +
                                               ex3.getStackTrace().length;
 
@@ -127,10 +115,7 @@ class CompositeExceptionTest {
         ex2.setStackTrace(customStackTrace);
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex3), Sampler.always());
-        final int separatedStacktraceLength =
-                (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
-                            .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-                            .count();
+        final long separatedStacktraceLength = stackTraceLength(compositeException);
         final int sumStackTraceOutputLength = ex1.getStackTrace().length + ex2.getStackTrace().length +
                                               ex3.getStackTrace().length;
 
@@ -147,10 +132,7 @@ class CompositeExceptionTest {
         final AnticipatedException ex3 = new AnticipatedException(ex2);
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex3), Sampler.never());
-        final int separatedStacktraceLength =
-                (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
-                            .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-                            .count();
+        final long separatedStacktraceLength = stackTraceLength(compositeException);
 
         // if verboseException option enabled, test for composite exceptions.
         // Expected: CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 3
@@ -174,10 +156,7 @@ class CompositeExceptionTest {
         ex2.setStackTrace(customStackTrace);
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex3), Sampler.never());
-        final int separatedStacktraceLength =
-                (int) Arrays.stream(compositeException.getCause().getMessage().split(separator))
-                            .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-                            .count();
+        final long separatedStacktraceLength = stackTraceLength(compositeException);
 
         // if verboseException option enabled, test for composite exceptions.
         // Expected: CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 3 + ex2 StackTraces(3)
@@ -201,18 +180,7 @@ class CompositeExceptionTest {
         ex2.setStackTrace(customStackTrace);
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex2), Sampler.never());
-        final int paddingCount = Arrays.stream(compositeException.getCause().getMessage().split(separator))
-              .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-              .mapToInt(line -> {
-                  int padding = 0;
-                  final int paddingLength = PADDING.length();
-                  while (line.startsWith(PADDING)) {
-                      line = line.substring(paddingLength);
-                      padding += paddingLength;
-                  }
-                  return padding;
-              })
-              .sum();
+        final int paddingCount = paddingCount(compositeException);
 
         // padding * stack trace length * exception length
         final int expectPaddingCount = 4 * 3 * 2;
@@ -237,21 +205,31 @@ class CompositeExceptionTest {
         ex3.setStackTrace(customStackTrace);
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex3), Sampler.never());
-        final int paddingCount = Arrays.stream(compositeException.getCause().getMessage().split(separator))
-             .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
-             .mapToInt(line -> {
-                 int padding = 0;
-                 final int paddingLength = PADDING.length();
-                 while (line.startsWith(PADDING)) {
-                     line = line.substring(paddingLength);
-                     padding += paddingLength;
-                 }
-                 return padding;
-             })
-             .sum();
+        final int paddingCount = paddingCount(compositeException);
         // padding * custom stack trace length * exception length + ( composite exception padding *
         // custom stack trace length )
         final int expectPaddingCount = 4 * 3 * 2 + (6 * 3);
         assertThat(paddingCount).isEqualTo(expectPaddingCount);
+    }
+
+    private static long stackTraceLength(final CompositeException exception) {
+        return Arrays.stream(exception.getCause().getMessage().split(separator))
+                        .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
+                        .count();
+    }
+
+    private static int paddingCount(final CompositeException exception) {
+        return Arrays.stream(exception.getCause().getMessage().split(separator))
+                .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
+                .mapToInt(line -> {
+                    int padding = 0;
+                    final int paddingLength = PADDING.length();
+                    while (line.startsWith(PADDING)) {
+                        line = line.substring(paddingLength);
+                        padding += paddingLength;
+                    }
+                    return padding;
+                })
+                .sum();
     }
 }
