@@ -2,58 +2,58 @@
 akka = "2.6.19"
 bouncycastle = "1.70"
 brotli4j = "1.7.1"
-curator = "5.2.1"
-dagger = "2.42"
+curator = "5.3.0"
+dagger = "2.43.1"
 dropwizard1 = "1.3.29"
-dropwizard2 = "2.1.0"
+dropwizard2 = "2.1.1"
 errorprone = "2.14.0"
 eureka = "1.10.17"
-graphql-kotlin = "5.3.2"
+graphql-kotlin = "6.0.0"
 grpc-kotlin = "1.3.0"
 groovy = "3.0.5"
 guava = "31.1-jre"
 hamcrest = "2.2"
 jetty93 = '9.3.30.v20211001'
-jetty94 = "9.4.46.v20220331"
+jetty94 = "9.4.48.v20220622"
 jmh = "1.35"
 json-unit = "2.35.0"
 junit5 = "5.8.2"
-kotlin = "1.7.0"
-kotlin-coroutine = "1.6.3"
-micrometer = "1.9.1"
+kotlin = "1.7.10"
+kotlin-coroutine = "1.6.4"
+micrometer = "1.9.2"
 micrometer13 = "1.3.20"
 mockito = "4.6.1"
 monix = "3.4.1"
 munit = "0.7.29"
 okhttp4 = "4.10.0"
 opensaml = "3.4.6"
-protobuf = "3.19.2"
+protobuf = "3.21.1"
 reactive-grpc = "1.2.3"
 reactive-streams = "1.0.4"
-reactor = "3.4.19"
+reactor = "3.4.21"
 resteasy = "5.0.2.Final"
 retrofit2 = "2.9.0"
-sangria = "3.0.0"
+sangria = "3.0.1"
 sangria-slowlog = "2.0.4"
 scala-java8-compat = "1.0.2"
 scalapb = "0.11.11"
 scalapb-json = "0.12.0"
 slf4j = "1.7.36"
 spring-boot1 = "1.5.22.RELEASE"
-spring-boot2 = "2.7.1"
+spring-boot2 = "2.7.2"
 tomcat8 = "8.5.78"
-tomcat9 = "9.0.62"
+tomcat9 = "9.0.65"
 
 [boms]
-brave = { module = "io.zipkin.brave:brave-bom", version = "5.13.9" }
+brave = { module = "io.zipkin.brave:brave-bom", version = "5.13.10" }
 dropwizard-metrics = { module = "io.dropwizard.metrics:metrics-bom", version = "4.2.10" }
 # Ensure that we use the same Protobuf version as what gRPC depends on.
-# See: https://github.com/grpc/grpc-java/blob/master/build.gradle
-#      (Switch to the right tag and look for "protobufVersion" and "protocVersion".)
-grpc-java = { module = "io.grpc:grpc-bom", version = "1.47.0" }
+# See: https://github.com/grpc/grpc-java/blob/master/gradle/libs.versions.toml
+#      (Switch to the right tag and look for "protobuf".)
+grpc-java = { module = "io.grpc:grpc-bom", version = "1.48.0" }
 jackson = { module = "com.fasterxml.jackson:jackson-bom", version = "2.13.3" }
-junit5 = { module = "org.junit:junit-bom", version = "5.8.2" }
-netty = { module = "io.netty:netty-bom", version = "4.1.78.Final" }
+junit5 = { module = "org.junit:junit-bom", version = "5.9.0" }
+netty = { module = "io.netty:netty-bom", version = "4.1.79.Final" }
 
 # Akka is used only for testing in it:grpcweb module.
 [libraries.akka-http-cors_v213]
@@ -126,8 +126,8 @@ version.ref = "brotli4j"
 
 [libraries.bucket4j]
 module = "com.github.vladimir-bukhtoyarov:bucket4j-core"
-version = "7.5.0"
-javadocs = "https://javadoc.io/doc/com.github.vladimir-bukhtoyarov/bucket4j-core/7.5.0/"
+version = "7.6.0"
+javadocs = "https://javadoc.io/doc/com.github.vladimir-bukhtoyarov/bucket4j-core/7.6.0/"
 
 # Don"t upgrade Caffeine to 3.x that requires Java 11.
 [libraries.caffeine]
@@ -147,7 +147,7 @@ version = "2.5.5"
 
 [libraries.checkstyle]
 module = "com.puppycrawl.tools:checkstyle"
-version = "10.3.1"
+version = "10.3.2"
 
 [libraries.consul]
 module = "com.pszymczyk.consul:embedded-consul"
@@ -160,13 +160,13 @@ version = "2.2.1"
 module = "org.apache.curator:curator-recipes"
 version.ref = "curator"
 javadocs = [
-    "https://www.javadoc.io/doc/org.apache.curator/curator-framework/5.1.0/",
-    "https://www.javadoc.io/doc/org.apache.curator/curator-recipes/5.1.0/"]
+    "https://www.javadoc.io/doc/org.apache.curator/curator-framework/5.3.0/",
+    "https://www.javadoc.io/doc/org.apache.curator/curator-recipes/5.3.0/"]
 exclusions = "org.apache.zookeeper:zookeeper"
 [libraries.curator-discovery]
 module = "org.apache.curator:curator-x-discovery"
 version.ref = "curator"
-javadocs = "https://www.javadoc.io/doc/org.apache.curator/curator-x-discovery/5.1.0/"
+javadocs = "https://www.javadoc.io/doc/org.apache.curator/curator-x-discovery/5.3.0/"
 
 # This is only used for examples/context-propagation/dagger
 [libraries.dagger]
@@ -182,7 +182,7 @@ version.ref = "dagger"
 # DGS is used only for testing in it:dgs module.
 [libraries.dgs]
 module = "com.netflix.graphql.dgs:graphql-dgs-client"
-version = "5.0.4"
+version = "5.0.5"
 
 [libraries.dropwizard1-core]
 module = "io.dropwizard:dropwizard-core"
@@ -212,7 +212,7 @@ version.ref = "dropwizard1"
 [libraries.dropwizard2-core]
 module = "io.dropwizard:dropwizard-core"
 version.ref = "dropwizard2"
-javadocs = "https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.1.0/"
+javadocs = "https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.1.1/"
 [libraries.dropwizard2-jackson]
 module = "io.dropwizard:dropwizard-jackson"
 version.ref = "dropwizard2"
@@ -263,7 +263,7 @@ relocations = { from = "it.unimi.dsi.fastutil", to = "com.linecorp.armeria.inter
 # Finagle is used only for testing in zookeeper module.
 [libraries.finagle-serversets_v213]
 module = "com.twitter:finagle-serversets_2.13"
-version = "22.4.0"
+version = "22.7.0"
 
 [libraries.findbugs]
 module = "com.google.code.findbugs:jsr305"
@@ -280,11 +280,11 @@ version = "4.3.1"
 # gax-grpc is only used for gRPC test module.
 [libraries.gax-grpc]
 module = "com.google.api:gax-grpc"
-version = "2.18.2"
+version = "2.18.6"
 
 [libraries.graphql-java]
 module = "com.graphql-java:graphql-java"
-version = "18.2"
+version = "19.0"
 
 [libraries.graphql-kotlin-client]
 module = "com.expediagroup:graphql-kotlin-client"
@@ -302,7 +302,7 @@ version.ref = "graphql-kotlin"
 # Groovy is only used for testing consul
 [libraries.groovy-xml]
 module = "org.codehaus.groovy:groovy-xml"
-version = "3.0.11"
+version = "3.0.12"
 
 [libraries.grpc-core]
 module = "io.grpc:grpc-core"
@@ -501,7 +501,7 @@ version.ref = "json-unit"
 # JSoup is only used for Gradle script and SAML testing.
 [libraries.jsoup]
 module = "org.jsoup:jsoup"
-version = "1.15.1"
+version = "1.15.2"
 
 [libraries.junit4]
 module = "junit:junit"
@@ -529,12 +529,12 @@ version = "1.7.1"
 
 [libraries.jwt]
 module = "com.auth0:java-jwt"
-version = "3.19.1"
-javadocs = "https://www.javadoc.io/doc/com.auth0/java-jwt/3.19.0/"
+version = "4.0.0"
+javadocs = "https://www.javadoc.io/doc/com.auth0/java-jwt/4.0.0/"
 
 [libraries.kafka]
 module = "org.apache.kafka:kafka-clients"
-version = "3.2.0"
+version = "3.2.1"
 javadocs = "https://kafka.apache.org/30/javadoc/"
 
 [libraries.kotlin-allopen]
@@ -650,8 +650,8 @@ javadocs = "https://prometheus.github.io/client_java/"
 
 # Ensure that we use the same Protobuf version as what gRPC depends on.
 # See: https://github.com/grpc/grpc-java/blob/master/build.gradle
-#      (Switch to the right tag and look for "protobufVersion" and "protocVersion".)
-#      e.g. https://github.com/grpc/grpc-java/blob/v1.47.0/build.gradle
+#      (Switch to the right tag and look for "protobuf".)
+#      e.g. https://github.com/grpc/grpc-java/blob/v1.48.0/gradle/libs.versions.toml
 [libraries.protobuf-java]
 module = "com.google.protobuf:protobuf-java"
 version.ref = "protobuf"
@@ -664,7 +664,7 @@ module = "com.google.protobuf:protoc"
 version.ref = "protobuf"
 [libraries.protobuf-gradle-plugin]
 module = "com.google.protobuf:protobuf-gradle-plugin"
-version = "0.8.18"
+version = "0.8.19"
 
 [libraries.protobuf-jackson]
 module = "org.curioswitch.curiostack:protobuf-jackson"
@@ -681,7 +681,7 @@ module = "io.projectreactor:reactor-test"
 version.ref = "reactor"
 [libraries.reactor-kotlin]
 module = "io.projectreactor.kotlin:reactor-kotlin-extensions"
-version = '1.1.6'
+version = '1.1.7'
 
 [libraries.reactor-grpc]
 module = "com.salesforce.servicelibs:reactor-grpc"
@@ -706,8 +706,8 @@ version.ref = "resteasy"
 # "provided" dependency required by RESTEasy "resteasy-core-spi"
 [libraries.resteasy-jboss-logging]
 module = "org.jboss.logging:jboss-logging"
-version = "3.4.3.Final"
-javadocs = "https://javadoc.io/doc/org.jboss.logging/jboss-logging/3.4.3.Final/"
+version = "3.5.0.Final"
+javadocs = "https://javadoc.io/doc/org.jboss.logging/jboss-logging/3.5.0.Final/"
 [libraries.resteasy-jboss-logging-annotations]
 module = "org.jboss.logging:jboss-logging-annotations"
 version = "2.2.1.Final"
@@ -821,11 +821,11 @@ module = "org.scala-lang:scala-library"
 version = "2.13.8"
 [libraries.scala_v3]
 module = "org.scala-lang:scala3-library_3"
-version = "3.1.2"
+version = "3.1.3"
 
 [libraries.scala-collection-compat_v212]
 module = "org.scala-lang.modules:scala-collection-compat_2.12"
-version = "2.7.0"
+version = "2.8.1"
 [libraries.scala-java8-compat_v212]
 module = "org.scala-lang.modules:scala-java8-compat_2.12"
 version.ref = "scala-java8-compat"
@@ -887,7 +887,7 @@ version.ref = "slf4j"
 
 [libraries.spring-web]
 module = "org.springframework:spring-web"
-version = "5.3.21"
+version = "5.3.22"
 
 [libraries.spring-boot1-autoconfigure]
 module = "org.springframework.boot:spring-boot-autoconfigure"
