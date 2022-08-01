@@ -60,7 +60,7 @@ public class AggregationOptionsBuilder<T, U> {
     }
 
     /**
-     * Returns the {@link EventExecutor} set via {@link #executor(EventExecutor)}.
+     * Returns the {@link EventExecutor} to run the aggregation function on.
      */
     @Nullable
     protected final EventExecutor executor() {
@@ -79,7 +79,7 @@ public class AggregationOptionsBuilder<T, U> {
     }
 
     /**
-     * Sets whether to cache the aggregation result.
+     * Returns whether to cache the aggregation result.
      */
     protected final boolean cacheResult() {
         return cacheResult;
@@ -104,18 +104,33 @@ public class AggregationOptionsBuilder<T, U> {
     }
 
     /**
-     * Returns a newly created {@link AggregationOptions} with the properties set so far.
+     * (Advanced users only) Sets whether to receive the pooled {@link HttpData} as is, without making a copy.
      */
-    public AggregationOptions<T, U> build() {
+    protected final boolean withPooledObjects() {
+        return withPooledObjects;
+    }
+
+    /**
+     * Validates the options set so far.
+     * @throws IllegalStateException if the options are invalid.
+     */
+    protected final void validateOptions() {
         if (withPooledObjects && cacheResult) {
             throw new IllegalStateException("Can't cache pooled objects");
         }
+    }
+
+    /**
+     * Returns a newly created {@link AggregationOptions} with the properties set so far.
+     * @throws IllegalStateException if the options set are invalid.
+     */
+    public AggregationOptions<T, U> build() {
+        validateOptions();
 
         EventExecutor executor = this.executor;
         if (executor == null) {
             executor = RequestContext.mapCurrent(RequestContext::eventLoop,
                                                  CommonPools.workerGroup()::next);
-            assert executor != null;
         }
 
         return new DefaultAggregationOptions<>(aggregator, executor, cacheResult, withPooledObjects);

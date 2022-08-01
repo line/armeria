@@ -109,10 +109,6 @@ public interface HttpAggregationOptions<T extends HttpObject, U extends Aggregat
      * HttpResponse response = ...;
      * HttpAggregateOptions options =
      *     HttpAggregateOptions.builderForResponse()
-     *                         // Pooled objects are used to aggregated the `HttpResponse`.
-     *                         .alloc(ctx.alloc())
-     *                         // Pooled objects are used to aggregated the `HttpResponse`.
-     *                         .withPooledObjects(true)
      *                         // Specify an event loop to execute the aggregation function on.
      *                         .executor(ctx.eventLoop())
      *                         // Cache the aggregated `HttpResponse`.

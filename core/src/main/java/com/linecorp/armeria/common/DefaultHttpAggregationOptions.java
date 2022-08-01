@@ -18,12 +18,12 @@ package com.linecorp.armeria.common;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.AggregationOptions;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
@@ -31,33 +31,42 @@ import io.netty.util.concurrent.EventExecutor;
 final class DefaultHttpAggregationOptions<T extends HttpObject, U extends AggregatedHttpMessage>
         implements HttpAggregationOptions<T, U> {
 
-    private final AggregationOptions<T, U> delegate;
+    private final BiFunction<? super HttpAggregationOptions<T, U>, ? super List<T>, ? extends U> aggregator;
+    private final EventExecutor executor;
+    private final boolean cacheResult;
+    private final boolean withPooledObjects;
     @Nullable
     private final ByteBufAllocator alloc;
 
-    DefaultHttpAggregationOptions(AggregationOptions<T, U> delegate, @Nullable ByteBufAllocator alloc) {
-        this.delegate = delegate;
+    DefaultHttpAggregationOptions(
+            BiFunction<? super HttpAggregationOptions<T, U>, ? super List<T>, ? extends U> aggregator,
+            EventExecutor executor, boolean cacheResult, boolean withPooledObjects,
+            @Nullable ByteBufAllocator alloc) {
+        this.aggregator = aggregator;
+        this.executor = executor;
+        this.cacheResult = cacheResult;
+        this.withPooledObjects = withPooledObjects;
         this.alloc = alloc;
     }
 
     @Override
     public Function<List<T>, U> aggregator() {
-        return delegate.aggregator();
+        return objects -> aggregator.apply(this, objects);
     }
 
     @Override
     public EventExecutor executor() {
-        return delegate.executor();
+        return executor;
     }
 
     @Override
     public boolean cacheResult() {
-        return delegate.cacheResult();
+        return cacheResult;
     }
 
     @Override
     public boolean withPooledObjects() {
-        return delegate.withPooledObjects();
+        return withPooledObjects;
     }
 
     @Override
@@ -74,22 +83,25 @@ final class DefaultHttpAggregationOptions<T extends HttpObject, U extends Aggreg
             return false;
         }
         final HttpAggregationOptions<?, ?> that = (HttpAggregationOptions<?, ?>) o;
-        return delegate.equals(o) && Objects.equals(alloc, that.alloc());
+        return cacheResult == that.cacheResult() &&
+               withPooledObjects == that.withPooledObjects() &&
+               executor.equals(that.executor()) &&
+               aggregator.equals(that.aggregator()) &&
+               Objects.equals(alloc, that.alloc());
     }
 
     @Override
     public int hashCode() {
-        int hashCode = delegate.hashCode();
-        if (alloc != null) {
-            hashCode = hashCode * 31 + alloc.hashCode();
-        }
-        return hashCode;
+        return Objects.hash(aggregator, executor, cacheResult, withPooledObjects, alloc);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("delegate", delegate)
+                          .add("aggregator", aggregator)
+                          .add("executor", executor)
+                          .add("cacheResult", cacheResult)
+                          .add("withPooledObjects", withPooledObjects)
                           .add("alloc", alloc)
                           .toString();
     }

@@ -38,6 +38,8 @@ import io.netty.util.concurrent.EventExecutor;
 public final class HttpAggregationOptionsBuilder<T extends HttpObject, U extends AggregatedHttpMessage>
         extends AggregationOptionsBuilder<T, U> {
 
+    private final BiFunction<? super HttpAggregationOptions<T, U>,
+            ? super List<T>, ? extends U> aggregator;
     @Nullable
     private ByteBufAllocator alloc;
 
@@ -45,6 +47,7 @@ public final class HttpAggregationOptionsBuilder<T extends HttpObject, U extends
             BiFunction<? super HttpAggregationOptions<T, U>, ? super List<T>, ? extends U> aggregator) {
         //noinspection unchecked
         super((BiFunction<? super AggregationOptions<T, U>, ? super List<T>, ? extends U>) aggregator);
+        this.aggregator = aggregator;
     }
 
     @Override
@@ -86,9 +89,19 @@ public final class HttpAggregationOptionsBuilder<T extends HttpObject, U extends
 
     /**
      * Returns a newly created {@link HttpAggregationOptions} with the properties set so far.
+     * @throws IllegalStateException if the options set are invalid.
      */
     @Override
     public HttpAggregationOptions<T, U> build() {
-        return new DefaultHttpAggregationOptions<>(super.build(), alloc);
+        validateOptions();
+
+        EventExecutor executor = executor();
+        if (executor == null) {
+            executor = RequestContext.mapCurrent(RequestContext::eventLoop,
+                                                 CommonPools.workerGroup()::next);
+        }
+
+        return new DefaultHttpAggregationOptions<>(aggregator, executor, cacheResult(), 
+                                                   withPooledObjects(), alloc);
     }
 }

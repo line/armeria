@@ -17,11 +17,11 @@
 package com.linecorp.armeria.common.stream;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Objects;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -78,7 +78,7 @@ final class DefaultAggregationOptions<T, U> implements AggregationOptions<T, U> 
 
     @Override
     public int hashCode() {
-        return Objects.hashCode(aggregator, executor, cacheResult, withPooledObjects);
+        return Objects.hash(aggregator, executor, cacheResult, withPooledObjects);
     }
 
     @Override

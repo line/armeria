@@ -631,7 +631,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * the trailers of the response are received fully.
      *
      * <p>The {@link AggregatedHttpResponse} is cached by default. So it is allowed to repeatedly call this
-     * method get the cached value after the first aggregation.
+     * method and get the cached value after the first aggregation.
      * <pre>{@code
      * HttpResponse response = ...;
      * AggregatedHttpResponse aggregated0 = response.aggregate().join();
@@ -648,7 +648,7 @@ public interface HttpResponse extends Response, HttpMessage {
      * the trailers of the response are received fully.
      *
      * <p>The {@link AggregatedHttpResponse} is cached by default. So it is allowed to repeatedly call this
-     * method get the cached value after the first aggregation.
+     * method and get the cached value after the first aggregation.
      * <pre>{@code
      * HttpResponse response = ...;
      * AggregatedHttpResponse aggregated0 = response.aggregate(executor).join();
