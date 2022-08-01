@@ -88,6 +88,49 @@ configure(dependencyManagementProject) {
     }
 }
 
+// Publish version catalog so that other projects can easily align transitive versions of the project by
+// importing the published catalog.
+// https://docs.gradle.org/current/userguide/platforms.html#sec:version-catalog-plugin
+configure(projectsWithFlag('version-catalogs')) {
+    apply plugin: 'version-catalog'
+    apply plugin: 'maven-publish'
+
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                from components.versionCatalog
+            }
+        }
+    }
+
+    catalog {
+        versionCatalog {
+            def catalogs = rootProject.extensions.getByType(VersionCatalogsExtension).named('libs')
+            catalogs.libraryAliases.forEach { alias ->
+                def dep = catalogs.findLibrary(alias).get().get()
+                if (!dep.versionConstraint.requiredVersion.isEmpty()) {
+                    library(alias, dep.toString())
+                }
+            }
+
+            catalogs.pluginAliases.forEach { alias ->
+                def plug = catalogs.findPlugin(alias).get().get()
+                plugin(alias, plug.pluginId).version(plug.version.requiredVersion)
+            }
+
+            catalogs.versionAliases.forEach { alias ->
+                def ver = catalogs.findVersion(alias).get()
+                version(alias, ver.toString())
+            }
+
+            catalogs.bundleAliases.forEach { alias ->
+                def aliases = catalogs.findBundle(alias).get().get()
+                bundle(alias, aliases.toString())
+            }
+        }
+    }
+}
+
 configure(projectsWithFlags('java')) {
 
     configurations.configureEach { configuration ->

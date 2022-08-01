@@ -510,6 +510,19 @@ generate Maven BOM based on the dependencies specified in `dependencies.toml`.
 `bom` flag implies `publish` flag, which means the BOM will be uploaded to a
 Maven repository by `./gradlew publish`.
 
+## Sharing [dependency versions](https://docs.gradle.org/current/userguide/platforms.html#sec:version-catalog-plugin) with `version-catalog` flag
+
+If you configure a project with `version-catalog` flag, the project will be configured to
+publish version catalog based on the dependencies specified in `dependencies.toml`.
+
+`version-catalog` flag also implies `publish` flag, which means the `libs.versions.toml` will be uploaded to a
+Maven repository by `./gradlew publish`.
+
+```groovy
+// settings.gradle
+includeWithFlags ':version-catalogs',  'version-catalogs', 'publish'
+```
+
 ## Building shaded JARs with `shade` flag
 
 Let's say you have a project that depends on a very old version of Guava and
