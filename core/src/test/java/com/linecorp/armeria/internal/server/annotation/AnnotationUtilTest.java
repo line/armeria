@@ -31,6 +31,8 @@ import java.util.EnumSet;
 import java.util.List;
 
 import org.junit.Test;
+import org.junit.jupiter.api.condition.EnabledForJreRange;
+import org.junit.jupiter.api.condition.JRE;
 
 import net.sf.cglib.proxy.Enhancer;
 import net.sf.cglib.proxy.FixedValue;
@@ -408,6 +410,7 @@ public class AnnotationUtilTest {
     }
 
     @Test
+    @EnabledForJreRange(max = JRE.JAVA_15)
     public void cglibProxy() {
         final Enhancer enhancer = new Enhancer();
         enhancer.setSuperclass(TestGrandChildClass.class);
