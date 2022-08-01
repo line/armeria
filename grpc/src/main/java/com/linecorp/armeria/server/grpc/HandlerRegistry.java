@@ -86,16 +86,6 @@ final class HandlerRegistry {
     private static final Converter<String, String> methodNameConverter =
             CaseFormat.UPPER_CAMEL.converterTo(CaseFormat.LOWER_CAMEL);
 
-    private static HttpService applyDecorators(
-            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators,
-            HttpService delegate) {
-        Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
-        for (Function<? super HttpService, ? extends HttpService> function : decorators) {
-            decorator = decorator.compose(function);
-        }
-        return decorator.apply(delegate);
-    }
-
     private final List<ServerServiceDefinition> services;
     private final Map<String, ServerMethodDefinition<?, ?>> methods;
     private final Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute;
@@ -177,6 +167,16 @@ final class HandlerRegistry {
         final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, HttpService> builder = ImmutableMap.builder();
         builder.putAll(decorated);
         return builder.build();
+    }
+
+    private static HttpService applyDecorators(
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators,
+            HttpService delegate) {
+        Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
+        for (Function<? super HttpService, ? extends HttpService> function : decorators) {
+            decorator = decorator.compose(function);
+        }
+        return decorator.apply(delegate);
     }
 
     static final class Builder {
