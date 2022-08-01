@@ -134,11 +134,11 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
     }
 
     private List<FieldInfo> requestFieldInfos(JavaType javaType, Set<JavaType> visiting) {
-        if (!visiting.add(javaType)) {
+        if (!mapper.canDeserialize(javaType)) {
             return ImmutableList.of();
         }
-        if (!mapper.canDeserialize(javaType)) {
-            visiting.remove(javaType);
+
+        if (!visiting.add(javaType)) {
             return ImmutableList.of();
         }
 
@@ -165,11 +165,11 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
     }
 
     private List<FieldInfo> responseFieldInfos(JavaType javaType, Set<JavaType> visiting) {
-        if (!visiting.add(javaType)) {
+        if (!mapper.canSerialize(javaType.getRawClass())) {
             return ImmutableList.of();
         }
-        if (!mapper.canSerialize(javaType.getRawClass())) {
-            visiting.remove(javaType);
+        
+        if (!visiting.add(javaType)) {
             return ImmutableList.of();
         }
 

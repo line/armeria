@@ -644,6 +644,7 @@
       }
     }, {
       "name": "armeria.protobuf.testing.TestMessage",
+      "alias": "com.linecorp.armeria.scalapb.testing.messages.TestMessage",
       "fields": [
         {
           "name": "bool",

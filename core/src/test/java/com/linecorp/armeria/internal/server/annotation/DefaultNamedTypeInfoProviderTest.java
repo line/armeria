@@ -127,7 +127,7 @@ class DefaultNamedTypeInfoProviderTest {
     @ArgumentsSource(UnnamedTypeProvider.class)
     @ParameterizedTest
     void unnamedTypes(Class<?> clazz) {
-        StructInfo structInfo = (StructInfo) responseStructInfoProvider.newNamedTypeInfo(clazz);
+        StructInfo structInfo = (StructInfo) requestStructInfoProvider.newNamedTypeInfo(clazz);
         assertThat(structInfo.name()).isEqualTo(clazz.getName());
         assertThat(structInfo.fields()).isEmpty();
 
@@ -203,13 +203,6 @@ class DefaultNamedTypeInfoProviderTest {
     @Test
     void specification() throws Exception {
         final BlockingWebClient client = server.blockingWebClient();
-
-        final String responseString = client.prepare()
-                                            .get("/docs/specification.json")
-                                            .asString()
-                                            .execute()
-                                            .content();
-        System.out.println(responseString);
         final JsonNode response = client.prepare()
                                         .get("/docs/specification.json")
                                         .asJson(JsonNode.class)

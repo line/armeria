@@ -258,6 +258,7 @@
   } ],
   "structs" : [ {
     "name" : "armeria.protobuf.testing.TestMessage",
+    "alias" : "com.linecorp.armeria.protobuf.testing.Messages$TestMessage",
     "fields" : [ {
       "name" : "bool",
       "location" : "UNSPECIFIED",
@@ -455,6 +456,7 @@
     }
   }, {
     "name" : "armeria.protobuf.testing.TestMessage.Nested",
+    "alias" : "armeria.protobuf.testing.TestMessage.Nested",
     "fields" : [ {
       "name" : "string",
       "location" : "UNSPECIFIED",

@@ -24,6 +24,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -39,6 +41,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public final class StructInfo implements NamedTypeInfo {
 
     private final String name;
+    @Nullable
+    private final String alias;
     private final List<FieldInfo> fields;
     private final DescriptionInfo descriptionInfo;
 
@@ -46,14 +50,23 @@ public final class StructInfo implements NamedTypeInfo {
      * Creates a new instance.
      */
     public StructInfo(String name, Iterable<FieldInfo> fields) {
-        this(name, fields, DescriptionInfo.empty());
+        this(name, null, fields, DescriptionInfo.empty());
     }
 
     /**
      * Creates a new instance.
      */
     public StructInfo(String name, Iterable<FieldInfo> fields, DescriptionInfo descriptionInfo) {
+        this(name, null, fields, descriptionInfo);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public StructInfo(String name, @Nullable String alias, Iterable<FieldInfo> fields,
+                      DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
+        this.alias = alias;
         this.fields = ImmutableList.copyOf(requireNonNull(fields, "fields"));
         this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
     }
@@ -61,6 +74,29 @@ public final class StructInfo implements NamedTypeInfo {
     @Override
     public String name() {
         return name;
+    }
+
+    /**
+     * Returns the alias of the {@link #name()}.
+     */
+    @Nullable
+    @JsonInclude(Include.NON_NULL)
+    @JsonProperty
+    public String alias() {
+        return alias;
+    }
+
+    /**
+     * Returns a new {@link StructInfo} with the specified {@code alias}.
+     * Returns {@code this} if this {@link StructInfo} has the same {@link FieldInfo}s.
+     */
+    public StructInfo withAlias(String alias) {
+        requireNonNull(alias, "alias");
+        if (alias.equals(this.alias)) {
+            return this;
+        }
+
+        return new StructInfo(name, alias, fields, descriptionInfo);
     }
 
     /**
@@ -81,7 +117,7 @@ public final class StructInfo implements NamedTypeInfo {
             return this;
         }
 
-        return new StructInfo(name, fields, descriptionInfo);
+        return new StructInfo(name, alias, fields, descriptionInfo);
     }
 
     /**
@@ -103,7 +139,7 @@ public final class StructInfo implements NamedTypeInfo {
             return this;
         }
 
-        return new StructInfo(name, fields, descriptionInfo);
+        return new StructInfo(name, alias, fields, descriptionInfo);
     }
 
     @Override
@@ -125,19 +161,22 @@ public final class StructInfo implements NamedTypeInfo {
 
         final StructInfo that = (StructInfo) o;
         return name.equals(that.name) &&
+               Objects.equals(alias, that.alias) &&
                fields.equals(that.fields) &&
                descriptionInfo.equals(that.descriptionInfo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, fields, descriptionInfo);
+        return Objects.hash(name, alias, fields, descriptionInfo);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
                           .add("name", name)
+                          .add("alias", alias)
                           .add("fields", fields)
                           .add("descriptionInfo", descriptionInfo)
                           .toString();

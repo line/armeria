@@ -105,13 +105,6 @@ class ScalaPbNamedTypeInfoProviderTest extends FunSuite with ServerSuite {
 
   test("specification") {
     val client = server.webClient().blocking()
-    val res = client
-      .prepare()
-      .get("/docs/specification.json")
-      .asString()
-      .execute()
-      .content()
-    println(res)
     val response = client
       .prepare()
       .get("/docs/specification.json")

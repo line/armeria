@@ -30,7 +30,7 @@ final class ScalaPbNamedTypeInfoProvider extends NamedTypeInfoProvider {
     typeDescriptor match {
       case clazz: Class[_] if isProtobufMessage(clazz) =>
         val message = ScalaPbRequestConverterFunction.getDefaultInstance(clazz)
-        ProtobufNamedTypeInfoProvider.newStructInfo(message.companion.javaDescriptor)
+        ProtobufNamedTypeInfoProvider.newStructInfo(message.companion.javaDescriptor).withAlias(clazz.getName())
       case _ => null
     }
   }

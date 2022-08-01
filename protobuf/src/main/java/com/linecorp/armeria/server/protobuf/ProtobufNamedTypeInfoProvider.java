@@ -104,7 +104,8 @@ public final class ProtobufNamedTypeInfoProvider implements NamedTypeInfoProvide
         }
         final Message.Builder messageBuilder = getMessageBuilder(clazz);
         final Descriptor descriptorForType = messageBuilder.getDescriptorForType();
-        return newStructInfo(descriptorForType);
+
+        return newStructInfo(descriptorForType).withAlias(clazz.getName());
     }
 
     /**
