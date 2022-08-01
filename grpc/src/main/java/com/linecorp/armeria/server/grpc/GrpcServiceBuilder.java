@@ -956,8 +956,7 @@ public final class GrpcServiceBuilder {
                     httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
                                                             : UnframedGrpcErrorHandler.ofJson());
         }
-        if (!handlerRegistry.annotationDecorators().isEmpty() ||
-            !handlerRegistry.additionalDecorators().isEmpty()) {
+        if (handlerRegistry.containsDecorators()) {
             grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
         }
         return grpcService;
