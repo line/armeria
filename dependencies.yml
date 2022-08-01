@@ -656,3 +656,8 @@ org.jboss.logging:
     version: '2.2.1.Final'
     javadocs:
     - https://javadoc.io/doc/org.jboss.logging/jboss-logging-annotations/2.2.1.Final/
+
+# hessian
+com.caucho:
+  hessian:
+    version: 4.0.65
