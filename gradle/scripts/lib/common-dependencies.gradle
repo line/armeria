@@ -91,7 +91,7 @@ configure(dependencyManagementProject) {
 // Publish version catalog so that other projects can easily align transitive versions of the project by
 // importing the published catalog.
 // https://docs.gradle.org/current/userguide/platforms.html#sec:version-catalog-plugin
-configure(projectsWithFlag('version-catalogs')) {
+configure(projectsWithFlag('version-catalogs')) { catalogProject ->
     apply plugin: 'version-catalog'
     apply plugin: 'maven-publish'
 
@@ -126,6 +126,25 @@ configure(projectsWithFlag('version-catalogs')) {
             catalogs.bundleAliases.forEach { alias ->
                 def aliases = catalogs.findBundle(alias).get().get()
                 bundle(alias, aliases.toString())
+            }
+
+            afterEvaluate {
+                projectsWithFlag('publish').each { proj ->
+                    if (proj != catalogProject) {
+                        String alias = proj.ext.artifactId
+                        // Normalize the alias since Gradle prefixes `get` for '.' or '_' before a number.
+                        if (alias.contains("_")) {
+                            // Replace "armeria-scala_2.12" with "armeria-scala_v2.12"
+                            alias = alias.replace("_", "_v")
+                        }
+                        if (alias.contains(".")) {
+                            // Replace "armeria-scala_v2.12" with "armeria-scala_v212"
+                            // or "armeria-thrift0.13" with "armeria-thrift013"
+                            alias = alias.replace(".", "")
+                        }
+                        library(alias, proj.group, proj.ext.artifactId).version(proj.version)
+                    }
+                }
             }
         }
     }
