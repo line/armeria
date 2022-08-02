@@ -45,20 +45,20 @@ final class ServiceRouteUtil {
                 routingStatus = RoutingStatus.INVALID_PATH;
             }
         } else {
-            if (isCorsPreflightRequest(headers)) {
-                routingStatus = RoutingStatus.CORS_PREFLIGHT;
-            } else {
-                pathAndQuery = PathAndQuery.parse(originalPath);
-                if (pathAndQuery != null) {
-                    routingStatus = RoutingStatus.OK;
+            pathAndQuery = PathAndQuery.parse(originalPath);
+            if (pathAndQuery != null) {
+                if (isCorsPreflightRequest(headers)) {
+                    routingStatus = RoutingStatus.CORS_PREFLIGHT;
                 } else {
-                    routingStatus = RoutingStatus.INVALID_PATH;
+                    routingStatus = RoutingStatus.OK;
                 }
+            } else {
+                routingStatus = RoutingStatus.INVALID_PATH;
             }
         }
 
         final VirtualHost virtualHost = serverConfig.findVirtualHost(hostname, port);
-        if (routingStatus != RoutingStatus.OK) {
+        if (pathAndQuery == null) {
             return DefaultRoutingContext.of(virtualHost, hostname, headers.path(), /* query */ null, headers,
                                             routingStatus);
         } else {
