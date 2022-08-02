@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.graphql.protocol;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -41,7 +42,6 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.server.FileAggregatedMultipart;
 import com.linecorp.armeria.server.AbstractHttpService;
-import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -114,8 +114,10 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                         return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
                                                "Missing query");
                     }
-                    final Map<String, Object> variables = toMapFromJson(operations.get("variables"));
-                    final Map<String, Object> extensions = toMapFromJson(operations.get("extensions"));
+                    final Map<String, Object> variables = toMapFromJson(operations.get("variables"),
+                                                                        HashMap::new);
+                    final Map<String, Object> extensions = toMapFromJson(operations.get("extensions"),
+                                                                         ImmutableMap::of);
                     for (Map.Entry<String, List<String>> entry : map.entrySet()) {
                         final String key = entry.getKey();
                         final List<String> value = entry.getValue();
@@ -154,8 +156,10 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
 
                         final String operationName =
                                 toStringFromJson("operationName", requestMap.get("operationName"));
-                        final Map<String, Object> variables = toMapFromJson(requestMap.get("variables"));
-                        final Map<String, Object> extensions = toMapFromJson(requestMap.get("extensions"));
+                        final Map<String, Object> variables = toMapFromJson(requestMap.get("variables"),
+                                                                            ImmutableMap::of);
+                        final Map<String, Object> extensions = toMapFromJson(requestMap.get("extensions"),
+                                                                             ImmutableMap::of);
 
                         return executeGraphql(ctx, GraphqlRequest.of(query, operationName,
                                                                      variables, extensions));
@@ -191,8 +195,8 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         return unsupportedMediaType();
     }
 
-    private void bindMultipartVariable(Map<String, Object> variables, List<String> value,
-                                       List<MultipartFile> multipartFiles) {
+    private static void bindMultipartVariable(Map<String, Object> variables, List<String> value,
+                                              @Nullable List<MultipartFile> multipartFiles) {
         if (multipartFiles.isEmpty()) {
             return;
         }
@@ -248,7 +252,8 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
      * can only have string keys.
      */
     @SuppressWarnings("unchecked")
-    private static Map<String, Object> toMapFromJson(@Nullable Object maybeMap) {
+    private static Map<String, Object> toMapFromJson(@Nullable Object maybeMap,
+                                                     Supplier<Map<String, Object>> supplier) {
         if (maybeMap == null) {
             return new HashMap<>();
         }
@@ -256,7 +261,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         if (maybeMap instanceof Map) {
             final Map<?, ?> map = (Map<?, ?>) maybeMap;
             if (map.isEmpty()) {
-                return new HashMap<>();
+                return supplier.get();
             }
             return (Map<String, Object>) map;
         } else {
@@ -266,7 +271,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
 
     private static <T> T parseJsonString(String content, TypeReference<T> typeReference)
             throws JsonProcessingException {
-        return (T) mapper.readValue(content, typeReference);
+        return mapper.readValue(content, typeReference);
     }
 
     private static HttpResponse unsupportedMediaType() {
@@ -279,9 +284,6 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
     private static HttpResponse ofFailureThrownIllegalArgumentException(IllegalArgumentException ex) {
         final String message = ex.getMessage() == null ? HttpStatus.BAD_REQUEST.reasonPhrase()
                                                        : ex.getMessage();
-        final HttpResponse response = HttpResponse.of(HttpStatus.BAD_REQUEST,
-                                                      MediaType.PLAIN_TEXT, message);
-        final HttpResponseException cause = HttpResponseException.of(response, ex);
-        return HttpResponse.ofFailure(cause);
+        return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, message);
     }
 }

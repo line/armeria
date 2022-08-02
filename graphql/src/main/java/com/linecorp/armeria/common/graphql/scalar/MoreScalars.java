@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common.graphql.scalar;
 
+import com.linecorp.armeria.common.multipart.MultipartFile;
+
 import graphql.schema.GraphQLScalarType;
 
 /**
@@ -23,7 +25,7 @@ import graphql.schema.GraphQLScalarType;
 public final class MoreScalars {
 
     /**
-     * Returns {@link GraphQLScalarType} defined as a {@link com.linecorp.armeria.common.multipart.MultipartFile} type.
+     * Returns {@link GraphQLScalarType} defined as a {@link MultipartFile} type.
      */
     public static GraphQLScalarType multipartFile() {
         return MultipartFileScalar.INSTANCE;

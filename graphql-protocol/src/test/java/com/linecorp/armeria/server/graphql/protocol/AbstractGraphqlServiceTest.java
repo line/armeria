@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.graphql.protocol;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
@@ -49,7 +48,6 @@ import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest;
-import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.multipart.BodyPart;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
@@ -128,7 +126,7 @@ class AbstractGraphqlServiceTest {
 
     @MethodSource("provideThrowsExceptionPostMethodArguments")
     @ParameterizedTest
-    void throwsExceptionPost(Map<Object, Object> content) throws Exception {
+    void throwsExceptionPost(Map<Object, Object> content, String message) {
         final HttpRequest request = HttpRequest.builder()
                                                .post("/graphql")
                                                .contentJson(content)
@@ -137,8 +135,7 @@ class AbstractGraphqlServiceTest {
         final BlockingWebClient client = server.webClient().blocking();
         final AggregatedHttpResponse response = client.execute(request);
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        final RequestLog log = server.requestContextCaptor().take().log().whenComplete().join();
-        assertThat(log.responseCause()).isInstanceOf(IllegalArgumentException.class);
+        assertThat(response.contentUtf8()).contains(message);
     }
 
     @Test
@@ -171,14 +168,13 @@ class AbstractGraphqlServiceTest {
 
     @MethodSource("provideThrowsExceptionMultipartPostMethodArguments")
     @ParameterizedTest
-    void throwsExceptionMultipartPost(List<BodyPart> bodyParts) throws Exception {
+    void throwsExceptionMultipartPost(List<BodyPart> bodyParts, String message) {
         final HttpRequest request = Multipart.of(bodyParts).toHttpRequest("/graphql");
 
         final BlockingWebClient client = server.webClient().blocking();
         final AggregatedHttpResponse response = client.execute(request);
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        final RequestLog log = server.requestContextCaptor().take().log().whenComplete().join();
-        assertThat(log.responseCause()).isInstanceOf(IllegalArgumentException.class);
+        assertThat(response.contentUtf8()).startsWith(message);
     }
 
     @Test
@@ -195,7 +191,8 @@ class AbstractGraphqlServiceTest {
         ).toHttpRequest("/graphql");
         final ServiceRequestContext ctx = ServiceRequestContext.of(request);
         testGraphqlService.serve(ctx, request).aggregate().join();
-        final MultipartFile multipartFile = (MultipartFile) testGraphqlService.graphqlRequest.variables().get("file");
+        final MultipartFile multipartFile =
+                (MultipartFile) testGraphqlService.graphqlRequest.variables().get("file");
         assertThat(multipartFile.path()).hasContent("Hello!");
     }
 
@@ -215,7 +212,8 @@ class AbstractGraphqlServiceTest {
         ).toHttpRequest("/graphql");
         final ServiceRequestContext ctx = ServiceRequestContext.of(request);
         testGraphqlService.serve(ctx, request).aggregate().join();
-        final List<MultipartFile> multipartFiles = (List<MultipartFile>) testGraphqlService.graphqlRequest.variables().get("files");
+        final List<MultipartFile> multipartFiles =
+                (List<MultipartFile>) testGraphqlService.graphqlRequest.variables().get("files");
         assertThat(multipartFiles.get(0).path()).hasContent("foo");
         assertThat(multipartFiles.get(1).path()).hasContent("bar");
     }
@@ -245,13 +243,17 @@ class AbstractGraphqlServiceTest {
 
     private static Stream<Arguments> provideThrowsExceptionPostMethodArguments() {
         return Stream.of(
-                Arguments.of(ImmutableMap.of("query", ImmutableMap.of())),
+                Arguments.of(ImmutableMap.of("query", ImmutableMap.of()),
+                             "Invalid query"),
                 Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
-                                             "operationName", ImmutableMap.of())),
+                                             "operationName", ImmutableMap.of()),
+                             "Invalid operationName"),
                 Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
-                                             "variables", "variables_string")),
+                                             "variables", "variables_string"),
+                             "Unknown parameter type variables"),
                 Arguments.of(ImmutableMap.of("query", "{users(id: \"1\") {name}}",
-                                             "extensions", "extension_string"))
+                                             "extensions", "extension_string"),
+                             "Unknown parameter type variables")
         );
     }
 
@@ -266,98 +268,93 @@ class AbstractGraphqlServiceTest {
 
     private static Stream<Arguments> provideThrowsExceptionMultipartPostMethodArguments() {
         return Stream.of(
-                Arguments.of(ImmutableList.of(
-                        BodyPart.of(ContentDisposition.of("form-data", "operations"),
-                                    "")
-                )),
-                Arguments.of(ImmutableList.of(
-                        BodyPart.of(ContentDisposition.of("form-data", "operations"),
-                                    "[]")
-                )),
-                Arguments.of(ImmutableList.of(
-                        BodyPart.of(ContentDisposition.of("form-data", "operations"),
-                                    "{\"query\":\"{foo}\"}")
-                )),
-                Arguments.of(ImmutableList.of(
-                        BodyPart.of(ContentDisposition.of("form-data", "operations"),
-                                    "{\"query\":\"{foo}\"}"),
-                        BodyPart.of(ContentDisposition.of("form-data", "map"),
-                                    "{\"0\": [ \"invalid\" ]}"),
-                        BodyPart.of(ContentDisposition.of("form-data", "0", "foo.txt"),
-                                    "foo")
-                )),
-                Arguments.of(ImmutableList.of(
-                        BodyPart.of(ContentDisposition.of("form-data", "operations"),
-                                    "{\"query\":\"{foo}\"}"),
-                        BodyPart.of(ContentDisposition.of("form-data", "map"),
-                                    "{\"0\": [ \"invalid.file\" ]}"),
-                        BodyPart.of(ContentDisposition.of("form-data", "0", "foo.txt"),
-                                    "foo")
-                )),
+                Arguments.of(ImmutableList.of(BodyPart.of(ContentDisposition.of("form-data", "operations"),
+                                                          "")),
+                             "Missing request BodyPart"),
+                Arguments.of(ImmutableList.of(BodyPart.of(ContentDisposition.of("form-data", "operations"),
+                                                          "[]")),
+                             "Missing request BodyPart"),
+                Arguments.of(ImmutableList.of(BodyPart.of(ContentDisposition.of("form-data", "operations"),
+                                                          "{\"query\":\"{foo}\"}")),
+                             "Missing request BodyPart"),
+                Arguments.of(ImmutableList.of(BodyPart.of(ContentDisposition.of("form-data", "operations"),
+                                                          "{\"query\":\"{foo}\"}"),
+                                              BodyPart.of(ContentDisposition.of("form-data", "map"),
+                                                          "{\"0\": [ \"invalid\" ]}"),
+                                              BodyPart.of(ContentDisposition.of("form-data", "0", "foo.txt"),
+                                                          "foo")),
+                             "Invalid object-path"),
+                Arguments.of(ImmutableList.of(BodyPart.of(ContentDisposition.of("form-data", "operations"),
+                                                          "{\"query\":\"{foo}\"}"),
+                                              BodyPart.of(ContentDisposition.of("form-data", "map"),
+                                                          "{\"0\": [ \"invalid.file\" ]}"),
+                                              BodyPart.of(ContentDisposition.of("form-data", "0", "foo.txt"),
+                                                          "foo")),
+                             "Can only map into variables"),
                 Arguments.of(ImmutableList.of(
                         BodyPart.of(ContentDisposition.of("form-data", "operations"),
                                     "{\"query\":\"{foo}\",\"variables\":{\"file\":{}}}"),
                         BodyPart.of(ContentDisposition.of("form-data", "map"),
                                     "{\"0\": [ \"variables.file\" ]}"),
                         BodyPart.of(ContentDisposition.of("form-data", "0", "foo.txt"),
-                                    "foo")
-                )),
+                                    "foo")),
+                             "Expected null value when mapping"),
                 Arguments.of(ImmutableList.of(
                         BodyPart.of(ContentDisposition.of("form-data", "operations"),
                                     "{\"query\":\"{foo}\",\"variables\":{\"files\":[null]}}"),
                         BodyPart.of(ContentDisposition.of("form-data", "map"),
                                     "{\"0\": [ \"variables.files.1\" ]}"),
                         BodyPart.of(ContentDisposition.of("form-data", "0", "foo.txt"),
-                                    "foo")
-                )),
+                                    "foo")),
+                             "Expected null value when mapping"),
                 Arguments.of(ImmutableList.of(
                         BodyPart.of(ContentDisposition.of("form-data", "operations"),
                                     "{\"query\":\"{foo}\",\"variables\":{\"files\":[[null]]}}"),
                         BodyPart.of(ContentDisposition.of("form-data", "map"),
                                     "{\"0\": [ \"variables.files.0.a\" ]}"),
                         BodyPart.of(ContentDisposition.of("form-data", "0", "foo.txt"),
-                                    "foo")
-                )),
+                                    "foo")),
+                             "Expected null value when mapping"),
                 Arguments.of(ImmutableList.of(
                         BodyPart.of(ContentDisposition.of("form-data", "operations"),
                                     "{\"query\":\"{foo}\",\"variables\":{\"files\":[null]}}"),
                         BodyPart.of(ContentDisposition.of("form-data", "map"),
                                     "{\"0\": [ \"variables.files.1\" ]}"),
                         BodyPart.of(ContentDisposition.of("form-data", "0", "foo.txt"),
-                                    "foo")
-                )),
+                                    "foo")),
+                             "Expected null value when mapping"),
                 Arguments.of(ImmutableList.of(
                         BodyPart.of(ContentDisposition.of("form-data", "operations"),
                                     "{\"query\":\"{foo}\",\"variables\":{}}"),
                         BodyPart.of(ContentDisposition.of("form-data", "map"),
                                     "{\"0\": [ \"variables.file.0\" ]}"),
                         BodyPart.of(ContentDisposition.of("form-data", "0", "foo.txt"),
-                                    "foo")
-                )),
+                                    "foo")),
+                             "Found null intermediate value when trying to map"),
                 Arguments.of(ImmutableList.of(
                         BodyPart.of(ContentDisposition.of("form-data", "operations"),
                                     "{\"query\":\"{foo}\",\"variables\":{\"files\":[[null]]}}"),
                         BodyPart.of(ContentDisposition.of("form-data", "map"),
                                     "{\"0\": [ \"variables.files.a.0\" ]}"),
                         BodyPart.of(ContentDisposition.of("form-data", "0", "foo.txt"),
-                                    "foo")
-                )),
+                                    "foo")),
+                             "Found null intermediate value when trying to map"),
                 Arguments.of(ImmutableList.of(
                         BodyPart.of(ContentDisposition.of("form-data", "operations"),
                                     "{\"query\":\"{foo}\",\"variables\":{\"files\":[[null]]}}"),
                         BodyPart.of(ContentDisposition.of("form-data", "map"),
                                     "{\"0\": [ \"variables.files.1.0\" ]}"),
                         BodyPart.of(ContentDisposition.of("form-data", "0", "foo.txt"),
-                                    "foo")
-                )),
+                                    "foo")),
+                             "Found null intermediate value when trying to map"),
                 Arguments.of(ImmutableList.of(
                         BodyPart.of(ContentDisposition.of("form-data", "operations"),
                                     "{\"query\":\"{foo}\",\"variables\":{\"files\":[[null]]}}"),
                         BodyPart.of(ContentDisposition.of("form-data", "map"),
                                     "{\"0\": [ \"variables.files.-1.0\" ]}"),
                         BodyPart.of(ContentDisposition.of("form-data", "0", "foo.txt"),
-                                    "foo")
-                ))
+                                    "foo")),
+                             "Found null intermediate value when trying to map")
         );
     }
 

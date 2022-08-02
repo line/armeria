@@ -56,6 +56,7 @@ final class MultipartVariableMapper {
          return location.put(target, multipartFile);
       }
 
+      @Nullable
       @Override
       public Object recurse(Map<String, Object> location, String target) {
          return location.get(target);
@@ -75,6 +76,7 @@ final class MultipartVariableMapper {
          return location.set(value, multipartFile);
       }
 
+      @Nullable
       @Override
       public Object recurse(List<Object> location, String target) {
          final int value = parseUnsignedInt(target);
