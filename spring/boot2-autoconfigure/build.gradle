@@ -22,8 +22,8 @@ dependencies {
 }
 
 // allows illegal access by cglib
-test {
-    if (rootProject.ext.testJavaVersion >= 9) {
-        jvmArgs '--add-exports=java.base/java.lang=ALL-UNNAMED'
+if (rootProject.ext.testJavaVersion >= 16) {
+    tasks.withType(Test) {
+        jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED'
     }
 }
