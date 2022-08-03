@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.internal.server.thrift;
 
-import static com.linecorp.armeria.internal.server.thrift.ThriftNameTypeInfoProvider.newEnumInfo;
-import static com.linecorp.armeria.internal.server.thrift.ThriftNameTypeInfoProvider.newExceptionInfo;
-import static com.linecorp.armeria.internal.server.thrift.ThriftNameTypeInfoProvider.newFieldInfo;
-import static com.linecorp.armeria.internal.server.thrift.ThriftNameTypeInfoProvider.newStructInfo;
-import static com.linecorp.armeria.internal.server.thrift.ThriftNameTypeInfoProvider.toTypeSignature;
+import static com.linecorp.armeria.internal.server.thrift.ThriftNamedTypeInfoProvider.newEnumInfo;
+import static com.linecorp.armeria.internal.server.thrift.ThriftNamedTypeInfoProvider.newExceptionInfo;
+import static com.linecorp.armeria.internal.server.thrift.ThriftNamedTypeInfoProvider.newFieldInfo;
+import static com.linecorp.armeria.internal.server.thrift.ThriftNamedTypeInfoProvider.newStructInfo;
+import static com.linecorp.armeria.internal.server.thrift.ThriftNamedTypeInfoProvider.toTypeSignature;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;

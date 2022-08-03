@@ -240,7 +240,8 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
         }
 
         if (KotlinUtil.isData(classType.getRawClass())) {
-            // Only the parameters in the constructor of data classes provides `isMarkedNullable` information.
+            // Only the parameters in the constructor of data classes correctly provide
+            // `isMarkedNullable` information.
             final FieldRequirement requirement =
                     extractFromConstructor(classType, fieldType, fieldName, parameter -> {
                         if (isNullable(parameter)) {

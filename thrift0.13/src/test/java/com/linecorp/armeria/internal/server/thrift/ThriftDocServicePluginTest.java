@@ -56,7 +56,7 @@ class ThriftDocServicePluginTest {
 
     private static final ThriftDocServicePlugin generator = new ThriftDocServicePlugin();
 
-    private static final ThriftNameTypeInfoProvider namedTypeInfoProvider = new ThriftNameTypeInfoProvider();
+    private static final ThriftNamedTypeInfoProvider namedTypeInfoProvider = new ThriftNamedTypeInfoProvider();
 
     @Test
     void servicesTest() {

@@ -18,8 +18,8 @@ package com.linecorp.armeria.internal.server.thrift;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.internal.server.thrift.ThriftNameTypeInfoProvider.VOID;
-import static com.linecorp.armeria.internal.server.thrift.ThriftNameTypeInfoProvider.newFieldInfo;
+import static com.linecorp.armeria.internal.server.thrift.ThriftNamedTypeInfoProvider.VOID;
+import static com.linecorp.armeria.internal.server.thrift.ThriftNamedTypeInfoProvider.newFieldInfo;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;

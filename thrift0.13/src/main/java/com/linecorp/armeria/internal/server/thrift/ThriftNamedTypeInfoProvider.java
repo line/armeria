@@ -56,7 +56,7 @@ import com.linecorp.armeria.server.docs.TypeSignature;
  * A {@link NamedTypeInfoProvider} to create a {@link NamedTypeInfo} from a Thrift type such as {@link TBase}
  * , {@link TEnum} or {@link TException}.
  */
-public final class ThriftNameTypeInfoProvider implements NamedTypeInfoProvider {
+public final class ThriftNamedTypeInfoProvider implements NamedTypeInfoProvider {
 
     static final TypeSignature VOID = TypeSignature.ofBase("void");
     private static final TypeSignature BOOL = TypeSignature.ofBase("bool");
