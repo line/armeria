@@ -8,7 +8,7 @@ dropwizard1 = "1.3.29"
 dropwizard2 = "2.1.1"
 errorprone = "2.14.0"
 eureka = "1.10.17"
-graphql-kotlin = "6.0.0"
+graphql-kotlin = "6.1.0"
 grpc-kotlin = "1.3.0"
 groovy = "3.0.5"
 guava = "31.1-jre"
@@ -31,7 +31,7 @@ protobuf = "3.21.1"
 reactive-grpc = "1.2.3"
 reactive-streams = "1.0.4"
 reactor = "3.4.21"
-resteasy = "5.0.2.Final"
+resteasy = "5.0.4.Final"
 retrofit2 = "2.9.0"
 sangria = "3.0.1"
 sangria-slowlog = "2.0.4"
@@ -41,7 +41,7 @@ scalapb-json = "0.12.0"
 slf4j = "1.7.36"
 spring-boot1 = "1.5.22.RELEASE"
 spring-boot2 = "2.7.2"
-tomcat8 = "8.5.78"
+tomcat8 = "8.5.81"
 tomcat9 = "9.0.65"
 
 [boms]
@@ -280,7 +280,7 @@ version = "4.3.1"
 # gax-grpc is only used for gRPC test module.
 [libraries.gax-grpc]
 module = "com.google.api:gax-grpc"
-version = "2.18.6"
+version = "2.18.7"
 
 [libraries.graphql-java]
 module = "com.graphql-java:graphql-java"
@@ -816,7 +816,7 @@ version.ref = "sangria-slowlog"
 # you also need to change the scala version in `scala.gradle`.
 [libraries.scala_v212]
 module = "org.scala-lang:scala-library"
-version = "2.12.15"
+version = "2.12.16"
 [libraries.scala_v213]
 module = "org.scala-lang:scala-library"
 version = "2.13.8"
@@ -933,6 +933,7 @@ exclusions = "org.springframework.boot:spring-boot-starter-reactor-netty"
 module = "org.springframework.boot:spring-boot-configuration-processor"
 version.ref = "spring-boot2"
 
+# jdk 11 is required from testng version 7.6
 [libraries.testng]
 module = "org.testng:testng"
 version = "7.5"
