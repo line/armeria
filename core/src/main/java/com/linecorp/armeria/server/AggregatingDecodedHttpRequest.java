@@ -40,6 +40,8 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     private final RequestHeaders headers;
     private final RoutingContext routingCtx;
     private final ExchangeType exchangeType;
+    private final long requestStartTimeNanos;
+    private final long requestStartTimeMicros;
 
     @Nullable
     private ServiceRequestContext ctx;
@@ -53,7 +55,8 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
 
     AggregatingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                   boolean keepAlive, long maxRequestLength,
-                                  RoutingContext routingCtx, ExchangeType exchangeType) {
+                                  RoutingContext routingCtx, ExchangeType exchangeType,
+                                  long requestStartTimeNanos, long requestStartTimeMicros) {
         super(4);
         this.headers = headers;
         this.eventLoop = eventLoop;
@@ -64,6 +67,8 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         assert routingCtx.hasResult();
         this.routingCtx = routingCtx;
         this.exchangeType = exchangeType;
+        this.requestStartTimeNanos = requestStartTimeNanos;
+        this.requestStartTimeMicros = requestStartTimeMicros;
     }
 
     @Override
@@ -178,6 +183,16 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Override
     public ExchangeType exchangeType() {
         return exchangeType;
+    }
+
+    @Override
+    public long requestStartTimeNanos() {
+        return requestStartTimeNanos;
+    }
+
+    @Override
+    public long requestStartTimeMicros() {
+        return requestStartTimeMicros;
     }
 
     @Override

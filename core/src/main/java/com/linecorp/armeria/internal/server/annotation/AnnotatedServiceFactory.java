@@ -103,6 +103,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.annotation.Trace;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 
 /**
  * Builds a list of {@link AnnotatedService}s from an {@link Object}.
@@ -582,14 +583,14 @@ public final class AnnotatedServiceFactory {
      * Returns the description of the specified {@link AnnotatedElement}.
      */
     @Nullable
-    static String findDescription(AnnotatedElement annotatedElement) {
+    static DescriptionInfo findDescription(AnnotatedElement annotatedElement) {
         requireNonNull(annotatedElement, "annotatedElement");
         final Description description = AnnotationUtil.findFirst(annotatedElement, Description.class);
         if (description != null) {
             final String value = description.value();
             if (DefaultValues.isSpecified(value)) {
                 checkArgument(!value.isEmpty(), "value is empty.");
-                return value;
+                return DescriptionInfo.of(description.value(), description.markup());
             }
         } else if (annotatedElement instanceof Parameter) {
             // JavaDoc/KDoc descriptions only exist for method parameters
@@ -600,7 +601,8 @@ public final class AnnotatedServiceFactory {
             final String propertyName = executable.getName() + '.' + parameter.getName();
             final Properties cachedProperties = DOCUMENTATION_PROPERTIES_CACHE.getIfPresent(fileName);
             if (cachedProperties != null) {
-                return cachedProperties.getProperty(propertyName);
+                final String propertyValue = cachedProperties.getProperty(propertyName);
+                return propertyValue != null ? DescriptionInfo.of(propertyValue) : null;
             }
             try (InputStream stream = AnnotatedServiceFactory.class.getClassLoader()
                                                                    .getResourceAsStream(fileName)) {
@@ -610,7 +612,9 @@ public final class AnnotatedServiceFactory {
                 final Properties properties = new Properties();
                 properties.load(stream);
                 DOCUMENTATION_PROPERTIES_CACHE.put(fileName, properties);
-                return properties.getProperty(propertyName);
+
+                final String propertyValue = properties.getProperty(propertyName);
+                return propertyValue != null ? DescriptionInfo.of(propertyValue) : null;
             } catch (IOException exception) {
                 logger.warn("Failed to load an API description file: {}", fileName, exception);
             }

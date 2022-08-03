@@ -420,11 +420,6 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         }
     }
 
-    @Nullable
-    final Listener<I> listener() {
-        return listener;
-    }
-
     final void setListener(Listener<I> listener) {
         checkState(this.listener == null, "listener already set");
         this.listener = requireNonNull(listener, "listener");

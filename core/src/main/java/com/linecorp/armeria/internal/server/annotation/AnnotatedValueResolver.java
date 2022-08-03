@@ -95,6 +95,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.RequestObject;
 import com.linecorp.armeria.server.annotation.StringRequestConverterFunction;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 
 import io.netty.handler.codec.http.HttpConstants;
 import scala.concurrent.ExecutionContext;
@@ -441,7 +442,7 @@ final class AnnotatedValueResolver {
         requireNonNull(objectResolvers, "objectResolvers");
         requireNonNull(dependencyInjector, "dependencyInjector");
 
-        final String description = findDescription(annotatedElement);
+        final DescriptionInfo description = findDescription(annotatedElement);
         final Param param = annotatedElement.getAnnotation(Param.class);
         if (param != null) {
             final String name = findName(param, typeElement);
@@ -535,7 +536,7 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofPathVariable(String name,
                                                          AnnotatedElement annotatedElement,
                                                          AnnotatedElement typeElement, Class<?> type,
-                                                         @Nullable String description) {
+                                                         @Nullable DescriptionInfo description) {
         return new Builder(annotatedElement, type)
                 .annotationType(Param.class)
                 .httpElementName(name)
@@ -549,7 +550,7 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofQueryParam(String name,
                                                        AnnotatedElement annotatedElement,
                                                        AnnotatedElement typeElement, Class<?> type,
-                                                       @Nullable String description,
+                                                       @Nullable DescriptionInfo description,
                                                        @Nullable String serviceQueryDelimiter) {
         String queryDelimiter = serviceQueryDelimiter;
         final Delimiter delimiter = annotatedElement.getAnnotation(Delimiter.class);
@@ -575,7 +576,7 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofFileParam(String name,
                                                       AnnotatedElement annotatedElement,
                                                       AnnotatedElement typeElement, Class<?> type,
-                                                      @Nullable String description) {
+                                                      @Nullable DescriptionInfo description) {
         return new Builder(annotatedElement, type)
                 .annotationType(Param.class)
                 .httpElementName(name)
@@ -590,7 +591,7 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofHeader(String name,
                                                    AnnotatedElement annotatedElement,
                                                    AnnotatedElement typeElement, Class<?> type,
-                                                   @Nullable String description) {
+                                                   @Nullable DescriptionInfo description) {
         return new Builder(annotatedElement, type)
                 .annotationType(Header.class)
                 .httpElementName(name)
@@ -608,7 +609,7 @@ final class AnnotatedValueResolver {
                                                           Class<?> type, Set<String> pathParams,
                                                           List<RequestObjectResolver> objectResolvers,
                                                           DependencyInjector dependencyInjector,
-                                                          @Nullable String description) {
+                                                          @Nullable DescriptionInfo description) {
         // To do recursive resolution like a bean inside another bean, the original object resolvers should
         // be passed into the AnnotatedBeanFactoryRegistry#register.
         final BeanFactoryId beanFactoryId = AnnotatedBeanFactoryRegistry.register(
@@ -893,7 +894,7 @@ final class AnnotatedValueResolver {
     private final Object defaultValue;
 
     @Nullable
-    private final String description;
+    private final DescriptionInfo description;
 
     private final BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver;
 
@@ -912,7 +913,7 @@ final class AnnotatedValueResolver {
                                    @Nullable Class<?> containerType, Class<?> elementType,
                                    @Nullable ParameterizedType parameterizedElementType,
                                    @Nullable String defaultValue,
-                                   @Nullable String description,
+                                   @Nullable DescriptionInfo description,
                                    BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver,
                                    @Nullable BeanFactoryId beanFactoryId,
                                    AggregationStrategy aggregationStrategy) {
@@ -988,7 +989,7 @@ final class AnnotatedValueResolver {
     }
 
     @Nullable
-    String description() {
+    DescriptionInfo description() {
         return description;
     }
 
@@ -1068,7 +1069,7 @@ final class AnnotatedValueResolver {
         private boolean supportContainer;
         private boolean supportDefault;
         @Nullable
-        private String description;
+        private DescriptionInfo description;
         @Nullable
         private BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver;
         @Nullable
@@ -1136,7 +1137,7 @@ final class AnnotatedValueResolver {
         /**
          * Sets the description of the {@link AnnotatedElement}.
          */
-        private Builder description(@Nullable String description) {
+        private Builder description(@Nullable DescriptionInfo description) {
             this.description = description;
             return this;
         }

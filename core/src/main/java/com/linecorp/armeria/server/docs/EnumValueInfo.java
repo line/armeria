@@ -23,7 +23,6 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -36,7 +35,7 @@ public final class EnumValueInfo {
 
     private final String name;
     @Nullable
-    private final String docString;
+    private final DescriptionInfo descriptionInfo;
     @Nullable
     private final Integer intValue;
 
@@ -64,12 +63,13 @@ public final class EnumValueInfo {
      *
      * @param name the name of the enum value
      * @param intValue the integer value of the enum value
-     * @param docString the documentation string that describes the enum value
+     * @param descriptionInfo the description object that describes the enum value
      */
-    public EnumValueInfo(String name, @Nullable Integer intValue, @Nullable String docString) {
+    public EnumValueInfo(String name, @Nullable Integer intValue,
+                         @Nullable DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
         this.intValue = intValue;
-        this.docString = Strings.emptyToNull(docString);
+        this.descriptionInfo = descriptionInfo;
     }
 
     /**
@@ -91,13 +91,13 @@ public final class EnumValueInfo {
     }
 
     /**
-     * Returns the documentation string that describes the enum value.
+     * Returns the description information that describes the enum value.
      */
     @JsonProperty
     @JsonInclude(Include.NON_NULL)
     @Nullable
-    public String docString() {
-        return docString;
+    public DescriptionInfo descriptionInfo() {
+        return descriptionInfo;
     }
 
     @Override
@@ -124,7 +124,7 @@ public final class EnumValueInfo {
                           .omitNullValues()
                           .add("name", name)
                           .add("intValue", intValue)
-                          .add("docString", docString)
+                          .add("descriptionInfo", descriptionInfo)
                           .toString();
     }
 }
