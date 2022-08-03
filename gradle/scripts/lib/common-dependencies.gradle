@@ -132,7 +132,7 @@ configure(projectsWithFlag('version-catalogs')) { catalogProject ->
                 projectsWithFlag('publish').each { proj ->
                     if (proj != catalogProject) {
                         String alias = proj.ext.artifactId
-                        // Normalize the alias since Gradle prefixes `get` for '.' or '_' before a number.
+                        // Normalize the alias since Gradle prefixes `get` for '.' or '_' followed by a number.
                         // Replace "armeria-scala_2.12" with "armeria-scala_v2.12"
                         alias = alias.replaceAll('_(\\d)', '_v$1')
                         // Replace "armeria-scala_v2.12" with "armeria-scala_v212"
