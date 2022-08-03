@@ -10,17 +10,17 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "com.pszymczyk.consul:embedded-consul:${managedVersions['com.pszymczyk.consul:embedded-consul']}"
+        classpath libs.consul
     }
 }
 
 dependencies {
     // Embedded Consul
-    testImplementation 'com.pszymczyk.consul:embedded-consul'
+    testImplementation libs.consul
 
     // Embedded Consul removed Groovy from transitive dependencies
     // https://github.com/pszymczyk/embedded-consul/pull/102
-    testImplementation 'org.codehaus.groovy:groovy-xml'
+    testImplementation libs.groovy.xml
 }
 
 task consulBinary {

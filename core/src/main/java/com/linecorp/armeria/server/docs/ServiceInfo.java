@@ -31,7 +31,6 @@ import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Sets;
@@ -52,7 +51,7 @@ public final class ServiceInfo {
     private final Set<MethodInfo> methods;
     private final List<HttpHeaders> exampleHeaders;
     @Nullable
-    private final String docString;
+    private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
@@ -67,8 +66,8 @@ public final class ServiceInfo {
      */
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods,
-                       @Nullable String docString) {
-        this(name, methods, ImmutableList.of(), docString);
+                       @Nullable DescriptionInfo descriptionInfo) {
+        this(name, methods, ImmutableList.of(), descriptionInfo);
     }
 
     /**
@@ -77,12 +76,12 @@ public final class ServiceInfo {
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods,
                        Iterable<HttpHeaders> exampleHeaders,
-                       @Nullable String docString) {
+                       @Nullable DescriptionInfo descriptionInfo) {
 
         this.name = requireNonNull(name, "name");
         this.methods = mergeEndpoints(requireNonNull(methods));
         this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
-        this.docString = Strings.emptyToNull(docString);
+        this.descriptionInfo = descriptionInfo;
     }
 
     /**
@@ -122,7 +121,7 @@ public final class ServiceInfo {
                                           value.parameters(), value.exceptionTypeSignatures(),
                                           endpointInfos, value.exampleHeaders(),
                                           value.exampleRequests(), value.examplePaths(), value.exampleQueries(),
-                                          value.httpMethod(), value.docString());
+                                          value.httpMethod(), value.descriptionInfo());
                 }
             });
         }
@@ -157,13 +156,13 @@ public final class ServiceInfo {
     }
 
     /**
-     * Returns the documentation string.
+     * Returns the description information of the service.
      */
     @JsonProperty
     @JsonInclude(Include.NON_NULL)
     @Nullable
-    public String docString() {
-        return docString;
+    public DescriptionInfo descriptionInfo() {
+        return descriptionInfo;
     }
 
     /**
@@ -199,7 +198,7 @@ public final class ServiceInfo {
                           .add("name", name)
                           .add("methods", methods)
                           .add("exampleHeaders", exampleHeaders)
-                          .add("docstring", docString)
+                          .add("descriptionInfo", descriptionInfo)
                           .toString();
     }
 }

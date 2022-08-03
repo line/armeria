@@ -67,7 +67,6 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
     // Only set once.
     @Nullable
     private O responseMessage;
-    private boolean deframingStarted;
 
     UnaryServerCall(HttpRequest req, MethodDescriptor<I, O> method, String simpleMethodName,
                     CompressorRegistry compressorRegistry, DecompressorRegistry decompressorRegistry,
@@ -95,26 +94,12 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     @Override
     public void request(int numMessages) {
-        if (ctx.eventLoop().inEventLoop()) {
-            request();
-        } else {
-            ctx.eventLoop().execute(this::request);
-        }
-    }
-
-    private void request() {
-        if (listener() == null) {
-            return;
-        }
-        startDeframing();
+        // The request of unary call is not reactive. `startDeframing()` will push the request message to
+        // the stub through `listener.onMessage()` after `listener.onReady()` is invoked.
     }
 
     @Override
     void startDeframing() {
-        if (deframingStarted) {
-            return;
-        }
-        deframingStarted = true;
         req.collect(ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS).handle((objects, cause) -> {
             if (cause != null) {
                 onError(cause);

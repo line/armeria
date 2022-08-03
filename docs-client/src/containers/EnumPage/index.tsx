@@ -20,6 +20,7 @@ import TableCell from '@material-ui/core/TableCell';
 import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
+import TableContainer from '@material-ui/core/TableContainer';
 import React from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
@@ -30,6 +31,7 @@ import {
 } from '../../lib/specification';
 
 import Section from '../../components/Section';
+import Description from '../../components/Description';
 
 interface OwnProps {
   specification: Specification;
@@ -44,7 +46,9 @@ const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
   }
 
   const hasIntValue = data.values.some((value) => !!value.intValue);
-  const hasDocString = data.values.some((value) => !!value.docString);
+  const hasDescriptionInfo = data.values.some(
+    (value) => !!value.descriptionInfo,
+  );
 
   return (
     <>
@@ -54,37 +58,47 @@ const EnumPage: React.FunctionComponent<Props> = ({ match, specification }) => {
       <Typography variant="subtitle1" paragraph>
         <code>{packageName(data.name)}</code>
       </Typography>
-      <Typography variant="body2" paragraph>
-        {data.docString}
-      </Typography>
+      {data.descriptionInfo && (
+        <Section>
+          <Description descriptionInfo={data.descriptionInfo} />
+        </Section>
+      )}
       <Section>
         <Typography variant="h6">Values</Typography>
-        <Table>
-          <TableHead>
-            <TableRow>
-              <TableCell>Name</TableCell>
-              {hasIntValue && <TableCell>Int Value</TableCell>}
-              {hasDocString && <TableCell>Description</TableCell>}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {data.values.length > 0 ? (
-              data.values.map((value) => (
-                <TableRow key={value.name}>
-                  <TableCell>
-                    <code>{value.name}</code>
-                  </TableCell>
-                  {hasIntValue && <TableCell>{value.intValue}</TableCell>}
-                  {hasDocString && <TableCell>{value.docString}</TableCell>}
-                </TableRow>
-              ))
-            ) : (
+        <TableContainer>
+          <Table>
+            <TableHead>
               <TableRow>
-                <TableCell colSpan={2}>There are no values.</TableCell>
+                <TableCell>Name</TableCell>
+                {hasIntValue && <TableCell>Int Value</TableCell>}
+                {hasDescriptionInfo && <TableCell>Description</TableCell>}
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
+            </TableHead>
+            <TableBody>
+              {data.values.length > 0 ? (
+                data.values.map((value) => (
+                  <TableRow key={value.name}>
+                    <TableCell>
+                      <code>{value.name}</code>
+                    </TableCell>
+                    {hasIntValue && <TableCell>{value.intValue}</TableCell>}
+                    {hasDescriptionInfo && (
+                      <TableCell>
+                        <Description
+                          descriptionInfo={value.descriptionInfo!!}
+                        />
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={2}>There are no values.</TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Section>
     </>
   );
