@@ -133,15 +133,11 @@ configure(projectsWithFlag('version-catalogs')) { catalogProject ->
                     if (proj != catalogProject) {
                         String alias = proj.ext.artifactId
                         // Normalize the alias since Gradle prefixes `get` for '.' or '_' before a number.
-                        if (alias.contains("_")) {
-                            // Replace "armeria-scala_2.12" with "armeria-scala_v2.12"
-                            alias = alias.replace("_", "_v")
-                        }
-                        if (alias.contains(".")) {
-                            // Replace "armeria-scala_v2.12" with "armeria-scala_v212"
-                            // or "armeria-thrift0.13" with "armeria-thrift013"
-                            alias = alias.replace(".", "")
-                        }
+                        // Replace "armeria-scala_2.12" with "armeria-scala_v2.12"
+                        alias = alias.replaceAll('_(\\d)', '_v$1')
+                        // Replace "armeria-scala_v2.12" with "armeria-scala_v212"
+                        // or "armeria-thrift0.13" with "armeria-thrift013"
+                        alias = alias.replaceAll('\\.(\\d)', '$1')
                         library(alias, proj.group, proj.ext.artifactId).version(proj.version)
                     }
                 }
