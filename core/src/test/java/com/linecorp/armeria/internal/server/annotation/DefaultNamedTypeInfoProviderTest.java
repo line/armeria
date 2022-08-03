@@ -71,10 +71,12 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class DefaultNamedTypeInfoProviderTest {
 
-    static final JsonMapper json5Mapper = JsonMapper.builder()
-                                                    .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS.mappedFeature())
-                                                    .enable(JsonReadFeature.ALLOW_TRAILING_COMMA.mappedFeature())
-                                                    .build();
+    private static final JsonMapper json5Mapper =
+            JsonMapper.builder()
+                      .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS.mappedFeature())
+                      .enable(JsonReadFeature.ALLOW_TRAILING_COMMA.mappedFeature())
+                      .build();
+
     @RegisterExtension
     static ServerExtension jsonServer = new ServerExtension() {
         @Override
@@ -223,12 +225,11 @@ class DefaultNamedTypeInfoProviderTest {
             StructInfo structInfo = (StructInfo) provider.newNamedTypeInfo(ParamId.class);
             assertThat(structInfo.name()).isEqualTo(ParamId.class.getName());
             assertThat(structInfo.descriptionInfo()).isEqualTo(DescriptionInfo.of("ParamId class"));
-            assertThat(structInfo.fields())
-                    .containsExactly(
-                            FieldInfo.builder("id", INT)
-                                     .requirement(FieldRequirement.REQUIRED)
-                                     .descriptionInfo(DescriptionInfo.of("param id"))
-                                     .build());
+            assertThat(structInfo.fields()).containsExactly(
+                    FieldInfo.builder("id", INT)
+                             .requirement(FieldRequirement.REQUIRED)
+                             .descriptionInfo(DescriptionInfo.of("param id"))
+                             .build());
 
             structInfo = (StructInfo) provider.newNamedTypeInfo(ParamQuery.class);
             assertThat(structInfo.name()).isEqualTo(ParamQuery.class.getName());
@@ -246,10 +247,10 @@ class DefaultNamedTypeInfoProviderTest {
     void paramSpecification() throws IOException {
         final BlockingWebClient client = paramServer.blockingWebClient();
         final JsonNode response = client.prepare()
-                                      .get("/docs/specification.json")
-                                      .asJson(JsonNode.class)
-                                      .execute()
-                                      .content();
+                                        .get("/docs/specification.json")
+                                        .asJson(JsonNode.class)
+                                        .execute()
+                                        .content();
 
         final InputStream resourceAsStream = DefaultNamedTypeInfoProviderTest.class.getResourceAsStream(
                 "ReflectiveNamedTypeInfoProviderTest_specification.json5");
@@ -354,7 +355,7 @@ class DefaultNamedTypeInfoProviderTest {
         }
     }
 
-    private static class JsonService {
+    private static final class JsonService {
         @Post("/json")
         @ConsumesJson
         @ProducesJson
@@ -363,7 +364,7 @@ class DefaultNamedTypeInfoProviderTest {
         }
     }
 
-    private static class ParamService {
+    private static final class ParamService {
         @Get("/param/{id}")
         public CompletableFuture<String> param(@Param ParamId id, @Param @Nullable ParamQuery query) {
             return UnmodifiableFuture.completedFuture(null);
@@ -371,17 +372,18 @@ class DefaultNamedTypeInfoProviderTest {
     }
 
     @Description("ParamId class")
-    private static class ParamId {
+    private static final class ParamId {
         @Description("param id")
         private final int id;
 
+        @SuppressWarnings("RedundantModifier")
         public ParamId(String id) {
             this.id = Integer.parseInt(id);
         }
     }
 
     @Description("ParamQuery class")
-    private static class ParamQuery {
+    private static final class ParamQuery {
 
         public static ParamQuery of(String query) {
             return new ParamQuery(query);
