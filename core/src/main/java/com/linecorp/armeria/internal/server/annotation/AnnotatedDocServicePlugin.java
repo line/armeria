@@ -102,6 +102,8 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     @VisibleForTesting
     static final TypeSignature DOUBLE = TypeSignature.ofBase("double");
     @VisibleForTesting
+    static final TypeSignature CHAR = TypeSignature.ofBase("char");
+    @VisibleForTesting
     static final TypeSignature STRING = TypeSignature.ofBase("string");
     @VisibleForTesting
     static final TypeSignature BINARY = TypeSignature.ofBase("binary");
@@ -264,7 +266,8 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 if (!resolvers.isEmpty()) {
                     // Just use the simple name of the bean class as the field name.
                     return FieldInfo.builder(beanFactoryId.type().getSimpleName(), BEAN,
-                                             fieldInfos(resolvers, namedTypeInfoProvider)).build();
+                                             fieldInfos(resolvers, namedTypeInfoProvider))
+                                    .build();
                 }
             } else {
                 // NamedTypeInfoProvider may provide NamedTypedInfo for the implicit request object.
@@ -347,6 +350,9 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         }
         if (type == Double.class || type == double.class) {
             return DOUBLE;
+        }
+        if (type == char.class) {
+            return CHAR;
         }
         if (type == String.class) {
             return STRING;

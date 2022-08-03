@@ -22,6 +22,7 @@ import static com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeIn
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.List;
@@ -49,6 +50,7 @@ enum ReflectiveNamedTypeInfoProvider implements NamedTypeInfoProvider {
 
         final Class<?> clazz = (Class<?>) typeDescriptor;
         final List<FieldInfo> fieldInfos = Arrays.stream(clazz.getDeclaredFields())
+                                                 .filter(field -> !Modifier.isStatic(field.getModifiers()))
                                                  .map(ReflectiveNamedTypeInfoProvider::fieldInfo)
                                                  .collect(toImmutableList());
         final DescriptionInfo descriptionInfo = descriptionInfo(clazz);
