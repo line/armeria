@@ -154,7 +154,7 @@
           "location" : "UNSPECIFIED",
           "requirement" : "OPTIONAL",
           "typeSignature" : "armeria.protobuf.testing.TestMessage.Nested",
-          "childFieldInfos" : [ {  // The fields of a nested type.
+          "childFieldInfos" : [ {
             "name" : "string",
             "location" : "UNSPECIFIED",
             "requirement" : "OPTIONAL",
@@ -194,7 +194,7 @@
           "location" : "UNSPECIFIED",
           "requirement" : "OPTIONAL",
           "typeSignature" : "armeria.protobuf.testing.TestMessage",
-          "childFieldInfos" : [ ],  // Don't populate the fields of a circular type.
+          "childFieldInfos" : [ ],
           "descriptionInfo" : {
             "docString" : "",
             "markup" : "NONE"
@@ -456,7 +456,6 @@
     }
   }, {
     "name" : "armeria.protobuf.testing.TestMessage.Nested",
-    "alias" : "armeria.protobuf.testing.TestMessage.Nested",
     "fields" : [ {
       "name" : "string",
       "location" : "UNSPECIFIED",
