@@ -372,7 +372,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 return TypeSignature.ofMap(key, value);
             }
 
-            if (Optional.class.isAssignableFrom(rawType)) {
+            if (Optional.class.isAssignableFrom(rawType) || "scala.Option".equals(rawType.getName())) {
                 return TypeSignature.ofOptional(toTypeSignature(parameterizedType.getActualTypeArguments()[0]));
             }
 
@@ -456,11 +456,18 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 })
                 .collect(toImmutableSet());
 
+        final Set<TypeSignature> requestNamedTypes =
+                serviceInfos.stream()
+                            .flatMap(s -> s.findNamedTypes(true).stream())
+                            .collect(toImmutableSet());
+
         return ServiceSpecification.generate(
-                serviceInfos, typeSignature -> newNamedTypeInfo(typeSignature, namedTypeInfoProvider));
+                serviceInfos,
+                typeSignature -> newNamedTypeInfo(typeSignature, namedTypeInfoProvider, requestNamedTypes));
     }
 
-    private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature, NamedTypeInfoProvider provider) {
+    private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature, NamedTypeInfoProvider provider,
+                                                  Set<TypeSignature> requestNamedTypes) {
         final Object typeDescriptor = typeSignature.namedTypeDescriptor();
         if (typeDescriptor == null) {
             throw new IllegalArgumentException("cannot create a named type from: " + typeSignature);
@@ -471,10 +478,11 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             return namedTypeInfo;
         }
 
-        // If the type can be serialized to JSON, try extracting a `StructInfo` using Jackson.
-        // Don't care about the request object because the `StructInfo` for the request object is processed
-        // when building the `FieldInfo` of the `MethodInfo`.
-        namedTypeInfo = defaultResponseNamedTypeInfoProvider.newNamedTypeInfo(typeDescriptor);
+        if (requestNamedTypes.contains(typeSignature)) {
+            namedTypeInfo = defaultRequestNamedTypeInfoProvider.newNamedTypeInfo(typeDescriptor);
+        } else {
+            namedTypeInfo = defaultResponseNamedTypeInfoProvider.newNamedTypeInfo(typeDescriptor);
+        }
         if (namedTypeInfo != null) {
             return namedTypeInfo;
         } else {

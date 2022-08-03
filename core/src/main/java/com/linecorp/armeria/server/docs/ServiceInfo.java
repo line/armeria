@@ -30,6 +30,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Sets;
 
@@ -145,14 +146,31 @@ public final class ServiceInfo {
      * Returns all enum, struct and exception {@link TypeSignature}s referred to by this service.
      */
     public Set<TypeSignature> findNamedTypes() {
+        final Set<TypeSignature> requestNamedTypes = findNamedTypes(true);
+        final Set<TypeSignature> responseNamedType = findNamedTypes(false);
+        final int estimatedSize = requestNamedTypes.size() + responseNamedType.size();
+        return ImmutableSet.<TypeSignature>builderWithExpectedSize(estimatedSize)
+                           .addAll(requestNamedTypes)
+                           .addAll(responseNamedType)
+                           .build();
+    }
+
+    /**
+     * Returns all {@link TypeSignature} of {@link MethodInfo#parameters()} of {@link #methods()} if
+     * {@code request} is set to true. Otherwise, returns all {@link MethodInfo#returnTypeSignature()} and
+     * {@link MethodInfo#exceptionTypeSignatures()} of the {@link #methods()}.
+     */
+    public Set<TypeSignature> findNamedTypes(boolean request) {
         final Set<TypeSignature> collectedNamedTypes = new HashSet<>();
         methods().forEach(m -> {
-            findNamedTypes(collectedNamedTypes, m.returnTypeSignature());
-            m.parameters().forEach(p -> findNamedTypes(collectedNamedTypes, p.typeSignature()));
-            m.exceptionTypeSignatures().forEach(s -> findNamedTypes(collectedNamedTypes, s));
+            if (request) {
+                m.parameters().forEach(p -> findNamedTypes(collectedNamedTypes, p.typeSignature()));
+            } else {
+                findNamedTypes(collectedNamedTypes, m.returnTypeSignature());
+                m.exceptionTypeSignatures().forEach(s -> findNamedTypes(collectedNamedTypes, s));
+            }
         });
-
-        return ImmutableSortedSet.copyOf(comparing(TypeSignature::name), collectedNamedTypes);
+        return ImmutableSet.copyOf(collectedNamedTypes);
     }
 
     static void findNamedTypes(Set<TypeSignature> collectedNamedTypes, TypeSignature typeSignature) {

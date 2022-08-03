@@ -299,6 +299,13 @@ public final class TypeSignature {
     }
 
     /**
+     * Returns {@code true} if this type signature represents an optional type.
+     */
+    public boolean isOptional() {
+        return isContainer() && "optional".equals(name);
+    }
+
+    /**
      * Returns {@code true} if this type signature represents a named type.
      */
     public boolean isNamed() {

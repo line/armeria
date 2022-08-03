@@ -40,6 +40,7 @@ import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializerProvider;
+import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
 import com.fasterxml.jackson.databind.ser.PropertyWriter;
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableList;
@@ -122,18 +123,17 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
         return new EnumInfo(name, values, classDescriptionInfo(enumClass));
     }
 
-    @Nullable
     private StructInfo requestStructInfo(Class<?> type) {
         final JavaType javaType = mapper.constructType(type);
         if (!mapper.canDeserialize(javaType)) {
-            return null;
+            return newReflectiveStructInfo(type);
         }
         final Set<JavaType> visiting = new HashSet<>();
-        return new StructInfo(type.getName(), requestFieldInfos(javaType, visiting),
+        return new StructInfo(type.getName(), requestFieldInfos(javaType, visiting, true),
                               classDescriptionInfo(javaType.getRawClass()));
     }
 
-    private List<FieldInfo> requestFieldInfos(JavaType javaType, Set<JavaType> visiting) {
+    private List<FieldInfo> requestFieldInfos(JavaType javaType, Set<JavaType> visiting, boolean root) {
         if (!mapper.canDeserialize(javaType)) {
             return ImmutableList.of();
         }
@@ -143,28 +143,32 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
         }
 
         final BeanDescription description = mapper.getDeserializationConfig().introspect(javaType);
-        final List<FieldInfo> fieldInfos = description.findProperties().stream().map(property -> {
+        final List<BeanPropertyDefinition> properties = description.findProperties();
+        if (root && properties.isEmpty()) {
+            return newReflectiveStructInfo(javaType.getRawClass()).fields();
+        }
+
+        final List<FieldInfo> fieldInfos = properties.stream().map(property -> {
             return fieldInfos(javaType,
                               property.getName(),
                               property.getPrimaryType(),
-                              childType -> requestFieldInfos(childType, visiting));
+                              childType -> requestFieldInfos(childType, visiting, false));
         }).collect(toImmutableList());
         visiting.remove(javaType);
         return fieldInfos;
     }
 
-    @Nullable
     private StructInfo responseStructInfo(Class<?> type) {
         if (!mapper.canSerialize(type)) {
-            return null;
+            return newReflectiveStructInfo(type);
         }
         final JavaType javaType = mapper.constructType(type);
         final Set<JavaType> visiting = new HashSet<>();
-        return new StructInfo(type.getName(), responseFieldInfos(javaType, visiting),
+        return new StructInfo(type.getName(), responseFieldInfos(javaType, visiting, true),
                               classDescriptionInfo(type));
     }
 
-    private List<FieldInfo> responseFieldInfos(JavaType javaType, Set<JavaType> visiting) {
+    private List<FieldInfo> responseFieldInfos(JavaType javaType, Set<JavaType> visiting, boolean root) {
         if (!mapper.canSerialize(javaType.getRawClass())) {
             return ImmutableList.of();
         }
@@ -176,11 +180,15 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
         try {
             final JsonSerializer<Object> serializer = serializerProvider.findValueSerializer(javaType);
             final Iterator<PropertyWriter> logicalProperties = serializer.properties();
+            if (root && !logicalProperties.hasNext()) {
+                return newReflectiveStructInfo(javaType.getRawClass()).fields();
+            }
+
             return Streams.stream(logicalProperties).map(propertyWriter -> {
                 return fieldInfos(javaType,
                                   propertyWriter.getName(),
                                   propertyWriter.getType(),
-                                  childType -> responseFieldInfos(childType, visiting));
+                                  childType -> responseFieldInfos(childType, visiting, false));
             }).collect(toImmutableList());
         } catch (JsonMappingException e) {
             return ImmutableList.of();
@@ -193,7 +201,7 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
                                  Function<JavaType, List<FieldInfo>> childFieldsResolver) {
         TypeSignature typeSignature = toTypeSignature(fieldType);
         final FieldRequirement fieldRequirement;
-        if (isOptional(typeSignature)) {
+        if (typeSignature.isOptional()) {
             typeSignature = typeSignature.typeParameters().get(0);
             if (typeSignature.namedTypeDescriptor() instanceof Class) {
                 //noinspection OverlyStrongTypeCast
@@ -263,7 +271,7 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
         return firstNonNull(requirement, FieldRequirement.UNSPECIFIED);
     }
 
-    private static boolean isNullable(AnnotatedElement element) {
+    static boolean isNullable(AnnotatedElement element) {
         return isAnnotatedNullable(element) || KotlinUtil.isMarkedNullable(element);
     }
 
@@ -422,7 +430,7 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
         return null;
     }
 
-    private static boolean isOptional(TypeSignature typeSignature) {
-        return typeSignature.isContainer() && "optional".equals(typeSignature.name());
+    private StructInfo newReflectiveStructInfo(Class<?> clazz) {
+        return (StructInfo) ReflectiveNamedTypeInfoProvider.INSTANCE.newNamedTypeInfo(clazz);
     }
 }

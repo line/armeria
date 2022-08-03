@@ -23,6 +23,7 @@ import static com.linecorp.armeria.server.docs.FieldRequirement.UNSPECIFIED;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.io.IOException;
 import java.io.InputStream;
 import java.util.List;
 import java.util.Optional;
@@ -51,6 +52,8 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.ConsumesJson;
 import com.linecorp.armeria.server.annotation.Description;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
@@ -68,8 +71,12 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class DefaultNamedTypeInfoProviderTest {
 
+    static final JsonMapper json5Mapper = JsonMapper.builder()
+                                                    .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS.mappedFeature())
+                                                    .enable(JsonReadFeature.ALLOW_TRAILING_COMMA.mappedFeature())
+                                                    .build();
     @RegisterExtension
-    static ServerExtension server = new ServerExtension() {
+    static ServerExtension jsonServer = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.annotatedService(new JsonService());
@@ -79,6 +86,15 @@ class DefaultNamedTypeInfoProviderTest {
                                                       .namedTypeInfoProvider(new CustomNamedTypeInfoProvider())
                                                       .build());
             sb.decorator(LoggingService.newDecorator());
+        }
+    };
+
+    @RegisterExtension
+    static ServerExtension paramServer = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) {
+            sb.annotatedService(new ParamService());
+            sb.serviceUnder("/docs", new DocService());
         }
     };
 
@@ -201,8 +217,55 @@ class DefaultNamedTypeInfoProviderTest {
     }
 
     @Test
-    void specification() throws Exception {
-        final BlockingWebClient client = server.blockingWebClient();
+    void reflectiveStructInfo() {
+        for (NamedTypeInfoProvider provider : ImmutableList.of(requestStructInfoProvider,
+                                                               responseStructInfoProvider)) {
+            StructInfo structInfo = (StructInfo) provider.newNamedTypeInfo(ParamId.class);
+            assertThat(structInfo.name()).isEqualTo(ParamId.class.getName());
+            assertThat(structInfo.descriptionInfo()).isEqualTo(DescriptionInfo.of("ParamId class"));
+            assertThat(structInfo.fields())
+                    .containsExactly(
+                            FieldInfo.builder("id", INT)
+                                     .requirement(FieldRequirement.REQUIRED)
+                                     .descriptionInfo(DescriptionInfo.of("param id"))
+                                     .build());
+
+            structInfo = (StructInfo) provider.newNamedTypeInfo(ParamQuery.class);
+            assertThat(structInfo.name()).isEqualTo(ParamQuery.class.getName());
+            assertThat(structInfo.descriptionInfo()).isEqualTo(DescriptionInfo.of("ParamQuery class"));
+            assertThat(structInfo.fields())
+                    .containsExactly(
+                            FieldInfo.builder("query", STRING)
+                                     .requirement(FieldRequirement.OPTIONAL)
+                                     .descriptionInfo(DescriptionInfo.of("param query"))
+                                     .build());
+        }
+    }
+
+    @Test
+    void paramSpecification() throws IOException {
+        final BlockingWebClient client = paramServer.blockingWebClient();
+        final JsonNode response = client.prepare()
+                                      .get("/docs/specification.json")
+                                      .asJson(JsonNode.class)
+                                      .execute()
+                                      .content();
+
+        final InputStream resourceAsStream = DefaultNamedTypeInfoProviderTest.class.getResourceAsStream(
+                "ReflectiveNamedTypeInfoProviderTest_specification.json5");
+        final JsonNode expected = json5Mapper.readTree(resourceAsStream);
+
+        assertThat(response.get("services").get(0).get("name").textValue())
+                .isEqualTo(ParamService.class.getName());
+
+        assertThatJson(response.get("services").get(0).get("methods"))
+                .isEqualTo(expected.get("services").get(0).get("methods"));
+        assertThatJson(response.get("structs")).isEqualTo(expected.get("structs"));
+    }
+
+    @Test
+    void jsonSpecification() throws Exception {
+        final BlockingWebClient client = jsonServer.blockingWebClient();
         final JsonNode response = client.prepare()
                                         .get("/docs/specification.json")
                                         .asJson(JsonNode.class)
@@ -210,10 +273,6 @@ class DefaultNamedTypeInfoProviderTest {
                                         .content();
         final InputStream resourceAsStream = DefaultNamedTypeInfoProviderTest.class.getResourceAsStream(
                 "JsonNamedTypeInfoProviderTest_specification.json5");
-        final JsonMapper json5Mapper = JsonMapper.builder()
-                                                 .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS.mappedFeature())
-                                                 .enable(JsonReadFeature.ALLOW_TRAILING_COMMA.mappedFeature())
-                                                 .build();
         final JsonNode expected = json5Mapper.readTree(resourceAsStream);
 
         assertThat(response.get("services").get(0).get("name").textValue())
@@ -226,7 +285,7 @@ class DefaultNamedTypeInfoProviderTest {
 
     @Test
     void customStructInfo() {
-        final BlockingWebClient client = server.blockingWebClient();
+        final BlockingWebClient client = jsonServer.blockingWebClient();
 
         final JsonNode response = client.prepare()
                                         .get("/docs-custom/specification.json")
@@ -301,6 +360,39 @@ class DefaultNamedTypeInfoProviderTest {
         @ProducesJson
         public CompletableFuture<BarResponse> json(FooRequest req) {
             return UnmodifiableFuture.completedFuture(null);
+        }
+    }
+
+    private static class ParamService {
+        @Get("/param/{id}")
+        public CompletableFuture<String> param(@Param ParamId id, @Param @Nullable ParamQuery query) {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+    }
+
+    @Description("ParamId class")
+    private static class ParamId {
+        @Description("param id")
+        private final int id;
+
+        public ParamId(String id) {
+            this.id = Integer.parseInt(id);
+        }
+    }
+
+    @Description("ParamQuery class")
+    private static class ParamQuery {
+
+        public static ParamQuery of(String query) {
+            return new ParamQuery(query);
+        }
+
+        @Description("param query")
+        @Nullable
+        private final String query;
+
+        private ParamQuery(@Nullable String query) {
+            this.query = query;
         }
     }
 
