@@ -26,7 +26,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import com.linecorp.armeria.server.graphql.GraphqlServiceContexts;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.http.HttpStatus;
@@ -42,6 +41,7 @@ import com.google.common.io.Files;
 import com.linecorp.armeria.common.graphql.scalar.MoreScalars;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.graphql.GraphqlService;
+import com.linecorp.armeria.server.graphql.GraphqlServiceContexts;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import graphql.com.google.common.collect.ImmutableList;
@@ -89,15 +89,13 @@ class GraphqlTest {
         return environment -> CompletableFuture.supplyAsync(() -> {
             final List<com.linecorp.armeria.common.multipart.MultipartFile> multipartFiles =
                     environment.getArgument("files");
-            return multipartFiles.stream()
-                        .map(it -> {
-                            try {
-                                return Files.asCharSource(it.file(), StandardCharsets.UTF_8).read();
-                            } catch (IOException e) {
-                                throw new UncheckedIOException(e);
-                            }
-                        })
-                        .collect(toImmutableList());
+            return multipartFiles.stream().map(it -> {
+                try {
+                    return Files.asCharSource(it.file(), StandardCharsets.UTF_8).read();
+                } catch (IOException e) {
+                    throw new UncheckedIOException(e);
+                }
+            }).collect(toImmutableList());
         }, GraphqlServiceContexts.get(environment).blockingTaskExecutor()).join();
     }
 
@@ -106,16 +104,15 @@ class GraphqlTest {
         final MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         final String query = "mutation FileUpload($file: MultipartFile) {fileUpload(file: $file)}";
         final String variables = "{\"file\": null}";
-        body.put("operations", ImmutableList.of(String.format("{ \"query\": \"%s\", \"variables\": %s}",
-                                                              query, variables)));
+        body.put("operations",
+                 ImmutableList.of(String.format("{ \"query\": \"%s\", \"variables\": %s}", query, variables)));
         body.put("map", ImmutableList.of("{\"0\": [\"variables.file\"]}"));
-        final MultipartFile multipart = new MockMultipartFile("0", "dummy.txt", "plain/txt",
-                                                              "Hello!".getBytes(StandardCharsets.UTF_8));
+        final MultipartFile multipart =
+                new MockMultipartFile("0", "dummy.txt", "plain/txt", "Hello!".getBytes(StandardCharsets.UTF_8));
         body.put("0", ImmutableList.of(multipart.getResource()));
 
-        final ResponseEntity<String> response = restTemplate.postForEntity(server.httpUri().resolve("/graphql"),
-                                                                           body,
-                                                                           String.class);
+        final ResponseEntity<String> response =
+                restTemplate.postForEntity(server.httpUri().resolve("/graphql"), body, String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("{\"data\":{\"fileUpload\":\"Hello!\"}}");
@@ -126,16 +123,15 @@ class GraphqlTest {
         final MultiValueMap<String, Object> body = new LinkedMultiValueMap<>();
         final String query = "mutation FileUploads($files: [MultipartFile]) {fileUploads(files: $files)}";
         final String variables = "{\"files\": [null]}";
-        body.put("operations", ImmutableList.of(String.format("{ \"query\": \"%s\", \"variables\": %s}",
-                                                              query, variables)));
+        body.put("operations",
+                 ImmutableList.of(String.format("{ \"query\": \"%s\", \"variables\": %s}", query, variables)));
         body.put("map", ImmutableList.of("{\"0\": [\"variables.files.0\"]}"));
-        final MultipartFile multipart = new MockMultipartFile("0", "dummy.txt", "plain/txt",
-                                                              "Hello!".getBytes(StandardCharsets.UTF_8));
+        final MultipartFile multipart =
+                new MockMultipartFile("0", "dummy.txt", "plain/txt", "Hello!".getBytes(StandardCharsets.UTF_8));
         body.put("0", ImmutableList.of(multipart.getResource()));
 
-        final ResponseEntity<String> response = restTemplate.postForEntity(server.httpUri().resolve("/graphql"),
-                                                                           body,
-                                                                           String.class);
+        final ResponseEntity<String> response =
+                restTemplate.postForEntity(server.httpUri().resolve("/graphql"), body, String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isEqualTo("{\"data\":{\"fileUploads\":[\"Hello!\"]}}");
