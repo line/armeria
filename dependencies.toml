@@ -387,6 +387,7 @@ exclusions = [
     "org.slf4j:slf4j-log4j12"]
 
 # Validator is only used for examples and testings in Spring
+# version 7 starts using jakarta api, which isn't compatible with spring-boot2
 [libraries.hibernate-validator]
 module = "org.hibernate.validator:hibernate-validator"
 version = "6.2.3.Final"
