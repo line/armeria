@@ -4,76 +4,102 @@ date: 2022-08-04
 
 ## 🌟 New features
 
-- Users can extract the innermost wrapped object conveniently #4338
-- Users can decorate a service using a builder method like the following
+- <type://DocService> can now render Markdown and [Mermaid](https://mermaid-js.github.io/mermaid/)
+formatted documentation for annotated services #4299 #4304
+
+```java Markdown
+@Description(value = "### Markdown format", markup = Markup.MARKDOWN)
+@Get("/markdown")
+public HttpResponse markdown() {
+    return HttpResponse.of(200);
+}
+```
+
+```java Mermaid
+@Description(value = "graph TD;\n" +
+                     " A-->B;\n" +
+                     " A-->C;\n" +
+                     " B-->D;\n" +
+                     " C-->D;",
+             markup = Markup.MERMAID)
+@Get("/mermaid")
+public HttpResponse mermaid() {
+    return HttpResponse.of(200);
+}
+```
+
+- It is now possible to bind decorators to gRPC services using <type://GrpcServiceBuilder>. #4311 #4316
 ```java
 GrpcService.builder()
-           .addService(myGrpcService1Impl, List.of(LoggingService.newDecorator()))
-           .addService(myGrpcService2Impl, List.of(LoggingService.newDecorator(), MetricCollectingService.newDecorator()))             
-           .addService(myGrpcService3Impl, List.of(delegate -> delegate.decorate(new CustomDecorator())
+           .addService(myGrpcService, List.of(LoggingService.newDecorator()))
            .build();
-``` #4311 #4316
-- Support Markdown Description  #4304
-- Support Enums&Return Types documentation in annotated service #4304
-- You can have a richer error model as described by [google error model](https://cloud.google.com/apis/design/errors#error_model) 
-eg.   #4231
--  #4231
-- if you throw exceptions like 
- ```
-           final ErrorInfo errorInfo = ErrorInfo.newBuilder()
-                                                 .setDomain("test")
-                                                 .setReason("Unknown Exception").build();
-            final com.google.rpc.Status
-                    status = com.google.rpc.Status.newBuilder()
-                                                  .setCode(
-                                                          Code.UNKNOWN.getNumber())
-                                                  .setMessage("Unknown Exceptions Test")
-                                                  .addDetails(
-                                                          Any.pack(errorInfo))
-                                                  .build();
-            responseObserver.onError(StatusProto.toStatusRuntimeException(status));
 ```
-You can use this error handler by doing
-``` 
-sb.service(GrpcService.builder()   
-                              .addService(grpcService)   
-                              .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.ofRichJson())   
-                              .build());
+
+- Armeria's gRPC users can now use an <type://UnframedGrpcErrorHandler> which provides a
+[richer error model](https://cloud.google.com/apis/design/errors#error_model) for unframed requests.
+
+```java
+Server.builder()
+      .service(GrpcService.builder()
+                          .addService(grpcService)
+                          .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.ofRichJson())
+                          .build());
 ```
-You can get a response 
-```
+
+```json
 {
 	"error": {
-		"code": 500,
-		"status": "UNKNOWN",
-		"message": "Unknown Exceptions Test",
-		"details": [{
-			"@type": "type.googleapis.com/google.rpc.ErrorInfo",
-			"reason": "Unknown Exception",
-			"domain": "test"
-		}]
+		"code": 2,
+		"message": "A custom message!"
 	}
 }
-``` #4231
-- Support file upload for GraphQL #3971 #4199
+```
+
+- Multipart file upload is now available for GraphQL users. #3971 #4199
+```java
+GraphqlService service =
+    GraphqlService.builder()
+...
+                  .runtimeWiring(c -> {
+                      c.scalar(MoreScalars.multipartFile());
+                      DataFetcher<String> fileUpload = environment -> {
+                          MultipartFile multipartFile = environment.getArgument("file");
+                          ...
+                      }
+                      c.type("Mutation", typeWiring -> typeWiring.dataFetcher("fileUpload", fileUpload));
+                  })
+...
+```
+
+- Users can now extract the innermost element of <type://Unwrappable> type objects easily using <type://Unwrappable#unwrapAll()> #4338
+```java
+FooDecorator extends SimpleDecoratingHttpClient {
+...
+    @Override
+    public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
+        Object innermost = unwrapAll();
+        ...
+    }
+}
+```
 
 ## 📈 Improvements
 
-- Developers may add more utility functions to `RequestContext` without worrying about public API exposure #4308
-- Armeria tries to unwrap `RequestContext` instead of simply checking the type. #4308
-- Add AnnotatedServiceConfigSetters, Replace Interface #4205 #4210
+- <type://AnnotatedServiceBindingBuilder> and <type://VirtualHostAnnotatedServiceBindingBuilder> now
+extend a single interface. #4205 #4210
+- <type://RequestContext> now extends <type://Unwrappable>. #4308
 
 ## 🛠️ Bug fixes
 
-- `ClosedSessionException` and `ClosedStreamException` are raised correctly according to its usage. #4380
-- You no longer see `IllegalStateException` when a gRPC service run on a
-  blocking take executor. #4367 #4374
-- Fix file serving from OSGI bundle classloader #4371 #4373
+- You no longer see an intermittent <type://IllegalStateException> for gRPC services
+when <type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)> is enabled. #4367 #4374
+- Requests no longer hang when gRPC-JSON transcoding is enabled and gRPC decorators return an unframed response. #4337 #4348
+- Files from OSGI bundle classloader are correctly served #4371 #4373
 - `requestStartTimeNanos` and `requestStartTimeMicros` are now correctly
-  recoded when `RequestHeaders` is received. #4365 #4372
+recorded when Armeria's server receives the first header of a request. #4365 #4372
 - You no longer see a false positive warning for unknown `MethodType` when using gRPC clients. #4363
-- You no longer see a `NoSuchElementException` while an `HealthEndpointGroup` is closing. #4349
-- Please Recommend a Test file to put it in (or a name for a new test file)~~ Integration tests added #4337 #4348
+- You no longer see a `NoSuchElementException` while a <type://HealthCheckedEndpointGroup> is closed. #4349
+- <type://ClosedSessionException> and <type://ClosedStreamException> are raised correctly according to its usage. #4380
 
 ## 🏚️ Deprecations
 
@@ -85,15 +111,7 @@ You can get a response
 
 ## ⛓ Dependencies
 
-
-
-## 🗑 Maybe ignore
-
-- no warnings! #4368
-- Migrate `dependencies.yml` to Gradle's version catalogs #4120 #4353
-- Set okhttp version explicitly in `retrofit2` module #4345 #4346
-- Developers may add more utility functions to `RequestContext` without worrying about public API exposure #4308
-- Armeria tries to unwrap `RequestContext` instead of simply checking the type. #4308
+TBU
 
 ## 🙇 Thank you
 
