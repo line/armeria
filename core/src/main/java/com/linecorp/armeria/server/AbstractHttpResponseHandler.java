@@ -77,9 +77,9 @@ abstract class AbstractHttpResponseHandler {
             Throwable cause = CapturedServiceException.get(reqCtx);
             if (cause == null) {
                 if (reqCtx.sessionProtocol().isMultiplex()) {
-                    cause = ClosedSessionException.get();
-                } else {
                     cause = ClosedStreamException.get();
+                } else {
+                    cause = ClosedSessionException.get();
                 }
             }
             fail(cause);
