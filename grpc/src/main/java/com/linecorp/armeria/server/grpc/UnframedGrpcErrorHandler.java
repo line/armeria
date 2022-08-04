@@ -35,7 +35,7 @@ public interface UnframedGrpcErrorHandler {
      * Returns a plain text or json response based on the content type.
      */
     static UnframedGrpcErrorHandler of() {
-        return DefaultUnframedGrpcErrorHandler.of(UnframedGrpcStatusMappingFunction.of());
+        return UnframedGrpcErrorHandlers.of(UnframedGrpcStatusMappingFunction.of());
     }
 
     /**
@@ -45,14 +45,14 @@ public interface UnframedGrpcErrorHandler {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        return DefaultUnframedGrpcErrorHandler.of(statusMappingFunction);
+        return UnframedGrpcErrorHandlers.of(statusMappingFunction);
     }
 
     /**
      * Returns a JSON response.
      */
     static UnframedGrpcErrorHandler ofJson() {
-        return DefaultUnframedGrpcErrorHandler.ofJson(UnframedGrpcStatusMappingFunction.of());
+        return UnframedGrpcErrorHandlers.ofJson(UnframedGrpcStatusMappingFunction.of());
     }
 
     /**
@@ -62,14 +62,14 @@ public interface UnframedGrpcErrorHandler {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        return DefaultUnframedGrpcErrorHandler.ofJson(statusMappingFunction);
+        return UnframedGrpcErrorHandlers.ofJson(statusMappingFunction);
     }
 
     /**
      * Returns a plain text response.
      */
     static UnframedGrpcErrorHandler ofPlainText() {
-        return DefaultUnframedGrpcErrorHandler.ofPlaintext(UnframedGrpcStatusMappingFunction.of());
+        return UnframedGrpcErrorHandlers.ofPlaintext(UnframedGrpcStatusMappingFunction.of());
     }
 
     /**
@@ -79,7 +79,7 @@ public interface UnframedGrpcErrorHandler {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler ofPlainText(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        return DefaultUnframedGrpcErrorHandler.ofPlaintext(statusMappingFunction);
+        return UnframedGrpcErrorHandlers.ofPlaintext(statusMappingFunction);
     }
 
     /**
@@ -88,7 +88,7 @@ public interface UnframedGrpcErrorHandler {
      * for more information.
      */
     static UnframedGrpcErrorHandler ofRichJson() {
-        return DefaultUnframedGrpcErrorHandler.ofRichJson(UnframedGrpcStatusMappingFunction.of());
+        return UnframedGrpcErrorHandlers.ofRichJson(UnframedGrpcStatusMappingFunction.of());
     }
 
     /**

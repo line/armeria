@@ -65,10 +65,11 @@ import io.grpc.Status.Code;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufOutputStream;
 
-final class DefaultUnframedGrpcErrorHandler {
+final class UnframedGrpcErrorHandlers {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultUnframedGrpcErrorHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(UnframedGrpcErrorHandlers.class);
 
+    // XXX(ikhoon): Support custom JSON marshaller?
     private static final MessageMarshaller ERROR_DETAILS_MARSHALLER =
             MessageMarshaller.builder()
                              .omittingInsignificantWhitespace(true)
@@ -93,8 +94,7 @@ final class DefaultUnframedGrpcErrorHandler {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler of(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        final UnframedGrpcStatusMappingFunction mappingFunction
-                = ofStatusMappingFunction(statusMappingFunction);
+        final UnframedGrpcStatusMappingFunction mappingFunction = withDefault(statusMappingFunction);
         return (ctx, status, response) -> {
             final MediaType grpcMediaType = response.contentType();
             if (grpcMediaType != null && grpcMediaType.isJson()) {
@@ -112,12 +112,11 @@ final class DefaultUnframedGrpcErrorHandler {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        final UnframedGrpcStatusMappingFunction mappingFunction
-                = ofStatusMappingFunction(statusMappingFunction);
+        final UnframedGrpcStatusMappingFunction mappingFunction = withDefault(statusMappingFunction);
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();
             final String grpcMessage = status.getDescription();
-            final Throwable cause = getThrowableFromContext(ctx);
+            final Throwable cause = responseCause(ctx);
             final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
             final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
                                                                    .contentType(MediaType.JSON_UTF_8)
@@ -143,12 +142,11 @@ final class DefaultUnframedGrpcErrorHandler {
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler ofPlaintext(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        final UnframedGrpcStatusMappingFunction mappingFunction
-                = ofStatusMappingFunction(statusMappingFunction);
+        final UnframedGrpcStatusMappingFunction mappingFunction = withDefault(statusMappingFunction);
         return (ctx, status, response) -> {
             final Code grpcCode = status.getCode();
             final String grpcMessage = status.getDescription();
-            final Throwable cause = getThrowableFromContext(ctx);
+            final Throwable cause = responseCause(ctx);
             final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
             final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
                                                                    .contentType(MediaType.PLAIN_TEXT_UTF_8)
@@ -185,7 +183,7 @@ final class DefaultUnframedGrpcErrorHandler {
             final ByteBuf buffer = ctx.alloc().buffer();
             final Code grpcCode = status.getCode();
             final String grpcMessage = status.getDescription();
-            final Throwable cause = getThrowableFromContext(ctx);
+            final Throwable cause = responseCause(ctx);
             final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
             final HttpHeaders trailers = !response.trailers().isEmpty() ?
                                          response.trailers() : response.headers();
@@ -198,8 +196,6 @@ final class DefaultUnframedGrpcErrorHandler {
             boolean success = false;
             try (OutputStream outputStream = new ByteBufOutputStream(buffer);
                  JsonGenerator jsonGenerator = mapper.createGenerator(outputStream)) {
-                jsonGenerator.writeStartObject();
-                jsonGenerator.writeFieldName("error");
                 jsonGenerator.writeStartObject();
                 jsonGenerator.writeNumberField("code", grpcCode.value());
                 if (grpcMessage != null) {
@@ -222,7 +218,6 @@ final class DefaultUnframedGrpcErrorHandler {
                     }
                 }
                 jsonGenerator.writeEndObject();
-                jsonGenerator.writeEndObject();
                 jsonGenerator.flush();
                 success = true;
             } catch (IOException e) {
@@ -240,13 +235,12 @@ final class DefaultUnframedGrpcErrorHandler {
         };
     }
 
-    private DefaultUnframedGrpcErrorHandler() {}
-
     /**
      * Ensure that unframedGrpcStatusMappingFunction never returns null by falling back to the default.
      */
-    private static UnframedGrpcStatusMappingFunction ofStatusMappingFunction(
+    private static UnframedGrpcStatusMappingFunction withDefault(
             UnframedGrpcStatusMappingFunction statusMappingFunction) {
+
         requireNonNull(statusMappingFunction, "statusMappingFunction");
         if (statusMappingFunction == UnframedGrpcStatusMappingFunction.of()) {
             return statusMappingFunction;
@@ -275,14 +269,14 @@ final class DefaultUnframedGrpcErrorHandler {
     }
 
     @Nullable
-    private static Throwable getThrowableFromContext(ServiceRequestContext ctx) {
+    private static Throwable responseCause(ServiceRequestContext ctx) {
         final RequestLogAccess log = ctx.log();
-        final Throwable cause;
         if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
-            cause = log.partial().responseCause();
+            return log.partial().responseCause();
         } else {
-            cause = null;
+            return null;
         }
-        return cause;
     }
+
+    private UnframedGrpcErrorHandlers() {}
 }

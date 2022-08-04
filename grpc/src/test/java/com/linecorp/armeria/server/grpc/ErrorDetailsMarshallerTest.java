@@ -47,7 +47,7 @@ import com.google.rpc.Status;
 
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
-class DefaultUnframedGrpcErrorHandlerTest {
+class ErrorDetailsMarshallerTest {
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
@@ -119,7 +119,7 @@ class DefaultUnframedGrpcErrorHandlerTest {
 
         final StringWriter jsonObjectWriter = new StringWriter();
         final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
-        DefaultUnframedGrpcErrorHandler.writeErrorDetails(status.getDetailsList(), jsonGenerator);
+        UnframedGrpcErrorHandlers.writeErrorDetails(status.getDetailsList(), jsonGenerator);
         jsonGenerator.flush();
         final String expectedJsonString =
                 "[\n" +
@@ -198,7 +198,7 @@ class DefaultUnframedGrpcErrorHandlerTest {
         final StringWriter jsonObjectWriter = new StringWriter();
         final JsonGenerator jsonGenerator = mapper.createGenerator(jsonObjectWriter);
 
-        assertThatThrownBy(() -> DefaultUnframedGrpcErrorHandler.writeErrorDetails(
+        assertThatThrownBy(() -> UnframedGrpcErrorHandlers.writeErrorDetails(
                 status.getDetailsList(), jsonGenerator)).isInstanceOf(IOException.class);
     }
 }

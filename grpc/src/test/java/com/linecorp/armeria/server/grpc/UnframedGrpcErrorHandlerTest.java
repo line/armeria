@@ -175,11 +175,19 @@ public class UnframedGrpcErrorHandlerTest {
                       .content(MediaType.PROTOBUF, Empty.getDefaultInstance().toByteArray())
                       .execute();
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThatJson(mapper.readTree(response.contentUtf8())).isEqualTo(
-                "{\"error\":{\"code\":2," +
-                "\"message\":\"Unknown Exceptions Test\"," +
-                "\"details\":[{\"@type\":\"type.googleapis.com/google.rpc.ErrorInfo\"," +
-                "\"reason\":\"Unknown Exception\",\"domain\":\"test\"}]}}");
+        assertThatJson(mapper.readTree(response.contentUtf8()))
+                .isEqualTo(
+                        '{' +
+                        "  \"code\": 2," +
+                        "  \"message\": \"Unknown Exceptions Test\"," +
+                        "  \"details\": [" +
+                        "    {" +
+                        "      \"@type\": \"type.googleapis.com/google.rpc.ErrorInfo\"," +
+                        "      \"reason\": \"Unknown Exception\"," +
+                        "      \"domain\": \"test\"" +
+                        "    }" +
+                        "  ]" +
+                        '}');
         assertThat(response.trailers()).isEmpty();
     }
 }
