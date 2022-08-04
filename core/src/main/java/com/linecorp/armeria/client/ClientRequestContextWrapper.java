@@ -171,4 +171,9 @@ public class ClientRequestContextWrapper
     public CompletableFuture<Void> whenResponseTimedOut() {
         return delegate().whenResponseTimedOut();
     }
+
+    @Override
+    public ClientRequestContext unwrapAll() {
+        return (ClientRequestContext) super.unwrapAll();
+    }
 }

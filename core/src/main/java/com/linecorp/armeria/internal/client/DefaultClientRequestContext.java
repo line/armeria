@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,12 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.client;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.client.DefaultWebClient.pathWithQuery;
+import static com.linecorp.armeria.internal.client.ClientUtil.pathWithQuery;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
 import static java.util.Objects.requireNonNull;
 
@@ -35,6 +35,12 @@ import java.util.function.Function;
 
 import javax.net.ssl.SSLSession;
 
+import com.linecorp.armeria.client.Client;
+import com.linecorp.armeria.client.ClientOptions;
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AttributesGetters;
 import com.linecorp.armeria.common.ContextAwareEventLoop;
@@ -45,7 +51,6 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -56,7 +61,6 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -66,9 +70,10 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.PathAndQuery;
+import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
-import com.linecorp.armeria.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -82,10 +87,9 @@ import io.netty.util.AttributeKey;
 /**
  * Default {@link ClientRequestContext} implementation.
  */
-@UnstableApi
 public final class DefaultClientRequestContext
         extends NonWrappingRequestContext
-        implements ClientRequestContext {
+        implements ClientRequestContextExtension {
 
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
             additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
@@ -149,7 +153,7 @@ public final class DefaultClientRequestContext
      * @param requestStartTimeMicros the number of microseconds since the epoch,
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
      */
-    DefaultClientRequestContext(
+    public DefaultClientRequestContext(
             EventLoop eventLoop, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
@@ -249,11 +253,14 @@ public final class DefaultClientRequestContext
 
     @Nullable
     private static AttributesGetters getAttributes(@Nullable ServiceRequestContext ctx) {
-        if (ctx instanceof DefaultServiceRequestContext) {
-            return ((DefaultServiceRequestContext) ctx).attributes();
-        } else {
+        if (ctx == null) {
             return null;
         }
+        final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
+        if (ctxExtension == null) {
+            return null;
+        }
+        return ctxExtension.attributes();
     }
 
     @Nullable
@@ -262,14 +269,7 @@ public final class DefaultClientRequestContext
         return current != null ? current.root() : null;
     }
 
-    /**
-     * Initializes this context with the specified {@link EndpointGroup}.
-     * This method must be invoked to finish the construction of this context.
-     *
-     * @return {@code true} if the initialization has succeeded.
-     *         {@code false} if the initialization has failed and this context's {@link RequestLog} has been
-     *         completed with the cause of the failure.
-     */
+    @Override
     public CompletableFuture<Boolean> init(EndpointGroup endpointGroup) {
         assert endpoint == null : endpoint;
         assert !initialized;
@@ -364,12 +364,7 @@ public final class DefaultClientRequestContext
         }
     }
 
-    /**
-     * Returns a {@link CompletableFuture} that will be completed
-     * if this {@link ClientRequestContext} is initialized with an {@link EndpointGroup}.
-     *
-     * @see #init(EndpointGroup)
-     */
+    @Override
     public CompletableFuture<Boolean> whenInitialized() {
         CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
         if (whenInitialized != null) {
@@ -384,9 +379,7 @@ public final class DefaultClientRequestContext
         }
     }
 
-    /**
-     * Completes the {@link #whenInitialized()} with the specified value.
-     */
+    @Override
     public void finishInitialization(boolean success) {
         final CompletableFuture<Boolean> whenInitialized = this.whenInitialized;
         if (whenInitialized != null) {
@@ -742,7 +735,8 @@ public final class DefaultClientRequestContext
         return log;
     }
 
-    CancellationScheduler responseCancellationScheduler() {
+    @Override
+    public CancellationScheduler responseCancellationScheduler() {
         return responseCancellationScheduler;
     }
 

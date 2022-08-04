@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;

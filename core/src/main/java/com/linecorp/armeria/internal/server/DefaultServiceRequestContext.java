@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server;
+package com.linecorp.armeria.internal.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
@@ -44,14 +44,12 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.NonWrappingRequestContext;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -60,7 +58,14 @@ import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
+import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.server.ProxiedAddresses;
+import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingContext;
+import com.linecorp.armeria.server.RoutingResult;
+import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
@@ -70,7 +75,6 @@ import io.netty.util.AttributeKey;
 /**
  * Default {@link ServiceRequestContext} implementation.
  */
-@UnstableApi
 public final class DefaultServiceRequestContext
         extends NonWrappingRequestContext
         implements ServiceRequestContext {
@@ -143,7 +147,7 @@ public final class DefaultServiceRequestContext
              requestStartTimeNanos, requestStartTimeMicros, HttpHeaders.of(), HttpHeaders.of());
     }
 
-    DefaultServiceRequestContext(
+    public DefaultServiceRequestContext(
             ServiceConfig cfg, Channel ch, MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, RoutingContext routingContext, RoutingResult routingResult, ExchangeType exchangeType,
             HttpRequest req, @Nullable SSLSession sslSession, ProxiedAddresses proxiedAddresses,
@@ -313,7 +317,7 @@ public final class DefaultServiceRequestContext
                                                              .toNanos());
     }
 
-    CancellationScheduler requestCancellationScheduler() {
+    public CancellationScheduler requestCancellationScheduler() {
         return requestCancellationScheduler;
     }
 
