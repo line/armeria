@@ -119,18 +119,16 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                     final Map<String, Object> extensions = toMapFromJson(operations.get("extensions"),
                                                                          ImmutableMap::of);
                     for (Map.Entry<String, List<String>> entry : map.entrySet()) {
-                        final String key = entry.getKey();
-                        final List<String> value = entry.getValue();
-                        final List<MultipartFile> multipartFiles = multipart.files().get(key);
-                        bindMultipartVariable(variables, value, multipartFiles);
+                        final List<MultipartFile> multipartFiles = multipart.files().get(entry.getKey());
+                        bindMultipartVariable(variables, entry.getValue(), multipartFiles);
                     }
 
                     return executeGraphql(ctx, GraphqlRequest.of(query, null, variables, extensions));
                 } catch (JsonProcessingException ex) {
                     return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
-                                           "Failed to parse a JSON document");
+                                           "Failed to parse a JSON document: " + ex.getMessage());
                 } catch (IllegalArgumentException ex) {
-                    return ofFailureThrownIllegalArgumentException(ex);
+                    return createResponse(ex);
                 } catch (Exception ex) {
                     return HttpResponse.ofFailure(ex);
                 }
@@ -167,7 +165,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                         return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
                                                "Failed to parse a JSON document: " + body);
                     } catch (IllegalArgumentException ex) {
-                        return ofFailureThrownIllegalArgumentException(ex);
+                        return createResponse(ex);
                     } catch (Exception ex) {
                         return HttpResponse.ofFailure(ex);
                     }
@@ -195,13 +193,13 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         return unsupportedMediaType();
     }
 
-    private static void bindMultipartVariable(Map<String, Object> variables, List<String> value,
+    private static void bindMultipartVariable(Map<String, Object> variables, List<String> operationsPaths,
                                               @Nullable List<MultipartFile> multipartFiles) {
-        if (multipartFiles.isEmpty()) {
+        if (multipartFiles == null || multipartFiles.isEmpty()) {
             return;
         }
         for (MultipartFile multipartFile : multipartFiles) {
-            for (String objectPath : value) {
+            for (String objectPath : operationsPaths) {
                 MultipartVariableMapper.mapVariable(objectPath, variables, multipartFile);
             }
         }
@@ -233,7 +231,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
     private static String getValueFromMultipartParam(String name, ListMultimap<String, String> params) {
         final List<String> list = params.get(name);
         if (list.isEmpty() || Strings.isNullOrEmpty(list.get(0))) {
-            throw new IllegalArgumentException("Missing request BodyPart[name=" + name + ']');
+            throw new IllegalArgumentException(name + " form field is missing");
         }
         return list.get(0);
     }
@@ -285,7 +283,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                                "application/graphql are supported.");
     }
 
-    private static HttpResponse ofFailureThrownIllegalArgumentException(IllegalArgumentException ex) {
+    private static HttpResponse createResponse(IllegalArgumentException ex) {
         final String message = ex.getMessage() == null ? HttpStatus.BAD_REQUEST.reasonPhrase()
                                                        : ex.getMessage();
         return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, message);

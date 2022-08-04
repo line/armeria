@@ -27,9 +27,11 @@ import graphql.schema.GraphQLScalarType;
  * A multipart-file scalar that converts a file path string into a
  * {@link com.linecorp.armeria.common.multipart.MultipartFile}.
  */
-final class MultipartFileScalar {
+enum MultipartFileScalar {
 
-    static final GraphQLScalarType INSTANCE;
+    INSTANCE;
+
+    private static final GraphQLScalarType TYPE;
 
     static {
         final Coercing<MultipartFile, Void> coercing = new Coercing<MultipartFile, Void>() {
@@ -55,13 +57,14 @@ final class MultipartFileScalar {
             }
         };
 
-        INSTANCE = GraphQLScalarType.newScalar()
-                                    .name("MultipartFile")
-                                    .description("A multipart-file in a multipart request")
-                                    .coercing(coercing)
-                                    .build();
+        TYPE = GraphQLScalarType.newScalar()
+                                .name("MultipartFile")
+                                .description("A multipart-file in a multipart request")
+                                .coercing(coercing)
+                                .build();
     }
 
-    private MultipartFileScalar() {
+    GraphQLScalarType type() {
+        return TYPE;
     }
 }

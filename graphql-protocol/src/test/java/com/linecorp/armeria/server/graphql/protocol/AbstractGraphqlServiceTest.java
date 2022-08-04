@@ -174,7 +174,7 @@ class AbstractGraphqlServiceTest {
         final BlockingWebClient client = server.webClient().blocking();
         final AggregatedHttpResponse response = client.execute(request);
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.contentUtf8()).startsWith(message);
+        assertThat(response.contentUtf8()).contains(message);
     }
 
     @Test
@@ -270,13 +270,13 @@ class AbstractGraphqlServiceTest {
         return Stream.of(
                 Arguments.of(ImmutableList.of(BodyPart.of(ContentDisposition.of("form-data", "operations"),
                                                           "")),
-                             "Missing request BodyPart"),
+                             "form field is missing"),
                 Arguments.of(ImmutableList.of(BodyPart.of(ContentDisposition.of("form-data", "operations"),
                                                           "[]")),
-                             "Missing request BodyPart"),
+                             "form field is missing"),
                 Arguments.of(ImmutableList.of(BodyPart.of(ContentDisposition.of("form-data", "operations"),
                                                           "{\"query\":\"{foo}\"}")),
-                             "Missing request BodyPart"),
+                             "form field is missing"),
                 Arguments.of(ImmutableList.of(BodyPart.of(ContentDisposition.of("form-data", "operations"),
                                                           "{\"query\":\"{foo}\"}"),
                                               BodyPart.of(ContentDisposition.of("form-data", "map"),
