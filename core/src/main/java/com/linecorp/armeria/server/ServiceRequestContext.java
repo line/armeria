@@ -644,4 +644,9 @@ public interface ServiceRequestContext extends RequestContext {
     default ServiceRequestContext unwrap() {
         return (ServiceRequestContext) RequestContext.super.unwrap();
     }
+
+    @Override
+    default ServiceRequestContext unwrapAll() {
+        return (ServiceRequestContext) RequestContext.super.unwrapAll();
+    }
 }

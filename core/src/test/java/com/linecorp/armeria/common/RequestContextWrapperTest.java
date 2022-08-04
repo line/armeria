@@ -24,12 +24,14 @@ import org.junit.jupiter.api.Test;
 import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextWrapper;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceRequestContextWrapper;
 
 class RequestContextWrapperTest {
 
@@ -106,12 +108,30 @@ class RequestContextWrapperTest {
 
         final ClientRequestContext clientRequestContext =
                 ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
-        final ClientRequestContext unwrappedClientRequestContext = clientRequestContext.unwrap();
+        ClientRequestContext unwrappedClientRequestContext = clientRequestContext.unwrap();
+        assertThat(unwrappedClientRequestContext).isSameAs(clientRequestContext);
+        unwrappedClientRequestContext = clientRequestContext.unwrapAll();
         assertThat(unwrappedClientRequestContext).isSameAs(clientRequestContext);
 
         final ServiceRequestContext serviceRequestContext =
                 ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
-        final ServiceRequestContext unwrappedServiceRequestContext = serviceRequestContext.unwrap();
+        ServiceRequestContext unwrappedServiceRequestContext = serviceRequestContext.unwrap();
+        assertThat(unwrappedServiceRequestContext).isSameAs(serviceRequestContext);
+        unwrappedServiceRequestContext = serviceRequestContext.unwrapAll();
+        assertThat(unwrappedServiceRequestContext).isSameAs(serviceRequestContext);
+
+        final ClientRequestContextWrapper clientRequestContextWrapper =
+                new ClientRequestContextWrapper(clientRequestContext) {};
+        unwrappedClientRequestContext = clientRequestContextWrapper.unwrap();
+        assertThat(unwrappedClientRequestContext).isSameAs(clientRequestContext);
+        unwrappedClientRequestContext = clientRequestContext.unwrapAll();
+        assertThat(unwrappedClientRequestContext).isSameAs(clientRequestContext);
+
+        final ServiceRequestContextWrapper serviceRequestContextWrapper =
+                new ServiceRequestContextWrapper(serviceRequestContext) {};
+        unwrappedServiceRequestContext = serviceRequestContextWrapper.unwrap();
+        assertThat(unwrappedServiceRequestContext).isSameAs(serviceRequestContext);
+        unwrappedServiceRequestContext = serviceRequestContextWrapper.unwrapAll();
         assertThat(unwrappedServiceRequestContext).isSameAs(serviceRequestContext);
     }
 }
