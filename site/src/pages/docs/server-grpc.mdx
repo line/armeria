@@ -113,34 +113,36 @@ ServerBuilder sb = Server.builder();
 ...
 sb.service(GrpcService.builder()
                       .addService(new MyHelloService())
+                      .addService(new MySecondHelloService())
                       .build(),
            LoggingService.newDecorator());
 ...
 Server server = sb.build();
 server.start();
 ```
-See [Decorating `ServiceWithRoutes`](/docs/server-decorator#decorating-servicewithroutes) for more information about <type://HttpServiceWithRoutes>.
 
+<Tip>
 
-There are two ways to decorate an individual gRPC service:
+See [Decorating `ServiceWithRoutes`](/docs/server-decorator#decorating-servicewithroutes) for more information
+about <type://HttpServiceWithRoutes>.
 
-- bind a decorator using the builder method of <type://GrpcService>
+</Tip>
+
+The above decorator decorates all services. If you want to decorate only a specific service, you need to specify
+the decorators when you add the service to the <type://GrpcServiceBuilder>,
+or use the <type://@Decorator>.
 
 ```java
 GrpcService.builder()
-           .addService(new MyHelloServiceImpl(),
-                       List.of(delegate -> delegate.decorate(new FirstDecorator()),
-                               delegate -> delegate.decorate(new SecondDecorator())))
+           .addService(new MyHelloService(),
+                       List.of(new FirstDecorator(), new SecondDecorator())) // 👈👈👈
            .build()
-```
 
-- bind a decorator using <type://@Decorator>
+// Or, use the @Decorator directly to the service or method.
+@Decorator(ThirdDecorator.class)
+class MyHelloService extends MyHelloServiceBase {
 
-```java
-@Decorator(ClassDecorator.class)
-class MyHelloServiceImpl extends MyHelloServiceImplBase {
-
-    @Decorator(MethodDecorator.class)
+    @Decorator(FourthDecorator.class)
     @Override
     public void sayHello(HelloRequest request, StreamObserver<HelloResponse> responseObserver) {
         ...
@@ -148,8 +150,8 @@ class MyHelloServiceImpl extends MyHelloServiceImplBase {
 }
 ```
 
-If you use the above at the same time, the decorators will be applied in the order of
-`FirstDecorator`, `SecondDecorator`, `ClassDecorator`, and `MethodDecorator`.
+As you might have noticed already, the decorators will be applied in the order of
+`FirstDecorator`, `SecondDecorator`, `ThirdDecorator`, and `FourthDecorator`.
 
 ## `gRPC-Web`
 

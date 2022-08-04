@@ -159,9 +159,7 @@ final class HandlerRegistry {
             decorated.put(entry.getKey(), applyDecorators(entry.getValue(), service));
         }
 
-        final ImmutableMap.Builder<ServerMethodDefinition<?, ?>, HttpService> builder = ImmutableMap.builder();
-        builder.putAll(decorated);
-        return builder.build();
+        return ImmutableMap.copyOf(decorated);
     }
 
     private static HttpService applyDecorators(
