@@ -36,7 +36,6 @@ import io.netty.handler.codec.http2.Http2Settings;
 final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler {
 
     private final ServerConfig cfg;
-    private final GracefulShutdownSupport gracefulShutdownSupport;
     private final Http2RequestDecoder requestDecoder;
     @Nullable
     private ServerHttp2ObjectEncoder responseEncoder;
@@ -45,13 +44,11 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     Http2ServerConnectionHandler(Http2ConnectionDecoder decoder, Http2ConnectionEncoder encoder,
                                  Http2Settings initialSettings, Channel channel, ServerConfig cfg,
-                                 Timer keepAliveTimer, GracefulShutdownSupport gracefulShutdownSupport,
-                                 String scheme) {
+                                 Timer keepAliveTimer, String scheme) {
 
         super(decoder, encoder, initialSettings, newKeepAliveHandler(encoder, channel, cfg, keepAliveTimer));
 
         this.cfg = cfg;
-        this.gracefulShutdownSupport = gracefulShutdownSupport;
 
         gracefulConnectionShutdownHandler = new Http2GracefulConnectionShutdownHandler(
                 cfg.connectionDrainDurationMicros());
@@ -93,8 +90,7 @@ final class Http2ServerConnectionHandler extends AbstractHttp2ConnectionHandler 
 
     @Override
     protected boolean needsImmediateDisconnection() {
-        return gracefulShutdownSupport.isShuttingDown() ||
-               requestDecoder.goAwayHandler().receivedErrorGoAway() || keepAliveHandler().isClosing();
+        return requestDecoder.goAwayHandler().receivedErrorGoAway() || keepAliveHandler().isClosing();
     }
 
     @Override

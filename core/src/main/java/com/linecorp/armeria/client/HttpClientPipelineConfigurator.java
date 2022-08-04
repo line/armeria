@@ -652,10 +652,20 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         final Http2ConnectionEncoder encoder = encoder(connection);
         final Http2ConnectionDecoder decoder = decoder(connection, encoder);
 
-        return new Http2ClientConnectionHandlerBuilder(ch, clientFactory, protocol)
-                .codec(decoder, encoder)
-                .initialSettings(http2Settings())
-                .build();
+        final Http2ClientConnectionHandlerBuilder builder =
+                new Http2ClientConnectionHandlerBuilder(ch, clientFactory, protocol);
+        builder.codec(decoder, encoder)
+               .initialSettings(http2Settings());
+
+        final long timeout = clientFactory.idleTimeoutMillis();
+        if (timeout > 0) {
+            builder.gracefulShutdownTimeoutMillis(timeout);
+        } else {
+            // Timeout disabled
+            builder.gracefulShutdownTimeoutMillis(-1);
+        }
+
+        return builder.build();
     }
 
     private static Http2ConnectionEncoder encoder(Http2Connection connection) {

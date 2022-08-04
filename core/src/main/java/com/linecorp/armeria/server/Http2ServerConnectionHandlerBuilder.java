@@ -29,15 +29,12 @@ final class Http2ServerConnectionHandlerBuilder
 
     private final ServerConfig config;
     private final Timer keepAliveTimer;
-    private final GracefulShutdownSupport gracefulShutdownSupport;
     private final String scheme;
 
-    Http2ServerConnectionHandlerBuilder(Channel ch, ServerConfig config, Timer keepAliveTimer,
-                                        GracefulShutdownSupport gracefulShutdownSupport, String scheme) {
+    Http2ServerConnectionHandlerBuilder(Channel ch, ServerConfig config, Timer keepAliveTimer, String scheme) {
         super(ch);
         this.config = config;
         this.keepAliveTimer = keepAliveTimer;
-        this.gracefulShutdownSupport = gracefulShutdownSupport;
         this.scheme = scheme;
         // Disable graceful shutdown timeout in a super class. Server-side HTTP/2 graceful shutdown is
         // handled by Armeria's HTTP/2 server handler.
@@ -49,6 +46,6 @@ final class Http2ServerConnectionHandlerBuilder
                                                  Http2ConnectionEncoder encoder,
                                                  Http2Settings initialSettings) throws Exception {
         return new Http2ServerConnectionHandler(decoder, encoder, initialSettings, channel(),
-                                                config, keepAliveTimer, gracefulShutdownSupport, scheme);
+                                                config, keepAliveTimer, scheme);
     }
 }
