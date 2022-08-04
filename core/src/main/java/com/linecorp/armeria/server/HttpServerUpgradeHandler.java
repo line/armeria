@@ -30,11 +30,15 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static io.netty.channel.ChannelFutureListener.CLOSE;
+import static io.netty.channel.ChannelFutureListener.CLOSE_ON_FAILURE;
+import static io.netty.handler.codec.http.HttpResponseStatus.BAD_REQUEST;
 import static io.netty.handler.codec.http.HttpResponseStatus.SWITCHING_PROTOCOLS;
 import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static io.netty.util.AsciiString.containsContentEqualsIgnoreCase;
 import static io.netty.util.internal.ObjectUtil.checkNotNull;
 
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import com.google.common.base.Splitter;
@@ -44,7 +48,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.ChannelFuture;
-import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.handler.codec.http.DefaultFullHttpResponse;
@@ -76,6 +79,11 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
     private static final FullHttpResponse UPGRADE_RESPONSE = newUpgradeResponse();
 
     private static final Splitter COMMA_SPLITTER = Splitter.on(',').omitEmptyStrings().trimResults();
+
+    private static final FullHttpResponse invalidSettingsHeaderResponse =
+            new DefaultFullHttpResponse(HTTP_1_1, BAD_REQUEST, Unpooled.unreleasableBuffer(
+                    Unpooled.directBuffer()
+                            .writeBytes("Invalid HTTP2-Settings header\n".getBytes(StandardCharsets.UTF_8))));
 
     /**
      * A codec that the source can be upgraded to {@link SessionProtocol#H2C}.
@@ -188,6 +196,7 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
     @Nullable
     private UpgradeCodec upgradeCodec;
     private boolean handlingUpgrade;
+    private boolean handlingInvalidSettingsHeader;
 
     /**
      * Constructs the upgrader with the supported codecs.
@@ -209,6 +218,9 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
             final HttpRequest req = (HttpRequest) msg;
             if (req.headers().contains(HttpHeaderNames.UPGRADE) && upgrade(ctx, req)) {
                 handlingUpgrade = true;
+                return;
+            }
+            if (handlingInvalidSettingsHeader) {
                 return;
             }
         }
@@ -276,6 +288,8 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
         // Prepare and send the upgrade response. Wait for this write to complete before upgrading,
         // since we need the old codec in-place to properly encode the response.
         if (!upgradeCodec.prepareUpgradeResponse(ctx, request)) {
+            ctx.writeAndFlush(invalidSettingsHeaderResponse.duplicate()).addListener(CLOSE);
+            handlingInvalidSettingsHeader = true;
             return false;
         }
 
@@ -304,7 +318,7 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
             // Add the listener last to avoid firing upgrade logic after
             // the channel is already closed since the listener may fire
             // immediately if the write failed eagerly.
-            writeComplete.addListener(ChannelFutureListener.CLOSE_ON_FAILURE);
+            writeComplete.addListener(CLOSE_ON_FAILURE);
         } finally {
             // Release the event if the upgrade event wasn't fired.
             event.release();

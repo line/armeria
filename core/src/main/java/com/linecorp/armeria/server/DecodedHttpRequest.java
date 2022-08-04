@@ -16,10 +16,12 @@
 
 package com.linecorp.armeria.server;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.ChannelHandlerContext;
@@ -30,20 +32,32 @@ interface DecodedHttpRequest extends HttpRequest {
     static DecodedHttpRequest of(boolean endOfStream, EventLoop eventLoop, int id, int streamId,
                                  RequestHeaders headers, boolean keepAlive,
                                  InboundTrafficController inboundTrafficController,
-                                 RoutingContext routingCtx, @Nullable Routed<ServiceConfig> routed) {
-        if (endOfStream || routed == null) {
-            return new EmptyContentDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                      routingCtx, routed);
+                                 RoutingContext routingCtx) {
+        final long requestStartTimeNanos = System.nanoTime();
+        final long requestStartTimeMicros = SystemInfo.currentTimeMicros();
+        if (!routingCtx.hasResult()) {
+            return new EmptyContentDecodedHttpRequest(
+                    eventLoop, id, streamId, headers, keepAlive, routingCtx, ExchangeType.RESPONSE_STREAMING,
+                    requestStartTimeNanos, requestStartTimeMicros);
         } else {
-            final ServiceConfig config = routed.value();
+            final ServiceConfig config = routingCtx.result().value();
             final HttpService service = config.service();
-            if (service.exchangeType(headers, routed.route()).isRequestStreaming()) {
-                return new StreamingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                       inboundTrafficController,
-                                                       config.maxRequestLength(), routingCtx, routed);
+            final ExchangeType exchangeType = service.exchangeType(routingCtx);
+            if (endOfStream) {
+                return new EmptyContentDecodedHttpRequest(
+                        eventLoop, id, streamId, headers, keepAlive, routingCtx, exchangeType,
+                        requestStartTimeNanos, requestStartTimeMicros);
             } else {
-                return new AggregatingDecodedHttpRequest(eventLoop, id, streamId, headers, keepAlive,
-                                                         config.maxRequestLength(), routingCtx, routed);
+                if (exchangeType.isRequestStreaming()) {
+                    return new StreamingDecodedHttpRequest(
+                            eventLoop, id, streamId, headers, keepAlive, inboundTrafficController,
+                            config.maxRequestLength(), routingCtx, exchangeType,
+                            requestStartTimeNanos, requestStartTimeMicros);
+                } else {
+                    return new AggregatingDecodedHttpRequest(
+                            eventLoop, id, streamId, headers, keepAlive, config.maxRequestLength(), routingCtx,
+                            exchangeType, requestStartTimeNanos, requestStartTimeMicros);
+                }
             }
         }
     }
@@ -90,4 +104,21 @@ interface DecodedHttpRequest extends HttpRequest {
      * Returns whether the request should be fully aggregated before passed to the {@link HttpServerHandler}.
      */
     boolean isAggregated();
+
+    /**
+     * Returns the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or
+     * {@link HttpResponse}.
+     */
+    ExchangeType exchangeType();
+
+    /**
+     * Returns the {@link System#nanoTime()} value when the request started.
+     */
+    long requestStartTimeNanos();
+
+    /**
+     * Returns the number of microseconds since the epoch, e.g. {@code System.currentTimeMillis() * 1000},
+     * when the request started.
+     */
+    long requestStartTimeMicros();
 }

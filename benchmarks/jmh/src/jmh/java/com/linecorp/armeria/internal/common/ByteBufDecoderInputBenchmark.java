@@ -28,7 +28,7 @@ import org.openjdk.jmh.annotations.State;
 import org.openjdk.jmh.annotations.TearDown;
 import org.openjdk.jmh.infra.Blackhole;
 
-import com.linecorp.armeria.internal.common.stream.ByteBufDecoderInput;
+import com.linecorp.armeria.internal.common.stream.ByteBufsDecoderInput;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
@@ -40,7 +40,7 @@ public class ByteBufDecoderInputBenchmark {
     public static class ByteBufData {
 
         List<ByteBuf> byteBufs;
-        ByteBufDecoderInput input;
+        ByteBufsDecoderInput input;
 
         @Setup(Level.Invocation)
         public void setup() {
@@ -50,7 +50,7 @@ public class ByteBufDecoderInputBenchmark {
                 Arrays.fill(bytes, (byte) i);
                 final ByteBuf byteBuf = Unpooled.copiedBuffer(bytes);
                 byteBufs.add(byteBuf);
-                input = new ByteBufDecoderInput(ByteBufAllocator.DEFAULT);
+                input = new ByteBufsDecoderInput(ByteBufAllocator.DEFAULT);
                 input.add(byteBuf.retainedDuplicate());
             }
         }
@@ -66,7 +66,7 @@ public class ByteBufDecoderInputBenchmark {
 
     @Benchmark
     public void add(ByteBufData data, Blackhole bh) {
-        final ByteBufDecoderInput input = new ByteBufDecoderInput(ByteBufAllocator.DEFAULT);
+        final ByteBufsDecoderInput input = new ByteBufsDecoderInput(ByteBufAllocator.DEFAULT);
         for (ByteBuf byteBuf : data.byteBufs) {
             bh.consume(input.add(byteBuf));
         }
@@ -74,7 +74,7 @@ public class ByteBufDecoderInputBenchmark {
 
     @Benchmark
     public void readInt(ByteBufData data, Blackhole bh) {
-        final ByteBufDecoderInput input = data.input;
+        final ByteBufsDecoderInput input = data.input;
         while (input.readableBytes() >= 4) {
             bh.consume(input.readInt());
         }
@@ -82,7 +82,7 @@ public class ByteBufDecoderInputBenchmark {
 
     @Benchmark
     public void readByte(ByteBufData data, Blackhole bh) {
-        final ByteBufDecoderInput input = data.input;
+        final ByteBufsDecoderInput input = data.input;
         while (input.isReadable()) {
             bh.consume(input.readByte());
         }

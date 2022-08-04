@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import javax.annotation.Nonnull;
 
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -38,7 +39,10 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     private final long maxRequestLength;
     private final RequestHeaders headers;
     private final RoutingContext routingCtx;
-    private final Routed<ServiceConfig> routed;
+    private final ExchangeType exchangeType;
+    private final long requestStartTimeNanos;
+    private final long requestStartTimeMicros;
+
     @Nullable
     private ServiceRequestContext ctx;
     @Nullable
@@ -51,8 +55,8 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
 
     AggregatingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                   boolean keepAlive, long maxRequestLength,
-                                  RoutingContext routingCtx,
-                                  Routed<ServiceConfig> routed) {
+                                  RoutingContext routingCtx, ExchangeType exchangeType,
+                                  long requestStartTimeNanos, long requestStartTimeMicros) {
         super(4);
         this.headers = headers;
         this.eventLoop = eventLoop;
@@ -60,8 +64,11 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         this.streamId = streamId;
         this.keepAlive = keepAlive;
         this.maxRequestLength = maxRequestLength;
+        assert routingCtx.hasResult();
         this.routingCtx = routingCtx;
-        this.routed = routed;
+        this.exchangeType = exchangeType;
+        this.requestStartTimeNanos = requestStartTimeNanos;
+        this.requestStartTimeMicros = requestStartTimeMicros;
     }
 
     @Override
@@ -81,7 +88,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Nonnull
     @Override
     public Routed<ServiceConfig> route() {
-        return routed;
+        return routingCtx.result();
     }
 
     @Override
@@ -171,6 +178,21 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     @Override
     public boolean isAggregated() {
         return true;
+    }
+
+    @Override
+    public ExchangeType exchangeType() {
+        return exchangeType;
+    }
+
+    @Override
+    public long requestStartTimeNanos() {
+        return requestStartTimeNanos;
+    }
+
+    @Override
+    public long requestStartTimeMicros() {
+        return requestStartTimeMicros;
     }
 
     @Override

@@ -19,6 +19,7 @@ import TableBody from '@material-ui/core/TableBody';
 import TableCell from '@material-ui/core/TableCell';
 import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
+import TableContainer from '@material-ui/core/TableContainer';
 import React from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
@@ -38,6 +39,7 @@ import VariableList from '../../components/VariableList';
 import DebugPage from './DebugPage';
 import Endpoints from './Endpoints';
 import Exceptions from './Exceptions';
+import Description from '../../components/Description';
 
 interface OwnProps {
   specification: Specification;
@@ -160,9 +162,11 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
       <Typography variant="h5" paragraph>
         <code>{`${simpleName(service.name)}.${method.name}()`}</code>
       </Typography>
-      <Typography variant="body2" paragraph>
-        {method.docString}
-      </Typography>
+      {method.descriptionInfo && (
+        <Section>
+          <Description descriptionInfo={method.descriptionInfo} />
+        </Section>
+      )}
       <Section>
         <VariableList
           key={method.name}
@@ -173,19 +177,21 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
       </Section>
       <Section>
         <Typography variant="h6">Return Type</Typography>
-        <Table>
-          <TableBody>
-            <TableRow>
-              <TableCell>
-                <code>
-                  {props.specification.getTypeSignatureHtml(
-                    method.returnTypeSignature,
-                  )}
-                </code>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
+        <TableContainer>
+          <Table>
+            <TableBody>
+              <TableRow>
+                <TableCell>
+                  <code>
+                    {props.specification.getTypeSignatureHtml(
+                      method.returnTypeSignature,
+                    )}
+                  </code>
+                </TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </TableContainer>
       </Section>
       {!isAnnotatedService && (
         <Exceptions method={method} specification={props.specification} />

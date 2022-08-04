@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.endpointInfoBuilder;
-import static com.linecorp.armeria.internal.server.grpc.GrpcMethodUtil.extractMethodName;
 import static java.util.Objects.requireNonNull;
 
 import java.io.UncheckedIOException;
@@ -62,6 +61,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
@@ -379,7 +379,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     @Override
-    public Map<String, String> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
+    public Map<String, DescriptionInfo> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
         return serviceConfigs.stream()
                              .flatMap(c -> {
                                  final GrpcService grpcService = c.service().as(GrpcService.class);
@@ -388,7 +388,10 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                              })
                              .flatMap(s -> docstringExtractor.getAllDocStrings(s.getClass().getClassLoader())
                                                              .entrySet().stream())
-                             .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a));
+                             .collect(toImmutableMap(Map.Entry<String, String>::getKey,
+                                                     (Map.Entry<String, String> entry) ->
+                                                             DescriptionInfo.of(entry.getValue()),
+                                                     (a, b) -> a));
     }
 
     @Override
@@ -602,7 +605,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
             assert service != null;
 
             final MethodDescriptor method =
-                    service.findMethodByName(extractMethodName(grpcMethod.getFullMethodName()));
+                    service.findMethodByName(grpcMethod.getBareMethodName());
             assert method != null;
 
             methods.put(service, method);

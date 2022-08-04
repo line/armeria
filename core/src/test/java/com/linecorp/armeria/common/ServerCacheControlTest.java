@@ -27,11 +27,11 @@ public class ServerCacheControlTest {
     public void testConstants() {
         assertThat(ServerCacheControl.EMPTY.isEmpty()).isTrue();
         assertThat(ServerCacheControl.DISABLED.asHeaderValue())
-                .isEqualTo("no-cache, no-store, must-revalidate");
+                .isEqualTo("no-cache, no-store, max-age=0, must-revalidate");
         assertThat(ServerCacheControl.IMMUTABLE.asHeaderValue())
                 .isEqualTo("max-age=31536000, public, immutable");
         assertThat(ServerCacheControl.REVALIDATED.asHeaderValue())
-                .isEqualTo("no-cache, must-revalidate");
+                .isEqualTo("no-cache, max-age=0, must-revalidate");
     }
 
     @Test

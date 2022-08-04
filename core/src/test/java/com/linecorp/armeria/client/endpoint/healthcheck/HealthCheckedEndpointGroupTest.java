@@ -25,9 +25,11 @@ import java.io.Serializable;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.LinkedTransferQueue;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -251,6 +253,7 @@ class HealthCheckedEndpointGroupTest {
 
         try (HealthCheckedEndpointGroup group =
                      new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -280,6 +283,7 @@ class HealthCheckedEndpointGroupTest {
 
         try (HealthCheckedEndpointGroup group =
                      new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
@@ -310,11 +314,49 @@ class HealthCheckedEndpointGroupTest {
 
         try (HealthCheckedEndpointGroup unused =
                      new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000, 10000,
                                                     SessionProtocol.HTTP, 80,
                                                     DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
                                                     ClientOptions.of(), checkFactory,
                                                     HealthCheckStrategy.all())) {
             assertThat(counter.get()).isEqualTo(2);
+        }
+    }
+
+    @Test
+    void shouldDeduplicateOldEndpoints() {
+        final Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkFactory = ctx -> {
+            ctx.updateHealth(HEALTHY, null, null, null);
+            return AsyncCloseableSupport.of();
+        };
+
+        final Endpoint candidate1 = Endpoint.of("candidate1");
+        final Endpoint candidate2 = Endpoint.of("candidate2");
+        final Endpoint candidate3 = Endpoint.of("candidate3");
+        final MockEndpointGroup delegate = new MockEndpointGroup();
+        delegate.set(candidate1, candidate2);
+
+        try (HealthCheckedEndpointGroup endpointGroup =
+                     new HealthCheckedEndpointGroup(delegate, true,
+                                                    10000, 10000,
+                                                    SessionProtocol.HTTP, 80,
+                                                    DEFAULT_HEALTH_CHECK_RETRY_BACKOFF,
+                                                    ClientOptions.of(), checkFactory,
+                                                    HealthCheckStrategy.all())) {
+            final BlockingQueue<List<Endpoint>> healthyEndpointsList = new LinkedTransferQueue<>();
+            endpointGroup.addListener(healthyEndpointsList::add, true);
+            delegate.set(candidate1, candidate3);
+            final HealthCheckContextGroup contextGroup = endpointGroup.contextGroupChain().poll();
+            assertThat(contextGroup.candidates()).containsExactly(candidate1, candidate3);
+            assertThat(contextGroup.whenInitialized()).isDone();
+            assertThat(healthyEndpointsList).hasSize(3);
+            final List<Endpoint> first = healthyEndpointsList.poll();
+            assertThat(first).containsExactly(candidate1, candidate2);
+            final List<Endpoint> second = healthyEndpointsList.poll();
+            // `candidate1` should be deduplicated.
+            assertThat(second).containsExactly(candidate1, candidate2, candidate3);
+            final List<Endpoint> third = healthyEndpointsList.poll();
+            assertThat(third).containsExactly(candidate1, candidate3);
         }
     }
 
@@ -346,6 +388,29 @@ class HealthCheckedEndpointGroupTest {
 
         // No more than one checker must be created.
         assertThat(newCheckerCount).hasValue(1);
+    }
+
+    @Test
+    void setHealthyEndpointsAfterEndpointIsClosed() {
+        final Endpoint delegate = Endpoint.of("foo");
+        final AsyncCloseableSupport checkerCloseable = AsyncCloseableSupport.of();
+        final AtomicReference<HealthCheckerContext> checkerContextRef = new AtomicReference<>();
+        final HealthCheckedEndpointGroup group = new AbstractHealthCheckedEndpointGroupBuilder(delegate) {
+            @Override
+            protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+                return ctx -> {
+                    checkerContextRef.set(ctx);
+                    return checkerCloseable;
+                };
+            }
+        }.build();
+
+        checkerContextRef.get().updateHealth(1, null, null, null);
+        assertThat(group.whenReady().join()).containsExactly(delegate);
+        group.close();
+        // If an inflight health check request can invoke `allHealthyEndpoints`
+        // while a `HealthCheckedEndpointGroup` is closing or closed.
+        assertThat(group.allHealthyEndpoints()).isEmpty();
     }
 
     @Test
@@ -456,6 +521,13 @@ class HealthCheckedEndpointGroupTest {
     }
 
     static final class MockEndpointGroup extends DynamicEndpointGroup {
+
+        MockEndpointGroup() {}
+
+        MockEndpointGroup(long selectionTimeoutMillis) {
+            super(true, selectionTimeoutMillis);
+        }
+
         void set(Endpoint... endpoints) {
             setEndpoints(ImmutableList.copyOf(endpoints));
         }

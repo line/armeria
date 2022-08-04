@@ -27,7 +27,7 @@ import com.google.common.base.MoreObjects;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessages;
 import com.linecorp.armeria.internal.common.HttpObjectAggregator;
 
@@ -37,9 +37,9 @@ import io.netty.util.concurrent.EventExecutor;
 final class DefaultBodyPart implements BodyPart {
 
     private final HttpHeaders headers;
-    private final StreamMessage<? extends HttpData> content;
+    private final ByteStreamMessage content;
 
-    DefaultBodyPart(HttpHeaders headers, StreamMessage<? extends HttpData> content) {
+    DefaultBodyPart(HttpHeaders headers, ByteStreamMessage content) {
         this.headers = headers;
         this.content = content;
     }
@@ -51,8 +51,8 @@ final class DefaultBodyPart implements BodyPart {
 
     @SuppressWarnings("unchecked")
     @Override
-    public StreamMessage<HttpData> content() {
-        return (StreamMessage<HttpData>) content;
+    public ByteStreamMessage content() {
+        return content;
     }
 
     @Override

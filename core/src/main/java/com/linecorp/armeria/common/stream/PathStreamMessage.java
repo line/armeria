@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsNotifyCancellation;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.containsWithPooledObjects;
 import static java.util.Objects.requireNonNull;
@@ -37,6 +39,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableSet;
 import com.google.common.math.LongMath;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -50,7 +53,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.concurrent.EventExecutor;
 
-final class PathStreamMessage implements StreamMessage<HttpData> {
+final class PathStreamMessage implements ByteStreamMessage {
 
     private static final Logger logger = LoggerFactory.getLogger(PathStreamMessage.class);
 
@@ -64,22 +67,36 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
     private final Path path;
-    private final ByteBufAllocator alloc;
     @Nullable
     private final ExecutorService blockingTaskExecutor;
+    private final ByteBufAllocator alloc;
     private final int bufferSize;
+
+    private long offset;
+    private long length = Long.MAX_VALUE;
 
     private volatile int subscribed;
 
     @Nullable
     private volatile PathSubscription pathSubscription;
 
-    PathStreamMessage(Path path, ByteBufAllocator alloc,
-                      @Nullable ExecutorService blockingTaskExecutor, int bufferSize) {
+    PathStreamMessage(Path path, @Nullable ExecutorService blockingTaskExecutor, ByteBufAllocator alloc,
+                      int bufferSize) {
         this.path = requireNonNull(path, "path");
-        this.alloc = requireNonNull(alloc, "alloc");
         this.blockingTaskExecutor = blockingTaskExecutor;
+        this.alloc = alloc;
         this.bufferSize = bufferSize;
+    }
+
+    @Override
+    public ByteStreamMessage range(long offset, long length) {
+        checkArgument(offset >= 0, "offset: %s (expected: >= 0)", offset);
+        checkArgument(length > 0, "length: %s (expected: > 0)", length);
+        checkState(subscribed == 0, "cannot specify range(%s, %s) after this %s is subscribed", offset, length,
+                   PathStreamMessage.class);
+        this.offset = offset;
+        this.length = length;
+        return this;
     }
 
     @Override
@@ -179,10 +196,10 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
             }
         }
 
+        final int bufferSize = Math.min(Ints.saturatedCast(length), this.bufferSize);
         final PathSubscription pathSubscription =
-                new PathSubscription(fileChannel, subscriber, executor,
-                                     bufferSize, containsNotifyCancellation(options),
-                                     containsWithPooledObjects(options));
+                new PathSubscription(fileChannel, subscriber, executor, offset, length, bufferSize,
+                                     containsNotifyCancellation(options), containsWithPooledObjects(options));
         this.pathSubscription = pathSubscription;
         subscriber.onSubscribe(pathSubscription);
     }
@@ -208,8 +225,9 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
 
         private final AsynchronousFileChannel fileChannel;
         private Subscriber<? super HttpData> downstream;
-        private final int bufferSize;
         private final EventExecutor executor;
+        private final int bufferSize;
+        private final long end;
         private final boolean notifyCancellation;
         private final boolean withPooledObjects;
 
@@ -217,17 +235,20 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
         private boolean closed;
 
         private volatile long requested;
-        private volatile int position;
+        private volatile long position;
 
         private PathSubscription(AsynchronousFileChannel fileChannel, Subscriber<? super HttpData> downstream,
-                                 EventExecutor executor, int bufferSize, boolean notifyCancellation,
-                                 boolean withPooledObjects) {
+                                 EventExecutor executor, long offset, long length, int bufferSize,
+                                 boolean notifyCancellation, boolean withPooledObjects) {
             this.fileChannel = fileChannel;
             this.downstream = downstream;
             this.executor = executor;
             this.bufferSize = bufferSize;
+            end = offset + length;
+
             this.notifyCancellation = notifyCancellation;
             this.withPooledObjects = withPooledObjects;
+            position = offset;
         }
 
         @Override
@@ -266,6 +287,8 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
             if (!reading && !closed && requested > 0) {
                 requested--;
                 reading = true;
+                final long position = this.position;
+                final int bufferSize = Math.min(this.bufferSize, Ints.saturatedCast(end - position));
                 final ByteBuf buffer = alloc.buffer(bufferSize);
                 fileChannel.read(buffer.nioBuffer(0, bufferSize), position, buffer, this);
             }
@@ -316,8 +339,15 @@ final class PathStreamMessage implements StreamMessage<HttpData> {
                             byteBuf.release();
                         }
                         downstream.onNext(data);
-                        reading = false;
-                        read();
+                        final long position = this.position;
+                        assert position <= end;
+                        if (position < end) {
+                            reading = false;
+                            read();
+                        } else {
+                            maybeCloseFileChannel();
+                            close0(null);
+                        }
                     } else {
                         byteBuf.release();
                         maybeCloseFileChannel();

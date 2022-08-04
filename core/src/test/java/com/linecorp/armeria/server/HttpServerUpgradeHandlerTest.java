@@ -31,16 +31,25 @@
 
 package com.linecorp.armeria.server;
 
+import static com.linecorp.armeria.common.HttpStatus.OK;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeCodec;
 import com.linecorp.armeria.server.HttpServerUpgradeHandler.UpgradeCodecFactory;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -62,6 +71,14 @@ import io.netty.util.ReferenceCountUtil;
 class HttpServerUpgradeHandlerTest {
 
     // Forked from http://github.com/netty/netty/blob/cf624c93c5f97097f1b13fe926ed50c32c8b1430/codec-http/src/test/java/io/netty/handler/codec/http/HttpServerUpgradeHandlerTest.java
+
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.service("/", (ctx, req) -> HttpResponse.of(OK));
+        }
+    };
 
     private static class TestUpgradeCodec implements UpgradeCodec {
         @Override
@@ -194,5 +211,33 @@ class HttpServerUpgradeHandlerTest {
         channel.flushOutbound();
         assertThat((Object) channel.readOutbound()).isNull();
         channel.finishAndReleaseAll();
+    }
+
+    // Repeat to check if an illegal reference cnt exception is raised while using the response multiple times.
+    @RepeatedTest(5)
+    void upgradeFailWithInvalidSettingsHeader() throws Exception {
+        try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
+            socket.setSoTimeout(1000);
+
+            // Build a h2c upgrade request, but duplicated settings HTTP2-Settings.
+            final String upgradeBody = "Hello";
+            final PrintWriter writer = new PrintWriter(socket.getOutputStream());
+            writer.print("POST / HTTP/1.1\r\n");
+            writer.print("Content-Length: " + upgradeBody.getBytes(StandardCharsets.UTF_8).length + "\r\n");
+            writer.print("Connection: Upgrade, HTTP2-Settings\r\n");
+            writer.print("Upgrade: h2c\r\n");
+            writer.print("HTTP2-Settings: AAMAAABkAAQAAP__\r\n");
+            writer.print("HTTP2-Settings: AAMAAABkAAQAAP__\r\n\r\n");
+            writer.flush();
+
+            final BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
+            assertThat(in.readLine()).isEqualTo("HTTP/1.1 400 Bad Request");
+
+            // empty line
+            in.readLine();
+
+            assertThat(in.readLine()).isEqualTo("Invalid HTTP2-Settings header");
+            assertThat(in.read()).isEqualTo(-1);
+        }
     }
 }

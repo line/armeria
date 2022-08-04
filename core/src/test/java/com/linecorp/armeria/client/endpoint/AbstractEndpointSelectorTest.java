@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -27,8 +28,11 @@ import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.UnprocessedRequestException;
+import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 
@@ -76,6 +80,14 @@ class AbstractEndpointSelectorTest {
         final Stopwatch stopwatch = Stopwatch.createStarted();
         assertThat(future.join()).isNull();
         assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS)).isGreaterThan(900);
+    }
+
+    @Test
+    void testSelectionTimeoutException() {
+        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
+        assertThatThrownBy(() -> WebClient.of(SessionProtocol.HTTP, endpointGroup).get("/").aggregate().join())
+                .hasCauseInstanceOf(UnprocessedRequestException.class)
+                .hasRootCauseInstanceOf(EndpointSelectionTimeoutException.class);
     }
 
     private static EndpointSelector newSelector(EndpointGroup endpointGroup) {

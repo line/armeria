@@ -150,9 +150,15 @@ public final class ByteBufsInputStream extends InputStream {
     public void add(ByteBuf buffer) {
         requireNonNull(buffer, "buffer");
         if (eos.get()) {
+            buffer.release();
             throw new IllegalStateException("Already closed");
         }
+        if (!buffer.isReadable()) {
+            buffer.release();
+            return;
+        }
         if (!buffers.add(buffer)) {
+            buffer.release();
             throw new IllegalStateException("Unable to add new buffer");
         }
     }
