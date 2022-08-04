@@ -200,6 +200,11 @@ public abstract class RequestContextWrapper<T extends RequestContext>
     }
 
     @Override
+    public RequestContext unwrapAll() {
+        return (RequestContext) super.unwrapAll();
+    }
+
+    @Override
     @Nullable
     public Throwable cancellationCause() {
         return unwrap().cancellationCause();
