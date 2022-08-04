@@ -210,6 +210,10 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
     @Override
     public ExchangeType exchangeType(RoutingContext routingContext) {
         // Response stream will be supported via WebSocket.
+        final MediaType contentType = routingContext.contentType();
+        if (contentType != null && contentType.is(MediaType.MULTIPART_FORM_DATA)) {
+            return ExchangeType.REQUEST_STREAMING;
+        }
         return ExchangeType.UNARY;
     }
 
