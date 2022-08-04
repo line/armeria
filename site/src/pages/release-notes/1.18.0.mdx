@@ -62,11 +62,11 @@ GraphqlService service =
 ...
                   .runtimeWiring(c -> {
                       c.scalar(MoreScalars.multipartFile());
-                      DataFetcher<String> fileUpload = environment -> {
+                      DataFetcher<String> upload = environment -> {
                           MultipartFile multipartFile = environment.getArgument("file");
                           ...
                       }
-                      c.type("Mutation", typeWiring -> typeWiring.dataFetcher("fileUpload", fileUpload));
+                      c.type("Multipart", typeWiring -> typeWiring.dataFetcher("upload", upload));
                   })
 ...
 ```
