@@ -51,9 +51,9 @@ class ClientHttp2GracefulShutdownTimeoutOverridingTest {
                       .build();
         server.start().join();
 
-        try (final ClientFactory factory = ClientFactory.builder()
-                                                        .idleTimeout(Duration.ofSeconds(50))
-                                                        .build()) {
+        try (ClientFactory factory = ClientFactory.builder()
+                                                  .idleTimeout(Duration.ofSeconds(50))
+                                                  .build()) {
             final WebClient client = WebClient.builder("http://127.0.0.1:" + server.activeLocalPort())
                                               .factory(factory)
                                               .responseTimeout(Duration.ofSeconds(60))
