@@ -139,10 +139,10 @@ GrpcService.builder()
            .build()
 
 // Or, use the @Decorator directly to the service or method.
-@Decorator(ThirdDecorator.class)
+@Decorator(ThirdDecorator.class) // 👈👈👈
 class MyHelloService extends MyHelloServiceBase {
 
-    @Decorator(FourthDecorator.class)
+    @Decorator(FourthDecorator.class) // 👈👈👈
     @Override
     public void sayHello(HelloRequest request, StreamObserver<HelloResponse> responseObserver) {
         ...
