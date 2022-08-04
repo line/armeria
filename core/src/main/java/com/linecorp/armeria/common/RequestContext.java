@@ -470,6 +470,11 @@ public interface RequestContext extends Unwrappable {
         return (RequestContext) Unwrappable.super.unwrap();
     }
 
+    @Override
+    default RequestContext unwrapAll() {
+        return (RequestContext) Unwrappable.super.unwrapAll();
+    }
+
     /**
      * Immediately run a given {@link Runnable} with this context.
      */
