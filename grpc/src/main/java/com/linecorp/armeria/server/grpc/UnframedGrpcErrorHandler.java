@@ -88,7 +88,19 @@ public interface UnframedGrpcErrorHandler {
      * for more information.
      */
     static UnframedGrpcErrorHandler ofRichJson() {
-        return UnframedGrpcErrorHandlers.ofRichJson(UnframedGrpcStatusMappingFunction.of());
+        return ofRichJson(UnframedGrpcStatusMappingFunction.of());
+    }
+
+    /**
+     * Returns a rich error JSON response based on Google APIs.
+     * See <a href="https://cloud.google.com/apis/design/errors#error_model">Google error model</a>
+     * for more information.
+     *
+     * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
+     *                              to an {@link HttpStatus} code.
+     */
+    static UnframedGrpcErrorHandler ofRichJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+        return UnframedGrpcErrorHandlers.ofRichJson(statusMappingFunction);
     }
 
     /**
