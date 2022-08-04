@@ -20,6 +20,7 @@ import TableHead from '@material-ui/core/TableHead';
 import TableRow from '@material-ui/core/TableRow';
 import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
+import TableContainer from '@material-ui/core/TableContainer';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import React from 'react';
@@ -97,18 +98,20 @@ const HomePage: React.FunctionComponent<Props> = ({ versions }) => {
             Version information
           </Typography>
           <Section>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Module</TableCell>
-                  <TableCell>Version</TableCell>
-                  <TableCell>Commit Time</TableCell>
-                  <TableCell>Commit ID</TableCell>
-                  <TableCell>Repository Status</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>{tableRows}</TableBody>
-            </Table>
+            <TableContainer>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Module</TableCell>
+                    <TableCell>Version</TableCell>
+                    <TableCell>Commit Time</TableCell>
+                    <TableCell>Commit ID</TableCell>
+                    <TableCell>Repository Status</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>{tableRows}</TableBody>
+              </Table>
+            </TableContainer>
           </Section>
         </>
       )}

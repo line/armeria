@@ -25,7 +25,6 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 
@@ -41,7 +40,7 @@ public final class ExceptionInfo implements NamedTypeInfo {
     private final String name;
     private final List<FieldInfo> fields;
     @Nullable
-    private final String docString;
+    private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
@@ -53,10 +52,10 @@ public final class ExceptionInfo implements NamedTypeInfo {
     /**
      * Creates a new instance.
      */
-    public ExceptionInfo(String name, Iterable<FieldInfo> fields, @Nullable String docString) {
+    public ExceptionInfo(String name, Iterable<FieldInfo> fields, @Nullable DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
         this.fields = ImmutableList.copyOf(requireNonNull(fields, "fields"));
-        this.docString = Strings.emptyToNull(docString);
+        this.descriptionInfo = descriptionInfo;
     }
 
     @Override
@@ -73,8 +72,8 @@ public final class ExceptionInfo implements NamedTypeInfo {
     }
 
     @Override
-    public String docString() {
-        return docString;
+    public DescriptionInfo descriptionInfo() {
+        return descriptionInfo;
     }
 
     @Override

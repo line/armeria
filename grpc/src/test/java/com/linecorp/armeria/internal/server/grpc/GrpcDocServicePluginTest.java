@@ -272,7 +272,7 @@ class GrpcDocServicePluginTest {
         assertThat(methodInfo.parameters().get(0).typeSignature().namedTypeDescriptor())
                 .isEqualTo(SimpleRequest.getDescriptor());
         assertThat(methodInfo.exceptionTypeSignatures()).isEmpty();
-        assertThat(methodInfo.docString()).isNull();
+        assertThat(methodInfo.descriptionInfo()).isNull();
         assertThat(methodInfo.endpoints()).containsExactlyInAnyOrder(
                 EndpointInfo.builder("*", "/foo")
                             .availableFormats(GrpcSerializationFormats.PROTO)

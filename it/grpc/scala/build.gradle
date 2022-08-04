@@ -2,9 +2,9 @@ dependencies {
     testImplementation project(':core')
     testImplementation project(':grpc')
     testImplementation project(':scalapb_2.13')
-    testImplementation 'com.thesamet.scalapb:scalapb-runtime_2.13'
-    testImplementation 'com.thesamet.scalapb:scalapb-runtime-grpc_2.13'
-    testImplementation 'com.thesamet.scalapb:scalapb-json4s_2.13'
+    testImplementation libs.scalapb.runtime.v213
+    testImplementation libs.scalapb.runtime.grpc.v213
+    testImplementation libs.scalapb.json4s.v213
 }
 
 sourceSets {

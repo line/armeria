@@ -6,16 +6,16 @@ dependencies {
     implementation project(':core')
     implementation project(':grpc')
     implementation project(':scalapb_2.13')
-    implementation "com.thesamet.scalapb:scalapb-runtime_2.13"
-    implementation "com.thesamet.scalapb:scalapb-runtime-grpc_2.13"
-    implementation "com.thesamet.scalapb:scalapb-json4s_2.13"
-    implementation 'io.monix:monix-reactive_2.13'
+    implementation libs.scalapb.runtime.v213
+    implementation libs.scalapb.runtime.grpc.v213
+    implementation libs.scalapb.json4s.v213
+    implementation libs.monix.reactive.v213
 
-    runtimeOnly 'org.slf4j:slf4j-simple'
+    runtimeOnly libs.slf4j.simple
 
-    testImplementation 'org.assertj:assertj-core'
-    testImplementation 'org.awaitility:awaitility'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation libs.assertj
+    testImplementation libs.awaitility
+    testImplementation libs.junit5.jupiter.api
 }
 
 application {

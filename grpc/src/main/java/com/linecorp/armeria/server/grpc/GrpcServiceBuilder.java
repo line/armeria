@@ -866,15 +866,14 @@ public final class GrpcServiceBuilder {
                     unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
                                                      : UnframedGrpcErrorHandler.of());
         }
-
-        if (!handlerRegistry.decorators().isEmpty()) {
-            grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
-        }
         if (enableHttpJsonTranscoding) {
             grpcService = HttpJsonTranscodingService.of(
                     grpcService,
                     httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
                                                             : UnframedGrpcErrorHandler.ofJson());
+        }
+        if (!handlerRegistry.decorators().isEmpty()) {
+            grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
         }
         return grpcService;
     }

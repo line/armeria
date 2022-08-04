@@ -1,15 +1,20 @@
 dependencies {
     implementation project(':jetty9')
     // Dropwizard
-    ['core', 'util', 'lifecycle', 'jackson', 'validation', 'jetty', 'jersey'].each {
-        api "io.dropwizard:dropwizard-$it"
-    }
+    api libs.dropwizard2.core
+    api libs.dropwizard2.util
+    api libs.dropwizard2.lifecycle
+    api libs.dropwizard2.jackson
+    api libs.dropwizard2.validation
+    api libs.dropwizard2.jersey
+    api libs.dropwizard2.jetty
+    
     // Dropwizard Metrics
-    implementation 'io.dropwizard.metrics:metrics-core'
+    implementation libs.dropwizard.metrics.core
 
-    implementation 'javax.validation:validation-api'
+    implementation libs.javax.validation
 
-    testImplementation 'io.dropwizard:dropwizard-testing'
+    testImplementation libs.dropwizard2.testing
 }
 
 // Do not relocate Guava because it's part of Dropwizard's public API.

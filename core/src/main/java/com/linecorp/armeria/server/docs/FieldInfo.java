@@ -47,6 +47,17 @@ public final class FieldInfo {
     }
 
     /**
+     * Creates a new {@link FieldInfo} with the specified {@code name}, {@link TypeSignature} and description.
+     * The {@link FieldLocation} and {@link FieldRequirement} of the {@link FieldInfo} will be
+     * {@code UNSPECIFIED}.
+     */
+    public static FieldInfo of(String name, TypeSignature typeSignature,
+                               @Nullable DescriptionInfo descriptionInfo) {
+        return new FieldInfo(name, FieldLocation.UNSPECIFIED, FieldRequirement.UNSPECIFIED, typeSignature,
+                             ImmutableList.of(), descriptionInfo);
+    }
+
+    /**
      * Returns a newly created {@link FieldInfoBuilder}.
      */
     public static FieldInfoBuilder builder(String name, TypeSignature typeSignature) {
@@ -76,19 +87,20 @@ public final class FieldInfo {
     private final List<FieldInfo> childFieldInfos;
 
     @Nullable
-    private final String docString;
+    private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
      */
     FieldInfo(String name, FieldLocation location, FieldRequirement requirement,
-              TypeSignature typeSignature, List<FieldInfo> childFieldInfos, @Nullable String docString) {
+              TypeSignature typeSignature, List<FieldInfo> childFieldInfos,
+              @Nullable DescriptionInfo descriptionInfo) {
         this.name = name;
         this.location = location;
         this.requirement = requirement;
         this.typeSignature = typeSignature;
         this.childFieldInfos = childFieldInfos;
-        this.docString = docString;
+        this.descriptionInfo = descriptionInfo;
     }
 
     /**
@@ -132,13 +144,13 @@ public final class FieldInfo {
     }
 
     /**
-     * Returns the documentation string of the field.
+     * Returns the description information object of the field.
      */
     @JsonProperty
     @JsonInclude(Include.NON_NULL)
     @Nullable
-    public String docString() {
-        return docString;
+    public DescriptionInfo descriptionInfo() {
+        return descriptionInfo;
     }
 
     @Override
@@ -172,7 +184,7 @@ public final class FieldInfo {
                           .add("requirement", requirement)
                           .add("typeSignature", typeSignature)
                           .add("childFieldInfos", childFieldInfos)
-                          .add("docString", docString)
+                          .add("descriptionInfo", descriptionInfo)
                           .toString();
     }
 }

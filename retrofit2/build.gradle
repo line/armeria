@@ -1,13 +1,8 @@
 dependencies {
-    api 'com.squareup.retrofit2:retrofit'
+    api libs.retrofit2
 
-    implementation 'com.github.ben-manes.caffeine:caffeine'
-    implementation("com.squareup.okhttp3:okhttp") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly '3.14.9'
-        }
-    }
+    implementation libs.caffeine
+    libs.okhttp3
 
-    testImplementation 'com.squareup.retrofit2:converter-jackson'
+    testImplementation libs.retrofit2.converter.jackson
 }

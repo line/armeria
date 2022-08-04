@@ -24,7 +24,6 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -39,7 +38,7 @@ public final class EnumInfo implements NamedTypeInfo {
     private final String name;
     private final List<EnumValueInfo> values;
     @Nullable
-    private final String docString;
+    private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
@@ -51,8 +50,8 @@ public final class EnumInfo implements NamedTypeInfo {
     /**
      * Creates a new instance.
      */
-    public EnumInfo(Class<? extends Enum<?>> enumType, String docString) {
-        this(enumType.getName(), enumType, requireNonNull(docString, "docString"));
+    public EnumInfo(Class<? extends Enum<?>> enumType, @Nullable DescriptionInfo descriptionInfo) {
+        this(enumType.getName(), enumType, descriptionInfo);
     }
 
     /**
@@ -65,8 +64,9 @@ public final class EnumInfo implements NamedTypeInfo {
     /**
      * Creates a new instance.
      */
-    public EnumInfo(String name, Class<? extends Enum<?>> enumType, @Nullable String docString) {
-        this(name, toEnumValues(enumType), docString);
+    public EnumInfo(String name, Class<? extends Enum<?>> enumType,
+                    @Nullable DescriptionInfo descriptionInfo) {
+        this(name, toEnumValues(enumType), descriptionInfo);
     }
 
     /**
@@ -79,10 +79,11 @@ public final class EnumInfo implements NamedTypeInfo {
     /**
      * Creates a new instance.
      */
-    public EnumInfo(String name, Iterable<EnumValueInfo> values, @Nullable String docString) {
+    public EnumInfo(String name, Iterable<EnumValueInfo> values,
+                    @Nullable DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
         this.values = ImmutableList.copyOf(requireNonNull(values, "values"));
-        this.docString = Strings.emptyToNull(docString);
+        this.descriptionInfo = descriptionInfo;
     }
 
     @Override
@@ -98,9 +99,12 @@ public final class EnumInfo implements NamedTypeInfo {
         return values;
     }
 
+    /**
+     * Returns the description information of the enum.
+     */
     @Override
-    public String docString() {
-        return docString;
+    public DescriptionInfo descriptionInfo() {
+        return descriptionInfo;
     }
 
     @Override

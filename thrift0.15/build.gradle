@@ -1,25 +1,18 @@
 // This module builds and publishes 'armeria-thrift0.15', which is compiled with
 // the source code of ':thrift0.13' and ':thrift0.14.0'.
-final def THRIFT_VERSION = '0.15.0'
-
 dependencies {
-    api("org.apache.thrift:libthrift") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly THRIFT_VERSION
-        }
-    }
+    api libs.thrift015
 
-    api 'javax.annotation:javax.annotation-api'
+    api libs.javax.annotation
 
     // Jetty, for testing TServlet interoperability.
-    testImplementation 'org.eclipse.jetty:jetty-webapp'
-    testImplementation 'org.eclipse.jetty.http2:http2-server'
+    testImplementation libs.jetty94.webapp
+    testImplementation libs.jetty94.http2.server
 
     // Dropwizard and Prometheus, for testing metrics integration
-    testImplementation 'io.dropwizard.metrics:metrics-core'
-    testImplementation 'io.micrometer:micrometer-registry-prometheus'
-    testImplementation 'io.prometheus:simpleclient_common'
+    testImplementation libs.dropwizard.metrics.core
+    testImplementation libs.micrometer.prometheus
+    testImplementation libs.prometheus
 }
 
 // Use the sources from ':thrift0.13' and ':thrift0.14'.
@@ -48,7 +41,9 @@ task generateTestSources(type: Copy) {
     into "${project.ext.genSrcDir}/test/java"
 }
 
+def thriftFullVersion = libs.thrift015.get().versionConstraint.requiredVersion
 ext {
+    thriftVersion = thriftFullVersion.substring(0, thriftFullVersion.lastIndexOf('.'));
     testThriftSrcDirs = ["$thrift013ProjectDir/src/test/thrift"]
 }
 
