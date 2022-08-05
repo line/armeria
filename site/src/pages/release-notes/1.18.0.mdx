@@ -94,7 +94,7 @@ FooDecorator extends SimpleDecoratingHttpClient {
 - You no longer see an intermittent <type://IllegalStateException> for gRPC services
   when <type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)> is enabled. #4367 #4374
 - Requests no longer hang when gRPC-JSON transcoding is enabled and gRPC decorators return an unframed response. #4337 #4348
-- Files from OSGI bundle classloader are correctly served #4371 #4373
+- Files from OSGI bundle class loader are now correctly served #4371 #4373
 - Server metrics related to a request's start time are now correctly
   recorded when a server receives the first header. #4365 #4372
 - You no longer see a false positive warning for unknown `MethodType` when using gRPC clients. #4363
