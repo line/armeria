@@ -112,7 +112,8 @@ final class MultipartVariableMapper {
                   throw new IllegalArgumentException("Expected null value when mapping: " + objectPath);
                }
             } else {
-               throw new IllegalArgumentException("Expected null value when mapping: " + objectPath);
+               throw new IllegalArgumentException(
+                       "Invalid type: " + currentLocation + " (expected: Map or List)");
             }
          } else {
             if (currentLocation instanceof Map) {
