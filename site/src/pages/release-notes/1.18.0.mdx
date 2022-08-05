@@ -36,22 +36,23 @@ GrpcService.builder()
   .build();
 ```
 
-- gRPC users can now use an <type://UnframedGrpcErrorHandler> which provides a
-  [richer error model](https://cloud.google.com/apis/design/errors#error_model) for unframed requests.
+- <type://UnframedGrpcErrorHandler#ofJson()> now conforms to
+  [Google's error model](https://cloud.google.com/apis/design/errors#error_model).
 
 ```java
 GrpcService
   .builder()
   .addService(myGrpcServiceImpl)
   .unframedGrpcErrorHandler(
-    UnframedGrpcErrorHandler.ofRichJson()) // 👈👈👈
+    UnframedGrpcErrorHandler.ofJson()) // 👈👈👈
   .build();
 ```
 
 ```json
 {
   "code": 2,
-  "message": "A custom message!"
+  "message": "A custom message!",
+  ...
 }
 ```
 
