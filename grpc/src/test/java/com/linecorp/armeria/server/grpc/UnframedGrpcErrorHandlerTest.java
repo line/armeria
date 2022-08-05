@@ -161,7 +161,8 @@ public class UnframedGrpcErrorHandlerTest {
                       .execute();
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         final String content = response.contentUtf8();
-        assertThat(content).startsWith("{\"code\":2,\"grpc-code\":\"UNKNOWN\",\"message\":\"grpc error message\"," +
+        assertThat(content).startsWith("{\"code\":2,\"grpc-code\":\"UNKNOWN\"," +
+                                       "\"message\":\"grpc error message\"," +
                                        "\"stack-trace\":\"io.grpc.StatusException");
         assertThat(response.trailers()).isEmpty();
     }
