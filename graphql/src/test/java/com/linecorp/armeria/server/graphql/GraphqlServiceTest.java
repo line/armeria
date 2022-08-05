@@ -254,7 +254,8 @@ class GraphqlServiceTest {
         final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
                                                                  .execute(request);
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.contentUtf8()).contains("Validation error of type FieldUndefined");
+        assertThat(response.contentUtf8()).contains("Validation error")
+                                          .contains("FieldUndefined");
     }
 
     @Test

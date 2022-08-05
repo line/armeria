@@ -20,3 +20,10 @@ dependencies {
     // Enables cglib for testing
     testImplementation libs.hibernate.validator
 }
+
+// allows illegal access by cglib
+if (rootProject.ext.testJavaVersion >= 16) {
+    tasks.withType(Test) {
+        jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED'
+    }
+}
