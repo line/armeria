@@ -11,11 +11,11 @@ date: 2022-08-05
 @Description(value = "### Markdown format", markup = Markup.MARKDOWN)
 @Get("/markdown")
 public HttpResponse markdown() {
-    return HttpResponse.of(200);
+  return HttpResponse.of(200);
 }
 ```
 
-```java Mermaid
+```java
 @Description(value = "graph TD;\n" +
                      " A-->B;\n" +
                      " A-->C;\n" +
@@ -24,19 +24,20 @@ public HttpResponse markdown() {
              markup = Markup.MERMAID)
 @Get("/mermaid")
 public HttpResponse mermaid() {
-    return HttpResponse.of(200);
+  return HttpResponse.of(200);
 }
 ```
 
 - It is now possible to bind decorators to gRPC services using <type://GrpcServiceBuilder>. #4311 #4316
+
 ```java
 GrpcService.builder()
-           .addService(myGrpcService, List.of(LoggingService.newDecorator()))
-           .build();
+  .addService(myGrpcService, List.of(decorator)) // 👈👈👈
+  .build();
 ```
 
 - gRPC users can now use an <type://UnframedGrpcErrorHandler> which provides a
-[richer error model](https://cloud.google.com/apis/design/errors#error_model) for unframed requests.
+  [richer error model](https://cloud.google.com/apis/design/errors#error_model) for unframed requests.
 
 ```java
 GrpcService
@@ -49,39 +50,19 @@ GrpcService
 
 ```json
 {
-	"error": {
-		"code": 2,
-		"message": "A custom message!"
-	}
+  "error": {
+    "code": 2,
+    "message": "A custom message!"
+  }
 }
-```
-
-- Multipart file upload is now available for GraphQL users. #3971 #4199
-```java
-GraphqlService service =
-    GraphqlService.builder()
-...
-                  .runtimeWiring(c -> {
-                      c.scalar(MoreScalars.multipartFile());
-                      DataFetcher<String> upload = environment -> {
-                          MultipartFile multipartFile = environment.getArgument("file");
-                          ...
-                      }
-                      c.type("Multipart", typeWiring -> typeWiring.dataFetcher("upload", upload));
-                  })
-...
 ```
 
 - Users can now extract the innermost element of <type://Unwrappable> type objects easily using <type://Unwrappable#unwrapAll()> #4338
 ```java
-FooDecorator extends SimpleDecoratingHttpClient {
-...
-    @Override
-    public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
-        Object innermost = unwrapAll();
-        ...
-    }
-}
+Foo foo = new Foo();
+Bar<Foo> bar = new Bar<>(foo);
+Qux<Bar<Foo>> qux = new Qux<>(bar);
+assert qux.unwrapAll() == foo; // 👈👈👈
 ```
 
 ## 📈 Improvements
@@ -118,10 +99,8 @@ TBU
 ## 🙇 Thank you
 
 <ThankYou usernames={[
-  'CLAassistant',
   'anuraaga',
   'cnabro',
-  'heowc',
   'ikhoon',
   'j-min5u',
   'jrhee17',
