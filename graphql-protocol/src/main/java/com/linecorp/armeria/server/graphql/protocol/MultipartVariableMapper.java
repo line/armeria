@@ -107,15 +107,17 @@ final class MultipartVariableMapper {
                if (MAP_MAPPER.set((Map<String, Object>) currentLocation, segmentName, multipartFile) != null) {
                   throw new IllegalArgumentException("Expected null value when mapping: " + objectPath);
                }
-            } else {
+            } else if (currentLocation instanceof List) {
                if (LIST_MAPPER.set((List<Object>) currentLocation, segmentName, multipartFile) != null) {
                   throw new IllegalArgumentException("Expected null value when mapping: " + objectPath);
                }
+            } else {
+               throw new IllegalArgumentException("Expected null value when mapping: " + objectPath);
             }
          } else {
             if (currentLocation instanceof Map) {
                currentLocation = MAP_MAPPER.recurse((Map<String, Object>) currentLocation, segmentName);
-            } else {
+            } else if (currentLocation instanceof List) {
                currentLocation = LIST_MAPPER.recurse((List<Object>) currentLocation, segmentName);
             }
             if (currentLocation == null) {
