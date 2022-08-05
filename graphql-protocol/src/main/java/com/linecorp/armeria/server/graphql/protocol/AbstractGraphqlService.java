@@ -68,7 +68,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
         final QueryParams queryString = QueryParams.fromQueryString(ctx.query());
         String query = queryString.get("query");
         if (Strings.isNullOrEmpty(query)) {
-            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
+            return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "query is missing");
         }
         query = query.trim();
         if (query.startsWith("mutation")) {
@@ -112,7 +112,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                     final String query = toStringFromJson("query", operations.get("query"));
                     if (Strings.isNullOrEmpty(query)) {
                         return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
-                                               "Missing query");
+                                               "query is missing: " + operationsParam);
                     }
                     final Map<String, Object> variables = toMapFromJson(operations.get("variables"),
                                                                         HashMap::new);
@@ -149,7 +149,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                         final String query = toStringFromJson("query", requestMap.get("query"));
                         if (Strings.isNullOrEmpty(query)) {
                             return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
-                                                   "Missing query");
+                                                   "query is missing");
                         }
 
                         final String operationName =
@@ -178,7 +178,8 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
                 try (SafeCloseable ignored = ctx.push()) {
                     final String query = req.contentUtf8();
                     if (Strings.isNullOrEmpty(query)) {
-                        return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT, "Missing query");
+                        return HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT,
+                                               "query is missing");
                     }
 
                     try {

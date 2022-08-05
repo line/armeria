@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.common.graphql.scalar;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.multipart.MultipartFile;
 
 import graphql.schema.GraphQLScalarType;
@@ -22,6 +23,7 @@ import graphql.schema.GraphQLScalarType;
 /**
  * This contains the implementations of the custom Scalar types.
  */
+@UnstableApi
 public final class MoreScalars {
 
     /**
