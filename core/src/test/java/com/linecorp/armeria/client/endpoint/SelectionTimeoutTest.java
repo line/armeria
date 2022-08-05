@@ -45,7 +45,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
-import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 class SelectionTimeoutTest {
 
