@@ -50,10 +50,8 @@ GrpcService
 
 ```json
 {
-  "error": {
-    "code": 2,
-    "message": "A custom message!"
-  }
+  "code": 2,
+  "message": "A custom message!"
 }
 ```
 
@@ -67,8 +65,6 @@ assert qux.unwrapAll() == foo; // 👈👈👈
 
 ## 📈 Improvements
 
-- <type://AnnotatedServiceBindingBuilder> and <type://VirtualHostAnnotatedServiceBindingBuilder> now
-  extend a single interface. #4205 #4210
 - <type://RequestContext> now extends <type://Unwrappable>. #4308
 
 ## 🛠️ Bug fixes
@@ -86,30 +82,30 @@ assert qux.unwrapAll() == foo; // 👈👈👈
 
 ## ⛓ Dependencies
 
-- Brave 5.13.9 -> 5.13.10
-- Bucket4j 7.5.0 -> 7.6.0
-- Curator 5.2.1 -> 5.3.0
-- Dropwizard metrics 2.1.0 -> 2.1.1
-- GraphQL-Java 18.2 -> 19.0
-- GraphQL-Kotlin 5.3.2 -> 6.1.0
-- gRPC-Java 1.47.0 -> 1.48.0
-- java-jwt 3.19.1 -> 4.0.0
-- Jetty 9.4.46.v20220331 -> 9.4.48.v20220622
-- kafka-clients 3.2.0 -> 3.2.1
-- Kotlin 1.7.0 -> 1.7.10
-- Kotlin Coroutine 1.6.3 -> 1.6.4
-- Micrometer 1.9.1 -> 1.9.2
-- Netty 4.1.78.Final -> 4.1.79.Final
-- Protobuf 3.19.2 -> 3.21.1
-- Reactor 3.4.19 -> 3.4.21
-- RESTEasy 5.0.2.Final -> 5.0.4.Final
-- Sangria 3.0.0 -> 3.0.1
-- Scala 2.12.15 -> 2.12.16, 3.1.2 -> 3.1.3
-- scala-collection-compat 2.7.0 -> 2.8.1
-- Spring Boot 2.7.1 -> 2.7.2
-- Spring Web 5.3.21 -> 5.3.22
-- Tomcat8 8.5.78 -> 8.5.81
-- Tomcat9 9.0.62 -> 9.0.65
+- Brave 5.13.9 → 5.13.10
+- Bucket4j 7.5.0 → 7.6.0
+- Curator 5.2.1 → 5.3.0
+- Dropwizard metrics 2.1.0 → 2.1.1
+- GraphQL-Java 18.2 → 19.0
+- GraphQL-Kotlin 5.3.2 → 6.1.0
+- gRPC-Java 1.47.0 → 1.48.0
+- java-jwt 3.19.1 → 4.0.0
+- Jetty 9.4.46.v20220331 → 9.4.48.v20220622
+- kafka-clients 3.2.0 → 3.2.1
+- Kotlin 1.7.0 → 1.7.10
+- Kotlin Coroutine 1.6.3 → 1.6.4
+- Micrometer 1.9.1 → 1.9.2
+- Netty 4.1.78.Final → 4.1.79.Final
+- Protobuf 3.19.2 → 3.21.1
+- Reactor 3.4.19 → 3.4.21
+- RESTEasy 5.0.2.Final → 5.0.4.Final
+- Sangria 3.0.0 → 3.0.1
+- Scala 2.12.15 → 2.12.16, 3.1.2 → 3.1.3
+- scala-collection-compat 2.7.0 → 2.8.1
+- Spring Boot 2.7.1 → 2.7.2
+- Spring Web 5.3.21 → 5.3.22
+- Tomcat8 8.5.78 → 8.5.81
+- Tomcat9 9.0.62 → 9.0.65
 
 ## 🙇 Thank you
 
