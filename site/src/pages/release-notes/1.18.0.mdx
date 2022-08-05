@@ -7,62 +7,63 @@ date: 2022-08-05
 - <type://DocService> can now render Markdown and [Mermaid](https://mermaid-js.github.io/mermaid/)
   formatted documentation for annotated services. #4299 #4304
 
-```java
-@Description(value = "### Markdown format", markup = Markup.MARKDOWN)
-@Get("/markdown")
-public HttpResponse markdown() {
-  return HttpResponse.of(200);
-}
-```
+  ```java
+  @Description(value = "### Markdown format", markup = Markup.MARKDOWN)
+  @Get("/markdown")
+  public HttpResponse markdown() {
+    return HttpResponse.of(200);
+  }
+  ```
 
-```java
-@Description(value = "graph TD;\n" +
-                     " A-->B;\n" +
-                     " A-->C;\n" +
-                     " B-->D;\n" +
-                     " C-->D;",
-             markup = Markup.MERMAID)
-@Get("/mermaid")
-public HttpResponse mermaid() {
-  return HttpResponse.of(200);
-}
-```
+  ```java
+  @Description(value = "graph TD;\n" +
+                       " A-->B;\n" +
+                       " A-->C;\n" +
+                       " B-->D;\n" +
+                       " C-->D;",
+               markup = Markup.MERMAID)
+  @Get("/mermaid")
+  public HttpResponse mermaid() {
+    return HttpResponse.of(200);
+  }
+  ```
 
 - You can now bind decorators to each gRPC service using <type://GrpcServiceBuilder#addService(BindableService,Iterable)>. #4311 #4316
 
-```java
-GrpcService.builder()
-  .addService(myGrpcService, List.of(decorator)) // 👈👈👈
-  .build();
-```
+  ```java
+  GrpcService.builder()
+    .addService(myGrpcService, List.of(decorator)) // 👈👈👈
+    .build();
+  ```
 
 - <type://UnframedGrpcErrorHandler#ofJson()> now conforms to
   [Google's error model](https://cloud.google.com/apis/design/errors#error_model).
 
-```java
-GrpcService
-  .builder()
-  .addService(myGrpcServiceImpl)
-  .unframedGrpcErrorHandler(
-    UnframedGrpcErrorHandler.ofJson()) // 👈👈👈
-  .build();
-```
+  ```java
+  GrpcService
+    .builder()
+    .addService(myGrpcServiceImpl)
+    .unframedGrpcErrorHandler(
+      UnframedGrpcErrorHandler.ofJson()) // 👈👈👈
+    .build();
+  ```
 
-```json
-{
-  "code": 2,
-  "message": "A custom message!",
-  ...
-}
-```
+  ```json
+  {
+    "code": 2,
+    "message": "A custom message!",
+    ...
+  }
+  ```
 
 - You can now extract the innermost element of <type://Unwrappable> type objects easily using <type://Unwrappable#unwrapAll()>. #4338
-```java
-Foo foo = new Foo();
-Bar<Foo> bar = new Bar<>(foo);
-Qux<Bar<Foo>> qux = new Qux<>(bar);
-assert qux.unwrapAll() == foo; // 👈👈👈
-```
+
+  ```java
+  Foo foo = new Foo();
+  Bar<Foo> bar = new Bar<>(foo);
+  Qux<Bar<Foo>> qux = new Qux<>(bar);
+  assert qux.unwrapAll() == foo; // 👈👈👈
+  ```
 
 ## 📈 Improvements
 
