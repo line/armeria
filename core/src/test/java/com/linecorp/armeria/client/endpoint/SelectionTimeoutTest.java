@@ -44,10 +44,12 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
 
 import io.netty.channel.EventLoop;
+import io.netty.channel.EventLoopGroup;
 
 class SelectionTimeoutTest {
 
@@ -339,7 +341,8 @@ class SelectionTimeoutTest {
 
     @Test
     void selectorSelectionTimeout() {
-        final EventLoop eventLoop = CommonPools.workerGroup().next();
+        final EventLoopGroup eventLoopGroup = EventLoopGroups.newEventLoopGroup(1);
+        final EventLoop eventLoop = eventLoopGroup.next();
         final AtomicBoolean completed = new AtomicBoolean();
         eventLoop.execute(() -> {
             try (DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup(true, 4000)) {
@@ -361,6 +364,7 @@ class SelectionTimeoutTest {
             }
         });
         await().untilTrue(completed);
+        eventLoopGroup.shutdownGracefully();
     }
 
     private static AbstractLongAssert<?> assertSelectionTimeout(EndpointGroup endpointGroup) {
