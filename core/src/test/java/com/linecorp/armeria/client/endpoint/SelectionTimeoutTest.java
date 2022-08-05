@@ -18,23 +18,23 @@ package com.linecorp.armeria.client.endpoint;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.awaitility.Awaitility.await;
 
 import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.assertj.core.api.AbstractLongAssert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.endpoint.AbstractEndpointSelector.ListeningFuture;
 import com.linecorp.armeria.client.endpoint.dns.DnsAddressEndpointGroup;
 import com.linecorp.armeria.client.endpoint.dns.DnsServiceEndpointGroup;
@@ -44,12 +44,9 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
-
-import io.netty.channel.EventLoop;
-import io.netty.channel.EventLoopGroup;
+import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 
 class SelectionTimeoutTest {
 
@@ -341,30 +338,23 @@ class SelectionTimeoutTest {
 
     @Test
     void selectorSelectionTimeout() {
-        final EventLoopGroup eventLoopGroup = EventLoopGroups.newEventLoopGroup(1);
-        final EventLoop eventLoop = eventLoopGroup.next();
-        final AtomicBoolean completed = new AtomicBoolean();
-        eventLoop.execute(() -> {
-            try (DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup(true, 4000)) {
-                assertSelectionTimeout(endpointGroup).isEqualTo(4000);
-                final ClientRequestContext ctx =
-                        ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
-                                            .eventLoop(eventLoop)
-                                            .build();
-                ctx.setResponseTimeoutMillis(1000);
-                final Stopwatch timer = Stopwatch.createStarted();
-                endpointGroup.select(ctx, CommonPools.blockingTaskExecutor()).join();
-                final long elapsed = timer.stop().elapsed(TimeUnit.MILLISECONDS);
-                // Should complete after the selection timeout.
-                assertThat(elapsed).isGreaterThanOrEqualTo(2000);
-                assertThat(ClientPendingThrowableUtil.pendingThrowable(ctx))
-                        .isInstanceOf(EndpointSelectionTimeoutException.class)
-                        .hasMessageContaining("Failed to select within 4000 ms an endpoint from");
-                completed.set(true);
-            }
-        });
-        await().untilTrue(completed);
-        eventLoopGroup.shutdownGracefully();
+        try (DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup(true, 4000)) {
+            assertSelectionTimeout(endpointGroup).isEqualTo(4000);
+            final ClientRequestContext ctx =
+                    ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                        .requestOptions(RequestOptions.builder()
+                                                                      .responseTimeoutMillis(1000)
+                                                                      .build())
+                                        .build();
+            final Stopwatch timer = Stopwatch.createStarted();
+            endpointGroup.select(ctx, CommonPools.blockingTaskExecutor()).join();
+            final long elapsed = timer.stop().elapsed(TimeUnit.MILLISECONDS);
+            // Should complete after the selection timeout.
+            assertThat(elapsed).isGreaterThanOrEqualTo(2000);
+            assertThat(ClientPendingThrowableUtil.pendingThrowable(ctx))
+                    .isInstanceOf(EndpointSelectionTimeoutException.class)
+                    .hasMessageContaining("Failed to select within 4000 ms an endpoint from");
+        }
     }
 
     private static AbstractLongAssert<?> assertSelectionTimeout(EndpointGroup endpointGroup) {
