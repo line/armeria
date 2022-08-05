@@ -39,11 +39,12 @@ GrpcService.builder()
 [richer error model](https://cloud.google.com/apis/design/errors#error_model) for unframed requests.
 
 ```java
-Server.builder()
-      .service(GrpcService.builder()
-                          .addService(grpcService)
-                          .unframedGrpcErrorHandler(UnframedGrpcErrorHandler.ofRichJson())
-                          .build());
+GrpcService
+  .builder()
+  .addService(myGrpcServiceImpl)
+  .unframedGrpcErrorHandler(
+    UnframedGrpcErrorHandler.ofRichJson()) // 👈👈👈
+  .build();
 ```
 
 ```json
