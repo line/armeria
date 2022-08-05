@@ -27,7 +27,6 @@ import java.util.concurrent.TimeUnit;
 import org.assertj.core.api.AbstractLongAssert;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
