@@ -1,5 +1,3 @@
-final def TOMCAT_VERSION = '8.5.78'
-
 dependencies {
     // Tomcat
     api libs.tomcat8.core

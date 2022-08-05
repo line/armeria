@@ -26,7 +26,6 @@ import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
@@ -184,7 +183,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
 
                         res.initTimeout();
                         if (!res.tryWrite(ArmeriaHttpUtil.toArmeria(nettyRes))) {
-                            fail(ctx, ClosedStreamException.get());
+                            fail(ctx, ClosedSessionException.get());
                             return;
                         }
                     } else {
@@ -222,7 +221,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                                                                   .build());
                                 return;
                             } else if (!res.tryWrite(HttpData.wrap(data.retain()))) {
-                                fail(ctx, ClosedStreamException.get());
+                                fail(ctx, ClosedSessionException.get());
                                 return;
                             }
                         }
@@ -238,7 +237,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                             final HttpHeaders trailingHeaders = ((LastHttpContent) msg).trailingHeaders();
                             if (!trailingHeaders.isEmpty() &&
                                 !res.tryWrite(ArmeriaHttpUtil.toArmeria(trailingHeaders))) {
-                                fail(ctx, ClosedStreamException.get());
+                                fail(ctx, ClosedSessionException.get());
                                 return;
                             }
 

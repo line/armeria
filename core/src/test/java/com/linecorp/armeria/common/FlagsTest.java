@@ -59,7 +59,7 @@ class FlagsTest {
     private Class<?> flags;
 
     @BeforeEach
-    private void reloadFlags() throws ClassNotFoundException {
+    void reloadFlags() throws ClassNotFoundException {
         final FlagsClassLoader classLoader = new FlagsClassLoader();
         flags = classLoader.loadClass(Flags.class.getCanonicalName());
     }
