@@ -61,4 +61,7 @@ final class MultipartFileScalar {
                                     .coercing(coercing)
                                     .build();
     }
+
+    private MultipartFileScalar() {
+    }
 }
