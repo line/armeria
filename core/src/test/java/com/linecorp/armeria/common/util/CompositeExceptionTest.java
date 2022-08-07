@@ -28,7 +28,6 @@ import com.linecorp.armeria.internal.testing.AnticipatedException;
 class CompositeExceptionTest {
 
     private static final String separator = System.getProperty("line.separator");
-    private static final String PADDING = "  ";
 
     @Test
     void verboseExceptionEnabledTest() {
@@ -222,13 +221,12 @@ class CompositeExceptionTest {
         return Arrays.stream(exception.getCause().getMessage().split(separator))
                      .filter(line -> !line.contains("Multiple exceptions") && !line.contains("|-- "))
                      .mapToInt(line -> {
-                         int padding = 0;
-                         final int paddingLength = PADDING.length();
-                         while (line.startsWith(PADDING)) {
-                             line = line.substring(paddingLength);
-                             padding += paddingLength;
+                         for (int i = 0; i < line.length(); i++) {
+                             if (line.charAt(i) != ' ') {
+                                 return i;
+                             }
                          }
-                         return padding;
+                         return 0;
                      })
                      .sum();
     }

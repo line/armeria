@@ -150,16 +150,17 @@ public final class CompositeException extends RuntimeException {
 
                 final StringBuilder aggregateMessage = new StringBuilder();
                 aggregateMessage.append("Multiple exceptions (").append(exceptions.size())
-                        .append(')').append(separator);
+                                .append(')').append(separator);
 
                 for (Throwable inner : exceptions) {
                     int depth = 0;
                     while (inner != null) {
+                        final Class<? extends Throwable> innerClass = inner.getClass();
                         for (int i = 0; i < depth; i++) {
                             aggregateMessage.append("  ");
                         }
                         aggregateMessage.append("|-- ");
-                        aggregateMessage.append(inner.getClass().getCanonicalName()).append(": ");
+                        aggregateMessage.append(innerClass.getCanonicalName()).append(": ");
                         final String innerMessage = inner.getMessage();
                         final String messagePadding = Strings.repeat("  ", depth + 2);
                         if (innerMessage != null && innerMessage.contains(separator)) {
@@ -175,12 +176,13 @@ public final class CompositeException extends RuntimeException {
                         final StackTraceElement[] st = inner.getStackTrace();
                         if (st.length > 0) {
                             final boolean isVerboseException =
-                                    verboseExceptionSampler.isSampled(inner.getClass());
-                            final int maxStackTraceSize = isVerboseException ? st.length
-                                    : Math.min(DEFAULT_MAX_NUM_STACK_TRACES, st.length);
+                                    verboseExceptionSampler.isSampled(innerClass);
+                            final int maxStackTraceSize =
+                                    isVerboseException ? st.length
+                                                       : Math.min(DEFAULT_MAX_NUM_STACK_TRACES, st.length);
                             for (int i = 0; i < maxStackTraceSize; i++) {
                                 aggregateMessage.append(messagePadding).append("at ")
-                                        .append(st[i]).append(separator);
+                                                .append(st[i]).append(separator);
                             }
                         }
 
