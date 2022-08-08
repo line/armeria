@@ -109,6 +109,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                                                       NamedTypeInfoProvider namedTypeInfoProvider) {
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(filter, "filter");
+        requireNonNull(namedTypeInfoProvider, "namedTypeInfoProvider");
 
         final Map<Class<?>, EntryBuilder> map = new LinkedHashMap<>();
 

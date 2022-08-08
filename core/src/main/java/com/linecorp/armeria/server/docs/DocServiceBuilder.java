@@ -453,6 +453,19 @@ public final class DocServiceBuilder {
     }
 
     /**
+     * Adds the specified {@link NamedTypeInfoProvider}s used to create a {@link NamedTypeInfo} from
+     * a type descriptor.
+     */
+    public DocServiceBuilder namedTypeInfoProvider(
+            Iterable<? extends NamedTypeInfoProvider> namedTypeInfoProviders) {
+        requireNonNull(namedTypeInfoProviders, "namedTypeInfoProviders");
+        for (NamedTypeInfoProvider typeInfoProvider : namedTypeInfoProviders) {
+            namedTypeInfoProvider(typeInfoProvider);
+        }
+        return this;
+    }
+
+    /**
      * Adds the specified {@link NamedTypeInfoProvider} used to create a {@link NamedTypeInfo} from
      * a type descriptor.
      */

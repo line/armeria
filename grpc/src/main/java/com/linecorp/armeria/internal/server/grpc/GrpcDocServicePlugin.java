@@ -111,6 +111,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                                                       NamedTypeInfoProvider namedTypeInfoProvider) {
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(filter, "filter");
+        requireNonNull(namedTypeInfoProvider, "namedTypeInfoProvider");
 
         final Set<GrpcService> addedService = new HashSet<>();
         final ImmutableList.Builder<HttpEndpoint> httpEndpoints = ImmutableList.builder();

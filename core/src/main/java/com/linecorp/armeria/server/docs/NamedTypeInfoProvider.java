@@ -56,14 +56,14 @@ public interface NamedTypeInfoProvider {
      * Returns a newly created {@link NamedTypeInfoProvider} that tries this {@link NamedTypeInfoProvider}
      * first and then the specified {@link NamedTypeInfoProvider} when the first call returns {@code null}.
      */
-    default NamedTypeInfoProvider orElse(NamedTypeInfoProvider provider) {
-        requireNonNull(provider, "provider");
+    default NamedTypeInfoProvider orElse(NamedTypeInfoProvider other) {
+        requireNonNull(other, "other");
         return typeDescriptor -> {
             final NamedTypeInfo structInfo = newNamedTypeInfo(typeDescriptor);
             if (structInfo != null) {
                 return structInfo;
             } else {
-                return provider.newNamedTypeInfo(typeDescriptor);
+                return other.newNamedTypeInfo(typeDescriptor);
             }
         };
     }

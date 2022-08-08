@@ -27,7 +27,8 @@ import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.List;
 
-import com.linecorp.armeria.common.annotation.Nullable;
+import javax.annotation.Nonnull;
+
 import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
@@ -41,13 +42,9 @@ enum ReflectiveNamedTypeInfoProvider implements NamedTypeInfoProvider {
 
     INSTANCE;
 
-    @Nullable
+    @Nonnull
     @Override
     public NamedTypeInfo newNamedTypeInfo(Object typeDescriptor) {
-        if (!(typeDescriptor instanceof Class)) {
-            return null;
-        }
-
         final Class<?> clazz = (Class<?>) typeDescriptor;
         final List<FieldInfo> fieldInfos = Arrays.stream(clazz.getDeclaredFields())
                                                  .filter(field -> !Modifier.isStatic(field.getModifiers()))
@@ -80,12 +77,10 @@ enum ReflectiveNamedTypeInfoProvider implements NamedTypeInfoProvider {
 
     private static DescriptionInfo descriptionInfo(AnnotatedElement element) {
         final Description description = AnnotationUtil.findFirst(element, Description.class);
-        final DescriptionInfo descriptionInfo;
         if (description == null) {
-            descriptionInfo = DescriptionInfo.empty();
+            return DescriptionInfo.empty();
         } else {
-            descriptionInfo = DescriptionInfo.from(description);
+            return DescriptionInfo.from(description);
         }
-        return descriptionInfo;
     }
 }

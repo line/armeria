@@ -283,7 +283,10 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                                                  FieldRequirement.REQUIRED : FieldRequirement.OPTIONAL)
                                     .build();
                 } else {
-                    return FieldInfo.of(elementType.getName(), toTypeSignature(elementType));
+                    return FieldInfo.builder(elementType.getName(), toTypeSignature(elementType))
+                                    .requirement(resolver.shouldExist() ?
+                                                 FieldRequirement.REQUIRED : FieldRequirement.OPTIONAL)
+                                    .build();
                 }
             }
         }
@@ -351,7 +354,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         if (type == Double.class || type == double.class) {
             return DOUBLE;
         }
-        if (type == char.class) {
+        if (type == Character.class || type == char.class) {
             return CHAR;
         }
         if (type == String.class) {
@@ -407,10 +410,6 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         if (clazz.isArray()) {
             // If it's an array, return it as a list.
             return TypeSignature.ofList(toTypeSignature(clazz.getComponentType()));
-        }
-
-        if (clazz.isEnum()) {
-            return TypeSignature.ofNamed(clazz);
         }
 
         return TypeSignature.ofNamed(clazz);

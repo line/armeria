@@ -431,7 +431,7 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
         return null;
     }
 
-    private StructInfo newReflectiveStructInfo(Class<?> clazz) {
+    private static StructInfo newReflectiveStructInfo(Class<?> clazz) {
         return (StructInfo) ReflectiveNamedTypeInfoProvider.INSTANCE.newNamedTypeInfo(clazz);
     }
 }

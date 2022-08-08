@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.EnumSet;
@@ -131,11 +132,11 @@ public final class EnumInfo implements NamedTypeInfo {
         return new EnumInfo(name, values, descriptionInfo);
     }
 
-    private static Iterable<EnumValueInfo> toEnumValues(Class<? extends Enum<?>> enumType) {
+    private static List<EnumValueInfo> toEnumValues(Class<? extends Enum<?>> enumType) {
         final Class<?> rawEnumType = requireNonNull(enumType, "enumType");
         @SuppressWarnings({ "unchecked", "rawtypes" })
         final Set<Enum> values = EnumSet.allOf((Class<Enum>) rawEnumType);
-        return values.stream().map(e -> new EnumValueInfo(e.name()))::iterator;
+        return values.stream().map(e -> new EnumValueInfo(e.name())).collect(toImmutableList());
     }
 
     @Override

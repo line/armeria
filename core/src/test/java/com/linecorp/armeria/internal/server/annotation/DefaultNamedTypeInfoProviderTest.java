@@ -393,6 +393,10 @@ class DefaultNamedTypeInfoProviderTest {
         @Nullable
         private final String query;
 
+        @Description("param query2")
+        @Nullable
+        private final Optional<String> query2 = null;
+
         private ParamQuery(@Nullable String query) {
             this.query = query;
         }
