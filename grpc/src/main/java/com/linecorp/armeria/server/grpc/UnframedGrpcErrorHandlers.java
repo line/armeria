@@ -31,7 +31,6 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableMap;
 import com.google.protobuf.Any;
 import com.google.protobuf.InvalidProtocolBufferException;
 import com.google.rpc.BadRequest;
@@ -106,79 +105,13 @@ final class UnframedGrpcErrorHandlers {
     }
 
     /**
-     * Returns a JSON response.
-     *
+     * Returns a JSON response based on Google APIs.
+     * Please refer to <a href="https://cloud.google.com/apis/design/errors#error_model">Google error model</a>
      * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
      *                              to an {@link HttpStatus} code.
      */
     static UnframedGrpcErrorHandler ofJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
         final UnframedGrpcStatusMappingFunction mappingFunction = withDefault(statusMappingFunction);
-        return (ctx, status, response) -> {
-            final Code grpcCode = status.getCode();
-            final String grpcMessage = status.getDescription();
-            final Throwable cause = responseCause(ctx);
-            final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
-            final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
-                                                                   .contentType(MediaType.JSON_UTF_8)
-                                                                   .addInt(GrpcHeaderNames.GRPC_STATUS,
-                                                                           status.getCode().value())
-                                                                   .build();
-            final ImmutableMap.Builder<String, String> messageBuilder = ImmutableMap.builder();
-            messageBuilder.put("grpc-code", grpcCode.name());
-            if (grpcMessage != null) {
-                messageBuilder.put("message", grpcMessage);
-            }
-            if (cause != null && ctx.config().verboseResponses()) {
-                messageBuilder.put("stack-trace", Exceptions.traceText(cause));
-            }
-            return HttpResponse.ofJson(responseHeaders, messageBuilder.build());
-        };
-    }
-
-    /**
-     * Returns a plaintext response.
-     *
-     * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
-     *                              to an {@link HttpStatus} code.
-     */
-    static UnframedGrpcErrorHandler ofPlaintext(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        final UnframedGrpcStatusMappingFunction mappingFunction = withDefault(statusMappingFunction);
-        return (ctx, status, response) -> {
-            final Code grpcCode = status.getCode();
-            final String grpcMessage = status.getDescription();
-            final Throwable cause = responseCause(ctx);
-            final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
-            final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
-                                                                   .contentType(MediaType.PLAIN_TEXT_UTF_8)
-                                                                   .addInt(GrpcHeaderNames.GRPC_STATUS,
-                                                                           grpcCode.value())
-                                                                   .build();
-            final HttpData content;
-            try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
-                final StringBuilder msg = ttl.stringBuilder();
-                msg.append("grpc-code: ").append(grpcCode.name());
-                if (grpcMessage != null) {
-                    msg.append(", ").append(grpcMessage);
-                }
-                if (cause != null && ctx.config().verboseResponses()) {
-                    msg.append("\nstack-trace:\n").append(Exceptions.traceText(cause));
-                }
-                content = HttpData.ofUtf8(msg);
-            }
-            return HttpResponse.of(responseHeaders, content);
-        };
-    }
-
-    /**
-     * Returns a rich error JSON response based on Google APIs.
-     * Please refer to <a href="https://cloud.google.com/apis/design/errors#error_model">Google error model</a>
-     * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
-     *                              to an {@link HttpStatus} code.
-     */
-    static UnframedGrpcErrorHandler ofRichJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        final UnframedGrpcStatusMappingFunction mappingFunction =
-                requireNonNull(statusMappingFunction, "statusMappingFunction")
-                        .orElse(UnframedGrpcStatusMappingFunction.of());
         return (ctx, status, response) -> {
             final ByteBuf buffer = ctx.alloc().buffer();
             final Code grpcCode = status.getCode();
@@ -198,6 +131,7 @@ final class UnframedGrpcErrorHandlers {
                  JsonGenerator jsonGenerator = mapper.createGenerator(outputStream)) {
                 jsonGenerator.writeStartObject();
                 jsonGenerator.writeNumberField("code", grpcCode.value());
+                jsonGenerator.writeStringField("grpc-code", grpcCode.name());
                 if (grpcMessage != null) {
                     jsonGenerator.writeStringField("message", grpcMessage);
                 }
@@ -232,6 +166,40 @@ final class UnframedGrpcErrorHandlers {
             } else {
                 return HttpResponse.of(responseHeaders);
             }
+        };
+    }
+
+    /**
+     * Returns a plaintext response.
+     *
+     * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
+     *                              to an {@link HttpStatus} code.
+     */
+    static UnframedGrpcErrorHandler ofPlaintext(UnframedGrpcStatusMappingFunction statusMappingFunction) {
+        final UnframedGrpcStatusMappingFunction mappingFunction = withDefault(statusMappingFunction);
+        return (ctx, status, response) -> {
+            final Code grpcCode = status.getCode();
+            final String grpcMessage = status.getDescription();
+            final Throwable cause = responseCause(ctx);
+            final HttpStatus httpStatus = mappingFunction.apply(ctx, status, cause);
+            final ResponseHeaders responseHeaders = ResponseHeaders.builder(httpStatus)
+                                                                   .contentType(MediaType.PLAIN_TEXT_UTF_8)
+                                                                   .addInt(GrpcHeaderNames.GRPC_STATUS,
+                                                                           grpcCode.value())
+                                                                   .build();
+            final HttpData content;
+            try (TemporaryThreadLocals ttl = TemporaryThreadLocals.acquire()) {
+                final StringBuilder msg = ttl.stringBuilder();
+                msg.append("grpc-code: ").append(grpcCode.name());
+                if (grpcMessage != null) {
+                    msg.append(", ").append(grpcMessage);
+                }
+                if (cause != null && ctx.config().verboseResponses()) {
+                    msg.append("\nstack-trace:\n").append(Exceptions.traceText(cause));
+                }
+                content = HttpData.ofUtf8(msg);
+            }
+            return HttpResponse.of(responseHeaders, content);
         };
     }
 

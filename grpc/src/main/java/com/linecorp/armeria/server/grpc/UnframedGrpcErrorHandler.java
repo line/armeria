@@ -49,14 +49,18 @@ public interface UnframedGrpcErrorHandler {
     }
 
     /**
-     * Returns a JSON response.
+     * Returns a JSON response based on Google APIs.
+     * See <a href="https://cloud.google.com/apis/design/errors#error_model">Google error model</a>
+     * for more information.
      */
     static UnframedGrpcErrorHandler ofJson() {
         return UnframedGrpcErrorHandlers.ofJson(UnframedGrpcStatusMappingFunction.of());
     }
 
     /**
-     * Returns a json response.
+     * Returns a JSON response based on Google APIs.
+     * See <a href="https://cloud.google.com/apis/design/errors#error_model">Google error model</a>
+     * for more information.
      *
      * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
      *                              to an {@link HttpStatus} code.
@@ -80,27 +84,6 @@ public interface UnframedGrpcErrorHandler {
      */
     static UnframedGrpcErrorHandler ofPlainText(UnframedGrpcStatusMappingFunction statusMappingFunction) {
         return UnframedGrpcErrorHandlers.ofPlaintext(statusMappingFunction);
-    }
-
-    /**
-     * Returns a rich error JSON response based on Google APIs.
-     * See <a href="https://cloud.google.com/apis/design/errors#error_model">Google error model</a>
-     * for more information.
-     */
-    static UnframedGrpcErrorHandler ofRichJson() {
-        return ofRichJson(UnframedGrpcStatusMappingFunction.of());
-    }
-
-    /**
-     * Returns a rich error JSON response based on Google APIs.
-     * See <a href="https://cloud.google.com/apis/design/errors#error_model">Google error model</a>
-     * for more information.
-     *
-     * @param statusMappingFunction The function which maps the {@link Throwable} or gRPC {@link Status} code
-     *                              to an {@link HttpStatus} code.
-     */
-    static UnframedGrpcErrorHandler ofRichJson(UnframedGrpcStatusMappingFunction statusMappingFunction) {
-        return UnframedGrpcErrorHandlers.ofRichJson(statusMappingFunction);
     }
 
     /**

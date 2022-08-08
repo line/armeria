@@ -72,7 +72,7 @@ public class UnframedGrpcErrorHandlerTest {
     static ServerExtension testServerGrpcStatus = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            configureServer(sb, false, UnframedGrpcErrorHandler.ofRichJson(), testServiceGrpcStatus);
+            configureServer(sb, false, UnframedGrpcErrorHandler.ofJson(), testServiceGrpcStatus);
         }
     };
 
@@ -161,7 +161,8 @@ public class UnframedGrpcErrorHandlerTest {
                       .execute();
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         final String content = response.contentUtf8();
-        assertThat(content).startsWith("{\"grpc-code\":\"UNKNOWN\",\"message\":\"grpc error message\"," +
+        assertThat(content).startsWith("{\"code\":2,\"grpc-code\":\"UNKNOWN\"," +
+                                       "\"message\":\"grpc error message\"," +
                                        "\"stack-trace\":\"io.grpc.StatusException");
         assertThat(response.trailers()).isEmpty();
     }
@@ -179,6 +180,7 @@ public class UnframedGrpcErrorHandlerTest {
                 .isEqualTo(
                         '{' +
                         "  \"code\": 2," +
+                        "  \"grpc-code\": \"UNKNOWN\"," +
                         "  \"message\": \"Unknown Exceptions Test\"," +
                         "  \"details\": [" +
                         "    {" +
