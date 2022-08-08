@@ -16,8 +16,10 @@
 package com.linecorp.armeria.client.logging;
 
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.logging.*;
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -29,9 +31,6 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.logging.LogLevel;
-import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
-import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.Sampler;
 
 /**
@@ -80,12 +79,14 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
                     ? extends @Nullable Object> responseTrailersSanitizer,
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer,
+            Consumer<RequestOnlyLog> requestLogger,
+            Consumer<RequestLog> responseLogger,
             Sampler<? super ClientRequestContext> successSampler,
             Sampler<? super ClientRequestContext> failureSampler) {
 
         super(delegate, logger, requestLogLevelMapper, responseLogLevelMapper,
               requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
               responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
-              responseCauseSanitizer, successSampler, failureSampler);
+                responseCauseSanitizer, requestLogger, responseLogger, successSampler, failureSampler);
     }
 }

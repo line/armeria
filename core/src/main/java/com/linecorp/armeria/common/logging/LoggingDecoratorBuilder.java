@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.logging;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -68,6 +69,12 @@ public abstract class LoggingDecoratorBuilder {
             responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
     private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
             responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
+
+    @Nullable
+    private Consumer<RequestOnlyLog> requestLogger;
+
+    @Nullable
+    private Consumer<RequestLog> responseLogger;
 
     /**
      * Sets the {@link Logger} to use when logging.
@@ -410,6 +417,28 @@ public abstract class LoggingDecoratorBuilder {
                     ? extends @Nullable Object> responseCauseSanitizer) {
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
         return this;
+    }
+
+    public LoggingDecoratorBuilder requestLogger(
+            Consumer<RequestOnlyLog> requestLogger
+    ) {
+        this.requestLogger = requireNonNull(requestLogger, "requestLogger");
+        return this;
+    }
+
+    public Consumer<RequestOnlyLog> requestLogger() {
+        return requestLogger;
+    }
+
+    public LoggingDecoratorBuilder responseLogger(
+            Consumer<RequestLog> responseLogger
+    ) {
+        this.responseLogger = requireNonNull(responseLogger, "responseLogger");
+        return this;
+    }
+
+    public Consumer<RequestLog> responseLogger() {
+        return responseLogger;
     }
 
     /**

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.logging;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.log;
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logRequest;
 import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logResponse;
@@ -51,8 +52,8 @@ import com.linecorp.armeria.common.util.Sampler;
 abstract class AbstractLoggingClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
-    private final RequestLogger requestLogger = new RequestLogger();
-    private final ResponseLogger responseLogger = new ResponseLogger();
+    private final Consumer<RequestOnlyLog> requestLogger;
+    private final Consumer<RequestLog> responseLogger;
 
     private final Logger logger;
     private final RequestLogLevelMapper requestLogLevelMapper;
@@ -99,12 +100,15 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
                     ? extends @Nullable Object> responseTrailersSanitizer,
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer,
+            Consumer<RequestOnlyLog> requestLogger,
+            Consumer<RequestLog> responseLogger,
             Sampler<? super ClientRequestContext> successSampler,
-            Sampler<? super ClientRequestContext> failureSampler) {
+            Sampler<? super ClientRequestContext> failureSampler
+    ) {
 
         super(requireNonNull(delegate, "delegate"));
 
-        this.logger = logger != null ? logger : LoggerFactory.getLogger(getClass());
+        this.logger = firstNonNull(logger, LoggerFactory.getLogger(getClass()));
         this.requestLogLevelMapper = requireNonNull(requestLogLevelMapper, "requestLogLevelMapper");
         this.responseLogLevelMapper = requireNonNull(responseLogLevelMapper, "responseLogLevelMapper");
 
@@ -116,6 +120,9 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
         this.responseContentSanitizer = requireNonNull(responseContentSanitizer, "responseContentSanitizer");
         this.responseTrailersSanitizer = requireNonNull(responseTrailersSanitizer, "responseTrailersSanitizer");
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
+        this.requestLogger = firstNonNull(requestLogger, new RequestLogger());
+        this.responseLogger = firstNonNull(responseLogger, new ResponseLogger());
+
         requireNonNull(successSampler, "successSampler");
         requireNonNull(failureSampler, "failureSampler");
         sampler = requestLog -> {

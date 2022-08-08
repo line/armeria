@@ -57,6 +57,8 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
                                  responseContentSanitizer(),
                                  responseTrailersSanitizer(),
                                  responseCauseSanitizer(),
+                                 requestLogger(),
+                                 responseLogger(),
                                  successSampler(),
                                  failureSampler());
     }

@@ -132,6 +132,8 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
                                   responseContentSanitizer(),
                                   responseTrailersSanitizer(),
                                   responseCauseSanitizer(),
+                                  requestLogger(),
+                                  responseLogger(),
                                   successSampler,
                                   failureSampler);
     }
