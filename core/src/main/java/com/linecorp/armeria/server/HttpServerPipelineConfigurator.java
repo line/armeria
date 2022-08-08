@@ -243,8 +243,8 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
         final Http2Connection connection = new DefaultHttp2Connection(/* server */ true);
         final Http2ConnectionEncoder encoder = encoder(connection);
         final Http2ConnectionDecoder decoder = decoder(connection, encoder);
-        return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config,
-                                                       keepAliveTimer, scheme.toString())
+        return new Http2ServerConnectionHandlerBuilder(pipeline.channel(), config, keepAliveTimer,
+                                                       gracefulShutdownSupport, scheme.toString())
                 .codec(decoder, encoder)
                 .initialSettings(http2Settings())
                 .build();
