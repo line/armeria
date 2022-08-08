@@ -25,7 +25,7 @@ import io.netty.handler.codec.http2.Http2Settings;
 
 final class Http2ServerConnectionHandlerBuilder
         extends AbstractHttp2ConnectionHandlerBuilder<Http2ServerConnectionHandler,
-        Http2ServerConnectionHandlerBuilder> {
+                                                      Http2ServerConnectionHandlerBuilder> {
 
     private final ServerConfig config;
     private final Timer keepAliveTimer;
