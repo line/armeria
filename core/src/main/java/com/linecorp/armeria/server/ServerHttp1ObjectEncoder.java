@@ -126,7 +126,9 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         } else {
             res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, false);
             convertHeaders(headers, res.headers(), isTrailersEmpty);
-            maybeSetTransferEncoding(res);
+            if (!HttpStatus.isContentAlwaysEmpty(statusCode)) {
+                maybeSetTransferEncoding(res);
+            }
         }
 
         return res;
