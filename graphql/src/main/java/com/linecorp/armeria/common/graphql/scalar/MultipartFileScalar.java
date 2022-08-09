@@ -29,7 +29,7 @@ import graphql.schema.GraphQLScalarType;
  */
 final class MultipartFileScalar {
 
-    static final GraphQLScalarType INSTANCE;
+    static final GraphQLScalarType scalarType;
 
     static {
         final Coercing<MultipartFile, Void> coercing = new Coercing<MultipartFile, Void>() {
@@ -55,11 +55,11 @@ final class MultipartFileScalar {
             }
         };
 
-        INSTANCE = GraphQLScalarType.newScalar()
-                                    .name("MultipartFile")
-                                    .description("A multipart-file in a multipart request")
-                                    .coercing(coercing)
-                                    .build();
+        scalarType = GraphQLScalarType.newScalar()
+                                      .name("MultipartFile")
+                                      .description("A multipart-file in a multipart request")
+                                      .coercing(coercing)
+                                      .build();
     }
 
     private MultipartFileScalar() {

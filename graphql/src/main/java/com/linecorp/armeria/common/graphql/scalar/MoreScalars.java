@@ -30,7 +30,7 @@ public final class MoreScalars {
      * Returns {@link GraphQLScalarType} defined as a {@link MultipartFile} type.
      */
     public static GraphQLScalarType multipartFile() {
-        return MultipartFileScalar.INSTANCE;
+        return MultipartFileScalar.scalarType;
     }
 
     private MoreScalars() {}
