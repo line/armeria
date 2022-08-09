@@ -62,6 +62,7 @@ import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
@@ -482,10 +483,8 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         }
     }
 
-    // Methods related with extracting documentation strings.
-
     @Override
-    public Map<String, String> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
+    public Map<String, DescriptionInfo> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
         return serviceConfigs.stream()
                              .flatMap(c -> {
                                  final THttpService service = c.service().as(THttpService.class);
@@ -495,10 +494,11 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                              .flatMap(entry -> entry.interfaces().stream().map(Class::getClassLoader))
                              .flatMap(loader -> docstringExtractor.getAllDocStrings(loader)
                                                                   .entrySet().stream())
-                             .collect(toImmutableMap(Map.Entry::getKey, Map.Entry::getValue, (a, b) -> a));
+                             .collect(toImmutableMap(Map.Entry<String, String>::getKey,
+                                                     (Map.Entry<String, String> entry) ->
+                                                             DescriptionInfo.of(entry.getValue()),
+                                                     (a, b) -> a));
     }
-
-    // Methods related with serializing example requests.
 
     @Override
     public Set<Class<?>> supportedExampleRequestTypes() {

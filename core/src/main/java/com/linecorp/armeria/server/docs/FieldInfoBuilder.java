@@ -40,7 +40,7 @@ public final class FieldInfoBuilder {
     private FieldRequirement requirement = FieldRequirement.UNSPECIFIED;
     private FieldLocation location = FieldLocation.UNSPECIFIED;
     @Nullable
-    private String docString;
+    private DescriptionInfo descriptionInfo;
 
     FieldInfoBuilder(String name, TypeSignature typeSignature) {
         this.name = requireNonNull(name, "name");
@@ -77,10 +77,10 @@ public final class FieldInfoBuilder {
     }
 
     /**
-     * Sets the documentation string of the field.
+     * Sets the description information of the field.
      */
-    public FieldInfoBuilder docString(String docString) {
-        this.docString = requireNonNull(docString, "docString");
+    public FieldInfoBuilder descriptionInfo(DescriptionInfo descriptionInfo) {
+        this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
         return this;
     }
 
@@ -88,7 +88,8 @@ public final class FieldInfoBuilder {
      * Returns a newly-created {@link FieldInfo} based on the properties of this builder.
      */
     public FieldInfo build() {
-        return new FieldInfo(name, location, requirement, typeSignature, childFieldInfos, docString);
+        return new FieldInfo(name, location, requirement, typeSignature,
+                             childFieldInfos, descriptionInfo);
     }
 
     @Override
@@ -99,7 +100,7 @@ public final class FieldInfoBuilder {
                           .add("requirement", requirement)
                           .add("typeSignature", typeSignature)
                           .add("childFieldInfos", childFieldInfos)
-                          .add("docString", docString)
+                          .add("descriptionInfo", descriptionInfo)
                           .toString();
     }
 }

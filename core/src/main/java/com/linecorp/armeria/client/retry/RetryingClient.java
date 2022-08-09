@@ -30,7 +30,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
@@ -49,6 +48,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
+import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 import io.netty.handler.codec.DateFormatter;
@@ -309,14 +309,15 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         final HttpResponse response;
         final EndpointGroup endpointGroup = derivedCtx.endpointGroup();
-        if (!initialAttempt && derivedCtx instanceof DefaultClientRequestContext &&
+        final ClientRequestContextExtension ctxExtension = derivedCtx.as(ClientRequestContextExtension.class);
+        if (!initialAttempt && ctxExtension != null &&
             endpointGroup != null && derivedCtx.endpoint() == null) {
             // clear the pending throwable to retry endpoint selection
             ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
-            final DefaultClientRequestContext casted = (DefaultClientRequestContext) derivedCtx;
-            response = initContextAndExecuteWithFallback(unwrap(), casted, endpointGroup, HttpResponse::from,
-                                                         (context, cause) -> HttpResponse.ofFailure(cause));
+            response = initContextAndExecuteWithFallback(
+                    unwrap(), ctxExtension, endpointGroup, HttpResponse::from,
+                    (context, cause) -> HttpResponse.ofFailure(cause));
         } else {
             response = executeWithFallback(unwrap(), derivedCtx,
                                            (context, cause) -> HttpResponse.ofFailure(cause));

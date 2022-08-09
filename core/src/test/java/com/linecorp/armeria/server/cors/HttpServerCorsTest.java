@@ -461,6 +461,15 @@ public class HttpServerCorsTest {
     }
 
     @Test
+    public void testCorsPreflightWithQueryParams() throws Exception {
+        final WebClient client = client();
+        final AggregatedHttpResponse response = preflightRequest(client, "/cors?a=b", "http://example.com", "POST");
+        assertEquals(HttpStatus.OK, response.status());
+        assertEquals("http://example.com", response.headers().get(HttpHeaderNames.ACCESS_CONTROL_ALLOW_ORIGIN));
+        assertEquals("Hello CORS", response.headers().get(HttpHeaderNames.of("x-preflight-cors")));
+    }
+
+    @Test
     public void testCorsAllowed() throws Exception {
         final WebClient client = client();
         final AggregatedHttpResponse response = request(client, HttpMethod.POST, "/cors", "http://example.com",

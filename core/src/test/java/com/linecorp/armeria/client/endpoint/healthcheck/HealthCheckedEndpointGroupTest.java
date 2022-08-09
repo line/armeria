@@ -391,6 +391,29 @@ class HealthCheckedEndpointGroupTest {
     }
 
     @Test
+    void setHealthyEndpointsAfterEndpointIsClosed() {
+        final Endpoint delegate = Endpoint.of("foo");
+        final AsyncCloseableSupport checkerCloseable = AsyncCloseableSupport.of();
+        final AtomicReference<HealthCheckerContext> checkerContextRef = new AtomicReference<>();
+        final HealthCheckedEndpointGroup group = new AbstractHealthCheckedEndpointGroupBuilder(delegate) {
+            @Override
+            protected Function<? super HealthCheckerContext, ? extends AsyncCloseable> newCheckerFactory() {
+                return ctx -> {
+                    checkerContextRef.set(ctx);
+                    return checkerCloseable;
+                };
+            }
+        }.build();
+
+        checkerContextRef.get().updateHealth(1, null, null, null);
+        assertThat(group.whenReady().join()).containsExactly(delegate);
+        group.close();
+        // If an inflight health check request can invoke `allHealthyEndpoints`
+        // while a `HealthCheckedEndpointGroup` is closing or closed.
+        assertThat(group.allHealthyEndpoints()).isEmpty();
+    }
+
+    @Test
     void authTest() throws Exception {
         final ServerExtension server = new ServerExtension() {
             @Override

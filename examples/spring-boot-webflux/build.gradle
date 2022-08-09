@@ -1,21 +1,14 @@
-buildscript {
-    repositories {
-        gradlePluginPortal()
-    }
-    dependencies {
-        classpath "org.springframework.boot:spring-boot-gradle-plugin:${managedVersions['org.springframework.boot:spring-boot-gradle-plugin']}"
-    }
+plugins {
+    alias libs.plugins.spring.boot
 }
-
-apply plugin: 'org.springframework.boot'
 
 dependencies {
     implementation project(':spring:boot2-webflux-starter')
 
-    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor libs.spring.boot2.configuration.processor
 
     runtimeOnly project(':spring:boot2-actuator-starter')
 
-    testImplementation 'org.junit.jupiter:junit-jupiter-api'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation libs.junit5.jupiter.api
+    testImplementation libs.spring.boot2.starter.test
 }

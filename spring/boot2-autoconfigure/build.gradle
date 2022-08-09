@@ -4,19 +4,26 @@ dependencies {
     implementation project(':logback')
 
     // TODO(anuraaga): Consider removing these since this module does not have related functionality.
-    optionalApi 'io.micrometer:micrometer-registry-prometheus'
-    optionalApi 'io.dropwizard.metrics:metrics-json'
+    optionalApi libs.micrometer.prometheus
+    optionalApi libs.dropwizard.metrics.json
 
-    api 'javax.inject:javax.inject'
-    api 'org.springframework.boot:spring-boot-autoconfigure'
-    compileOnly 'javax.validation:validation-api'
-    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    api libs.javax.inject
+    api libs.spring.boot2.autoconfigure
+    compileOnly libs.javax.validation
+    annotationProcessor libs.spring.boot2.configuration.processor
 
     testImplementation project(':grpc')
     testImplementation project(':thrift0.16')
-    testImplementation 'org.springframework.boot:spring-boot-starter'
-    testImplementation 'org.springframework.boot:spring-boot-starter-actuator'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation libs.spring.boot2.starter
+    testImplementation libs.spring.boot2.starter.actuator
+    testImplementation libs.spring.boot2.starter.test
     // Enables cglib for testing
-    testImplementation 'org.hibernate.validator:hibernate-validator'
+    testImplementation libs.hibernate.validator
+}
+
+// allows illegal access by cglib
+if (rootProject.ext.testJavaVersion >= 16) {
+    tasks.withType(Test) {
+        jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED'
+    }
 }
