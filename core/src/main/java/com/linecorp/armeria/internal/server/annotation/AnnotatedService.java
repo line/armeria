@@ -420,19 +420,18 @@ public final class AnnotatedService implements HttpService {
     /**
      * Converts the specified {@code result} to an {@link HttpResponse}.
      */
-    private HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable HttpHeaders headers,
+    private HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable ResponseHeaders headers,
                                          @Nullable Object result, HttpHeaders trailers) {
         final ResponseHeaders newHeaders;
         final HttpHeaders newTrailers;
         if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
-            newHeaders = setHttpStatus(addNegotiatedResponseMediaType(ctx, httpResult.headers()));
+            newHeaders = addNegotiatedResponseMediaType(ctx, setHttpStatus(httpResult.headers()));
             result = httpResult.content();
             newTrailers = httpResult.trailers();
         } else {
-            newHeaders = setHttpStatus(
-                    headers == null ? addNegotiatedResponseMediaType(ctx, HttpHeaders.of())
-                                    : ResponseHeaders.builder().add(headers));
+            newHeaders = headers == null ? addNegotiatedResponseMediaType(ctx, setHttpStatus(HttpHeaders.of()))
+                                         : headers; // :status header is already set here.
             newTrailers = trailers;
         }
 
@@ -455,28 +454,27 @@ public final class AnnotatedService implements HttpService {
         }
     }
 
-    private static ResponseHeadersBuilder addNegotiatedResponseMediaType(ServiceRequestContext ctx,
-                                                                         HttpHeaders headers) {
-
+    private static ResponseHeaders addNegotiatedResponseMediaType(ServiceRequestContext ctx,
+                                                                  ResponseHeadersBuilder headers) {
+        // :status header is guaranteed to be set.
+        if (headers.status().isContentAlwaysEmpty()) {
+            return headers.build();
+        }
         final MediaType negotiatedResponseMediaType = ctx.negotiatedResponseMediaType();
         if (negotiatedResponseMediaType == null || headers.contentType() != null) {
             // Do not overwrite 'content-type'.
-            return ResponseHeaders.builder()
-                                  .add(headers);
-        }
-
-        return ResponseHeaders.builder()
-                              .add(headers)
-                              .contentType(negotiatedResponseMediaType);
-    }
-
-    private ResponseHeaders setHttpStatus(ResponseHeadersBuilder headers) {
-        if (headers.contains(HttpHeaderNames.STATUS)) {
-            // Do not overwrite HTTP status.
             return headers.build();
         }
+        return headers.contentType(negotiatedResponseMediaType).build();
+    }
 
-        return headers.status(defaultStatus).build();
+    private ResponseHeadersBuilder setHttpStatus(HttpHeaders headers) {
+        final ResponseHeadersBuilder builder = ResponseHeaders.builder().add(headers);
+        if (headers.contains(HttpHeaderNames.STATUS)) {
+            // Do not overwrite HTTP status.
+            return builder;
+        }
+        return builder.status(defaultStatus);
     }
 
     /**
