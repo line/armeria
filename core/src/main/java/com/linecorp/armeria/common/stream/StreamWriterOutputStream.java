@@ -25,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -36,7 +37,7 @@ final class StreamWriterOutputStream<T> extends OutputStream {
     private ByteBuf buffer;
     private final int maxBufferSize;
     private boolean closed;
-    private CompletableFuture<Void> writeFuture = CompletableFuture.completedFuture(null);
+    private CompletableFuture<Void> writeFuture = UnmodifiableFuture.completedFuture(null);
 
     StreamWriterOutputStream(StreamWriter<T> writer,
                              Function<? super HttpData, ? extends T> httpDataConverter,
