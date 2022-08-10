@@ -6,15 +6,15 @@ dependencies {
     implementation project(':core')
     implementation project(':grpc')
 
-    compileOnly 'javax.annotation:javax.annotation-api'
-    runtimeOnly 'org.slf4j:slf4j-simple'
+    compileOnly libs.javax.annotation
+    runtimeOnly libs.slf4j.simple
 
     testImplementation project(':junit5')
-    testImplementation 'org.assertj:assertj-core'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation libs.assertj
+    testImplementation libs.junit5.jupiter.api
 }
 
 application {
-//    mainClass.set('example.armeria.grpc.Main')
+    mainClass.set('example.armeria.server.blog.grpc.Main')
 }
 
