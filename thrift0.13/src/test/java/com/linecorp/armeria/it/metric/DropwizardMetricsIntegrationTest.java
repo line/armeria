@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.it.metric;
 
-import static com.linecorp.armeria.common.thrift.ThriftSerializationFormats.BINARY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
@@ -32,8 +31,8 @@ import com.codahale.metrics.Sampling;
 import com.google.common.base.CaseFormat;
 
 import com.linecorp.armeria.client.ClientFactory;
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.metric.MetricCollectingRpcClient;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.metric.DropwizardMeterRegistries;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -155,11 +154,13 @@ class DropwizardMetricsIntegrationTest {
     }
 
     private static void makeRequest(String name) {
-        final Iface client = Clients.builder(server.httpUri(BINARY) + "/helloservice")
-                                    .factory(clientFactory)
-                                    .rpcDecorator(MetricCollectingRpcClient.newDecorator(
-                                            MeterIdPrefixFunction.ofDefault("armeria.client.hello.service")))
-                                    .build(Iface.class);
+        final Iface client = ThriftClients.builder(server.httpUri())
+                                          .path("/helloservice")
+                                          .factory(clientFactory)
+                                          .rpcDecorator(MetricCollectingRpcClient.newDecorator(
+                                                  MeterIdPrefixFunction.ofDefault(
+                                                          "armeria.client.hello.service")))
+                                          .build(Iface.class);
         try {
             client.hello(name);
         } catch (Throwable t) {

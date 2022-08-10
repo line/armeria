@@ -1,13 +1,6 @@
-buildscript {
-    repositories {
-        gradlePluginPortal()
-    }
-    dependencies {
-        classpath "me.champeau.jmh:jmh-gradle-plugin:${managedVersions['me.champeau.jmh:jmh-gradle-plugin']}"
-    }
+plugins {
+    alias libs.plugins.jmh
 }
-
-apply plugin: 'me.champeau.jmh'
 
 dependencies {
     implementation project(':grpc')
@@ -16,21 +9,21 @@ dependencies {
     implementation project(':thrift0.16')
     implementation project(':kotlin')
 
-    implementation 'com.squareup.retrofit2:converter-jackson'
-    implementation 'com.google.protobuf:protobuf-java-util'
-    implementation 'io.grpc:grpc-okhttp'
-    implementation 'io.grpc:grpc-netty-shaded'
-    implementation 'org.awaitility:awaitility'
-    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
+    implementation libs.retrofit2.converter.jackson
+    implementation libs.protobuf.java.util
+    implementation libs.grpc.okhttp
+    implementation libs.grpc.netty.shaded
+    implementation libs.awaitility
+    implementation libs.kotlin.coroutines.core
 
-    jmh "pl.project13.scala:sbt-jmh-extras:${managedVersions['pl.project13.scala:sbt-jmh-extras']}"
+    jmh libs.jmh.extras
 
     implementation project(':testing-internal')
 }
 
 jmh {
     duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
-    jmhVersion = managedVersions['org.openjdk.jmh:jmh-core']
+    jmhVersion = libs.versions.jmh.get()
 
     def jmhIncludes = rootProject.findProperty('jmh.includes')
     if (jmhIncludes) {

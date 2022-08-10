@@ -36,6 +36,7 @@ final class OrElseEndpointGroup extends AbstractEndpointGroup implements Listena
 
     private final CompletableFuture<List<Endpoint>> initialEndpointsFuture;
     private final EndpointSelector selector;
+    private final long selectionTimeoutMillis;
 
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
 
@@ -50,6 +51,7 @@ final class OrElseEndpointGroup extends AbstractEndpointGroup implements Listena
                 .thenApply(unused -> endpoints());
 
         selector = first.selectionStrategy().newSelector(this);
+        selectionTimeoutMillis = Math.max(first.selectionTimeoutMillis(), second.selectionTimeoutMillis());
     }
 
     @Override
@@ -71,11 +73,22 @@ final class OrElseEndpointGroup extends AbstractEndpointGroup implements Listena
         return selector.selectNow(ctx);
     }
 
+    @Deprecated
     @Override
     public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
                                               ScheduledExecutorService executor,
                                               long timeoutMillis) {
-        return selector.select(ctx, executor, timeoutMillis);
+        return select(ctx, executor);
+    }
+
+    @Override
+    public CompletableFuture<Endpoint> select(ClientRequestContext ctx, ScheduledExecutorService executor) {
+        return selector.select(ctx, executor);
+    }
+
+    @Override
+    public long selectionTimeoutMillis() {
+        return selectionTimeoutMillis;
     }
 
     @Override

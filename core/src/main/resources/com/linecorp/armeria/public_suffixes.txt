@@ -16,6 +16,7 @@
 *.bd
 *.beget.app
 *.build.run
+*.builder.code.com
 *.bzz.dapps.earth
 *.ck
 *.cloud.metacentrum.cz
@@ -30,6 +31,7 @@
 *.customer-oci.com
 *.dapps.earth
 *.database.run
+*.dev-builder.code.com
 *.dev.adobeaemcloud.com
 *.devcdnaccesso.com
 *.developer.app
@@ -89,6 +91,7 @@
 *.sensiosite.cloud
 *.spectrum.myjino.ru
 *.statics.cloud
+*.stg-builder.code.com
 *.stg.dev
 *.stgstage.dev
 *.stolos.io
@@ -134,9 +137,11 @@
 4lima.de
 4u.com
 5.bg
+5g.in
 6.bg
 611.to
 64-b.it
+6g.in
 7.bg
 8.bg
 9.bg
@@ -284,6 +289,7 @@ aguni.okinawa.jp
 ah.cn
 ah.no
 ai
+ai.in
 aibetsu.hokkaido.jp
 aichi.jp
 aid.pl
@@ -367,6 +373,7 @@ alwaysdata.net
 am
 am.br
 am.gov.br
+am.in
 am.leg.br
 ama.aichi.jp
 ama.shimane.jp
@@ -831,6 +838,7 @@ biella.it
 bieszczady.pl
 bievat.no
 bifuka.hokkaido.jp
+bihar.in
 bihoro.hokkaido.jp
 bike
 bilbao.museum
@@ -859,6 +867,7 @@ biz.et
 biz.fj
 biz.gl
 biz.id
+biz.in
 biz.ki
 biz.ls
 biz.mv
@@ -875,6 +884,7 @@ biz.tr
 biz.tt
 biz.ua
 biz.vn
+biz.wf
 biz.zm
 bizen.okayama.jp
 bj
@@ -1094,6 +1104,7 @@ bus.museum
 busan.kr
 bushey.museum
 business
+business.in
 but.jp
 buy
 buyshop.jp
@@ -1119,6 +1130,7 @@ c66.me
 ca
 ca-central-1.elasticbeanstalk.com
 ca.eu.org
+ca.in
 ca.it
 ca.na
 ca.reclaim.cloud
@@ -1448,6 +1460,7 @@ cn-north-1.eb.amazonaws.com.cn
 cn-northwest-1.eb.amazonaws.com.cn
 cn.com
 cn.eu.org
+cn.in
 cn.it
 cn.ua
 cn.vu
@@ -1609,6 +1622,7 @@ com.hn
 com.hr
 com.ht
 com.im
+com.in
 com.io
 com.iq
 com.is
@@ -1733,6 +1747,7 @@ coop
 coop.ar
 coop.br
 coop.ht
+coop.in
 coop.km
 coop.mv
 coop.mw
@@ -1782,6 +1797,7 @@ crown
 crs
 cruise
 cruises
+cs.in
 cs.it
 cs.keliweb.cloud
 csx.cc
@@ -1898,6 +1914,7 @@ definima.io
 definima.net
 degree
 delaware.museum
+delhi.in
 delivery
 dell
 dell-ogliastra.it
@@ -2014,6 +2031,7 @@ dot
 dovre.no
 download
 dp.ua
+dr.in
 dr.na
 dr.tr
 drammen.no
@@ -2334,6 +2352,7 @@ epilepsy.museum
 epson
 equipment
 equipment.aero
+er.in
 ericsson
 erimo.hokkaido.jp
 erni
@@ -3193,6 +3212,7 @@ guernsey.museum
 guge
 guide
 guitars
+gujarat.in
 gujo.gifu.jp
 gulen.no
 gunma.jp
@@ -3550,6 +3570,7 @@ ibaraki.osaka.jp
 ibestad.no
 ibigawa.gifu.jp
 ibm
+ibxos.it
 ic.gov.pl
 icbc
 ice
@@ -3610,6 +3631,7 @@ il
 il.eu.org
 il.us
 ilawa.pl
+iliadboxos.it
 illustration.museum
 ilovecollege.info
 im
@@ -3702,6 +3724,7 @@ info.fj
 info.gu
 info.ht
 info.hu
+info.in
 info.ke
 info.ki
 info.la
@@ -3743,6 +3766,7 @@ int.ci
 int.co
 int.cv
 int.eu.org
+int.in
 int.is
 int.la
 int.lk
@@ -3759,12 +3783,14 @@ intelligence.museum
 interactive.museum
 international
 internet-dns.de
+internet.in
 intl.tn
 intuit
 inuyama.aichi.jp
 investments
 inzai.chiba.jp
 io
+io.in
 io.kg
 iobb.net
 iopsys.se
@@ -3870,6 +3896,7 @@ isehara.kanagawa.jp
 isen.kagoshima.jp
 isernia.it
 iserv.dev
+iservschule.de
 isesaki.gunma.jp
 ishigaki.okinawa.jp
 ishikari.hokkaido.jp
@@ -4738,6 +4765,7 @@ logoip.de
 lohmus.me
 lol
 lolipop.io
+lolipopmc.jp
 lolitapunk.jp
 lom.it
 lom.no
@@ -4937,6 +4965,7 @@ md.ci
 md.us
 me
 me.eu.org
+me.in
 me.it
 me.ke
 me.so
@@ -4997,6 +5026,7 @@ meraker.no
 merckmsd
 merseine.nu
 mesaverde.museum
+messerli.app
 messina.it
 messwithdns.com
 meteorapp.com
@@ -5503,6 +5533,7 @@ name.mv
 name.my
 name.na
 name.ng
+name.pm
 name.pr
 name.qa
 name.tj
@@ -6485,6 +6516,7 @@ pescara.it
 pet
 pf
 pfizer
+pg.in
 pg.it
 pgafan.net
 pgfog.com
@@ -6601,6 +6633,7 @@ portal.museum
 portland.museum
 portlligat.museum
 post
+post.in
 postman-echo.com
 posts-and-telecommunications.museum
 potager.org
@@ -6653,6 +6686,7 @@ pro.cy
 pro.ec
 pro.fj
 pro.ht
+pro.in
 pro.mv
 pro.na
 pro.om
@@ -7171,6 +7205,8 @@ sch.qa
 sch.sa
 sch.so
 sch.ss
+sch.tf
+sch.wf
 sch.zm
 schaeffler
 schlesisches.museum
@@ -7187,6 +7223,7 @@ school.za
 schoolbus.jp
 schools.nsw.edu.au
 schule
+schulplattform.de
 schulserver.de
 schwarz
 schweiz.museum
@@ -8107,6 +8144,7 @@ transport.museum
 transporte.bo
 trapani.it
 travel
+travel.in
 travel.pl
 travel.tt
 travelchannel
@@ -8213,6 +8251,7 @@ tv.bb
 tv.bo
 tv.br
 tv.im
+tv.in
 tv.it
 tv.kg
 tv.na
@@ -8270,6 +8309,7 @@ ujitawara.kyoto.jp
 uk
 uk.com
 uk.eu.org
+uk.in
 uk.kg
 uk.net
 uk.oxa.cloud
@@ -8308,6 +8348,7 @@ unzen.nagasaki.jp
 uol
 uonuma.niigata.jp
 uozu.toyama.jp
+up.in
 upaas.kazteleport.kz
 upli.io
 upow.gov.pl
@@ -8343,6 +8384,7 @@ us.ax
 us.com
 us.eu.org
 us.gov.pl
+us.in
 us.kg
 us.na
 us.org

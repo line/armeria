@@ -17,7 +17,6 @@
 package com.linecorp.armeria.server.grpc;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.server.grpc.FramedGrpcService.methodDefinition;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -59,6 +58,7 @@ import io.grpc.ServerMethodDefinition;
  */
 final class UnframedGrpcService extends AbstractUnframedGrpcService {
 
+    private final GrpcService delegate;
     private final HandlerRegistry registry;
 
     /**
@@ -67,8 +67,14 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
     UnframedGrpcService(GrpcService delegate, HandlerRegistry registry,
                         UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
         super(delegate, unframedGrpcErrorHandler);
+        this.delegate = delegate;
         this.registry = registry;
         checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
+    }
+
+    @Override
+    public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
+        return delegate.methodDefinition(ctx);
     }
 
     @Override
@@ -98,7 +104,7 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
             }
         }
 
-        final ServerMethodDefinition<?, ?> method = methodDefinition(ctx, registry);
+        final ServerMethodDefinition<?, ?> method = methodDefinition(ctx);
         if (method == null) {
             // Unknown method, let the delegate return a usual error.
             return unwrap().serve(ctx, req);
@@ -143,7 +149,6 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
                 if (t != null) {
                     responseFuture.completeExceptionally(t);
                 } else {
-                    ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, method);
                     frameAndServe(unwrap(), ctx, grpcHeaders.build(),
                                   clientRequest.content(), responseFuture, null);
                 }

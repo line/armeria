@@ -58,9 +58,7 @@ public final class GrpcTrailersUtil {
         final ByteBuf serialized = alloc.buffer();
         boolean success = false;
         try {
-            for (Map.Entry<AsciiString, String> trailer : trailers) {
-                encodeHeader(trailer.getKey(), trailer.getValue(), serialized);
-            }
+            serializeTrailersAsMessage(serialized, trailers);
             success = true;
         } finally {
             if (!success) {
@@ -68,6 +66,15 @@ public final class GrpcTrailersUtil {
             }
         }
         return serialized;
+    }
+
+    /**
+     * Appends the serialized {@link HttpHeaders} into the specifed {@link ByteBuf}.
+     */
+    public static void serializeTrailersAsMessage(ByteBuf byteBuf, HttpHeaders trailers) {
+        for (Map.Entry<AsciiString, String> trailer : trailers) {
+            encodeHeader(trailer.getKey(), trailer.getValue(), byteBuf);
+        }
     }
 
     // Copied from io.netty.handler.codec.http.HttpHeadersEncoder

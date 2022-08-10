@@ -19,15 +19,10 @@ package com.linecorp.armeria.server.grpc;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static java.util.Objects.requireNonNull;
-import static org.reflections.ReflectionUtils.withModifier;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.time.Duration;
 import java.util.AbstractMap.SimpleImmutableEntry;
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
@@ -45,6 +40,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Iterables;
 import com.google.protobuf.ByteString;
 import com.google.protobuf.Message;
 
@@ -57,10 +53,8 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshallerBuilder;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
-import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageDeframer;
+import com.linecorp.armeria.common.grpc.protocol.AbstractMessageDeframer;
 import com.linecorp.armeria.common.grpc.protocol.ArmeriaMessageFramer;
-import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
-import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Server;
@@ -78,7 +72,6 @@ import io.grpc.Metadata;
 import io.grpc.MethodDescriptor;
 import io.grpc.ServerInterceptor;
 import io.grpc.ServerInterceptors;
-import io.grpc.ServerMethodDefinition;
 import io.grpc.ServerServiceDefinition;
 import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
@@ -95,15 +88,6 @@ public final class GrpcServiceBuilder {
     private static final Logger logger = LoggerFactory.getLogger(GrpcServiceBuilder.class);
 
     private static final boolean USE_COROUTINE_CONTEXT_INTERCEPTOR;
-
-    private static Map<String, HttpService> applyGrpcServiceToDecorators(
-            Map<String, List<DecoratorAndOrder>> mp, GrpcService grpcService) {
-        return mp.entrySet()
-                 .stream()
-                 .collect(toImmutableMap(Map.Entry::getKey,
-                                         e -> DecoratorAnnotationUtil.applyDecorators(e.getValue(),
-                                                                                      grpcService)));
-    }
 
     static {
         boolean useCoroutineContextInterceptor;
@@ -148,7 +132,7 @@ public final class GrpcServiceBuilder {
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
-    private int maxRequestMessageLength = ArmeriaMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
+    private int maxRequestMessageLength = AbstractMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
 
     private int maxResponseMessageLength = ArmeriaMessageFramer.NO_MAX_OUTBOUND_MESSAGE_SIZE;
 
@@ -165,11 +149,9 @@ public final class GrpcServiceBuilder {
 
     private boolean useClientTimeoutHeader = true;
 
-    private final Map<String, List<DecoratorAndOrder>> pathToDecorators = new HashMap<>();
-
-    private final Map<String, List<DecoratorAndOrder>> methodToDecorators = new HashMap<>();
-
     private boolean enableHealthCheckService;
+
+    private boolean autoCompression;
 
     @Nullable
     private GrpcHealthCheckService grpcHealthCheckService;
@@ -181,7 +163,7 @@ public final class GrpcServiceBuilder {
      * what's returned by {@link BindableService#bindService()}.
      */
     public GrpcServiceBuilder addService(ServerServiceDefinition service) {
-        registryBuilder.addService(requireNonNull(service, "service"));
+        registryBuilder.addService(requireNonNull(service, "service"), null, ImmutableList.of());
         return this;
     }
 
@@ -203,7 +185,8 @@ public final class GrpcServiceBuilder {
      * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, ServerServiceDefinition service) {
-        registryBuilder.addService(requireNonNull(path, "path"), requireNonNull(service, "service"), null);
+        registryBuilder.addService(requireNonNull(path, "path"), requireNonNull(service, "service"),
+                                   null, null, ImmutableList.of());
         return this;
     }
 
@@ -229,7 +212,8 @@ public final class GrpcServiceBuilder {
                                          MethodDescriptor<?, ?> methodDescriptor) {
         registryBuilder.addService(requireNonNull(path, "path"),
                                    requireNonNull(service, "service"),
-                                   requireNonNull(methodDescriptor, "methodDescriptor"));
+                                   requireNonNull(methodDescriptor, "methodDescriptor"),
+                                   null, ImmutableList.of());
         return this;
     }
 
@@ -238,13 +222,37 @@ public final class GrpcServiceBuilder {
      * implementations are {@link BindableService}s.
      */
     public GrpcServiceBuilder addService(BindableService bindableService) {
+        return addService(bindableService, ImmutableList.of());
+    }
+
+    /**
+     * Decorates a gRPC {@link BindableService} with the given decorators, in the order of iteration.
+     * For more details on decorator behavior, please refer to the following document.
+     *
+     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
+     */
+    @UnstableApi
+    public GrpcServiceBuilder addService(
+            BindableService bindableService,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(bindableService, "bindableService");
+        requireNonNull(decorators, "decorators");
+
+        final boolean hasDecorators = !Iterables.isEmpty(decorators);
         if (bindableService instanceof ProtoReflectionService) {
+            if (hasDecorators) {
+                throw new IllegalArgumentException(
+                        "ProtoReflectionService should not be used with decorators.");
+            }
             return addService(ServerInterceptors.intercept(bindableService,
                                                            newProtoReflectionServiceInterceptor()));
         }
 
         if (bindableService instanceof GrpcHealthCheckService) {
+            if (hasDecorators) {
+                throw new IllegalArgumentException(
+                        "GrpcHealthCheckService should not be used with decorators.");
+            }
             if (enableHealthCheckService) {
                 throw new IllegalStateException("default gRPC health check service is enabled already.");
             }
@@ -252,9 +260,9 @@ public final class GrpcServiceBuilder {
             return this;
         }
 
-        final ServerServiceDefinition serverServiceDefinition = bindableService.bindService();
-        collectDecorators(bindableService.getClass(), null, serverServiceDefinition);
-        return addService(serverServiceDefinition);
+        registryBuilder.addService(bindableService.bindService(), bindableService.getClass(),
+                                   ImmutableList.copyOf(decorators));
+        return this;
     }
 
     /**
@@ -275,13 +283,34 @@ public final class GrpcServiceBuilder {
      * {@code "/foo/Hello"}. This is useful for supporting unframed gRPC with HTTP idiomatic path.
      */
     public GrpcServiceBuilder addService(String path, BindableService bindableService) {
+        return addService(path, bindableService, ImmutableList.of());
+    }
+
+    /**
+     * Decorates a gRPC {@link BindableService} with the given decorators, in the order of iteration.
+     * For more details on decorator behavior, please refer to the following document.
+     *
+     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
+     */
+    @UnstableApi
+    public GrpcServiceBuilder addService(
+            String path, BindableService bindableService,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        requireNonNull(path, "path");
+        requireNonNull(bindableService, "bindableService");
+        requireNonNull(decorators, "decorators");
         if (bindableService instanceof ProtoReflectionService) {
+            if (!Iterables.isEmpty(decorators)) {
+                throw new IllegalArgumentException(
+                        "ProtoReflectionService should not be used with decorators.");
+            }
+
             return addService(path, ServerInterceptors.intercept(bindableService,
                                                                  newProtoReflectionServiceInterceptor()));
         }
-        final ServerServiceDefinition serverServiceDefinition = bindableService.bindService();
-        collectDecorators(bindableService.getClass(), path, serverServiceDefinition);
-        return addService(path, serverServiceDefinition);
+        registryBuilder.addService(path, bindableService.bindService(), null, bindableService.getClass(),
+                                   ImmutableList.copyOf(decorators));
+        return this;
     }
 
     /**
@@ -308,12 +337,49 @@ public final class GrpcServiceBuilder {
     public <T> GrpcServiceBuilder addService(
             T implementation,
             Function<? super T, ServerServiceDefinition> serviceDefinitionFactory) {
+        return addService(implementation, serviceDefinitionFactory, ImmutableList.of());
+    }
+
+    /**
+     * Decorates an implementation of gRPC service with the given decorators, in the order of iteration.
+     *
+     * <p>Most gRPC service implementations are {@link BindableService}s.
+     * This method is useful in cases like the followings.
+     *
+     * <p>Used for ScalaPB gRPC stubs
+     *
+     * <pre>{@code
+     * GrpcService.builder()
+     *            .addService(new HelloServiceImpl,
+     *                        HelloServiceGrpc.bindService(_,
+     *                                                     ExecutionContext.global))}
+     * </pre>
+     *
+     * <p>Used for intercepted gRPC-Java stubs
+     * <pre>{@code
+     * GrpcService.builder()
+     *            .addService(new TestServiceImpl,
+     *                        impl -> ServerInterceptors.intercept(impl, interceptors));
+     * }</pre>
+     *
+     * <p>For more details on decorator behavior, please refer to the following document.
+     *
+     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
+     */
+    @UnstableApi
+    public <T> GrpcServiceBuilder addService(
+            T implementation,
+            Function<? super T, ServerServiceDefinition> serviceDefinitionFactory,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
         requireNonNull(implementation, "implementation");
         requireNonNull(serviceDefinitionFactory, "serviceDefinitionFactory");
+        requireNonNull(decorators, "decorators");
+
         final ServerServiceDefinition serverServiceDefinition = serviceDefinitionFactory.apply(implementation);
         requireNonNull(serverServiceDefinition, "serviceDefinitionFactory.apply() returned null");
-        collectDecorators(implementation.getClass(), null, serverServiceDefinition);
-        return addService(serverServiceDefinition);
+        registryBuilder.addService(serverServiceDefinition, implementation.getClass(),
+                                   ImmutableList.copyOf(decorators));
+        return this;
     }
 
     /**
@@ -336,14 +402,39 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder addService(String path, BindableService bindableService,
                                          MethodDescriptor<?, ?> methodDescriptor) {
+        // TODO(minwoox): consider renaming to addMethod(...)
+        return addService(path, bindableService, methodDescriptor, ImmutableList.of());
+    }
+
+    /**
+     * Decorates a {@linkplain MethodDescriptor method} of gRPC {@link BindableService}
+     * with the given decorators, in the order of iteration.
+     * For more details on decorator behavior, please refer to the following document.
+     *
+     * @see <a href="https://armeria.dev/docs/server-grpc#decorating-a-grpcservice">Decorating a GrpcService</a>
+     */
+    @UnstableApi
+    public GrpcServiceBuilder addService(
+            String path, BindableService bindableService, MethodDescriptor<?, ?> methodDescriptor,
+            Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
+        requireNonNull(path, "path");
+        requireNonNull(bindableService, "bindableService");
+        requireNonNull(methodDescriptor, "methodDescriptor");
+        requireNonNull(decorators, "decorators");
+
         if (bindableService instanceof ProtoReflectionService) {
+            if (!Iterables.isEmpty(decorators)) {
+                throw new IllegalArgumentException(
+                        "ProtoReflectionService should not be used with decorators.");
+            }
             final ServerServiceDefinition interceptor =
                     ServerInterceptors.intercept(bindableService, newProtoReflectionServiceInterceptor());
             return addService(path, interceptor, methodDescriptor);
         }
-        final ServerServiceDefinition serverServiceDefinition = bindableService.bindService();
-        collectDecorators(bindableService.getClass(), null, serverServiceDefinition);
-        return addService(path, serverServiceDefinition, methodDescriptor);
+
+        registryBuilder.addService(path, bindableService.bindService(), methodDescriptor,
+                                   bindableService.getClass(), ImmutableList.copyOf(decorators));
+        return this;
     }
 
     /**
@@ -365,7 +456,7 @@ public final class GrpcServiceBuilder {
      */
     public GrpcServiceBuilder intercept(Iterable<? extends ServerInterceptor> interceptors) {
         requireNonNull(interceptors, "interceptors");
-        this.interceptors().addAll(interceptors);
+        interceptors().addAll(interceptors);
         return this;
     }
 
@@ -665,7 +756,8 @@ public final class GrpcServiceBuilder {
      * The gRPC health check service manages only the health checker that determines
      * the healthiness of the {@link Server}.
      *
-     * @see <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
+     * @see
+     * <a href="https://github.com/grpc/grpc/blob/master/doc/health-checking.md">GRPC Health Checking Protocol</a>
      */
     public GrpcServiceBuilder enableHealthCheckService(boolean enableHealthCheckService) {
         if (grpcHealthCheckService != null && enableHealthCheckService) {
@@ -686,6 +778,16 @@ public final class GrpcServiceBuilder {
                    "exceptionMapping() and addExceptionMapping() are mutually exclusive.");
 
         this.statusFunction = statusFunction;
+        return this;
+    }
+
+    /**
+     * Sets whether the gRPC response is compressed automatically when a client sends the
+     * {@code grpc-accept-encoding} header with the encoding registered in the {@link CompressorRegistry}.
+     */
+    @UnstableApi
+    public GrpcServiceBuilder autoCompression(boolean autoCompression) {
+        this.autoCompression = autoCompression;
         return this;
     }
 
@@ -803,52 +905,6 @@ public final class GrpcServiceBuilder {
         return interceptors;
     }
 
-    private void collectDecorators(Class<?> clazz, @Nullable String path,
-                                   ServerServiceDefinition serverServiceDefinition) {
-        final String serviceName =
-                path != null ? path : '/' + serverServiceDefinition.getServiceDescriptor().getName();
-        // In gRPC, A method name is unique.
-        final Map<String, Method> methods = new HashMap<>();
-        for (Method method : InternalReflectionUtils.getAllSortedMethods(clazz,
-                                                                         withModifier(Modifier.PUBLIC))) {
-            final String methodName = method.getName();
-            if (!methods.containsKey(methodName)) {
-                methods.put(methodName, method);
-            }
-        }
-        for (final ServerMethodDefinition<?, ?> serverMethodDefinition : serverServiceDefinition.getMethods()) {
-            final String targetMethodName = serverMethodDefinition.getMethodDescriptor().getBareMethodName();
-            if (targetMethodName == null) {
-                continue;
-            }
-            final String methodName = targetMethodName.substring(0, 1).toLowerCase() +
-                                      targetMethodName.substring(1);
-            final Method method = methods.get(methodName);
-            if (method == null) {
-                continue;
-            }
-            final List<DecoratorAndOrder> decorators = DecoratorAnnotationUtil.collectDecorators(clazz, method);
-            if (!decorators.isEmpty()) {
-                String key = serviceName + '/' + targetMethodName;
-                pathToDecorators.put(key, decorators);
-                if (path == null) {
-                    key = serverMethodDefinition.getMethodDescriptor().getFullMethodName();
-                    methodToDecorators.put(key, decorators);
-                }
-            }
-        }
-    }
-
-    @VisibleForTesting
-    Map<String, List<DecoratorAndOrder>> pathToDecorators() {
-        return pathToDecorators;
-    }
-
-    @VisibleForTesting
-    Map<String, List<DecoratorAndOrder>> methodToDecorators() {
-        return methodToDecorators;
-    }
-
     /**
      * Constructs a new {@link GrpcService} that can be bound to
      * {@link ServerBuilder}. It is recommended to bind the service to a server using
@@ -876,7 +932,7 @@ public final class GrpcServiceBuilder {
             grpcHealthCheckService = GrpcHealthCheckService.builder().build();
         }
         if (grpcHealthCheckService != null) {
-            registryBuilder.addService(grpcHealthCheckService.bindService());
+            registryBuilder.addService(grpcHealthCheckService.bindService(), null, ImmutableList.of());
         }
         if (interceptors != null) {
             final HandlerRegistry.Builder newRegistryBuilder = new HandlerRegistry.Builder();
@@ -885,7 +941,8 @@ public final class GrpcServiceBuilder {
                 final MethodDescriptor<?, ?> methodDescriptor = entry.method();
                 final ServerServiceDefinition intercepted =
                         ServerInterceptors.intercept(entry.service(), interceptors);
-                newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor);
+                newRegistryBuilder.addService(entry.path(), intercepted, methodDescriptor, entry.type(),
+                                              entry.additionalDecorators());
             }
             handlerRegistry = newRegistryBuilder.build();
         } else {
@@ -899,7 +956,6 @@ public final class GrpcServiceBuilder {
             statusFunction = this.statusFunction;
         }
 
-        final boolean lookupMethodFromAttribute = enableUnframedRequests || enableHttpJsonTranscoding;
         GrpcService grpcService = new FramedGrpcService(
                 handlerRegistry,
                 firstNonNull(decompressorRegistry, DecompressorRegistry.getDefaultInstance()),
@@ -912,29 +968,23 @@ public final class GrpcServiceBuilder {
                 useBlockingTaskExecutor,
                 unsafeWrapRequestBuffers,
                 useClientTimeoutHeader,
-                lookupMethodFromAttribute,
-                grpcHealthCheckService);
+                enableHttpJsonTranscoding, // The method definition might be set when transcoding is enabled.
+                grpcHealthCheckService,
+                autoCompression);
         if (enableUnframedRequests) {
             grpcService = new UnframedGrpcService(
                     grpcService, handlerRegistry,
                     unframedGrpcErrorHandler != null ? unframedGrpcErrorHandler
                                                      : UnframedGrpcErrorHandler.of());
         }
-        if (!pathToDecorators.isEmpty()) {
-            final Map<String, HttpService> pathToComposeDecorators = applyGrpcServiceToDecorators(
-                    pathToDecorators, grpcService);
-            final Map<String, HttpService> methodToComposedDecorators = applyGrpcServiceToDecorators(
-                    methodToDecorators, grpcService);
-            grpcService = new GrpcDecoratingService(grpcService,
-                                                    pathToComposeDecorators,
-                                                    methodToComposedDecorators,
-                                                    lookupMethodFromAttribute);
-        }
         if (enableHttpJsonTranscoding) {
             grpcService = HttpJsonTranscodingService.of(
                     grpcService,
                     httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
                                                             : UnframedGrpcErrorHandler.ofJson());
+        }
+        if (handlerRegistry.containsDecorators()) {
+            grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
         }
         return grpcService;
     }

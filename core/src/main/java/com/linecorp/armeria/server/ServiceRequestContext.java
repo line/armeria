@@ -38,6 +38,7 @@ import com.google.errorprone.annotations.MustBeClosed;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -629,4 +630,23 @@ public interface ServiceRequestContext extends RequestContext {
      */
     @UnstableApi
     CompletableFuture<Void> initiateConnectionShutdown();
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>Note that an {@link HttpRequest} will be aggregated before serving the {@link HttpService} if
+     * {@link ExchangeType#UNARY} or {@link ExchangeType#RESPONSE_STREAMING} is set.
+     */
+    @Override
+    ExchangeType exchangeType();
+
+    @Override
+    default ServiceRequestContext unwrap() {
+        return (ServiceRequestContext) RequestContext.super.unwrap();
+    }
+
+    @Override
+    default ServiceRequestContext unwrapAll() {
+        return (ServiceRequestContext) RequestContext.super.unwrapAll();
+    }
 }

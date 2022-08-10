@@ -26,6 +26,8 @@ import java.util.function.Function;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -50,6 +52,7 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
@@ -68,6 +71,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
     private final GrpcService delegate;
     private final UnframedGrpcErrorHandler unframedGrpcErrorHandler;
 
+    private static final Logger logger = LoggerFactory.getLogger(AbstractUnframedGrpcService.class);
+
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
      */
@@ -83,15 +88,15 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
-        final MediaType contentType = headers.contentType();
+    public ExchangeType exchangeType(RoutingContext routingContext) {
+        final MediaType contentType = routingContext.headers().contentType();
         if (contentType == null) {
             return ExchangeType.BIDI_STREAMING;
         }
 
         for (SerializationFormat format : GrpcSerializationFormats.values()) {
             if (format.isAccepted(contentType)) {
-                return ((HttpService) unwrap()).exchangeType(headers, route);
+                return ((HttpService) unwrap()).exchangeType(routingContext);
             }
         }
 
@@ -181,6 +186,13 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
+        if (grpcStatusCode == null) {
+            PooledObjects.close(grpcResponse.content());
+            res.completeExceptionally(new NullPointerException("grpcStatusCode must not be null"));
+            logger.warn("{} A gRPC response must have the {} header. response: {}",
+                    ctx, GrpcHeaderNames.GRPC_STATUS, grpcResponse);
+            return;
+        }
         Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
         final String grpcMessage = trailers.get(GrpcHeaderNames.GRPC_MESSAGE);
         if (!Strings.isNullOrEmpty(grpcMessage)) {

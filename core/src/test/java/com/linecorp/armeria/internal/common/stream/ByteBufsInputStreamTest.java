@@ -31,6 +31,7 @@ import java.util.Scanner;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
@@ -40,6 +41,7 @@ import org.junit.jupiter.params.provider.MethodSource;
 
 import com.google.common.collect.ImmutableList;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 
 class ByteBufsInputStreamTest {
@@ -51,7 +53,6 @@ class ByteBufsInputStreamTest {
         final ImmutableList.Builder<String> resultBuilder = ImmutableList.builder();
         while (scanner.hasNext()) {
             final String s = scanner.next();
-            System.out.println(s);
             resultBuilder.add(s);
         }
         final List<String> resultStrings = resultBuilder.build();
@@ -78,7 +79,6 @@ class ByteBufsInputStreamTest {
         final ImmutableList.Builder<String> resultBuilder = ImmutableList.builder();
         while (scanner.hasNext()) {
             final String s = scanner.next();
-            System.out.println(s);
             resultBuilder.add(s);
         }
 
@@ -88,6 +88,44 @@ class ByteBufsInputStreamTest {
         assertThat(stream.available()).isEqualTo(0);
 
         assertThat(resultStrings.size()).isEqualTo(5);
+        assertThat(String.join(",", resultStrings)).isEqualTo(String.join("", strings));
+        assertThat(resultStrings.get(0)).isEqualTo("first");
+        assertThat(resultStrings.get(1)).isEqualTo("second");
+        assertThat(resultStrings.get(2)).isEqualTo("third");
+        assertThat(resultStrings.get(3)).isEqualTo("fourth");
+        assertThat(resultStrings.get(4)).isEqualTo("fifth");
+    }
+
+    @Test
+    void testAdd_ignoreEmptyByteBuf() {
+        final List<String> strings1 = ImmutableList.of("first,", "second,");
+        final List<String> strings2 = ImmutableList.of("third,fourth", ",fifth");
+        final ByteBuf empty = Unpooled.buffer();
+
+        final ByteBufsInputStream stream = new ByteBufsInputStream();
+        assertThat(stream.isEos()).isFalse();
+        assertThat(stream.available()).isEqualTo(0);
+        strings1.forEach(s -> stream.add(Unpooled.wrappedBuffer(s.getBytes(StandardCharsets.UTF_8))));
+        stream.add(empty);
+        strings2.forEach(s -> stream.add(Unpooled.wrappedBuffer(s.getBytes(StandardCharsets.UTF_8))));
+        stream.setEos();
+
+        final Scanner scanner = new Scanner(stream).useDelimiter(",");
+        final ImmutableList.Builder<String> resultBuilder = ImmutableList.builder();
+        while (scanner.hasNext()) {
+            final String s = scanner.next();
+            resultBuilder.add(s);
+        }
+
+        final List<String> resultStrings = resultBuilder.build();
+
+        assertThat(stream.isEos()).isTrue();
+        assertThat(stream.available()).isEqualTo(0);
+
+        assertThat(resultStrings.size()).isEqualTo(5);
+        final List<String> strings = Stream
+                .concat(strings1.stream(), strings2.stream())
+                .collect(Collectors.toList());
         assertThat(String.join(",", resultStrings)).isEqualTo(String.join("", strings));
         assertThat(resultStrings.get(0)).isEqualTo("first");
         assertThat(resultStrings.get(1)).isEqualTo("second");
@@ -190,7 +228,6 @@ class ByteBufsInputStreamTest {
             final ImmutableList.Builder<String> resultBuilder = ImmutableList.builder();
             while (scanner.hasNext()) {
                 final String s = scanner.next();
-                System.out.println(s);
                 resultBuilder.add(s);
             }
             return resultBuilder.build();

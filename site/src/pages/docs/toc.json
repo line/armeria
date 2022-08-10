@@ -14,6 +14,7 @@
     "server-decorator",
     "server-grpc",
     "server-thrift",
+    "server-graphql",
     "server-docservice",
     "server-annotated-service",
     "server-http-file",
@@ -22,7 +23,7 @@
     "server-cors",
     "server-sse",
     "server-service-registration",
-    "server-graphql"
+    "server-multipart"
   ],
   "Client": [
     "client-http",

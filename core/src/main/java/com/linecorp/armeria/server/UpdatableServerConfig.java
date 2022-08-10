@@ -29,6 +29,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -49,6 +50,10 @@ final class UpdatableServerConfig implements ServerConfig {
 
     void updateConfig(DefaultServerConfig newConfig) {
         delegate = requireNonNull(newConfig, "newConfig");
+    }
+
+    DefaultServerConfig delegate() {
+        return delegate;
     }
 
     // Delegate non-public methods
@@ -220,11 +225,6 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
-    public boolean shutdownBlockingTaskExecutorOnStop() {
-        return delegate.shutdownBlockingTaskExecutorOnStop();
-    }
-
-    @Override
     public MeterRegistry meterRegistry() {
         return delegate.meterRegistry();
     }
@@ -277,6 +277,11 @@ final class UpdatableServerConfig implements ServerConfig {
     @Override
     public Http1HeaderNaming http1HeaderNaming() {
         return delegate.http1HeaderNaming();
+    }
+
+    @Override
+    public DependencyInjector dependencyInjector() {
+        return delegate.dependencyInjector();
     }
 
     @Override

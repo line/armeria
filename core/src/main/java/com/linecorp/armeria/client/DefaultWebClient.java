@@ -16,15 +16,15 @@
 
 package com.linecorp.armeria.client;
 
+import static com.linecorp.armeria.internal.client.ClientUtil.pathWithQuery;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
 import static java.util.Objects.requireNonNull;
 
 import java.net.URI;
 
-import com.google.common.base.Strings;
-
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Scheme;
@@ -38,8 +38,15 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
 
     static final WebClient DEFAULT = new WebClientBuilder().build();
 
+    static final RequestOptions RESPONSE_STREAMING_REQUEST_OPTIONS =
+            RequestOptions.builder()
+                          .exchangeType(ExchangeType.RESPONSE_STREAMING)
+                          .build();
+
     @Nullable
     private BlockingWebClient blockingWebClient;
+    @Nullable
+    private RestClient restClient;
 
     DefaultWebClient(ClientBuilderParams params, HttpClient delegate, MeterRegistry meterRegistry) {
         super(params, delegate, meterRegistry,
@@ -131,17 +138,15 @@ final class DefaultWebClient extends UserClient<HttpRequest, HttpResponse> imple
     }
 
     @Override
-    public HttpClient unwrap() {
-        return (HttpClient) super.unwrap();
+    public RestClient asRestClient() {
+        if (restClient != null) {
+            return restClient;
+        }
+        return restClient = RestClient.of(this);
     }
 
-    static String pathWithQuery(URI uri, @Nullable String query) {
-        String path = uri.getRawPath();
-        if (Strings.isNullOrEmpty(path)) {
-            path = query == null ? "/" : "/?" + query;
-        } else if (query != null) {
-            path = path + '?' + query;
-        }
-        return path;
+    @Override
+    public HttpClient unwrap() {
+        return (HttpClient) super.unwrap();
     }
 }

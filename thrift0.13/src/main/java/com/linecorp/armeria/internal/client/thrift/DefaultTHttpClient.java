@@ -23,9 +23,11 @@ import static java.util.Objects.requireNonNull;
 import org.apache.thrift.transport.TTransportException;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
+import com.linecorp.armeria.client.RequestOptions;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.UserClient;
 import com.linecorp.armeria.client.thrift.THttpClient;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -35,6 +37,11 @@ import com.linecorp.armeria.internal.common.PathAndQuery;
 import io.micrometer.core.instrument.MeterRegistry;
 
 final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> implements THttpClient {
+
+    private static final RequestOptions UNARY_REQUEST_OPTIONS =
+            RequestOptions.builder()
+                          .exchangeType(ExchangeType.UNARY)
+                          .build();
 
     DefaultTHttpClient(ClientBuilderParams params, RpcClient delegate, MeterRegistry meterRegistry) {
         super(params, delegate, meterRegistry, RpcResponse::from,
@@ -68,7 +75,7 @@ final class DefaultTHttpClient extends UserClient<RpcRequest, RpcResponse> imple
 
         final RpcRequest call = RpcRequest.of(serviceType, method, args);
         return execute(scheme().sessionProtocol(), HttpMethod.POST,
-                       pathAndQuery.path(), null, serviceName, call);
+                       pathAndQuery.path(), null, serviceName, call, UNARY_REQUEST_OPTIONS);
     }
 
     @Override

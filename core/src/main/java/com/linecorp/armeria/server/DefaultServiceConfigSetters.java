@@ -23,6 +23,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
@@ -59,12 +61,11 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private AccessLogWriter accessLogWriter;
     @Nullable
     private ScheduledExecutorService blockingTaskExecutor;
-    private boolean shutdownBlockingTaskExecutorOnStop;
-    private boolean shutdownAccessLogWriterOnStop;
     @Nullable
     private SuccessFunction successFunction;
     @Nullable
     private Path multipartUploadsLocation;
+    private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
 
     @Override
     public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
@@ -97,8 +98,15 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
 
     @Override
     public ServiceConfigSetters accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
-        this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
-        shutdownAccessLogWriterOnStop = shutdownOnStop;
+        requireNonNull(accessLogWriter, "accessLogWriter");
+        if (this.accessLogWriter != null) {
+            this.accessLogWriter = this.accessLogWriter.andThen(accessLogWriter);
+        } else {
+            this.accessLogWriter = accessLogWriter;
+        }
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(accessLogWriter));
+        }
         return this;
     }
 
@@ -130,16 +138,12 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Override
     public ServiceConfigSetters decorators(
             Iterable<? extends Function<? super HttpService, ? extends HttpService>> decorators) {
-
         requireNonNull(decorators, "decorators");
-
-        ServiceConfigSetters ret = this;
         for (Function<? super HttpService, ? extends HttpService> decorator : decorators) {
             requireNonNull(decorator, "decorators contains null.");
-            ret = decorator(decorator);
+            decorator(decorator);
         }
-
-        return ret;
+        return this;
     }
 
     @Override
@@ -167,7 +171,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     public ServiceConfigSetters blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
                                                      boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(blockingTaskExecutor));
+        }
         return this;
     }
 
@@ -238,10 +244,12 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
             serviceConfigBuilder.verboseResponses(verboseResponses);
         }
         if (accessLogWriter != null) {
-            serviceConfigBuilder.accessLogWriter(accessLogWriter, shutdownAccessLogWriterOnStop);
+            serviceConfigBuilder.accessLogWriter(accessLogWriter, false);
+            // Set the accessLogWriter as false because it's shut down in ShutdownSupport.
         }
         if (blockingTaskExecutor != null) {
-            serviceConfigBuilder.blockingTaskExecutor(blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop);
+            serviceConfigBuilder.blockingTaskExecutor(blockingTaskExecutor, false);
+            // Set the blockingTaskExecutor as false because it's shut down in ShutdownSupport.
         }
         if (successFunction != null) {
             serviceConfigBuilder.successFunction(successFunction);
@@ -249,6 +257,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         if (multipartUploadsLocation != null) {
             serviceConfigBuilder.multipartUploadsLocation(multipartUploadsLocation);
         }
+        serviceConfigBuilder.shutdownSupports(shutdownSupports);
         return serviceConfigBuilder;
     }
 }
