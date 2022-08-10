@@ -38,8 +38,7 @@ import io.netty.util.concurrent.EventExecutor;
 public final class HttpAggregationOptionsBuilder<T extends HttpObject, U extends AggregatedHttpMessage>
         extends AggregationOptionsBuilder<T, U> {
 
-    private final BiFunction<? super HttpAggregationOptions<T, U>,
-            ? super List<T>, ? extends U> aggregator;
+    private final BiFunction<? super HttpAggregationOptions<T, U>, ? super List<T>, ? extends U> aggregator;
     @Nullable
     private ByteBufAllocator alloc;
 
