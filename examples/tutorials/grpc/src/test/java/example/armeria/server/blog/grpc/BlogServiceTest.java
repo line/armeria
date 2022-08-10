@@ -21,14 +21,14 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-import example.armeria.server.blog.grpc.Blog.BlogPost;
-import example.armeria.server.blog.grpc.Blog.CreateBlogPostRequest;
-import example.armeria.server.blog.grpc.Blog.DeleteBlogPostRequest;
-import example.armeria.server.blog.grpc.Blog.GetBlogPostRequest;
-import example.armeria.server.blog.grpc.Blog.ListBlogPostsRequest;
-import example.armeria.server.blog.grpc.Blog.ListBlogPostsResponse;
-import example.armeria.server.blog.grpc.Blog.UpdateBlogPostRequest;
-import example.armeria.server.blog.grpc.BlogServiceGrpc.BlogServiceBlockingStub;
+import example.armeria.blog.grpc.BlogPost;
+import example.armeria.blog.grpc.BlogServiceGrpc.BlogServiceBlockingStub;
+import example.armeria.blog.grpc.CreateBlogPostRequest;
+import example.armeria.blog.grpc.DeleteBlogPostRequest;
+import example.armeria.blog.grpc.GetBlogPostRequest;
+import example.armeria.blog.grpc.ListBlogPostsRequest;
+import example.armeria.blog.grpc.ListBlogPostsResponse;
+import example.armeria.blog.grpc.UpdateBlogPostRequest;
 import io.grpc.Status.Code;
 import io.grpc.StatusRuntimeException;
 
@@ -103,7 +103,9 @@ class BlogServiceTest {
                                                                        .build();
         client.createBlogPost(newBlogPost);
         final ListBlogPostsResponse
-                response = client.listBlogPosts(ListBlogPostsRequest.newBuilder().setOrderBy("asc").build());
+                response = client.listBlogPosts(ListBlogPostsRequest.newBuilder()
+                                                                    .setDescending(false)
+                                                                    .build());
 
         final List<BlogPost> blogs = response.getBlogsList();
         assertThat(blogs).hasSize(2);

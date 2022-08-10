@@ -1,7 +1,8 @@
 syntax = "proto3";
 
-package example.armeria.server.blog.grpc;
-option java_package = "example.armeria.server.blog.grpc";
+package example.armeria.blog.grpc;
+option java_package = "example.armeria.blog.grpc";
+option java_multiple_files = true;
 
 import "google/protobuf/empty.proto";
 
@@ -23,7 +24,7 @@ message GetBlogPostRequest {
 }
 
 message ListBlogPostsRequest {
-  string order_by = 1;
+  bool descending = 1;
 }
 
 message ListBlogPostsResponse {

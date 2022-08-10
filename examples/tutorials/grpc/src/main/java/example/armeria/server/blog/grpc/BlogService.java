@@ -12,13 +12,14 @@ import java.util.stream.Collectors;
 
 import com.google.protobuf.Empty;
 
-import example.armeria.server.blog.grpc.Blog.BlogPost;
-import example.armeria.server.blog.grpc.Blog.CreateBlogPostRequest;
-import example.armeria.server.blog.grpc.Blog.DeleteBlogPostRequest;
-import example.armeria.server.blog.grpc.Blog.GetBlogPostRequest;
-import example.armeria.server.blog.grpc.Blog.ListBlogPostsRequest;
-import example.armeria.server.blog.grpc.Blog.ListBlogPostsResponse;
-import example.armeria.server.blog.grpc.Blog.UpdateBlogPostRequest;
+import example.armeria.blog.grpc.BlogPost;
+import example.armeria.blog.grpc.BlogServiceGrpc;
+import example.armeria.blog.grpc.CreateBlogPostRequest;
+import example.armeria.blog.grpc.DeleteBlogPostRequest;
+import example.armeria.blog.grpc.GetBlogPostRequest;
+import example.armeria.blog.grpc.ListBlogPostsRequest;
+import example.armeria.blog.grpc.ListBlogPostsResponse;
+import example.armeria.blog.grpc.UpdateBlogPostRequest;
 import io.grpc.Status;
 import io.grpc.stub.StreamObserver;
 
@@ -65,7 +66,7 @@ final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
     public void listBlogPosts(ListBlogPostsRequest request,
                               StreamObserver<ListBlogPostsResponse> responseObserver) {
         final Collection<BlogPost> blogPosts;
-        if ("desc".equals(request.getOrderBy())) {
+        if (request.getDescending()) {
             blogPosts = this.blogPosts.entrySet()
                                       .stream()
                                       .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))

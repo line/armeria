@@ -8,7 +8,8 @@ import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.grpc.GrpcService;
 
-import example.armeria.server.blog.grpc.Blog.BlogPost;
+import example.armeria.blog.grpc.BlogPost;
+import example.armeria.blog.grpc.BlogServiceGrpc;
 import io.grpc.reflection.v1alpha.ServerReflectionGrpc;
 
 final class Main {
@@ -18,10 +19,9 @@ final class Main {
     public static void main(String[] args) throws Exception {
         final Server server = newServer(8080);
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            server.stop().join();
+        server.closeOnJvmShutdown().thenRun(() -> {
             logger.info("Server has been stopped.");
-        }));
+        });
 
         server.start().join();
 
