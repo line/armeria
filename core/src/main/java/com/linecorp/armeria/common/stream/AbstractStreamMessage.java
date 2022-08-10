@@ -24,6 +24,7 @@ import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.Exceptions;
 
 /**
  * A skeletal {@link StreamMessage} implementation.
@@ -37,7 +38,7 @@ public abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             AbstractStreamMessage.class, CompletableFuture.class, "aggregation");
 
     @Nullable
-    private volatile CompletableFuture<?> aggregation;
+    private volatile CompletableFuture<Object> aggregation;
 
     /**
      * Creates a new instance.
@@ -58,13 +59,21 @@ public abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
             return (CompletableFuture<U>) aggregation;
         }
 
-        final CompletableFuture<U> future =
-                collect(options.executor(), subscriptionOptions).thenApply(options.aggregator());
-        if (aggregationUpdater.compareAndSet(this, null, future)) {
-            return future;
-        } else {
-            //noinspection ConstantConditions
-            return (CompletableFuture<U>) this.aggregation;
+        if (aggregationUpdater.compareAndSet(this, null, new CompletableFuture<>())) {
+            // Propagate the result to `aggregation`
+            collect(options.executor(), subscriptionOptions).thenApply(options.aggregator())
+                    .handle((res, cause) -> {
+                        if (cause != null) {
+                            cause = Exceptions.peel(cause);
+                            this.aggregation.completeExceptionally(cause);
+                        } else {
+                            this.aggregation.complete(res);
+                        }
+                        return null;
+                    });
         }
+
+        //noinspection unchecked
+        return (CompletableFuture<U>) this.aggregation;
     }
 }

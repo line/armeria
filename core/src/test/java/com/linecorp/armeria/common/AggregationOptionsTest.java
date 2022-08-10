@@ -18,19 +18,24 @@ package com.linecorp.armeria.common;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.util.List;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
@@ -44,6 +49,8 @@ import io.netty.buffer.ByteBufAllocator;
 import reactor.core.publisher.Flux;
 
 class AggregationOptionsTest {
+
+    private static final Logger logger = LoggerFactory.getLogger(AggregationOptionsTest.class);
 
     @ArgumentsSource(StreamMessageProvider.class)
     @ParameterizedTest
@@ -87,9 +94,9 @@ class AggregationOptionsTest {
     void disallowPooledObjectWithCache() {
         assertThatThrownBy(() -> {
             HttpAggregationOptions.builderForResponse()
-                              .withPooledObjects(true, ByteBufAllocator.DEFAULT)
-                              .cacheResult(true)
-                              .build();
+                                  .withPooledObjects(true, ByteBufAllocator.DEFAULT)
+                                  .cacheResult(true)
+                                  .build();
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Can't cache pooled objects");
     }
@@ -150,6 +157,36 @@ class AggregationOptionsTest {
         assertThatThrownBy(() -> response.aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    void testConcurrentAggregation() throws InterruptedException {
+        final StreamMessage<Integer> stream = StreamMessage.of(1, 2, 3, 4);
+        final Function<List<Integer>, Integer> aggregator = nums -> {
+            return nums.stream().reduce(0, Integer::sum);
+        };
+        final AggregationOptions<Integer, Integer> options = AggregationOptions.builder(aggregator)
+                                                                               .cacheResult(true)
+                                                                               .build();
+
+        final int concurrency = 20;
+        final CountDownLatch startLatch = new CountDownLatch(concurrency);
+        final AtomicInteger success = new AtomicInteger();
+        for (int i = 0; i < 20; i++) {
+            CommonPools.blockingTaskExecutor().submit(() -> {
+                try {
+                    startLatch.countDown();
+                    startLatch.await();
+                } catch (InterruptedException e) {
+                    logger.warn("interrupted: ", e);
+                }
+                final int sum = stream.aggregate(options).join();
+                assertThat(sum).isEqualTo(10);
+                success.incrementAndGet();
+            });
+        }
+
+        await().untilAtomic(success, Matchers.equalTo(concurrency));
     }
 
     private static class StreamMessageProvider implements ArgumentsProvider {
