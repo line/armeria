@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpData;
@@ -35,6 +36,7 @@ final class StreamWriterOutputStream<T> extends OutputStream {
     private ByteBuf buffer;
     private final int maxBufferSize;
     private boolean closed;
+    private CompletableFuture<Void> writeFuture = CompletableFuture.completedFuture(null);
 
     StreamWriterOutputStream(StreamWriter<T> writer,
                              Function<? super HttpData, ? extends T> httpDataConverter,
@@ -107,9 +109,11 @@ final class StreamWriterOutputStream<T> extends OutputStream {
         if (!buffer.isReadable() || !writer.isOpen()) {
             return;
         }
+        writeFuture.join();
         if (!writer.tryWrite(httpDataConverter.apply(HttpData.wrap(buffer)))) {
             throw new IOException("Stream closed");
         }
         buffer = Unpooled.buffer(maxBufferSize, maxBufferSize);
+        writeFuture = writer.whenConsumed();
     }
 }

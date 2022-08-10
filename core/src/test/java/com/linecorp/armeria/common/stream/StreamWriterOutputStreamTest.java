@@ -28,6 +28,8 @@ import java.util.List;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Bytes;
@@ -58,6 +60,9 @@ class StreamWriterOutputStreamTest {
         final DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
         final OutputStream outputStream = writer.toOutputStream(HttpData::toStringUtf8);
 
+        final DefaultStreamMessage<String> verify = new DefaultStreamMessage<>();
+        writer.subscribe(testSubscriber(verify));
+
         final List<String> strings = ImmutableList.of("foo", "bar", "baz");
         for (String string : strings) {
             for (byte b : string.getBytes()) {
@@ -67,7 +72,7 @@ class StreamWriterOutputStreamTest {
         }
         outputStream.close();
 
-        StepVerifier.create(writer)
+        StepVerifier.create(verify)
                     .expectNext("foo", "bar", "baz")
                     .verifyComplete();
     }
@@ -77,6 +82,9 @@ class StreamWriterOutputStreamTest {
         final DefaultStreamMessage<Integer> writer = new DefaultStreamMessage<>();
         final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()));
 
+        final DefaultStreamMessage<Integer> verify = new DefaultStreamMessage<>();
+        writer.subscribe(testSubscriber(verify));
+
         final List<Integer> integers = ImmutableList.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         for (Integer integer : integers) {
             outputStream.write(integer.byteValue());
@@ -84,7 +92,7 @@ class StreamWriterOutputStreamTest {
         }
         outputStream.close();
 
-        StepVerifier.create(writer)
+        StepVerifier.create(verify)
                     .expectNext(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                     .verifyComplete();
     }
@@ -99,6 +107,9 @@ class StreamWriterOutputStreamTest {
         final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()));
         final StreamMessage<Integer> concat = StreamMessage.concat(source, writer);
 
+        final DefaultStreamMessage<Integer> verify = new DefaultStreamMessage<>();
+        concat.subscribe(testSubscriber(verify));
+
         final List<Integer> integers = ImmutableList.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         for (Integer integer : integers) {
             outputStream.write(integer.byteValue());
@@ -106,7 +117,7 @@ class StreamWriterOutputStreamTest {
         }
         outputStream.close();
 
-        StepVerifier.create(concat)
+        StepVerifier.create(verify)
                     .expectNext(12, 14, 16, 18, 20, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                     .verifyComplete();
     }
@@ -136,12 +147,15 @@ class StreamWriterOutputStreamTest {
         final DefaultStreamMessage<String> writer = new DefaultStreamMessage<>();
         final OutputStream outputStream = writer.toOutputStream(HttpData::toStringUtf8, 3);
 
+        final DefaultStreamMessage<String> verify = new DefaultStreamMessage<>();
+        writer.subscribe(testSubscriber(verify));
+
         for (byte b : "foobarbaz".getBytes()) {
             outputStream.write(b);
         }
         outputStream.close();
 
-        StepVerifier.create(writer)
+        StepVerifier.create(verify)
                     .expectNext("foo", "bar", "baz")
                     .verifyComplete();
     }
@@ -158,13 +172,16 @@ class StreamWriterOutputStreamTest {
                                            .reduce(Bytes::concat).get());
         byteArrayOutputStream.write(0);
 
+        final DefaultStreamMessage<String> verify = new DefaultStreamMessage<>();
+        writer.subscribe(testSubscriber(verify));
+
         for (byte b : "12".getBytes()) {
             outputStream.write(b);
         }
         outputStream.write(byteArrayOutputStream.toByteArray(), 1, byteArrayOutputStream.size() - 2);
         outputStream.close();
 
-        StepVerifier.create(writer)
+        StepVerifier.create(verify)
                     .expectNext("123", "456", "789", "ABC", "D")
                     .verifyComplete();
     }
@@ -183,6 +200,9 @@ class StreamWriterOutputStreamTest {
         final DefaultStreamMessage<Integer> writer = new DefaultStreamMessage<>();
         final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()));
 
+        final DefaultStreamMessage<Integer> verify = new DefaultStreamMessage<>();
+        writer.subscribe(testSubscriber(verify));
+
         final List<Integer> integers = ImmutableList.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         for (Integer integer : integers) {
             outputStream.write(integer.byteValue());
@@ -190,7 +210,7 @@ class StreamWriterOutputStreamTest {
         }
 
         assertThatCode(outputStream::close).doesNotThrowAnyException();
-        StepVerifier.create(writer)
+        StepVerifier.create(verify)
                     .expectNext(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                     .verifyComplete();
         assertThatThrownBy(() -> outputStream.write(0))
@@ -209,6 +229,9 @@ class StreamWriterOutputStreamTest {
         final DefaultStreamMessage<Integer> writer = new DefaultStreamMessage<>();
         final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()));
 
+        final DefaultStreamMessage<Integer> verify = new DefaultStreamMessage<>();
+        writer.subscribe(testSubscriber(verify));
+
         final List<Integer> integers = ImmutableList.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         for (Integer integer : integers) {
             outputStream.write(integer.byteValue());
@@ -219,7 +242,7 @@ class StreamWriterOutputStreamTest {
         outputStream.flush();
         writer.close();
 
-        StepVerifier.create(writer)
+        StepVerifier.create(verify)
                     .expectNext(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11)
                     .verifyComplete();
         assertThatThrownBy(() -> outputStream.write(0))
@@ -258,13 +281,16 @@ class StreamWriterOutputStreamTest {
         final DefaultStreamMessage<Integer> writer = new DefaultStreamMessage<>();
         final OutputStream outputStream = writer.toOutputStream(x -> Integer.valueOf(x.byteBuf().readByte()));
 
+        final DefaultStreamMessage<Integer> verify = new DefaultStreamMessage<>();
+        writer.subscribe(testSubscriber(verify));
+
         final List<Integer> integers = ImmutableList.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
         for (Integer integer : integers) {
             outputStream.write(integer.byteValue());
             outputStream.flush();
         }
         assertThatCode(outputStream::close).doesNotThrowAnyException();
-        StepVerifier.create(writer)
+        StepVerifier.create(verify)
                     .expectNext(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
                     .verifyComplete();
 
@@ -299,5 +325,29 @@ class StreamWriterOutputStreamTest {
         assertThatThrownBy(() -> outputStream.write(0))
                 .isInstanceOf(IOException.class)
                 .hasMessage("Stream closed");
+    }
+
+    private static <T> Subscriber<T> testSubscriber(StreamWriter<T> verify) {
+        return new Subscriber<T>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(Long.MAX_VALUE);
+            }
+
+            @Override
+            public void onNext(T item) {
+                verify.write(item);
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                verify.close(t);
+            }
+
+            @Override
+            public void onComplete() {
+                verify.close();
+            }
+        };
     }
 }
