@@ -60,13 +60,13 @@ class ServerHttp1ObjectEncoderTest {
             final InputStream is = socket.getInputStream();
             final BufferedReader reader = new BufferedReader(new InputStreamReader(is));
 
+            final String transferEncoding = HttpHeaderNames.TRANSFER_ENCODING.toString().toLowerCase();
             for (;;) {
                 final String line = reader.readLine();
                 if (Strings.isNullOrEmpty(line)) {
                     break;
                 }
-                assertThat(line.toLowerCase()).doesNotContain(
-                        HttpHeaderNames.TRANSFER_ENCODING.toString().toLowerCase());
+                assertThat(line.toLowerCase()).doesNotContain(transferEncoding);
             }
         }
     }
