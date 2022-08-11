@@ -93,7 +93,7 @@ Let's test deleting a blog. We know that our client creates a blog post by defau
 
 1. Call the delete method we just implemented followed by `listBlogPosts()` to see that no post with the ID `0` exists after deleting the post.
   ```java filename=BlogClient.java
-  static void testRun(){
+  static void testRun() {
     createBlogPost("Another blog post", "Creating a post via createBlogPost().");
     deleteBlogPost(0);
     listBlogPosts();
