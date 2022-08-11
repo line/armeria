@@ -10,7 +10,7 @@ type: step
 
 # Implementing UPDATE operation
 
-Previously, we created and read blog posts. Now, let's implement and make a call to update a blog post. Here, we'll throw a custom exception and add a <type://GrpcExceptionHandler> for handling.
+Previously, we created and read blog posts. Now, let's implement and make a call to update a blog post. Here, we'll throw a custom exception and add a GrpcExceptionHandler for handling.
 
 <TutorialSteps current={5} />
 
@@ -27,7 +27,7 @@ You need to have the files obtained from previous steps:
 
 1. In `BlogService.java` we've been working on, add a service method for updating a blog post. Leave the exception throwing part empty for now.
   ```java filename=BlogService.java
-  import example.armeria.server.blog.grpc.Blog.UpdateBlogPostRequest;
+  import example.armeria.blog.grpc.Blog.UpdateBlogPostRequest;
   
   public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
     @Override
@@ -50,7 +50,7 @@ You need to have the files obtained from previous steps:
   ```
 2. Add a class for the exception to be thrown when a specified blog post ID doesn't exist.
   ```java filename=BlogNotFoundException.java
-  package example.armeria.server.blog.grpc;
+  package example.armeria.blog.grpc;
   
   final class BlogNotFoundException extends IllegalStateException {
     BlogNotFoundException(String s) {
@@ -95,7 +95,7 @@ You need to have the files obtained from previous steps:
     }
   }
   ```
-4. Bind the exception handler `GrpcExceptionHandler` to our service.
+4. Bind the `GrpcExceptionHandler` to our service.
   ```java filename=Main.java
   private static Server newServer(int port) throws Exception {
     final GrpcService grpcService = 
@@ -110,7 +110,7 @@ You need to have the files obtained from previous steps:
 Add a method `updateBlogPost()` to send a request to update a blog post.
 
 ```java filename=BlogClient.java
-import example.armeria.server.blog.grpc.Blog.UpdateBlogPostRequest;
+import example.armeria.blog.grpc.Blog.UpdateBlogPostRequest;
 
 class BlogClient {
   static void updateBlogPost(Integer id, String newTitle, String newContent){
@@ -130,7 +130,7 @@ Let's test updating a blog post. Since we know we are giving an incremental inde
 
 1. Add a method to test run the update method we just implemented. 
   ```java filename=BlogClient.java
-  static void testRun(){
+  static void testRun() {
     // This guarantees a blog post with ID equal to 1
     createBlogPost("Another blog post", "Creating a post via createBlogPost().");
     // Check the existing title and content
@@ -152,7 +152,7 @@ Let's test updating a blog post. Since we know we are giving an incremental inde
    modifiedAt: 1649120472799
    }
    ...
-   DEBUG c.l.a.client.logging.LoggingClient - [...][http://127.0.0.1:8080/example.armeria.server.blog.grpc.BlogService/GetBlogPost#POST] 
+   DEBUG c.l.a.client.logging.LoggingClient - [...][http://127.0.0.1:8080/example.armeria.blog.grpc.BlogService/GetBlogPost#POST] 
    Response: {startTime=..., content=CompletableRpcResponse{id: 1
    title: "Another blog"
    content: "Creating a post via createBlogPost()."
@@ -196,7 +196,7 @@ To check that our exception handler is working, let's try updating a post we kno
 
 1. Add a method to test run the update method we just implemented.
   ```java filename=BlogClient.java
-  static void testRun(){
+  static void testRun() {
     createBlogPost("Another blog post", "Creating a post via createBlogPost().");
     updateBlogPost(10000, "New title", "New content."); // add this
   }
@@ -207,7 +207,7 @@ To check that our exception handler is working, let's try updating a post we kno
     at io.grpc.stub.ClientCalls.toStatusRuntimeException(ClientCalls.java:262)
     at io.grpc.stub.ClientCalls.getUnchecked(ClientCalls.java:243)
     at io.grpc.stub.ClientCalls.blockingUnaryCall(ClientCalls.java:156)
-    at example.armeria.server.blog.grpc.BlogServiceGrpc$BlogServiceBlockingStub.updateBlogPost(BlogServiceGrpc.java:390)
+    at example.armeria.blog.grpc.BlogServiceGrpc$BlogServiceBlockingStub.updateBlogPost(BlogServiceGrpc.java:390)
     at example.armeria.client.blog.grpc.BlogClient.updateBlogPost(BlogClient.java:110)
     at example.armeria.client.blog.grpc.BlogClient.testRun(BlogClient.java:53)
     at example.armeria.client.blog.grpc.BlogClient.main(BlogClient.java:46)

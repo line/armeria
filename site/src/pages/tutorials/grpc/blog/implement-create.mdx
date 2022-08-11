@@ -44,7 +44,7 @@ Let's implement a service method `createBlogPost()` in `BlogService.java`.
     2. Save the post information in the map.
     3. Return the information of the blog post created.
   ```java filename=BlogService.java
-  import example.armeria.server.blog.grpc.Blog.BlogPost;
+  import example.armeria.blog.grpc.Blog.BlogPost;
   import io.grpc.stub.StreamObserver;
   
   final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {

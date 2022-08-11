@@ -23,7 +23,7 @@ You need to have the [Java code generated](/tutorials/grpc/blog/define-service#c
 Create a file `BlogService.java` and declare an empty blog service. We'll implement the service methods later on in this file. For now, leave it empty.
 
 ```java filename=BlogService.java
-package example.armeria.server.blog.grpc;
+package example.armeria.blog.grpc;
 
 final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {}
 ```
@@ -35,7 +35,7 @@ Build a service and server using Armeria's <type://ServerBuilder> to serve our s
 1. Create a main class for our server. You can see the full version of the file [here](https://github.com/line/armeria-examples/blob/master/tutorials/grpc/src/main/java/example/armeria/server/blog/grpc/BlogService.java).
 
   ```java filename=Main.java
-  package example.armeria.server.blog.grpc;
+  package example.armeria.blog.grpc;
 
   public final class Main {}
   ```
@@ -102,7 +102,7 @@ We've only tested running the service on a server. This time, let's try calling 
 2. Create a client using Armeria's <type://GrpcClients>. We're running the server locally and have set the port to 8080 in our server code. Let's access the server at http://127.0.0.1:8080.
   ```java filename=BlogClient.java
   import com.linecorp.armeria.client.grpc.GrpcClients;
-  import example.armeria.server.blog.grpc.BlogServiceGrpc.BlogServiceBlockingStub;
+  import example.armeria.blog.grpc.BlogServiceGrpc.BlogServiceBlockingStub;
 
   class BlogClient {
     static BlogServiceBlockingStub client;
@@ -112,10 +112,10 @@ We've only tested running the service on a server. This time, let's try calling 
                                      BlogServiceBlockingStub.class);
   }
   ```
-3. Although we haven't implemented any service method, we'll call one just to check our client can communicate with the server.
+3. Although we haven't implemented any service method, we'll call one just to check whether our client can communicate with the server.
   ```java
-  import example.armeria.server.blog.grpc.Blog.BlogPost;
-  import example.armeria.server.blog.grpc.Blog.CreateBlogPostRequest;
+  import example.armeria.blog.grpc.Blog.BlogPost;
+  import example.armeria.blog.grpc.Blog.CreateBlogPostRequest;
 
   public static void main(String[] args) throws Exception {
     ...
@@ -132,7 +132,7 @@ We've only tested running the service on a server. This time, let's try calling 
 While the server is running, run the client's `main()` method. You'll get an exception.
 
 ```bash
-Exception in thread "main" io.grpc.StatusRuntimeException: UNIMPLEMENTED: Method example.armeria.server.blog.grpc.BlogService/CreateBlogPost is unimplemented
+Exception in thread "main" io.grpc.StatusRuntimeException: UNIMPLEMENTED: Method example.armeria.blog.grpc.BlogService/CreateBlogPost is unimplemented
 ```
 
 The message says "UNIMPLEMENTED". This is because we are yet to implement the service method to create a blog post. One thing we did check is that our service does return something to a client call.

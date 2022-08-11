@@ -31,7 +31,7 @@ Let's implement a service method `deleteBlogPost()` in `BlogService.java` we've 
 1. Add a service method, `deleteBlogPost()`.
 
   ```java filename=BlogService.java
-  import example.armeria.server.blog.grpc.Blog.DeleteBlogPostRequest;
+  import example.armeria.blog.grpc.Blog.DeleteBlogPostRequest;
 
   public class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
     @Override
@@ -46,11 +46,11 @@ Let's implement a service method `deleteBlogPost()` in `BlogService.java` we've 
       final BlogPost removed = blogPosts.remove(request.getId());
       if (removed == null) {
         responseObserver.onError(
-          throw new IllegalArgumentException("The post with ID": " + "does not exist");
-       } else {
+          throw new IllegalArgumentException("The blog post does not exist. ID: " + request.getId());
+      } else {
           responseObserver.onNext(Empty.getDefaultInstance());
           responseObserver.onCompleted();
-       }
+      }
    }
   }
   ```
@@ -73,10 +73,10 @@ Let's implement a service method `deleteBlogPost()` in `BlogService.java` we've 
 Add a method `deleteBlogPost()` to send a request to update a blog post.
 
 ```java filename=BlogClient.java
-import example.armeria.server.blog.grpc.Blog.DeleteBlogPostRequest;
+import example.armeria.blog.grpc.Blog.DeleteBlogPostRequest;
 
 class BlogClient {
-  static void deleteBlogPost(Integer id) {
+  static void deleteBlogPost(int id) {
     final DeleteBlogPostRequest request = DeleteBlogPostRequest.newBuilder().setId(id).build();
     try {
       client.deleteBlogPost(request);
@@ -106,7 +106,7 @@ Let's test deleting a blog. We know that our client creates a blog post by defau
 3. Run the client. The number of blog posts in the log depends on how you've tested so far. Anyhow, since we are attempting to delete the first post, you won't have a problem, unless you've deleted it already. You can check that the list of posts retrieved start from `1`, which is the second post.
    ```bash
    [armeria-common-worker-nio-2-1] DEBUG c.l.a.client.logging.LoggingClient - [creqId=8573ef34, ... 
-   [http://127.0.0.1:8080/example.armeria.server.blog.grpc.BlogService/ListBlogPosts#POST] 
+   [http://127.0.0.1:8080/example.armeria.blog.grpc.BlogService/ListBlogPosts#POST] 
    Response: ..., content=CompletableRpcResponse{blogs {
    id: 1
    ```

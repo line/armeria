@@ -18,8 +18,9 @@ Create a file, `blog.proto` inside the directory, `{project_root}/src/main/proto
 ```protobuf filename=blog.proto
 syntax = "proto3";
 
-package example.armeria.server.blog.grpc;
-option java_package = "example.armeria.server.blog.grpc";
+package example.armeria.blog.grpc;
+option java_package = "example.armeria.blog.grpc";
+option java_multiple_files = true;
 ```
 
 ## 2. Define a blog post
@@ -39,6 +40,12 @@ message BlogPost {
 ## 3. Add service methods
 
 Add service methods to the blog service. We have two methods for retrieving blog posts; one is for retrieving a single post and another for multiple posts.
+
+<Tip>
+
+  The APIs are designed based on the [Google's API design decisions](https://google.aip.dev/general).
+
+</Tip>
 
 ```protobuf filename=blog.proto
 import "google/protobuf/empty.proto";

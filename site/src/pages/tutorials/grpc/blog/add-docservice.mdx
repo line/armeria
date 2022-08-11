@@ -53,7 +53,7 @@ final class Main {
 ```
 
 ## 2. Enable unframed requests
-To test making calls on the Documentation service, enable unframed requests by setting <type://GrpcServiceBuilder#enableUnframedRequests(boolean)> to true. This makes the blog service support requests that are not framed in gRPC wire format. For us, this enables making calls from a web browser.
+To test making calls on the Documentation service, enable unframed requests by setting <type://GrpcServiceBuilder#enableUnframedRequests(boolean)> to `true`. This makes the blog service support requests that are not framed in gRPC wire format. For us, this enables making calls from a web browser.
 
 ```java filename=Main.java
 private static Server newServer(int port) throws Exception {
