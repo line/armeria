@@ -78,6 +78,12 @@ public final class StructInfo implements NamedTypeInfo {
 
     /**
      * Returns the alias of the {@link #name()}.
+     * An alias could be set when a {@link StructInfo} has two different names.
+     *
+     * <p>For example, if a {@link StructInfo} is extracted from a {@code com.google.protobuf.Message},
+     * the {@link StructInfo#name()} is set to the full name defined in the proto file and the
+     * {@link StructInfo#alias()} is set to the {@linkplain Class#getName() name} of the generated
+     * {@link Class}.
      */
     @Nullable
     @JsonInclude(Include.NON_NULL)
