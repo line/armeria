@@ -100,7 +100,7 @@ This time, we'll add a method each for retrieving posts.
   ```java filename=BlogClient.java
   import example.armeria.server.blog.grpc.Blog.GetBlogPostRequest;
   ...
-  static void getBlogPost(Integer id){
+  static void getBlogPost(int id){
     final BlogPost blogPost = client.getBlogPost(GetBlogPostRequest.newBuilder().setId(id).build());
   }
   ```
