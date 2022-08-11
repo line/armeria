@@ -34,9 +34,9 @@ Let's implement a service method `createBlogPost()` in `BlogService.java`.
   import java.util.concurrent.atomic.AtomicInteger;
   
   public final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+    private static final Logger logger = LoggerFactory.getLogger(BlogService.class);
     private final AtomicInteger idGenerator = new AtomicInteger();
     private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
-    private static final Logger logger = LoggerFactory.getLogger(Main.class);
   }
   ```
 2. Add a service method, `createBlogPost()`:
