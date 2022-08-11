@@ -54,10 +54,10 @@ final class ResponseConverterFunctionUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(ResponseConverterFunctionUtil.class);
 
-    static final List<DelegatingResponseConverterFunctionProvider>
+    private static final List<DelegatingResponseConverterFunctionProvider>
             delegatingResponseConverterFunctionProviders = ImmutableList.copyOf(
             ServiceLoader.load(DelegatingResponseConverterFunctionProvider.class,
-                               AnnotatedService.class.getClassLoader()));
+                               ResponseConverterFunctionUtil.class.getClassLoader()));
 
     /**
      * The default {@link ResponseConverterFunction}s.
@@ -66,7 +66,7 @@ final class ResponseConverterFunctionUtil {
             new JacksonResponseConverterFunction(), new StringResponseConverterFunction(),
             new ByteArrayResponseConverterFunction(), new HttpFileResponseConverterFunction());
 
-    static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
+    private static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
             ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
                                                     AnnotatedService.class.getClassLoader()));
 
@@ -92,8 +92,10 @@ final class ResponseConverterFunctionUtil {
                                                   .collect(Collectors.toList());
 
         final ImmutableList<ResponseConverterFunction> backingConverters =
-                ImmutableList.<ResponseConverterFunction>builder().addAll(responseConverters).addAll(
-                        nonDelegatingSpiConverters).addAll(defaultResponseConverters).build();
+                ImmutableList.<ResponseConverterFunction>builder()
+                             .addAll(responseConverters)
+                             .addAll(nonDelegatingSpiConverters)
+                             .addAll(defaultResponseConverters).build();
 
         final ResponseConverterFunction responseConverter = new CompositeResponseConverterFunction(
                 ImmutableList.<ResponseConverterFunction>builder().addAll(backingConverters)

@@ -33,7 +33,7 @@ public interface DelegatingResponseConverterFunctionProvider {
      * Returns a {@link ResponseConverterFunction} instance if the function can convert
      * the {@code responseType}, otherwise return {@code null}.
      * The {@link ResponseConverterFunction} passed in is a delegate function which will be used to convert
-     * the {@code responseType}
+     * the {@code responseType}.
      *
      * @param responseType the return {@link Type} of the annotated HTTP service method
      * @param responseConverter the delegate {@link ResponseConverterFunction} which converts an object
