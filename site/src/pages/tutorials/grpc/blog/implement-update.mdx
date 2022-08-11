@@ -201,7 +201,7 @@ To check that our exception handler is working, let's try updating a post we kno
     updateBlogPost(10000, "New title", "New content."); // add this
   }
   ```
-2. While the server is running, run the client and see the message that you get. We threw the `BlogNotFoundException` and the exception handler returned the NOT_FOUND runtime exception for us.
+2. While the server is running, run the client and see the message that you get. We threw the `BlogNotFoundException` and the exception handler returned the `NOT_FOUND` runtime exception for us.
   ```bash
   Exception in thread "main" io.grpc.StatusRuntimeException: NOT_FOUND: The blog post does not exist. ID: 10000
     at io.grpc.stub.ClientCalls.toStatusRuntimeException(ClientCalls.java:262)
