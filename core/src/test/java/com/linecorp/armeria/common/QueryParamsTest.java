@@ -99,7 +99,7 @@ class QueryParamsTest {
         assertThat(params.get("date")).isEqualTo(expectedDate);
         assertThat(params.get("instant")).isEqualTo(expectedDate);
         assertThat(params.get("calendar")).isEqualTo(expectedDate);
-        assertThat(params.get("cache-control")).isEqualTo("no-cache, no-store, must-revalidate");
+        assertThat(params.get("cache-control")).isEqualTo("no-cache, no-store, max-age=0, must-revalidate");
         assertThat(params.get("media-type")).isEqualTo("text/plain; charset=utf-8");
     }
 

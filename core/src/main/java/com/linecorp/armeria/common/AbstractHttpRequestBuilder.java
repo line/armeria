@@ -20,12 +20,9 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.common.HttpHeaderNames.CONTENT_LENGTH;
-import static com.linecorp.armeria.common.HttpHeaderNames.COOKIE;
 import static java.util.Objects.requireNonNull;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
@@ -49,8 +46,6 @@ public abstract class AbstractHttpRequestBuilder
     private QueryParamsBuilder queryParams;
     @Nullable
     private Map<String, String> pathParams;
-    @Nullable
-    private List<Cookie> cookies;
     @Nullable
     private String path;
     private boolean disablePathParams;
@@ -235,20 +230,14 @@ public abstract class AbstractHttpRequestBuilder
     @Override
     public AbstractHttpRequestBuilder cookie(Cookie cookie) {
         requireNonNull(cookie, "cookie");
-        if (cookies == null) {
-            cookies = new ArrayList<>();
-        }
-        cookies.add(cookie);
+        requestHeadersBuilder.cookie(cookie);
         return this;
     }
 
     @Override
     public AbstractHttpRequestBuilder cookies(Iterable<? extends Cookie> cookies) {
         requireNonNull(cookies, "cookies");
-        if (this.cookies == null) {
-            this.cookies = new ArrayList<>();
-        }
-        cookies.forEach(this.cookies::add);
+        requestHeadersBuilder.cookies(cookies);
         return this;
     }
 
@@ -285,11 +274,10 @@ public abstract class AbstractHttpRequestBuilder
 
     private RequestHeaders requestHeaders() {
         requestHeadersBuilder.path(buildPath());
-        if (cookies != null) {
-            requestHeadersBuilder.set(COOKIE, Cookie.toCookieHeader(cookies));
-        }
+        @SuppressWarnings("resource")
         final HttpData content = content();
         if (content == null || content.isEmpty()) {
+            //noinspection ReactiveStreamsUnusedPublisher
             if (publisher() == null) {
                 requestHeadersBuilder.remove(CONTENT_LENGTH);
             }

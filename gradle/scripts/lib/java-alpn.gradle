@@ -14,7 +14,7 @@ configure(projectsWithFlags('java')) {
         }
 
         dependencies {
-            alpnAgent 'org.mortbay.jetty.alpn:jetty-alpn-agent'
+            alpnAgent "org.mortbay.jetty.alpn:jetty-alpn-agent:${managedVersions['org.mortbay.jetty.alpn:jetty-alpn-agent']}"
         }
 
         task copyAlpnAgent(type: Copy) {

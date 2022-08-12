@@ -61,6 +61,7 @@ import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -343,9 +344,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final DefaultServiceRequestContext reqCtx = new DefaultServiceRequestContext(
                 serviceCfg, channel, config.meterRegistry(), protocol,
-                nextRequestId(), routingCtx, routingResult,
+                nextRequestId(), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
-                System.nanoTime(), SystemInfo.currentTimeMicros());
+                req.requestStartTimeNanos(), req.requestStartTimeMicros());
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
@@ -433,7 +434,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             req.setResponse(res);
 
             assert responseEncoder != null;
-            if (service.exchangeType(headers, routed.route()).isResponseStreaming()) {
+            if (reqCtx.exchangeType().isResponseStreaming()) {
                 final HttpResponseSubscriber resSubscriber =
                         new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
                 res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
@@ -610,17 +611,18 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private ServiceRequestContext newEarlyRespondingRequestContext(Channel channel, HttpRequest req,
+    private ServiceRequestContext newEarlyRespondingRequestContext(Channel channel, DecodedHttpRequest req,
                                                                    ProxiedAddresses proxiedAddresses,
                                                                    InetAddress clientAddress,
                                                                    RoutingContext routingCtx) {
+        final ServiceConfig serviceConfig = routingCtx.virtualHost().fallbackServiceConfig();
         final RoutingResult routingResult = RoutingResult.builder()
                                                          .path(routingCtx.path())
                                                          .build();
         return new DefaultServiceRequestContext(
-                routingCtx.virtualHost().fallbackServiceConfig(),
+                serviceConfig,
                 channel, NoopMeterRegistry.get(), protocol(),
-                nextRequestId(), routingCtx, routingResult,
+                nextRequestId(), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
                 System.nanoTime(), SystemInfo.currentTimeMicros());
     }

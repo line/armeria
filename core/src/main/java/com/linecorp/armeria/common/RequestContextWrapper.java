@@ -27,6 +27,7 @@ import javax.net.ssl.SSLSession;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
+import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -38,185 +39,195 @@ import io.netty.util.AttributeKey;
  *
  * @param <T> the self type
  */
-public abstract class RequestContextWrapper<T extends RequestContext> implements RequestContext {
-
-    private final T delegate;
-
+public abstract class RequestContextWrapper<T extends RequestContext>
+        extends AbstractUnwrappable<T> implements RequestContext {
     /**
      * Creates a new instance.
      */
     protected RequestContextWrapper(T delegate) {
-        this.delegate = requireNonNull(delegate, "delegate");
+        super(requireNonNull(delegate, "delegate"));
     }
 
     /**
      * Returns the delegate context.
+     * @deprecated Use {@link RequestContextWrapper#unwrap()} instead.
      */
+    @Deprecated
     protected final T delegate() {
-        return delegate;
+        return unwrap();
     }
 
     @Nullable
     @Override
     public ServiceRequestContext root() {
-        return delegate().root();
+        return unwrap().root();
     }
 
     @Nullable
     @Override
     public <V> V attr(AttributeKey<V> key) {
-        return delegate().attr(key);
+        return unwrap().attr(key);
     }
 
     @Nullable
     @Override
     public <V> V ownAttr(AttributeKey<V> key) {
-        return delegate().ownAttr(key);
+        return unwrap().ownAttr(key);
     }
 
     @Override
     public boolean hasAttr(AttributeKey<?> key) {
-        return delegate().hasAttr(key);
+        return unwrap().hasAttr(key);
     }
 
     @Override
     public boolean hasOwnAttr(AttributeKey<?> key) {
-        return delegate().hasOwnAttr(key);
+        return unwrap().hasOwnAttr(key);
     }
 
     @Override
     public Iterator<Entry<AttributeKey<?>, Object>> attrs() {
-        return delegate().attrs();
+        return unwrap().attrs();
     }
 
     @Override
     public Iterator<Entry<AttributeKey<?>, Object>> ownAttrs() {
-        return delegate().ownAttrs();
+        return unwrap().ownAttrs();
     }
 
     @Override
     public <V> V setAttr(AttributeKey<V> key, @Nullable V value) {
-        return delegate().setAttr(key, value);
+        return unwrap().setAttr(key, value);
     }
 
     @Override
     public HttpRequest request() {
-        return delegate().request();
+        return unwrap().request();
     }
 
     @Nullable
     @Override
     public RpcRequest rpcRequest() {
-        return delegate().rpcRequest();
+        return unwrap().rpcRequest();
     }
 
     @Override
     public void updateRequest(HttpRequest req) {
-        delegate().updateRequest(req);
+        unwrap().updateRequest(req);
     }
 
     @Override
     public void updateRpcRequest(RpcRequest rpcReq) {
-        delegate().updateRpcRequest(rpcReq);
+        unwrap().updateRpcRequest(rpcReq);
     }
 
     @Override
     public SessionProtocol sessionProtocol() {
-        return delegate().sessionProtocol();
+        return unwrap().sessionProtocol();
     }
 
     @Nullable
     @Override
     public <A extends SocketAddress> A remoteAddress() {
-        return delegate().remoteAddress();
+        return unwrap().remoteAddress();
     }
 
     @Nullable
     @Override
     public <A extends SocketAddress> A localAddress() {
-        return delegate().localAddress();
+        return unwrap().localAddress();
     }
 
     @Nullable
     @Override
     public SSLSession sslSession() {
-        return delegate().sslSession();
+        return unwrap().sslSession();
     }
 
     @Override
     public RequestId id() {
-        return delegate().id();
+        return unwrap().id();
     }
 
     @Override
     public HttpMethod method() {
-        return delegate().method();
+        return unwrap().method();
     }
 
     @Override
     public String path() {
-        return delegate().path();
+        return unwrap().path();
     }
 
     @Override
     public String decodedPath() {
-        return delegate().decodedPath();
+        return unwrap().decodedPath();
     }
 
     @Override
     public String query() {
-        return delegate().query();
+        return unwrap().query();
     }
 
     @Override
     public RequestLogAccess log() {
-        return delegate().log();
+        return unwrap().log();
     }
 
     @Override
     public RequestLogBuilder logBuilder() {
-        return delegate().logBuilder();
+        return unwrap().logBuilder();
     }
 
     @Override
     public MeterRegistry meterRegistry() {
-        return delegate().meterRegistry();
+        return unwrap().meterRegistry();
     }
 
     @Override
     public void cancel(Throwable cause) {
-        delegate().cancel(cause);
+        unwrap().cancel(cause);
     }
 
     @Override
     public void cancel() {
-        delegate().cancel();
+        unwrap().cancel();
     }
 
     @Override
     public void timeoutNow() {
-        delegate().timeoutNow();
+        unwrap().timeoutNow();
+    }
+
+    @Override
+    public RequestContext unwrapAll() {
+        return (RequestContext) super.unwrapAll();
     }
 
     @Override
     @Nullable
     public Throwable cancellationCause() {
-        return delegate().cancellationCause();
+        return unwrap().cancellationCause();
     }
 
     @Override
     public ContextAwareEventLoop eventLoop() {
-        return delegate().eventLoop();
+        return unwrap().eventLoop();
     }
 
     @Override
     public ByteBufAllocator alloc() {
-        return delegate().alloc();
+        return unwrap().alloc();
+    }
+
+    @Override
+    public ExchangeType exchangeType() {
+        return delegate().exchangeType();
     }
 
     @Override
     public String toString() {
-        return delegate().toString();
+        return unwrap().toString();
     }
 
     @Override

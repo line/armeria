@@ -54,6 +54,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
 import com.linecorp.armeria.common.util.TransportType;
+import com.linecorp.armeria.internal.common.FlagsLoaded;
 import com.linecorp.armeria.internal.common.util.SslContextUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -1415,4 +1416,10 @@ public final class Flags {
     }
 
     private Flags() {}
+
+    // This static block is defined at the end of this file deliberately
+    // to ensure that all static variables defined beforehand are initialized.
+    static {
+        FlagsLoaded.set();
+    }
 }

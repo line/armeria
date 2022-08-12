@@ -68,11 +68,11 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
     int attemptsSoFar;
 
     DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
-                     DefaultDnsResolver resolver, EventLoop eventLoop,
+                     long selectionTimeoutMillis, DefaultDnsResolver resolver, EventLoop eventLoop,
                      List<DnsQuestionWithoutTrailingDot> questions,
                      Backoff backoff, int minTtl, int maxTtl) {
 
-        super(selectionStrategy, allowEmptyEndpoints);
+        super(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis);
 
         this.resolver = resolver;
         this.eventLoop = eventLoop;

@@ -26,6 +26,7 @@ import java.util.function.Consumer;
 import javax.annotation.Nonnull;
 
 import com.linecorp.armeria.common.ContextAwareScheduledExecutorService;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -172,6 +173,11 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public ExchangeType exchangeType() {
+        return delegate().exchangeType();
+    }
+
+    @Override
     public long maxRequestLength() {
         return delegate().maxRequestLength();
     }
@@ -234,5 +240,10 @@ public class ServiceRequestContextWrapper
     @Override
     public CompletableFuture<Void> initiateConnectionShutdown() {
         return delegate().initiateConnectionShutdown();
+    }
+
+    @Override
+    public ServiceRequestContext unwrapAll() {
+        return (ServiceRequestContext) super.unwrapAll();
     }
 }

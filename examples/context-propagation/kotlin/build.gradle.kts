@@ -4,11 +4,11 @@ plugins {
 
 dependencies {
     implementation(project(":core"))
-    runtimeOnly("org.slf4j:slf4j-simple")
+    runtimeOnly(libs.slf4j.simple)
 
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")
+    implementation(kotlin("stdlib-jdk8"))
+    implementation(libs.kotlin.coroutines.core)
+    implementation(libs.kotlin.coroutines.jdk8)
 }
 
 application {

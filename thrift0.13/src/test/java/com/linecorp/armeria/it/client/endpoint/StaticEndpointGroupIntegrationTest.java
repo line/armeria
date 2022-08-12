@@ -22,9 +22,9 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TestName;
 
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.service.test.thrift.main.HelloService;
@@ -51,8 +51,8 @@ public class StaticEndpointGroupIntegrationTest {
                 Endpoint.of("127.0.0.1", serverTwo.httpPort()).withWeight(2),
                 Endpoint.of("127.0.0.1", serverThree.httpPort()).withWeight(3));
 
-        HelloService.Iface ipService = Clients.newClient("ttext+http", endpointGroup, "/serverIp",
-                                                         HelloService.Iface.class);
+        HelloService.Iface ipService = ThriftClients.newClient("ttext+http", endpointGroup, "/serverIp",
+                                                               HelloService.Iface.class);
         assertThat(ipService.hello("ip")).isEqualTo(
                 "host:127.0.0.1:" + serverOne.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo(
@@ -64,8 +64,8 @@ public class StaticEndpointGroupIntegrationTest {
                 Endpoint.of("127.0.0.1", serverTwo.httpPort()).withWeight(4),
                 Endpoint.of("127.0.0.1", serverThree.httpPort()).withWeight(3));
 
-        ipService = Clients.newClient("tbinary+http", serverGroup2, "/serverIp",
-                                      HelloService.Iface.class);
+        ipService = ThriftClients.newClient("http", serverGroup2, "/serverIp",
+                                            HelloService.Iface.class);
 
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverOne.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverThree.httpPort());
@@ -89,8 +89,8 @@ public class StaticEndpointGroupIntegrationTest {
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverTwo.httpPort());
 
         //direct connect to ip host
-        ipService = Clients.newClient("tbinary+http://127.0.0.1:" + serverOne.httpPort() + "/serverIp",
-                                      HelloService.Iface.class);
+        ipService = ThriftClients.newClient("tbinary+http://127.0.0.1:" + serverOne.httpPort() + "/serverIp",
+                                            HelloService.Iface.class);
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverOne.httpPort());
         assertThat(ipService.hello("ip")).isEqualTo("host:127.0.0.1:" + serverOne.httpPort());
     }

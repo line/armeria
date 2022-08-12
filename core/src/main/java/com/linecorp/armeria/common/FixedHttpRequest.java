@@ -44,6 +44,7 @@ final class FixedHttpRequest {
         }
     }
 
+    // TODO(ikhoon): Make `FixedHttpRequest`s implement AggregatedHttpRequest
     static final class OneElementFixedHttpRequest
             extends OneElementFixedStreamMessage<HttpObject> implements HttpRequest {
 

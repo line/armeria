@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.util;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Provides a way to unwrap an object in decorator pattern, similar to down-casting in an inheritance pattern.
@@ -86,5 +87,46 @@ public interface Unwrappable {
      */
     default Unwrappable unwrap() {
         return this;
+    }
+
+    /**
+     * Unwraps this object and returns the innermost object being decorated.
+     * If this {@link Unwrappable} is the innermost object, this method returns itself. For example:
+     * <pre>{@code
+     * class Foo implements Unwrappable {}
+     *
+     * class Bar<T extends Unwrappable> extends AbstractUnwrappable<T> {
+     *     Bar(T delegate) {
+     *         super(delegate);
+     *     }
+     * }
+     *
+     * class Qux<T extends Unwrappable> extends AbstractUnwrappable<T> {
+     *     Qux(T delegate) {
+     *         super(delegate);
+     *     }
+     * }
+     *
+     * Foo foo = new Foo();
+     * assert foo.unwrapAll() == foo;
+     *
+     * Bar<Foo> bar = new Bar<>(foo);
+     * assert bar.unwrapAll() == foo;
+     *
+     * Qux<Bar<Foo>> qux = new Qux<>(bar);
+     * assert qux.unwrap() == bar;
+     * assert qux.unwrapAll() == foo;
+     * }</pre>
+     */
+    @UnstableApi
+    default Object unwrapAll() {
+        Unwrappable unwrapped = this;
+        while (true) {
+            final Unwrappable inner = unwrapped.unwrap();
+            if (inner == unwrapped) {
+                return inner;
+            }
+            unwrapped = inner;
+        }
     }
 }

@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -135,6 +136,11 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public ExchangeType exchangeType() {
+        return delegate().exchangeType();
+    }
+
+    @Override
     public boolean isCancelled() {
         return delegate().isCancelled();
     }
@@ -164,5 +170,10 @@ public class ClientRequestContextWrapper
     @Override
     public CompletableFuture<Void> whenResponseTimedOut() {
         return delegate().whenResponseTimedOut();
+    }
+
+    @Override
+    public ClientRequestContext unwrapAll() {
+        return (ClientRequestContext) super.unwrapAll();
     }
 }

@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -26,6 +27,7 @@ import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -60,15 +62,14 @@ public final class ServiceConfig {
     private final boolean verboseResponses;
 
     private final AccessLogWriter accessLogWriter;
-    private final boolean shutdownAccessLogWriterOnStop;
     private final Set<TransientServiceOption> transientServiceOptions;
     private final boolean handlesCorsPreflight;
     private final SuccessFunction successFunction;
 
     private final ScheduledExecutorService blockingTaskExecutor;
-    private final boolean shutdownBlockingTaskExecutorOnStop;
 
     private final Path multipartUploadsLocation;
+    private final List<ShutdownSupport> shutdownSupports;
 
     /**
      * Creates a new instance.
@@ -77,16 +78,14 @@ public final class ServiceConfig {
                   @Nullable String defaultServiceName, ServiceNaming defaultServiceNaming,
                   long requestTimeoutMillis, long maxRequestLength,
                   boolean verboseResponses, AccessLogWriter accessLogWriter,
-                  boolean shutdownAccessLogWriterOnStop,
                   ScheduledExecutorService blockingTaskExecutor,
-                  boolean shutdownBlockingTaskExecutorOnStop,
                   SuccessFunction successFunction,
-                  Path multipartUploadsLocation) {
+                  Path multipartUploadsLocation, List<ShutdownSupport> shutdownSupports) {
         this(null, route, mappedRoute, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
-             shutdownAccessLogWriterOnStop, extractTransientServiceOptions(service),
-             blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
-             multipartUploadsLocation);
+             extractTransientServiceOptions(service),
+             blockingTaskExecutor, successFunction,
+             multipartUploadsLocation, shutdownSupports);
     }
 
     /**
@@ -97,29 +96,27 @@ public final class ServiceConfig {
                           @Nullable String defaultLogName, @Nullable String defaultServiceName,
                           ServiceNaming defaultServiceNaming, long requestTimeoutMillis, long maxRequestLength,
                           boolean verboseResponses, AccessLogWriter accessLogWriter,
-                          boolean shutdownAccessLogWriterOnStop,
                           Set<TransientServiceOption> transientServiceOptions,
                           ScheduledExecutorService blockingTaskExecutor,
-                          boolean shutdownBlockingTaskExecutorOnStop,
                           SuccessFunction successFunction,
-                          Path multipartUploadsLocation) {
+                          Path multipartUploadsLocation,
+                          List<ShutdownSupport> shutdownSupports) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
         this.service = requireNonNull(service, "service");
         this.defaultLogName = defaultLogName;
         this.defaultServiceName = defaultServiceName;
-        this.defaultServiceNaming = defaultServiceNaming;
+        this.defaultServiceNaming = requireNonNull(defaultServiceNaming, "defaultServiceNaming");
         this.requestTimeoutMillis = validateRequestTimeoutMillis(requestTimeoutMillis);
         this.maxRequestLength = validateMaxRequestLength(maxRequestLength);
         this.verboseResponses = verboseResponses;
         this.accessLogWriter = requireNonNull(accessLogWriter, "accessLogWriter");
-        this.shutdownAccessLogWriterOnStop = shutdownAccessLogWriterOnStop;
         this.transientServiceOptions = requireNonNull(transientServiceOptions, "transientServiceOptions");
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
         this.successFunction = requireNonNull(successFunction, "successFunction");
-        this.multipartUploadsLocation = multipartUploadsLocation;
+        this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
+        this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
     }
@@ -155,9 +152,9 @@ public final class ServiceConfig {
         requireNonNull(virtualHost, "virtualHost");
         return new ServiceConfig(virtualHost, route, mappedRoute, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
-                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
-                                 multipartUploadsLocation);
+                                 accessLogWriter, transientServiceOptions,
+                                 blockingTaskExecutor, successFunction,
+                                 multipartUploadsLocation, shutdownSupports);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -165,18 +162,18 @@ public final class ServiceConfig {
         return new ServiceConfig(virtualHost, route, mappedRoute, service.decorate(decorator), defaultLogName,
                                  defaultServiceName, defaultServiceNaming, requestTimeoutMillis,
                                  maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
-                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
-                                 multipartUploadsLocation);
+                                 accessLogWriter, transientServiceOptions,
+                                 blockingTaskExecutor, successFunction,
+                                 multipartUploadsLocation, shutdownSupports);
     }
 
     ServiceConfig withRoute(Route route) {
         requireNonNull(route, "route");
         return new ServiceConfig(virtualHost, route, mappedRoute, service, defaultLogName, defaultServiceName,
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
-                                 accessLogWriter, shutdownAccessLogWriterOnStop, transientServiceOptions,
-                                 blockingTaskExecutor, shutdownBlockingTaskExecutorOnStop, successFunction,
-                                 multipartUploadsLocation);
+                                 accessLogWriter, transientServiceOptions,
+                                 blockingTaskExecutor, successFunction,
+                                 multipartUploadsLocation, shutdownSupports);
     }
 
     /**
@@ -323,10 +320,14 @@ public final class ServiceConfig {
     /**
      * Tells whether the {@link AccessLogWriter} is shut down when the {@link Server} stops.
      *
-     * @see VirtualHost#shutdownAccessLogWriterOnStop()
+     * @deprecated This method is not used anymore. The {@link AccessLogWriter} is shut down if
+     *             the {@code shutdownOnStop} of
+     *             {@link ServiceBindingBuilder#accessLogWriter(AccessLogWriter, boolean)}
+     *             is set to {@code true}.
      */
+    @Deprecated
     public boolean shutdownAccessLogWriterOnStop() {
-        return shutdownAccessLogWriterOnStop;
+        return false;
     }
 
     /**
@@ -360,10 +361,14 @@ public final class ServiceConfig {
     /**
      * Returns whether the blocking task {@link Executor} is shut down when the {@link Server} stops.
      *
-     * @see VirtualHost#shutdownBlockingTaskExecutorOnStop()
+     * @deprecated This method is not used anymore. The {@code blockingTaskExecutor} is shut down if
+     *             the {@code shutdownOnStop} of
+     *             {@link ServiceBindingBuilder#blockingTaskExecutor(ScheduledExecutorService, boolean)}
+     *             is set to {@code true}.
      */
+    @Deprecated
     public boolean shutdownBlockingTaskExecutorOnStop() {
-        return shutdownBlockingTaskExecutorOnStop;
+        return false;
     }
 
     /**
@@ -381,6 +386,10 @@ public final class ServiceConfig {
         return multipartUploadsLocation;
     }
 
+    List<ShutdownSupport> shutdownSupports() {
+        return shutdownSupports;
+    }
+
     @Override
     public String toString() {
         final ToStringHelper toStringHelper = MoreObjects.toStringHelper(this).omitNullValues();
@@ -395,11 +404,10 @@ public final class ServiceConfig {
                              .add("maxRequestLength", maxRequestLength)
                              .add("verboseResponses", verboseResponses)
                              .add("accessLogWriter", accessLogWriter)
-                             .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
                              .add("blockingTaskExecutor", blockingTaskExecutor)
-                             .add("shutdownBlockingTaskExecutorOnStop", shutdownBlockingTaskExecutorOnStop)
                              .add("successFunction", successFunction)
                              .add("multipartUploadsLocation", multipartUploadsLocation)
+                             .add("shutdownSupports", shutdownSupports)
                              .toString();
     }
 }

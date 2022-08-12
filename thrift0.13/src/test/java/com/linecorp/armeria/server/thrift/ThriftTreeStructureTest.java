@@ -27,7 +27,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -69,8 +69,8 @@ class ThriftTreeStructureTest {
     @Test
     void testRecursiveUnionCodec() throws TException {
         for (SerializationFormat format : ThriftSerializationFormats.values()) {
-            final TreeService.Iface client = Clients.newClient(server.uri(HTTP, format).resolve("/tree"),
-                                                               TreeService.Iface.class);
+            final TreeService.Iface client = ThriftClients.newClient(server.uri(HTTP, format).resolve("/tree"),
+                                                                     TreeService.Iface.class);
             assertThat(client.createTree(treeRequest)).isEqualTo("OK");
         }
     }

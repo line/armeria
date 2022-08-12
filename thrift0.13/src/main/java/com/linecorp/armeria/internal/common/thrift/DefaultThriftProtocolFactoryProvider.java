@@ -15,10 +15,15 @@
  */
 package com.linecorp.armeria.internal.common.thrift;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Set;
+
+import org.apache.thrift.protocol.TProtocolFactory;
 
 import com.google.common.collect.ImmutableSet;
 
+import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactoryProvider;
 import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
@@ -28,19 +33,40 @@ import com.linecorp.armeria.common.thrift.ThriftSerializationFormats;
  * It is not overridable but you may provide and register another implementation.
  */
 public final class DefaultThriftProtocolFactoryProvider extends ThriftProtocolFactoryProvider {
+
+    private static final Set<SerializationFormat> SERIALIZATION_FORMATS =
+            ImmutableSet.of(ThriftSerializationFormats.BINARY,
+                            ThriftSerializationFormats.COMPACT,
+                            ThriftSerializationFormats.JSON,
+                            ThriftSerializationFormats.TEXT,
+                            ThriftSerializationFormats.TEXT_NAMED_ENUM);
+
     @Override
-    protected Set<Entry> entries() {
-        return ImmutableSet.of(
-                new Entry(
-                        ThriftSerializationFormats.BINARY, ThriftProtocolFactories.BINARY),
-                new Entry(
-                        ThriftSerializationFormats.COMPACT, ThriftProtocolFactories.COMPACT),
-                new Entry(
-                        ThriftSerializationFormats.JSON, ThriftProtocolFactories.JSON),
-                new Entry(
-                        ThriftSerializationFormats.TEXT, ThriftProtocolFactories.TEXT),
-                new Entry(
-                        ThriftSerializationFormats.TEXT_NAMED_ENUM, ThriftProtocolFactories.TEXT_NAMED_ENUM)
-        );
+    protected Set<SerializationFormat> serializationFormats() {
+        return SERIALIZATION_FORMATS;
+    }
+
+    @Override
+    protected TProtocolFactory protocolFactory(SerializationFormat serializationFormat,
+                                               int maxStringLength, int maxContainerLength) {
+        requireNonNull(serializationFormat, "serializationFormat");
+        if (!serializationFormats().contains(serializationFormat)) {
+            return null;
+        }
+
+        if (serializationFormat == ThriftSerializationFormats.BINARY) {
+            return ThriftProtocolFactories.binary(maxStringLength, maxContainerLength);
+        } else if (serializationFormat == ThriftSerializationFormats.COMPACT) {
+            return ThriftProtocolFactories.compact(maxStringLength, maxContainerLength);
+        } else if (serializationFormat == ThriftSerializationFormats.JSON) {
+            return ThriftProtocolFactories.json();
+        } else if (serializationFormat == ThriftSerializationFormats.TEXT) {
+            return ThriftProtocolFactories.text();
+        } else if (serializationFormat == ThriftSerializationFormats.TEXT_NAMED_ENUM) {
+            return ThriftProtocolFactories.textNamedEnum();
+        } else {
+            // Should never reach here.
+            throw new Error();
+        }
     }
 }

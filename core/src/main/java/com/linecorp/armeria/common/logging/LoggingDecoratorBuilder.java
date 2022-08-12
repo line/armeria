@@ -106,6 +106,15 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
+     * Sets the {@link LogLevel} to use when the response fails with the specified {@link Throwable}.
+     */
+    public LoggingDecoratorBuilder requestLogLevel(Class<? extends Throwable> clazz, LogLevel requestLogLevel) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(requestLogLevel, "requestLogLevel");
+        return requestLogLevelMapper(RequestLogLevelMapper.of(clazz, requestLogLevel));
+    }
+
+    /**
      * Sets the {@link Function} to use when mapping the log level of request logs.
      *
      * @deprecated Use {@link #requestLogLevelMapper(RequestLogLevelMapper)} instead.
@@ -157,6 +166,16 @@ public abstract class LoggingDecoratorBuilder {
     @UnstableApi
     public LoggingDecoratorBuilder responseLogLevel(HttpStatusClass statusClass, LogLevel logLevel) {
         return responseLogLevelMapper(ResponseLogLevelMapper.of(statusClass, logLevel));
+    }
+
+    /**
+     * Sets the {@link LogLevel} to use when the response fails with the specified {@link Throwable}.
+     */
+    @UnstableApi
+    public LoggingDecoratorBuilder responseLogLevel(Class<? extends Throwable> clazz, LogLevel logLevel) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(logLevel, "logLevel");
+        return responseLogLevelMapper(ResponseLogLevelMapper.of(clazz, logLevel));
     }
 
     /**

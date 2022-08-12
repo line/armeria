@@ -21,10 +21,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.net.InetAddress;
 import java.net.StandardProtocolFamily;
 import java.net.UnknownHostException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map.Entry;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,6 +28,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.Maps;
 
+import com.linecorp.armeria.common.Attributes;
+import com.linecorp.armeria.common.AttributesBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
 
 import io.netty.util.AttributeKey;
@@ -485,50 +483,46 @@ class EndpointTest {
     @Test
     void attrs() {
         final Endpoint endpoint = Endpoint.parse("a");
-        assertThat(endpoint.attrs()).isExhausted();
+        assertThat(endpoint.attrs().attrs()).isExhausted();
 
-        final List<Entry<AttributeKey<?>, String>> attrs = new ArrayList<>();
+        final AttributesBuilder attrs = Attributes.builder();
         final AttributeKey<String> key1 = AttributeKey.valueOf("key1");
         final AttributeKey<String> key2 = AttributeKey.valueOf("key2");
 
-        attrs.add(Maps.immutableEntry(key1, "value1"));
-        attrs.add(Maps.immutableEntry(key2, "value2"));
+        attrs.set(key1, "value1");
+        attrs.set(key2, "value2");
 
-        final List<Entry<AttributeKey<?>, String>> attrs2 = new ArrayList<>();
+        final AttributesBuilder attrs2 = Attributes.builder();
         final AttributeKey<String> key3 = AttributeKey.valueOf("key3");
-        attrs2.add(Maps.immutableEntry(key1, "value1-2"));
-        attrs2.add(Maps.immutableEntry(key3, "value3"));
+        attrs2.set(key1, "value1-2");
+        attrs2.set(key3, "value3");
 
-        final Endpoint endpointB = endpoint.withAttrs(attrs);
-        final Endpoint endpointC = endpointB.withAttrs(attrs2);
+        final Endpoint endpointB = endpoint.withAttrs(attrs.build());
+        final Endpoint endpointC = endpointB.withAttrs(attrs2.build());
 
         assertThat(endpointB.attr(key1))
                 .isEqualTo("value1");
         assertThat(endpointB.attr(key2))
                 .isEqualTo("value2");
-        assertThat(endpointB.attrs())
+        assertThat(endpointB.attrs().attrs())
                 .toIterable()
-                .anyMatch(entry -> entry.getKey().equals(key1) && "value1".equals(entry.getValue()))
-                .anyMatch(entry -> entry.getKey().equals(key2) && "value2".equals(entry.getValue()))
-                .hasSize(2);
+                .containsExactlyInAnyOrder(Maps.immutableEntry(key1, "value1"),
+                                           Maps.immutableEntry(key2, "value2"));
 
-        // key1 is updated, key3 is added.
-        assertThat(endpointC.attr(key1))
-                .isEqualTo("value1-2");
-        assertThat(endpointC.attr(key2))
-                .isEqualTo("value2");
-        assertThat(endpointC.attr(key3))
-                .isEqualTo("value3");
-        assertThat(endpointC.attrs())
+        // `attrs` should be replaced with `attrs2`
+        assertThat(endpointC.attr(key1)).isEqualTo("value1-2");
+        assertThat(endpointC.attr(key2)).isNull();
+        assertThat(endpointC.attr(key3)).isEqualTo("value3");
+        assertThat(endpointC.attrs().attrs())
                 .toIterable()
-                .anyMatch(entry -> entry.getKey().equals(key1) && "value1-2".equals(entry.getValue()))
-                .anyMatch(entry -> entry.getKey().equals(key2) && "value2".equals(entry.getValue()))
-                .anyMatch(entry -> entry.getKey().equals(key3) && "value3".equals(entry.getValue()))
-                .hasSize(3);
+                .containsExactlyInAnyOrder(Maps.immutableEntry(key1, "value1-2"),
+                                           Maps.immutableEntry(key3, "value3"));
 
-        // update by empty attrs, not crate new endpoint.
-        assertThat(endpointB.withAttrs(Collections.emptyList())).isSameAs(endpointB);
-        // not change other properties.
-        assertThat(endpointB).isEqualTo(endpointC);
+        // Reset attrs with an empty attributes.
+        final Endpoint newEndpointB = endpointB.withAttrs(Attributes.of());
+        assertThat(newEndpointB.attrs().isEmpty()).isTrue();
+
+        final Endpoint sameEndpoint = endpoint.withAttrs(Attributes.of());
+        assertThat(sameEndpoint).isSameAs(endpoint);
     }
 }

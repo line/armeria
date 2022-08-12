@@ -115,6 +115,21 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
+    public boolean hasResult() {
+        return delegate.hasResult();
+    }
+
+    @Override
+    public void setResult(Routed<ServiceConfig> result) {
+        delegate.setResult(result);
+    }
+
+    @Override
+    public Routed<ServiceConfig> result() {
+        return delegate.result();
+    }
+
+    @Override
     public int hashCode() {
         return DefaultRoutingContext.hashCode(this);
     }

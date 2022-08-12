@@ -36,8 +36,6 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.testing.TemporaryFolder;
 
-import io.netty.buffer.ByteBufAllocator;
-
 public class PathStreamMessageTckTest extends StreamMessageVerification<HttpData> {
 
     static TemporaryFolder temporaryFolder = new TemporaryFolder();
@@ -64,7 +62,7 @@ public class PathStreamMessageTckTest extends StreamMessageVerification<HttpData
                 bytes[i] = '0';
             }
             Files.write(path, bytes);
-            return new PathStreamMessage(path, ByteBufAllocator.DEFAULT, null,  1);
+            return StreamMessage.builder(path).bufferSize(1).build();
         } catch (IOException e) {
             return Exceptions.throwUnsafely(e);
         }
@@ -72,8 +70,9 @@ public class PathStreamMessageTckTest extends StreamMessageVerification<HttpData
 
     @Override
     public StreamMessage<HttpData> createFailedPublisher() {
-        return new PathStreamMessage(Paths.get("/unknown/" + UUID.randomUUID()),
-                                     ByteBufAllocator.DEFAULT, null, 1);
+        return StreamMessage.builder(Paths.get("/unknown/" + UUID.randomUUID()))
+                            .bufferSize(1)
+                            .build();
     }
 
     @Override

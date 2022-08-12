@@ -16,9 +16,11 @@
 package com.linecorp.armeria.client.endpoint.dns;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.client.dns.DnsUtil.defaultDnsQueryTimeoutMillis;
 import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
+import java.time.Duration;
 import java.util.function.Consumer;
 
 import com.google.common.base.Ascii;
@@ -33,6 +35,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
+import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
 import io.netty.channel.EventLoop;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
@@ -45,12 +48,13 @@ abstract class DnsEndpointGroupBuilder
     private EventLoop eventLoop;
     private Backoff backoff = Backoff.exponential(1000, 32000).withJitter(0.2);
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
-    private final DnsDynamicEndpointGroupBuilder dnsDynamicEndpointGroupBuilder =
-            new DnsDynamicEndpointGroupBuilder();
+    private final DnsDynamicEndpointGroupBuilder dnsDynamicEndpointGroupBuilder;
 
     DnsEndpointGroupBuilder(String hostname) {
         this.hostname = Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"),
                                                       IDN.ALLOW_UNASSIGNED));
+        // Use the default queryTimeoutMillis(5000) as the default selection timeout.
+        dnsDynamicEndpointGroupBuilder = new DnsDynamicEndpointGroupBuilder(defaultDnsQueryTimeoutMillis());
     }
 
     final String hostname() {
@@ -112,6 +116,28 @@ abstract class DnsEndpointGroupBuilder
         return this;
     }
 
+    @Override
+    public DnsEndpointGroupBuilder selectionTimeout(Duration selectionTimeout) {
+        dnsDynamicEndpointGroupBuilder.selectionTimeout(selectionTimeout);
+        return this;
+    }
+
+    /**
+     * Sets the timeout to wait until a successful {@link Endpoint} selection.
+     * {@code 0} disables the timeout.
+     * If unspecified, the default DNS query timeout ({@link DnsUtil#DEFAULT_DNS_QUERY_TIMEOUT_MILLIS} ms) is
+     * used by default.
+     */
+    @Override
+    public DnsEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
+        dnsDynamicEndpointGroupBuilder.selectionTimeoutMillis(selectionTimeoutMillis);
+        return this;
+    }
+
+    final long selectionTimeoutMillis() {
+        return dnsDynamicEndpointGroupBuilder.selectionTimeoutMillis();
+    }
+
     final DefaultDnsResolver buildResolver() {
         return buildResolver(unused -> {});
     }
@@ -133,10 +159,18 @@ abstract class DnsEndpointGroupBuilder
      * AbstractDnsResolverBuilder.
      */
     private static class DnsDynamicEndpointGroupBuilder extends AbstractDynamicEndpointGroupBuilder {
+        protected DnsDynamicEndpointGroupBuilder(long selectionTimeoutMillis) {
+            super(selectionTimeoutMillis);
+        }
 
         @Override
         public boolean shouldAllowEmptyEndpoints() {
             return super.shouldAllowEmptyEndpoints();
+        }
+
+        @Override
+        public long selectionTimeoutMillis() {
+            return super.selectionTimeoutMillis();
         }
     }
 }

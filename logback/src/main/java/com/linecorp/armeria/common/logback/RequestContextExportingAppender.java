@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.BuiltInProperty;
 import com.linecorp.armeria.common.logging.RequestContextExporter;
 import com.linecorp.armeria.common.logging.RequestContextExporterBuilder;
+import com.linecorp.armeria.internal.common.FlagsLoaded;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -184,6 +185,14 @@ public final class RequestContextExportingAppender
     @Override
     protected void append(ILoggingEvent eventObject) {
         if (exporter == null) {
+            if (!FlagsLoaded.get()) {
+                // It is possible that requestContextStorageProvider hasn't been initialized yet
+                // due to static variable circular dependency.
+                // Most notably, this can happen when logs are appended while trying to initialize
+                // Flags#requestContextStorageProvider.
+                aai.appendLoopOnAppenders(eventObject);
+                return;
+            }
             exporter = builder.build();
         }
         final Map<String, String> contextMap = exporter.export();

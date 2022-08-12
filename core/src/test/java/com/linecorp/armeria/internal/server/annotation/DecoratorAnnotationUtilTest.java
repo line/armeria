@@ -105,9 +105,8 @@ class DecoratorAnnotationUtilTest {
     @Test
     void ofUserDefinedRepeatableDecorator() throws NoSuchMethodException {
         final List<DecoratorAndOrder> list =
-                DecoratorAnnotationUtil.collectDecorators(TestClass.class,
-                                                          TestClass.class.getMethod(
-                                                                  "userDefinedRepeatableDecorator"));
+                DecoratorAnnotationUtil.collectDecorators(
+                        TestClass.class, TestClass.class.getMethod("userDefinedRepeatableDecorator"));
         assertThat(values(list)).containsExactly(Decorator1.class,
                                                  LoggingDecoratorFactoryFunction.class,
                                                  UserDefinedRepeatableDecoratorFactory.class,

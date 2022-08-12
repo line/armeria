@@ -31,8 +31,8 @@ import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.client.endpoint.AbstractEndpointSelector;
 import com.linecorp.armeria.client.endpoint.DynamicEndpointGroup;
-import com.linecorp.armeria.client.endpoint.EmptyEndpointGroupException;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.client.endpoint.EndpointSelectionTimeoutException;
 import com.linecorp.armeria.client.endpoint.EndpointSelector;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.Flags;
@@ -69,7 +69,7 @@ class ClientRequestContextDelayedInitTest {
         final Stopwatch stopwatch = Stopwatch.createStarted();
         assertThatThrownBy(() -> client.get("/").aggregate().join())
                 .getCause().isInstanceOf(UnprocessedRequestException.class)
-                .getCause().isInstanceOf(EmptyEndpointGroupException.class);
+                .getCause().isInstanceOf(EndpointSelectionTimeoutException.class);
         assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS))
                 .isGreaterThanOrEqualTo(Flags.defaultConnectTimeoutMillis());
     }
