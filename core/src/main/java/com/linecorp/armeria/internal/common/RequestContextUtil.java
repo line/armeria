@@ -38,7 +38,8 @@ import com.linecorp.armeria.common.RequestContextStorageProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Sampler;
-import com.linecorp.armeria.server.DefaultServiceRequestContext;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;

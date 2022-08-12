@@ -229,14 +229,4 @@ public abstract class RequestContextWrapper<T extends RequestContext>
     public String toString() {
         return unwrap().toString();
     }
-
-    @Override
-    public boolean equals(Object obj) {
-        return delegate().equals(obj);
-    }
-
-    @Override
-    public int hashCode() {
-        return delegate().hashCode();
-    }
 }

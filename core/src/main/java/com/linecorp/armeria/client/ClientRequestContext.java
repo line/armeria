@@ -220,7 +220,7 @@ public interface ClientRequestContext extends RequestContext {
             return RequestContextUtil.invokeHookAndPop(this, null);
         }
 
-        if (oldCtx.equals(this)) {
+        if (oldCtx.unwrapAll() == unwrapAll()) {
             // Reentrance
             return noopSafeCloseable();
         }

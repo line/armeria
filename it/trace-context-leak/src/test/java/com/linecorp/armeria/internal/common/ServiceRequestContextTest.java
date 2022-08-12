@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.util.function.Function;
 
+import org.assertj.core.api.ObjectAssert;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
@@ -49,13 +50,13 @@ class ServiceRequestContextTest {
             assertThat(ServiceRequestContext.current()).isSameAs(sctx);
             final ClientRequestContext cctx = clientRequestContext("/2");
             try (SafeCloseable unused1 = cctx.push()) {
-                assertThat(ServiceRequestContext.current()).isEqualTo(sctx);
-                assertThat(ClientRequestContext.current()).isEqualTo(cctx);
-                assertThat((ClientRequestContext) RequestContext.current()).isEqualTo(cctx);
+                assertThatUnwrapAll(ServiceRequestContext.current()).isEqualTo(sctx);
+                assertThatUnwrapAll(ClientRequestContext.current()).isEqualTo(cctx);
+                assertThatUnwrapAll((ClientRequestContext) RequestContext.current()).isEqualTo(cctx);
             }
-            assertCurrentCtx(sctx);
+            assertUnwrapAllCurrentCtx(sctx);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
 
         try (SafeCloseable unused = clientRequestContext().push()) {
             assertThatThrownBy(ServiceRequestContext::current)
@@ -73,13 +74,13 @@ class ServiceRequestContextTest {
             assertThat(ServiceRequestContext.currentOrNull()).isSameAs(sctx);
             final ClientRequestContext cctx = clientRequestContext();
             try (SafeCloseable unused1 = cctx.push()) {
-                assertThat(ServiceRequestContext.currentOrNull()).isEqualTo(sctx);
-                assertThat(ClientRequestContext.current()).isEqualTo(cctx);
-                assertThat((ClientRequestContext) RequestContext.current()).isEqualTo(cctx);
+                assertThatUnwrapAll(ServiceRequestContext.currentOrNull()).isEqualTo(sctx);
+                assertThatUnwrapAll(ClientRequestContext.current()).isEqualTo(cctx);
+                assertThatUnwrapAll((ClientRequestContext) RequestContext.current()).isEqualTo(cctx);
             }
-            assertCurrentCtx(sctx);
+            assertUnwrapAllCurrentCtx(sctx);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
 
         try (SafeCloseable unused = clientRequestContext().push()) {
             assertThat(ServiceRequestContext.currentOrNull()).isNull();
@@ -103,16 +104,16 @@ class ServiceRequestContextTest {
                 assertThat(ServiceRequestContext.mapCurrent(c -> c == sctx ? "foo" : "bar",
                                                             () -> "defaultValue"))
                         .isEqualTo("foo");
-                assertThat(ClientRequestContext.mapCurrent(c -> c.equals(cctx) ? "baz" : "qux",
+                assertThat(ClientRequestContext.mapCurrent(c -> c.unwrapAll().equals(cctx) ? "baz" : "qux",
                                                            () -> "defaultValue"))
                         .isEqualTo("baz");
                 assertThat(ServiceRequestContext.mapCurrent(Function.identity(), null)).isEqualTo(sctx);
-                assertThat(ClientRequestContext.mapCurrent(Function.identity(), null)).isEqualTo(cctx);
-                assertThat(RequestContext.mapCurrent(Function.identity(), null)).isEqualTo(cctx);
+                assertThatUnwrapAll(ClientRequestContext.mapCurrent(Function.identity(), null)).isEqualTo(cctx);
+                assertThatUnwrapAll(RequestContext.mapCurrent(Function.identity(), null)).isEqualTo(cctx);
             }
-            assertCurrentCtx(sctx);
+            assertUnwrapAllCurrentCtx(sctx);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
 
         try (SafeCloseable unused = clientRequestContext().push()) {
             assertThatThrownBy(() -> ServiceRequestContext.mapCurrent(c -> "foo", () -> "bar"))
@@ -125,43 +126,43 @@ class ServiceRequestContextTest {
     void pushReentrance() {
         final ServiceRequestContext ctx = serviceRequestContext();
         try (SafeCloseable ignored = ctx.push()) {
-            assertCurrentCtx(ctx);
+            assertUnwrapAllCurrentCtx(ctx);
             try (SafeCloseable ignored2 = ctx.push()) {
-                assertCurrentCtx(ctx);
+                assertUnwrapAllCurrentCtx(ctx);
             }
-            assertCurrentCtx(ctx);
+            assertUnwrapAllCurrentCtx(ctx);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
     }
 
     @Test
     void pushWithOldClientCtxWhoseRootIsThisServiceCtx() {
         final ServiceRequestContext sctx = serviceRequestContext();
         try (SafeCloseable ignored = sctx.push()) {
-            assertCurrentCtx(sctx);
+            assertUnwrapAllCurrentCtx(sctx);
             // The root of ClientRequestContext is sctx.
             final ClientRequestContext cctx = clientRequestContext();
             try (SafeCloseable ignored1 = cctx.push()) {
-                assertCurrentCtx(cctx);
+                assertUnwrapAllCurrentCtx(cctx);
                 try (SafeCloseable ignored2 = sctx.push()) {
-                    assertCurrentCtx(sctx);
+                    assertUnwrapAllCurrentCtx(sctx);
                 }
-                assertCurrentCtx(cctx);
+                assertUnwrapAllCurrentCtx(cctx);
             }
-            assertCurrentCtx(sctx);
+            assertUnwrapAllCurrentCtx(sctx);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
     }
 
     @Test
     void pushWithOldIrrelevantClientCtx() {
         final ClientRequestContext cctx = clientRequestContext();
         try (SafeCloseable ignored = cctx.push()) {
-            assertCurrentCtx(cctx);
+            assertUnwrapAllCurrentCtx(cctx);
             final ServiceRequestContext sctx = serviceRequestContext();
             assertThatThrownBy(sctx::push).isInstanceOf(IllegalStateException.class);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
     }
 
     @Test
@@ -169,10 +170,10 @@ class ServiceRequestContextTest {
         final ServiceRequestContext sctx1 = serviceRequestContext();
         final ServiceRequestContext sctx2 = serviceRequestContext();
         try (SafeCloseable ignored = sctx1.push()) {
-            assertCurrentCtx(sctx1);
+            assertUnwrapAllCurrentCtx(sctx1);
             assertThatThrownBy(sctx2::push).isInstanceOf(IllegalStateException.class);
         }
-        assertCurrentCtx(null);
+        assertUnwrapAllCurrentCtx(null);
     }
 
     @Test
@@ -199,9 +200,17 @@ class ServiceRequestContextTest {
         assertThat(ctx.queryParams("Not exist")).isEmpty();
     }
 
-    private static void assertCurrentCtx(@Nullable RequestContext ctx) {
+    private static void assertUnwrapAllCurrentCtx(@Nullable RequestContext ctx) {
         final RequestContext current = RequestContext.currentOrNull();
-        assertThat(current).isEqualTo(ctx);
+        if (current == null) {
+            assertThat(ctx).isNull();
+        } else {
+            assertThatUnwrapAll(current).isEqualTo(ctx);
+        }
+    }
+
+    private static <T extends RequestContext> ObjectAssert<RequestContext> assertThatUnwrapAll(T actual) {
+        return assertThat(actual.unwrapAll());
     }
 
     private static ServiceRequestContext serviceRequestContext() {
