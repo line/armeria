@@ -35,8 +35,8 @@ import io.reactivex.Single;
  * Provides an {@link ObservableResponseConverterFunction} to annotated services.
  */
 @UnstableApi
-public final class ObservableResponseConverterFunctionProvider implements
-                                                               DelegatingResponseConverterFunctionProvider {
+public final class ObservableResponseConverterFunctionProvider
+        implements DelegatingResponseConverterFunctionProvider {
 
     @Nullable
     @Override

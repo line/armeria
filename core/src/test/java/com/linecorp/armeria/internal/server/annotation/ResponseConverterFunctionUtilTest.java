@@ -15,12 +15,15 @@
  */
 package com.linecorp.armeria.internal.server.annotation;
 
+import static com.linecorp.armeria.internal.server.annotation.ResponseConverterFunctionUtil.newResponseConverter;
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Collections;
 
 import org.junit.jupiter.api.Test;
+
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
@@ -36,14 +39,14 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 @SuppressWarnings("ConstantConditions")
 class ResponseConverterFunctionUtilTest {
 
-    private static final ServiceRequestContext ctx = ServiceRequestContext.builder(
-            HttpRequest.of(HttpMethod.GET, "/")).build();
+    private static final ServiceRequestContext ctx =
+            ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
     @Test
     void prioritisesSpiDelegatingResponseConverterProvider() throws Exception {
-        final ResponseConverterFunction converterFunction = ResponseConverterFunctionUtil.responseConverter(
+        final ResponseConverterFunction converterFunction = newResponseConverter(
                 TestClassWithDelegatingResponseConverterProvider.class,
-                Collections.singletonList(new MyResponseConverterFunction()));
+                ImmutableList.of(new MyResponseConverterFunction()));
 
         final HttpResponse response = converterFunction.convertResponse(
                 ctx,
@@ -57,7 +60,7 @@ class ResponseConverterFunctionUtilTest {
     @Test
     void prioritisesPassedInResponseConvertersGivenNoDelegatingResponseConverterProviderAvailable()
             throws Exception {
-        final ResponseConverterFunction converterFunction = ResponseConverterFunctionUtil.responseConverter(
+        final ResponseConverterFunction converterFunction = newResponseConverter(
                 TestClassWithNonDelegatingResponseConverterProvider.class,
                 Collections.singletonList(new MyResponseConverterFunction()));
 
@@ -72,7 +75,7 @@ class ResponseConverterFunctionUtilTest {
 
     @Test
     void usesNonDelegatingSpiResponseConverterGivenNoResponseConverterSpecified() throws Exception {
-        final ResponseConverterFunction converterFunction = ResponseConverterFunctionUtil.responseConverter(
+        final ResponseConverterFunction converterFunction = newResponseConverter(
                 TestClassWithNonDelegatingResponseConverterProvider.class, emptyList());
 
         final HttpResponse response = converterFunction.convertResponse(

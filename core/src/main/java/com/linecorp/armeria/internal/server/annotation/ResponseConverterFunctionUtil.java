@@ -16,32 +16,17 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
-
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
-import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.HttpFileResponseConverterFunction;
@@ -54,11 +39,6 @@ final class ResponseConverterFunctionUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(ResponseConverterFunctionUtil.class);
 
-    private static final List<DelegatingResponseConverterFunctionProvider>
-            delegatingResponseConverterFunctionProviders = ImmutableList.copyOf(
-            ServiceLoader.load(DelegatingResponseConverterFunctionProvider.class,
-                               ResponseConverterFunctionUtil.class.getClassLoader()));
-
     /**
      * The default {@link ResponseConverterFunction}s.
      */
@@ -66,30 +46,35 @@ final class ResponseConverterFunctionUtil {
             new JacksonResponseConverterFunction(), new StringResponseConverterFunction(),
             new ByteArrayResponseConverterFunction(), new HttpFileResponseConverterFunction());
 
-    private static final List<ResponseConverterFunctionProvider> responseConverterFunctionProviders =
+    private static final List<ResponseConverterFunctionProvider> responseConverterProviders =
             ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
                                                     AnnotatedService.class.getClassLoader()));
 
+    private static final List<DelegatingResponseConverterFunctionProvider>
+            delegatingResponseConverterProviders = ImmutableList.copyOf(
+            ServiceLoader.load(DelegatingResponseConverterFunctionProvider.class,
+                               ResponseConverterFunctionUtil.class.getClassLoader()));
+
     static {
-        if (!delegatingResponseConverterFunctionProviders.isEmpty()) {
-            logger.debug("Available {}s: {}", DelegatingResponseConverterFunctionProvider.class.getSimpleName(),
-                         delegatingResponseConverterFunctionProviders);
-        }
-        if (!responseConverterFunctionProviders.isEmpty()) {
+        if (!responseConverterProviders.isEmpty()) {
             logger.debug("Available {}s: {}", ResponseConverterFunctionProvider.class.getSimpleName(),
-                         responseConverterFunctionProviders);
+                         responseConverterProviders);
+        }
+        if (!delegatingResponseConverterProviders.isEmpty()) {
+            logger.debug("Available {}s: {}", DelegatingResponseConverterFunctionProvider.class.getSimpleName(),
+                         delegatingResponseConverterProviders);
         }
     }
 
-    static ResponseConverterFunction responseConverter(Type returnType,
-                                                       List<ResponseConverterFunction> responseConverters) {
+    static ResponseConverterFunction newResponseConverter(Type returnType,
+                                                          List<ResponseConverterFunction> responseConverters) {
 
         final List<ResponseConverterFunction> nonDelegatingSpiConverters =
-                responseConverterFunctionProviders.stream().map(
-                                                          provider -> provider.newResponseConverterFunction(
-                                                                  returnType)
-                                                  ).filter(Objects::nonNull)
-                                                  .collect(Collectors.toList());
+                responseConverterProviders.stream().map(
+                                                  provider -> provider.newResponseConverterFunction(
+                                                          returnType)
+                                          ).filter(Objects::nonNull)
+                                          .collect(Collectors.toList());
 
         final ImmutableList<ResponseConverterFunction> backingConverters =
                 ImmutableList.<ResponseConverterFunction>builder()
@@ -105,7 +90,7 @@ final class ResponseConverterFunctionUtil {
                                      new CompositeResponseConverterFunction(backingConverters))).build());
 
         for (final DelegatingResponseConverterFunctionProvider provider
-                : delegatingResponseConverterFunctionProviders) {
+                : delegatingResponseConverterProviders) {
             final ResponseConverterFunction func = provider.createResponseConverterFunction(returnType,
                                                                                             responseConverter);
             if (func != null) {
@@ -117,56 +102,4 @@ final class ResponseConverterFunctionUtil {
     }
 
     private ResponseConverterFunctionUtil() {}
-
-    /**
-     * A response converter implementation which creates an {@link HttpResponse} with
-     * the objects published from a {@link Publisher} or {@link Stream}.
-     */
-    private static final class AggregatedResponseConverterFunction implements ResponseConverterFunction {
-
-        private final ResponseConverterFunction responseConverter;
-
-        AggregatedResponseConverterFunction(ResponseConverterFunction responseConverter) {
-            this.responseConverter = responseConverter;
-        }
-
-        @Override
-        public Boolean isResponseStreaming(Type returnType, @Nullable MediaType contentType) {
-            final Class<?> clazz = typeToClass(unwrapAsyncType(returnType));
-            if (clazz == null) {
-                return null;
-            }
-
-            if (HttpResponse.class.isAssignableFrom(clazz)) {
-                return true;
-            }
-            if (Publisher.class.isAssignableFrom(clazz) || Stream.class.isAssignableFrom(clazz)) {
-                return false;
-            }
-
-            return null;
-        }
-
-        @Override
-        @SuppressWarnings("unchecked")
-        public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
-                                            @Nullable Object result, HttpHeaders trailers) throws Exception {
-            final CompletableFuture<?> f;
-            if (result instanceof Publisher) {
-                f = collectFrom((Publisher<Object>) result, ctx);
-            } else if (result instanceof Stream) {
-                f = collectFrom((Stream<Object>) result, ctx.blockingTaskExecutor());
-            } else {
-                return ResponseConverterFunction.fallthrough();
-            }
-
-            return HttpResponse.from(f.thenApply(aggregated -> {
-                try {
-                    return responseConverter.convertResponse(ctx, headers, aggregated, trailers);
-                } catch (Exception ex) {
-                    return Exceptions.throwUnsafely(ex);
-                }
-            }));
-        }
-    }
 }

@@ -17,7 +17,10 @@
 package com.linecorp.armeria.server.scalapb
 
 import com.linecorp.armeria.common.annotation.{Nullable, UnstableApi}
-import com.linecorp.armeria.server.annotation.{ResponseConverterFunction, DelegatingResponseConverterFunctionProvider}
+import com.linecorp.armeria.server.annotation.{
+  DelegatingResponseConverterFunctionProvider,
+  ResponseConverterFunction
+}
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.{isSupportedGenericType, toResultType}
 import java.lang.reflect.Type
 

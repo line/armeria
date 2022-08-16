@@ -16,18 +16,15 @@
 
 package com.linecorp.armeria.server.protobuf;
 
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Collections;
-import java.util.Objects;
-
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.google.common.collect.ImmutableList;
 import com.google.protobuf.util.JsonFormat;
 
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.protobuf.testing.Messages;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -50,23 +47,15 @@ class ProtobufResponseAnnotatedServiceJsonArrayTest {
         }
     };
 
-    WebClient client;
-
-    @BeforeEach
-    void setUp() {
-        client = WebClient.of(server.httpUri());
-    }
-
     @Test
     void returnEmptyJsonArrayGivenCustomJsonPrinter() {
-        final AggregatedHttpResponse response = client.get("/json").aggregate().join();
-        assertThat(Objects.requireNonNull(Objects.requireNonNull(response.headers().contentType()))
-                          .subtype()).isEqualTo("json");
+        final AggregatedHttpResponse response = server.blockingWebClient().get("/json");
+        assertThat(response.headers().contentType().isJson()).isTrue();
 
         final String responseString = response.contentUtf8();
 
         final String expectedString = "{\"messages\":[]}";
-        assertThat(responseString).isEqualToIgnoringWhitespace(expectedString);
+        assertThatJson(responseString).isEqualTo(expectedString);
     }
 
     private static class GreetingService {
@@ -74,7 +63,9 @@ class ProtobufResponseAnnotatedServiceJsonArrayTest {
         @ProducesJson
         @SuppressWarnings("unused")
         public Messages.SimpleRepeatedResponse produceJsonWithRepeatedFields() {
-            return Messages.SimpleRepeatedResponse.newBuilder().addAllMessages(Collections.emptyList()).build();
+            return Messages.SimpleRepeatedResponse.newBuilder()
+                                                  .addAllMessages(ImmutableList.of())
+                                                  .build();
         }
     }
 }

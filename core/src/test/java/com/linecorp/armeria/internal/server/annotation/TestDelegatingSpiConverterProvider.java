@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.server.annotation;
 
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -30,7 +29,7 @@ import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctio
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 
 /**
- * For use with ResponseConverterFunctionUtilTest.
+ * For use with {@link ResponseConverterFunctionUtilTest}.
  */
 public class TestDelegatingSpiConverterProvider implements DelegatingResponseConverterFunctionProvider {
 
@@ -38,29 +37,16 @@ public class TestDelegatingSpiConverterProvider implements DelegatingResponseCon
     public @Nullable ResponseConverterFunction createResponseConverterFunction(
             Type responseType,
             ResponseConverterFunction responseConverter) {
-        final Class<?> responseClass = toClass(responseType);
+        final Class<?> responseClass = ClassUtil.typeToClass(responseType);
         if (responseClass != null && TestClassWithDelegatingResponseConverterProvider.class.isAssignableFrom(
                 responseClass)) {
-            return new TestDelegatingResponseConverterFunction(responseConverter);
-        } else {
-            return null;
-        }
-    }
-
-    private Class<?> toClass(Type type) {
-        if (type instanceof ParameterizedType) {
-            return (Class<?>) ((ParameterizedType) type).getRawType();
-        } else if (type instanceof Class<?>) {
-            return (Class<?>) type;
+            return new TestDelegatingResponseConverterFunction();
         } else {
             return null;
         }
     }
 
     static class TestDelegatingResponseConverterFunction implements ResponseConverterFunction {
-
-        TestDelegatingResponseConverterFunction(ResponseConverterFunction responseConverter) {
-        }
 
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.server.annotation.ResponseConverterFunctionUtil.newResponseConverter;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
@@ -136,7 +137,7 @@ public final class AnnotatedService implements HttpService {
         }
 
         actualReturnType = getActualReturnType(method);
-        responseConverter = ResponseConverterFunctionUtil.responseConverter(
+        responseConverter = newResponseConverter(
                 actualReturnType, requireNonNull(responseConverters, "responseConverters"));
         aggregationStrategy = AggregationStrategy.from(resolvers);
         this.route = requireNonNull(route, "route");

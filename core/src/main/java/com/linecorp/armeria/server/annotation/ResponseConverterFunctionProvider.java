@@ -23,6 +23,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 /**
  * A {@link ResponseConverterFunction} provider interface which creates a new
  * {@link ResponseConverterFunction} for converting an object of the given type and functions.
+ *
+ * @see DelegatingResponseConverterFunctionProvider
  */
 @UnstableApi
 @FunctionalInterface

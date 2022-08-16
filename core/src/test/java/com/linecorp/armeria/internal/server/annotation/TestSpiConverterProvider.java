@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.internal.server.annotation;
 
-import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -30,13 +29,13 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 
 /**
- * For use with ResponseConverterFunctionSelectorTest.
+ * For use with {@link ResponseConverterFunctionUtilTest}.
  */
-public class TestSpiConverterProvider implements ResponseConverterFunctionProvider {
+public final class TestSpiConverterProvider implements ResponseConverterFunctionProvider {
 
     @Override
     public @Nullable ResponseConverterFunction newResponseConverterFunction(Type responseType) {
-        final Class<?> responseClass = toClass(responseType);
+        final Class<?> responseClass = ClassUtil.typeToClass(responseType);
         if (responseClass != null && TestClassWithNonDelegatingResponseConverterProvider.class.isAssignableFrom(
                 responseClass)) {
             return new TestResponseConverterFunction();
@@ -45,17 +44,7 @@ public class TestSpiConverterProvider implements ResponseConverterFunctionProvid
         }
     }
 
-    private Class<?> toClass(Type type) {
-        if (type instanceof ParameterizedType) {
-            return (Class<?>) ((ParameterizedType) type).getRawType();
-        } else if (type instanceof Class<?>) {
-            return (Class<?>) type;
-        } else {
-            return null;
-        }
-    }
-
-    static class TestResponseConverterFunction implements ResponseConverterFunction {
+    private static final class TestResponseConverterFunction implements ResponseConverterFunction {
         @Override
         public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
                                             @Nullable Object result, HttpHeaders trailers) throws Exception {
