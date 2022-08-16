@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.protobuf
 import com.fasterxml.jackson.core.json.JsonReadFeature
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.json.JsonMapper
+import com.linecorp.armeria.scalapb.testing.Messages
 import com.linecorp.armeria.scalapb.testing.messages.TestMessage
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.{ConsumesJson, Post, ProducesJson}
@@ -101,6 +102,21 @@ class ScalaPbNamedTypeInfoProviderTest extends FunSuite with ServerSuite {
     assertEquals(oneof.childFieldInfos().size(), 2)
     assertEquals(oneof.childFieldInfos().get(0).typeSignature().signature(), "armeria.protobuf.testing.Literal")
     assertEquals(oneof.childFieldInfos().get(1).typeSignature().signature(), "armeria.protobuf.testing.Add")
+  }
+
+  test("should not handle com.google.protobuf.Message with ScalaPbNamedTypeInfoProvider") {
+    val provider = new ScalaPbNamedTypeInfoProvider()
+    val protobufMessage = classOf[Messages.TestMessage]
+    assert(classOf[com.google.protobuf.Message].isAssignableFrom(protobufMessage))
+    assert(provider.newNamedTypeInfo(protobufMessage) == null)
+  }
+
+  test("should not handle scalapb.GenerateMessage with ProtobufNamedTyeInfoProvider") {
+    val provider = new ProtobufNamedTypeInfoProvider()
+    val scalapbMessage = classOf[TestMessage]
+    assert(!classOf[com.google.protobuf.Message].isAssignableFrom(scalapbMessage))
+    assert(classOf[scalapb.GeneratedMessage].isAssignableFrom(scalapbMessage))
+    assert(provider.newNamedTypeInfo(scalapbMessage) == null)
   }
 
   test("specification") {
