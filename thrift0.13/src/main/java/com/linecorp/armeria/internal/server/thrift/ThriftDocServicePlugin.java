@@ -37,6 +37,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.thrift.TBase;
+import org.apache.thrift.TEnum;
 import org.apache.thrift.TException;
 import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.TSerializer;
@@ -282,7 +283,10 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
             throw new IllegalArgumentException("cannot create a named type from: " + typeSignature);
         }
 
-        assert type.isEnum() || TException.class.isAssignableFrom(type) || TBase.class.isAssignableFrom(type);
+        assert TBase.class.isAssignableFrom(type) ||
+               TEnum.class.isAssignableFrom(type) ||
+               TException.class.isAssignableFrom(type);
+
         final NamedTypeInfo namedTypeInfo = namedTypeInfoProvider.newNamedTypeInfo(type);
         return requireNonNull(namedTypeInfo, "namedTypeInfoProvider.newNamedTypeInfo() returned null");
     }

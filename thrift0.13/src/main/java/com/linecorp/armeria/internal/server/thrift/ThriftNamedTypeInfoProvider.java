@@ -76,7 +76,7 @@ public final class ThriftNamedTypeInfoProvider implements NamedTypeInfoProvider 
         }
 
         final Class<?> clazz = (Class<?>) typeDescriptor;
-        if (clazz.isEnum()) {
+        if (TEnum.class.isAssignableFrom(clazz)) {
             @SuppressWarnings("unchecked")
             final Class<? extends Enum<? extends TEnum>> enumType =
                     (Class<? extends Enum<? extends TEnum>>) clazz;
