@@ -122,8 +122,7 @@ final class ResponseConverterFunctionUtil {
      * A response converter implementation which creates an {@link HttpResponse} with
      * the objects published from a {@link Publisher} or {@link Stream}.
      */
-    @VisibleForTesting
-    static final class AggregatedResponseConverterFunction implements ResponseConverterFunction {
+    private static final class AggregatedResponseConverterFunction implements ResponseConverterFunction {
 
         private final ResponseConverterFunction responseConverter;
 
