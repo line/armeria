@@ -23,7 +23,11 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A {@link ResponseConverterFunction} provider interface which provides a
- * {@link ResponseConverterFunction} for converting an object of the given type.
+ * {@link ResponseConverterFunction} that converts an object of the given type to an {@link HttpResponse}
+ * using the delegating {@link ResponseConverterFunction}.
+ * The delegating converter is a collection of several converters that you specify when
+ * {@linkplain ServerBuilder#annotatedService(Object, Object...) creating an annotated service} and
+ * Armeria default converters.
  */
 @UnstableApi
 @FunctionalInterface
