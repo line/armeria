@@ -5,7 +5,7 @@ apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
 // Published BOM projects
 includeWithFlags ':bom',                                 'bom', 'publish'
 // Published version catalog projects
-includeWithFlags ':version-catalogs',                    'version-catalogs', 'publish'
+includeWithFlags ':version-catalogs',                    'version-catalogs'
 
 // Published Java projects
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
