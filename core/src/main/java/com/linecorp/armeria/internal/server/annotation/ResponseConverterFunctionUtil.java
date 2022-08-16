@@ -161,7 +161,6 @@ final class ResponseConverterFunctionUtil {
                 return ResponseConverterFunction.fallthrough();
             }
 
-            assert f != null;
             return HttpResponse.from(f.thenApply(aggregated -> {
                 try {
                     return responseConverter.convertResponse(ctx, headers, aggregated, trailers);
