@@ -49,7 +49,7 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
      * @param sampler the {@link Sampler} that determines whether to retain the stacktrace of the context leaks
      */
     LeakTracingRequestContextStorage(RequestContextStorage delegate,
-                                            Sampler<? super RequestContext> sampler) {
+                                     Sampler<? super RequestContext> sampler) {
         this.delegate = requireNonNull(delegate, "delegate");
         this.sampler = requireNonNull(sampler, "sampler");
     }
