@@ -71,7 +71,7 @@ final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
   public void listBlogPosts(ListBlogPostsRequest request,
                             StreamObserver<ListBlogPostsResponse> responseObserver) {
       final Collection<BlogPost> blogPosts;
-      if ("desc".equals(request.getOrderBy())) {
+      if (request.getDescending()) {
           blogPosts = this.blogPosts.entrySet()
                                     .stream()
                                     .sorted(Collections.reverseOrder(Comparator.comparingInt(Entry::getKey)))
