@@ -27,33 +27,15 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Restore the cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/wrapper
-            ~/.gradle/caches
-          key: build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
-          restore-keys: |
-            build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
-            build-${{ matrix.java }}-${{ runner.os }}-
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
 
       - name: Build the site
         run: |
           ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel site
-        shell: bash
 
       - name: Deploy the site
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: site/public
-
-      - name: Clean up the cache
-        run: |
-          rm -fr ~/.gradle/caches/[0-9]* || true
-          rm -fr ~/.gradle/caches/journal-* || true
-          rm -fr ~/.gradle/caches/transforms-* || true
-          rm -f ~/.gradle/caches/*/*.lock || true
-          rm -f ~/.gradle/caches/*/gc.properties || true
-        shell: bash
