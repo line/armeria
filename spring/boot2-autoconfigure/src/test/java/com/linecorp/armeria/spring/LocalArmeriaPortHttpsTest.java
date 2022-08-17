@@ -24,6 +24,8 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.SmartLifecycle;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
@@ -50,7 +52,13 @@ public class LocalArmeriaPortHttpsTest {
 
     @SpringBootApplication
     @Import(ArmeriaOkServiceConfiguration.class)
-    static class TestConfiguration {}
+    static class TestConfiguration {
+
+        @Bean
+        SmartLifecycle smartLifecycle(Server server) {
+            return new RetryableArmeriaServerGracefulShutdownLifecycle(server, 8);
+        }
+    }
 
     private static final ClientFactory clientFactory =
             ClientFactory.builder()

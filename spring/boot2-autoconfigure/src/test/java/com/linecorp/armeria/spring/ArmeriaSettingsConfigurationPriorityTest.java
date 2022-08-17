@@ -24,6 +24,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.SmartLifecycle;
 import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
@@ -45,6 +46,11 @@ public class ArmeriaSettingsConfigurationPriorityTest {
         @Bean
         ArmeriaServerConfigurator maxNumConnectionsConfigurator() {
             return builder -> builder.maxNumConnections(16);
+        }
+
+        @Bean
+        SmartLifecycle smartLifecycle(Server server) {
+            return new RetryableArmeriaServerGracefulShutdownLifecycle(server, 8);
         }
     }
 
