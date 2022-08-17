@@ -44,7 +44,7 @@ final class RetryableArmeriaServerGracefulShutdownLifecycle implements SmartLife
     RetryableArmeriaServerGracefulShutdownLifecycle(Server server, int maxAttempts) {
         delegate = new ArmeriaServerGracefulShutdownLifecycle(server);
         this.maxAttempts = maxAttempts;
-        backoff = Backoff.ofDefault().withMaxAttempts(maxAttempts);
+        backoff = Backoff.ofDefault();
     }
 
     @Override

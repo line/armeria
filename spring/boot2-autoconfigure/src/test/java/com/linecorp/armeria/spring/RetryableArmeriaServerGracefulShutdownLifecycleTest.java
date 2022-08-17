@@ -19,7 +19,7 @@ package com.linecorp.armeria.spring;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-import java.net.BindException;
+import java.io.IOException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -47,7 +47,7 @@ public class RetryableArmeriaServerGracefulShutdownLifecycleTest {
         // Make sure that `failingServer` is unable to start because of the port collision.
         assertThatThrownBy(() -> failingServer.start().join())
                 .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(BindException.class)
+                .hasCauseInstanceOf(IOException.class)
                 .hasMessageContaining("Address already in use");
 
         final SmartLifecycle lifecycle =
