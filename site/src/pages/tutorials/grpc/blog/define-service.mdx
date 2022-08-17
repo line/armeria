@@ -74,7 +74,7 @@ message GetBlogPostRequest {    // For retrieving a single post
 }
 
 message ListBlogPostsRequest {  // For retrieving multiple posts
-  string order_by = 1;
+  bool descending = 1;
 }
 
 message UpdateBlogPostRequest {
