@@ -29,8 +29,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.Server;
 
 /**
- * An {@link ArmeriaServerGracefulShutdownLifecycle} which retries to start the {@link Server} up to
- * {@code maxAttempts}.
+ * An {@link SmartLifecycle} which retries to start the {@link Server} up to {@code maxAttempts}.
  * This is useful for testing that needs to bind a server to a random port number obtained in advance.
  */
 final class RetryableArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
