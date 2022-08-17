@@ -117,7 +117,7 @@ This time, we'll add a method each for retrieving posts.
   ...
   static void listBlogPosts() {
     final ListBlogPostsResponse
-            response = client.listBlogPosts(ListBlogPostsRequest.newBuilder().setOrderBy("asc").build());
+            response = client.listBlogPosts(ListBlogPostsRequest.newBuilder().setDescending(false).build());
 
     final List<BlogPost> blogs = response.getBlogsList();
   }
