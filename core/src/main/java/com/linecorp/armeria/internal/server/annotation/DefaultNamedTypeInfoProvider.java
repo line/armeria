@@ -310,6 +310,15 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
     @Nullable
     private static <T> T extractRequestFieldMeta(JavaType classType, JavaType fieldType, String fieldName,
                                                  Function<AnnotatedElement, @Nullable T> extractor) {
+        // There are no standard rules to get properties of a request object. But we might assume that a request
+        // object is a settable object. Before directly accessing private fields, try the patterns that are
+        // commonly used in settable objects.
+        //
+        // - Java POJO style setters such as `void setName(String name)`.
+        // - Non-standard setters such as `void name(String name)`.
+        // - A single constructor.
+        // - Private fields as a last resort.
+
         // Setter: setFieldName(field)
         final String setter = "set" + CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, fieldName);
         T result = extractFromSetter(classType, fieldType, setter, extractor);
@@ -333,6 +342,16 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
     @Nullable
     private static <T> T extractResponseFieldMeta(JavaType classType, JavaType fieldType, String fieldName,
                                                   Function<AnnotatedElement, @Nullable T> extractor) {
+        // There are no standard rules to get properties of a response object. But we might assume that a
+        // response object is a gettable object. Before directly accessing private fields, try the patterns that
+        // are commonly used in gettable objects. Although the constructor has the characteristics of settable,
+        // it is added just in case.
+        //
+        // - Java POJO style setters such as `void setName(String name)`.
+        // - Non-standard setters such as `void name(String name)`.
+        // - Private fields.
+        // - A single constructor as a last resort.
+
         // Getter: Field getFieldName()
         final String getter = "get" + CaseFormat.LOWER_CAMEL.to(CaseFormat.UPPER_CAMEL, fieldName);
         T result = extractFromGetter(classType, fieldType, getter, extractor);
