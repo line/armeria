@@ -46,6 +46,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -178,7 +179,7 @@ public final class AnnotatedServiceFactory {
             // Set a default HTTP status code for a response depending on the return type of the method.
             final Class<?> returnType = method.getReturnType();
 
-            if (Publisher.class.isAssignableFrom(returnType)) {
+            if (Publisher.class.isAssignableFrom(returnType) || CompletionStage.class.isAssignableFrom(returnType)) {
                 // This doesn't cover suspending function returning Publisher<Void>.
                 final Type type = method.getGenericReturnType();
                 if (type instanceof ParameterizedType) {

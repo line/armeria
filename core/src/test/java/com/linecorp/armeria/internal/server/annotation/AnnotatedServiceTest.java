@@ -43,6 +43,8 @@ import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Publisher;
 
 import com.google.common.collect.ImmutableList;
@@ -288,6 +290,30 @@ class AnnotatedServiceTest {
         @ProducesJson
         public Publisher<Void> voidPublisherJson204() {
             return Mono.empty();
+        }
+
+        @Get("/voidFuture/204")
+        public CompletionStage<Void> voidFuture204() {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+
+        @Get("/voidFuture/200")
+        @ResponseConverter(VoidTo200ResponseConverter.class)
+        public CompletionStage<Void> voidFuture200() {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+
+        @Get("/voidFuture/json/200")
+        @ProducesJson
+        public CompletionStage<Void> voidFutureJson200() {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+
+        @Get("/voidFuture/json/204")
+        @StatusCode(204)
+        @ProducesJson
+        public CompletionStage<Void> voidFutureJson204() {
+            return UnmodifiableFuture.completedFuture(null);
         }
     }
 
@@ -1114,25 +1140,16 @@ class AnnotatedServiceTest {
         }
     }
 
-    @Test
-    void testReturnVoid() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = { "void", "voidPublisher", "voidFuture" })
+    void testReturnVoid(String returnType) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            testStatusCode(hc, get("/1/void/204"), 204);
-            testBodyAndContentType(hc, get("/1/void/200"), "200 OK", MediaType.PLAIN_TEXT_UTF_8.toString());
-            testStatusCode(hc, get("/1/void/json/204"), 204);
-            testBodyAndContentType(hc, get("/1/void/json/200"), "null", MediaType.JSON_UTF_8.toString());
-        }
-    }
-
-    @Test
-    void testReturnMonoVoid() throws Exception {
-        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            testStatusCode(hc, get("/1/voidPublisher/204"), 204);
-            testBodyAndContentType(hc, get("/1/voidPublisher/200"), "200 OK",
-                                   MediaType.PLAIN_TEXT_UTF_8.toString());
-            testStatusCode(hc, get("/1/voidPublisher/json/204"), 204);
-            testBodyAndContentType(hc, get("/1/voidPublisher/json/200"), "null",
-                                   MediaType.JSON_UTF_8.toString());
+            testStatusCode(hc, get("/1/" + returnType + "/204"), 204);
+            testBodyAndContentType(hc, get("/1/" + returnType + "/200"),
+                                   "200 OK", MediaType.PLAIN_TEXT_UTF_8.toString());
+            testStatusCode(hc, get("/1/" + returnType + "/json/204"), 204);
+            testBodyAndContentType(hc, get("/1/" + returnType + "/json/200"),
+                                   "null", MediaType.JSON_UTF_8.toString());
         }
     }
 
