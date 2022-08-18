@@ -248,19 +248,6 @@ public final class AnnotatedServiceFactory {
         }
 
         final Class<?> clazz = object.getClass();
-        final String classAlias = clazz.getName();
-        final String methodAlias = String.format("%s.%s()", classAlias, method.getName());
-
-        final HttpHeaders responseHeaders = responseHeaders(method, clazz, classAlias, methodAlias);
-        final HttpHeaders responseTrailers = responseTrailers(method, clazz, classAlias, methodAlias);
-
-        final HttpStatus defaultStatus = defaultResponseStatus(method, clazz);
-        if (defaultStatus.isContentAlwaysEmpty() && !responseTrailers.isEmpty()) {
-            logger.warn("A response with HTTP status code '{}' cannot have a content. " +
-                        "Trailers defined at '{}' might be ignored if HTTP/1.1 is used.",
-                        defaultStatus.code(), methodAlias);
-        }
-
         final List<Route> routes = routes(method, clazz, pathPrefix);
 
         final List<RequestConverterFunction> req =
@@ -275,6 +262,18 @@ public final class AnnotatedServiceFactory {
                 getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class,
                                       dependencyInjector)
                         .addAll(baseExceptionHandlers).build();
+
+        final String classAlias = clazz.getName();
+        final String methodAlias = String.format("%s.%s()", classAlias, method.getName());
+        final HttpHeaders responseHeaders = responseHeaders(method, clazz, classAlias, methodAlias);
+        final HttpHeaders responseTrailers = responseTrailers(method, clazz, classAlias, methodAlias);
+
+        final HttpStatus defaultStatus = defaultResponseStatus(method, clazz);
+        if (defaultStatus.isContentAlwaysEmpty() && !responseTrailers.isEmpty()) {
+            logger.warn("A response with HTTP status code '{}' cannot have a content. " +
+                        "Trailers defined at '{}' might be ignored if HTTP/1.1 is used.",
+                        defaultStatus.code(), methodAlias);
+        }
 
         final boolean needToUseBlockingTaskExecutor =
                 needToUseBlockingTaskExecutor(object, method, useBlockingTaskExecutor);
