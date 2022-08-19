@@ -25,7 +25,6 @@ import java.time.Duration;
 import java.util.function.ToLongFunction;
 
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -92,9 +91,9 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
      * This option is enabled by default.
      *
      * <p>If disable this option, the expired {@link DnsRecord} is removed from the {@link DnsCache} and a new
-     * {@link DnsQuery} will be executed when a new {@link Request} is made.
-     * The total of duration of a request may be longer. So it is recommended to turn on this option when a
-     * limited number of hostnames are used.
+     * {@link DnsQuery} will be executed when a connection is newly established.
+     * The DNS time may make the total of duration of a request longer. So it is recommended to turn on this
+     * option when a <strong>limited</strong> number of hostnames are used.
      */
     @UnstableApi
     public DnsResolverGroupBuilder enableAutoRefresh(boolean autoRefresh) {
@@ -103,7 +102,7 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
     }
 
     /**
-     * Sets {@link Backoff} which is used when the {@link DnsNameResolver} fails to update the cache.
+     * Sets the {@link Backoff} which is used when the {@link DnsNameResolver} fails to update the cache.
      */
     public DnsResolverGroupBuilder autoRefreshBackoff(Backoff refreshBackoff) {
         autoRefreshBackoff = requireNonNull(refreshBackoff, "refreshBackoff");

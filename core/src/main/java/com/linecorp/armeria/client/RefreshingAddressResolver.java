@@ -405,6 +405,7 @@ final class RefreshingAddressResolver
                               .add("cause", cause)
                               .add("cacheable", cacheable)
                               .add("numAttemptsSoFar", numAttemptsSoFar)
+                              .add("creationTimeNanos", creationTimeNanos)
                               .toString();
         }
     }
