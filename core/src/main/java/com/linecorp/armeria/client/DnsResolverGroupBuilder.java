@@ -16,16 +16,23 @@
 
 package com.linecorp.armeria.client;
 
+import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
 import java.time.Duration;
+import java.util.function.ToLongFunction;
 
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoopGroup;
+import io.netty.handler.codec.dns.DnsQuery;
+import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.AddressResolver;
 import io.netty.resolver.AddressResolverGroup;
 import io.netty.resolver.HostsFileEntriesResolver;
@@ -41,27 +48,32 @@ import io.netty.resolver.dns.DnsServerAddressStreamProvider;
  * meaning DNS queries after TTL will always take time to resolve. A refreshing {@link AddressResolver}
  * on the other hand updates the DNS cache automatically when TTL elapses,
  * meaning DNS queries after TTL will retrieve a refreshed result right away. If refreshing fails,
- * the {@link AddressResolver} will retry with {@link #refreshBackoff(Backoff)}.
- *
- * <p>The refreshing {@link AddressResolver} will only start auto refresh for a given hostname
- * on the second access before TTL to avoid auto-refreshing for queries that only happen once
- * (e.g., requests during server startup).
+ * the {@link AddressResolver} will retry with {@link #autoRefreshBackoff(Backoff)}.
  */
 public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
 
-    private Backoff refreshBackoff = Backoff.ofDefault();
+    static final ToLongFunction<String> DEFAULT_AUTO_REFRESH_TIMEOUT_FUNCTION = hostname -> Long.MAX_VALUE;
 
     @Nullable
     private ResolvedAddressTypes resolvedAddressTypes;
+
+    // Auto refresh is enabled by default
+    private boolean autoRefresh = true;
+    @Nullable
+    private Backoff autoRefreshBackoff;
+    @Nullable
+    private ToLongFunction<String> autoRefreshTimeoutFunction;
 
     DnsResolverGroupBuilder() {}
 
     /**
      * Sets {@link Backoff} which is used when the {@link DnsNameResolver} fails to update the cache.
+     *
+     * @deprecated Use {@link #autoRefreshBackoff(Backoff)} instead.
      */
+    @Deprecated
     public DnsResolverGroupBuilder refreshBackoff(Backoff refreshBackoff) {
-        this.refreshBackoff = requireNonNull(refreshBackoff, "refreshBackoff");
-        return this;
+        return autoRefreshBackoff(refreshBackoff);
     }
 
     /**
@@ -75,14 +87,105 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
         return this;
     }
 
+    /**
+     * Sets whether to enable auto refresh for expired {@link DnsRecord}s.
+     * This option is enabled by default.
+     *
+     * <p>If disable this option, the expired {@link DnsRecord} is removed from the {@link DnsCache} and a new
+     * {@link DnsQuery} will be executed when a new {@link Request} is made.
+     * The total of duration of a request may be longer. So it is recommended to turn on this option when a
+     * limited number of hostnames are used.
+     */
+    @UnstableApi
+    public DnsResolverGroupBuilder enableAutoRefresh(boolean autoRefresh) {
+        this.autoRefresh = autoRefresh;
+        return this;
+    }
+
+    /**
+     * Sets {@link Backoff} which is used when the {@link DnsNameResolver} fails to update the cache.
+     */
+    public DnsResolverGroupBuilder autoRefreshBackoff(Backoff refreshBackoff) {
+        autoRefreshBackoff = requireNonNull(refreshBackoff, "refreshBackoff");
+        return this;
+    }
+
+    /**
+     * Sets the {@link ToLongFunction} which determines how long the {@link DnsRecord}s for a hostname should
+     * be refreshed after the first cache.
+     *
+     * <p>For example:
+     * <pre>{@code
+     * dnsResolverGroupBuilder.autoRefreshTimeout(hostname -> {
+     *     if (hostname.endsWith("busy.domain.com")) {
+     *         return Duration.ofDays(7).toMillis(); // Automatically refresh the cached domain for 7 days.
+     *     }
+     *     if (hostname.endsWith("sporadic.domain.dom")) {
+     *         return 0; // Don't need to refresh a sporadically used domain.
+     *     }
+     *     ...
+     * });
+     * }</pre>
+     *
+     * <p>Note this method is mutually exclusive with {@link #autoRefreshTimeout(Duration)} and
+     * {@link #autoRefreshTimeoutMillis(long)}.
+     */
+    @UnstableApi
+    public DnsResolverGroupBuilder autoRefreshTimeout(ToLongFunction<? super String> timeoutFunction) {
+        requireNonNull(timeoutFunction, "timeoutFunction");
+        checkState(autoRefreshTimeoutFunction == null, "'autoRefreshTimeout()' was set already: %s",
+                   autoRefreshTimeoutFunction);
+        //noinspection unchecked
+        autoRefreshTimeoutFunction = (ToLongFunction<String>) timeoutFunction;
+        return this;
+    }
+
+    /**
+     * Sets the timeout after which a refreshing {@link DnsRecord} should expire.
+     * If this option is unspecified and {@link #enableAutoRefresh(boolean)} is set to
+     * {@code true}, a cached {@link DnsRecord} is automatically refreshed until the {@link ClientFactory}
+     * is closed.
+     */
+    @UnstableApi
+    public DnsResolverGroupBuilder autoRefreshTimeout(Duration timeout) {
+        requireNonNull(timeout, "timeout");
+        return autoRefreshTimeoutMillis(timeout.toMillis());
+    }
+
+    /**
+     * Sets the timeout in milliseconds after which a refreshing {@link DnsRecord} should expire.
+     * If this option is unspecified and {@link #enableAutoRefresh(boolean)} is set to
+     * {@code true}, a cached {@link DnsRecord} is automatically refreshed until the {@link ClientFactory}
+     * is closed.
+     */
+    @UnstableApi
+    public DnsResolverGroupBuilder autoRefreshTimeoutMillis(long timeoutMillis) {
+        checkArgument(timeoutMillis > 0, "timeoutMillis: %s (expected: > 0)", timeoutMillis);
+        return autoRefreshTimeout(hostname -> timeoutMillis);
+    }
+
     @Nullable
     MeterRegistry meterRegistry0() {
         return meterRegistry();
     }
 
     RefreshingAddressResolverGroup build(EventLoopGroup eventLoopGroup) {
-        return new RefreshingAddressResolverGroup(cacheSpec(), minTtl(), maxTtl(), negativeTtl(),
-                                                  refreshBackoff, resolvedAddressTypes, maybeCreateDnsCache(),
+        ToLongFunction<String> autoRefreshTimeoutFunction = this.autoRefreshTimeoutFunction;
+        Backoff autoRefreshBackoff = this.autoRefreshBackoff;
+        if (!autoRefresh && (autoRefreshTimeoutFunction != null || autoRefreshBackoff != null)) {
+            throw new IllegalStateException("Can't set 'autoRefreshTimeoutFunction' or 'autoRefreshBackoff' " +
+                                            "if 'autoRefresh' is disabled");
+        }
+
+        if (autoRefreshTimeoutFunction == null) {
+            autoRefreshTimeoutFunction = DEFAULT_AUTO_REFRESH_TIMEOUT_FUNCTION;
+        }
+        if (autoRefreshBackoff == null) {
+            autoRefreshBackoff = Backoff.ofDefault();
+        }
+        return new RefreshingAddressResolverGroup(cacheSpec(), negativeTtl(), resolvedAddressTypes,
+                                                  maybeCreateDnsCache(), autoRefresh,
+                                                  autoRefreshBackoff, autoRefreshTimeoutFunction,
                                                   searchDomains(), ndots(), queryTimeoutMillis(),
                                                   hostsFileEntriesResolver(),
                                                   buildConfigurator(eventLoopGroup));

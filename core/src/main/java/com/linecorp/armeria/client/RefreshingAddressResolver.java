@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
+import static com.linecorp.armeria.client.DnsResolverGroupBuilder.DEFAULT_AUTO_REFRESH_TIMEOUT_FUNCTION;
 import static com.linecorp.armeria.internal.client.dns.DnsUtil.extractAddressBytes;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -28,11 +29,13 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.ToLongFunction;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.retry.Backoff;
@@ -57,21 +60,26 @@ final class RefreshingAddressResolver
     private final DefaultDnsResolver resolver;
     private final List<DnsRecordType> dnsRecordTypes;
     private final int negativeTtl;
-    private final Backoff retryBackoff;
+    private final Backoff autoRefreshBackoff;
+    private final boolean autoRefresh;
+    private final ToLongFunction<String> autoRefreshTimeoutFunction;
 
     private volatile boolean resolverClosed;
 
     RefreshingAddressResolver(EventLoop eventLoop, DefaultDnsResolver resolver,
                               List<DnsRecordType> dnsRecordTypes,
                               Cache<String, CacheEntry> addressResolverCache,
-                              DnsCache dnsResolverCache,
-                              int negativeTtl, Backoff retryBackoff) {
+                              DnsCache dnsResolverCache, int negativeTtl,
+                              boolean autoRefresh, Backoff autoRefreshBackoff,
+                              ToLongFunction<String> autoRefreshTimeoutFunction) {
         super(eventLoop);
         this.addressResolverCache = addressResolverCache;
         this.resolver = resolver;
         this.dnsRecordTypes = dnsRecordTypes;
         this.negativeTtl = negativeTtl;
-        this.retryBackoff = retryBackoff;
+        this.autoRefresh = autoRefresh;
+        this.autoRefreshBackoff = autoRefreshBackoff;
+        this.autoRefreshTimeoutFunction = autoRefreshTimeoutFunction;
         dnsResolverCache.addListener(this);
     }
 
@@ -128,14 +136,15 @@ final class RefreshingAddressResolver
                 dnsRecordTypes.stream()
                               .map(type -> DnsQuestionWithoutTrailingDot.of(hostname, type))
                               .collect(toImmutableList());
-        return sendQueries(questions, hostname);
+        return sendQueries(questions, hostname, null);
     }
 
-    private CompletableFuture<CacheEntry> sendQueries(List<DnsQuestion> questions, String hostname) {
+    private CompletableFuture<CacheEntry> sendQueries(List<DnsQuestion> questions, String hostname,
+                                                      @Nullable Long creationTimeNanos) {
         return resolver.resolve(questions, hostname).handle((records, cause) -> {
             if (cause != null) {
                 cause = Exceptions.peel(cause);
-                return new CacheEntry(hostname, null, questions, cause);
+                return new CacheEntry(hostname, null, questions, creationTimeNanos, cause);
             }
 
             InetAddress inetAddress = null;
@@ -149,17 +158,17 @@ final class RefreshingAddressResolver
                     break;
                 } catch (UnknownHostException e) {
                     // Should never reach here because we already validated it in extractAddressBytes.
-                    return new CacheEntry(hostname, null, questions, new IllegalArgumentException(
-                            "Invalid address: " + hostname, e));
+                    return new CacheEntry(hostname, null, questions, creationTimeNanos,
+                                          new IllegalArgumentException("Invalid address: " + hostname, e));
                 }
             }
 
             if (inetAddress == null) {
-                return new CacheEntry(hostname, null, questions, new UnknownHostException(
+                return new CacheEntry(hostname, null, questions, creationTimeNanos, new UnknownHostException(
                         "failed to receive DNS records for " + hostname));
             }
 
-            return new CacheEntry(hostname, inetAddress, questions, null);
+            return new CacheEntry(hostname, inetAddress, questions, creationTimeNanos, null);
         });
     }
 
@@ -184,10 +193,22 @@ final class RefreshingAddressResolver
 
         assert question instanceof DnsQuestionWithoutTrailingDot;
         final DnsQuestionWithoutTrailingDot cast = (DnsQuestionWithoutTrailingDot) question;
-        final CacheEntry entry = addressResolverCache.getIfPresent(cast.originalName());
-        if (entry != null && entry.refreshable()) {
-            // onRemoval is invoked by the executor of 'dnsResolverCache'.
-            executor().execute(entry::refresh);
+        final String hostname = cast.originalName();
+
+        if (!autoRefresh) {
+            addressResolverCache.invalidate(hostname);
+            return;
+        }
+
+        final CacheEntry entry = addressResolverCache.getIfPresent(hostname);
+        if (entry != null) {
+            if (entry.refreshable()) {
+                // onRemoval is invoked by the executor of 'dnsResolverCache'.
+                executor().execute(entry::refresh);
+            } else {
+                // Remove the old CacheEntry.
+                addressResolverCache.invalidate(hostname);
+            }
         }
     }
 
@@ -207,6 +228,7 @@ final class RefreshingAddressResolver
 
     final class CacheEntry {
 
+        private final String hostname;
         @Nullable
         private final InetAddress address;
         private final List<DnsQuestion> questions;
@@ -215,6 +237,7 @@ final class RefreshingAddressResolver
         private final boolean cacheable;
         @Nullable
         private final ScheduledFuture<?> negativeCacheFuture;
+        private final long creationTimeNanos;
 
         private boolean refreshing;
         @Nullable
@@ -222,7 +245,8 @@ final class RefreshingAddressResolver
         private int numAttemptsSoFar = 1;
 
         CacheEntry(String hostname, @Nullable InetAddress address, List<DnsQuestion> questions,
-                   @Nullable Throwable cause) {
+                   @Nullable Long creationTimeNanos, @Nullable Throwable cause) {
+            this.hostname = hostname;
             this.address = address;
             this.questions = questions;
             this.cause = cause;
@@ -248,6 +272,15 @@ final class RefreshingAddressResolver
             }
             this.cacheable = cacheable;
             this.negativeCacheFuture = negativeCacheFuture;
+            if (creationTimeNanos != null) {
+                this.creationTimeNanos = creationTimeNanos;
+            } else {
+                if (autoRefreshTimeoutFunction == DEFAULT_AUTO_REFRESH_TIMEOUT_FUNCTION) {
+                    this.creationTimeNanos = 0;
+                } else {
+                    this.creationTimeNanos = System.nanoTime();
+                }
+            }
         }
 
         @Nullable
@@ -276,7 +309,6 @@ final class RefreshingAddressResolver
                 return;
             }
 
-            assert refreshable();
             final String hostname = address.getHostName();
             if (refreshing) {
                 return;
@@ -284,7 +316,7 @@ final class RefreshingAddressResolver
             refreshing = true;
 
             // 'sendQueries()' always successfully completes.
-            sendQueries(questions, hostname).thenAccept(entry -> {
+            sendQueries(questions, hostname, creationTimeNanos).thenAccept(entry -> {
                 if (executor().inEventLoop()) {
                     maybeUpdate(hostname, entry);
                 } else {
@@ -302,7 +334,8 @@ final class RefreshingAddressResolver
 
             final Throwable cause = entry.cause();
             if (cause != null) {
-                final long nextDelayMillis = retryBackoff.nextDelayMillis(numAttemptsSoFar++);
+                final long nextDelayMillis = autoRefreshBackoff.nextDelayMillis(numAttemptsSoFar++);
+
                 if (nextDelayMillis < 0) {
                     addressResolverCache.invalidate(hostname);
                 } else {
@@ -310,7 +343,13 @@ final class RefreshingAddressResolver
                     if (retryFuture != null) {
                         retryFuture.cancel(false);
                     }
-                    this.retryFuture = executor().schedule(this::refresh, nextDelayMillis, MILLISECONDS);
+                    this.retryFuture = executor().schedule(() -> {
+                        if (refreshable()) {
+                            refresh();
+                        } else {
+                            addressResolverCache.invalidate(hostname);
+                        }
+                    }, nextDelayMillis, MILLISECONDS);
                 }
                 return null;
             }
@@ -322,16 +361,45 @@ final class RefreshingAddressResolver
         }
 
         boolean refreshable() {
-            return address != null;
+            if (address == null) {
+                return false;
+            }
+
+            if (autoRefreshTimeoutFunction == DEFAULT_AUTO_REFRESH_TIMEOUT_FUNCTION) {
+                return true;
+            }
+
+            try {
+                final long timeoutMillis = autoRefreshTimeoutFunction.applyAsLong(hostname);
+                if (timeoutMillis == Long.MAX_VALUE) {
+                    return true;
+                }
+                if (timeoutMillis <= 0) {
+                    return false;
+                }
+
+                final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - creationTimeNanos);
+                return elapsedMillis < timeoutMillis;
+            } catch (Exception ex) {
+                logger.warn("Unexpected exception while invoking 'autoRefreshTimeoutFunction.applyAsLong({})'",
+                            hostname, ex);
+                return false;
+            }
         }
 
         boolean cacheable() {
             return cacheable;
         }
 
+        @VisibleForTesting
+        long creationTimeNanos() {
+            return creationTimeNanos;
+        }
+
         @Override
         public String toString() {
             return MoreObjects.toStringHelper(this).omitNullValues()
+                              .add("hostname", hostname)
                               .add("address", address)
                               .add("questions", questions)
                               .add("cause", cause)
