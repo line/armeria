@@ -179,7 +179,8 @@ public final class AnnotatedServiceFactory {
             // Set a default HTTP status code for a response depending on the return type of the method.
             final Class<?> returnType = method.getReturnType();
 
-            if (Publisher.class.isAssignableFrom(returnType) || CompletionStage.class.isAssignableFrom(returnType)) {
+            if (Publisher.class.isAssignableFrom(returnType) ||
+                CompletionStage.class.isAssignableFrom(returnType)) {
                 // This doesn't cover suspending function returning Publisher<Void>.
                 final Type type = method.getGenericReturnType();
                 if (type instanceof ParameterizedType) {
