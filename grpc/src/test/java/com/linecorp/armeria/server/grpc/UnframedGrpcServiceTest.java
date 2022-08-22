@@ -23,19 +23,13 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.spy;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
+import com.linecorp.armeria.common.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
@@ -122,6 +116,7 @@ class UnframedGrpcServiceTest {
         final ByteBuf byteBuf = Unpooled.buffer();
         final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
                                                                .add(GrpcHeaderNames.GRPC_STATUS, "1")
+                                                               .add(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
                                                                .build();
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
@@ -131,15 +126,47 @@ class UnframedGrpcServiceTest {
     }
 
     @Test
-    void shouldClosePooledObjectsForMissingGrpcStatus() {
+    void shouldClosePooledObjectsForMissingMediaType() {
         final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
         final ByteBuf byteBuf = Unpooled.buffer();
-        final ResponseHeaders responseHeaders = ResponseHeaders.of(HttpStatus.OK);
+        final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
+                .add(GrpcHeaderNames.GRPC_STATUS, "0")
+                .build();
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                 HttpData.wrap(byteBuf));
         UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res,
                 UnframedGrpcErrorHandler.of(), null, MediaType.PROTOBUF);
         assertThat(byteBuf.refCnt()).isZero();
+
+    }
+
+    @Test
+    void shouldClosePooledObjectsForMissingGrpcStatus() {
+        final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
+        final ByteBuf byteBuf = Unpooled.buffer();
+        final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
+                .add(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
+                .build();
+        final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
+                HttpData.wrap(byteBuf));
+        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res,
+                UnframedGrpcErrorHandler.of(), null, MediaType.PROTOBUF);
+        assertThat(byteBuf.refCnt()).isZero();
+    }
+
+    @Test
+    void succeedWithAllRequiredHeaders() throws ExecutionException, InterruptedException {
+        final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
+        final ByteBuf byteBuf = Unpooled.buffer();
+        final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
+                .add(GrpcHeaderNames.GRPC_STATUS, "0")
+                .add(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
+                .build();
+        final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
+                HttpData.wrap(byteBuf));
+        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res,
+                UnframedGrpcErrorHandler.of(), null, MediaType.PROTOBUF);
+        assertThat(HttpResponse.from(res).aggregate().get().status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
