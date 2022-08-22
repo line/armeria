@@ -212,7 +212,12 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         }
 
         final MediaType grpcMediaType = grpcResponse.contentType();
-        requireNonNull(grpcMediaType);
+        if (grpcMediaType == null) {
+            PooledObjects.close(grpcResponse.content());
+            res.completeExceptionally(new NullPointerException("MediaType is undefined"));
+            return;
+        }
+
         final ResponseHeadersBuilder unframedHeaders = grpcResponse.headers().toBuilder();
         unframedHeaders.set(GrpcHeaderNames.GRPC_STATUS, grpcStatusCode); // grpcStatusCode is 0 which is OK.
         if (responseContentType != null) {
