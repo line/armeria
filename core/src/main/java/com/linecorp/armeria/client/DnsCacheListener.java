@@ -28,11 +28,10 @@ import io.netty.handler.codec.dns.DnsRecord;
 /**
  * Listens to the {@link DnsCache} events.
  */
-@SuppressWarnings("InterfaceMayBeAnnotatedFunctional")
 @UnstableApi
 public interface DnsCacheListener {
     /**
-     * Invoked when a removal occurred.
+     * Invoked when the {@link DnsRecord}s expired due to TTL or negative TTL.
      *
      * @param question the DNS question.
      * @param records the result of a successful DNS resolution. {@code null} if failed.
@@ -40,4 +39,16 @@ public interface DnsCacheListener {
      */
     void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
                    @Nullable UnknownHostException cause);
+
+    /**
+     * Invoked when an eviction occurred for the {@link DnsRecord}s. The eviction may occur due to exceeding
+     * a maximum size or timed expiration. The cause may vary according to the
+     * {@link DnsCacheBuilder#cacheSpec(String)} of the {@link DnsCache}.
+     *
+     * @param question the DNS question.
+     * @param records the result of a successful DNS resolution. {@code null} if failed.
+     * @param cause the cause of a failed DNS resolution. {@code null} if succeeded.
+     */
+    void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                    @Nullable UnknownHostException cause);
 }

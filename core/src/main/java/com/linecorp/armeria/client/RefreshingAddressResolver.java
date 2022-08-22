@@ -212,6 +212,24 @@ final class RefreshingAddressResolver
         }
     }
 
+    @Override
+    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                           @Nullable UnknownHostException cause) {
+        if (resolverClosed) {
+            return;
+        }
+
+        final DnsRecordType type = question.type();
+        if (!(type.equals(DnsRecordType.A) || type.equals(DnsRecordType.AAAA))) {
+            // AddressResolver only uses A or AAAA.
+            return;
+        }
+
+        final DnsQuestionWithoutTrailingDot cast = (DnsQuestionWithoutTrailingDot) question;
+        // The DnsCache is full. Don't schedule refreshing because it may cause another eviction.
+        addressResolverCache.invalidate(cast.originalName());
+    }
+
     /**
      * Closes all the resources allocated and used by this resolver.
      *

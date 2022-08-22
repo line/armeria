@@ -49,6 +49,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.client.dns.ByteArrayDnsRecord;
 import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
@@ -60,6 +61,7 @@ import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DatagramDnsQuery;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
+import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsSection;
@@ -540,8 +542,16 @@ class RefreshingAddressResolverTest {
                                                                               .build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
                 final AtomicBoolean removed = new AtomicBoolean();
-                dnsCache.addListener((question, records, cause) -> {
-                    removed.set(true);
+                dnsCache.addListener(new DnsCacheListener() {
+                    @Override
+                    public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                          @Nullable UnknownHostException cause) {
+                        removed.set(true);
+                    }
+
+                    @Override
+                    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                           @Nullable UnknownHostException cause) {}
                 });
 
                 final Cache<String, CacheEntry> cache = group.cache();
@@ -588,8 +598,16 @@ class RefreshingAddressResolverTest {
                                  .build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
                 final AtomicInteger removalCounter = new AtomicInteger();
-                dnsCache.addListener((question, records, cause) -> {
-                    removalCounter.incrementAndGet();
+                dnsCache.addListener(new DnsCacheListener() {
+                    @Override
+                    public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                          @Nullable UnknownHostException cause) {
+                        removalCounter.incrementAndGet();
+                    }
+
+                    @Override
+                    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                           @Nullable UnknownHostException cause) {}
                 });
 
                 final Cache<String, CacheEntry> cache = group.cache();
@@ -655,8 +673,16 @@ class RefreshingAddressResolverTest {
 
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
                 final AtomicInteger removalCounter = new AtomicInteger();
-                dnsCache.addListener((question, records, cause) -> {
-                    removalCounter.incrementAndGet();
+                dnsCache.addListener(new DnsCacheListener() {
+                    @Override
+                    public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                          @Nullable UnknownHostException cause) {
+                        removalCounter.incrementAndGet();
+                    }
+
+                    @Override
+                    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                           @Nullable UnknownHostException cause) {}
                 });
 
                 final Cache<String, CacheEntry> cache = group.cache();
@@ -705,8 +731,16 @@ class RefreshingAddressResolverTest {
 
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
                 final AtomicInteger removalCounter = new AtomicInteger();
-                dnsCache.addListener((question, records, cause) -> {
-                    removalCounter.incrementAndGet();
+                dnsCache.addListener(new DnsCacheListener() {
+                    @Override
+                    public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                          @Nullable UnknownHostException cause) {
+                        removalCounter.incrementAndGet();
+                    }
+
+                    @Override
+                    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                           @Nullable UnknownHostException cause) {}
                 });
 
                 final Cache<String, CacheEntry> cache = group.cache();
@@ -747,8 +781,16 @@ class RefreshingAddressResolverTest {
 
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
                 final AtomicInteger removalCounter = new AtomicInteger();
-                dnsCache.addListener((question, records, cause) -> {
-                    removalCounter.incrementAndGet();
+                dnsCache.addListener(new DnsCacheListener() {
+                    @Override
+                    public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                          @Nullable UnknownHostException cause) {
+                        removalCounter.incrementAndGet();
+                    }
+
+                    @Override
+                    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                           @Nullable UnknownHostException cause) {}
                 });
 
                 final Cache<String, CacheEntry> cache = group.cache();
@@ -782,6 +824,69 @@ class RefreshingAddressResolverTest {
                 Thread.sleep(2000);
                 fooCacheEntry = cache.getIfPresent("foo.com.");
                 assertThat(fooCacheEntry).isNull();
+            }
+        }
+    }
+
+    @Test
+    void shouldStopRefreshingOnEviction() throws InterruptedException {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("foo.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1")),
+                new DefaultDnsQuestion("bar.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("bar.com.", "2.2.2.2")),
+                new DefaultDnsQuestion("baz.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "3.3.3.3"))))) {
+
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsCache dnsCache = DnsCache.builder()
+                                              .cacheSpec("maximumSize=2")
+                                              .build();
+            try (RefreshingAddressResolverGroup group =
+                         builder(false, server)
+                                 .dnsCache(dnsCache)
+                                 .build(eventLoop)) {
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+                final AtomicInteger removalCounter = new AtomicInteger();
+                final AtomicInteger evictionCounter = new AtomicInteger();
+                dnsCache.addListener(new DnsCacheListener() {
+                    @Override
+                    public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                          @Nullable UnknownHostException cause) {
+                        removalCounter.incrementAndGet();
+                    }
+
+                    @Override
+                    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                           @Nullable UnknownHostException cause) {
+                        // The old cache should be evicted first.
+                        assertThat(question.name()).isEqualTo("foo.com.");
+                        evictionCounter.incrementAndGet();
+                    }
+                });
+
+                final Cache<String, CacheEntry> cache = group.cache();
+
+                final Future<InetSocketAddress> fooAddr = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com", 36462));
+                assertIpAddress(fooAddr).isEqualTo("1.1.1.1");
+                assertThat(cache.estimatedSize()).isOne();
+
+                final Future<InetSocketAddress> barAddr = resolver.resolve(
+                        InetSocketAddress.createUnresolved("bar.com", 36462));
+                assertIpAddress(barAddr).isEqualTo("2.2.2.2");
+
+                final Future<InetSocketAddress> bazAddr = resolver.resolve(
+                        InetSocketAddress.createUnresolved("baz.com", 36462));
+                assertIpAddress(bazAddr).isEqualTo("3.3.3.3");
+                await().untilAtomic(evictionCounter, Matchers.equalTo(1));
+                assertThat(removalCounter).hasValue(0);
+
+                // Wait for the eviction event to be delivered.
+                Thread.sleep(2000);
+                assertThat(cache.estimatedSize()).isEqualTo(2);
+                assertThat(cache.asMap().keySet())
+                        .containsExactlyInAnyOrder("bar.com", "baz.com");
             }
         }
     }

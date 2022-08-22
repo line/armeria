@@ -126,6 +126,12 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
         }
     }
 
+    @Override
+    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                           @Nullable UnknownHostException cause) {
+        // Don't refresh the old Endpoints on eviction. The original scheduler may update them.
+    }
+
     private void sendQueries(List<DnsQuestionWithoutTrailingDot> questions) {
         if (isClosing()) {
             return;

@@ -27,6 +27,9 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.RemovalListener;
@@ -50,11 +53,14 @@ final class DefaultDnsCache implements DnsCache {
     private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(
             ThreadFactories.newThreadFactory("armeria-dns-cache-executor", true));
 
+    private static final Logger logger = LoggerFactory.getLogger(DefaultDnsCache.class);
+
     private final List<DnsCacheListener> listeners = new CopyOnWriteArrayList<>();
     private final int minTtl;
     private final int maxTtl;
     private final Cache<DnsQuestion, CacheEntry> cache;
     private final int negativeTtl;
+    private boolean evictionWarned;
 
     DefaultDnsCache(String cacheSpec, MeterRegistry meterRegistry, int minTtl, int maxTtl, int negativeTtl) {
         this.minTtl = minTtl;
@@ -72,15 +78,35 @@ final class DefaultDnsCache implements DnsCache {
                 return;
             }
 
+            final boolean evicted = cause.wasEvicted();
+            if (evicted) {
+                if (!evictionWarned) {
+                    evictionWarned = true;
+                    logger.warn(
+                            "{} is evicted due to '{}'. Please consider increasing the maximum size or " +
+                            "expiration timeout of the DNS cache. cache spec: {}", key, cause, cacheSpec);
+                } else {
+                    logger.debug("{} is evicted due to {}.", key, cause);
+                }
+            }
+
             final UnknownHostException reason = value.cause();
             final List<DnsRecord> records = value.records();
             if (reason != null) {
                 for (DnsCacheListener listener : listeners) {
-                    listener.onRemoval(key, null, reason);
+                    if (evicted) {
+                        listener.onEviction(key, null, reason);
+                    } else {
+                        listener.onRemoval(key, null, reason);
+                    }
                 }
             } else if (records != null) {
                 for (DnsCacheListener listener : listeners) {
-                    listener.onRemoval(key, records, null);
+                    if (evicted) {
+                        listener.onEviction(key, records, null);
+                    } else {
+                        listener.onRemoval(key, records, null);
+                    }
                 }
             } else {
                 // Should not reach here.
@@ -150,7 +176,7 @@ final class DefaultDnsCache implements DnsCache {
         listeners.add(listener);
     }
 
-    static final class CacheEntry {
+    private static final class CacheEntry {
 
         @Nullable
         private final List<DnsRecord> records;
