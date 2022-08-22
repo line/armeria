@@ -365,7 +365,7 @@ relocations = { from = "com.google.common", to = "com.linecorp.armeria.internal.
 # A transitive dependency of Guava which needs relocation as well.
 [libraries.guava-failureaccess]
 module = "com.google.guava:failureaccess"
-version.ref = "guava"
+version = "1.0.1"
 exclusions = ["com.google.errorprone:error_prone_annotations", "com.google.j2objc:j2objc-annotations"]
 relocations = { from = "com.google.common", to = "com.linecorp.armeria.internal.shaded.guava" }
 
