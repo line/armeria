@@ -122,9 +122,9 @@ class UnframedGrpcServiceTest {
         final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
         final ByteBuf byteBuf = Unpooled.buffer();
         final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
-                                           .add(GrpcHeaderNames.GRPC_STATUS, "1")
-                                           .add(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
-                                           .build();
+                                                               .add(GrpcHeaderNames.GRPC_STATUS, "1")
+                                                               .add(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
+                                                               .build();
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
         UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(),
@@ -137,8 +137,8 @@ class UnframedGrpcServiceTest {
         final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
         final ByteBuf byteBuf = Unpooled.buffer();
         final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
-                .add(GrpcHeaderNames.GRPC_STATUS, "0")
-                .build();
+                                                               .add(GrpcHeaderNames.GRPC_STATUS, "0")
+                                                               .build();
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse
                 .of(responseHeaders, HttpData.wrap(byteBuf));
         AbstractUnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(),
@@ -151,12 +151,13 @@ class UnframedGrpcServiceTest {
         final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
         final ByteBuf byteBuf = Unpooled.buffer();
         final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
-                .add(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
-                .build();
+                                                               .add(HttpHeaderNames.CONTENT_TYPE,
+                                                                    MediaType.PROTOBUF.toString())
+                                                               .build();
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
-        UnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(),
-                                              null, MediaType.PROTOBUF);
+        AbstractUnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(),
+                                                      null, MediaType.PROTOBUF);
         assertThat(byteBuf.refCnt()).isZero();
     }
 
@@ -165,9 +166,10 @@ class UnframedGrpcServiceTest {
         final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
         final ByteBuf byteBuf = Unpooled.buffer();
         final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
-                .add(GrpcHeaderNames.GRPC_STATUS, "0")
-                .add(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
-                .build();
+                                                               .add(GrpcHeaderNames.GRPC_STATUS, "0")
+                                                               .add(HttpHeaderNames.CONTENT_TYPE,
+                                                                    MediaType.PROTOBUF.toString())
+                                                               .build();
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse
                 .of(responseHeaders, HttpData.wrap(byteBuf));
         AbstractUnframedGrpcService.deframeAndRespond(ctx, framedResponse, res, UnframedGrpcErrorHandler.of(),
