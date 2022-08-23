@@ -516,7 +516,7 @@ includeWithFlags ':bom', 'bom'
 ```
 ## Sharing [dependency versions](https://docs.gradle.org/current/userguide/platforms.html#sec:version-catalog-plugin) with `version-catalog` flag
 
-If you configure a project with `version-catalogs` flag, the project will be configured to
+If you configure a project with the `version-catalog` flag, the project will be configured to
 publish version catalog based on the dependencies specified in `dependencies.toml`.
 
 The `version-catalog` flag also implies `publish` flag, which means the `libs.versions.toml` will be uploaded to a
