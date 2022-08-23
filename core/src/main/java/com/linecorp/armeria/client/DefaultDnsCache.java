@@ -90,25 +90,9 @@ final class DefaultDnsCache implements DnsCache {
 
             final UnknownHostException reason = value.cause();
             final List<DnsRecord> records = value.records();
-            if (reason != null) {
-                for (DnsCacheListener listener : listeners) {
-                    if (evicted) {
-                        listener.onEviction(key, null, reason);
-                    } else {
-                        listener.onRemoval(key, null, reason);
-                    }
-                }
-            } else if (records != null) {
-                for (DnsCacheListener listener : listeners) {
-                    if (evicted) {
-                        listener.onEviction(key, records, null);
-                    } else {
-                        listener.onRemoval(key, records, null);
-                    }
-                }
-            } else {
-                // Should not reach here.
-                throw new Error();
+            assert records != null || reason != null;
+            for (DnsCacheListener listener : listeners) {
+                invokeListener(listener, evicted, key, records, reason);
             }
         });
         caffeine.executor(executor);
@@ -116,6 +100,20 @@ final class DefaultDnsCache implements DnsCache {
 
         final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.client.dns.cache");
         CaffeineMetricSupport.setup(meterRegistry, idPrefix, cache);
+    }
+
+    private static void invokeListener(DnsCacheListener listener, boolean evicted, DnsQuestion question,
+                                       @Nullable List<DnsRecord> records,
+                                       @Nullable UnknownHostException reason) {
+        try {
+            if (evicted) {
+                listener.onEviction(question, records, reason);
+            } else {
+                listener.onRemoval(question, records, reason);
+            }
+        } catch (Exception ex) {
+            logger.warn("Unexpected exception while invoking {}", listener, ex);
+        }
     }
 
     @Override
