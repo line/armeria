@@ -127,8 +127,8 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    MediaType.PLAIN_TEXT_UTF_8,
                                    "Unsupported media type. Only application/protobuf, " +
-                                           "application/x-protobuf, application/x-google-protobuf" +
-                                           "and application/json are supported.");
+                                   "application/x-protobuf, application/x-google-protobuf" +
+                                   "and application/json are supported.");
         }
         grpcHeaders.contentType(framedContentType);
 
