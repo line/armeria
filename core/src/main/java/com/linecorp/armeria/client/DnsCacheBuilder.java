@@ -37,10 +37,10 @@ import io.micrometer.core.instrument.Metrics;
 @UnstableApi
 public final class DnsCacheBuilder {
 
-    static final DnsCache DEFAULT_CACHE = DnsCache.builder().build();
-
     private static final ScheduledExecutorService DEFAULT_EXECUTOR = Executors.newSingleThreadScheduledExecutor(
             ThreadFactories.newThreadFactory("armeria-dns-cache-executor", true));
+
+    static final DnsCache DEFAULT_CACHE = DnsCache.builder().build();
 
     private String cacheSpec = Flags.dnsCacheSpec();
     private MeterRegistry meterRegistry = Metrics.globalRegistry;
