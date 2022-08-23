@@ -524,7 +524,7 @@ Maven repository by `./gradlew publish`.
 
 ```groovy
 // settings.gradle
-includeWithFlags ':version-catalogs', 'version-catalogs'
+includeWithFlags ':version-catalog', 'version-catalog'
 ```
 
 ## Building shaded JARs with `shade` flag
