@@ -101,6 +101,11 @@ static def addFlags(Set<String> actualFlags, ...flags) {
         actualFlags.add('publish')
     }
 
+    // 'version-catalogs' implies 'publish'.
+    if (actualFlags.contains('version-catalogs')) {
+        actualFlags.add('publish')
+    }
+
     return Collections.unmodifiableSet(actualFlags)
 }
 

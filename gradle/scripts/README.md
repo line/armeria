@@ -508,28 +508,23 @@ If you configure a project with `bom` flag, the project will be configured to
 generate Maven BOM based on the dependencies specified in `dependencies.toml`.
 
 `bom` flag implies `publish` flag, which means the BOM will be uploaded to a
-Maven repository by `./gradlew publish`. Even though the artifacts can be uploaded without `publish` flag, it is
-highly recommended to explicitly set `publish` flag. Otherwise, some metadata for `pom.xml` such as `developers`
-and `licenses` is not correctly produced and the artifact ID set via `ext.artifactId` is not applied.
+Maven repository by `./gradlew publish`.
 
 ```groovy
 // settings.gradle
-includeWithFlags ':bom',  'bom', 'publish'
+includeWithFlags ':bom', 'bom'
 ```
-
 ## Sharing [dependency versions](https://docs.gradle.org/current/userguide/platforms.html#sec:version-catalog-plugin) with `version-catalog` flag
 
 If you configure a project with `version-catalogs` flag, the project will be configured to
 publish version catalog based on the dependencies specified in `dependencies.toml`.
 
 `version-catalogs` flag also implies `publish` flag, which means the `libs.versions.toml` will be uploaded to a
-Maven repository by `./gradlew publish`. Even though the artifacts can be uploaded without `publish` flag, it is
-highly recommended to explicitly set `publish` flag. Otherwise, some metadata for `pom.xml` such as `developers`
-and `licenses` is not correctly produced and the artifact ID set via `ext.artifactId` is not applied.
+Maven repository by `./gradlew publish`.
 
 ```groovy
 // settings.gradle
-includeWithFlags ':version-catalogs',  'version-catalogs', 'publish'
+includeWithFlags ':version-catalogs', 'version-catalogs'
 ```
 
 ## Building shaded JARs with `shade` flag
