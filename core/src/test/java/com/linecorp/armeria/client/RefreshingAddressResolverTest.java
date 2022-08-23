@@ -591,7 +591,7 @@ class RefreshingAddressResolverTest {
                          builder(false, server)
                                  // Refresh only 'static.com' domain
                                  .autoRefreshTimeout(hostname -> {
-                                     if ("static.com".equals(hostname)) {
+                                     if ("static.com.".equals(hostname)) {
                                          return 60 * 1000;
                                      }
                                      // Don't refresh
@@ -616,16 +616,16 @@ class RefreshingAddressResolverTest {
                 final Cache<String, CacheEntry> cache = group.cache();
 
                 final Future<InetSocketAddress> staticAddr = resolver.resolve(
-                        InetSocketAddress.createUnresolved("static.com", 36462));
+                        InetSocketAddress.createUnresolved("static.com.", 36462));
                 assertIpAddress(staticAddr).isEqualTo("1.1.1.1");
                 assertThat(cache.estimatedSize()).isOne();
 
                 final Future<InetSocketAddress> dynamicAddr = resolver.resolve(
-                        InetSocketAddress.createUnresolved("dynamic.com", 36462));
+                        InetSocketAddress.createUnresolved("dynamic.com.", 36462));
                 assertIpAddress(dynamicAddr).isEqualTo("2.2.2.2");
                 assertThat(cache.estimatedSize()).isEqualTo(2);
 
-                final CacheEntry oldStaticCacheEntry = cache.getIfPresent("static.com");
+                final CacheEntry oldStaticCacheEntry = cache.getIfPresent("static.com.");
 
                 server.setResponses(
                         ImmutableMap.of(
@@ -637,20 +637,19 @@ class RefreshingAddressResolverTest {
                                                                                              "2.2.2.3"))));
 
                 final DnsQuestionWithoutTrailingDot staticQuestion =
-                        DnsQuestionWithoutTrailingDot.of("static.com", "static.com.", A);
+                        DnsQuestionWithoutTrailingDot.of("static.com.", "static.com.", A);
                 final DnsQuestionWithoutTrailingDot dynamicQuestion =
-                        DnsQuestionWithoutTrailingDot.of("dynamic.com", "dynamic.com.", A);
+                        DnsQuestionWithoutTrailingDot.of("dynamic.com.", "dynamic.com.", A);
                 dnsCache.remove(staticQuestion);
                 dnsCache.remove(dynamicQuestion);
                 // Wait until the removal event is delivered.
-                await().atMost(Duration.ofSeconds(20))
-                       .untilAtomic(removalCounter, Matchers.equalTo(2));
+                await().untilAtomic(removalCounter, Matchers.equalTo(2));
 
                 // Wait for the refresh task to be done.
                 Thread.sleep(2000);
 
-                final CacheEntry newStaticCacheEntry = cache.getIfPresent("static.com");
-                final CacheEntry newDynamicCacheEntry = cache.getIfPresent("dynamic.com");
+                final CacheEntry newStaticCacheEntry = cache.getIfPresent("static.com.");
+                final CacheEntry newDynamicCacheEntry = cache.getIfPresent("dynamic.com.");
                 assertThat(newStaticCacheEntry.address().getAddress())
                         .isEqualTo(NetUtil.createByteArrayFromIpAddressString("1.1.1.2"));
                 // New CacheEntry should inherit the original creationTimeNanos
@@ -871,7 +870,8 @@ class RefreshingAddressResolverTest {
                     public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
                                            @Nullable UnknownHostException cause) {
                         // The old cache should be evicted first.
-                        assertThat(question.name()).isEqualTo("foo.com.");
+                        assertThat(((DnsQuestionWithoutTrailingDot) question).originalName())
+                                .isEqualTo("foo.com.");
                         evictionCounter.incrementAndGet();
                     }
                 });
@@ -879,16 +879,16 @@ class RefreshingAddressResolverTest {
                 final Cache<String, CacheEntry> cache = group.cache();
 
                 final Future<InetSocketAddress> fooAddr = resolver.resolve(
-                        InetSocketAddress.createUnresolved("foo.com", 36462));
+                        InetSocketAddress.createUnresolved("foo.com.", 36462));
                 assertIpAddress(fooAddr).isEqualTo("1.1.1.1");
                 assertThat(cache.estimatedSize()).isOne();
 
                 final Future<InetSocketAddress> barAddr = resolver.resolve(
-                        InetSocketAddress.createUnresolved("bar.com", 36462));
+                        InetSocketAddress.createUnresolved("bar.com.", 36462));
                 assertIpAddress(barAddr).isEqualTo("2.2.2.2");
 
                 final Future<InetSocketAddress> bazAddr = resolver.resolve(
-                        InetSocketAddress.createUnresolved("baz.com", 36462));
+                        InetSocketAddress.createUnresolved("baz.com.", 36462));
                 assertIpAddress(bazAddr).isEqualTo("3.3.3.3");
                 await().atMost(Duration.ofSeconds(20))
                        .untilAtomic(evictionCounter, Matchers.equalTo(1));
@@ -898,7 +898,7 @@ class RefreshingAddressResolverTest {
                 Thread.sleep(2000);
                 assertThat(cache.estimatedSize()).isEqualTo(2);
                 assertThat(cache.asMap().keySet())
-                        .containsExactlyInAnyOrder("bar.com", "baz.com");
+                        .containsExactlyInAnyOrder("bar.com.", "baz.com.");
             }
         }
     }
