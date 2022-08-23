@@ -519,7 +519,7 @@ includeWithFlags ':bom', 'bom'
 If you configure a project with `version-catalogs` flag, the project will be configured to
 publish version catalog based on the dependencies specified in `dependencies.toml`.
 
-`version-catalogs` flag also implies `publish` flag, which means the `libs.versions.toml` will be uploaded to a
+The `version-catalog` flag also implies `publish` flag, which means the `libs.versions.toml` will be uploaded to a
 Maven repository by `./gradlew publish`.
 
 ```groovy
