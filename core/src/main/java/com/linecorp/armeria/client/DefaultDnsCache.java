@@ -22,7 +22,6 @@ import static java.util.Objects.requireNonNull;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -41,7 +40,6 @@ import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -50,19 +48,19 @@ import io.netty.handler.codec.dns.DnsRecord;
 
 final class DefaultDnsCache implements DnsCache {
 
-    private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(
-            ThreadFactories.newThreadFactory("armeria-dns-cache-executor", true));
-
     private static final Logger logger = LoggerFactory.getLogger(DefaultDnsCache.class);
 
     private final List<DnsCacheListener> listeners = new CopyOnWriteArrayList<>();
+    private final Cache<DnsQuestion, CacheEntry> cache;
+    private final ScheduledExecutorService executor;
     private final int minTtl;
     private final int maxTtl;
-    private final Cache<DnsQuestion, CacheEntry> cache;
     private final int negativeTtl;
     private boolean evictionWarned;
 
-    DefaultDnsCache(String cacheSpec, MeterRegistry meterRegistry, int minTtl, int maxTtl, int negativeTtl) {
+    DefaultDnsCache(String cacheSpec, MeterRegistry meterRegistry, ScheduledExecutorService executor,
+                    int minTtl, int maxTtl, int negativeTtl) {
+        this.executor = executor;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         this.negativeTtl = negativeTtl;
@@ -132,7 +130,7 @@ final class DefaultDnsCache implements DnsCache {
                                .orElse(minTtl);
         final int effectiveTtl = Math.min(maxTtl, Math.max(minTtl, Ints.saturatedCast(ttl)));
 
-        cache.put(question, new CacheEntry(cache, question, copied, null, effectiveTtl));
+        cache.put(question, new CacheEntry(cache, question, copied, null, executor, effectiveTtl));
     }
 
     @Override
@@ -141,7 +139,7 @@ final class DefaultDnsCache implements DnsCache {
         requireNonNull(cause, "cause");
 
         if (negativeTtl > 0) {
-            cache.put(question, new CacheEntry(cache, question, null, cause, negativeTtl));
+            cache.put(question, new CacheEntry(cache, question, null, cause, executor, negativeTtl));
         }
     }
 
@@ -187,7 +185,8 @@ final class DefaultDnsCache implements DnsCache {
 
         private CacheEntry(Cache<DnsQuestion, CacheEntry> cache, DnsQuestion question,
                            @Nullable List<DnsRecord> records,
-                           @Nullable UnknownHostException cause, int timeToLive) {
+                           @Nullable UnknownHostException cause, ScheduledExecutorService executor,
+                           int timeToLive) {
             assert records != null || cause != null;
             this.records = records;
             this.cause = cause;

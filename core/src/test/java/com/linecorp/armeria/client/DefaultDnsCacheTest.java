@@ -91,9 +91,7 @@ class DefaultDnsCacheTest {
 
             @Override
             public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
-                                   @Nullable UnknownHostException cause) {
-
-            }
+                                   @Nullable UnknownHostException cause) {}
         });
 
         await().untilAtomic(removed, Matchers.is(records));
@@ -265,10 +263,12 @@ class DefaultDnsCacheTest {
                                           .cacheSpec("maximumSize=1")
                                           .build();
 
-        final DnsQuestionWithoutTrailingDot query0 = DnsQuestionWithoutTrailingDot.of("foo.com.", DnsRecordType.A);
+        final DnsQuestionWithoutTrailingDot query0 =
+                DnsQuestionWithoutTrailingDot.of("foo.com.", DnsRecordType.A);
         final DnsRecord record0 = newRecord("foo.com.", "1.1.1.0", 20);
 
-        final DnsQuestionWithoutTrailingDot query1 = DnsQuestionWithoutTrailingDot.of("bar.com.", DnsRecordType.A);
+        final DnsQuestionWithoutTrailingDot query1 =
+                DnsQuestionWithoutTrailingDot.of("bar.com.", DnsRecordType.A);
         final DnsRecord record1 = newRecord("bar.com.", "1.1.1.1", 40);
         final AtomicBoolean removed = new AtomicBoolean();
         final AtomicBoolean evicted = new AtomicBoolean();

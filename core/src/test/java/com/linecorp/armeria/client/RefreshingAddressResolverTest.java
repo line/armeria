@@ -583,7 +583,9 @@ class RefreshingAddressResolverTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("dynamic.com.", "2.2.2.2"))))) {
 
             final EventLoop eventLoop = eventLoopExtension.get();
-            final DnsCache dnsCache = DnsCache.builder().build();
+            final DnsCache dnsCache = DnsCache.builder()
+                                              .executor(eventLoop)
+                                              .build();
             try (RefreshingAddressResolverGroup group =
                          builder(false, server)
                                  // Refresh only 'static.com' domain
@@ -664,7 +666,9 @@ class RefreshingAddressResolverTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))) {
 
             final EventLoop eventLoop = eventLoopExtension.get();
-            final DnsCache dnsCache = DnsCache.builder().build();
+            final DnsCache dnsCache = DnsCache.builder()
+                                              .executor(eventLoop)
+                                              .build();
             try (RefreshingAddressResolverGroup group =
                          builder(false, server)
                                  .autoRefreshTimeoutMillis(5 * 1000) // refresh for 5 seconds
@@ -722,7 +726,9 @@ class RefreshingAddressResolverTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))) {
 
             final EventLoop eventLoop = eventLoopExtension.get();
-            final DnsCache dnsCache = DnsCache.builder().build();
+            final DnsCache dnsCache = DnsCache.builder()
+                                              .executor(eventLoop)
+                                              .build();
             try (RefreshingAddressResolverGroup group =
                          builder(false, server)
                                  .autoRefreshTimeout(hostname -> 0)
@@ -772,7 +778,9 @@ class RefreshingAddressResolverTest {
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))) {
 
             final EventLoop eventLoop = eventLoopExtension.get();
-            final DnsCache dnsCache = DnsCache.builder().build();
+            final DnsCache dnsCache = DnsCache.builder()
+                                              .executor(eventLoop)
+                                              .build();
             try (RefreshingAddressResolverGroup group =
                          builder(false, server)
                                  .autoRefreshTimeoutMillis(5 * 1000) // refresh for 5 seconds
@@ -840,6 +848,7 @@ class RefreshingAddressResolverTest {
 
             final EventLoop eventLoop = eventLoopExtension.get();
             final DnsCache dnsCache = DnsCache.builder()
+                                              .executor(eventLoop)
                                               .cacheSpec("maximumSize=2")
                                               .build();
             try (RefreshingAddressResolverGroup group =
