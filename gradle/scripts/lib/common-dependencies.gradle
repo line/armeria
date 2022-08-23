@@ -91,7 +91,7 @@ configure(dependencyManagementProject) {
 // Publish version catalog so that other projects can easily align transitive versions of the project by
 // importing the published catalog.
 // https://docs.gradle.org/current/userguide/platforms.html#sec:version-catalog-plugin
-configure(projectsWithFlag('version-catalogs')) { catalogProject ->
+configure(projectsWithFlag('version-catalog')) { catalogProject ->
     apply plugin: 'version-catalog'
     apply plugin: 'maven-publish'
 
