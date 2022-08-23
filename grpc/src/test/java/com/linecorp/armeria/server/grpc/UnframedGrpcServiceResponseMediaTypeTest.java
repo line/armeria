@@ -18,8 +18,15 @@ package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.util.stream.Stream;
+
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtensionContext;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.ArgumentsProvider;
+import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpMethod;
@@ -59,16 +66,15 @@ public class UnframedGrpcServiceResponseMediaTypeTest {
                 "/armeria.grpc.testing.TestService/EmptyCall",
                 MediaType.JSON_UTF_8, "{}");
         final ServiceRequestContext ctx = ServiceRequestContext.builder(request)
-                                                               .eventLoop(eventLoop.get())
                                                                .build();
 
         final AggregatedHttpResponse res = unframedGrpcService.serve(ctx, request).aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.contentType()).isNotNull();
         assertThat(res.contentType()).isEqualTo(MediaType.JSON_UTF_8);
     }
 
-    @Test
+    @ParameterizedTest
+    @ArgumentsSource(ProtobufMediaTypeProvider.class)
     void respondWithCorrespondingProtobufMediaType() throws Exception {
         final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(testService);
 
@@ -77,61 +83,27 @@ public class UnframedGrpcServiceResponseMediaTypeTest {
                                                    MediaType.PROTOBUF,
                                                    EmptyProtos.Empty.getDefaultInstance().toByteArray());
         final ServiceRequestContext ctx = ServiceRequestContext.builder(request)
-                                                               .eventLoop(eventLoop.get())
                                                                .build();
 
         final AggregatedHttpResponse res = unframedGrpcService.serve(ctx, request).aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.contentType()).isNotNull();
         assertThat(res.contentType()).isEqualTo(MediaType.PROTOBUF);
     }
 
-    @Test
-    void respondWithCorrespondingXProtobufMediaType() throws Exception {
-        final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(testService);
-
-        final HttpRequest request = HttpRequest.of(HttpMethod.POST,
-                "/armeria.grpc.testing.TestService/EmptyCall",
-                MediaType.X_PROTOBUF, EmptyProtos.Empty.getDefaultInstance().toByteArray());
-        final ServiceRequestContext ctx = ServiceRequestContext.builder(request)
-                                                               .eventLoop(eventLoop.get())
-                                                               .build();
-
-        final AggregatedHttpResponse res = unframedGrpcService.serve(ctx, request).aggregate().join();
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.contentType()).isNotNull();
-        assertThat(res.contentType()).isEqualTo(MediaType.X_PROTOBUF);
-    }
-
-    @Test
-    void respondWithCorrespondingXGoogleProtobufMediaType() throws Exception {
-        final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(testService);
-
-        final HttpRequest request = HttpRequest.of(HttpMethod.POST,
-                "/armeria.grpc.testing.TestService/EmptyCall",
-                MediaType.X_GOOGLE_PROTOBUF, EmptyProtos.Empty.getDefaultInstance().toByteArray());
-        final ServiceRequestContext ctx = ServiceRequestContext.builder(request)
-                                                               .eventLoop(eventLoop.get())
-                                                               .build();
-
-        final AggregatedHttpResponse res = unframedGrpcService.serve(ctx, request).aggregate().join();
-        assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.contentType()).isNotNull();
-        assertThat(res.contentType()).isEqualTo(MediaType.X_GOOGLE_PROTOBUF);
+    private static class ProtobufMediaTypeProvider implements ArgumentsProvider {
+        @Override
+        public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
+            return Stream.of(MediaType.PROTOBUF, MediaType.X_PROTOBUF, MediaType.X_GOOGLE_PROTOBUF)
+                         .map(Arguments::of);
+        }
     }
 
     private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService) {
-        return buildUnframedGrpcService(bindableService, UnframedGrpcErrorHandler.ofPlainText());
-    }
-
-    private static UnframedGrpcService buildUnframedGrpcService(BindableService bindableService,
-                                                                UnframedGrpcErrorHandler errorHandler) {
         return (UnframedGrpcService) GrpcService.builder()
-                .addService(bindableService)
-                .maxRequestMessageLength(MAX_MESSAGE_BYTES)
-                .maxResponseMessageLength(MAX_MESSAGE_BYTES)
-                .enableUnframedRequests(true)
-                .unframedGrpcErrorHandler(errorHandler)
-                .build();
+                                                .addService(bindableService)
+                                                .maxRequestMessageLength(MAX_MESSAGE_BYTES)
+                                                .maxResponseMessageLength(MAX_MESSAGE_BYTES)
+                                                .enableUnframedRequests(true)
+                                                .build();
     }
 }

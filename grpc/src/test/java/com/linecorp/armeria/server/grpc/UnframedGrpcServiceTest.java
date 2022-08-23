@@ -30,7 +30,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -123,7 +122,7 @@ class UnframedGrpcServiceTest {
         final ByteBuf byteBuf = Unpooled.buffer();
         final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
                                                                .add(GrpcHeaderNames.GRPC_STATUS, "1")
-                                                               .add(HttpHeaderNames.CONTENT_TYPE, MediaType.PROTOBUF.toString())
+                                                               .contentType(MediaType.PROTOBUF)
                                                                .build();
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
@@ -151,8 +150,7 @@ class UnframedGrpcServiceTest {
         final CompletableFuture<HttpResponse> res = new CompletableFuture<>();
         final ByteBuf byteBuf = Unpooled.buffer();
         final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
-                                                               .add(HttpHeaderNames.CONTENT_TYPE,
-                                                                    MediaType.PROTOBUF.toString())
+                                                               .contentType(MediaType.PROTOBUF)
                                                                .build();
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse.of(responseHeaders,
                                                                                 HttpData.wrap(byteBuf));
@@ -167,8 +165,7 @@ class UnframedGrpcServiceTest {
         final ByteBuf byteBuf = Unpooled.buffer();
         final ResponseHeaders responseHeaders = ResponseHeaders.builder(HttpStatus.OK)
                                                                .add(GrpcHeaderNames.GRPC_STATUS, "0")
-                                                               .add(HttpHeaderNames.CONTENT_TYPE,
-                                                                    MediaType.PROTOBUF.toString())
+                                                               .contentType(MediaType.PROTOBUF)
                                                                .build();
         final AggregatedHttpResponse framedResponse = AggregatedHttpResponse
                 .of(responseHeaders, HttpData.wrap(byteBuf));
