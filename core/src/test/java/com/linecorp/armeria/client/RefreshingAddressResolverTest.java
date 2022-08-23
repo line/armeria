@@ -30,6 +30,7 @@ import static org.awaitility.Awaitility.await;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
@@ -642,7 +643,8 @@ class RefreshingAddressResolverTest {
                 dnsCache.remove(staticQuestion);
                 dnsCache.remove(dynamicQuestion);
                 // Wait until the removal event is delivered.
-                await().untilAtomic(removalCounter, Matchers.equalTo(2));
+                await().atMost(Duration.ofSeconds(20))
+                       .untilAtomic(removalCounter, Matchers.equalTo(2));
 
                 // Wait for the refresh task to be done.
                 Thread.sleep(2000);
@@ -888,7 +890,8 @@ class RefreshingAddressResolverTest {
                 final Future<InetSocketAddress> bazAddr = resolver.resolve(
                         InetSocketAddress.createUnresolved("baz.com", 36462));
                 assertIpAddress(bazAddr).isEqualTo("3.3.3.3");
-                await().untilAtomic(evictionCounter, Matchers.equalTo(1));
+                await().atMost(Duration.ofSeconds(20))
+                       .untilAtomic(evictionCounter, Matchers.equalTo(1));
                 assertThat(removalCounter).hasValue(0);
 
                 // Wait for the eviction event to be delivered.
