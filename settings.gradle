@@ -3,7 +3,9 @@ rootProject.name = 'armeria'
 apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
 
 // Published BOM projects
-includeWithFlags ':bom',                                 'bom', 'publish'
+includeWithFlags ':bom',                                 'bom'
+// Published version catalog projects
+includeWithFlags ':version-catalog',                     'version-catalog'
 
 // Published Java projects
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
