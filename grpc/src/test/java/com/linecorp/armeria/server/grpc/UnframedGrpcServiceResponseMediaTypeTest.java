@@ -75,12 +75,12 @@ public class UnframedGrpcServiceResponseMediaTypeTest {
 
     @ParameterizedTest
     @ArgumentsSource(ProtobufMediaTypeProvider.class)
-    void respondWithCorrespondingProtobufMediaType() throws Exception {
+    void respondWithCorrespondingProtobufMediaType(MediaType protobufType) throws Exception {
         final UnframedGrpcService unframedGrpcService = buildUnframedGrpcService(testService);
 
         final HttpRequest request = HttpRequest.of(HttpMethod.POST,
                                                    "/armeria.grpc.testing.TestService/EmptyCall",
-                                                   MediaType.PROTOBUF,
+                                                   protobufType,
                                                    EmptyProtos.Empty.getDefaultInstance().toByteArray());
         final ServiceRequestContext ctx = ServiceRequestContext.builder(request)
                                                                .build();
