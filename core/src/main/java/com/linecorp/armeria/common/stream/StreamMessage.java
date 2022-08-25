@@ -23,12 +23,15 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -276,6 +279,14 @@ public interface StreamMessage<T> extends Publisher<T> {
             builder.executor(executor);
         }
         return builder.alloc(alloc).bufferSize(bufferSize).build();
+    }
+
+    static ByteStreamMessage fromOutputStream(Consumer<OutputStream> outputStreamWriter) {
+        return fromOutputStream(outputStreamWriter, Executors.newSingleThreadExecutor());
+    }
+
+    static ByteStreamMessage fromOutputStream(Consumer<OutputStream> outputStreamWriter, Executor executor) {
+        return new ByteStreamMessageOutputStream(outputStreamWriter, executor);
     }
 
     /**
