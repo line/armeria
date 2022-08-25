@@ -226,7 +226,7 @@ public interface ClientRequestContext extends RequestContext {
         }
 
         final ServiceRequestContext root = root();
-        if (oldCtx.root() == root) {
+        if (oldCtx.root().unwrapAll() == root.unwrapAll()) {
             return RequestContextUtil.invokeHookAndPop(this, oldCtx);
         }
 

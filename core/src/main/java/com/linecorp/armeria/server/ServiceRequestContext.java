@@ -228,7 +228,7 @@ public interface ServiceRequestContext extends RequestContext {
             return noopSafeCloseable();
         }
 
-        if (oldCtx.root() == this) {
+        if (oldCtx.root().unwrapAll() == unwrapAll()) {
             return RequestContextUtil.invokeHookAndPop(this, oldCtx);
         }
 
