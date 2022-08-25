@@ -61,7 +61,7 @@ class TraceRequestContextLeakTest {
         executor.execute(() -> {
             final ServiceRequestContext ctx = newCtx("/1");
             try (SafeCloseable ignore = ctx.push()) {
-                //Ignore
+                // Ignore
             } catch (Exception ex) {
                 isThrown.set(true);
             } finally {
@@ -74,7 +74,7 @@ class TraceRequestContextLeakTest {
             try (SafeCloseable ignore = anotherCtx.push()) {
                 final ClientRequestContext clientCtx = newClientCtx("/3");
                 try (SafeCloseable ignore2 = clientCtx.push()) {
-                    //Ignore
+                    // Ignore
                 }
             } catch (Exception ex) {
                 isThrown.set(true);
@@ -105,7 +105,7 @@ class TraceRequestContextLeakTest {
             executor.execute(() -> {
                 final ServiceRequestContext anotherCtx = newCtx("/2");
                 try (SafeCloseable ignore = anotherCtx.push()) {
-                    //Ignore
+                    // Ignore
                 } catch (Exception ex) {
                     isThrown.set(true);
                     exception.set(ex);
@@ -138,15 +138,15 @@ class TraceRequestContextLeakTest {
             });
 
             ex2.execute(() -> {
-                //Leak happened on the first eventLoop shouldn't affect 2nd eventLoop when trying to push
+                // Leak happened on the first eventLoop shouldn't affect 2nd eventLoop when trying to push
                 final ServiceRequestContext anotherCtx = newCtx("/2");
                 try (SafeCloseable ignore1 = anotherCtx.push()) {
                     final ClientRequestContext cctx = newClientCtx("/3");
                     try (SafeCloseable ignore2 = cctx.push()) {
-                        //Ignore
+                        // Ignore
                     }
                 } catch (Exception ex) {
-                    //Not suppose to throw exception on the second event loop
+                    // Not suppose to throw exception on the second event loop
                     isThrown.set(true);
                 } finally {
                     latch.countDown();
@@ -192,7 +192,7 @@ class TraceRequestContextLeakTest {
 
             ex1.execute(() -> {
                 try (SafeCloseable ignore = anotherCtx3.push()) {
-                    //Ignore
+                    // Ignore
                 } catch (Exception ex) {
                     isThrown.set(true);
                     exception.set(ex);
@@ -241,7 +241,7 @@ class TraceRequestContextLeakTest {
                 deferredClose.add(ctx2);
                 final ClientRequestContext ctx3 = newClientCtx("/3");
                 try (SafeCloseable ignored1 = ctx3.push()) {
-                    //Ignore
+                    // Ignore
                 }
             } catch (Exception ex) {
                 exception.set(ex);
@@ -261,7 +261,7 @@ class TraceRequestContextLeakTest {
                                    .build();
     }
 
-    //Utility to clean up RequestContext leak after test
+    // Utility to clean up RequestContext leak after test
     private static class DeferredClose implements SafeCloseable {
 
         private final ConcurrentHashMap<Executor, SafeCloseable> toClose;
