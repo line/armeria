@@ -2626,6 +2626,10 @@ fr.eu.org
 fr.it
 fra1-de.cloudjiffy.net
 framer.app
+framer.media
+framer.photos
+framer.website
+framer.wiki
 framercanvas.com
 frana.no
 francaise.museum
