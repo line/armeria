@@ -139,6 +139,7 @@ class TraceRequestContextLeakTest {
 
             ex2.execute(() -> {
                 // Leak happened on the first eventLoop shouldn't affect 2nd eventLoop when trying to push
+                await().until(() -> latch.getCount() == 1);
                 final ServiceRequestContext anotherCtx = newCtx("/2");
                 try (SafeCloseable ignore1 = anotherCtx.push()) {
                     final ClientRequestContext cctx = newClientCtx("/3");
@@ -201,7 +202,7 @@ class TraceRequestContextLeakTest {
 
             await().untilTrue(isThrown);
             assertThat(exception.get())
-                    .hasMessageContaining("multiThreadContextLeak$6(TraceRequestContextLeakTest.java:178)");
+                    .hasMessageContaining("multiThreadContextLeak$7(TraceRequestContextLeakTest.java:179)");
         }
     }
 
@@ -248,7 +249,7 @@ class TraceRequestContextLeakTest {
             }
         }
         assertThat(exception.get())
-                .hasMessageContaining("connerCase(TraceRequestContextLeakTest.java:240)");
+                .hasMessageContaining("connerCase(TraceRequestContextLeakTest.java:241)");
     }
 
     private static ServiceRequestContext newCtx(String path) {
