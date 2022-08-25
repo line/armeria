@@ -76,6 +76,11 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
         return delegate.currentOrNull();
     }
 
+    @Override
+    public RequestContextStorage unwrap() {
+        return delegate;
+    }
+
     private static RequestContextWrapper<?> warpRequestContext(RequestContext ctx) {
         return ctx instanceof ClientRequestContext ?
                new TraceableClientRequestContext((ClientRequestContext) ctx)
