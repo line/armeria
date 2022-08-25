@@ -19,7 +19,9 @@ package com.linecorp.armeria.common.logging;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
+import java.util.function.BiFunction;
 
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -30,14 +32,45 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  * A formatter that converts {@link RequestLog} into text message.
  */
 @UnstableApi
-enum DefaultTextLogFormatter implements LogFormatter {
+class TextLogFormatter implements LogFormatter {
 
-    INSTANCE;
+    static final TextLogFormatter DEFAULT_INSTANCE = new TextLogFormatterBuilder().build();
+
+    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestHeadersSanitizer;
+
+    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseHeadersSanitizer;
+
+    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestTrailersSanitizer;
+
+    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseTrailersSanitizer;
+
+    private BiFunction<? super RequestContext, Object, ? extends String> requestContentSanitizer;
+
+    private BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer;
+
+    private BiFunction<? super RequestContext, ? super Throwable, ? extends String> responseCauseSanitizer;
+
+    TextLogFormatter(
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestHeadersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseHeadersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseTrailersSanitizer,
+            BiFunction<? super RequestContext, Object, ? extends String> requestContentSanitizer,
+            BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer,
+            BiFunction<? super RequestContext, ? super Throwable, ? extends String> responseCauseSanitizer
+    ) {
+        this.requestHeadersSanitizer = requestHeadersSanitizer;
+        this.responseHeadersSanitizer = responseHeadersSanitizer;
+        this.requestTrailersSanitizer = requestTrailersSanitizer;
+        this.responseTrailersSanitizer = responseTrailersSanitizer;
+        this.requestContentSanitizer = requestContentSanitizer;
+        this.responseContentSanitizer = responseContentSanitizer;
+        this.responseCauseSanitizer = responseCauseSanitizer;
+    }
 
     @Override
-    public String formatRequest(RequestLog log, LogSanitizer logSanitizer) {
+    public String formatRequest(RequestLog log) {
         requireNonNull(log, "log");
-        requireNonNull(logSanitizer, "logSanitizer");
 
         final Set<RequestLogProperty> availableProperties = log.availableProperties();
         if (!availableProperties.contains(RequestLogProperty.REQUEST_START_TIME)) {
@@ -54,14 +87,14 @@ enum DefaultTextLogFormatter implements LogFormatter {
         final RequestContext ctx = log.context();
         final String sanitizedHeaders;
         if (availableProperties.contains(RequestLogProperty.REQUEST_HEADERS)) {
-            sanitizedHeaders = logSanitizer.sanitizeHeaders(ctx, log.requestHeaders());
+            sanitizedHeaders = requestHeadersSanitizer.apply(ctx, log.requestHeaders());
         } else {
             sanitizedHeaders = null;
         }
 
         final String sanitizedContent;
         if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT) && log.requestContent() != null) {
-            sanitizedContent = logSanitizer.sanitizeContent(ctx, log.requestContent());
+            sanitizedContent = requestContentSanitizer.apply(ctx, log.requestContent());
         } else {
             sanitizedContent = null;
         }
@@ -69,7 +102,7 @@ enum DefaultTextLogFormatter implements LogFormatter {
         final String sanitizedTrailers;
         if (availableProperties.contains(RequestLogProperty.REQUEST_TRAILERS) &&
             !log.requestTrailers().isEmpty()) {
-            sanitizedTrailers = logSanitizer.sanitizeTrailers(ctx, log.requestTrailers());
+            sanitizedTrailers = requestTrailersSanitizer.apply(ctx, log.requestTrailers());
         } else {
             sanitizedTrailers = null;
         }
@@ -131,9 +164,8 @@ enum DefaultTextLogFormatter implements LogFormatter {
     }
 
     @Override
-    public String formatResponse(RequestLog log, LogSanitizer sanitizer) {
+    public String formatResponse(RequestLog log) {
         requireNonNull(log, "log");
-        requireNonNull(sanitizer, "sanitizer");
 
         final Set<RequestLogProperty> availableProperties = log.availableProperties();
         if (!availableProperties.contains(RequestLogProperty.RESPONSE_START_TIME)) {
@@ -150,7 +182,7 @@ enum DefaultTextLogFormatter implements LogFormatter {
         final RequestContext ctx = log.context();
         final String sanitizedHeaders;
         if (availableProperties.contains(RequestLogProperty.RESPONSE_HEADERS)) {
-            sanitizedHeaders = sanitizer.sanitizeHeaders(ctx, log.responseHeaders());
+            sanitizedHeaders = responseHeadersSanitizer.apply(ctx, log.responseHeaders());
         } else {
             sanitizedHeaders = null;
         }
@@ -158,7 +190,7 @@ enum DefaultTextLogFormatter implements LogFormatter {
         final String sanitizedContent;
         if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT) &&
             log.responseContent() != null) {
-            sanitizedContent = sanitizer.sanitizeContent(ctx, log.responseContent());
+            sanitizedContent = responseContentSanitizer.apply(ctx, log.responseContent());
         } else {
             sanitizedContent = null;
         }
@@ -166,7 +198,7 @@ enum DefaultTextLogFormatter implements LogFormatter {
         final String sanitizedTrailers;
         if (availableProperties.contains(RequestLogProperty.RESPONSE_TRAILERS) &&
             !log.responseTrailers().isEmpty()) {
-            sanitizedTrailers = sanitizer.sanitizeTrailers(ctx, log.responseTrailers());
+            sanitizedTrailers = responseTrailersSanitizer.apply(ctx, log.responseTrailers());
         } else {
             sanitizedTrailers = null;
         }
@@ -219,4 +251,6 @@ enum DefaultTextLogFormatter implements LogFormatter {
             return buf.toString();
         }
     }
+
+    private TextLogFormatter() {}
 }

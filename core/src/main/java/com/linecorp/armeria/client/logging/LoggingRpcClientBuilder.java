@@ -166,6 +166,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.responseLogLevelMapper(responseLogLevelMapper);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder requestHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -173,6 +174,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.requestHeadersSanitizer(requestHeadersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder responseHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -180,6 +182,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder requestTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -187,6 +190,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.requestTrailersSanitizer(requestTrailersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder responseTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -194,6 +198,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder headersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
@@ -201,6 +206,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.headersSanitizer(headersSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder requestContentSanitizer(
             BiFunction<? super RequestContext, Object,
@@ -208,6 +214,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.requestContentSanitizer(requestContentSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder responseContentSanitizer(
             BiFunction<? super RequestContext, Object,
@@ -215,12 +222,14 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
         return (LoggingRpcClientBuilder) super.responseContentSanitizer(responseContentSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder contentSanitizer(
             BiFunction<? super RequestContext, Object, ? extends @Nullable Object> contentSanitizer) {
         return (LoggingRpcClientBuilder) super.contentSanitizer(contentSanitizer);
     }
 
+    @Deprecated
     @Override
     public LoggingRpcClientBuilder responseCauseSanitizer(
             BiFunction<? super RequestContext, ? super Throwable,

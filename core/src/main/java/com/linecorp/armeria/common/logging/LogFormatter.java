@@ -21,16 +21,16 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A formatter that convert {@link RequestLog} into {@link String log message} using {@link LogSanitizer}.
+ * A formatter that convert {@link RequestLog} into {@link String log message}.
  */
 @UnstableApi
 public interface LogFormatter {
 
     /**
-     * Returns {@link DefaultTextLogFormatter}.
+     * Returns {@link TextLogFormatter}.
      */
     static LogFormatter ofText() {
-        return DefaultTextLogFormatter.INSTANCE;
+        return TextLogFormatter.DEFAULT_INSTANCE;
     }
 
     /**
@@ -45,18 +45,18 @@ public interface LogFormatter {
      * json format log message by using specified {@link ObjectMapper}.
      */
     static LogFormatter ofJson(ObjectMapper objectMapper) {
-        return new JsonLogFormatter(objectMapper);
+        return new JsonLogFormatterBuilder()
+                .objectMapper(objectMapper)
+                .build();
     }
 
     /**
-     * Returns the formatted request log message that is constructed by {@link RequestLog}
-     * with using sanitizers.
+     * Returns the formatted request log message that is constructed by {@link RequestLog}.
      */
-    String formatRequest(RequestLog log, LogSanitizer logSanitizer);
+    String formatRequest(RequestLog log);
 
     /**
-     * Returns the formatted response log message that is constructed by {@link RequestLog}
-     * with using sanitizers.
+     * Returns the formatted response log message that is constructed by {@link RequestLog}.
      */
-    String formatResponse(RequestLog log, LogSanitizer logSanitizer);
+    String formatResponse(RequestLog log);
 }

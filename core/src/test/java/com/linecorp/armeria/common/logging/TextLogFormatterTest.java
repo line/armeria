@@ -22,10 +22,9 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.util.Functions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-class DefaultTextLogFormatterTest {
+class TextLogFormatterTest {
 
     @Test
     void formatRequest() {
@@ -33,12 +32,7 @@ class DefaultTextLogFormatterTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/format"));
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endRequest();
-        final LogSanitizer sanitizer = LogSanitizer.ofRequestLogSanitizer(
-                Functions.second(),
-                Functions.second(),
-                Functions.second()
-        );
-        final String requestLog = logFormatter.formatRequest(log, sanitizer);
+        final String requestLog = logFormatter.formatRequest(log);
         assertThat(requestLog)
                 .matches("^\\{startTime=.+, length=.+, duration=.+, scheme=.+, name=.+, headers=.+}$");
     }
@@ -49,12 +43,7 @@ class DefaultTextLogFormatterTest {
         final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/format"));
         final DefaultRequestLog log = (DefaultRequestLog) ctx.log();
         log.endResponse();
-        final LogSanitizer sanitizer = LogSanitizer.ofResponseLogSanitizer(
-                Functions.second(),
-                Functions.second(),
-                Functions.second()
-        );
-        final String responseLog = logFormatter.formatResponse(log, sanitizer);
+        final String responseLog = logFormatter.formatResponse(log);
         assertThat(responseLog)
                 .matches("^\\{startTime=.+, length=.+, duration=.+, totalDuration=.+, headers=.+}$");
     }

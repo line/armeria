@@ -69,7 +69,8 @@ public abstract class LoggingDecoratorBuilder {
     private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
             responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
 
-    private LogFormatter logFormatter = LogFormatter.ofText();
+    @Nullable
+    private LogFormatter logFormatter;
 
     /**
      * Sets the {@link Logger} to use when logging.
@@ -219,7 +220,10 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link BiFunction} to use to sanitize request headers before logging. It is common to have the
      * {@link BiFunction} that removes sensitive headers, like {@code Cookie}, before logging. If unset, will
      * not sanitize request headers.
+     *
+     * @deprecated Use {@link #logFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder requestHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> requestHeadersSanitizer) {
@@ -239,7 +243,10 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link BiFunction} to use to sanitize response headers before logging. It is common to have the
      * {@link BiFunction} that removes sensitive headers, like {@code Set-Cookie}, before logging. If unset,
      * will not sanitize response headers.
+     *
+     * @deprecated Use {@link #logFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder responseHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> responseHeadersSanitizer) {
@@ -258,7 +265,10 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link BiFunction} to use to sanitize request trailers before logging. If unset,
      * will not sanitize request trailers.
+     *
+     * @deprecated Use {@link #logFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder requestTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> requestTrailersSanitizer) {
@@ -277,7 +287,10 @@ public abstract class LoggingDecoratorBuilder {
     /**
      * Sets the {@link BiFunction} to use to sanitize response trailers before logging. If unset,
      * will not sanitize response trailers.
+     *
+     * @deprecated Use {@link #logFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder responseTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> responseTrailersSanitizer) {
@@ -308,7 +321,9 @@ public abstract class LoggingDecoratorBuilder {
      * @see #requestTrailersSanitizer(BiFunction)
      * @see #responseHeadersSanitizer(BiFunction)
      * @see #responseTrailersSanitizer(BiFunction)
+     * @deprecated Use {@link #logFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder headersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> headersSanitizer) {
@@ -325,7 +340,9 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link BiFunction} to use to sanitize request content before logging. It is common to have the
      * {@link BiFunction} that removes sensitive content, such as an GPS location query, before logging.
      * If unset, will not sanitize request content.
+     * @deprecated Use {@link #logFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder requestContentSanitizer(
             BiFunction<? super RequestContext, Object,
                     ? extends @Nullable Object> requestContentSanitizer) {
@@ -345,7 +362,9 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link BiFunction} to use to sanitize response content before logging. It is common to have the
      * {@link BiFunction} that removes sensitive content, such as an address, before logging. If unset,
      * will not sanitize response content.
+     * @deprecated Use {@link #logFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder responseContentSanitizer(
             BiFunction<? super RequestContext, Object,
                     ? extends @Nullable Object> responseContentSanitizer) {
@@ -373,7 +392,9 @@ public abstract class LoggingDecoratorBuilder {
      *
      * @see #requestContentSanitizer(BiFunction)
      * @see #responseContentSanitizer(BiFunction)
+     * @deprecated Use {@link #logFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder contentSanitizer(
             BiFunction<? super RequestContext, Object, ? extends @Nullable Object> contentSanitizer) {
         requireNonNull(contentSanitizer, "contentSanitizer");
@@ -387,7 +408,9 @@ public abstract class LoggingDecoratorBuilder {
      * sanitize the stack trace of the exception to remove sensitive information, or prevent from logging
      * the stack trace completely by returning {@code null} in the {@link BiFunction}. If unset, will not
      * sanitize a response cause.
+     * @deprecated Use {@link #logFormatter)} instead.
      */
+    @Deprecated
     public LoggingDecoratorBuilder responseCauseSanitizer(
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer) {
@@ -405,7 +428,7 @@ public abstract class LoggingDecoratorBuilder {
 
     /**
      * Sets the {@link LogFormatter} to convert {@link RequestLog} into log message.
-     * If unset, will use {@link DefaultTextLogFormatter}.
+     * If unset, will use {@link TextLogFormatter}.
      */
     public LoggingDecoratorBuilder logFormatter(LogFormatter logFormatter) {
         this.logFormatter = requireNonNull(logFormatter, "logFormatter");
