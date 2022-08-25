@@ -107,8 +107,8 @@ class TraceRequestContextLeakTest {
                 try (SafeCloseable ignore = anotherCtx.push()) {
                     // Ignore
                 } catch (Exception ex) {
-                    isThrown.set(true);
                     exception.set(ex);
+                    isThrown.set(true);
                 }
             });
 
@@ -194,8 +194,8 @@ class TraceRequestContextLeakTest {
                 try (SafeCloseable ignore = anotherCtx3.push()) {
                     // Ignore
                 } catch (Exception ex) {
-                    isThrown.set(true);
                     exception.set(ex);
+                    isThrown.set(true);
                 }
             });
 
