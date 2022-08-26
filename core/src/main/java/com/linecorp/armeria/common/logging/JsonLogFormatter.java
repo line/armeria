@@ -40,7 +40,7 @@ import com.linecorp.armeria.common.util.TextFormatter;
  * A formatter that convert {@link RequestLog} into json format message.
  */
 @UnstableApi
-final class JsonLogFormatter implements LogFormatter {
+public final class JsonLogFormatter implements LogFormatter {
 
     static final JsonLogFormatter DEFAULT_INSTANCE = new JsonLogFormatterBuilder().build();
 

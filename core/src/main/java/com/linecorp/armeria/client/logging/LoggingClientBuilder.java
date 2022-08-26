@@ -60,7 +60,7 @@ public final class LoggingClientBuilder extends AbstractLoggingClientBuilder {
                                  responseCauseSanitizer(),
                                  successSampler(),
                                  failureSampler(),
-                                 logFormatter());
+                                 buildLogFormatter());
     }
 
     /**

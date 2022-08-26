@@ -34,6 +34,13 @@ public interface LogFormatter {
     }
 
     /**
+     * Returns a newly created {@link TextLogFormatterBuilder}.
+     */
+    static TextLogFormatterBuilder ofTextBuilder() {
+        return new TextLogFormatterBuilder();
+    }
+
+    /**
      * Returns {@link JsonLogFormatter} that convert {@link RequestLog} into json format log message.
      */
     static LogFormatter ofJson() {
@@ -48,6 +55,13 @@ public interface LogFormatter {
         return new JsonLogFormatterBuilder()
                 .objectMapper(objectMapper)
                 .build();
+    }
+
+    /**
+     * Returns a newly created {@link JsonLogFormatterBuilder}.
+     */
+    static JsonLogFormatterBuilder ofJsonBuilder() {
+        return new JsonLogFormatterBuilder();
     }
 
     /**

@@ -32,7 +32,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  * A formatter that converts {@link RequestLog} into text message.
  */
 @UnstableApi
-class TextLogFormatter implements LogFormatter {
+public final class TextLogFormatter implements LogFormatter {
 
     static final TextLogFormatter DEFAULT_INSTANCE = new TextLogFormatterBuilder().build();
 

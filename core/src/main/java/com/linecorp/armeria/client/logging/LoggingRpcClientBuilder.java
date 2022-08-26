@@ -63,7 +63,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
                                     responseCauseSanitizer(),
                                     successSampler(),
                                     failureSampler(),
-                                    logFormatter());
+                                    buildLogFormatter());
     }
 
     /**
