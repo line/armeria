@@ -30,12 +30,12 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
- * A builder implementation for {@link TextLogFormatter}
+ * A builder implementation for {@link TextLogFormatter}.
  */
 @UnstableApi
 public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNode> {
 
-    private static <T, U> BiFunction<T, U, JsonNode> DEFAULT_SANITIZER(ObjectMapper objectMapper) {
+    private static <T, U> BiFunction<T, U, JsonNode> defaultSanitizer(ObjectMapper objectMapper) {
         return (first, second) -> objectMapper.valueToTree(second);
     }
 
@@ -59,7 +59,8 @@ public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNod
      */
     @Override
     public JsonLogFormatterBuilder requestHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode> requestHeadersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
+                    requestHeadersSanitizer) {
         return (JsonLogFormatterBuilder) super.requestHeadersSanitizer(requestHeadersSanitizer);
     }
 
@@ -70,7 +71,8 @@ public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNod
      */
     @Override
     public JsonLogFormatterBuilder responseHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode> responseHeadersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
+                    responseHeadersSanitizer) {
         return (JsonLogFormatterBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
     }
 
@@ -80,7 +82,8 @@ public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNod
      */
     @Override
     public JsonLogFormatterBuilder requestTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode> requestTrailersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
+                    requestTrailersSanitizer) {
         return (JsonLogFormatterBuilder) super.requestTrailersSanitizer(requestTrailersSanitizer);
     }
 
@@ -90,7 +93,8 @@ public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNod
      */
     @Override
     public JsonLogFormatterBuilder responseTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode> responseTrailersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
+                    responseTrailersSanitizer) {
         return (JsonLogFormatterBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
     }
 
@@ -175,20 +179,20 @@ public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNod
     public JsonLogFormatter build() {
         final ObjectMapper objectMapper = this.objectMapper != null ?
                                           this.objectMapper : JacksonUtil.newDefaultObjectMapper();
-        final BiFunction<RequestContext, HttpHeaders, JsonNode> DEFAULT_HEADERS_SANITIZER =
-                DEFAULT_SANITIZER(objectMapper);
-        final BiFunction<RequestContext, Object, JsonNode> DEFAULT_CONTENT_SANITIZER =
-                DEFAULT_SANITIZER(objectMapper);
-        final BiFunction<RequestContext, Throwable, JsonNode> DEFAULT_CAUSE_SANITIZER =
-                DEFAULT_SANITIZER(objectMapper);
+        final BiFunction<RequestContext, HttpHeaders, JsonNode> defaultHeadersSanitizer =
+                defaultSanitizer(objectMapper);
+        final BiFunction<RequestContext, Object, JsonNode> defaultContentSanitizer =
+                defaultSanitizer(objectMapper);
+        final BiFunction<RequestContext, Throwable, JsonNode> defaultCauseSanitizer =
+                defaultSanitizer(objectMapper);
         return new JsonLogFormatter(
-                requestHeadersSanitizer() != null ? requestHeadersSanitizer() : DEFAULT_HEADERS_SANITIZER,
-                responseHeadersSanitizer() != null ? responseHeadersSanitizer() : DEFAULT_HEADERS_SANITIZER,
-                requestTrailersSanitizer() != null ? requestTrailersSanitizer() : DEFAULT_HEADERS_SANITIZER,
-                responseTrailersSanitizer() != null ? responseTrailersSanitizer() : DEFAULT_HEADERS_SANITIZER,
-                requestContentSanitizer() != null ? requestContentSanitizer() : DEFAULT_CONTENT_SANITIZER,
-                responseContentSanitizer() != null ? responseContentSanitizer() : DEFAULT_CONTENT_SANITIZER,
-                responseCauseSanitizer() != null ? responseCauseSanitizer() : DEFAULT_CAUSE_SANITIZER,
+                requestHeadersSanitizer() != null ? requestHeadersSanitizer() : defaultHeadersSanitizer,
+                responseHeadersSanitizer() != null ? responseHeadersSanitizer() : defaultHeadersSanitizer,
+                requestTrailersSanitizer() != null ? requestTrailersSanitizer() : defaultHeadersSanitizer,
+                responseTrailersSanitizer() != null ? responseTrailersSanitizer() : defaultHeadersSanitizer,
+                requestContentSanitizer() != null ? requestContentSanitizer() : defaultContentSanitizer,
+                responseContentSanitizer() != null ? responseContentSanitizer() : defaultContentSanitizer,
+                responseCauseSanitizer() != null ? responseCauseSanitizer() : defaultCauseSanitizer,
                 objectMapper);
     }
 }

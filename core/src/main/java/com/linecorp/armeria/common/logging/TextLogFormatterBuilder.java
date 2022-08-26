@@ -23,19 +23,19 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A builder implementation for {@link TextLogFormatter}
+ * A builder implementation for {@link TextLogFormatter}.
  */
 @UnstableApi
 public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<String> {
 
     private static final BiFunction<RequestContext, HttpHeaders, String> DEFAULT_HEADERS_SANITIZER =
-            DEFAULT_SANITIZER();
+            defaultSanitizer();
     private static final BiFunction<RequestContext, Object, String> DEFAULT_CONTENT_SANITIZER =
-            DEFAULT_SANITIZER();
+            defaultSanitizer();
     private static final BiFunction<RequestContext, Throwable, String> DEFAULT_CAUSE_SANITIZER =
-            DEFAULT_SANITIZER();
+            defaultSanitizer();
 
-    private static <T, U> BiFunction<T, U, String> DEFAULT_SANITIZER() {
+    private static <T, U> BiFunction<T, U, String> defaultSanitizer() {
         return (first, second) -> second.toString();
     }
 
@@ -59,7 +59,8 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
      */
     @Override
     public TextLogFormatterBuilder responseHeadersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseHeadersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
+                    responseHeadersSanitizer) {
         return (TextLogFormatterBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
     }
 
@@ -69,7 +70,8 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
      */
     @Override
     public TextLogFormatterBuilder requestTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestTrailersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
+                    requestTrailersSanitizer) {
         return (TextLogFormatterBuilder) super.requestTrailersSanitizer(requestTrailersSanitizer);
     }
 
@@ -79,7 +81,8 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
      */
     @Override
     public TextLogFormatterBuilder responseTrailersSanitizer(
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseTrailersSanitizer) {
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
+                    responseTrailersSanitizer) {
         return (TextLogFormatterBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
     }
 

@@ -221,7 +221,7 @@ public abstract class LoggingDecoratorBuilder {
      * {@link BiFunction} that removes sensitive headers, like {@code Cookie}, before logging. If unset, will
      * not sanitize request headers.
      *
-     * @deprecated Use {@link #logFormatter)} instead.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead
      */
     @Deprecated
     public LoggingDecoratorBuilder requestHeadersSanitizer(
@@ -244,7 +244,7 @@ public abstract class LoggingDecoratorBuilder {
      * {@link BiFunction} that removes sensitive headers, like {@code Set-Cookie}, before logging. If unset,
      * will not sanitize response headers.
      *
-     * @deprecated Use {@link #logFormatter)} instead.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead
      */
     @Deprecated
     public LoggingDecoratorBuilder responseHeadersSanitizer(
@@ -266,7 +266,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link BiFunction} to use to sanitize request trailers before logging. If unset,
      * will not sanitize request trailers.
      *
-     * @deprecated Use {@link #logFormatter)} instead.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead
      */
     @Deprecated
     public LoggingDecoratorBuilder requestTrailersSanitizer(
@@ -288,7 +288,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link BiFunction} to use to sanitize response trailers before logging. If unset,
      * will not sanitize response trailers.
      *
-     * @deprecated Use {@link #logFormatter)} instead.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead
      */
     @Deprecated
     public LoggingDecoratorBuilder responseTrailersSanitizer(
@@ -321,7 +321,7 @@ public abstract class LoggingDecoratorBuilder {
      * @see #requestTrailersSanitizer(BiFunction)
      * @see #responseHeadersSanitizer(BiFunction)
      * @see #responseTrailersSanitizer(BiFunction)
-     * @deprecated Use {@link #logFormatter)} instead.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead
      */
     @Deprecated
     public LoggingDecoratorBuilder headersSanitizer(
@@ -340,7 +340,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link BiFunction} to use to sanitize request content before logging. It is common to have the
      * {@link BiFunction} that removes sensitive content, such as an GPS location query, before logging.
      * If unset, will not sanitize request content.
-     * @deprecated Use {@link #logFormatter)} instead.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead
      */
     @Deprecated
     public LoggingDecoratorBuilder requestContentSanitizer(
@@ -362,7 +362,7 @@ public abstract class LoggingDecoratorBuilder {
      * Sets the {@link BiFunction} to use to sanitize response content before logging. It is common to have the
      * {@link BiFunction} that removes sensitive content, such as an address, before logging. If unset,
      * will not sanitize response content.
-     * @deprecated Use {@link #logFormatter)} instead.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead
      */
     @Deprecated
     public LoggingDecoratorBuilder responseContentSanitizer(
@@ -392,7 +392,7 @@ public abstract class LoggingDecoratorBuilder {
      *
      * @see #requestContentSanitizer(BiFunction)
      * @see #responseContentSanitizer(BiFunction)
-     * @deprecated Use {@link #logFormatter)} instead.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead
      */
     @Deprecated
     public LoggingDecoratorBuilder contentSanitizer(
@@ -408,7 +408,7 @@ public abstract class LoggingDecoratorBuilder {
      * sanitize the stack trace of the exception to remove sensitive information, or prevent from logging
      * the stack trace completely by returning {@code null} in the {@link BiFunction}. If unset, will not
      * sanitize a response cause.
-     * @deprecated Use {@link #logFormatter)} instead.
+     * @deprecated Use {@link #logFormatter(LogFormatter)} instead
      */
     @Deprecated
     public LoggingDecoratorBuilder responseCauseSanitizer(

@@ -230,7 +230,8 @@ public abstract class AbstractLogFormatterBuilder<T> {
      * Returns the {@link BiFunction} to use to sanitize response cause before logging.
      */
     @Nullable
-    protected final BiFunction<? super RequestContext, ? super Throwable, ? extends T> responseCauseSanitizer() {
+    protected final BiFunction<? super RequestContext, ? super Throwable, ? extends T>
+    responseCauseSanitizer() {
         return responseCauseSanitizer;
     }
 }

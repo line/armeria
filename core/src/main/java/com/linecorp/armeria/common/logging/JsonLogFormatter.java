@@ -54,6 +54,9 @@ final class JsonLogFormatter implements LogFormatter {
     private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
             responseHeadersSanitizer;
 
+    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
+            requestTrailersSanitizer;
+
     private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
             responseTrailersSanitizer;
 
@@ -66,9 +69,12 @@ final class JsonLogFormatter implements LogFormatter {
 
     JsonLogFormatter(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode> responseHeadersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode> requestTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode> responseTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
+                    responseHeadersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
+                    requestTrailersSanitizer,
+            BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
+                    responseTrailersSanitizer,
             BiFunction<? super RequestContext, Object, ? extends JsonNode> requestContentSanitizer,
             BiFunction<? super RequestContext, Object, ? extends JsonNode> responseContentSanitizer,
             BiFunction<? super RequestContext, ? super Throwable, ? extends JsonNode> responseCauseSanitizer,
@@ -76,6 +82,7 @@ final class JsonLogFormatter implements LogFormatter {
     ) {
         this.requestHeadersSanitizer = requestHeadersSanitizer;
         this.responseHeadersSanitizer = responseHeadersSanitizer;
+        this.requestTrailersSanitizer = requestTrailersSanitizer;
         this.responseTrailersSanitizer = responseTrailersSanitizer;
         this.requestContentSanitizer = requestContentSanitizer;
         this.responseContentSanitizer = responseContentSanitizer;
@@ -117,7 +124,7 @@ final class JsonLogFormatter implements LogFormatter {
         final JsonNode sanitizedTrailers;
         if (availableProperties.contains(RequestLogProperty.REQUEST_TRAILERS) &&
             !log.requestTrailers().isEmpty()) {
-            sanitizedTrailers = responseTrailersSanitizer.apply(ctx, log.requestTrailers());
+            sanitizedTrailers = requestTrailersSanitizer.apply(ctx, log.requestTrailers());
         } else {
             sanitizedTrailers = null;
         }
