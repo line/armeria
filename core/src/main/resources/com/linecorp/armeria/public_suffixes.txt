@@ -779,6 +779,7 @@ be
 be.ax
 be.eu.org
 be.gy
+beagleboard.io
 bearalvahki.no
 beardu.no
 beats
@@ -2118,6 +2119,8 @@ eastafrica.museum
 eastasia.azurestaticapps.net
 eastcoast.museum
 eastus2.azurestaticapps.net
+easypanel.app
+easypanel.host
 eat
 eating-organic.net
 eaton.mi.us
@@ -7702,6 +7705,7 @@ stpetersburg.museum
 strand.no
 stranda.no
 stream
+streamlitapp.com
 stripper.jp
 stryn.no
 student.aero
