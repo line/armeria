@@ -87,7 +87,7 @@ public class UnframedGrpcServiceResponseMediaTypeTest {
 
         final AggregatedHttpResponse res = unframedGrpcService.serve(ctx, request).aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
-        assertThat(res.contentType()).isEqualTo(MediaType.PROTOBUF);
+        assertThat(res.contentType()).isEqualTo(protobufType);
     }
 
     private static class ProtobufMediaTypeProvider implements ArgumentsProvider {
