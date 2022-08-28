@@ -164,11 +164,12 @@ class TraceRequestContextLeakTest {
     void multiThreadContextLeak() throws InterruptedException {
         final AtomicBoolean isThrown = new AtomicBoolean(false);
         final AtomicReference<Exception> exception = new AtomicReference<>();
+        final CountDownLatch waitForExecutor2 = new CountDownLatch(1);
 
         final EventLoopGroup executor =  eventLoopGroupExtension.get();
 
-        final ServiceRequestContext ctx = newCtx("/1-leak");
-        final ServiceRequestContext anotherCtx = newCtx("/2-leak");
+        final ServiceRequestContext leakingCtx = newCtx("/1-leak");
+        final ServiceRequestContext anotherCtx2 = newCtx("/2-leak");
         final ServiceRequestContext anotherCtx3 = newCtx("/3-leak");
 
         final Executor ex1 = executor.next();
@@ -176,19 +177,22 @@ class TraceRequestContextLeakTest {
 
         try (DeferredClose deferredClose = new DeferredClose()) {
             ex1.execute(() -> {
-                final SafeCloseable leaked = ctx.push(); // <- Leaked, should show in error.
+                final SafeCloseable leaked = leakingCtx.push(); // <- Leaked, should show in error.
                 deferredClose.add(ex1, leaked);
             });
 
             ex2.execute(() -> {
                 try {
-                    final SafeCloseable leaked = anotherCtx.push();
+                    final SafeCloseable leaked = anotherCtx2.push();
                     deferredClose.add(ex2, leaked);
                 } catch (Exception ex) {
                     isThrown.set(true);
+                } finally {
+                    waitForExecutor2.countDown();
                 }
             });
 
+            waitForExecutor2.await();
             assertThat(isThrown).isFalse();
 
             ex1.execute(() -> {
@@ -202,7 +206,7 @@ class TraceRequestContextLeakTest {
 
             await().untilTrue(isThrown);
             assertThat(exception.get())
-                    .hasMessageContaining("multiThreadContextLeak$7(TraceRequestContextLeakTest.java:179)");
+                    .hasMessageContaining("multiThreadContextLeak$7(TraceRequestContextLeakTest.java:180)");
         }
     }
 
@@ -249,7 +253,7 @@ class TraceRequestContextLeakTest {
             }
         }
         assertThat(exception.get())
-                .hasMessageContaining("connerCase(TraceRequestContextLeakTest.java:241)");
+                .hasMessageContaining("connerCase(TraceRequestContextLeakTest.java:245)");
     }
 
     private static ServiceRequestContext newCtx(String path) {
