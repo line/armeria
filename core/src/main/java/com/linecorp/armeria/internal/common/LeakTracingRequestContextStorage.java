@@ -19,9 +19,6 @@ package com.linecorp.armeria.internal.common;
 import static java.lang.Thread.currentThread;
 import static java.util.Objects.requireNonNull;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
-
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.ClientRequestContextWrapper;
 import com.linecorp.armeria.common.RequestContext;
@@ -89,51 +86,51 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
 
     private static final class TraceableClientRequestContext extends ClientRequestContextWrapper {
 
-        private final PendingRequestContextStackTrace stackTrace;
+            private final StackTraceElement[] stackTrace;
+            private final String threadName;
 
-        private TraceableClientRequestContext(ClientRequestContext delegate) {
-            super(delegate);
-            stackTrace = new PendingRequestContextStackTrace();
-        }
+            private TraceableClientRequestContext(ClientRequestContext delegate) {
+                super(delegate);
+                stackTrace = currentThread().getStackTrace();
+                threadName = currentThread().getName();
+            }
 
-        @Override
-        public String toString() {
-            final StringWriter sw = new StringWriter();
-            stackTrace.printStackTrace(new PrintWriter(sw));
-            return new StringBuilder().append(getClass().getSimpleName())
-                                      .append(super.toString())
-                                      .append(System.lineSeparator())
-                                      .append(sw).toString();
+            @Override
+            public String toString() {
+                final StringBuilder builder = new StringBuilder(512);
+                builder.append(getClass().getSimpleName())
+                       .append(unwrap()).append(System.lineSeparator())
+                       .append("At thread [").append(threadName)
+                       .append("] previous RequestContext is pushed at the following stacktrace");
+                for (int i = 1; i < stackTrace.length; i++) {
+                    builder.append("\tat ").append(stackTrace[i]).append(System.lineSeparator());
+                }
+                return builder.toString();
+            }
         }
-    }
 
     private static final class TraceableServiceRequestContext extends ServiceRequestContextWrapper {
 
-        private final PendingRequestContextStackTrace stackTrace;
+        private final StackTraceElement[] stackTrace;
+        private final String threadName;
 
         private TraceableServiceRequestContext(ServiceRequestContext delegate) {
             super(delegate);
-            stackTrace = new PendingRequestContextStackTrace();
+            stackTrace = currentThread().getStackTrace();
+            threadName = currentThread().getName();
         }
 
         @Override
         public String toString() {
-            final StringWriter sw = new StringWriter();
-            stackTrace.printStackTrace(new PrintWriter(sw));
-            return new StringBuilder().append(getClass().getSimpleName())
-                           .append(super.toString())
-                           .append(System.lineSeparator())
-                           .append(sw).toString();
-        }
-    }
-
-    private static final class PendingRequestContextStackTrace extends RuntimeException {
-
-        private static final long serialVersionUID = -689451606253441556L;
-
-        private PendingRequestContextStackTrace() {
-            super("At thread [" + currentThread().getName() + "] previous RequestContext is pushed at " +
-                  "the following stacktrace");
+            final StringBuilder builder = new StringBuilder(512);
+            builder.append(getClass().getSimpleName())
+                   .append(unwrap()).append(System.lineSeparator())
+                   .append("At thread [").append(threadName)
+                   .append("] previous RequestContext is pushed at the following stacktrace");
+            for (int i = 1; i < stackTrace.length; i++) {
+                builder.append("\tat ").append(stackTrace[i]).append(System.lineSeparator());
+            }
+            return builder.toString();
         }
     }
 }
