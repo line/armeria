@@ -45,7 +45,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-import org.reactivestreams.Publisher;
 
 import com.google.common.collect.ImmutableList;
 
@@ -268,27 +267,27 @@ class AnnotatedServiceTest {
         @ProducesJson
         public void voidJson204() {}
 
-        @Get("/voidPublisher/204")
-        public Publisher<Void> voidPublisher204() {
+        @Get("/voidMono/204")
+        public Mono<Void> voidMono204() {
             return Mono.empty();
         }
 
-        @Get("/voidPublisher/200")
+        @Get("/voidMono/200")
         @ResponseConverter(VoidTo200ResponseConverter.class)
-        public Publisher<Void> voidPublisher200() {
+        public Mono<Void> voidMono200() {
             return Mono.empty();
         }
 
-        @Get("/voidPublisher/json/200")
+        @Get("/voidMono/json/200")
         @ProducesJson
-        public Publisher<Void> voidPublisherJson200() {
+        public Mono<Void> voidMonoJson200() {
             return Mono.empty();
         }
 
-        @Get("/voidPublisher/json/204")
+        @Get("/voidMono/json/204")
         @StatusCode(204)
         @ProducesJson
-        public Publisher<Void> voidPublisherJson204() {
+        public Mono<Void> voidMonoJson204() {
             return Mono.empty();
         }
 
@@ -1141,7 +1140,7 @@ class AnnotatedServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "void", "voidPublisher", "voidFuture" })
+    @ValueSource(strings = { "void", "voidMono", "voidFuture" })
     void testReturnVoid(String returnType) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             testStatusCode(hc, get("/1/" + returnType + "/204"), 204);
