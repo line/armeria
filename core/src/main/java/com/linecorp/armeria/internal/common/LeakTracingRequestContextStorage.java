@@ -84,7 +84,8 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
                : new TraceableServiceRequestContext((ServiceRequestContext) ctx);
     }
 
-    private static String stacktraceToString(StackTraceElement[] stackTrace, String threadName, RequestContext unwrap) {
+    private static String stacktraceToString(StackTraceElement[] stackTrace, String threadName,
+                                             RequestContext unwrap) {
         final StringBuilder builder = new StringBuilder(512);
         builder.append(unwrap).append(System.lineSeparator())
                .append("At thread [").append(threadName)
