@@ -84,6 +84,18 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
                : new TraceableServiceRequestContext((ServiceRequestContext) ctx);
     }
 
+    private static String stacktraceToString(StackTraceElement[] stackTrace, String threadName, RequestContext unwrap) {
+        final StringBuilder builder = new StringBuilder(512);
+        builder.append(unwrap).append(System.lineSeparator())
+               .append("At thread [").append(threadName)
+               .append("] previous RequestContext is pushed at the following stacktrace")
+               .append(System.lineSeparator());
+        for (int i = 1; i < stackTrace.length; i++) {
+            builder.append("\tat ").append(stackTrace[i]).append(System.lineSeparator());
+        }
+        return builder.toString();
+    }
+
     private static final class TraceableClientRequestContext extends ClientRequestContextWrapper {
 
             private final StackTraceElement[] stackTrace;
@@ -97,15 +109,7 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
 
             @Override
             public String toString() {
-                final StringBuilder builder = new StringBuilder(512);
-                builder.append(getClass().getSimpleName())
-                       .append(unwrap()).append(System.lineSeparator())
-                       .append("At thread [").append(threadName)
-                       .append("] previous RequestContext is pushed at the following stacktrace");
-                for (int i = 1; i < stackTrace.length; i++) {
-                    builder.append("\tat ").append(stackTrace[i]).append(System.lineSeparator());
-                }
-                return builder.toString();
+                return stacktraceToString(stackTrace, threadName, unwrap());
             }
         }
 
@@ -122,15 +126,7 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
 
         @Override
         public String toString() {
-            final StringBuilder builder = new StringBuilder(512);
-            builder.append(getClass().getSimpleName())
-                   .append(unwrap()).append(System.lineSeparator())
-                   .append("At thread [").append(threadName)
-                   .append("] previous RequestContext is pushed at the following stacktrace");
-            for (int i = 1; i < stackTrace.length; i++) {
-                builder.append("\tat ").append(stackTrace[i]).append(System.lineSeparator());
-            }
-            return builder.toString();
+            return stacktraceToString(stackTrace, threadName, unwrap());
         }
     }
 }
