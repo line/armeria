@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.internal.common.RequestContextUtil.equalUnwrapAllNullable;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCloseable;
 import static java.util.Objects.requireNonNull;
@@ -226,7 +227,7 @@ public interface ClientRequestContext extends RequestContext {
         }
 
         final ServiceRequestContext root = root();
-        if (oldCtx.root().unwrapAll() == root.unwrapAll()) {
+        if (equalUnwrapAllNullable(oldCtx.root(), root)) {
             return RequestContextUtil.invokeHookAndPop(this, oldCtx);
         }
 

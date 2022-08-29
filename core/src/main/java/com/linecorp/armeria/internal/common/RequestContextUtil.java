@@ -20,6 +20,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -199,6 +200,11 @@ public final class RequestContextUtil {
                 requestContextStorage.pop(current, toRestore);
             };
         }
+    }
+
+    public static boolean equalUnwrapAllNullable(@Nullable RequestContext ctx1, @Nullable RequestContext ctx2) {
+        return Optional.ofNullable(ctx1).map(RequestContext::unwrapAll).orElse(null) ==
+               Optional.ofNullable(ctx2).map(RequestContext::unwrapAll).orElse(null);
     }
 
     @Nullable
