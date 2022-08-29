@@ -172,33 +172,33 @@ public final class AnnotatedServiceFactory {
 
     private static HttpStatus defaultResponseStatus(Method method, Class<?> clazz) {
         final StatusCode statusCodeAnnotation = AnnotationUtil.findFirst(method, StatusCode.class);
-        if (statusCodeAnnotation == null) {
-            if (!producibleMediaTypes(method, clazz).isEmpty()) {
-                return HttpStatus.OK;
-            }
-            // Set a default HTTP status code for a response depending on the return type of the method.
-            final Class<?> returnType = method.getReturnType();
-
-            if (Publisher.class.isAssignableFrom(returnType) ||
-                CompletionStage.class.isAssignableFrom(returnType)) {
-                // This doesn't cover suspending function returning Publisher<Void>.
-                final Type type = method.getGenericReturnType();
-                if (type instanceof ParameterizedType) {
-                    final ParameterizedType containerType = (ParameterizedType) type;
-                    final Type actualReturnType = containerType.getActualTypeArguments()[0];
-
-                    return actualReturnType == Void.class ? HttpStatus.NO_CONTENT : HttpStatus.OK;
-                }
-            }
-            return returnType == Void.class ||
-                   returnType == void.class ||
-                   KotlinUtil.isSuspendingAndReturnTypeUnit(method) ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+        if (statusCodeAnnotation != null) {
+            final int statusCode = statusCodeAnnotation.value();
+            checkArgument(statusCode >= 0,
+                          "invalid HTTP status code: %s (expected: >= 0)", statusCode);
+            return HttpStatus.valueOf(statusCode);
         }
 
-        final int statusCode = statusCodeAnnotation.value();
-        checkArgument(statusCode >= 0,
-                      "invalid HTTP status code: %s (expected: >= 0)", statusCode);
-        return HttpStatus.valueOf(statusCode);
+        if (!producibleMediaTypes(method, clazz).isEmpty()) {
+            return HttpStatus.OK;
+        }
+        // Set a default HTTP status code for a response depending on the return type of the method.
+        final Class<?> returnType = method.getReturnType();
+
+        if (Publisher.class.isAssignableFrom(returnType) ||
+            CompletionStage.class.isAssignableFrom(returnType)) {
+            // This doesn't cover suspending function returning Publisher<Void>.
+            final Type type = method.getGenericReturnType();
+            if (type instanceof ParameterizedType) {
+                final ParameterizedType containerType = (ParameterizedType) type;
+                final Type actualReturnType = containerType.getActualTypeArguments()[0];
+
+                return actualReturnType == Void.class ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+            }
+        }
+        return returnType == Void.class ||
+               returnType == void.class ||
+               KotlinUtil.isSuspendingAndReturnTypeUnit(method) ? HttpStatus.NO_CONTENT : HttpStatus.OK;
     }
 
     private static <T extends Annotation> void setAdditionalHeader(HttpHeadersBuilder headers,
