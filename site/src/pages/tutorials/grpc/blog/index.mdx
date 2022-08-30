@@ -9,7 +9,7 @@ import versions from '/gen-src/versions.json';
 
 Learn to build a gRPC service with Armeria by writing a blog service in gRPC. This tutorial is based on a [sample service](https://github.com/line/armeria-examples/tree/master/tutorials/grpc), a minimal blog service, with which you can create, read, update, and delete blog posts.
 
-Before we get our hands on the tutorial, let's switfly go over Armeria's gRPC features. Armeria supports you features that the upstream (gRPC-Java) does not support.
+Before we get our hands on the tutorial, let's switfly go over Armeria's gRPC features. Armeria supports features that the upstream (gRPC-Java) does not support.
 
 - Protocol
   - HTTP/1.1
@@ -47,7 +47,7 @@ To run and develop the sample service, you need JDK 11 or higher.
 ## Build and run sample service
 
 The sample service provides you implementations of CRUD operations with corresponding service methods. Have a go at running the sample gRPC service and see the outcome of this tutorial.
-Using Armeria's [Documentation Service](/docs/server-docservice), you can check a server running, receiving requests and sending responses.
+Using Armeria's [Documentation Service](/docs/server-docservice), you can easily verify a server is running, receiving requests and sending responses.
 
 1. Download the code from [here](https://github.com/line/armeria-examples/tree/master/tutorials/grpc).
 2. Build the sample service using the Gradle Wrapper.
@@ -63,6 +63,12 @@ Using Armeria's [Documentation Service](/docs/server-docservice), you can check 
 ## Try writing blog service yourself
 
 Have a go at writing the blog service yourself, starting with [defining the service](/tutorials/grpc/blog/define-service). Use the sample service's build.gradle to start building the service from scratch.
+
+<Tip>
+
+  In this tutorial, we use [gradle](https://gradle.org/) as the build tool and use [protobuf-gradle-plugin](https://github.com/google/protobuf-gradle-plugin) to generate stubs from `proto` files.
+
+</Tip>
 
 <CodeBlock language="groovy" filename="build.gradle">{`
 apply plugin: 'java'

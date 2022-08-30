@@ -27,7 +27,7 @@ You need to have the following obtained from previous steps:
 
 Let's implement a service method `createBlogPost()` in `BlogService.java`.
 
-1. Create an ID generator to issue temporary blog post IDs and a map to contain blogs posts. Add in a logger for debugging.
+1. Create an ID generator to issue temporary blog post IDs and a map to contain blogs posts. We have also added in a logger for debugging.
   ```java filename=BlogService.java
   import java.util.Map;
   import java.util.concurrent.ConcurrentHashMap;
@@ -68,7 +68,7 @@ Let's implement a service method `createBlogPost()` in `BlogService.java`.
 
 ## 2. Implement client-side
 
-This time, let's add a proper method for creating a blog post. Previously, we made a call to create a blog post, from the client's `main()` method for quick testing. Leave the code inside `main()` for testing purpose.
+This time, let's add a proper method for creating a blog post.
 
 Add a method `createBlogPost()` in `BlogClient.java` to send a request to create a blog post.
   ```java filename=BlogClient.java
@@ -94,7 +94,7 @@ Add a method `createBlogPost()` in `BlogClient.java` to send a request to create
 
 Now, let's make a call from the client. Note the code is minimal to keep things simple.
 
-1. Add a method to test run the create method we just implemented.
+1. Add a method to test the create method we just implemented.
   ```java filename=BlogClient.java
   public static void main(String[] args) throws Exception {
     ...
