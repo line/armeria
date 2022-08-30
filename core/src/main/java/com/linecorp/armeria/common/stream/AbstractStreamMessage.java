@@ -16,29 +16,14 @@
 
 package com.linecorp.armeria.common.stream;
 
-import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
-import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.POOLED_OBJECTS;
-
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.stream.AggregationSupport;
 
 /**
  * A skeletal {@link StreamMessage} implementation.
  */
 @UnstableApi
-public abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
-
-    @SuppressWarnings("rawtypes")
-    private static final AtomicReferenceFieldUpdater<AbstractStreamMessage, CompletableFuture>
-            aggregationUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            AbstractStreamMessage.class, CompletableFuture.class, "aggregation");
-
-    @Nullable
-    private volatile CompletableFuture<Object> aggregation;
+public abstract class AbstractStreamMessage<T> extends AggregationSupport<T> implements StreamMessage<T> {
 
     /**
      * Creates a new instance.
@@ -46,34 +31,7 @@ public abstract class AbstractStreamMessage<T> implements StreamMessage<T> {
     protected AbstractStreamMessage() {}
 
     @Override
-    public <U> CompletableFuture<U> aggregate(AggregationOptions<T, U> options) {
-        final boolean withPooledObjects = options.withPooledObjects();
-        final SubscriptionOption[] subscriptionOptions = withPooledObjects ? POOLED_OBJECTS : EMPTY_OPTIONS;
-        if (!options.cacheResult()) {
-            return collect(options.executor(), subscriptionOptions).thenApply(options.aggregator());
-        }
-
-        final CompletableFuture<?> aggregation = this.aggregation;
-        if (aggregation != null) {
-            //noinspection unchecked
-            return (CompletableFuture<U>) aggregation;
-        }
-
-        if (aggregationUpdater.compareAndSet(this, null, new CompletableFuture<>())) {
-            // Propagate the result to `aggregation`
-            collect(options.executor(), subscriptionOptions).thenApply(options.aggregator())
-                    .handle((res, cause) -> {
-                        if (cause != null) {
-                            cause = Exceptions.peel(cause);
-                            this.aggregation.completeExceptionally(cause);
-                        } else {
-                            this.aggregation.complete(res);
-                        }
-                        return null;
-                    });
-        }
-
-        //noinspection unchecked
-        return (CompletableFuture<U>) this.aggregation;
+    protected final StreamMessage<T> streamMessage() {
+        return this;
     }
 }

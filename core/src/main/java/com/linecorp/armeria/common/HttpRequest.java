@@ -331,6 +331,7 @@ public interface HttpRequest extends Request, HttpMessage {
 
     /**
      * Returns the value of the {@code 'content-type'} header.
+     *
      * @return the valid header value if present, or {@code null} otherwise.
      */
     @Nullable
@@ -357,7 +358,9 @@ public interface HttpRequest extends Request, HttpMessage {
      * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
      * and also referenced in
      * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
+     *
      * @param supportedLocales an {@link Iterable} of {@link Locale}s supported by the server.
+     *
      * @return The best matching {@link Locale} or {@code null} if no {@link Locale} matches.
      */
     @Nullable
@@ -374,7 +377,9 @@ public interface HttpRequest extends Request, HttpMessage {
      * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
      * and also referenced in
      * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
+     *
      * @param supportedLocales {@link Locale}s supported by the server.
+     *
      * @return The best matching {@link Locale} or {@code null} if no {@link Locale} matches.
      */
     @Nullable
@@ -480,13 +485,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * assert aggregated0 == aggregated1;
      * }</pre>
      */
-    default CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
-        requireNonNull(executor, "executor");
-        return aggregate(HttpAggregationOptions.builderForRequest(headers())
-                                               .executor(executor)
-                                               .cacheResult(true)
-                                               .build());
-    }
+    CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor);
 
     /**
      * (Advanced users only) Aggregates this request. The returned {@link CompletableFuture} will be notified
@@ -525,15 +524,8 @@ public interface HttpRequest extends Request, HttpMessage {
      * request.aggregateWithPooledObjects(executor, alloc).join();
      * }</pre>
      */
-    default CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(
-            EventExecutor executor, ByteBufAllocator alloc) {
-        requireNonNull(executor, "executor");
-        requireNonNull(alloc, "alloc");
-        return aggregate(HttpAggregationOptions.builderForRequest(headers())
-                                               .executor(executor)
-                                               .withPooledObjects(true, alloc)
-                                               .build());
-    }
+    CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(EventExecutor executor,
+                                                                        ByteBufAllocator alloc);
 
     @Override
     default HttpRequestDuplicator toDuplicator() {
