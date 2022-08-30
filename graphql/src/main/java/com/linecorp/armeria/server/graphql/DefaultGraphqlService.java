@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
-import org.dataloader.DataLoaderRegistry;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -49,14 +48,16 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     private final GraphQL graphQL;
 
-    private final DataLoaderRegistry dataLoaderRegistry;
+    private final DataLoaderRegistryStrategy dataLoaderRegistryStrategy;
 
     private final boolean useBlockingTaskExecutor;
 
-    DefaultGraphqlService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry,
+    DefaultGraphqlService(GraphQL graphQL,
+                          DataLoaderRegistryStrategy dataLoaderRegistryStrategy,
                           boolean useBlockingTaskExecutor) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
-        this.dataLoaderRegistry = requireNonNull(dataLoaderRegistry, "dataLoaderRegistry");
+        this.dataLoaderRegistryStrategy = requireNonNull(dataLoaderRegistryStrategy,
+                                                         "dataLoaderRegistryStrategy");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
     }
 
@@ -88,7 +89,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         final ExecutionInput executionInput =
                 builder.context(ctx)
                        .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
-                       .dataLoaderRegistry(dataLoaderRegistry)
+                       .dataLoaderRegistry(dataLoaderRegistryStrategy.apply(ctx))
                        .build();
         return execute(ctx, executionInput, produceType);
     }

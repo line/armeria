@@ -77,6 +77,9 @@ public final class GraphqlServiceBuilder {
     private boolean useBlockingTaskExecutor;
 
     @Nullable
+    private DataLoaderRegistryStrategy dataLoaderRegistryStrategy;
+
+    @Nullable
     private GraphQLSchema schema;
 
     GraphqlServiceBuilder() {}
@@ -139,6 +142,15 @@ public final class GraphqlServiceBuilder {
      */
     public GraphqlServiceBuilder schema(GraphQLSchema schema) {
         this.schema = requireNonNull(schema, "schema");
+        return this;
+    }
+
+    /**
+     * Sets {@link DataLoaderRegistry} strategy.
+     */
+    public GraphqlServiceBuilder dataLoaderRegistry(DataLoaderRegistryStrategy dataLoaderRegistryStrategy) {
+        this.dataLoaderRegistryStrategy =
+                requireNonNull(dataLoaderRegistryStrategy, "dataLoaderRegistryStrategy");
         return this;
     }
 
@@ -246,13 +258,12 @@ public final class GraphqlServiceBuilder {
             configurer.configure(builder);
         }
 
-        final DataLoaderRegistry dataLoaderRegistry = new DataLoaderRegistry();
-        final List<Consumer<? super DataLoaderRegistry>> dataLoaderRegistries =
-                dataLoaderRegistryConsumers.build();
-        for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistries) {
-            configurer.accept(dataLoaderRegistry);
+        if (dataLoaderRegistryStrategy == null) {
+            dataLoaderRegistryStrategy =
+                    DataLoaderRegistryStrategy.ofFixed(dataLoaderRegistryConsumers.build());
         }
-        return new DefaultGraphqlService(builder.build(), dataLoaderRegistry, useBlockingTaskExecutor);
+
+        return new DefaultGraphqlService(builder.build(), dataLoaderRegistryStrategy, useBlockingTaskExecutor);
     }
 
     private GraphQLSchema buildSchema() {
