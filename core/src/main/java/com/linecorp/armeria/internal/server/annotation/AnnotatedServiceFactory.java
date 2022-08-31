@@ -21,8 +21,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
 import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getAllMethods;
@@ -36,6 +34,8 @@ import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
@@ -46,11 +46,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
 import java.util.Set;
+import java.util.concurrent.CompletionStage;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -181,7 +183,19 @@ public final class AnnotatedServiceFactory {
             return HttpStatus.OK;
         }
         // Set a default HTTP status code for a response depending on the return type of the method.
-        final Class<?> returnType = typeToClass(unwrapAsyncType(method.getGenericReturnType()));
+        final Class<?> returnType = method.getReturnType();
+
+        if (Publisher.class.isAssignableFrom(returnType) ||
+            CompletionStage.class.isAssignableFrom(returnType)) {
+            // This doesn't cover suspending function returning Publisher<Void>.
+            final Type type = method.getGenericReturnType();
+            if (type instanceof ParameterizedType) {
+                final ParameterizedType containerType = (ParameterizedType) type;
+                final Type actualReturnType = containerType.getActualTypeArguments()[0];
+
+                return actualReturnType == Void.class ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+            }
+        }
         return returnType == Void.class ||
                returnType == void.class ||
                KotlinUtil.isSuspendingAndReturnTypeUnit(method) ? HttpStatus.NO_CONTENT : HttpStatus.OK;
