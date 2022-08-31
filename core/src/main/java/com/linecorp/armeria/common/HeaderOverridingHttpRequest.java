@@ -26,10 +26,8 @@ import org.reactivestreams.Subscriber;
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.AggregationOptions;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
@@ -149,29 +147,8 @@ final class HeaderOverridingHttpRequest implements HttpRequest {
     }
 
     @Override
-    public <U> CompletableFuture<U> aggregate(AggregationOptions<HttpObject, U> options) {
-        return delegate.aggregate(options);
-    }
-
-    @Override
-    public CompletableFuture<AggregatedHttpRequest> aggregate() {
-        return delegate.aggregate().thenApply(this::replaceHeaders);
-    }
-
-    @Override
-    public CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
-        return delegate.aggregate(executor).thenApply(this::replaceHeaders);
-    }
-
-    @Override
-    public CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(ByteBufAllocator alloc) {
-        return delegate.aggregateWithPooledObjects(alloc).thenApply(this::replaceHeaders);
-    }
-
-    @Override
-    public CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(
-            EventExecutor executor, ByteBufAllocator alloc) {
-        return delegate.aggregateWithPooledObjects(executor, alloc).thenApply(this::replaceHeaders);
+    public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
+        return delegate.aggregate(options).thenApply(this::replaceHeaders);
     }
 
     private AggregatedHttpRequest replaceHeaders(AggregatedHttpRequest req) {

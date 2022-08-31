@@ -627,6 +627,24 @@ public interface HttpResponse extends Response, HttpMessage {
     CompletableFuture<Void> whenComplete();
 
     /**
+     * Aggregates this response with the specified {@link AggregationOptions}. The returned
+     * {@link CompletableFuture} will be notified when the content and the trailers of the response are
+     * received fully.
+     *
+     * <p><pre>{@code
+     * AggregationOptions options =
+     *     AggregationOptions.builder()
+     *                       .cacheResult(false)
+     *                       .executor(...)
+     *                       .build();
+     * HttpResponse request = ...;
+     * AggregatedHttpResponse aggregated = response.aggregate(options).join();
+     * }</pre>
+     */
+    @UnstableApi
+    CompletableFuture<AggregatedHttpResponse> aggregate(AggregationOptions options);
+
+    /**
      * Aggregates this response. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the response are received fully.
      *
@@ -658,10 +676,10 @@ public interface HttpResponse extends Response, HttpMessage {
      */
     default CompletableFuture<AggregatedHttpResponse> aggregate(EventExecutor executor) {
         requireNonNull(executor, "executor");
-        return aggregate(HttpAggregationOptions.builderForResponse()
-                                               .executor(executor)
-                                               .cacheResult(true)
-                                               .build());
+        return aggregate(AggregationOptions.builder()
+                                           .executor(executor)
+                                           .cacheResult(true)
+                                           .build());
     }
 
     /**
@@ -705,10 +723,10 @@ public interface HttpResponse extends Response, HttpMessage {
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        return aggregate(HttpAggregationOptions.builderForResponse()
-                                               .executor(executor)
-                                               .withPooledObjects(true, alloc)
-                                               .build());
+        return aggregate(AggregationOptions.builder()
+                                           .executor(executor)
+                                           .alloc(alloc)
+                                           .build());
     }
 
     @Override

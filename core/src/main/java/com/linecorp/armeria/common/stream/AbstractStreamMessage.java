@@ -23,15 +23,10 @@ import com.linecorp.armeria.internal.common.stream.AggregationSupport;
  * A skeletal {@link StreamMessage} implementation.
  */
 @UnstableApi
-public abstract class AbstractStreamMessage<T> extends AggregationSupport<T> implements StreamMessage<T> {
+public abstract class AbstractStreamMessage<T> extends AggregationSupport implements StreamMessage<T> {
 
     /**
      * Creates a new instance.
      */
     protected AbstractStreamMessage() {}
-
-    @Override
-    protected final StreamMessage<T> streamMessage() {
-        return this;
-    }
 }

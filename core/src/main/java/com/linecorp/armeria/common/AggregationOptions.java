@@ -14,11 +14,8 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.common;
 
-import java.util.function.Function;
-
-import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.unsafe.PooledObjects;
@@ -27,23 +24,20 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
 /**
- * An {@link AggregationOptions} to control the aggregation behavior of {@link StreamMessage}.
- * @param <T> the type of the object to aggregate.
- * @param <U> the type of the aggregated object.
- *
- * @see StreamMessage#aggregate(AggregationOptions)
+ * An {@link AggregationOptions} to control the aggregation behavior of {@link HttpMessage}.
  */
 @UnstableApi
-public interface AggregationOptions<T, U> {
+public interface AggregationOptions {
 
     /**
-     * Returns the aggregation {@link Function} that aggregates a list of {@code T} type objects into
-     * a {code U} type object.
+     * Returns a new {@link AggregationOptionsBuilder}.
      */
-    boolean isRequest();
+    static AggregationOptionsBuilder builder() {
+        return new AggregationOptionsBuilder();
+    }
 
     /**
-     * Returns the {@link EventExecutor} that runs the {@link #aggregator()} on.
+     * Returns the {@link EventExecutor} that executes the aggregation on.
      */
     EventExecutor executor();
 
@@ -51,15 +45,6 @@ public interface AggregationOptions<T, U> {
      * Returns whether to cache the aggregation result.
      */
     boolean cacheResult();
-
-    /**
-     * Returns {@code true} if an {@link HttpData} is passed to the aggregation function as is, without
-     * making a copy.
-     *
-     * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
-     * Therefore, if {@link #cacheResult()} is set to {@code true}, this method always returns {@code false}.
-     */
-    boolean withPooledObjects();
 
     /**
      * (Advanced users only) Returns the {@link ByteBufAllocator} that can be used to create a

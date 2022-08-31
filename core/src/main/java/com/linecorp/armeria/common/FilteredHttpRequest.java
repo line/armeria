@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.FilteredStreamMessage;
 import com.linecorp.armeria.unsafe.PooledObjects;
@@ -51,6 +53,12 @@ public abstract class FilteredHttpRequest
     protected FilteredHttpRequest(HttpRequest delegate, boolean withPooledObjects) {
         super(delegate, withPooledObjects);
         headers = delegate.headers();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
+        return super.aggregate(options);
     }
 
     @Override

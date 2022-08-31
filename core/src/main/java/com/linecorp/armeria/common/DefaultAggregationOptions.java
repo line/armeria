@@ -14,36 +14,33 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common.stream;
+package com.linecorp.armeria.common;
 
-import java.util.List;
 import java.util.Objects;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
+import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
-final class DefaultAggregationOptions<T, U> implements AggregationOptions<T, U> {
+final class DefaultAggregationOptions implements AggregationOptions {
 
-    private final BiFunction<? super AggregationOptions<T, U>, ? super List<T>, ? extends U> aggregator;
     private final EventExecutor executor;
+    @Nullable
+    private final ByteBufAllocator alloc;
     private final boolean cacheResult;
-    private final boolean withPooledObjects;
 
-    DefaultAggregationOptions(
-            BiFunction<? super AggregationOptions<T, U>, ? super List<T>, ? extends U> aggregator,
-            EventExecutor executor, boolean cacheResult, boolean withPooledObjects) {
-        this.aggregator = aggregator;
+    DefaultAggregationOptions(EventExecutor executor, @Nullable ByteBufAllocator alloc, boolean cacheResult) {
         this.executor = executor;
+        this.alloc = alloc;
         this.cacheResult = cacheResult;
-        this.withPooledObjects = withPooledObjects;
     }
 
     @Override
-    public Function<List<T>, U> aggregator() {
-        return objects -> aggregator.apply(this, objects);
+    public EventExecutor executor() {
+        return executor;
     }
 
     @Override
@@ -52,13 +49,8 @@ final class DefaultAggregationOptions<T, U> implements AggregationOptions<T, U> 
     }
 
     @Override
-    public boolean withPooledObjects() {
-        return withPooledObjects;
-    }
-
-    @Override
-    public EventExecutor executor() {
-        return executor;
+    public ByteBufAllocator alloc() {
+        return alloc;
     }
 
     @Override
@@ -69,25 +61,23 @@ final class DefaultAggregationOptions<T, U> implements AggregationOptions<T, U> 
         if (!(o instanceof AggregationOptions)) {
             return false;
         }
-        final AggregationOptions<?, ?> that = (AggregationOptions<?, ?>) o;
+        final AggregationOptions that = (AggregationOptions) o;
         return cacheResult == that.cacheResult() &&
-               withPooledObjects == that.withPooledObjects() &&
                executor.equals(that.executor()) &&
-               aggregator.equals(that.aggregator());
+               Objects.equals(alloc, that.alloc());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(aggregator, executor, cacheResult, withPooledObjects);
+        return Objects.hash(executor, alloc, cacheResult);
     }
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("aggregator", aggregator)
+        return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("executor", executor)
+                          .add("alloc", alloc)
                           .add("cacheResult", cacheResult)
-                          .add("withPooledObjects", withPooledObjects)
                           .toString();
     }
 }

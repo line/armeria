@@ -31,7 +31,7 @@ import io.netty.util.concurrent.EventExecutor;
  * Wraps a {@link StreamMessage} and forwards its method invocations to {@code delegate}.
  * @param <T> the type of elements
  */
-public class StreamMessageWrapper<T> implements StreamMessage<T> {
+public class StreamMessageWrapper<T> extends AbstractStreamMessage<T> {
 
     private final StreamMessage<? extends T> delegate;
 
@@ -97,13 +97,6 @@ public class StreamMessageWrapper<T> implements StreamMessage<T> {
         @SuppressWarnings("unchecked")
         final StreamMessage<T> delegate = (StreamMessage<T>) delegate();
         return delegate.collect(executor, options);
-    }
-
-    @Override
-    public <U> CompletableFuture<U> aggregate(AggregationOptions<T, U> options) {
-        @SuppressWarnings("unchecked")
-        final StreamMessage<T> delegate = (StreamMessage<T>) delegate();
-        return delegate.aggregate(options);
     }
 
     @SuppressWarnings("unchecked")

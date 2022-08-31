@@ -25,10 +25,8 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.stream.AbstractStreamMessage;
-import com.linecorp.armeria.common.stream.AggregationOptions;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
-import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -97,21 +95,6 @@ public class AbortedStreamMessage<T> extends AbstractStreamMessage<T> implements
     private void abortLateSubscriber(Subscriber<? super T> subscriber) {
         subscriber.onSubscribe(NoopSubscription.get());
         subscriber.onError(new IllegalStateException("subscribed by other subscriber already"));
-    }
-
-    @Override
-    public <U> CompletableFuture<U> aggregate(AggregationOptions<T, U> options) {
-        if (subscribedUpdater.compareAndSet(this, 0, 1)) {
-            completionFuture.completeExceptionally(cause);
-            return UnmodifiableFuture.exceptionallyCompletedFuture(cause);
-        } else {
-            if (options.cacheResult()) {
-                return UnmodifiableFuture.exceptionallyCompletedFuture(cause);
-            } else {
-                return UnmodifiableFuture.exceptionallyCompletedFuture(
-                        new IllegalStateException("subscribed by other subscriber already"));
-            }
-        }
     }
 
     @Override

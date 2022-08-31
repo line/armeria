@@ -15,8 +15,12 @@
  */
 package com.linecorp.armeria.internal.common;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
@@ -29,5 +33,11 @@ public class DefaultHttpResponse extends DefaultStreamMessage<HttpObject> implem
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).toString();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public CompletableFuture<AggregatedHttpResponse> aggregate(AggregationOptions options) {
+        return super.aggregate(options);
     }
 }

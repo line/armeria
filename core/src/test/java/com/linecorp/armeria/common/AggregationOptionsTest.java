@@ -20,11 +20,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-import java.util.List;
-import java.util.concurrent.CompletionException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.function.Function;
 import java.util.stream.Stream;
 
 import org.hamcrest.Matchers;
@@ -39,11 +36,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.stream.AggregationOptions;
-import com.linecorp.armeria.common.stream.DefaultStreamMessage;
-import com.linecorp.armeria.common.stream.FilteredStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.internal.testing.AnticipatedException;
 
 import io.netty.buffer.ByteBufAllocator;
 import reactor.core.publisher.Flux;
@@ -52,51 +45,13 @@ class AggregationOptionsTest {
 
     private static final Logger logger = LoggerFactory.getLogger(AggregationOptionsTest.class);
 
-    @ArgumentsSource(StreamMessageProvider.class)
-    @ParameterizedTest
-    void streamMessage_cached(StreamMessage<Integer> stream) {
-        final AtomicInteger counter = new AtomicInteger();
-        final Function<List<Integer>, Integer> aggregator = nums -> {
-            counter.incrementAndGet();
-            return nums.stream().reduce(0, Integer::sum);
-        };
-        final AggregationOptions<Integer, Integer> options = AggregationOptions.builder(aggregator)
-                                                                               .cacheResult(true)
-                                                                               .build();
-        final int sumFirst = stream.aggregate(options).join();
-        assertThat(sumFirst).isEqualTo(10);
-        assertThat(counter).hasValue(1);
-
-        final int sumSecond = stream.aggregate(options).join();
-        assertThat(sumSecond).isEqualTo(10);
-        // Make sure that the aggregation function is not evaluated.
-        assertThat(counter).hasValue(1);
-    }
-
-    @ArgumentsSource(StreamMessageProvider.class)
-    @ParameterizedTest
-    void streamMessage_nonCached(StreamMessage<Integer> stream) {
-        final AggregationOptions<Integer, Integer> options =
-                AggregationOptions.<Integer, Integer>builder(nums -> {
-                                      return nums.stream().reduce(0, Integer::sum);
-                                  }).cacheResult(false)
-                                  .build();
-        final int sum = stream.aggregate(options).join();
-        assertThat(sum).isEqualTo(10);
-
-        // Disallow the second aggregation
-        assertThatThrownBy(() -> stream.aggregate(options).join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(IllegalStateException.class);
-    }
-
     @Test
     void disallowPooledObjectWithCache() {
         assertThatThrownBy(() -> {
-            HttpAggregationOptions.builderForResponse()
-                                  .withPooledObjects(true, ByteBufAllocator.DEFAULT)
-                                  .cacheResult(true)
-                                  .build();
+            AggregationOptions.builder()
+                              .alloc(ByteBufAllocator.DEFAULT)
+                              .cacheResult(true)
+                              .build();
         }).isInstanceOf(IllegalStateException.class)
           .hasMessageContaining("Can't cache pooled objects");
     }
@@ -109,7 +64,13 @@ class AggregationOptionsTest {
         assertThat(agg0.path()).isEqualTo("/abc");
         assertThat(agg0.content().toStringUtf8()).isEqualTo("12");
         final AggregatedHttpRequest agg1 = request.aggregate().join();
-        assertThat(agg1).isSameAs(agg0);
+        if (request instanceof HeaderOverridingHttpRequest) {
+            // A new object is created for the overridden header .
+            assertThat(agg1).isEqualTo(agg0);
+            assertThat(agg0.content()).isSameAs(agg1.content());
+        } else {
+            assertThat(agg1).isSameAs(agg0);
+        }
     }
 
     @ArgumentsSource(HttpRequestProvider.class)
@@ -123,12 +84,12 @@ class AggregationOptionsTest {
         agg0.content().close();
 
         assertThatThrownBy(() -> request.aggregateWithPooledObjects(alloc).join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(IllegalStateException.class);
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("the stream was aggregated");
 
         assertThatThrownBy(() -> request.aggregate().join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(IllegalStateException.class);
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("the stream was aggregated");
     }
 
     @ArgumentsSource(HttpResponseProvider.class)
@@ -151,24 +112,19 @@ class AggregationOptionsTest {
         agg0.content().close();
 
         assertThatThrownBy(() -> response.aggregateWithPooledObjects(alloc).join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(IllegalStateException.class);
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("the stream was aggregated");
 
         assertThatThrownBy(() -> response.aggregate().join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(IllegalStateException.class);
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("the stream was aggregated");
     }
 
     @Test
     void testConcurrentAggregation() throws InterruptedException {
-        final StreamMessage<Integer> stream = StreamMessage.of(1, 2, 3, 4);
-        final Function<List<Integer>, Integer> aggregator = nums -> {
-            return nums.stream().reduce(0, Integer::sum);
-        };
-        final AggregationOptions<Integer, Integer> options = AggregationOptions.builder(aggregator)
-                                                                               .cacheResult(true)
-                                                                               .build();
-
+        final HttpRequest request = HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"), HttpData.ofUtf8("1"),
+                                                   HttpData.ofUtf8("2"),
+                                                   HttpData.ofUtf8("3"), HttpData.ofUtf8("4"));
         final int concurrency = 20;
         final CountDownLatch startLatch = new CountDownLatch(concurrency);
         final AtomicInteger success = new AtomicInteger();
@@ -180,42 +136,13 @@ class AggregationOptionsTest {
                 } catch (InterruptedException e) {
                     logger.warn("interrupted: ", e);
                 }
-                final int sum = stream.aggregate(options).join();
-                assertThat(sum).isEqualTo(10);
+                final AggregatedHttpRequest agg = request.aggregate().join();
+                assertThat(agg.contentUtf8()).isEqualTo("1234");
                 success.incrementAndGet();
             });
         }
 
         await().untilAtomic(success, Matchers.equalTo(concurrency));
-    }
-
-    private static class StreamMessageProvider implements ArgumentsProvider {
-
-        @Override
-        public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {
-            final StreamMessage<Integer> fixed = StreamMessage.of(1, 2, 3, 4);
-            final DefaultStreamMessage<Integer> defaultStream = new DefaultStreamMessage<>();
-            defaultStream.write(1);
-            defaultStream.write(2);
-            defaultStream.write(3);
-            defaultStream.write(4);
-            defaultStream.close();
-            final StreamMessage<Integer> publisherBased = StreamMessage.of(Flux.range(1, 4));
-            final StreamMessage<Integer> fuseable = StreamMessage.of(0, 1, 2, 3).map(x -> x + 1);
-            final StreamMessage<Integer> recoverable =
-                    StreamMessage.<Integer>aborted(new AnticipatedException())
-                                 .recoverAndResume(cause -> StreamMessage.of(1, 2, 3, 4));
-            final FilteredStreamMessage<Integer, Integer> filtered =
-                    new FilteredStreamMessage<Integer, Integer>(StreamMessage.of(0, 1, 2, 3)) {
-                        @Override
-                        protected Integer filter(Integer obj) {
-                            return obj + 1;
-                        }
-                    };
-
-            return Stream.of(fixed, defaultStream, publisherBased, fuseable, recoverable, filtered)
-                         .map(Arguments::of);
-        }
     }
 
     private static class HttpRequestProvider implements ArgumentsProvider {
@@ -247,7 +174,17 @@ class AggregationOptionsTest {
                                     Integer.toString(Integer.parseInt(data.toStringUtf8()) + 1));
                         }
                     };
-            return Stream.of(fixed, streaming, publisherBased, fuseable, filtered)
+
+            final HttpRequest streamMessageBased =
+                    HttpRequest.of(headers, StreamMessage.of(HttpData.ofUtf8("1"), HttpData.ofUtf8("2")));
+
+            final HttpRequest headerOverriding =
+                    HttpRequest.of(RequestHeaders.of(HttpMethod.GET, "/"), HttpData.ofUtf8("1"),
+                                   HttpData.ofUtf8("2"))
+                               .withHeaders(headers);
+
+            return Stream.of(fixed, streaming, publisherBased, fuseable, filtered,
+                             streamMessageBased, headerOverriding)
                          .map(Arguments::of);
         }
     }
@@ -285,7 +222,16 @@ class AggregationOptionsTest {
                                     Integer.toString(Integer.parseInt(data.toStringUtf8()) + 1));
                         }
                     };
-            return Stream.of(fixed, streaming, publisherBased, fuseable, filtered)
+
+            final HttpResponse streamMessageBased =
+                    HttpResponse.of(headers, StreamMessage.of(HttpData.ofUtf8("1"), HttpData.ofUtf8("2")));
+
+            final HttpResponse headerOverriding =
+                    HttpResponse.of(ResponseHeaders.of(HttpStatus.BAD_REQUEST),
+                                    HttpData.ofUtf8("1"), HttpData.ofUtf8("2"))
+                                .mapHeaders(headers0 -> headers);
+            return Stream.of(fixed, streaming, publisherBased, fuseable, filtered,
+                             streamMessageBased, headerOverriding)
                          .map(Arguments::of);
         }
     }

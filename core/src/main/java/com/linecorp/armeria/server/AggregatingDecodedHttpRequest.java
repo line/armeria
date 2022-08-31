@@ -21,8 +21,8 @@ import java.util.concurrent.CompletableFuture;
 import javax.annotation.Nonnull;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ExchangeType;
-import com.linecorp.armeria.common.HttpAggregationOptions;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -31,9 +31,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.stream.AggregatingStreamMessage;
 
-import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
-import io.netty.util.concurrent.EventExecutor;
 
 final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpObject>
         implements DecodedHttpRequestWriter {
@@ -81,18 +79,10 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Override
-    public CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
-        return aggregate(HttpAggregationOptions.builderForRequest(headers())
-                                                         .executor(executor)
-                                                         .cacheResult(true)
-                                                         .build());
-    }
-
-    @Override
-    public CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(EventExecutor executor,
-                                                                               ByteBufAllocator alloc) {
-        return null;
+    public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
+        return super.aggregate(options);
     }
 
     @Override

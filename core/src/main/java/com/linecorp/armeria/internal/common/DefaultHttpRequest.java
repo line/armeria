@@ -17,8 +17,12 @@ package com.linecorp.armeria.internal.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
@@ -42,6 +46,12 @@ public class DefaultHttpRequest extends DefaultStreamMessage<HttpObject> impleme
     @Override
     public final RequestHeaders headers() {
         return headers;
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
+        return super.aggregate(options);
     }
 
     @Override

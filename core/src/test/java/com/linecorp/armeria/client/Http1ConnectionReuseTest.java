@@ -26,7 +26,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
@@ -34,7 +36,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.stream.AggregationOptions;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -117,7 +118,7 @@ class Http1ConnectionReuseTest {
             }
 
             @Override
-            public <U> CompletableFuture<U> aggregate(AggregationOptions<HttpObject, U> options) {
+            public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
                 return delegate.aggregate(options);
             }
         };

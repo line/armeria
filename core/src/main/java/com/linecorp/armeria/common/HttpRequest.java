@@ -456,6 +456,24 @@ public interface HttpRequest extends Request, HttpMessage {
     }
 
     /**
+     * Aggregates this request with the specified {@link AggregationOptions}. The returned
+     * {@link CompletableFuture} will be notified when the content and the trailers of the request are
+     * received fully.
+     *
+     * <p><pre>{@code
+     * AggregationOptions options =
+     *     AggregationOptions.builder()
+     *                       .cacheResult(false)
+     *                       .executor(...)
+     *                       .build();
+     * HttpRequest request = ...;
+     * AggregatedHttpRequest aggregated = request.aggregate(options).join();
+     * }</pre>
+     */
+    @UnstableApi
+    CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options);
+
+    /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the request is received fully.
      *
@@ -485,7 +503,13 @@ public interface HttpRequest extends Request, HttpMessage {
      * assert aggregated0 == aggregated1;
      * }</pre>
      */
-    CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor);
+    default CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
+        requireNonNull(executor, "executor");
+        return aggregate(AggregationOptions.builder()
+                                           .executor(executor)
+                                           .cacheResult(true)
+                                           .build());
+    }
 
     /**
      * (Advanced users only) Aggregates this request. The returned {@link CompletableFuture} will be notified
@@ -510,7 +534,8 @@ public interface HttpRequest extends Request, HttpMessage {
     }
 
     /**
-     * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
+     * (Advanced users only) Aggregates this request. The returned {@link CompletableFuture} will be notified
+     * when the content and
      * the trailers of the request is received fully. {@link AggregatedHttpRequest#content()} will
      * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
      * use {@link #aggregate()}.
@@ -524,8 +549,15 @@ public interface HttpRequest extends Request, HttpMessage {
      * request.aggregateWithPooledObjects(executor, alloc).join();
      * }</pre>
      */
-    CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(EventExecutor executor,
-                                                                        ByteBufAllocator alloc);
+    default CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(
+            EventExecutor executor, ByteBufAllocator alloc) {
+        requireNonNull(executor, "executor");
+        requireNonNull(alloc, "alloc");
+        return aggregate(AggregationOptions.builder()
+                                           .executor(executor)
+                                           .alloc(alloc)
+                                           .build());
+    }
 
     @Override
     default HttpRequestDuplicator toDuplicator() {
