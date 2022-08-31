@@ -19,7 +19,7 @@ package com.linecorp.armeria.internal.server.annotation;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapUnaryAsyncType;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
@@ -613,7 +613,7 @@ public final class AnnotatedService implements HttpService {
 
         @Override
         public Boolean isResponseStreaming(Type returnType, @Nullable MediaType contentType) {
-            final Class<?> clazz = typeToClass(unwrapAsyncType(returnType));
+            final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(returnType));
             if (clazz == null) {
                 return null;
             }

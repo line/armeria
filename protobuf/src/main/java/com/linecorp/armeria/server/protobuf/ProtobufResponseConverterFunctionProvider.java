@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.server.protobuf;
 
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapUnaryAsyncType;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -52,7 +52,7 @@ public final class ProtobufResponseConverterFunctionProvider implements Response
      * {@link ProtobufResponseConverterFunction}.
      */
     private static boolean isSupportedType(Type type) {
-        type = unwrapAsyncType(type);
+        type = unwrapUnaryAsyncType(type);
         if (type instanceof Class) {
             return MessageLite.class.isAssignableFrom((Class<?>) type);
         }
