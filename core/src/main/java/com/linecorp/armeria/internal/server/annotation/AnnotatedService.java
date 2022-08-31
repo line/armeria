@@ -375,11 +375,10 @@ public final class AnnotatedService implements HttpService {
                     composedFuture = f.thenCompose(
                             aReq -> toCompletionStage(invoke(ctx, req, aReq), ctx.eventLoop()));
                 }
-                return composedFuture
-                        .thenApply(result -> convertResponse(ctx, null, result, HttpHeaders.of()));
+                return composedFuture.thenApply(result -> convertResponse(ctx, result));
             default:
                 final Function<AggregatedResult, HttpResponse> defaultApplyFunction =
-                        aReq -> convertResponse(ctx, null, invoke(ctx, req, aReq), HttpHeaders.of());
+                        aReq -> convertResponse(ctx, invoke(ctx, req, aReq));
                 if (useBlockingTaskExecutor) {
                     return f.thenApplyAsync(defaultApplyFunction, ctx.blockingTaskExecutor());
                 } else {
@@ -420,61 +419,81 @@ public final class AnnotatedService implements HttpService {
     /**
      * Converts the specified {@code result} to an {@link HttpResponse}.
      */
-    private HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable ResponseHeaders headers,
-                                         @Nullable Object result, HttpHeaders trailers) {
-        final ResponseHeaders newHeaders;
-        final HttpHeaders newTrailers;
-        if (result instanceof HttpResult) {
-            final HttpResult<?> httpResult = (HttpResult<?>) result;
-            newHeaders = addNegotiatedResponseMediaType(ctx, setHttpStatus(httpResult.headers()));
-            result = httpResult.content();
-            newTrailers = httpResult.trailers();
-        } else {
-            newHeaders = headers == null ? addNegotiatedResponseMediaType(ctx, setHttpStatus(HttpHeaders.of()))
-                                         : headers; // :status header is already set here.
-            newTrailers = trailers;
-        }
-
+    private HttpResponse convertResponse(ServiceRequestContext ctx, @Nullable Object result) {
         if (result instanceof HttpResponse) {
             return (HttpResponse) result;
         }
         if (result instanceof AggregatedHttpResponse) {
             return ((AggregatedHttpResponse) result).toHttpResponse();
         }
+
+        final ResponseHeaders headers;
+        final HttpHeaders trailers;
+
+        if (result instanceof HttpResult) {
+            final HttpResult<?> httpResult = (HttpResult<?>) result;
+
+            headers = buildResponseHeaders(ctx, httpResult.headers());
+            result = httpResult.content();
+            trailers = httpResult.trailers();
+        } else {
+            headers = buildResponseHeaders(ctx);
+            trailers = HttpHeaders.of();
+        }
+
+        return convertResponseInternal(ctx, headers, result, trailers);
+    }
+
+    private HttpResponse convertResponseInternal(ServiceRequestContext ctx,
+                                                 ResponseHeaders headers,
+                                                 @Nullable Object result,
+                                                 HttpHeaders trailers) {
         if (result instanceof CompletionStage) {
             final CompletionStage<?> future = (CompletionStage<?>) result;
-            return HttpResponse.from(future.thenApply(object -> convertResponse(ctx, newHeaders, object,
-                                                                                newTrailers)));
+            return HttpResponse.from(
+                    future.thenApply(object -> convertResponseInternal(ctx, headers, object, trailers)));
         }
 
         try (SafeCloseable ignored = ctx.push()) {
-            return responseConverter.convertResponse(ctx, newHeaders, result, newTrailers);
+            return responseConverter.convertResponse(ctx, headers, result, trailers);
         } catch (Exception cause) {
             return HttpResponse.ofFailure(cause);
         }
     }
 
-    private static ResponseHeaders addNegotiatedResponseMediaType(ServiceRequestContext ctx,
-                                                                  ResponseHeadersBuilder headers) {
-        // :status header is guaranteed to be set.
-        if (headers.status().isContentAlwaysEmpty()) {
-            return headers.build();
+    private ResponseHeaders buildResponseHeaders(ServiceRequestContext ctx, HttpHeaders customHeaders) {
+        final ResponseHeadersBuilder builder;
+
+        // Prefer ResponseHeaders#toBuilder because builder#add is an expensive operation.
+        if (customHeaders instanceof ResponseHeaders) {
+            builder = ((ResponseHeaders) customHeaders).toBuilder();
+        } else {
+            builder = ResponseHeaders.builder();
+            builder.add(customHeaders);
+            if (!builder.contains(HttpHeaderNames.STATUS)) {
+                builder.status(defaultStatus);
+            }
         }
-        final MediaType negotiatedResponseMediaType = ctx.negotiatedResponseMediaType();
-        if (negotiatedResponseMediaType == null || headers.contentType() != null) {
-            // Do not overwrite 'content-type'.
-            return headers.build();
-        }
-        return headers.contentType(negotiatedResponseMediaType).build();
+        return addContentTypeIfNeeded(ctx, builder).build();
     }
 
-    private ResponseHeadersBuilder setHttpStatus(HttpHeaders headers) {
-        final ResponseHeadersBuilder builder = ResponseHeaders.builder().add(headers);
-        if (headers.contains(HttpHeaderNames.STATUS)) {
-            // Do not overwrite HTTP status.
+    private ResponseHeaders buildResponseHeaders(ServiceRequestContext ctx) {
+        return addContentTypeIfNeeded(ctx, ResponseHeaders.builder(defaultStatus)).build();
+    }
+
+    private static ResponseHeadersBuilder addContentTypeIfNeeded(ServiceRequestContext ctx,
+                                                                 ResponseHeadersBuilder builder) {
+        if (builder.status().isContentAlwaysEmpty()) {
             return builder;
         }
-        return builder.status(defaultStatus);
+        if (builder.contentType() != null) {
+            return builder;
+        }
+        final MediaType negotiatedResponseMediaType = ctx.negotiatedResponseMediaType();
+        if (negotiatedResponseMediaType != null) {
+            builder.contentType(negotiatedResponseMediaType);
+        }
+        return builder;
     }
 
     /**
