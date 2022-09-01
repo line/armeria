@@ -183,8 +183,11 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
         } else {
             if (!(req instanceof DecodedHttpRequestWriter)) {
-                throw connectionError(PROTOCOL_ERROR,
-                                      "received an HEADERS frame for an invalid stream: %d", streamId);
+                // Silently ignore the following HEADERS Frames of non-DecodedHttpRequestWriter. The request
+                // stream is closed when receiving the first HEADERS Frame and some responses might be sent
+                // already.
+                logger.debug("{} received a HEADERS Frame for an invalid stream: {}", ctx, streamId);
+                return;
             }
             final HttpHeaders trailers = ArmeriaHttpUtil.toArmeria(nettyHeaders, true, endOfStream);
             final DecodedHttpRequestWriter decodedReq = (DecodedHttpRequestWriter) req;
@@ -197,7 +200,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 }
             } catch (Throwable t) {
                 decodedReq.close(t);
-                throw connectionError(INTERNAL_ERROR, t, "failed to consume an HEADERS frame");
+                throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");
             }
         }
 
@@ -254,19 +257,16 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             throw connectionError(PROTOCOL_ERROR, "received a DATA Frame for an unknown stream: %d",
                                   streamId);
         }
-        if (!(req instanceof DecodedHttpRequestWriter)) {
-            // A DATA Frame is not allowed for non-DecodedHttpRequestWriter.
-            if (logger.isDebugEnabled()) {
-                throw connectionError(PROTOCOL_ERROR,
-                                      "received a DATA Frame for an invalid stream: %d. headers: %s",
-                                      streamId, req.headers());
-            } else {
-                throw connectionError(PROTOCOL_ERROR,
-                                      "received a DATA Frame for an invalid stream: %d", streamId);
-            }
-        }
 
         final int dataLength = data.readableBytes();
+        if (!(req instanceof DecodedHttpRequestWriter)) {
+            // Silently ignore the following DATA Frames of non-DecodedHttpRequestWriter. The request stream is
+            // closed when receiving the HEADERS Frame and some responses might be sent already.
+            logger.debug("{} received a DATA Frame for an invalid stream: {}. headers: {}",
+                         ctx, streamId, req.headers());
+            return dataLength + padding;
+        }
+
         if (dataLength == 0) {
             // Received an empty DATA frame
             if (endOfStream) {
