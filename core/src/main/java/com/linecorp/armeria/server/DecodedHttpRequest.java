@@ -103,7 +103,7 @@ interface DecodedHttpRequest extends HttpRequest {
     /**
      * Returns whether the request should be fully aggregated before passed to the {@link HttpServerHandler}.
      */
-    boolean isAggregated();
+    boolean needsAggregation();
 
     /**
      * Returns the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or

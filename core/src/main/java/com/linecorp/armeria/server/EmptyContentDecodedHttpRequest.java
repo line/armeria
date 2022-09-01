@@ -188,7 +188,7 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     }
 
     @Override
-    public boolean isAggregated() {
+    public boolean needsAggregation() {
         return false;
     }
 
