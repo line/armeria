@@ -182,6 +182,10 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 ctx.fireChannelRead(req);
             }
         } else {
+            if (!(req instanceof DecodedHttpRequestWriter)) {
+                throw connectionError(PROTOCOL_ERROR,
+                                      "received a HEADERS frame for an invalid stream: %d", streamId);
+            }
             final HttpHeaders trailers = ArmeriaHttpUtil.toArmeria(nettyHeaders, true, endOfStream);
             final DecodedHttpRequestWriter decodedReq = (DecodedHttpRequestWriter) req;
             try {
@@ -196,6 +200,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");
             }
         }
+
     }
 
     @Override
@@ -248,6 +253,17 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         if (req == null) {
             throw connectionError(PROTOCOL_ERROR, "received a DATA Frame for an unknown stream: %d",
                                   streamId);
+        }
+        if (!(req instanceof DecodedHttpRequestWriter)) {
+            // A DATA Frame is not allowed for non-DecodedHttpRequestWriter.
+            if (logger.isDebugEnabled()) {
+                throw connectionError(PROTOCOL_ERROR,
+                                      "received a DATA Frame for an invalid stream: %d. headers: %s",
+                                      streamId, req.headers());
+            } else {
+                throw connectionError(PROTOCOL_ERROR,
+                                      "received a DATA Frame for an invalid stream: %d", streamId);
+            }
         }
 
         final int dataLength = data.readableBytes();

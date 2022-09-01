@@ -498,9 +498,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             respond(reqCtx, false, resHeaders, resContent, cause).addListener(CLOSE);
         }
 
-        if (!isReading) {
+//        if (!isReading) {
             ctx.flush();
-        }
+//        }
     }
 
     private ChannelFuture respond(ServiceRequestContext reqCtx, boolean addKeepAlive,
