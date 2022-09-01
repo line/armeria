@@ -186,7 +186,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 // Silently ignore the following HEADERS Frames of non-DecodedHttpRequestWriter. The request
                 // stream is closed when receiving the first HEADERS Frame and some responses might be sent
                 // already.
-                logger.debug("{} received a HEADERS Frame for an invalid stream: {}", ctx, streamId);
+                logger.debug("{} received a HEADERS Frame for an invalid stream: {}", ctx.channel(), streamId);
                 return;
             }
             final HttpHeaders trailers = ArmeriaHttpUtil.toArmeria(nettyHeaders, true, endOfStream);
@@ -263,7 +263,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             // Silently ignore the following DATA Frames of non-DecodedHttpRequestWriter. The request stream is
             // closed when receiving the HEADERS Frame and some responses might be sent already.
             logger.debug("{} received a DATA Frame for an invalid stream: {}. headers: {}",
-                         ctx, streamId, req.headers());
+                         ctx.channel(), streamId, req.headers());
             return dataLength + padding;
         }
 

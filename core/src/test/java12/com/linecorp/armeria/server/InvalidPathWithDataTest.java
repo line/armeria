@@ -28,7 +28,6 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -70,7 +69,7 @@ class InvalidPathWithDataTest {
 
         final ListAppender<ILoggingEvent> logWatcher = new ListAppender<>();
         logWatcher.start();
-        final Logger logger = (Logger) LoggerFactory.getLogger(AbstractHttp2ConnectionHandler.class);
+        final Logger logger = (Logger) LoggerFactory.getLogger(Http2RequestDecoder.class);
         logger.setLevel(Level.DEBUG);
         logger.addAppender(logWatcher);
 
@@ -93,11 +92,10 @@ class InvalidPathWithDataTest {
         await().untilAsserted(() -> {
             assertThat(logWatcher.list)
                     .anyMatch(event -> {
-                        final String errorMessage = event.getThrowableProxy()
-                                                         .getMessage();
-                        return event.getLevel().equals(Level.WARN) &&
-                               errorMessage.contains("received a DATA Frame for an invalid stream") &&
-                               errorMessage.contains(invalidPath);
+                        final String logMessage = event.getFormattedMessage();
+                        return event.getLevel().equals(Level.DEBUG) &&
+                               logMessage.contains("received a DATA Frame for an invalid stream") &&
+                               logMessage.contains(invalidPath);
                     });
         });
     }
