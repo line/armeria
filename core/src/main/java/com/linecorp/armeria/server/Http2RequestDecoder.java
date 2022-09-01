@@ -203,7 +203,6 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");
             }
         }
-
     }
 
     @Override
