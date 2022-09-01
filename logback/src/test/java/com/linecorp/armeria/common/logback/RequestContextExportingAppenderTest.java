@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.logback;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
@@ -567,6 +568,23 @@ class RequestContextExportingAppenderTest {
                            .containsKey("req.id")
                            .containsKey("elapsed_nanos")
                            .hasSize(27);
+        }
+    }
+
+    @Test
+    void testResponseCause() throws Exception {
+        final List<ILoggingEvent> events = prepare(a -> {
+            a.addBuiltIn(BuiltInProperty.RES_CAUSE);
+        });
+
+        final ClientRequestContext ctx = newClientContext("/foo", "type=bar");
+        try (SafeCloseable ignored = ctx.push()) {
+            ctx.logBuilder().endResponse(new Throwable());
+            final ILoggingEvent e = log(events);
+            final Map<String, String> mdc = e.getMDCPropertyMap();
+            assertThat(mdc).containsOnlyKeys("res.cause")
+                           .extracting(key -> mdc.get("res.cause"), STRING)
+                           .contains("java.lang.Throwable");
         }
     }
 

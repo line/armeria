@@ -44,6 +44,7 @@ import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.util.StringUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -292,6 +293,21 @@ public enum BuiltInProperty {
         }
         if (log.isAvailable(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
             return log.responseContentPreview();
+        }
+        return null;
+    }),
+
+    /**
+     * {@code "res.cause"} - the cause of the response failure represented
+     * by {@link Throwable#printStackTrace()}.
+     * Unavailable if the response has been completed successfully.
+     */
+    RES_CAUSE("res.cause", log -> {
+        if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+            final Throwable responseCause = log.responseCause();
+            if (responseCause != null) {
+                return Exceptions.traceText(responseCause);
+            }
         }
         return null;
     }),
