@@ -8,6 +8,7 @@ dependencies {
     optionalApi libs.dropwizard.metrics.json
 
     implementation libs.spring.boot2.autoconfigure
+    optionalImplementation libs.reactor.core
 
     testImplementation libs.spring.boot2.starter.actuator
     testImplementation libs.spring.boot2.starter.test
