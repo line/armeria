@@ -459,8 +459,7 @@ public interface HttpRequest extends Request, HttpMessage {
      * Aggregates this request with the specified {@link AggregationOptions}. The returned
      * {@link CompletableFuture} will be notified when the content and the trailers of the request are
      * received fully.
-     *
-     * <p><pre>{@code
+     * <pre>{@code
      * AggregationOptions options =
      *     AggregationOptions.builder()
      *                       .cacheResult(false)

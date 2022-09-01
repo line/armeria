@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.stream;
+package com.linecorp.armeria.common.stream;
 
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.POOLED_OBJECTS;
@@ -32,9 +32,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.AbstractStreamMessage;
-import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.HttpMessageAggregator;
 
@@ -42,14 +40,14 @@ import io.netty.buffer.ByteBufAllocator;
 
 /**
  * A helper class to support caching the aggregated result of {@link HttpMessage}.
- * {@link StreamMessage} does not support aggregation because don't know how to aggregate a stream of
- * arbitrary objects in a {@link StreamMessage}.
  *
- * <p>Although this class is not directly used in {@link StreamMessage}'s API, it is injected on top of
- * {@link AbstractStreamMessage} due to the limitation of the class hierarchy so that all variants of
- * {@link HttpRequest} and {@link HttpResponse} take advantage of the caching logic in this class.
+ * <p>Note that {@link StreamMessage} does not support aggregation because don't know how to aggregate a
+ * stream of arbitrary objects in a {@link StreamMessage}. Although this class is not directly used in
+ * {@link StreamMessage}'s API, it is injected on top of {@link AbstractStreamMessage} due to the limitation
+ * of the multiple class hierarchy so that all variants of {@link HttpRequest} and {@link HttpResponse} take
+ * advantage of the caching logic in this class.
  */
-public abstract class AggregationSupport {
+abstract class AggregationSupport {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<AggregationSupport, CompletableFuture> aggregationUpdater =
@@ -58,11 +56,17 @@ public abstract class AggregationSupport {
 
     private static final CompletableFuture<Object> NO_CACHE = new CompletableFuture<>();
 
-    protected AggregationSupport() {}
-
     @Nullable
     private volatile CompletableFuture<Object> aggregation;
 
+    /**
+     * Aggregates an {@link HttpMessage} into an {@link AggregatedHttpMessage} using
+     * the specified {@link AggregationOptions}.
+     *
+     * <p>Note that this method is added for internal usage. Therefore, <strong>must not</strong> override or
+     * call this method if you are not familiar with Armeria's internal implementation.
+     */
+    @UnstableApi
     protected <U extends AggregatedHttpMessage> CompletableFuture<U> aggregate(AggregationOptions options) {
         requireNonNull(options, "options");
 

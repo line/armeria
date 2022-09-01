@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common.stream;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.stream.AggregationSupport;
 
 /**
  * A skeletal {@link StreamMessage} implementation.
