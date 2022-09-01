@@ -184,7 +184,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         } else {
             if (!(req instanceof DecodedHttpRequestWriter)) {
                 throw connectionError(PROTOCOL_ERROR,
-                                      "received a HEADERS frame for an invalid stream: %d", streamId);
+                                      "received an HEADERS frame for an invalid stream: %d", streamId);
             }
             final HttpHeaders trailers = ArmeriaHttpUtil.toArmeria(nettyHeaders, true, endOfStream);
             final DecodedHttpRequestWriter decodedReq = (DecodedHttpRequestWriter) req;
@@ -197,7 +197,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 }
             } catch (Throwable t) {
                 decodedReq.close(t);
-                throw connectionError(INTERNAL_ERROR, t, "failed to consume a HEADERS frame");
+                throw connectionError(INTERNAL_ERROR, t, "failed to consume an HEADERS frame");
             }
         }
 

@@ -85,7 +85,8 @@ class InvalidPathWithDataTest {
                                                  "Hello Armeria!"))
                                          .build();
 
-        final java.net.http.HttpResponse<String> response = client.send(invalidRequest, BodyHandlers.ofString());
+        final java.net.http.HttpResponse<String> response =
+                client.send(invalidRequest, BodyHandlers.ofString());
         assertThat(response.statusCode()).isEqualTo(400);
         assertThat(response.body()).contains("Invalid request path");
 
