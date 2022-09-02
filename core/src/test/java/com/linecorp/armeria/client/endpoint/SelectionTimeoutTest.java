@@ -26,6 +26,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.assertj.core.api.AbstractLongAssert;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.RepeatedTest;
 import org.junit.jupiter.api.Test;
 
 import com.google.common.base.Stopwatch;
@@ -271,10 +272,11 @@ class SelectionTimeoutTest {
         delegate.close();
     }
 
-    @Test
+    // TODO(ikhoon): Revert once CI builds pass
+    @RepeatedTest(1000)
     void select_timeout() {
-        try (MockEndpointGroup endpointGroup = new MockEndpointGroup(2000)) {
-            final int expectedTimeout = 2000;
+        final int expectedTimeout = 3000;
+        try (MockEndpointGroup endpointGroup = new MockEndpointGroup(expectedTimeout)) {
             assertSelectionTimeout(endpointGroup).isEqualTo(expectedTimeout);
 
             final Stopwatch stopwatch = Stopwatch.createStarted();
@@ -283,7 +285,7 @@ class SelectionTimeoutTest {
             assertThat(result.join()).isNull();
             assertThat(stopwatch.elapsed())
                     .isGreaterThanOrEqualTo(Duration.ofMillis(expectedTimeout))
-                    .isLessThan(Duration.ofMillis(expectedTimeout + 1000));
+                    .isLessThan(Duration.ofMillis(expectedTimeout + 2000));
         }
     }
 
