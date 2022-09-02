@@ -273,7 +273,7 @@ class SelectionTimeoutTest {
     }
 
     // TODO(ikhoon): Revert once CI builds pass
-    @RepeatedTest(1000)
+    @RepeatedTest(100)
     void select_timeout() {
         final int expectedTimeout = 3000;
         try (MockEndpointGroup endpointGroup = new MockEndpointGroup(expectedTimeout)) {
