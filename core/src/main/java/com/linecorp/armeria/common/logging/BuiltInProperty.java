@@ -243,6 +243,21 @@ public enum BuiltInProperty {
     }),
 
     /**
+     * {@code "req.cause"} - the cause of the request failure represented
+     * by {@link Throwable#printStackTrace()}.
+     * Unavailable if the request has been completed successfully.
+     */
+    REQ_CAUSE("req.cause", log -> {
+        if (log.isAvailable(RequestLogProperty.REQUEST_CAUSE)) {
+            final Throwable requestCause = log.requestCause();
+            if (requestCause != null) {
+                return Exceptions.traceText(requestCause);
+            }
+        }
+        return null;
+    }),
+
+    /**
      * {@code "res.status_code"} - the protocol-specific integer representation of the response status code.
      * Unavailable if the current response is not fully sent yet.
      */

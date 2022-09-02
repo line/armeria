@@ -574,17 +574,21 @@ class RequestContextExportingAppenderTest {
     @Test
     void testResponseCause() throws Exception {
         final List<ILoggingEvent> events = prepare(a -> {
+            a.addBuiltIn(BuiltInProperty.REQ_CAUSE);
             a.addBuiltIn(BuiltInProperty.RES_CAUSE);
         });
 
-        final ClientRequestContext ctx = newClientContext("/foo", "type=bar");
+        final ClientRequestContext ctx = newClientContext("/bar", null);
         try (SafeCloseable ignored = ctx.push()) {
-            ctx.logBuilder().endResponse(new Throwable());
+            ctx.logBuilder().endRequest(new Throwable("request"));
+            ctx.logBuilder().endResponse(new Throwable("response"));
             final ILoggingEvent e = log(events);
             final Map<String, String> mdc = e.getMDCPropertyMap();
-            assertThat(mdc).containsOnlyKeys("res.cause")
-                           .extracting(key -> mdc.get("res.cause"), STRING)
-                           .contains("java.lang.Throwable");
+            assertThat(mdc).containsOnlyKeys("req.cause", "res.cause");
+            assertThat(mdc).extracting(key -> mdc.get("req.cause"), STRING)
+                           .contains("java.lang.Throwable: request");
+            assertThat(mdc).extracting(key -> mdc.get("res.cause"), STRING)
+                           .contains("java.lang.Throwable: response");
         }
     }
 
