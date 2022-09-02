@@ -534,10 +534,9 @@ public interface HttpRequest extends Request, HttpMessage {
 
     /**
      * (Advanced users only) Aggregates this request. The returned {@link CompletableFuture} will be notified
-     * when the content and
-     * the trailers of the request is received fully. {@link AggregatedHttpRequest#content()} will
-     * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
-     * use {@link #aggregate()}.
+     * when the content and the trailers of the request is received fully.
+     * {@link AggregatedHttpRequest#content()} will return a pooled object, and the caller must ensure to
+     * release it. If you don't know what this means, use {@link #aggregate()}.
      *
      * <p>The pooled {@link AggregatedHttpRequest} is not cached. So it is NOT allowed to access the
      * {@link AggregatedHttpRequest} from this method after the first aggregation.

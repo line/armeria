@@ -48,8 +48,8 @@ public interface AggregationOptions {
 
     /**
      * (Advanced users only) Returns the {@link ByteBufAllocator} that can be used to create a
-     * {@link PooledObjects} without making a copy. If {@code null}, a {@code byte[]}-based is used to create
-     * a {@link HttpData}.
+     * {@link PooledObjects} without making a copy. If {@code null}, a {@code byte[]}-based {@link HttpData}
+     * is created.
      *
      * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
      * Therefore, if {@link #cacheResult()} is set to {@code true}, this method always returns {@code null}.

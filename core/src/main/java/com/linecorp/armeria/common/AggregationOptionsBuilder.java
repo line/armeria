@@ -61,8 +61,8 @@ public final class AggregationOptionsBuilder {
 
     /**
      * (Advanced users only) Sets the {@link ByteBufAllocator} that can be used to create a
-     * {@link PooledObjects} without making a copy. If unspecified, a {@code byte[]}-based is used to create
-     * a {@link HttpData}.
+     * {@link PooledObjects} without making a copy. If unspecified, a {@code byte[]}-based {@link HttpData}
+     * is created.
      *
      * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
      * Therefore, that this method and {@link #cacheResult(boolean)} are mutually exclusive.
@@ -77,6 +77,7 @@ public final class AggregationOptionsBuilder {
 
     /**
      * Returns a newly created {@link AggregationOptions} with the properties set so far.
+     *
      * @throws IllegalStateException if the options set are invalid.
      */
     public AggregationOptions build() {

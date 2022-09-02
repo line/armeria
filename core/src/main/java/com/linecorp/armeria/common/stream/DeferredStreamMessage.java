@@ -111,7 +111,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
      * Sets the upstream {@link StreamMessage} which will actually publish the stream.
      *
      * @throws IllegalStateException if the upstream has been set already or
-     *                               if {@link #close()} or {@link #close(Throwable)} was called already.
+     * if {@link #close()} or {@link #close(Throwable)} was called already.
      */
     protected final void delegate(StreamMessage<T> upstream) {
         requireNonNull(upstream, "upstream");
@@ -129,11 +129,17 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
 
         if (!collectingFutureUpdater.compareAndSet(this, null, NO_COLLECTING_FUTURE)) {
             upstream.collect(collectingExecutor, collectionOptions).handle((result, cause) -> {
-                final EventExecutor collectingExecutor = this.collectingExecutor;
-                if (collectingExecutor.inEventLoop()) {
-                    completeCollectingFuture(result, cause);
+                final CompletableFuture<List<T>> collectingFuture = this.collectingFuture;
+                assert collectingFuture != null;
+                if (cause != null) {
+                    collectingFuture.completeExceptionally(cause);
                 } else {
-                    collectingExecutor.execute(() -> completeCollectingFuture(result, cause));
+                    // `collectingFuture` can be completed exceptionally by `abort()`
+                    if (!collectingFuture.complete(result)) {
+                        for (final T obj : result) {
+                            PooledObjects.close(obj);
+                        }
+                    }
                 }
                 return null;
             });
@@ -153,26 +159,11 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
         safeOnSubscribeToUpstream();
     }
 
-    private void completeCollectingFuture(@Nullable List<T> objs, @Nullable Throwable cause) {
-        final CompletableFuture<List<T>> collectingFuture = this.collectingFuture;
-        assert collectingFuture != null;
-        if (cause != null) {
-            collectingFuture.completeExceptionally(cause);
-        } else {
-            // `collectingFuture` can be completed exceptionally by `abort()`
-            if (!collectingFuture.complete(objs)) {
-                for (final T obj : objs) {
-                    PooledObjects.close(obj);
-                }
-            }
-        }
-    }
-
     /**
      * Closes the deferred stream without setting a delegate.
      *
      * @throws IllegalStateException if the upstream has been set already or
-     *                               if {@link #close()} or {@link #close(Throwable)} was called already.
+     * if {@link #close()} or {@link #close(Throwable)} was called already.
      */
     public final void close() {
         delegate(StreamMessage.of());
@@ -182,7 +173,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
      * Closes the deferred stream without setting a delegate.
      *
      * @throws IllegalStateException if the delegate has been set already or
-     *                               if {@link #close()} or {@link #close(Throwable)} was called already.
+     * if {@link #close()} or {@link #close(Throwable)} was called already.
      */
     public final void close(Throwable cause) {
         requireNonNull(cause, "cause");
@@ -342,7 +333,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
 
         //noinspection unchecked
         final CompletableFuture<List<?>> collectingFuture =
-                (CompletableFuture<List<?>>)(CompletableFuture<?>) this.collectingFuture;
+                (CompletableFuture<List<?>>) (CompletableFuture<?>) this.collectingFuture;
         if (collectingFuture != null && collectingFuture != NO_COLLECTING_FUTURE) {
             collectingFuture.completeExceptionally(cause);
         }
