@@ -47,14 +47,4 @@ final class HttpStatusPredicate implements Predicate<HttpStatus> {
         assert statusClass != null;
         return status.codeClass() == statusClass;
     }
-
-    @Nullable
-    HttpStatus status() {
-        return status;
-    }
-
-    @Nullable
-    HttpStatusClass statusClass() {
-        return statusClass;
-    }
 }
