@@ -17,8 +17,6 @@ package com.linecorp.armeria.spring.actuate;
 
 import static com.linecorp.armeria.spring.actuate.WebOperationService.handleResult;
 
-import java.util.concurrent.CompletableFuture;
-
 import org.reactivestreams.Publisher;
 import org.springframework.boot.actuate.endpoint.InvalidEndpointRequestException;
 
@@ -26,6 +24,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import reactor.core.publisher.Flux;
@@ -50,22 +50,20 @@ final class ReactiveHealthEndpointWebExtensionUtil {
     private static HttpResponse handlePublisher(SimpleHttpCodeStatusMapper statusMapper,
                                                 ServiceRequestContext ctx, Publisher<?> result,
                                                 HttpMethod method) {
-        final CompletableFuture<HttpResponse> future = new CompletableFuture<>();
-        Mono.from(result).subscribe(result0 -> {
-            try {
-                future.complete(handleResult(statusMapper, ctx, result0, method));
-            } catch (Throwable e) {
-                future.completeExceptionally(e);
-            }
-        }, throwable -> {
-            if (throwable instanceof InvalidEndpointRequestException) {
-                future.complete(HttpResponse.of(HttpStatus.BAD_REQUEST, MediaType.PLAIN_TEXT_UTF_8,
-                                                ((InvalidEndpointRequestException) throwable).getReason()));
-                return;
-            }
-            future.completeExceptionally(throwable);
-        });
-        return HttpResponse.from(future);
+        final Mono<HttpResponse> monoResponse =
+                Mono.from(result).map(result0 -> {
+                        try {
+                            return handleResult(statusMapper, ctx, result0, method);
+                        } catch (Throwable e) {
+                            return Exceptions.throwUnsafely(e);
+                        }
+                    })
+                    .onErrorResume(InvalidEndpointRequestException.class,
+                                   ex -> Mono.just(HttpResponse.of(HttpStatus.BAD_REQUEST,
+                                                                   MediaType.PLAIN_TEXT_UTF_8,
+                                                                   ex.getReason())))
+                    .defaultIfEmpty((method != HttpMethod.GET) ? HttpResponse.of(204) : HttpResponse.of(404));
+        return HttpResponse.of(StreamMessage.concat(monoResponse));
     }
 
     private ReactiveHealthEndpointWebExtensionUtil() {}
