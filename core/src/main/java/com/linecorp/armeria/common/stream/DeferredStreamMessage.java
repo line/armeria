@@ -111,7 +111,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
      * Sets the upstream {@link StreamMessage} which will actually publish the stream.
      *
      * @throws IllegalStateException if the upstream has been set already or
-     * if {@link #close()} or {@link #close(Throwable)} was called already.
+     *                               if {@link #close()} or {@link #close(Throwable)} was called already.
      */
     protected final void delegate(StreamMessage<T> upstream) {
         requireNonNull(upstream, "upstream");
@@ -163,7 +163,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
      * Closes the deferred stream without setting a delegate.
      *
      * @throws IllegalStateException if the upstream has been set already or
-     * if {@link #close()} or {@link #close(Throwable)} was called already.
+     *                               if {@link #close()} or {@link #close(Throwable)} was called already.
      */
     public final void close() {
         delegate(StreamMessage.of());
@@ -173,7 +173,7 @@ public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
      * Closes the deferred stream without setting a delegate.
      *
      * @throws IllegalStateException if the delegate has been set already or
-     * if {@link #close()} or {@link #close(Throwable)} was called already.
+     *                               if {@link #close()} or {@link #close(Throwable)} was called already.
      */
     public final void close(Throwable cause) {
         requireNonNull(cause, "cause");
