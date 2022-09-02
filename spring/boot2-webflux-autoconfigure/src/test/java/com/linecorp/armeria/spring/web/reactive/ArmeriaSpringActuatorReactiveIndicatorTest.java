@@ -21,7 +21,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.actuate.endpoint.ApiVersion;
 import org.springframework.boot.actuate.health.AbstractReactiveHealthIndicator;
@@ -37,6 +36,7 @@ import org.springframework.test.context.ActiveProfiles;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -76,16 +76,10 @@ class ArmeriaSpringActuatorReactiveIndicatorTest {
     @LocalServerPort
     int port;
 
-    private WebClient client;
-
-    @BeforeEach
-    void setUp() {
-        client = WebClient.of("http://127.0.0.1:" + port);
-    }
-
     @Test
     void testHealth() throws Exception {
-        AggregatedHttpResponse res = client.get("/internal/actuator/health").aggregate().get();
+        final BlockingWebClient client = WebClient.of("http://127.0.0.1:" + port).blocking();
+        AggregatedHttpResponse res = client.get("/internal/actuator/health");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.contentType().toString()).isEqualTo(ApiVersion.V3.getProducedMimeType().toString());
         Map<String, Object> values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
@@ -93,7 +87,7 @@ class ArmeriaSpringActuatorReactiveIndicatorTest {
 
         healthy.set(false);
 
-        res = client.get("/internal/actuator/health").aggregate().get();
+        res = client.get("/internal/actuator/health");
         assertThat(res.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThat(res.contentType().toString()).isEqualTo(ApiVersion.V3.getProducedMimeType().toString());
         values = OBJECT_MAPPER.readValue(res.content().array(), JSON_MAP);
