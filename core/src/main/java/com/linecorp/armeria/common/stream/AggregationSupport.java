@@ -109,18 +109,21 @@ abstract class AggregationSupport {
             return (CompletableFuture<U>) aggregation;
         }
 
-        if (aggregationUpdater.compareAndSet(this, null, new CompletableFuture<>())) {
+        final CompletableFuture<U> aggregationFuture = new CompletableFuture<>();
+        if (aggregationUpdater.compareAndSet(this, null, aggregationFuture)) {
             // Propagate the result to `aggregation`
             httpMessage.collect(options.executor(), subscriptionOptions)
                        .thenApply(objects -> aggregate(objects, headers, alloc)).handle((res, cause) -> {
                            if (cause != null) {
                                cause = Exceptions.peel(cause);
-                               this.aggregation.completeExceptionally(cause);
+                               aggregationFuture.completeExceptionally(cause);
                            } else {
-                               this.aggregation.complete(res);
+                               //noinspection unchecked
+                               aggregationFuture.complete((U) res);
                            }
                            return null;
                        });
+            return aggregationFuture;
         }
 
         final CompletableFuture<?> aggregation0 = this.aggregation;
