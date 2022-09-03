@@ -18,12 +18,10 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.function.Predicate;
-
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-final class HttpStatusPredicate implements Predicate<HttpStatus> {
+final class HttpStatusPredicate {
 
     @Nullable
     private final HttpStatus status;
@@ -32,8 +30,7 @@ final class HttpStatusPredicate implements Predicate<HttpStatus> {
         this.status = requireNonNull(status, "status");
     }
 
-    @Override
-    public boolean test(HttpStatus status) {
+    boolean test(HttpStatus status) {
         return this.status == status;
     }
 
