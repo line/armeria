@@ -72,13 +72,7 @@ final class AggregatedResponseAs {
         if (!response.status().isSuccess()) {
             throw newInvalidHttpResponseException(response);
         }
-
-        try {
-            return ResponseEntity.of(response.headers(), decoder.decode(response.content().array()),
-                                     response.trailers());
-        } catch (IOException e) {
-            return Exceptions.throwUnsafely(new InvalidHttpResponseException(response, e));
-        }
+        return createJsonResponseEntity(response, decoder);
     }
 
     private static <T> ResponseEntity<T> newJsonResponseEntity(AggregatedHttpResponse response,
@@ -87,13 +81,7 @@ final class AggregatedResponseAs {
         if (!predicate.test(response.status())) {
             throw newInvalidHttpStatusResponseException(response, predicate);
         }
-
-        try {
-            return ResponseEntity.of(response.headers(), decoder.decode(response.content().array()),
-                                     response.trailers());
-        } catch (IOException e) {
-            return Exceptions.throwUnsafely(new InvalidHttpResponseException(response, e));
-        }
+        return createJsonResponseEntity(response, decoder);
     }
 
     private static <T> ResponseEntity<T> newJsonResponseEntity(AggregatedHttpResponse response,
@@ -102,7 +90,11 @@ final class AggregatedResponseAs {
         if (!predicate.test(response.status().codeClass())) {
             throw newInvalidHttpStatusClassResponseException(response, predicate);
         }
+        return createJsonResponseEntity(response, decoder);
+    }
 
+    private static <T> ResponseEntity<T> createJsonResponseEntity(AggregatedHttpResponse response,
+                                                                  JsonDecoder<T> decoder) {
         try {
             return ResponseEntity.of(response.headers(), decoder.decode(response.content().array()),
                                      response.trailers());
