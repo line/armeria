@@ -36,4 +36,9 @@ final class HttpStatusPredicate implements Predicate<HttpStatus> {
     public boolean test(HttpStatus status) {
         return this.status == status;
     }
+
+    @Nullable
+    HttpStatus status() {
+        return status;
+    }
 }

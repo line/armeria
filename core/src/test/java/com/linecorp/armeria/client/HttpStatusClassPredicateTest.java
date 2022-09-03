@@ -55,4 +55,10 @@ class HttpStatusClassPredicateTest {
         assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(100))
                            .test(HttpStatusClass.valueOf(300))).isFalse();
     }
+
+    @Test
+    public void statusClassMethodReturnHttpStatusClass() {
+        assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(200)).statusClass())
+                .isEqualTo(HttpStatusClass.valueOf(200));
+    }
 }
