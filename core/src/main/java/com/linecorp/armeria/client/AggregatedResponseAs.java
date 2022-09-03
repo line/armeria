@@ -122,14 +122,15 @@ final class AggregatedResponseAs {
             AggregatedHttpResponse response, HttpStatusPredicate predicate) {
         return new InvalidHttpResponseException(
                 response, "status: " + response.status() +
-                          " (expect: the success class (2xx). response: " + response, null);
+                          " (expect: the " + predicate.status().reasonPhrase() + " class (" +
+                          predicate.status().codeAsText() + "). response: " + response, null);
     }
 
     private static InvalidHttpResponseException newInvalidHttpStatusClassResponseException(
             AggregatedHttpResponse response, HttpStatusClassPredicate predicate) {
         return new InvalidHttpResponseException(
                 response, "status: " + response.status() +
-                          " (expect: the success class (2xx). response: " + response, null);
+                          " (expect: the " + predicate.statusClass() + " class response: " + response, null);
     }
 
     @FunctionalInterface
