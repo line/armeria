@@ -105,6 +105,22 @@ public interface ResponseAs<T, R> {
         return aggregateAndConvert(AggregatedResponseAs.json(clazz));
     }
 
+    @UnstableApi
+    static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz,
+                                                        HttpStatusPredicate predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(predicate, "predicate");
+        return aggregateAndConvert(AggregatedResponseAs.json(clazz, predicate));
+    }
+
+    @UnstableApi
+    static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz,
+                                                        HttpStatusClassPredicate predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(predicate, "predicate");
+        return aggregateAndConvert(AggregatedResponseAs.json(clazz, predicate));
+    }
+
     /**
      * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
      * into the specified non-container type using the specified {@link ObjectMapper}.

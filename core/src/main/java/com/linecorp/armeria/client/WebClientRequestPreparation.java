@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.JacksonObjectMapperProvider;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseEntity;
@@ -211,6 +212,36 @@ public final class WebClientRequestPreparation
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz) {
         requireNonNull(clazz, "clazz");
         return asEntity(ResponseAs.json(clazz));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
+                                                                              HttpStatus httpStatus) {
+        requireNonNull(httpStatus, "httpStatus");
+        return asJson(clazz, new HttpStatusPredicate(httpStatus));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
+                                                                              HttpStatusClass httpStatusClass) {
+        requireNonNull(httpStatusClass, "httpStatusClass");
+        return asJson(clazz, new HttpStatusClassPredicate(httpStatusClass));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
+                                                                              HttpStatusPredicate predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(predicate, "predicate");
+        return asEntity(ResponseAs.json(clazz, predicate));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
+                                                                              HttpStatusClassPredicate predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(predicate, "predicate");
+        return asEntity(ResponseAs.json(clazz, predicate));
     }
 
     /**

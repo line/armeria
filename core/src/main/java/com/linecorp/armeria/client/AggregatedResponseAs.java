@@ -42,6 +42,18 @@ final class AggregatedResponseAs {
     }
 
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz,
+                                                                          HttpStatusPredicate predicate) {
+        return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, clazz),
+                                                 predicate);
+    }
+
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz,
+                                                                          HttpStatusClassPredicate predicate) {
+        return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, clazz),
+                                                 predicate);
+    }
+
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz,
                                                                           ObjectMapper mapper) {
         return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, clazz));
     }
@@ -69,8 +81,52 @@ final class AggregatedResponseAs {
         }
     }
 
+    private static <T> ResponseEntity<T> newJsonResponseEntity(AggregatedHttpResponse response,
+                                                               JsonDecoder<T> decoder,
+                                                               HttpStatusPredicate predicate) {
+        if (!predicate.test(response.status())) {
+            throw newInvalidHttpStatusResponseException(response, predicate);
+        }
+
+        try {
+            return ResponseEntity.of(response.headers(), decoder.decode(response.content().array()),
+                                     response.trailers());
+        } catch (IOException e) {
+            return Exceptions.throwUnsafely(new InvalidHttpResponseException(response, e));
+        }
+    }
+
+    private static <T> ResponseEntity<T> newJsonResponseEntity(AggregatedHttpResponse response,
+                                                               JsonDecoder<T> decoder,
+                                                               HttpStatusClassPredicate predicate) {
+        if (!predicate.test(response.status().codeClass())) {
+            throw newInvalidHttpStatusClassResponseException(response, predicate);
+        }
+
+        try {
+            return ResponseEntity.of(response.headers(), decoder.decode(response.content().array()),
+                                     response.trailers());
+        } catch (IOException e) {
+            return Exceptions.throwUnsafely(new InvalidHttpResponseException(response, e));
+        }
+    }
+
     private static InvalidHttpResponseException newInvalidHttpResponseException(
             AggregatedHttpResponse response) {
+        return new InvalidHttpResponseException(
+                response, "status: " + response.status() +
+                          " (expect: the success class (2xx). response: " + response, null);
+    }
+
+    private static InvalidHttpResponseException newInvalidHttpStatusResponseException(
+            AggregatedHttpResponse response, HttpStatusPredicate predicate) {
+        return new InvalidHttpResponseException(
+                response, "status: " + response.status() +
+                          " (expect: the success class (2xx). response: " + response, null);
+    }
+
+    private static InvalidHttpResponseException newInvalidHttpStatusClassResponseException(
+            AggregatedHttpResponse response, HttpStatusClassPredicate predicate) {
         return new InvalidHttpResponseException(
                 response, "status: " + response.status() +
                           " (expect: the success class (2xx). response: " + response, null);
