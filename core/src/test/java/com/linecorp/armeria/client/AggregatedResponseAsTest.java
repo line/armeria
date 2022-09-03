@@ -192,6 +192,68 @@ class AggregatedResponseAsTest {
     }
 
     @Test
+    void jsonObject_customMapper_withHttpStatusPredicate_status200() {
+        final AggregatedHttpResponse response =
+                AggregatedHttpResponse.of(headers, HttpData.ofUtf8("{ 'id': 10 }"));
+
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+        final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
+                MyObject.class, mapper, new HttpStatusPredicate(HttpStatus.valueOf(200))).as(response);
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        assertThat(entity.content()).isEqualTo(myObject);
+    }
+
+    @Test
+    void jsonObject_customMapper_withHttpStatusPredicate_status500() {
+        final AggregatedHttpResponse response =
+                AggregatedHttpResponse.of(headers_statusCode500, HttpData.ofUtf8("{ 'id': 10 }"));
+
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+        final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
+                MyObject.class, mapper, new HttpStatusPredicate(HttpStatus.valueOf(500))).as(response);
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        assertThat(entity.content()).isEqualTo(myObject);
+    }
+
+    @Test
+    void jsonObject_customMapper_withHttpStatusClassPredicate_status200() {
+        final AggregatedHttpResponse response =
+                AggregatedHttpResponse.of(headers, HttpData.ofUtf8("{ 'id': 10 }"));
+
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+        final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
+                MyObject.class, mapper,
+                new HttpStatusClassPredicate(HttpStatusClass.valueOf(200))).as(response);
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        assertThat(entity.content()).isEqualTo(myObject);
+    }
+
+    @Test
+    void jsonObject_customMapper_withHttpStatusClassPredicate_status500() {
+        final AggregatedHttpResponse response =
+                AggregatedHttpResponse.of(headers_statusCode500, HttpData.ofUtf8("{ 'id': 10 }"));
+
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+        final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
+                MyObject.class, mapper,
+                new HttpStatusClassPredicate(HttpStatusClass.valueOf(500))).as(response);
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        assertThat(entity.content()).isEqualTo(myObject);
+    }
+
+    @Test
     void jsonGeneric() throws JsonProcessingException {
         final MyObject myObject = new MyObject();
         myObject.setId(10);
@@ -205,6 +267,64 @@ class AggregatedResponseAsTest {
     }
 
     @Test
+    void jsonGeneric_withHttpStatusPredicate_status200() throws JsonProcessingException {
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        final byte[] content = JacksonUtil.writeValueAsBytes(ImmutableList.of(myObject));
+        final AggregatedHttpResponse response = AggregatedHttpResponse.of(headers, HttpData.wrap(content));
+
+        final ResponseEntity<List<MyObject>> entity = AggregatedResponseAs.json(
+                new TypeReference<List<MyObject>>() {},
+                new HttpStatusPredicate(HttpStatus.valueOf(200))).as(response);
+        final List<MyObject> objects = entity.content();
+        assertThat(objects).containsExactly(myObject);
+    }
+
+    @Test
+    void jsonGeneric_withHttpStatusPredicate_status500() throws JsonProcessingException {
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        final byte[] content = JacksonUtil.writeValueAsBytes(ImmutableList.of(myObject));
+        final AggregatedHttpResponse response = AggregatedHttpResponse.of(headers_statusCode500,
+                                                                          HttpData.wrap(content));
+
+        final ResponseEntity<List<MyObject>> entity = AggregatedResponseAs.json(
+                new TypeReference<List<MyObject>>() {},
+                new HttpStatusPredicate(HttpStatus.valueOf(500))).as(response);
+        final List<MyObject> objects = entity.content();
+        assertThat(objects).containsExactly(myObject);
+    }
+
+    @Test
+    void jsonGeneric_withHttpStatusClassPredicate_status200() throws JsonProcessingException {
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        final byte[] content = JacksonUtil.writeValueAsBytes(ImmutableList.of(myObject));
+        final AggregatedHttpResponse response = AggregatedHttpResponse.of(headers, HttpData.wrap(content));
+
+        final ResponseEntity<List<MyObject>> entity = AggregatedResponseAs.json(
+                new TypeReference<List<MyObject>>() {},
+                new HttpStatusClassPredicate(HttpStatusClass.valueOf(200))).as(response);
+        final List<MyObject> objects = entity.content();
+        assertThat(objects).containsExactly(myObject);
+    }
+
+    @Test
+    void jsonGeneric_withHttpStatusClassPredicate_status500() throws JsonProcessingException {
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        final byte[] content = JacksonUtil.writeValueAsBytes(ImmutableList.of(myObject));
+        final AggregatedHttpResponse response = AggregatedHttpResponse.of(headers_statusCode500,
+                                                                          HttpData.wrap(content));
+
+        final ResponseEntity<List<MyObject>> entity = AggregatedResponseAs.json(
+                new TypeReference<List<MyObject>>() {},
+                new HttpStatusClassPredicate(HttpStatusClass.valueOf(500))).as(response);
+        final List<MyObject> objects = entity.content();
+        assertThat(objects).containsExactly(myObject);
+    }
+
+    @Test
     void jsonGeneric_customMapper() {
         final AggregatedHttpResponse response =
                 AggregatedHttpResponse.of(headers, HttpData.ofUtf8("[{ 'id': 10 }]"));
@@ -213,6 +333,72 @@ class AggregatedResponseAsTest {
                                             .build();
         final ResponseEntity<List<MyObject>> entity =
                 AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {}, mapper).as(response);
+        final List<MyObject> content = entity.content();
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        assertThat(content).containsExactly(myObject);
+    }
+
+    @Test
+    void jsonGeneric_customMapper_withHttpStatusPredicate_status200() {
+        final AggregatedHttpResponse response =
+                AggregatedHttpResponse.of(headers, HttpData.ofUtf8("[{ 'id': 10 }]"));
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+        final ResponseEntity<List<MyObject>> entity =
+                AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {}, mapper,
+                                          new HttpStatusPredicate(HttpStatus.valueOf(200))).as(response);
+        final List<MyObject> content = entity.content();
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        assertThat(content).containsExactly(myObject);
+    }
+
+    @Test
+    void jsonGeneric_customMapper_withHttpStatusPredicate_status500() {
+        final AggregatedHttpResponse response =
+                AggregatedHttpResponse.of(headers_statusCode500, HttpData.ofUtf8("[{ 'id': 10 }]"));
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+        final ResponseEntity<List<MyObject>> entity =
+                AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {}, mapper,
+                                          new HttpStatusPredicate(HttpStatus.valueOf(500))).as(response);
+        final List<MyObject> content = entity.content();
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        assertThat(content).containsExactly(myObject);
+    }
+
+    @Test
+    void jsonGeneric_customMapper_withHttpStatusClassPredicate_status200() {
+        final AggregatedHttpResponse response =
+                AggregatedHttpResponse.of(headers, HttpData.ofUtf8("[{ 'id': 10 }]"));
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+        final ResponseEntity<List<MyObject>> entity =
+                AggregatedResponseAs.json(
+                        new TypeReference<List<MyObject>>() {}, mapper,
+                        new HttpStatusClassPredicate(HttpStatusClass.valueOf(200))).as(response);
+        final List<MyObject> content = entity.content();
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        assertThat(content).containsExactly(myObject);
+    }
+
+    @Test
+    void jsonGeneric_customMapper_withHttpStatusClassPredicate_status500() {
+        final AggregatedHttpResponse response =
+                AggregatedHttpResponse.of(headers_statusCode500, HttpData.ofUtf8("[{ 'id': 10 }]"));
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+        final ResponseEntity<List<MyObject>> entity =
+                AggregatedResponseAs.json(
+                        new TypeReference<List<MyObject>>() {}, mapper,
+                        new HttpStatusClassPredicate(HttpStatusClass.valueOf(500))).as(response);
         final List<MyObject> content = entity.content();
         final MyObject myObject = new MyObject();
         myObject.setId(10);

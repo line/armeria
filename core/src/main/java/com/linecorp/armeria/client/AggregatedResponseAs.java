@@ -58,13 +58,53 @@ final class AggregatedResponseAs {
         return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, clazz));
     }
 
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz,
+                                                                          ObjectMapper mapper,
+                                                                          HttpStatusPredicate predicate) {
+        return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, clazz),
+                                                 predicate);
+    }
+
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz,
+                                                                          ObjectMapper mapper,
+                                                                          HttpStatusClassPredicate predicate) {
+        return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, clazz),
+                                                 predicate);
+    }
+
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef) {
         return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, typeRef));
     }
 
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
+                                                                          HttpStatusPredicate predicate) {
+        return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, typeRef),
+                                                 predicate);
+    }
+
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
+                                                                          HttpStatusClassPredicate predicate) {
+        return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, typeRef),
+                                                 predicate);
+    }
+
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
                                                                           ObjectMapper mapper) {
         return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, typeRef));
+    }
+
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
+                                                                          ObjectMapper mapper,
+                                                                          HttpStatusPredicate predicate) {
+        return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, typeRef),
+                                                 predicate);
+    }
+
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
+                                                                          ObjectMapper mapper,
+                                                                          HttpStatusClassPredicate predicate) {
+        return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, typeRef),
+                                                 predicate);
     }
 
     private static <T> ResponseEntity<T> newJsonResponseEntity(AggregatedHttpResponse response,
