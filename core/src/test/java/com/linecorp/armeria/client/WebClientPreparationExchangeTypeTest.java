@@ -30,6 +30,8 @@ import org.junit.jupiter.params.provider.CsvSource;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -108,6 +110,28 @@ class WebClientPreparationExchangeTypeTest {
                   .post("/json")
                   .content("foo")
                   .asJson(String.class)
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
+    }
+
+    @Test
+    void responseJson_withHttpStatus() {
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(String.class, HttpStatus.valueOf(200))
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
+    }
+
+    @Test
+    void responseJson_withHttpStatusClass() {
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(String.class, HttpStatusClass.valueOf(200))
                   .execute();
         }).isEqualTo(ExchangeType.UNARY);
     }

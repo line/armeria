@@ -271,7 +271,43 @@ public final class WebClientRequestPreparation
                                                                               ObjectMapper mapper) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
-        return asEntity(ResponseAs.json(clazz));
+        return asEntity(ResponseAs.json(clazz, mapper));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
+                                                                              ObjectMapper mapper,
+                                                                              HttpStatus httpStatus) {
+        requireNonNull(httpStatus, "httpStatus");
+        return asJson(clazz, mapper, new HttpStatusPredicate(httpStatus));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
+                                                                              ObjectMapper mapper,
+                                                                              HttpStatusClass httpStatusClass) {
+        requireNonNull(httpStatusClass, "httpStatusClass");
+        return asJson(clazz, mapper, new HttpStatusClassPredicate(httpStatusClass));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
+                                                                              ObjectMapper mapper,
+                                                                              HttpStatusPredicate predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        return asEntity(ResponseAs.json(clazz, mapper, predicate));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
+                                                                              ObjectMapper mapper,
+                                                                              HttpStatusClassPredicate predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        return asEntity(ResponseAs.json(clazz, mapper, predicate));
     }
 
     /**
@@ -300,6 +336,36 @@ public final class WebClientRequestPreparation
         return asEntity(ResponseAs.json(typeRef));
     }
 
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, HttpStatus httpStatus) {
+        requireNonNull(httpStatus, "httpStatus");
+        return asJson(typeRef, new HttpStatusPredicate(httpStatus));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, HttpStatusClass httpStatusClass) {
+        requireNonNull(httpStatusClass, "httpStatusClass");
+        return asJson(typeRef, new HttpStatusClassPredicate(httpStatusClass));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, HttpStatusPredicate predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(predicate, "predicate");
+        return asEntity(ResponseAs.json(typeRef, predicate));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, HttpStatusClassPredicate predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(predicate, "predicate");
+        return asEntity(ResponseAs.json(typeRef, predicate));
+    }
+
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the
      * specified {@link ObjectMapper}. This method is useful when you want to deserialize the content into a
@@ -325,6 +391,38 @@ public final class WebClientRequestPreparation
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
         return asEntity(ResponseAs.json(typeRef, mapper));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, ObjectMapper mapper, HttpStatus httpStatus) {
+        requireNonNull(httpStatus, "httpStatus");
+        return asJson(typeRef, mapper, new HttpStatusPredicate(httpStatus));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, ObjectMapper mapper, HttpStatusClass httpStatusClass) {
+        requireNonNull(httpStatusClass, "httpStatusClass");
+        return asJson(typeRef, mapper, new HttpStatusClassPredicate(httpStatusClass));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, ObjectMapper mapper, HttpStatusPredicate predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        return asEntity(ResponseAs.json(typeRef, mapper, predicate));
+    }
+
+    @UnstableApi
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, ObjectMapper mapper, HttpStatusClassPredicate predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        return asEntity(ResponseAs.json(typeRef, mapper, predicate));
     }
 
     @Override

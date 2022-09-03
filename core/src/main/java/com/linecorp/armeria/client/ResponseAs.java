@@ -135,6 +135,24 @@ public interface ResponseAs<T, R> {
         return aggregateAndConvert(AggregatedResponseAs.json(clazz, mapper));
     }
 
+    @UnstableApi
+    static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz, ObjectMapper mapper,
+                                                        HttpStatusPredicate predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        return aggregateAndConvert(AggregatedResponseAs.json(clazz, mapper, predicate));
+    }
+
+    @UnstableApi
+    static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz, ObjectMapper mapper,
+                                                        HttpStatusClassPredicate predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        return aggregateAndConvert(AggregatedResponseAs.json(clazz, mapper, predicate));
+    }
+
     /**
      * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
      * into the specified Java type using the default {@link ObjectMapper}.
@@ -147,6 +165,22 @@ public interface ResponseAs<T, R> {
         return aggregateAndConvert(AggregatedResponseAs.json(typeRef));
     }
 
+    @UnstableApi
+    static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
+                                                        HttpStatusPredicate predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(predicate, "predicate");
+        return aggregateAndConvert(AggregatedResponseAs.json(typeRef, predicate));
+    }
+
+    @UnstableApi
+    static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
+                                                        HttpStatusClassPredicate predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(predicate, "predicate");
+        return aggregateAndConvert(AggregatedResponseAs.json(typeRef, predicate));
+    }
+
     /**
      * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
      * into the specified Java type using the specified {@link ObjectMapper}.
@@ -157,6 +191,24 @@ public interface ResponseAs<T, R> {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
         return aggregateAndConvert(AggregatedResponseAs.json(typeRef, mapper));
+    }
+
+    @UnstableApi
+    static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
+                                                        ObjectMapper mapper, HttpStatusPredicate predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        return aggregateAndConvert(AggregatedResponseAs.json(typeRef, mapper, predicate));
+    }
+
+    @UnstableApi
+    static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
+                                                        ObjectMapper mapper, HttpStatusClassPredicate predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        return aggregateAndConvert(AggregatedResponseAs.json(typeRef, mapper, predicate));
     }
 
     /**
