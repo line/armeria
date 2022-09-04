@@ -61,19 +61,19 @@ class GraphqlTest {
                                   .schemaFile(graphqlSchemaFile)
                                   .runtimeWiring(c -> {
                                       c.scalar(MoreScalars.multipartFile());
-                                      final DataFetcher<String> fileUpload = fileUploadFetcher();
                                       c.type("Mutation",
-                                             typeWiring -> typeWiring.dataFetcher("fileUpload", fileUpload));
-                                      final DataFetcher<List<String>> fileUploads = fileUploadsFetcher();
+                                             typeWiring -> typeWiring.dataFetcher("fileUpload",
+                                                                                  fileUploadFetcher()));
                                       c.type("Mutation",
-                                             typeWiring -> typeWiring.dataFetcher("fileUploads", fileUploads));
+                                             typeWiring -> typeWiring.dataFetcher("fileUploads",
+                                                                                  fileUploadsFetcher()));
                                   })
                                   .build();
             sb.service("/graphql", service);
         }
     };
 
-    private static DataFetcher<String> fileUploadFetcher() {
+    private static DataFetcher<CompletableFuture<String>> fileUploadFetcher() {
         return environment -> CompletableFuture.supplyAsync(() -> {
             try {
                 final com.linecorp.armeria.common.multipart.MultipartFile multipartFile =
@@ -82,10 +82,10 @@ class GraphqlTest {
             } catch (IOException e) {
                 throw new UncheckedIOException(e);
             }
-        }, GraphqlServiceContexts.get(environment).blockingTaskExecutor()).join();
+        }, GraphqlServiceContexts.get(environment).blockingTaskExecutor());
     }
 
-    private static DataFetcher<List<String>> fileUploadsFetcher() {
+    private static DataFetcher<CompletableFuture<List<String>>> fileUploadsFetcher() {
         return environment -> CompletableFuture.supplyAsync(() -> {
             final List<com.linecorp.armeria.common.multipart.MultipartFile> multipartFiles =
                     environment.getArgument("files");
@@ -96,7 +96,7 @@ class GraphqlTest {
                     throw new UncheckedIOException(e);
                 }
             }).collect(toImmutableList());
-        }, GraphqlServiceContexts.get(environment).blockingTaskExecutor()).join();
+        }, GraphqlServiceContexts.get(environment).blockingTaskExecutor());
     }
 
     @Test

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.graphql.protocol;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -255,7 +256,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
     @SuppressWarnings("unchecked")
     private static Map<String, Object> toMapFromJson(@Nullable Object maybeMap) {
         if (maybeMap == null) {
-            return new HashMap<>();
+            return ImmutableMap.of();
         }
 
         if (maybeMap instanceof Map) {
@@ -263,7 +264,7 @@ public abstract class AbstractGraphqlService extends AbstractHttpService {
             if (map.isEmpty()) {
                 return ImmutableMap.of();
             }
-            return (Map<String, Object>) map;
+            return Collections.unmodifiableMap((Map<String, Object>) maybeMap);
         } else {
             throw new IllegalArgumentException("Unknown parameter type variables");
         }
