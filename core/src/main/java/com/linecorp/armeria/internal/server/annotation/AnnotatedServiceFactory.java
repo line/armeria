@@ -171,10 +171,7 @@ public final class AnnotatedServiceFactory {
     private static HttpStatus defaultResponseStatus(Method method, Class<?> clazz) {
         final StatusCode statusCodeAnnotation = AnnotationUtil.findFirst(method, StatusCode.class);
         if (statusCodeAnnotation != null) {
-            final int statusCode = statusCodeAnnotation.value();
-            checkArgument(statusCode >= 0,
-                          "invalid HTTP status code: %s (expected: >= 0)", statusCode);
-            return HttpStatus.valueOf(statusCode);
+            return HttpStatus.valueOf(statusCodeAnnotation.value());
         }
 
         if (!producibleMediaTypes(method, clazz).isEmpty()) {

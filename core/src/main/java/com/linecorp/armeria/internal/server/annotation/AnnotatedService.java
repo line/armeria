@@ -432,7 +432,6 @@ public final class AnnotatedService implements HttpService {
 
         if (result instanceof HttpResult) {
             final HttpResult<?> httpResult = (HttpResult<?>) result;
-
             headers = buildResponseHeaders(ctx, httpResult.headers());
             result = httpResult.content();
             trailers = httpResult.trailers();
@@ -474,15 +473,15 @@ public final class AnnotatedService implements HttpService {
                 builder.status(defaultStatus);
             }
         }
-        return addContentTypeIfNeeded(ctx, builder).build();
+        return maybeAddContentType(ctx, builder).build();
     }
 
     private ResponseHeaders buildResponseHeaders(ServiceRequestContext ctx) {
-        return addContentTypeIfNeeded(ctx, ResponseHeaders.builder(defaultStatus)).build();
+        return maybeAddContentType(ctx, ResponseHeaders.builder(defaultStatus)).build();
     }
 
-    private static ResponseHeadersBuilder addContentTypeIfNeeded(ServiceRequestContext ctx,
-                                                                 ResponseHeadersBuilder builder) {
+    private static ResponseHeadersBuilder maybeAddContentType(ServiceRequestContext ctx,
+                                                              ResponseHeadersBuilder builder) {
         if (builder.status().isContentAlwaysEmpty()) {
             return builder;
         }
