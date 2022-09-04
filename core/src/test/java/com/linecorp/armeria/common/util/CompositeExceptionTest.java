@@ -36,7 +36,7 @@ class CompositeExceptionTest {
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex2), Sampler.always());
         final long separatedStacktraceLength = stackTraceLineLength(compositeException);
-        final int stackTraceLength = sumStackTraces(ex1, ex2);
+        final int stackTraceLength = sumStackTraces(Sampler.always(), ex1, ex2);
 
         // if verboseException option enabled, output full stacktrace
         // this case is occurred 2 exceptions (ex1 stacktrace length + ex2 stacktrace length)
@@ -50,12 +50,12 @@ class CompositeExceptionTest {
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex2), Sampler.never());
         final long separatedStacktraceLength = stackTraceLineLength(compositeException);
+        final int stackTraceLength = sumStackTraces(Sampler.never(), ex1, ex2);
 
         // if verboseException option disabled, max output stacktrace is
         // CompositeException.DEFAULT_MAX_NUM_STACK_TRACES.
         // this case is occurred 2 exceptions (20 * 2)
-        assertThat(separatedStacktraceLength).isEqualTo(
-                CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 2);
+        assertThat(separatedStacktraceLength).isEqualTo(stackTraceLength);
     }
 
     @Test
@@ -74,12 +74,12 @@ class CompositeExceptionTest {
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex2), Sampler.never());
         final long separatedStacktraceLength = stackTraceLineLength(compositeException);
+        final int stackTraceLength = sumStackTraces(Sampler.never(), ex1, ex2);
 
         // if verboseException option disabled, max output stacktrace is
         // CompositeException.DEFAULT_MAX_NUM_STACK_TRACES.
         // but this case, one exception has 3 stacktrace (less than 20)
-        assertThat(separatedStacktraceLength).isEqualTo(
-                CompositeException.DEFAULT_MAX_NUM_STACK_TRACES + 3);
+        assertThat(separatedStacktraceLength).isEqualTo(stackTraceLength);
     }
 
     @Test
@@ -90,7 +90,7 @@ class CompositeExceptionTest {
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex3), Sampler.always());
         final long separatedStacktraceLength = stackTraceLineLength(compositeException);
-        final int stackTraceLength = sumStackTraces(ex1, ex2, ex3);
+        final int stackTraceLength = sumStackTraces(Sampler.always(), ex1, ex2, ex3);
 
         // if verboseException option enabled, test for composite exceptions.
         // Expected: ex1 StackTraces + ex2 StackTraces + ex3 StackTraces
@@ -114,7 +114,7 @@ class CompositeExceptionTest {
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex3), Sampler.always());
         final long separatedStacktraceLength = stackTraceLineLength(compositeException);
-        final int stackTraceLength = sumStackTraces(ex1, ex2, ex3);
+        final int stackTraceLength = sumStackTraces(Sampler.always(), ex1, ex2, ex3);
 
         // if verboseException option enabled, test for composite exceptions.
         // Expected: ex1 StackTraces + ex2 StackTraces(3) + ex3 StackTraces
@@ -129,11 +129,11 @@ class CompositeExceptionTest {
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex3), Sampler.never());
         final long separatedStacktraceLength = stackTraceLineLength(compositeException);
+        final int stackTraceLength = sumStackTraces(Sampler.never(), ex1, ex2, ex3);
 
         // if verboseException option enabled, test for composite exceptions.
         // Expected: CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 3
-        assertThat(separatedStacktraceLength).isEqualTo(
-                CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 3);
+        assertThat(separatedStacktraceLength).isEqualTo(stackTraceLength);
     }
 
     @Test
@@ -153,11 +153,11 @@ class CompositeExceptionTest {
         final CompositeException compositeException =
                 new CompositeException(ImmutableList.of(ex1, ex3), Sampler.never());
         final long separatedStacktraceLength = stackTraceLineLength(compositeException);
+        final int stackTraceLength = sumStackTraces(Sampler.never(), ex1, ex2, ex3);
 
         // if verboseException option enabled, test for composite exceptions.
         // Expected: CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 3 + ex2 StackTraces(3)
-        assertThat(separatedStacktraceLength).isEqualTo(
-                CompositeException.DEFAULT_MAX_NUM_STACK_TRACES * 2 + 3);
+        assertThat(separatedStacktraceLength).isEqualTo(stackTraceLength);
     }
 
     @Test
@@ -229,9 +229,17 @@ class CompositeExceptionTest {
                      .count();
     }
 
-    private static int sumStackTraces(final Throwable... exceptions) {
+    private static int sumStackTraces(final Sampler<Class<? extends Throwable>> verboseExceptionSampler,
+                                      final Throwable... exceptions) {
         return Arrays.stream(exceptions)
-                     .mapToInt(exception -> exception.getStackTrace().length)
+                     .mapToInt(exception -> {
+                         final boolean isSampled = verboseExceptionSampler.isSampled(exception.getClass());
+                         final int stackTraceLength = exception.getStackTrace().length;
+                         if (isSampled || stackTraceLength < CompositeException.DEFAULT_MAX_NUM_STACK_TRACES) {
+                             return stackTraceLength;
+                         }
+                         return CompositeException.DEFAULT_MAX_NUM_STACK_TRACES;
+                     })
                      .sum();
     }
 }
