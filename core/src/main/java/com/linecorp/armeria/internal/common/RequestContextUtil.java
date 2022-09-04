@@ -201,14 +201,11 @@ public final class RequestContextUtil {
         }
     }
 
-    public static boolean equalsUnwrapping(@Nullable RequestContext ctx1, @Nullable RequestContext ctx2) {
-        if (ctx1 == ctx2) {
-            return true;
+    public static boolean equalsIgnoreWrapper(@Nullable RequestContext ctx1, @Nullable RequestContext ctx2) {
+        if (ctx1 == null) {
+            return ctx2 == null;
         }
-        if (ctx1 != null && ctx2 != null) {
-            return ctx1.unwrapAll() == ctx2.unwrapAll();
-        }
-        return false;
+        return ctx1.equalsIgnoreWrapper(ctx2);
     }
 
     @Nullable

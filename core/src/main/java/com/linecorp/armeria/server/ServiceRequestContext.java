@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server;
 
-import static com.linecorp.armeria.internal.common.RequestContextUtil.equalsUnwrapping;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.newIllegalContextPushingException;
 import static com.linecorp.armeria.internal.common.RequestContextUtil.noopSafeCloseable;
 import static java.util.Objects.requireNonNull;
@@ -229,7 +228,7 @@ public interface ServiceRequestContext extends RequestContext {
             return noopSafeCloseable();
         }
 
-        if (equalsUnwrapping(oldCtx.root(), this)) {
+        if (RequestContextUtil.equalsIgnoreWrapper(oldCtx.root(), this)) {
             return RequestContextUtil.invokeHookAndPop(this, oldCtx);
         }
 
