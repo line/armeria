@@ -84,12 +84,11 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
                : new TraceableServiceRequestContext((ServiceRequestContext) ctx);
     }
 
-    private static String stacktraceToString(StackTraceElement[] stackTrace, String threadName,
+    private static String stacktraceToString(StackTraceElement[] stackTrace,
                                              RequestContext unwrap) {
         final StringBuilder builder = new StringBuilder(512);
         builder.append(unwrap).append(System.lineSeparator())
-               .append("At thread [").append(threadName)
-               .append("] previous RequestContext is pushed at the following stacktrace")
+               .append("The previous RequestContext is pushed at the following stacktrace")
                .append(System.lineSeparator());
         for (int i = 1; i < stackTrace.length; i++) {
             builder.append("\tat ").append(stackTrace[i]).append(System.lineSeparator());
@@ -100,34 +99,30 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
     private static final class TraceableClientRequestContext extends ClientRequestContextWrapper {
 
             private final StackTraceElement[] stackTrace;
-            private final String threadName;
 
             private TraceableClientRequestContext(ClientRequestContext delegate) {
                 super(delegate);
                 stackTrace = currentThread().getStackTrace();
-                threadName = currentThread().getName();
             }
 
             @Override
             public String toString() {
-                return stacktraceToString(stackTrace, threadName, unwrap());
+                return stacktraceToString(stackTrace, unwrap());
             }
         }
 
     private static final class TraceableServiceRequestContext extends ServiceRequestContextWrapper {
 
         private final StackTraceElement[] stackTrace;
-        private final String threadName;
 
         private TraceableServiceRequestContext(ServiceRequestContext delegate) {
             super(delegate);
             stackTrace = currentThread().getStackTrace();
-            threadName = currentThread().getName();
         }
 
         @Override
         public String toString() {
-            return stacktraceToString(stackTrace, threadName, unwrap());
+            return stacktraceToString(stackTrace, unwrap());
         }
     }
 }
