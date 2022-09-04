@@ -35,6 +35,8 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.JacksonObjectMapperProvider;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseEntity;
@@ -71,6 +73,71 @@ public final class RestClientPreparation implements RequestPreparationSetters {
     }
 
     /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the default
+     * {@link ObjectMapper}.<br>
+     * {@link HttpStatus} type argument specify what type of response is allowed.
+     *
+     * @see JacksonObjectMapperProvider
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz,
+                                                            HttpStatus httpStatus) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(httpStatus, "httpStatus");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(clazz, httpStatus).execute();
+        return cast(response);
+    }
+
+    /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the default
+     * {@link ObjectMapper}.
+     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     *
+     * @see JacksonObjectMapperProvider
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz,
+                                                            HttpStatusClass httpStatusClass) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(httpStatusClass, "httpStatusClass");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(clazz, httpStatusClass).execute();
+        return cast(response);
+    }
+
+    /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the default
+     * {@link ObjectMapper}.
+     * {@link HttpStatusPredicate} type argument specify what type of response is allowed.
+     *
+     * @see JacksonObjectMapperProvider
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz,
+                                                            HttpStatusPredicate predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(predicate, "predicate");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(clazz, predicate).execute();
+        return cast(response);
+    }
+
+    /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the default
+     * {@link ObjectMapper}.
+     * {@link HttpStatusClassPredicate} type argument specify what type of response is allowed.
+     *
+     * @see JacksonObjectMapperProvider
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz,
+                                                            HttpStatusClassPredicate predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(predicate, "predicate");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(clazz, predicate).execute();
+        return cast(response);
+    }
+
+
+    /**
      * Sends the HTTP request and converts the JSON response body as the {@code T} object using the specified
      * {@link ObjectMapper}.
      */
@@ -79,6 +146,66 @@ public final class RestClientPreparation implements RequestPreparationSetters {
         requireNonNull(mapper, "mapper");
         final CompletableFuture<? extends ResponseEntity<? extends T>> response =
                 delegate.asJson(clazz, mapper).execute();
+        return cast(response);
+    }
+
+    /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the specified
+     * {@link ObjectMapper}.
+     * {@link HttpStatus} type argument specify what type of response is allowed.
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz, ObjectMapper mapper,
+                                                            HttpStatus httpStatus) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(httpStatus, "httpStatus");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(clazz, mapper, httpStatus).execute();
+        return cast(response);
+    }
+
+    /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the specified
+     * {@link ObjectMapper}.
+     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz, ObjectMapper mapper,
+                                                            HttpStatusClass httpStatusClass) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(httpStatusClass, "httpStatusClass");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(clazz, mapper, httpStatusClass).execute();
+        return cast(response);
+    }
+
+    /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the specified
+     * {@link ObjectMapper}.
+     * {@link HttpStatusPredicate} type argument specify what type of response is allowed.
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz, ObjectMapper mapper,
+                                                            HttpStatusPredicate predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(clazz, mapper, predicate).execute();
+        return cast(response);
+    }
+
+    /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the specified
+     * {@link ObjectMapper}.
+     * {@link HttpStatusClassPredicate} type argument specify what type of response is allowed.
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz, ObjectMapper mapper,
+                                                            HttpStatusClassPredicate predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(clazz, mapper, predicate).execute();
         return cast(response);
     }
 
@@ -96,6 +223,70 @@ public final class RestClientPreparation implements RequestPreparationSetters {
     }
 
     /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the default
+     * {@link ObjectMapper}.
+     * {@link HttpStatus} type argument specify what type of response is allowed.
+     *
+     * @see JacksonObjectMapperProvider
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
+                                                            HttpStatus httpStatus) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(httpStatus, "httpStatus");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(typeRef, httpStatus).execute();
+        return cast(response);
+    }
+
+    /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the default
+     * {@link ObjectMapper}.
+     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     *
+     * @see JacksonObjectMapperProvider
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
+                                                            HttpStatusClass httpStatusClass) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(httpStatusClass, "httpStatusClass");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(typeRef, httpStatusClass).execute();
+        return cast(response);
+    }
+
+    /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the default
+     * {@link ObjectMapper}.
+     * {@link HttpStatusPredicate} type argument specify what type of response is allowed.
+     *
+     * @see JacksonObjectMapperProvider
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
+                                                            HttpStatusPredicate predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(predicate, "predicate");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(typeRef, predicate).execute();
+        return cast(response);
+    }
+
+    /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the default
+     * {@link ObjectMapper}.
+     * {@link HttpStatusClassPredicate} type argument specify what type of response is allowed.
+     *
+     * @see JacksonObjectMapperProvider
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
+                                                            HttpStatusClassPredicate predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(predicate, "predicate");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(typeRef, predicate).execute();
+        return cast(response);
+    }
+
+    /**
      * Sends the HTTP request and converts the JSON response body as the {@code T} object using the specified
      * {@link ObjectMapper}.
      */
@@ -105,6 +296,70 @@ public final class RestClientPreparation implements RequestPreparationSetters {
         requireNonNull(mapper, "mapper");
         final CompletableFuture<? extends ResponseEntity<? extends T>> response =
                 delegate.asJson(typeRef, mapper).execute();
+        return cast(response);
+    }
+
+    /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the specified
+     * {@link ObjectMapper}.
+     * {@link HttpStatus} type argument specify what type of response is allowed.
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
+                                                            ObjectMapper mapper,
+                                                            HttpStatus httpStatus) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(httpStatus, "httpStatus");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(typeRef, mapper, httpStatus).execute();
+        return cast(response);
+    }
+
+    /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the specified
+     * {@link ObjectMapper}.
+     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
+                                                            ObjectMapper mapper,
+                                                            HttpStatusClass httpStatusClass) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(httpStatusClass, "httpStatusClass");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(typeRef, mapper, httpStatusClass).execute();
+        return cast(response);
+    }
+
+    /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the specified
+     * {@link ObjectMapper}.
+     * {@link HttpStatusPredicate} type argument specify what type of response is allowed.
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
+                                                            ObjectMapper mapper,
+                                                            HttpStatusPredicate predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(typeRef, mapper, predicate).execute();
+        return cast(response);
+    }
+
+    /**
+     * Sends the HTTP request and converts the JSON response body as the {@code T} object using the specified
+     * {@link ObjectMapper}.
+     * {@link HttpStatusClassPredicate} type argument specify what type of response is allowed.
+     */
+    public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
+                                                            ObjectMapper mapper,
+                                                            HttpStatusClassPredicate predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        final CompletableFuture<? extends ResponseEntity<? extends T>> response =
+                delegate.asJson(typeRef, mapper, predicate).execute();
         return cast(response);
     }
 
