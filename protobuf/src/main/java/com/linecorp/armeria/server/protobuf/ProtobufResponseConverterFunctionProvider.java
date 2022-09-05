@@ -38,9 +38,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 public final class ProtobufResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
 
     @Override
-    public ResponseConverterFunction createResponseConverterFunction(
-            Type returnType,
-            ResponseConverterFunction responseConverter) {
+    public ResponseConverterFunction newResponseConverterFunction(Type returnType) {
         if (isSupportedType(returnType)) {
             return new ProtobufResponseConverterFunction();
         }
@@ -61,8 +59,7 @@ public final class ProtobufResponseConverterFunctionProvider implements Response
             final ParameterizedType parameterizedType = (ParameterizedType) type;
             final Class<?> rawType = (Class<?>) parameterizedType.getRawType();
 
-            if (Iterable.class.isAssignableFrom(rawType) ||
-                Stream.class.isAssignableFrom(rawType) ||
+            if (Iterable.class.isAssignableFrom(rawType) || Stream.class.isAssignableFrom(rawType) ||
                 Publisher.class.isAssignableFrom(rawType)) {
                 final Class<?> typeArgument = (Class<?>) parameterizedType.getActualTypeArguments()[0];
                 return Message.class.isAssignableFrom(typeArgument);
