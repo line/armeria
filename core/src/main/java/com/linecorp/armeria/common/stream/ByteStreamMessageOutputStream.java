@@ -214,11 +214,20 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
 
         @Override
         public void write(int b) throws IOException {
-            final ByteBuf buf = Unpooled.buffer(1, 1).writeByte(b);
-            if (!streamWriter.tryWrite(HttpData.wrap(buf))) {
+            final HttpData data = HttpData.copyOf(new byte[] { (byte) b });
+            if (!streamWriter.tryWrite(data)) {
                 throw new IOException("Stream closed");
             }
-            streamWriter.whenConsumed().join(); // Blocking wait until tryWrite is consumed
+            streamWriter.whenConsumed().join();
+        }
+
+        @Override
+        public void write(byte[] bytes, int off, int len) throws IOException {
+            final HttpData data = HttpData.copyOf(bytes, off, len);
+            if (!streamWriter.tryWrite(data)) {
+                throw new IOException("Stream closed");
+            }
+            streamWriter.whenConsumed().join();
         }
 
         @Override
