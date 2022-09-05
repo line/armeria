@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestContextWrapper;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContextWrapper;
@@ -34,7 +33,6 @@ import com.linecorp.armeria.server.ServiceRequestContextWrapper;
  * A {@link RequestContextStorage} which keeps track of {@link RequestContext}s, reporting pushed thread
  * information if a {@link RequestContext} is leaked.
  */
-@UnstableApi
 final class LeakTracingRequestContextStorage implements RequestContextStorage {
 
     private final RequestContextStorage delegate;
@@ -56,7 +54,7 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
     public <T extends RequestContext> T push(RequestContext toPush) {
         requireNonNull(toPush, "toPush");
         if (sampler.isSampled(toPush)) {
-            return delegate.push(warpRequestContext(toPush));
+            return delegate.push(wrapRequestContext(toPush));
         }
         return delegate.push(toPush);
     }
@@ -78,7 +76,7 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
         return delegate;
     }
 
-    private static RequestContextWrapper<?> warpRequestContext(RequestContext ctx) {
+    private static RequestContextWrapper<?> wrapRequestContext(RequestContext ctx) {
         return ctx instanceof ClientRequestContext ?
                new TraceableClientRequestContext((ClientRequestContext) ctx)
                : new TraceableServiceRequestContext((ServiceRequestContext) ctx);
