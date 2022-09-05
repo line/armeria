@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -57,6 +56,7 @@ import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.ThreeElementFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.TwoElementFixedStreamMessage;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
@@ -281,10 +281,42 @@ public interface StreamMessage<T> extends Publisher<T> {
         return builder.alloc(alloc).bufferSize(bufferSize).build();
     }
 
+    /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link OutputStream}.
+     *
+     * <p>For example:<pre>{@code
+     * ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
+     *     try {
+     *         for (int i = 0; i < 5; i++) {
+     *             os.write(i);
+     *         }
+     *         os.close();
+     *     } catch (IOException e) {
+     *         throw new RuntimeException(e);
+     *     }
+     * });
+     * byte[] result = byteStreamMessage.collectBytes().join();
+     *
+     * assert Arrays.equals(result, new byte[] { 0, 1, 2, 3, 4 });
+     * }</pre>
+     */
     static ByteStreamMessage fromOutputStream(Consumer<OutputStream> outputStreamWriter) {
-        return fromOutputStream(outputStreamWriter, Executors.newSingleThreadExecutor());
+        final RequestContext ctx = RequestContext.currentOrNull();
+        ExecutorService blockingTaskExecutor = null;
+        if (ctx instanceof ServiceRequestContext) {
+            blockingTaskExecutor = ((ServiceRequestContext) ctx).blockingTaskExecutor();
+        }
+        if (blockingTaskExecutor == null) {
+            blockingTaskExecutor = CommonPools.blockingTaskExecutor();
+        }
+        return fromOutputStream(outputStreamWriter, blockingTaskExecutor);
     }
 
+    /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link OutputStream}.
+     *
+     * @param executor the executor to execute {@link OutputStream#write}
+     */
     static ByteStreamMessage fromOutputStream(Consumer<OutputStream> outputStreamWriter, Executor executor) {
         return new ByteStreamMessageOutputStream(outputStreamWriter, executor);
     }
