@@ -80,11 +80,13 @@ import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.Put;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.Trace;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldLocation;
+import com.linecorp.armeria.server.docs.Markup;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
@@ -146,7 +148,10 @@ class AnnotatedDocServiceTest {
         addMultiMethodInfo(methodInfos);
         addJsonMethodInfo(methodInfos);
         addPeriodMethodInfo(methodInfos);
-        final Map<Class<?>, String> serviceDescription = ImmutableMap.of(MyService.class, "My service class");
+        addMarkdownDescriptionMethodInfo(methodInfos);
+        addMermaidDescriptionMethodInfo(methodInfos);
+        final Map<Class<?>, DescriptionInfo> serviceDescription = ImmutableMap.of(
+                MyService.class, DescriptionInfo.of("My service class"));
 
         final JsonNode expectedJson = mapper.valueToTree(AnnotatedDocServicePlugin.generate(
                 serviceDescription, methodInfos));
@@ -167,13 +172,13 @@ class AnnotatedDocServiceTest {
         final List<FieldInfo> fieldInfos = ImmutableList.of(
                 FieldInfo.builder("header", INT).requirement(REQUIRED)
                          .location(FieldLocation.HEADER)
-                         .docString("header parameter").build(),
+                         .descriptionInfo(DescriptionInfo.of("header parameter")).build(),
                 FieldInfo.builder("query", LONG).requirement(REQUIRED)
                          .location(QUERY)
-                         .docString("query parameter").build());
+                         .descriptionInfo(DescriptionInfo.of("query parameter")).build());
         final MethodInfo methodInfo = new MethodInfo(
                 "foo", TypeSignature.ofBase("T"), fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, "foo method");
+                ImmutableList.of(endpoint), HttpMethod.GET, DescriptionInfo.of("foo method"));
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -321,6 +326,40 @@ class AnnotatedDocServiceTest {
         final MethodInfo methodInfo = new MethodInfo(
                 "period", TypeSignature.ofBase("HttpResponse"), fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET, null);
+        methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
+    }
+
+    private static void addMarkdownDescriptionMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/markdown")
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
+        final List<FieldInfo> fieldInfos = ImmutableList.of(
+                FieldInfo.builder("descriptionEnum", toTypeSignature(DescriptionEnum.class))
+                         .requirement(REQUIRED)
+                         .location(QUERY)
+                         .descriptionInfo(DescriptionInfo.of("DESCRIPTION `PARAM`", Markup.MARKDOWN))
+                         .build());
+        final MethodInfo methodInfo = new MethodInfo(
+                "description", STRING, fieldInfos, ImmutableList.of(),
+                ImmutableList.of(endpoint), HttpMethod.GET,
+                DescriptionInfo.of("## Description method with markdown", Markup.MARKDOWN));
+        methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
+    }
+
+    private static void addMermaidDescriptionMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
+        final EndpointInfo endpoint = EndpointInfo.builder("*", "exact:/service/mermaid")
+                                                  .availableMimeTypes(MediaType.JSON_UTF_8)
+                                                  .build();
+        final List<FieldInfo> fieldInfos = ImmutableList.of();
+        final String mermaidDescription = "graph TD;\n" +
+                                          " A-->B;\n" +
+                                          " A-->C;\n" +
+                                          " B-->D;\n" +
+                                          " C-->D;";
+        final MethodInfo methodInfo = new MethodInfo(
+                "mermaid", TypeSignature.ofBase("HttpResponse"), fieldInfos, ImmutableList.of(),
+                ImmutableList.of(endpoint), HttpMethod.GET,
+                DescriptionInfo.of(mermaidDescription, Markup.MERMAID));
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -483,11 +522,29 @@ class AnnotatedDocServiceTest {
         @Post
         @Put
         public String json(JsonRequest request) {
-           return request.bar;
+            return request.bar;
         }
 
         @Get("/period")
         public HttpResponse period(@Param Period period) {
+            return HttpResponse.of(200);
+        }
+
+        @Description(value = "## Description method with markdown", markup = Markup.MARKDOWN)
+        @Get("/markdown")
+        public String description(@Param @Description(value = "DESCRIPTION `PARAM`", markup = Markup.MARKDOWN)
+                                  DescriptionEnum descriptionEnum) {
+            return descriptionEnum.name();
+        }
+
+        @Description(value = "graph TD;\n" +
+                             " A-->B;\n" +
+                             " A-->C;\n" +
+                             " B-->D;\n" +
+                             " C-->D;",
+                markup = Markup.MERMAID)
+        @Get("/mermaid")
+        public HttpResponse mermaid() {
             return HttpResponse.of(200);
         }
     }
@@ -496,6 +553,16 @@ class AnnotatedDocServiceTest {
         A,
         B,
         C
+    }
+
+    @Description("DESCRIPTION ENUM")
+    private enum DescriptionEnum {
+        @Description(value = "MARKDOWN DESCRIPTION `A`", markup = Markup.MARKDOWN)
+        DESCRIPTION_A,
+        @Description("NONE MARKDOWN DESCRIPTION B\nMultiline")
+        DESCRIPTION_B,
+        @Description("NONE MARKDOWN DESCRIPTION C")
+        DESCRIPTION_C
     }
 
     private static class JsonRequest {

@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -77,9 +78,9 @@ abstract class AbstractHttpResponseHandler {
             Throwable cause = CapturedServiceException.get(reqCtx);
             if (cause == null) {
                 if (reqCtx.sessionProtocol().isMultiplex()) {
-                    cause = ClosedSessionException.get();
-                } else {
                     cause = ClosedStreamException.get();
+                } else {
+                    cause = ClosedSessionException.get();
                 }
             }
             fail(cause);

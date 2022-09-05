@@ -1,9 +1,12 @@
 final def SPRING_BOOT_VERSION = '2.1.18.RELEASE'
 final def SPRING_VERSION = '5.1.20.RELEASE'
-final def TOMCAT_VERSION = '8.5.78'
+final def TOMCAT_VERSION = '8.5.81'
 
 dependencies {
-    implementation project(':spring:boot2-starter')
+    implementation(project(':spring:boot2-starter')) {
+        exclude group: 'org.springframework.boot', module: 'spring-boot-autoconfigure'
+        exclude group: 'org.springframework.boot', module: 'spring-boot-starter'
+    }
     implementation project(':tomcat8')
 
     ['spring-boot-starter', 'spring-boot-autoconfigure', 'spring-boot-starter-web'].each {

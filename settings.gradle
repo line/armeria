@@ -3,7 +3,9 @@ rootProject.name = 'armeria'
 apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
 
 // Published BOM projects
-includeWithFlags ':bom',                                 'bom', 'publish'
+includeWithFlags ':bom',                                 'bom'
+// Published version catalog projects
+includeWithFlags ':version-catalog',                     'version-catalog'
 
 // Published Java projects
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
@@ -146,3 +148,5 @@ includeWithFlags ':examples:spring-boot-webflux',                  'java'
 includeWithFlags ':examples:static-files',                         'java'
 includeWithFlags ':examples:thrift',                               'java'
 includeWithFlags ':examples:tutorials:rest-api-annotated-service', 'java'
+includeWithFlags ':examples:tutorials:grpc-tutorial',              'java'
+project(':examples:tutorials:grpc-tutorial').projectDir = file('examples/tutorials/grpc')

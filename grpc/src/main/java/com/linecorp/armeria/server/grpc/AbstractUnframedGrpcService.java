@@ -26,6 +26,8 @@ import java.util.function.Function;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -68,6 +70,8 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
 
     private final GrpcService delegate;
     private final UnframedGrpcErrorHandler unframedGrpcErrorHandler;
+
+    private static final Logger logger = LoggerFactory.getLogger(AbstractUnframedGrpcService.class);
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
@@ -182,6 +186,13 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
         final HttpHeaders trailers = !grpcResponse.trailers().isEmpty() ?
                                      grpcResponse.trailers() : grpcResponse.headers();
         final String grpcStatusCode = trailers.get(GrpcHeaderNames.GRPC_STATUS);
+        if (grpcStatusCode == null) {
+            PooledObjects.close(grpcResponse.content());
+            res.completeExceptionally(new NullPointerException("grpcStatusCode must not be null"));
+            logger.warn("{} A gRPC response must have the {} header. response: {}",
+                    ctx, GrpcHeaderNames.GRPC_STATUS, grpcResponse);
+            return;
+        }
         Status grpcStatus = Status.fromCodeValue(Integer.parseInt(grpcStatusCode));
         final String grpcMessage = trailers.get(GrpcHeaderNames.GRPC_MESSAGE);
         if (!Strings.isNullOrEmpty(grpcMessage)) {

@@ -40,6 +40,8 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     private final long maxRequestLength;
     private final RoutingContext routingCtx;
     private final ExchangeType exchangeType;
+    private final long requestStartTimeNanos;
+    private final long requestStartTimeMicros;
 
     @Nullable
     private ServiceRequestContext ctx;
@@ -51,7 +53,8 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
 
     StreamingDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                 boolean keepAlive, InboundTrafficController inboundTrafficController,
-                                long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType) {
+                                long maxRequestLength, RoutingContext routingCtx, ExchangeType exchangeType,
+                                long requestStartTimeNanos, long requestStartTimeMicros) {
         super(headers);
 
         this.eventLoop = eventLoop;
@@ -63,6 +66,8 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
         assert routingCtx.hasResult();
         this.routingCtx = routingCtx;
         this.exchangeType = exchangeType;
+        this.requestStartTimeNanos = requestStartTimeNanos;
+        this.requestStartTimeMicros = requestStartTimeMicros;
     }
 
     @Override
@@ -184,12 +189,22 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     }
 
     @Override
-    public boolean isAggregated() {
+    public boolean needsAggregation() {
         return false;
     }
 
     @Override
     public ExchangeType exchangeType() {
         return exchangeType;
+    }
+
+    @Override
+    public long requestStartTimeNanos() {
+        return requestStartTimeNanos;
+    }
+
+    @Override
+    public long requestStartTimeMicros() {
+        return requestStartTimeMicros;
     }
 }

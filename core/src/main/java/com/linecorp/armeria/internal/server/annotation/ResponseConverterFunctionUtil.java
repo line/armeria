@@ -16,11 +16,12 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
+
 import java.lang.reflect.Type;
 import java.util.List;
 import java.util.Objects;
 import java.util.ServiceLoader;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,7 +49,7 @@ final class ResponseConverterFunctionUtil {
 
     private static final List<ResponseConverterFunctionProvider> responseConverterProviders =
             ImmutableList.copyOf(ServiceLoader.load(ResponseConverterFunctionProvider.class,
-                                                    AnnotatedService.class.getClassLoader()));
+                                                    ResponseConverterFunctionUtil.class.getClassLoader()));
 
     private static final List<DelegatingResponseConverterFunctionProvider>
             delegatingResponseConverterProviders = ImmutableList.copyOf(
@@ -68,22 +69,22 @@ final class ResponseConverterFunctionUtil {
 
     static ResponseConverterFunction newResponseConverter(Type returnType,
                                                           List<ResponseConverterFunction> responseConverters) {
-
         final List<ResponseConverterFunction> nonDelegatingSpiConverters =
-                responseConverterProviders.stream().map(
-                                                  provider -> provider.newResponseConverterFunction(
-                                                          returnType)
-                                          ).filter(Objects::nonNull)
-                                          .collect(Collectors.toList());
+                responseConverterProviders.stream()
+                                          .map(provider -> provider.newResponseConverterFunction(returnType))
+                                          .filter(Objects::nonNull)
+                                          .collect(toImmutableList());
 
         final ImmutableList<ResponseConverterFunction> backingConverters =
                 ImmutableList.<ResponseConverterFunction>builder()
                              .addAll(responseConverters)
                              .addAll(nonDelegatingSpiConverters)
-                             .addAll(defaultResponseConverters).build();
+                             .addAll(defaultResponseConverters)
+                             .build();
 
         final ResponseConverterFunction responseConverter = new CompositeResponseConverterFunction(
-                ImmutableList.<ResponseConverterFunction>builder().addAll(backingConverters)
+                ImmutableList.<ResponseConverterFunction>builder()
+                             .addAll(backingConverters)
                              // It is the last converter to try to convert the result object into an
                              // HttpResponse after aggregating the published object from a Publisher or Stream.
                              .add(new AggregatedResponseConverterFunction(
@@ -91,8 +92,8 @@ final class ResponseConverterFunctionUtil {
 
         for (final DelegatingResponseConverterFunctionProvider provider
                 : delegatingResponseConverterProviders) {
-            final ResponseConverterFunction func = provider.createResponseConverterFunction(returnType,
-                                                                                            responseConverter);
+            final ResponseConverterFunction func =
+                    provider.createResponseConverterFunction(returnType, responseConverter);
             if (func != null) {
                 return func;
             }

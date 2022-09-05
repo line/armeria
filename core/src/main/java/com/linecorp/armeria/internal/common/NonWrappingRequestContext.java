@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.common;
+package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
@@ -25,10 +25,19 @@ import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Supplier;
 
+import com.linecorp.armeria.common.AttributesGetters;
+import com.linecorp.armeria.common.ConcurrentAttributes;
+import com.linecorp.armeria.common.ExchangeType;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.RequestContextStorage;
+import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.Channel;
@@ -38,8 +47,7 @@ import io.netty.util.AttributeKey;
  * A skeletal {@link RequestContext} implementation that helps to implement a non-wrapping
  * {@link RequestContext}.
  */
-@UnstableApi
-public abstract class NonWrappingRequestContext implements RequestContext {
+public abstract class NonWrappingRequestContext implements RequestContextExtension {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<NonWrappingRequestContext, Supplier>
@@ -236,10 +244,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
         return attrs.ownAttrs();
     }
 
-    /**
-     * Returns the {@link AttributesGetters} which stores the pairs of an {@link AttributeKey} and an object
-     * set via {@link #setAttr(AttributeKey, Object)}.
-     */
+    @Override
     @UnstableApi
     public final AttributesGetters attributes() {
         return attrs;
@@ -255,6 +260,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
      * it's not a good idea to run a time-consuming task.
      */
     @UnstableApi
+    @Override
     public void hook(Supplier<? extends AutoCloseable> contextHook) {
         requireNonNull(contextHook, "contextHook");
         for (;;) {
@@ -279,12 +285,7 @@ public abstract class NonWrappingRequestContext implements RequestContext {
         }
     }
 
-    /**
-     * Returns the hook which is invoked whenever this {@link NonWrappingRequestContext} is pushed to the
-     * {@link RequestContextStorage}. The {@link SafeCloseable} returned by the {@link Supplier} will be
-     * called whenever this {@link RequestContext} is popped from the {@link RequestContextStorage}.
-     */
-    @UnstableApi
+    @Override
     @Nullable
     public Supplier<AutoCloseable> hook() {
         return contextHook;

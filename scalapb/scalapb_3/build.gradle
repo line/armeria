@@ -2,11 +2,11 @@ dependencies {
     implementation project(':grpc')
 
     // ScalaPB
-    api "com.thesamet.scalapb:scalapb-json4s_3"
-    implementation "com.thesamet.scalapb:scalapb-runtime_3"
-    implementation "com.thesamet.scalapb:scalapb-runtime-grpc_3"
+    api libs.scalapb.json4s.v3
+    implementation libs.scalapb.runtime.v3
+    implementation libs.scalapb.runtime.grpc.v3
 
-    testImplementation 'io.monix:monix-reactive_3'
+    testImplementation libs.monix.reactive.v3
 }
 
 // Use the sources from ':scalapb_2.13'.

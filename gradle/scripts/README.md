@@ -3,7 +3,7 @@
 The scripts here provides a simple way to configure a Java project with
 sensible defaults. By applying them, you can:
 
-- Manage dependencies using a simple YAML file.
+- Manage dependencies using a simple TOML file that is fully compatible with [Gradle version catalogs](https://docs.gradle.org/current/userguide/platforms.html).
 - Configure Checkstyle and JaCoCo code coverage.
 - Add [Javadoc offline links](https://docs.oracle.com/javase/9/javadoc/javadoc-command.htm#GUID-51213F2C-6E01-4A03-A82A-17428A258A0F) easily.
 - Add Google Analytics scripts into Javadoc if `googleAnalyticsId` property exists.
@@ -122,47 +122,56 @@ sensible defaults. By applying them, you can:
 
 ## Dependency management
 
-Put your dependency versions into `<project_root>/dependencies.yml` so you don't
-need to put the version numbers in `build.gradle`:
+Put your dependency versions into `<project_root>/dependencies.toml` so you don't
+need to put the version numbers in `build.gradle`.
+The `dependencies.toml` file supports the same syntax as Gradle's [`libs.versions.toml`](https://docs.gradle.org/current/userguide/platforms.html#sub:conventional-dependencies-toml).
+In addition, it also supports additional properties such as:
+- `boms`: A table to manages a list of BOM dependencies.
+- `relocations`: A table or an array of tables to relocate specific dependencies to a new location.
+- `exclusions`: A string or an array of strings to exclude specific dependencies from the module.
+- `javadocs`: A string or an array of strings to link to external Javadocs.
 
-```yaml
+```toml
+# Import 'armeria-bom':
+[boms]
+armeria = { module = "com.linecorp.armeria:armeria-bom", version = "1.17.0" }
+
 # Simple form:
-com.google.code.findbugs:
-  jsr305: { version: '3.0.2' }
+[libraries]
+findbugs = { module = "com.google.code.findbugs:jsr305", version = '3.0.2' }
 
 # Slightly more verbose, but useful when an artifact has more than one property:
-com.google.guava:
-  guava:
-    version: '30.1.1-jre'
-    exclusions:
-      - com.google.code.findbugs:jsr305
-      - com.google.errorprone:error_prone_annotations
-      - com.google.j2objc:j2objc-annotations
-      - org.codehaus.mojo:animal-sniffer-annotations
+[libraries.guava]
+module = "com.google.guava:guava"
+version = '31.1.1-jre'
+exclusions = [
+  "com.google.code.findbugs:jsr305",
+  "com.google.errorprone:error_prone_annotations",
+  "com.google.j2objc:j2objc-annotations",
+  "org.codehaus.mojo:animal-sniffer-annotations"]
+relocations = [
+  { from = "com.google.common", to = "com.linecorp.armeria.internal.shaded.guava" },
+  { from = "com.google.thirdparty.publicsuffix", to = "com.linecorp.armeria.internal.shaded.publicsuffix" }]
 
-# More than one artifact under the same group:
-com.fasterxml.jackson.core:
-  jackson-annotations:
-    version: &JACKSON_VERSION '2.12.2' # Using a YAML anchor
-    javadocs:
-      - https://fasterxml.github.io/jackson-annotations/javadoc/2.12/
-  jackson-core:
-    version: *JACKSON_VERSION
-    javadocs:
-      - https://fasterxml.github.io/jackson-core/javadoc/2.12/
-  jackson-databind:
-    version: *JACKSON_VERSION
-    javadocs:
-      - https://fasterxml.github.io/jackson-databind/javadoc/2.12/
+[versions]
+reactor = "3.4.19"
+
+[libraries.reactor-core]
+module = "io.projectreactor:reactor-core"
+# Reference the version declared in `[versions]`:
+version.ref = "reactor"
+javadocs = "https://projectreactor.io/docs/core/release/api/"
+[libraries.reactor-test]
+module = "io.projectreactor:reactor-test"
+version.ref = "reactor"
 ```
 
-Gradle's dependency resolution strategy will be automatically configured as
-specified in `dependencies.yml`, so you don't have to specify version numbers
-in `build.gradle`:
+Dependencies declared in `dependencies.toml` are exposed to build scripts via an extension corresponding to 
+their name. 
 
 ```groovy
 plugins {
-    id 'com.google.osdetector' version '1.6.2' apply false
+    alias libs.plugins.osdetector apply false
 }
 
 allprojects {
@@ -177,23 +186,31 @@ apply from: "${rootDir}/gradle/scripts/build-flags.gradle"
 configure(projectsWithFlags('java')) {
     // Common dependencies
     dependencies {
-        compileOnly 'com.google.code.findbugs:jsr305'
-        compile 'com.google.guava:guava'
+      compileOnly libs.findbugs
+      implementation libs.guava
     }
 }
 
 // In case you need to get the version number of an artifact:
+println "Guava version: ${libs.guava.get().versionConstraint.requiredVersion}"
+// Note that it is not recommended to use `managedVersions` with the module defined multiple times with 
+// different aliases. Because if a module is declared with different versions, the version returned by 
+// `managedVersions` is determined by how the version catalogs are indexed.
 println "Guava version: ${managedVersions['com.google.guava:guava']}"
 ```
 
 ### Importing Maven BOM (Bill of Materials)
 
-At `dependencies.yml`, you can add a special section called `boms` to specify
+At `dependencies.toml`, you can add a special section called `boms` to specify
 the list of Maven BOMs to import:
 
-```yaml
-boms:
-- io.spring.platform:platform-bom:2.0.8.RELEASE
+```toml
+[boms]
+armeria = { module = "com.linecorp.armeria:armeria-bom", version = "1.17.0" }
+
+# A dependency that uses the version defined in 'armeria-bom'.
+[libraries.armeria]
+module = "com.linecorp.armeria:armeria"
 ```
 
 ### Checking if dependencies are up-to-date
@@ -298,7 +315,7 @@ automatically:
 
 - `java` - Makes a project build a Java source code
 - `publish` - Makes a project publish its artifact to a Maven repository
-- `bom` - Makes a project publish Maven BOM based on `dependencies.yml`
+- `bom` - Makes a project publish Maven BOM based on `dependencies.toml`
 - `shade`, `relocate` and `trim` - Makes a Java project produce an additional 'shaded' JAR
 - `reactor-grpc` or `rxgrpc` - Enables [`reactor-grpc`](https://github.com/salesforce/reactive-grpc/tree/master/reactor) or [`rxgrpc`](https://github.com/salesforce/reactive-grpc/tree/master/rx-java) support to the project
 
@@ -331,10 +348,10 @@ When a project has a `java` flag:
       such as static analysis.
   - A special configuration property `checkstyleConfigDir` is set so you can
     access the external files such as `suppressions.xml` from `checkstyle.xml`.
-  - You can choose Checkstyle version by specifying it in `dependencies.yml`:
-    ```yaml
-    com.puppycrawl.tools:
-      checkstyle: { version: '8.5' }
+  - You can choose Checkstyle version by specifying it in `dependencies.toml`:
+    ```toml
+    [libraries]
+    checkstyle = { module = "com.puppycrawl.tools:checkstyle", version = "10.3.1" }
     ```
   - Checkstyle can be disabled completely by specifying `-PnoLint` option.
 
@@ -357,24 +374,23 @@ When a project has a `java` flag:
 
 - [Jetty ALPN agent](https://github.com/jetty-project/jetty-alpn-agent) is
   loaded automatically when launching a Java process if you specified it in
-  `dependencies.yml`:
+  `dependencies.toml`:
 
-  ```yaml
-  org.mortbay.jetty.alpn:
-    jetty-alpn-agent: { version: '2.0.10' }
+  ```toml
+  [libraries] 
+  jetty-alpn = { module = "org.mortbay.jetty.alpn:jetty-alpn-agent", version = "2.0.10" }
   ```
 
-- The `package-list` files of the Javadocs specified in `dependencies.yml` will
+- The `package-list` files of the Javadocs specified in `dependencies.toml` will
   be downloaded and cached. The downloaded `package-list` files will be used
-  when generating Javadocs, e.g. in `dependencies.yml`:
+  when generating Javadocs, e.g. in `dependencies.toml`:
 
-  ```yaml
-  io.grpc:
-    grpc-core:
-      version: &GRPC_VERSION '1.36.1'
-      javadocs:
-        - https://grpc.io/grpc-java/javadoc/
-        - https://developers.google.com/protocol-buffers/docs/reference/java/
+  ```toml
+  [libraries.grpc-core]
+  module = "io.grpc:grpc-core"
+  version = "1.47.0"
+  javadocs = [ "https://grpc.io/grpc-java/javadoc/",
+               "https://developers.google.com/protocol-buffers/docs/reference/java/" ]
   ```
 
   If you are in an environment with restricted network access, you can specify
@@ -388,10 +404,20 @@ When a project has a `java` flag:
     - Consider adding dependency tasks to the `generateSources` task to do
       other source generation jobs.
   - You need to add `com.google.protobuf:protobuf-gradle-plugin` to
-    `dependencies.yml` to get this to work.
-  - Add `com.google.protobuf:protoc` to `dependencies.yml` to specify the
+    `dependencies.toml` to get this to work.
+  - Add `com.google.protobuf:protoc` to `dependencies.toml` to specify the
     compiler version.
   - Add `io.grpc:grpc-core` if you want to add gRPC plugin to the compiler.
+  
+    ```toml
+    [libraries.protobuf-gradle-plugin]
+    module = "com.google.protobuf:protobuf-gradle-plugin"
+    version = "0.8.18"
+
+    [libraries.protobuf-protoc]
+    module = "com.google.protobuf:protoc"
+    version = "3.19.2"
+    ```
 
 - The `.thrift` files under `src/*/thrift` will be compiled into Java code.
 
@@ -479,10 +505,27 @@ $ ./gradlew test -PbuildJdkVersion=15 -PtestJavaVersion=8
 ## Generating Maven BOM with `bom` flag
 
 If you configure a project with `bom` flag, the project will be configured to
-generate Maven BOM based on the dependencies specified in `dependencies.yml`.
+generate Maven BOM based on the dependencies specified in `dependencies.toml`.
 
 `bom` flag implies `publish` flag, which means the BOM will be uploaded to a
 Maven repository by `./gradlew publish`.
+
+```groovy
+// settings.gradle
+includeWithFlags ':bom', 'bom'
+```
+## Sharing [dependency versions](https://docs.gradle.org/current/userguide/platforms.html#sec:version-catalog-plugin) with `version-catalog` flag
+
+If you configure a project with the `version-catalog` flag, the project will be configured to
+publish version catalog based on the dependencies specified in `dependencies.toml`.
+
+The `version-catalog` flag also implies `publish` flag, which means the `libs.versions.toml` will be uploaded to a
+Maven repository by `./gradlew publish`.
+
+```groovy
+// settings.gradle
+includeWithFlags ':version-catalog', 'version-catalog'
+```
 
 ## Building shaded JARs with `shade` flag
 
@@ -501,18 +544,15 @@ apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
 includeWithFlags ':foo', 'java', 'shade'
 ```
 
-You need to add `relocations` property to `dependencies.yml` to tell which
+You need to add `relocations` property to `dependencies.toml` to tell which
 dependency needs shading:
 
 ```yaml
-com.google.guava:
-  guava:
-    version: '17.0' # What an ancient dependency!
-    relocations:
-    - from: com.google.common
-      to: com.doe.john.myproject.shaded.guava
-    - from: com.google.thirdparty.publicsuffix
-      to: com.doe.john.myproject.shaded.publicsuffix
+[libraries.guava]
+module = "com.google.guava:guava"
+version = "17.0" # What an ancient dependency!
+relocations [ { from: "com.google.common", to: "com.doe.john.myproject.shaded.guava" },
+              { from: "com.google.thirdparty.publicsuffix", to: "com.doe.john.myproject.shaded.publicsuffix" } ]
 ```
 
 ### Trimming a shaded JAR with `trim` flag

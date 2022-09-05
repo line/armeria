@@ -61,6 +61,7 @@ import com.linecorp.armeria.internal.common.AbstractHttp2ConnectionHandler;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -345,7 +346,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 serviceCfg, channel, config.meterRegistry(), protocol,
                 nextRequestId(), routingCtx, routingResult, req.exchangeType(),
                 req, sslSession, proxiedAddresses, clientAddress,
-                System.nanoTime(), SystemInfo.currentTimeMicros());
+                req.requestStartTimeNanos(), req.requestStartTimeMicros());
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();

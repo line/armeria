@@ -1,7 +1,8 @@
 dependencies {
-    api 'com.squareup.retrofit2:retrofit'
+    api libs.retrofit2
 
-    implementation 'com.github.ben-manes.caffeine:caffeine'
+    implementation libs.caffeine
+    libs.okhttp3
 
-    testImplementation 'com.squareup.retrofit2:converter-jackson'
+    testImplementation libs.retrofit2.converter.jackson
 }

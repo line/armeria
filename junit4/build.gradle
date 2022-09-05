@@ -1,5 +1,5 @@
 dependencies {
-    api 'junit:junit'
+    api libs.junit4
 }
 
 // Copy common files from junit5 module to gen-src directory in order to use them as a source set.

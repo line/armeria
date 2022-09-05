@@ -18,7 +18,7 @@ package com.linecorp.armeria.internal.server.annotation;
 
 import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.collectFrom;
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapUnaryAsyncType;
 
 import java.lang.reflect.Type;
 import java.util.concurrent.CompletableFuture;
@@ -49,7 +49,7 @@ final class AggregatedResponseConverterFunction implements ResponseConverterFunc
 
     @Override
     public Boolean isResponseStreaming(Type returnType, @Nullable MediaType contentType) {
-        final Class<?> clazz = typeToClass(unwrapAsyncType(returnType));
+        final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(returnType));
         if (clazz == null) {
             return null;
         }

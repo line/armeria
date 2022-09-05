@@ -2,11 +2,11 @@ dependencies {
     api project(':junit5')
     api project(':junit4')
 
-    api 'net.javacrumbs.json-unit:json-unit'
-    api 'net.javacrumbs.json-unit:json-unit-fluent'
-    api 'org.apache.httpcomponents:httpclient'
-    api 'org.assertj:assertj-core'
-    api 'org.junit.jupiter:junit-jupiter-params'
-    api 'org.mockito:mockito-junit-jupiter'
-    api 'io.projectreactor:reactor-test'
+    api libs.json.unit
+    api libs.json.unit.fluent
+    api libs.apache.httpclient
+    api libs.assertj
+    api libs.junit5.jupiter.params
+    api libs.mockito.junit.jupiter
+    api libs.reactor.test
 }

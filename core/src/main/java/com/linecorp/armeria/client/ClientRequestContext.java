@@ -534,4 +534,14 @@ public interface ClientRequestContext extends RequestContext {
     @Override
     @UnstableApi
     ExchangeType exchangeType();
+
+    @Override
+    default ClientRequestContext unwrap() {
+        return (ClientRequestContext) RequestContext.super.unwrap();
+    }
+
+    @Override
+    default ClientRequestContext unwrapAll() {
+        return (ClientRequestContext) RequestContext.super.unwrapAll();
+    }
 }

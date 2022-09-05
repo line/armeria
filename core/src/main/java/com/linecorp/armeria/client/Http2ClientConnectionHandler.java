@@ -50,15 +50,6 @@ final class Http2ClientConnectionHandler extends AbstractHttp2ConnectionHandler 
         responseDecoder = new Http2ResponseDecoder(channel, encoder(), clientFactory, keepAliveHandler());
         connection().addListener(responseDecoder);
         decoder().frameListener(responseDecoder);
-
-        // Setup post build options
-        final long timeout = clientFactory.idleTimeoutMillis();
-        if (timeout > 0) {
-            gracefulShutdownTimeoutMillis(timeout);
-        } else {
-            // Timeout disabled
-            gracefulShutdownTimeoutMillis(-1);
-        }
     }
 
     private static KeepAliveHandler newKeepAliveHandler(

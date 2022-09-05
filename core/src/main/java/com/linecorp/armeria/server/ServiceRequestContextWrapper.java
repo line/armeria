@@ -241,4 +241,9 @@ public class ServiceRequestContextWrapper
     public CompletableFuture<Void> initiateConnectionShutdown() {
         return delegate().initiateConnectionShutdown();
     }
+
+    @Override
+    public ServiceRequestContext unwrapAll() {
+        return (ServiceRequestContext) super.unwrapAll();
+    }
 }

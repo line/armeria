@@ -30,6 +30,7 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 class DefaultServiceRequestContextTest {
 

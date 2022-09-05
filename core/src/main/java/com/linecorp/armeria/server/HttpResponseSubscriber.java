@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.ChannelFuture;

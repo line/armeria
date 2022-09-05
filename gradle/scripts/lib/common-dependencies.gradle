@@ -13,57 +13,14 @@ buildscript {
     }
 }
 
-rootProject.ext {
-    def dependenciesYamlFile = new File("${project.projectDir}/dependencies.yml")
-    if (dependenciesYamlFile.exists()) {
-        dependenciesYaml = Collections.unmodifiableMap(new Yaml().loadAs(dependenciesYamlFile.text, Map))
-    } else {
-        dependenciesYaml = Collections.emptyMap()
-    }
-}
-
-def managedDependencyVersions = new TreeMap<String, String>() {
-    @Override
-    String get(Object key) {
-        def value = super.get(key)
-        if (value != null) {
-            return value
-        } else {
-            throw new IllegalArgumentException("Missing managed dependency: ${key}")
-        }
-    }
-}
-def managedDependencyExclusions = [:].withDefault { [] }
 def managedDependencyOverrides = [] as Set
-rootProject.ext.dependenciesYaml.forEach { String key, value ->
-    if (key == 'boms') {
-        value.each {
-            def parsed = it.split(':')
-            managedDependencyVersions["${parsed[0]}:${parsed[1]}"] = parsed[2]
-        }
-    } else {
-        def groupId = key
-        def artifact = value as Map
-        artifact.forEach { String artifactId, Map props ->
-            if (props.containsKey('version')) {
-                managedDependencyVersions["${groupId}:${artifactId}"] = String.valueOf(props['version'])
-            }
-            if (props.containsKey('exclusions')) {
-                props['exclusions'].each { String spec ->
-                    def parsed = spec.split(':')
-                    managedDependencyExclusions["${groupId}:${artifactId}"].add([
-                            group: parsed[0],
-                            module: parsed[1],
-                    ])
-                }
-            }
-        }
-    }
-}
 
-allprojects {
+allprojects { p ->
     ext {
-        managedVersions = managedDependencyVersions
+        // Add managedVersions() for backward compatibility with dependencies.yml
+        managedVersions = getManagedVersions(p.rootProject)
+        findLibrary = this.&findLibrary.curry(p.rootProject)
+        findPlugin = this.&findPlugin.curry(p.rootProject)
     }
 }
 
@@ -87,27 +44,13 @@ configure(dependencyManagementProject) {
     }
 
     dependencies {
-        if (rootProject.ext.dependenciesYaml.containsKey('boms')) {
-            dependenciesYaml['boms'].each {
-                api platform("${it}")
-            }
-        }
-
-        constraints {
-            rootProject.ext.dependenciesYaml.forEach { String key, value ->
-                if (key != 'boms') {
-                    def groupId = key
-                    def artifact = value as Map
-                    artifact.forEach { String artifactId, Map props ->
-                        if (props.containsKey('version')) {
-                            api "${groupId}:${artifactId}:${props['version']}"
-                        }
-                    }
-                }
+        rootProject.ext.dependenciesTomlBoms.each { alias ->
+            def library = rootProject.ext.findLibrary(alias)
+            if (library != null) {
+                api platform(library)
             }
         }
     }
-
 
     tasks {
         dependencyUpdates {
@@ -145,13 +88,71 @@ configure(dependencyManagementProject) {
     }
 }
 
+// Publish version catalog so that other projects can easily align transitive versions of the project by
+// importing the published catalog.
+// https://docs.gradle.org/current/userguide/platforms.html#sec:version-catalog-plugin
+configure(projectsWithFlag('version-catalog')) { catalogProject ->
+    apply plugin: 'version-catalog'
+    apply plugin: 'maven-publish'
+
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                from components.versionCatalog
+            }
+        }
+    }
+
+    catalog {
+        versionCatalog {
+            def catalogs = rootProject.extensions.getByType(VersionCatalogsExtension).named('libs')
+            catalogs.libraryAliases.forEach { alias ->
+                def dep = catalogs.findLibrary(alias).get().get()
+                if (!dep.versionConstraint.requiredVersion.isEmpty()) {
+                    library(alias, dep.toString())
+                }
+            }
+
+            catalogs.pluginAliases.forEach { alias ->
+                def plug = catalogs.findPlugin(alias).get().get()
+                plugin(alias, plug.pluginId).version(plug.version.requiredVersion)
+            }
+
+            catalogs.versionAliases.forEach { alias ->
+                def ver = catalogs.findVersion(alias).get()
+                version(alias, ver.toString())
+            }
+
+            catalogs.bundleAliases.forEach { alias ->
+                def aliases = catalogs.findBundle(alias).get().get()
+                bundle(alias, aliases.toString())
+            }
+
+            afterEvaluate {
+                projectsWithFlag('publish').each { proj ->
+                    if (proj != catalogProject) {
+                        String alias = proj.ext.artifactId
+                        // Normalize the alias since Gradle prefixes `get` for '.' or '_' followed by a number.
+                        // Replace "armeria-scala_2.12" with "armeria-scala_v2.12"
+                        alias = alias.replaceAll('_(\\d)', '_v$1')
+                        // Replace "armeria-scala_v2.12" with "armeria-scala_v212"
+                        // or "armeria-thrift0.13" with "armeria-thrift013"
+                        alias = alias.replaceAll('\\.(\\d)', '$1')
+                        library(alias, proj.group, proj.ext.artifactId).version(proj.version)
+                    }
+                }
+            }
+        }
+    }
+}
+
 configure(projectsWithFlags('java')) {
 
     configurations.configureEach { configuration ->
         configuration.dependencies.whenObjectAdded { dep ->
             if (dep instanceof org.gradle.api.artifacts.ModuleDependency) {
-                managedDependencyExclusions["${dep.group}:${dep.name}"].each {
-                    exclude it
+                rootProject.ext.exclusions["${dep.group}:${dep.name}"].each { list ->
+                    list.each { exclude it }
                 }
             }
         }
@@ -201,67 +202,91 @@ rootProject.configurations {
     }
 }
 
-rootProject.ext {
-    // Build the relocation table from dependencies.yml.
-    relocations = dependenciesYaml.entrySet().inject([]) { list, Map.Entry<String, Object> entry ->
-        if (entry.key != 'boms') {
-            def groupId = entry.key
-            entry.value.forEach { String artifactId, Map props ->
-                if (props.containsKey('relocations')) {
-                    props.get('relocations').each {
-                        list.add([
-                                name: "${groupId}:${artifactId}",
-                                from: it['from'],
-                                to: it['to']])
-                    }
-                }
-            }
-        }
-        return list
-    }
-
-    // Build the Javadoc link table from dependencies.yml.
-    javadocLinks = dependenciesYaml.entrySet().inject([]) { list, Map.Entry<String, Object> entry ->
-        if (entry.key != 'boms') {
-            def groupId = entry.key
-            entry.value.forEach { String artifactId, Map props ->
-                if (props.containsKey('javadocs')) {
-                    props['javadocs'].each { url ->
-                        list.add([
-                                groupId: groupId,
-                                artifactId: artifactId,
-                                url: url
-                        ])
-                    }
-                }
-            }
-        }
-        return list
-    }
-}
-
-subprojects {
-    ext {
-        dependenciesYaml = rootProject.ext.dependenciesYaml
-        relocations = rootProject.ext.relocations
-        javadocLinks = rootProject.ext.javadocLinks
-    }
-}
-
 configure(rootProject) {
     task managedVersions(
             group: 'Build',
             description: 'Generates the file that contains dependency versions.') {
 
+        inputs.property("catalog", project.extensions.getByType(VersionCatalogsExtension))
         def f = file("${project.buildDir}/managed_versions.yml")
-        inputs.properties managedDependencyVersions
         outputs.file(f)
 
         doLast {
             f.parentFile.mkdir()
+            managedVersions = [:]
+            inputs.properties["catalog"].catalogNames.forEach { name ->
+                def catalog = catalogs.named(name)
+                versions = [:] withDefault { [] }
+                catalog.libraryAliases.forEach { alias ->
+                    def library = catalog.findLibrary(alias).get().get()
+                    versions["libraries"].add([alias: alias, module: library.toString])
+                }
+
+                catalog.pluginAliases.forEach { alias ->
+                    def plugin = catalog.findPlugin(alias).get().get()
+                    versions["plugins"].add([alias: alias, plugin: plugin.toString])
+                }
+
+                catalog.versionAliases.forEach { alias ->
+                    def version = catalog.findVersion(alias).get()
+                    versions["versions"].add([alias: alias, version: version])
+                }
+
+                catalog.bundleAliases.forEach { alias ->
+                    def bundle = catalog.findBundle(alias).get().get()
+                    versions["bundles"].add([alias: alias, bundle: bundle.toString])
+                }
+                managedVersions[name] = versions
+            }
+
             f.withWriter('UTF-8') {
-                new Yaml().dump(managedDependencyVersions, it)
+                new Yaml().dump(managedVersions, it)
             }
         }
     }
+}
+
+static def findLibrary(Project rootProject, String alias) {
+    def catalogs = rootProject.extensions.getByType(VersionCatalogsExtension)
+    def catalog = catalogs.named("libs")
+
+    def library = catalog.findLibrary(alias)
+    if (library.isEmpty()) {
+        return null
+    } else {
+        return library.get()
+    }
+}
+
+static def findPlugin(Project rootProject, String alias) {
+    def catalogs = rootProject.extensions.getByType(VersionCatalogsExtension)
+    def catalog = catalogs.named("libs")
+
+    def plugin = catalog.findPlugin(alias)
+    if (plugin.isEmpty()) {
+        return null
+    } else {
+        return plugin.get()
+    }
+}
+
+/**
+ * Returns the managed versions that associates a module with a version.
+ * This method is added to support backward compatibility with 'dependencies.yml'
+ * Note that it is not recommended to use `managedVersions` with the module defined multiple times with different
+ * aliases. Because if a module is declared with different versions, the version returned by `managedVersions`
+ * is determined by how the version catalogs are indexed.
+ */
+static def getManagedVersions(Project rootProject) {
+    def managedVersions = [:]
+    def catalogs = rootProject.extensions.getByType(VersionCatalogsExtension)
+    catalogs.catalogNames.forEach { name ->
+        def catalog = catalogs.named(name)
+        catalog.libraryAliases.forEach {
+            def library = catalog.findLibrary(it).get().get()
+            def module = library.module
+            managedVersions["${module.group}:${module.name}"] = library.versionConstraint.requiredVersion
+        }
+    }
+    return managedVersions
 }
