@@ -71,20 +71,12 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
         if (spec == null) {
             return null;
         }
-        if ("true".equals(spec) || "always".equals(spec)) {
-            return Sampler.always();
-        }
-        if ("false".equals(spec) || "never".equals(spec)) {
-            return Sampler.never();
-        }
-
         try {
             Sampler.of(spec);
         } catch (Exception e) {
             // Invalid sampler specification
             throw new IllegalArgumentException("invalid sampler spec: " + spec, e);
         }
-
         return new ExceptionSampler(spec);
     }
 
@@ -436,6 +428,20 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     @Override
     public Path defaultMultipartUploadsLocation() {
         return getAndParse("defaultMultipartUploadsLocation", Paths::get);
+    }
+
+    @Override
+    public Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
+        final String spec = getNormalized("requestContextLeakDetectionSampler");
+        if (spec == null) {
+            return null;
+        }
+        try {
+            return Sampler.of(spec);
+        } catch (Exception e) {
+            // Invalid sampler specification
+            throw new IllegalArgumentException("invalid sampler spec: " + spec, e);
+        }
     }
 
     @Nullable
