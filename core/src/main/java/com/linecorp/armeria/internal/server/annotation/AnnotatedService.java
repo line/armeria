@@ -463,7 +463,7 @@ public final class AnnotatedService implements HttpService {
     private ResponseHeaders buildResponseHeaders(ServiceRequestContext ctx, HttpHeaders customHeaders) {
         final ResponseHeadersBuilder builder;
 
-        // Prefer ResponseHeaders#toBuilder because builder#add is an expensive operation.
+        // Prefer ResponseHeaders#toBuilder because builder#add(Iterable) is an expensive operation.
         if (customHeaders instanceof ResponseHeaders) {
             builder = ((ResponseHeaders) customHeaders).toBuilder();
         } else {
