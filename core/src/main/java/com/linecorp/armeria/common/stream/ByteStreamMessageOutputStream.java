@@ -32,12 +32,12 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class ByteStreamMessageOutputStream implements ByteStreamMessage {
 
-    private final Consumer<OutputStream> outputStreamWriter;
-    private final Executor executor;
-
     private final StreamMessageAndWriter<HttpData> streamWriter = new DefaultStreamMessage<>();
     private final ByteStreamMessage delegate = ByteStreamMessage.of(streamWriter);
     private final OutputStream outputStream = new StreamWriterOutputStream(streamWriter);
+
+    private final Consumer<OutputStream> outputStreamWriter;
+    private final Executor executor;
 
     ByteStreamMessageOutputStream(Consumer<OutputStream> outputStreamWriter, Executor executor) {
         this.outputStreamWriter = outputStreamWriter;
