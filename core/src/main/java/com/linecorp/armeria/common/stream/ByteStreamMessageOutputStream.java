@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static java.util.Objects.requireNonNull;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.CompletableFuture;
@@ -23,23 +25,24 @@ import java.util.concurrent.Executor;
 import java.util.function.Consumer;
 
 import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.Nullable;
 
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.util.concurrent.EventExecutor;
 
 final class ByteStreamMessageOutputStream implements ByteStreamMessage {
 
     private final StreamMessageAndWriter<HttpData> streamWriter = new DefaultStreamMessage<>();
     private final ByteStreamMessage delegate = ByteStreamMessage.of(streamWriter);
-    private final OutputStream outputStream = new StreamWriterOutputStream(streamWriter);
 
     private final Consumer<OutputStream> outputStreamWriter;
     private final Executor executor;
 
     ByteStreamMessageOutputStream(Consumer<OutputStream> outputStreamWriter, Executor executor) {
+        requireNonNull(outputStreamWriter, "outputStreamWriter");
+        requireNonNull(executor, "executor");
         this.outputStreamWriter = outputStreamWriter;
         this.executor = executor;
     }
@@ -73,8 +76,9 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
     @Override
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor eventExecutor,
                           SubscriptionOption... options) {
-        executor.execute(() -> outputStreamWriter.accept(outputStream));
-        delegate.subscribe(subscriber, eventExecutor, options);
+        final Subscriber<HttpData> outputStreamSubscriber = new OutputStreamSubscriber(
+                subscriber, eventExecutor, streamWriter, outputStreamWriter, executor);
+        delegate.subscribe(outputStreamSubscriber, eventExecutor, options);
     }
 
     @Override
@@ -85,6 +89,119 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
     @Override
     public void abort(Throwable cause) {
         delegate.abort(cause);
+    }
+
+    private static final class OutputStreamSubscriber implements Subscriber<HttpData>, Subscription {
+
+        private final Subscriber<? super HttpData> downstream;
+        private final EventExecutor eventExecutor;
+
+        private final StreamMessageAndWriter<HttpData> streamWriter;
+        private final Consumer<OutputStream> outputStreamWriter;
+        private final Executor executor;
+
+        @Nullable
+        private Subscription upstream;
+        private boolean completed;
+
+        OutputStreamSubscriber(Subscriber<? super HttpData> downstream,
+                               EventExecutor eventExecutor,
+                               StreamMessageAndWriter<HttpData> streamWriter,
+                               Consumer<OutputStream> outputStreamWriter,
+                               Executor executor) {
+            requireNonNull(downstream, "downstream");
+            requireNonNull(eventExecutor, "eventExecutor");
+            requireNonNull(streamWriter, "streamWriter");
+            requireNonNull(outputStreamWriter, "outputStreamWriter");
+            requireNonNull(executor, "executor");
+            this.downstream = downstream;
+            this.eventExecutor = eventExecutor;
+            this.streamWriter = streamWriter;
+            this.outputStreamWriter = outputStreamWriter;
+            this.executor = executor;
+        }
+
+        @Override
+        public void onSubscribe(Subscription subscription) {
+            requireNonNull(subscription, "subscription");
+            upstream = subscription;
+            downstream.onSubscribe(this);
+            CompletableFuture.runAsync(() -> outputStreamWriter
+                                     .accept(new StreamWriterOutputStream(streamWriter)), executor)
+                             .whenComplete((res, cause) -> {
+                                 if (cause != null) {
+                                     onError(cause);
+                                 }
+                             });
+        }
+
+        @Override
+        public void onNext(HttpData data) {
+            requireNonNull(data, "data");
+            if (completed) {
+                data.close();
+                return;
+            }
+            downstream.onNext(data);
+        }
+
+        @Override
+        public void onError(Throwable t) {
+            requireNonNull(t, "t");
+            if (completed) {
+                return;
+            }
+            completed = true;
+            downstream.onError(t);
+            streamWriter.close();
+        }
+
+        @Override
+        public void onComplete() {
+            if (completed) {
+                return;
+            }
+            completed = true;
+            downstream.onComplete();
+            streamWriter.close();
+        }
+
+        @Override
+        public void request(long n) {
+            if (eventExecutor.inEventLoop()) {
+                request0(n);
+            } else {
+                eventExecutor.execute(() -> request0(n));
+            }
+        }
+
+        private void request0(long n) {
+            if (n <= 0) {
+                onError(new IllegalArgumentException(
+                        "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
+                upstream.cancel();
+                return;
+            }
+            upstream.request(n);
+        }
+
+        @Override
+        public void cancel() {
+            if (eventExecutor.inEventLoop()) {
+                cancel0();
+            } else {
+                eventExecutor.execute(this::cancel0);
+            }
+        }
+
+        private void cancel0() {
+            if (completed) {
+                return;
+            }
+            completed = true;
+            upstream.cancel();
+            streamWriter.close();
+        }
     }
 
     private static final class StreamWriterOutputStream extends OutputStream {
