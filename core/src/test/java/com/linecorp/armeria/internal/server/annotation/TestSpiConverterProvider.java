@@ -34,7 +34,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 public final class TestSpiConverterProvider implements ResponseConverterFunctionProvider {
 
     @Override
-    public @Nullable ResponseConverterFunction newResponseConverterFunction(Type responseType) {
+    public @Nullable ResponseConverterFunction createResponseConverterFunction(Type responseType) {
         final Class<?> responseClass = ClassUtil.typeToClass(responseType);
         if (responseClass != null && TestClassWithNonDelegatingResponseConverterProvider.class.isAssignableFrom(
                 responseClass)) {

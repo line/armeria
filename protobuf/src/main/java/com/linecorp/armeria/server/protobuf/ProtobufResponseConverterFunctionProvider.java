@@ -38,7 +38,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 public final class ProtobufResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
 
     @Override
-    public ResponseConverterFunction newResponseConverterFunction(Type returnType) {
+    public ResponseConverterFunction createResponseConverterFunction(Type returnType) {
         if (isSupportedType(returnType)) {
             return new ProtobufResponseConverterFunction();
         }
