@@ -77,7 +77,7 @@ public interface TlsSetters {
     }
 
     /**
-     * Configures SSL or TLS of this with the specified cleartext {@link PrivateKey} and
+     * Configures SSL or TLS with the specified cleartext {@link PrivateKey} and
      * {@link X509Certificate} chain.
      */
     default TlsSetters tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
@@ -85,16 +85,16 @@ public interface TlsSetters {
     }
 
     /**
-     * Configures SSL or TLS of this with the specified cleartext {@link PrivateKey},
-     * {@code keyPassword} and {@link X509Certificate} chain.
+     * Configures SSL or TLS with the specified {@link PrivateKey}, {@code keyPassword} and
+     * {@link X509Certificate} chain.
      */
     default TlsSetters tls(PrivateKey key, @Nullable String keyPassword, X509Certificate... keyCertChain) {
         return tls(key, keyPassword, ImmutableList.copyOf(requireNonNull(keyCertChain, "keyCertChain")));
     }
 
     /**
-     * Configures SSL or TLS of this with the specified cleartext {@link PrivateKey},
-     * {@code keyPassword} and {@link X509Certificate} chain.
+     * Configures SSL or TLS with the specified {@link PrivateKey}, {@code keyPassword} and
+     * {@link X509Certificate} chain.
      */
     TlsSetters tls(PrivateKey key, @Nullable String keyPassword,
                    Iterable<? extends X509Certificate> keyCertChain);

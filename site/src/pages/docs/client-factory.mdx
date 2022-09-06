@@ -38,24 +38,25 @@ set a series of options programmatically.
 
 ## Customizing TLS
 
-You can configure the TLS key and certificates
+You can configure the client authentication
 for [mutual TLS (mTLS)](https://www.cloudflare.com/ko-kr/learning/access-management/what-is-mutual-tls/)
 using <type://ClientFactoryBuilder#tls(InputStream,InputStream)> .
 Additionally, you can specify various options such as a different CA certificate chain or enforce certain 
 cipher suites with <type://ClientFactoryBuilder#tlsCustomizer(Consumer)> .
 
 ```java
-String resourceRoot = "/path/to/resource/";
-ClientFactory builder =
-  ClientFactory
+try (InputStream keyCertChainInputStream = ...,
+     InputStream keyInputStream = ...) {
+  ClientFactory builder =
+    ClientFactory
+      .builder()
+      .tls(keyCertChainInputStream, keyInputStream)
+      .build();
+  WebClient
     .builder()
-    .tls(getClass().getResourceAsStream(resourceRoot + "custom.crt"),
-         getClass().getResourceAsStream(resourceRoot + "private.key"))
+    .factory(factory)
     .build();
-WebClient
-  .builder()
-  .factory(factory)
-  .build();
+}
 ```
 
 ## Lifecycle of `ClientFactory`

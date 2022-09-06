@@ -300,32 +300,19 @@ public final class ClientFactoryBuilder implements TlsSetters {
         return this;
     }
 
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified {@code keyCertChainFile}
+     * and cleartext {@code keyFile}.
+     */
     @Override
     public ClientFactoryBuilder tls(File keyCertChainFile, File keyFile) {
         return (ClientFactoryBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile);
     }
 
-    @Override
-    public ClientFactoryBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream) {
-        return (ClientFactoryBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream);
-    }
-
-    @Override
-    public ClientFactoryBuilder tls(PrivateKey key, X509Certificate... keyCertChain) {
-        return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyCertChain);
-    }
-
-    @Override
-    public ClientFactoryBuilder tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
-        return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyCertChain);
-    }
-
-    @Override
-    public ClientFactoryBuilder tls(PrivateKey key, @Nullable String keyPassword,
-                                    X509Certificate... keyCertChain) {
-        return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyPassword, keyCertChain);
-    }
-
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified {@code keyCertChainFile},
+     * {@code keyFile} and {@code keyPassword}.
+     */
     @Override
     public ClientFactoryBuilder tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
         ensureNoTlsKeySet();
@@ -334,6 +321,19 @@ public final class ClientFactoryBuilder implements TlsSetters {
         return tlsCustomizer(customizer -> customizer.keyManager(keyCertChainFile, keyFile, keyPassword));
     }
 
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified
+     * {@code keyCertChainInputStream} and cleartext {@code keyInputStream}.
+     */
+    @Override
+    public ClientFactoryBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream) {
+        return (ClientFactoryBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream);
+    }
+
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified
+     * {@code keyCertChainInputStream} and {@code keyInputStream} and {@code keyPassword}.
+     */
     @Override
     public ClientFactoryBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream,
                                     @Nullable String keyPassword) {
@@ -356,6 +356,38 @@ public final class ClientFactoryBuilder implements TlsSetters {
                                                                  keyPassword));
     }
 
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified cleartext
+     * {@link PrivateKey} and {@link X509Certificate} chain.
+     */
+    @Override
+    public ClientFactoryBuilder tls(PrivateKey key, X509Certificate... keyCertChain) {
+        return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyCertChain);
+    }
+
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified cleartext
+     * {@link PrivateKey} and {@link X509Certificate} chain.
+     */
+    @Override
+    public ClientFactoryBuilder tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
+        return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyCertChain);
+    }
+
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified {@link PrivateKey},
+     * {@code keyPassword} and {@link X509Certificate} chain.
+     */
+    @Override
+    public ClientFactoryBuilder tls(PrivateKey key, @Nullable String keyPassword,
+                                    X509Certificate... keyCertChain) {
+        return (ClientFactoryBuilder) TlsSetters.super.tls(key, keyPassword, keyCertChain);
+    }
+
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified {@link PrivateKey},
+     * {@code keyPassword} and {@link X509Certificate} chain.
+     */
     @Override
     public ClientFactoryBuilder tls(PrivateKey key, @Nullable String keyPassword,
                                     Iterable<? extends X509Certificate> keyCertChain) {
@@ -370,6 +402,9 @@ public final class ClientFactoryBuilder implements TlsSetters {
         return tlsCustomizer(customizer -> customizer.keyManager(key, keyPassword, keyCertChain));
     }
 
+    /**
+     * Configures SSL or TLS for client certificate authentication with the specified {@link KeyManagerFactory}.
+     */
     @Override
     public ClientFactoryBuilder tls(KeyManagerFactory keyManagerFactory) {
         ensureNoTlsKeySet();
