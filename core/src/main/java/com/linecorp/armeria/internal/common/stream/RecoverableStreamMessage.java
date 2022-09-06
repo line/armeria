@@ -30,7 +30,6 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.NoopSubscriber;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -42,7 +41,7 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 import io.netty.util.concurrent.EventExecutor;
 
-public final class RecoverableStreamMessage<T> extends AbstractStreamMessage<T> {
+public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicIntegerFieldUpdater<RecoverableStreamMessage> subscribedUpdater =
@@ -149,7 +148,7 @@ public final class RecoverableStreamMessage<T> extends AbstractStreamMessage<T> 
     public CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
         if (allowResuming) {
             // As the optimized `collect()` method gathers all elements into a list, resuming is unsupported.
-            return super.collect(executor, options);
+            return StreamMessage.super.collect(executor, options);
         }
 
         if (!subscribedUpdater.compareAndSet(this, 0, 1)) {

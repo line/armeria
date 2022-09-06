@@ -53,7 +53,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.util.concurrent.EventExecutor;
 
-final class PathStreamMessage extends AbstractStreamMessage<HttpData> implements ByteStreamMessage {
+final class PathStreamMessage implements ByteStreamMessage {
 
     private static final Logger logger = LoggerFactory.getLogger(PathStreamMessage.class);
 

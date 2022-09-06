@@ -36,7 +36,7 @@ import io.netty.util.concurrent.EventExecutor;
  * Relay items in order from a {@link StreamMessage} of {@link StreamMessage}s as a single {@link StreamMessage}
  * source.
  */
-final class ConcatPublisherStreamMessage<T> extends AbstractStreamMessage<T> {
+final class ConcatPublisherStreamMessage<T> implements StreamMessage<T> {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<ConcatPublisherStreamMessage, OuterSubscriber>

@@ -38,7 +38,7 @@ import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class FuseableStreamMessage<T, U> extends AbstractStreamMessage<U> {
+final class FuseableStreamMessage<T, U> implements StreamMessage<U> {
 
     static <T> FuseableStreamMessage<T, T> of(StreamMessage<? extends T> source,
                                               Predicate<? super T> predicate) {

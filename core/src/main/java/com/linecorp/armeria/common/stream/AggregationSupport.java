@@ -37,17 +37,19 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.HttpMessageAggregator;
 
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.util.concurrent.EventExecutor;
 
 /**
  * A helper class to support caching the aggregated result of {@link HttpMessage}.
  *
  * <p>Note that {@link StreamMessage} does not support aggregation because it doesn't know how to aggregate a
  * stream of arbitrary objects in a {@link StreamMessage}. Although this class is not directly used in
- * {@link StreamMessage}'s API, it is injected on top of {@link AbstractStreamMessage} due to the limitation
- * of the multiple class hierarchy so that all variants of {@link HttpRequest} and {@link HttpResponse} take
- * advantage of the caching logic in this class.
+ * {@link StreamMessage}'s API, it is injected on top of {@link StreamMessage} implementations due to the
+ * limitation of the multiple class hierarchy so that all variants of {@link HttpRequest} and
+ * {@link HttpResponse} take advantage of the caching logic in this class.
  */
-abstract class AggregationSupport {
+@UnstableApi
+public abstract class AggregationSupport {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<AggregationSupport, CompletableFuture> aggregationUpdater =
@@ -60,11 +62,16 @@ abstract class AggregationSupport {
     private volatile CompletableFuture<Object> aggregation;
 
     /**
+     * Creates a new instance.
+     */
+    protected AggregationSupport() {}
+
+    /**
      * Aggregates an {@link HttpMessage} into an {@link AggregatedHttpMessage} using
      * the specified {@link AggregationOptions}.
      *
-     * <p>Note that this method is added for internal usage. Therefore, you <strong>must not</strong> override or
-     * call this method if you are not familiar with Armeria's internal implementation.
+     * <p>Note that this method is added for internal usage. Therefore, you <strong>must not</strong> override
+     * or call this method if you are not familiar with Armeria's internal implementation.
      */
     @UnstableApi
     protected <U extends AggregatedHttpMessage> CompletableFuture<U> aggregate(AggregationOptions options) {
@@ -91,7 +98,11 @@ abstract class AggregationSupport {
                 throw new IllegalStateException("the stream was aggregated already. options: " + options);
             }
             if (aggregationUpdater.compareAndSet(this, null, NO_CACHE)) {
-                return httpMessage.collect(options.executor(), subscriptionOptions)
+                EventExecutor executor = options.executor();
+                if (executor == null) {
+                    executor = httpMessage.defaultSubscriberExecutor();
+                }
+                return httpMessage.collect(executor, subscriptionOptions)
                                   .thenApply(objects -> aggregate(objects, headers, alloc));
             } else {
                 throw new IllegalStateException("the stream was aggregated already. options: " + options);
@@ -112,7 +123,11 @@ abstract class AggregationSupport {
         final CompletableFuture<U> aggregationFuture = new CompletableFuture<>();
         if (aggregationUpdater.compareAndSet(this, null, aggregationFuture)) {
             // Propagate the result to `aggregation`
-            httpMessage.collect(options.executor(), subscriptionOptions)
+            EventExecutor executor = options.executor();
+            if (executor == null) {
+                executor = httpMessage.defaultSubscriberExecutor();
+            }
+            httpMessage.collect(executor, subscriptionOptions)
                        .thenApply(objects -> aggregate(objects, headers, alloc)).handle((res, cause) -> {
                            if (cause != null) {
                                cause = Exceptions.peel(cause);

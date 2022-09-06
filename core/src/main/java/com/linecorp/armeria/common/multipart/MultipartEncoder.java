@@ -28,7 +28,6 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
@@ -42,7 +41,7 @@ import io.netty.util.concurrent.EventExecutor;
 /**
  * Reactive processor that encodes a stream of {@link BodyPart}s into an HTTP payload.
  */
-final class MultipartEncoder extends AbstractStreamMessage<HttpData> {
+final class MultipartEncoder implements StreamMessage<HttpData> {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<MultipartEncoder, CompletableFuture>

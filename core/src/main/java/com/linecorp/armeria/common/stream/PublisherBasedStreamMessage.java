@@ -58,7 +58,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * @param <T> the type of element signaled
  */
 @UnstableApi
-public class PublisherBasedStreamMessage<T> extends AbstractStreamMessage<T> {
+public class PublisherBasedStreamMessage<T> extends AggregationSupport implements StreamMessage<T> {
 
     private static final Logger logger = LoggerFactory.getLogger(PublisherBasedStreamMessage.class);
 
@@ -184,7 +184,7 @@ public class PublisherBasedStreamMessage<T> extends AbstractStreamMessage<T> {
             //noinspection unchecked
             return ((StreamMessage<T>) publisher).collect(executor, options);
         } else {
-            return super.collect(executor, options);
+            return StreamMessage.super.collect(executor, options);
         }
     }
 

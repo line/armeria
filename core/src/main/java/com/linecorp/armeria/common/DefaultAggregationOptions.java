@@ -27,12 +27,14 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class DefaultAggregationOptions implements AggregationOptions {
 
+    @Nullable
     private final EventExecutor executor;
     @Nullable
     private final ByteBufAllocator alloc;
     private final boolean cacheResult;
 
-    DefaultAggregationOptions(EventExecutor executor, @Nullable ByteBufAllocator alloc, boolean cacheResult) {
+    DefaultAggregationOptions(@Nullable EventExecutor executor, @Nullable ByteBufAllocator alloc,
+                              boolean cacheResult) {
         this.executor = executor;
         this.alloc = alloc;
         this.cacheResult = cacheResult;
@@ -63,7 +65,7 @@ final class DefaultAggregationOptions implements AggregationOptions {
         }
         final AggregationOptions that = (AggregationOptions) o;
         return cacheResult == that.cacheResult() &&
-               executor.equals(that.executor()) &&
+               Objects.equals(executor, that.executor()) &&
                Objects.equals(alloc, that.alloc());
     }
 

@@ -51,10 +51,13 @@ public final class AggregationOptionsBuilder {
     /**
      * Returns whether to cache the aggregation result. This option is disabled by default.
      * Note that this method and {@link #alloc(ByteBufAllocator)} are mutually exclusive.
-     * If both this option is enabled and {@link #alloc(ByteBufAllocator)}} is set,
-     * an {@link IllegalStateException} will be raised when {@link #build()} is being called.
+     * If {@link #alloc(ByteBufAllocator)}} is set and this option is enabled, an {@link IllegalStateException}
+     * will be raised.
      */
     public AggregationOptionsBuilder cacheResult(boolean cache) {
+        if (alloc != null) {
+            throw new IllegalStateException("Can't cache pooled objects");
+        }
         cacheResult = cache;
         return this;
     }
@@ -66,31 +69,22 @@ public final class AggregationOptionsBuilder {
      *
      * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
      * Therefore, that this method and {@link #cacheResult(boolean)} are mutually exclusive.
-     * If both this option is set and {@link #cacheResult(boolean)} is enabled,
-     * an {@link IllegalStateException} will be raised when {@link #build()} is being called.
+     * If {@link #cacheResult(boolean)} is enabled and this option is set, an {@link IllegalStateException} will
+     * be raised.
      */
     public AggregationOptionsBuilder alloc(ByteBufAllocator alloc) {
         requireNonNull(alloc, "alloc");
+        if (cacheResult) {
+            throw new IllegalStateException("Can't cache pooled objects");
+        }
         this.alloc = alloc;
         return this;
     }
 
     /**
      * Returns a newly created {@link AggregationOptions} with the properties set so far.
-     *
-     * @throws IllegalStateException if the options set are invalid.
      */
     public AggregationOptions build() {
-        if (alloc != null && cacheResult) {
-            throw new IllegalStateException("Can't cache pooled objects");
-        }
-
-        EventExecutor executor = this.executor;
-        if (executor == null) {
-            executor = RequestContext.mapCurrent(RequestContext::eventLoop,
-                                                 CommonPools.workerGroup()::next);
-        }
-
         return new DefaultAggregationOptions(executor, alloc, cacheResult);
     }
 }

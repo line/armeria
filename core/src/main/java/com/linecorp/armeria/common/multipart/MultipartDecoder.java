@@ -29,7 +29,6 @@ import com.google.common.math.LongMath;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-import com.linecorp.armeria.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamDecoder;
@@ -46,8 +45,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
-final class MultipartDecoder extends AbstractStreamMessage<BodyPart>
-        implements StreamDecoder<HttpData, BodyPart> {
+final class MultipartDecoder implements StreamMessage<BodyPart>, StreamDecoder<HttpData, BodyPart> {
 
     private static final AtomicReferenceFieldUpdater<MultipartDecoder, MultipartSubscriber>
             delegatedSubscriberUpdater = AtomicReferenceFieldUpdater.newUpdater(MultipartDecoder.class,

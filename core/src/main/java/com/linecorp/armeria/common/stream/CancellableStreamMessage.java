@@ -42,7 +42,7 @@ import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 
-abstract class CancellableStreamMessage<T> extends AbstractStreamMessage<T> {
+abstract class CancellableStreamMessage<T> extends AggregationSupport implements StreamMessage<T> {
 
     static final Logger logger = LoggerFactory.getLogger(CancellableStreamMessage.class);
 

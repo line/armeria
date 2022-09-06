@@ -29,14 +29,16 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMessage;
 import com.linecorp.armeria.common.SplitHttpMessage;
-import com.linecorp.armeria.common.stream.AbstractStreamMessage;
+import com.linecorp.armeria.common.stream.AggregationSupport;
 import com.linecorp.armeria.common.stream.ByteStreamMessage;
+import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.util.concurrent.EventExecutor;
 
-abstract class AbstractSplitHttpMessage extends AbstractStreamMessage<HttpData> implements SplitHttpMessage {
+abstract class AbstractSplitHttpMessage extends AggregationSupport
+        implements StreamMessage<HttpData>, SplitHttpMessage {
 
     private static final AtomicIntegerFieldUpdater<AbstractSplitHttpMessage> subscribedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(AbstractSplitHttpMessage.class, "subscribed");

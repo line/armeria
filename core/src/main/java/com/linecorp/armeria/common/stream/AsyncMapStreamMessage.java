@@ -32,7 +32,7 @@ import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 import io.netty.util.concurrent.EventExecutor;
 
-final class AsyncMapStreamMessage<T, U> extends AbstractStreamMessage<U> {
+final class AsyncMapStreamMessage<T, U> implements StreamMessage<U> {
     private final StreamMessage<T> source;
     private final Function<T, CompletableFuture<U>> function;
     private final int maxConcurrency;

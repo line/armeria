@@ -40,7 +40,6 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.AbstractStreamMessage;
 import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
@@ -49,7 +48,7 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.util.concurrent.EventExecutor;
 
-final class DefaultMultipart extends AbstractStreamMessage<HttpData> implements Multipart {
+final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
 
     private static final BaseEncoding base64 = BaseEncoding.base64().omitPadding();
     private static final String BOUNDARY_PARAMETER = "boundary";

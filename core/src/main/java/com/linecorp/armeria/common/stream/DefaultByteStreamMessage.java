@@ -34,7 +34,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.concurrent.EventExecutor;
 
-final class DefaultByteStreamMessage extends AbstractStreamMessage<HttpData> implements ByteStreamMessage {
+final class DefaultByteStreamMessage implements ByteStreamMessage {
 
     private final StreamMessage<? extends HttpData> delegate;
 
