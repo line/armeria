@@ -20,11 +20,13 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
 import org.slf4j.MDC;
 import org.slf4j.Marker;
+import org.slf4j.event.KeyValuePair;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
@@ -327,6 +329,21 @@ public final class RequestContextExportingAppender
         }
 
         @Override
+        public int getNanoseconds() {
+            return event.getNanoseconds();
+        }
+
+        @Override
+        public long getSequenceNumber() {
+            return event.getSequenceNumber();
+        }
+
+        @Override
+        public List<KeyValuePair> getKeyValuePairs() {
+            return event.getKeyValuePairs();
+        }
+
+        @Override
         public StackTraceElement[] getCallerData() {
             return event.getCallerData();
         }
@@ -339,6 +356,11 @@ public final class RequestContextExportingAppender
         @Override
         public Marker getMarker() {
             return event.getMarker();
+        }
+
+        @Override
+        public List<Marker> getMarkerList() {
+            return event.getMarkerList();
         }
 
         @Override

@@ -1,14 +1,14 @@
 [versions]
 akka = "2.6.19"
 bouncycastle = "1.70"
-brotli4j = "1.7.1"
+brotli4j = "1.8.0"
 curator = "5.3.0"
-dagger = "2.43.1"
+dagger = "2.43.2"
 dropwizard1 = "1.3.29"
 dropwizard2 = "2.1.1"
-errorprone = "2.14.0"
+errorprone = "2.15.0"
 eureka = "1.10.17"
-graphql-kotlin = "6.1.0"
+graphql-kotlin = "6.2.2"
 grpc-kotlin = "1.3.0"
 groovy = "3.0.5"
 guava = "31.1-jre"
@@ -17,12 +17,12 @@ jetty93 = '9.3.30.v20211001'
 jetty94 = "9.4.48.v20220622"
 jmh = "1.35"
 json-unit = "2.35.0"
-junit5 = "5.8.2"
+junit5 = "5.9.0"
 kotlin = "1.7.10"
 kotlin-coroutine = "1.6.4"
-micrometer = "1.9.2"
+micrometer = "1.9.3"
 micrometer13 = "1.3.20"
-mockito = "4.6.1"
+mockito = "4.7.0"
 monix = "3.4.1"
 munit = "0.7.29"
 okhttp4 = "4.10.0"
@@ -30,30 +30,30 @@ opensaml = "3.4.6"
 protobuf = "3.21.1"
 reactive-grpc = "1.2.3"
 reactive-streams = "1.0.4"
-reactor = "3.4.21"
+reactor = "3.4.22"
 resteasy = "5.0.4.Final"
 retrofit2 = "2.9.0"
-sangria = "3.0.1"
+sangria = "3.2.0"
 sangria-slowlog = "2.0.4"
 scala-java8-compat = "1.0.2"
 scalapb = "0.11.11"
 scalapb-json = "0.12.0"
 slf4j = "1.7.36"
 spring-boot1 = "1.5.22.RELEASE"
-spring-boot2 = "2.7.2"
+spring-boot2 = "2.7.3"
 tomcat8 = "8.5.81"
 tomcat9 = "9.0.65"
 
 [boms]
-brave = { module = "io.zipkin.brave:brave-bom", version = "5.13.10" }
-dropwizard-metrics = { module = "io.dropwizard.metrics:metrics-bom", version = "4.2.10" }
+brave = { module = "io.zipkin.brave:brave-bom", version = "5.13.11" }
+dropwizard-metrics = { module = "io.dropwizard.metrics:metrics-bom", version = "4.2.12" }
 # Ensure that we use the same Protobuf version as what gRPC depends on.
 # See: https://github.com/grpc/grpc-java/blob/master/gradle/libs.versions.toml
 #      (Switch to the right tag and look for "protobuf".)
-grpc-java = { module = "io.grpc:grpc-bom", version = "1.48.0" }
-jackson = { module = "com.fasterxml.jackson:jackson-bom", version = "2.13.3" }
+grpc-java = { module = "io.grpc:grpc-bom", version = "1.49.0" }
+jackson = { module = "com.fasterxml.jackson:jackson-bom", version = "2.13.4" }
 junit5 = { module = "org.junit:junit-bom", version = "5.9.0" }
-netty = { module = "io.netty:netty-bom", version = "4.1.79.Final" }
+netty = { module = "io.netty:netty-bom", version = "4.1.80.Final" }
 
 # Akka is used only for testing in it:grpcweb module.
 [libraries.akka-http-cors_v213]
@@ -280,7 +280,7 @@ version = "4.3.1"
 # gax-grpc is only used for gRPC test module.
 [libraries.gax-grpc]
 module = "com.google.api:gax-grpc"
-version = "2.18.7"
+version = "2.19.0"
 
 [libraries.graphql-java]
 module = "com.graphql-java:graphql-java"
@@ -562,10 +562,11 @@ version.ref = "kotlin-coroutine"
 module = "org.jetbrains.kotlinx:kotlinx-coroutines-rx2"
 version.ref = "kotlin-coroutine"
 
+# Don't upgrade Logback to 1.4.0 which requires Java 11
 [libraries.logback]
 module = "ch.qos.logback:logback-classic"
-version = "1.2.11"
-javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.11/"
+version = "1.3.0"
+javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.3.0/"
 
 [libraries.micrometer-core]
 module = "io.micrometer:micrometer-core"
@@ -823,7 +824,7 @@ module = "org.scala-lang:scala-library"
 version = "2.13.8"
 [libraries.scala_v3]
 module = "org.scala-lang:scala3-library_3"
-version = "3.1.3"
+version = "3.2.0"
 
 [libraries.scala-collection-compat_v212]
 module = "org.scala-lang.modules:scala-collection-compat_2.12"
@@ -990,6 +991,9 @@ javadocs = "https://tomcat.apache.org/tomcat-9.0-doc/api/"
 [libraries.tomcat8-jasper]
 module = "org.apache.tomcat.embed:tomcat-embed-jasper"
 version.ref = "tomcat8"
+[libraries.tomcat8-el]
+module = "org.apache.tomcat.embed:tomcat-embed-el"
+version.ref = "tomcat8"
 [libraries.tomcat9-core]
 module = "org.apache.tomcat.embed:tomcat-embed-core"
 version.ref = "tomcat9"
@@ -1022,7 +1026,7 @@ module = "org.dmonix.junit:zookeeper-junit"
 version = "1.2"
 
 [plugins]
-jmh = { id = "me.champeau.jmh", version = "0.6.6" }
+jmh = { id = "me.champeau.jmh", version = "0.6.7" }
 osdetector = { id = "com.google.osdetector", version = "1.6.2" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
