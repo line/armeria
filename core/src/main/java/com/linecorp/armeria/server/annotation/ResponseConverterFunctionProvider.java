@@ -37,5 +37,5 @@ public interface ResponseConverterFunctionProvider {
      * @param responseType the return {@link Type} of the annotated HTTP service method
      */
     @Nullable
-    ResponseConverterFunction newResponseConverterFunction(Type responseType);
+    ResponseConverterFunction createResponseConverterFunction(Type responseType);
 }
