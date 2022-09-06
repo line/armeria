@@ -37,7 +37,7 @@ public interface AggregationOptions {
     }
 
     /**
-     * Returns the {@link EventExecutor} that executes the aggregation on.
+     * Returns the {@link EventExecutor} that executes the aggregation.
      */
     EventExecutor executor();
 
