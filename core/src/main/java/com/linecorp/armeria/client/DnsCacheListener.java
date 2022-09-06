@@ -42,7 +42,7 @@ public interface DnsCacheListener {
 
     /**
      * Invoked when an eviction occurred for the {@link DnsRecord}s. The eviction may occur due to exceeding
-     * a maximum size or timed expiration. The cause may vary according to the
+     * a maximum size or timed expiration. The cause may vary depending on the
      * {@link DnsCacheBuilder#cacheSpec(String)} of the {@link DnsCache}.
      *
      * @param question the DNS question.

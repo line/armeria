@@ -90,10 +90,8 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
      * Sets whether to enable auto refresh for expired {@link DnsRecord}s.
      * This option is enabled by default.
      *
-     * <p>If disable this option, the expired {@link DnsRecord} is removed from the {@link DnsCache} and a new
-     * {@link DnsQuery} will be executed when a connection is newly established.
-     * The DNS time may make the total of duration of a request longer. So it is recommended to turn on this
-     * option when a <strong>limited</strong> number of hostnames are used.
+     * <p>If this option is disabled, the expired {@link DnsRecord} is removed from the {@link DnsCache} and a
+     * new {@link DnsQuery} will be executed when the next request to the domain is made.
      */
     @UnstableApi
     public DnsResolverGroupBuilder enableAutoRefresh(boolean autoRefresh) {
@@ -144,6 +142,8 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
      * If this option is unspecified and {@link #enableAutoRefresh(boolean)} is set to
      * {@code true}, a cached {@link DnsRecord} is automatically refreshed until the {@link ClientFactory}
      * is closed.
+     *
+     * <p>Note this method is mutually exclusive with {@link #autoRefreshTimeout(ToLongFunction)}.
      */
     @UnstableApi
     public DnsResolverGroupBuilder autoRefreshTimeout(Duration timeout) {
@@ -156,6 +156,8 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
      * If this option is unspecified and {@link #enableAutoRefresh(boolean)} is set to
      * {@code true}, a cached {@link DnsRecord} is automatically refreshed until the {@link ClientFactory}
      * is closed.
+     *
+     * <p>Note this method is mutually exclusive with {@link #autoRefreshTimeout(ToLongFunction)}.
      */
     @UnstableApi
     public DnsResolverGroupBuilder autoRefreshTimeoutMillis(long timeoutMillis) {
@@ -179,7 +181,7 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
         if (autoRefreshTimeoutFunction == null) {
             autoRefreshTimeoutFunction = DEFAULT_AUTO_REFRESH_TIMEOUT_FUNCTION;
         }
-        if (autoRefreshBackoff == null) {
+        if (autoRefresh && autoRefreshBackoff == null) {
             autoRefreshBackoff = Backoff.ofDefault();
         }
         return new RefreshingAddressResolverGroup(cacheSpec(), negativeTtl(), resolvedAddressTypes,

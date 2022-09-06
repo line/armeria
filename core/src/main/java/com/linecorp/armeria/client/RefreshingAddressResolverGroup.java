@@ -94,6 +94,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     private final DnsCache dnsResolverCache;
 
     private final boolean autoRefresh;
+    @Nullable
     private final Backoff autoRefreshBackoff;
     private final ToLongFunction<String> autoRefreshTimeoutFunction;
 
@@ -109,7 +110,7 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
 
     RefreshingAddressResolverGroup(
             String cacheSpec, int negativeTtl, @Nullable ResolvedAddressTypes resolvedAddressTypes,
-            DnsCache dnsResolverCache, boolean autoRefresh, Backoff autoRefreshBackoff,
+            DnsCache dnsResolverCache, boolean autoRefresh, @Nullable Backoff autoRefreshBackoff,
             ToLongFunction<String> autoRefreshTimeoutFunction,
             List<String> searchDomains, int ndots, long queryTimeoutMillis,
             HostsFileEntriesResolver hostsFileEntriesResolver,

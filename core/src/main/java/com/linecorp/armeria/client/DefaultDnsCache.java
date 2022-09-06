@@ -64,39 +64,40 @@ final class DefaultDnsCache implements DnsCache {
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         this.negativeTtl = negativeTtl;
+        cache = Caffeine.from(cacheSpec)
+                        .removalListener((RemovalListener<DnsQuestion, CacheEntry>) (key, value, cause) -> {
+                            if (value != null) {
+                                value.scheduledFuture.cancel(true);
+                            }
 
-        final Caffeine<Object, Object> caffeine = Caffeine.from(cacheSpec);
-        caffeine.removalListener((RemovalListener<DnsQuestion, CacheEntry>) (key, value, cause) -> {
-            if (value != null) {
-                value.scheduledFuture.cancel(true);
-            }
+                            if (key == null || value == null) {
+                                // A key or value could be null if collected.
+                                return;
+                            }
 
-            if (key == null || value == null) {
-                // A key or value could be null if collected.
-                return;
-            }
+                            final boolean evicted = cause.wasEvicted();
+                            if (evicted) {
+                                if (!evictionWarned) {
+                                    evictionWarned = true;
+                                    logger.warn(
+                                            "{} is evicted due to '{}'. Please consider increasing the " +
+                                            "maximum size or " +
+                                            "expiration timeout of the DNS cache. cache spec: {}", key, cause
+                                            , cacheSpec);
+                                } else {
+                                    logger.debug("{} is evicted due to {}.", key, cause);
+                                }
+                            }
 
-            final boolean evicted = cause.wasEvicted();
-            if (evicted) {
-                if (!evictionWarned) {
-                    evictionWarned = true;
-                    logger.warn(
-                            "{} is evicted due to '{}'. Please consider increasing the maximum size or " +
-                            "expiration timeout of the DNS cache. cache spec: {}", key, cause, cacheSpec);
-                } else {
-                    logger.debug("{} is evicted due to {}.", key, cause);
-                }
-            }
-
-            final UnknownHostException reason = value.cause();
-            final List<DnsRecord> records = value.records();
-            assert records != null || reason != null;
-            for (DnsCacheListener listener : listeners) {
-                invokeListener(listener, evicted, key, records, reason);
-            }
-        });
-        caffeine.executor(executor);
-        cache = caffeine.build();
+                            final UnknownHostException reason = value.cause();
+                            final List<DnsRecord> records = value.records();
+                            assert records != null || reason != null;
+                            for (DnsCacheListener listener : listeners) {
+                                invokeListener(listener, evicted, key, records, reason);
+                            }
+                        })
+                        .executor(executor)
+                        .build();
 
         final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.client.dns.cache");
         CaffeineMetricSupport.setup(meterRegistry, idPrefix, cache);
@@ -181,10 +182,10 @@ final class DefaultDnsCache implements DnsCache {
         private final ScheduledFuture<?> scheduledFuture;
         int hashCode;
 
-        private CacheEntry(Cache<DnsQuestion, CacheEntry> cache, DnsQuestion question,
-                           @Nullable List<DnsRecord> records,
-                           @Nullable UnknownHostException cause, ScheduledExecutorService executor,
-                           int timeToLive) {
+        CacheEntry(Cache<DnsQuestion, CacheEntry> cache, DnsQuestion question,
+                   @Nullable List<DnsRecord> records,
+                   @Nullable UnknownHostException cause, ScheduledExecutorService executor,
+                   int timeToLive) {
             assert records != null || cause != null;
             this.records = records;
             this.cause = cause;

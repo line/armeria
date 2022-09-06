@@ -653,8 +653,8 @@ class RefreshingAddressResolverTest {
                 assertThat(newStaticCacheEntry.address().getAddress())
                         .isEqualTo(NetUtil.createByteArrayFromIpAddressString("1.1.1.2"));
                 // New CacheEntry should inherit the original creationTimeNanos
-                assertThat(oldStaticCacheEntry.creationTimeNanos())
-                        .isEqualTo(newStaticCacheEntry.creationTimeNanos());
+                assertThat(oldStaticCacheEntry.originalCreationTimeNanos())
+                        .isEqualTo(newStaticCacheEntry.originalCreationTimeNanos());
                 assertThat(newDynamicCacheEntry).isNull();
             }
         }

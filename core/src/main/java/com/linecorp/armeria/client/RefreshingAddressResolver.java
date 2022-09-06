@@ -60,6 +60,7 @@ final class RefreshingAddressResolver
     private final DefaultDnsResolver resolver;
     private final List<DnsRecordType> dnsRecordTypes;
     private final int negativeTtl;
+    @Nullable
     private final Backoff autoRefreshBackoff;
     private final boolean autoRefresh;
     private final ToLongFunction<String> autoRefreshTimeoutFunction;
@@ -70,7 +71,7 @@ final class RefreshingAddressResolver
                               List<DnsRecordType> dnsRecordTypes,
                               Cache<String, CacheEntry> addressResolverCache,
                               DnsCache dnsResolverCache, int negativeTtl,
-                              boolean autoRefresh, Backoff autoRefreshBackoff,
+                              boolean autoRefresh, @Nullable Backoff autoRefreshBackoff,
                               ToLongFunction<String> autoRefreshTimeoutFunction) {
         super(eventLoop);
         this.addressResolverCache = addressResolverCache;
@@ -255,7 +256,8 @@ final class RefreshingAddressResolver
         private final boolean cacheable;
         @Nullable
         private final ScheduledFuture<?> negativeCacheFuture;
-        private final long creationTimeNanos;
+        // A new CacheEntry should inherit the creation time of the original CacheEntry.
+        private final long originalCreationTimeNanos;
 
         private boolean refreshing;
         @Nullable
@@ -263,7 +265,7 @@ final class RefreshingAddressResolver
         private int numAttemptsSoFar = 1;
 
         CacheEntry(String hostname, @Nullable InetAddress address, List<DnsQuestion> questions,
-                   @Nullable Long creationTimeNanos, @Nullable Throwable cause) {
+                   @Nullable Long originalCreationTimeNanos, @Nullable Throwable cause) {
             this.hostname = hostname;
             this.address = address;
             this.questions = questions;
@@ -290,13 +292,13 @@ final class RefreshingAddressResolver
             }
             this.cacheable = cacheable;
             this.negativeCacheFuture = negativeCacheFuture;
-            if (creationTimeNanos != null) {
-                this.creationTimeNanos = creationTimeNanos;
+            if (originalCreationTimeNanos != null) {
+                this.originalCreationTimeNanos = originalCreationTimeNanos;
             } else {
                 if (autoRefreshTimeoutFunction == DEFAULT_AUTO_REFRESH_TIMEOUT_FUNCTION) {
-                    this.creationTimeNanos = 0;
+                    this.originalCreationTimeNanos = 0;
                 } else {
-                    this.creationTimeNanos = System.nanoTime();
+                    this.originalCreationTimeNanos = System.nanoTime();
                 }
             }
         }
@@ -334,7 +336,7 @@ final class RefreshingAddressResolver
             refreshing = true;
 
             // 'sendQueries()' always successfully completes.
-            sendQueries(questions, hostname, creationTimeNanos).thenAccept(entry -> {
+            sendQueries(questions, hostname, originalCreationTimeNanos).thenAccept(entry -> {
                 if (executor().inEventLoop()) {
                     maybeUpdate(hostname, entry);
                 } else {
@@ -352,6 +354,8 @@ final class RefreshingAddressResolver
 
             final Throwable cause = entry.cause();
             if (cause != null) {
+                // autoRefreshBackoff is not null if autoRefresh is true.
+                assert autoRefreshBackoff != null;
                 final long nextDelayMillis = autoRefreshBackoff.nextDelayMillis(numAttemptsSoFar++);
 
                 if (nextDelayMillis < 0) {
@@ -396,7 +400,8 @@ final class RefreshingAddressResolver
                     return false;
                 }
 
-                final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() - creationTimeNanos);
+                final long elapsedMillis = TimeUnit.NANOSECONDS.toMillis(System.nanoTime() -
+                                                                         originalCreationTimeNanos);
                 return elapsedMillis < timeoutMillis;
             } catch (Exception ex) {
                 logger.warn("Unexpected exception while invoking 'autoRefreshTimeoutFunction.applyAsLong({})'",
@@ -410,8 +415,8 @@ final class RefreshingAddressResolver
         }
 
         @VisibleForTesting
-        long creationTimeNanos() {
-            return creationTimeNanos;
+        long originalCreationTimeNanos() {
+            return originalCreationTimeNanos;
         }
 
         @Override
@@ -423,7 +428,7 @@ final class RefreshingAddressResolver
                               .add("cause", cause)
                               .add("cacheable", cacheable)
                               .add("numAttemptsSoFar", numAttemptsSoFar)
-                              .add("creationTimeNanos", creationTimeNanos)
+                              .add("originalCreationTimeNanos", originalCreationTimeNanos)
                               .toString();
         }
     }
