@@ -149,7 +149,7 @@ configure(projectsWithFlags('java')) {
         implementation libs.slf4j.api
         testImplementation libs.slf4j.jul.to.slf4j
 
-        // TODO(ikhoon): Remove this condition when Dropwizard supports Logback 1.3.0 or above.
+        // Dropwizard has its own logback dependency, so don't need to add it.
         if (!project.name.contains('dropwizard')) {
             testImplementation libs.logback
         }
