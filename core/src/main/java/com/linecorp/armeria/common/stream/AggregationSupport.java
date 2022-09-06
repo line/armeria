@@ -63,7 +63,7 @@ abstract class AggregationSupport {
      * Aggregates an {@link HttpMessage} into an {@link AggregatedHttpMessage} using
      * the specified {@link AggregationOptions}.
      *
-     * <p>Note that this method is added for internal usage. Therefore, <strong>must not</strong> override or
+     * <p>Note that this method is added for internal usage. Therefore, you <strong>must not</strong> override or
      * call this method if you are not familiar with Armeria's internal implementation.
      */
     @UnstableApi
