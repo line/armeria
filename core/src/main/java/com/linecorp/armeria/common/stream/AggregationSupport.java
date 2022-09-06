@@ -41,7 +41,7 @@ import io.netty.buffer.ByteBufAllocator;
 /**
  * A helper class to support caching the aggregated result of {@link HttpMessage}.
  *
- * <p>Note that {@link StreamMessage} does not support aggregation because don't know how to aggregate a
+ * <p>Note that {@link StreamMessage} does not support aggregation because it doesn't know how to aggregate a
  * stream of arbitrary objects in a {@link StreamMessage}. Although this class is not directly used in
  * {@link StreamMessage}'s API, it is injected on top of {@link AbstractStreamMessage} due to the limitation
  * of the multiple class hierarchy so that all variants of {@link HttpRequest} and {@link HttpResponse} take
