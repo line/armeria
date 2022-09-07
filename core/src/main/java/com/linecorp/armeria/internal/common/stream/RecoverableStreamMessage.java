@@ -147,7 +147,12 @@ public final class RecoverableStreamMessage<T> implements StreamMessage<T> {
     @Override
     public CompletableFuture<List<T>> collect(EventExecutor executor, SubscriptionOption... options) {
         if (allowResuming) {
-            // As the optimized `collect()` method gathers all elements into a list, resuming is unsupported.
+            // `upstream.collect()` either completes all elements into a list or exceptionally completes an
+            // exception. So the downstream can't see the elements written before an error with the `upstream
+            // .collect()`.
+            // However, `StreamMessage.collect()`, which uses Subscriber to collect the upstream's elements
+            // one by one, can deliver successfully published objects to the downstream before an error and
+            // resume the error with a fallback stream.
             return StreamMessage.super.collect(executor, options);
         }
 
