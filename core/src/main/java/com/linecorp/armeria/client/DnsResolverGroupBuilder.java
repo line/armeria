@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
@@ -109,7 +108,9 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
 
     /**
      * Sets the {@link ToLongFunction} which determines how long the {@link DnsRecord}s for a hostname should
-     * be refreshed after the first cache.
+     * be refreshed after the first cache. The {@link ToLongFunction} should return the refresh timeout in
+     * milliseconds. If a non-positive number is returned, the {@link DnsRecord}s are removed immediately
+     * without refresh.
      *
      * <p>For example:
      * <pre>{@code
@@ -123,15 +124,10 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
      *     ...
      * });
      * }</pre>
-     *
-     * <p>Note this method is mutually exclusive with {@link #autoRefreshTimeout(Duration)} and
-     * {@link #autoRefreshTimeoutMillis(long)}.
      */
     @UnstableApi
     public DnsResolverGroupBuilder autoRefreshTimeout(ToLongFunction<? super String> timeoutFunction) {
         requireNonNull(timeoutFunction, "timeoutFunction");
-        checkState(autoRefreshTimeoutFunction == null, "'autoRefreshTimeout()' was set already: %s",
-                   autoRefreshTimeoutFunction);
         //noinspection unchecked
         autoRefreshTimeoutFunction = (ToLongFunction<String>) timeoutFunction;
         return this;
@@ -141,9 +137,7 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
      * Sets the timeout after which a refreshing {@link DnsRecord} should expire.
      * If this option is unspecified and {@link #enableAutoRefresh(boolean)} is set to
      * {@code true}, a cached {@link DnsRecord} is automatically refreshed until the {@link ClientFactory}
-     * is closed.
-     *
-     * <p>Note this method is mutually exclusive with {@link #autoRefreshTimeout(ToLongFunction)}.
+     * is closed. {@link Duration#ZERO} disables the timeout.
      */
     @UnstableApi
     public DnsResolverGroupBuilder autoRefreshTimeout(Duration timeout) {
@@ -155,14 +149,18 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
      * Sets the timeout in milliseconds after which a refreshing {@link DnsRecord} should expire.
      * If this option is unspecified and {@link #enableAutoRefresh(boolean)} is set to
      * {@code true}, a cached {@link DnsRecord} is automatically refreshed until the {@link ClientFactory}
-     * is closed.
-     *
-     * <p>Note this method is mutually exclusive with {@link #autoRefreshTimeout(ToLongFunction)}.
+     * is closed. {@code 0} disables the timeout.
      */
     @UnstableApi
     public DnsResolverGroupBuilder autoRefreshTimeoutMillis(long timeoutMillis) {
-        checkArgument(timeoutMillis > 0, "timeoutMillis: %s (expected: > 0)", timeoutMillis);
-        return autoRefreshTimeout(hostname -> timeoutMillis);
+        checkArgument(timeoutMillis >= 0, "timeoutMillis: %s (expected: >= 0)", timeoutMillis);
+        final long adjustedTimeoutMillis;
+        if (timeoutMillis == 0) {
+            adjustedTimeoutMillis = Long.MAX_VALUE;
+        } else {
+            adjustedTimeoutMillis = timeoutMillis;
+        }
+        return autoRefreshTimeout(hostname -> adjustedTimeoutMillis);
     }
 
     @Nullable
