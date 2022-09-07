@@ -81,9 +81,8 @@ final class DefaultDnsCache implements DnsCache {
                                     evictionWarned = true;
                                     logger.warn(
                                             "{} is evicted due to '{}'. Please consider increasing the " +
-                                            "maximum size or " +
-                                            "expiration timeout of the DNS cache. cache spec: {}", key, cause
-                                            , cacheSpec);
+                                            "maximum size or expiration timeout of the DNS cache. cache spec:" +
+                                            " {}", key, cause, cacheSpec);
                                 } else {
                                     logger.debug("{} is evicted due to {}.", key, cause);
                                 }
