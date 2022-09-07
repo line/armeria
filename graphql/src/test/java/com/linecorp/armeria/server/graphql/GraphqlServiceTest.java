@@ -117,7 +117,7 @@ class GraphqlServiceTest {
                                                                  .get("/graphql");
 
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.contentUtf8()).isEqualTo("Missing query");
+        assertThat(response.contentUtf8()).isEqualTo("query is missing");
     }
 
     @Test
