@@ -112,14 +112,27 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
      * milliseconds. If a non-positive number is returned, the {@link DnsRecord}s are removed immediately
      * without refresh.
      *
+     * <p>Note that the timeout function is called whenever the cached {@link DnsRecord}s expire.
+     *
      * <p>For example:
      * <pre>{@code
+     * AtomicInteger refreshCounter = new AtomicInteger(MAX_NUM_REFRESH);
      * dnsResolverGroupBuilder.autoRefreshTimeout(hostname -> {
      *     if (hostname.endsWith("busy.domain.com")) {
      *         return Duration.ofDays(7).toMillis(); // Automatically refresh the cached domain for 7 days.
      *     }
      *     if (hostname.endsWith("sporadic.domain.dom")) {
      *         return 0; // Don't need to refresh a sporadically used domain.
+     *     }
+     *
+     *     if (hostname.endsWith("counter.domain.dom")) {
+     *         // Allow refreshing up to MAX_NUM_REFRESH times.
+     *         if (refreshCounter.getAndDecrease() > 0) {
+     *             return Long.MAX_VALUE;
+     *         } else {
+     *             refreshCounter.set(MAX_NUM_REFRESH);
+     *             return 0;
+     *         }
      *     }
      *     ...
      * });
