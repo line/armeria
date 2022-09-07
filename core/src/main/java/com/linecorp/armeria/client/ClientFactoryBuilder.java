@@ -315,7 +315,6 @@ public final class ClientFactoryBuilder implements TlsSetters {
      */
     @Override
     public ClientFactoryBuilder tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
-        ensureNoTlsKeySet();
         requireNonNull(keyCertChainFile, "keyCertChainFile");
         requireNonNull(keyFile, "keyFile");
         return tlsCustomizer(customizer -> customizer.keyManager(keyCertChainFile, keyFile, keyPassword));
@@ -337,7 +336,6 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Override
     public ClientFactoryBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream,
                                     @Nullable String keyPassword) {
-        ensureNoTlsKeySet();
         requireNonNull(keyCertChainInputStream, "keyCertChainInputStream");
         requireNonNull(keyInputStream, "keyInputStream");
 
@@ -391,7 +389,6 @@ public final class ClientFactoryBuilder implements TlsSetters {
     @Override
     public ClientFactoryBuilder tls(PrivateKey key, @Nullable String keyPassword,
                                     Iterable<? extends X509Certificate> keyCertChain) {
-        ensureNoTlsKeySet();
         requireNonNull(key, "key");
         requireNonNull(keyCertChain, "keyCertChain");
 
@@ -407,13 +404,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      */
     @Override
     public ClientFactoryBuilder tls(KeyManagerFactory keyManagerFactory) {
-        ensureNoTlsKeySet();
         return tlsCustomizer(customizer -> customizer.keyManager(keyManagerFactory));
-    }
-
-    private void ensureNoTlsKeySet() {
-        checkState(!tlsKeyCertSet, "TLS key and certificates are set already.");
-        tlsKeyCertSet = true;
     }
 
     /**
