@@ -53,7 +53,7 @@ dropwizard-metrics = { module = "io.dropwizard.metrics:metrics-bom", version = "
 grpc-java = { module = "io.grpc:grpc-bom", version = "1.49.0" }
 jackson = { module = "com.fasterxml.jackson:jackson-bom", version = "2.13.4" }
 junit5 = { module = "org.junit:junit-bom", version = "5.9.0" }
-netty = { module = "io.netty:netty-bom", version = "4.1.80.Final" }
+netty = { module = "io.netty:netty-bom", version = "4.1.79.Final" }
 
 # Akka is used only for testing in it:grpcweb module.
 [libraries.akka-http-cors_v213]
