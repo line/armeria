@@ -62,8 +62,9 @@ final class RefreshingAddressResolver
     private final int negativeTtl;
     @Nullable
     private final Backoff autoRefreshBackoff;
-    private final boolean autoRefresh;
+    @Nullable
     private final ToLongFunction<String> autoRefreshTimeoutFunction;
+    private final boolean autoRefresh;
 
     private volatile boolean resolverClosed;
 
@@ -72,13 +73,17 @@ final class RefreshingAddressResolver
                               Cache<String, CacheEntry> addressResolverCache,
                               DnsCache dnsResolverCache, int negativeTtl,
                               boolean autoRefresh, @Nullable Backoff autoRefreshBackoff,
-                              ToLongFunction<String> autoRefreshTimeoutFunction) {
+                              @Nullable ToLongFunction<String> autoRefreshTimeoutFunction) {
         super(eventLoop);
         this.addressResolverCache = addressResolverCache;
         this.resolver = resolver;
         this.dnsRecordTypes = dnsRecordTypes;
         this.negativeTtl = negativeTtl;
         this.autoRefresh = autoRefresh;
+        if (autoRefresh) {
+            assert autoRefreshBackoff != null;
+            assert autoRefreshTimeoutFunction != null;
+        }
         this.autoRefreshBackoff = autoRefreshBackoff;
         this.autoRefreshTimeoutFunction = autoRefreshTimeoutFunction;
         dnsResolverCache.addListener(this);
@@ -354,8 +359,6 @@ final class RefreshingAddressResolver
 
             final Throwable cause = entry.cause();
             if (cause != null) {
-                // autoRefreshBackoff is not null if autoRefresh is true.
-                assert autoRefreshBackoff != null;
                 final long nextDelayMillis = autoRefreshBackoff.nextDelayMillis(numAttemptsSoFar++);
 
                 if (nextDelayMillis < 0) {

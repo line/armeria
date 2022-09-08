@@ -189,11 +189,13 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
                                             "if 'autoRefresh' is disabled");
         }
 
-        if (autoRefreshTimeoutFunction == null) {
-            autoRefreshTimeoutFunction = DEFAULT_AUTO_REFRESH_TIMEOUT_FUNCTION;
-        }
-        if (autoRefresh && autoRefreshBackoff == null) {
-            autoRefreshBackoff = Backoff.ofDefault();
+        if (autoRefresh) {
+            if (autoRefreshTimeoutFunction == null) {
+                autoRefreshTimeoutFunction = DEFAULT_AUTO_REFRESH_TIMEOUT_FUNCTION;
+            }
+            if (autoRefreshBackoff == null) {
+                autoRefreshBackoff = Backoff.ofDefault();
+            }
         }
         return new RefreshingAddressResolverGroup(cacheSpec(), negativeTtl(), resolvedAddressTypes,
                                                   maybeCreateDnsCache(), autoRefresh,
