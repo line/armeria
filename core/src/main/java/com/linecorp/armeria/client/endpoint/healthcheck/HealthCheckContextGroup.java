@@ -24,6 +24,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
@@ -99,5 +101,13 @@ final class HealthCheckContextGroup {
     CompletableFuture<?> whenInitialized() {
         assert initFutures != null : "Should call initialize() before invoking this method.";
         return initFutures;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("contexts", contexts)
+                          .add("candidates", candidates)
+                          .toString();
     }
 }

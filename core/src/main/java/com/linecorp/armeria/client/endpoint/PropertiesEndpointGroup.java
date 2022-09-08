@@ -230,4 +230,11 @@ public final class PropertiesEndpointGroup extends DynamicEndpointGroup {
         }
         future.complete(null);
     }
+
+    @Override
+    public String toString() {
+        return toStringHelper()
+                .add("watchRegisterKey", watchRegisterKey)
+                .toString();
+    }
 }

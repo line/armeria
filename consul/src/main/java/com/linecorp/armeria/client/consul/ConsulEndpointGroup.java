@@ -139,4 +139,13 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
         }
         future.complete(null);
     }
+
+    @Override
+    public String toString() {
+        return toStringHelper()
+                .add("serviceName", serviceName)
+                .add("datacenter", datacenter)
+                .add("filter", filter)
+                .toString();
+    }
 }
