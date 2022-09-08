@@ -329,12 +329,12 @@ final class RefreshingAddressResolver
                 return;
             }
 
-            final String hostname = address.getHostName();
             if (refreshing) {
                 return;
             }
             refreshing = true;
 
+            final String hostname = address.getHostName();
             // 'sendQueries()' always successfully completes.
             sendQueries(questions, hostname, originalCreationTimeNanos).thenAccept(entry -> {
                 if (executor().inEventLoop()) {

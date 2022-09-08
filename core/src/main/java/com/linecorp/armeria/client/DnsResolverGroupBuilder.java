@@ -125,7 +125,7 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
      *         return 0; // Don't need to refresh a sporadically used domain.
      *     }
      *
-     *     if (hostname.endsWith("counter.domain.dom")) {
+     *     if (hostname.endsWith("counting.domain.dom")) {
      *         // Allow refreshing up to MAX_NUM_REFRESH times.
      *         if (refreshCounter.getAndDecrease() > 0) {
      *             return Long.MAX_VALUE;
