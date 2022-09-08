@@ -335,6 +335,9 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                           .add("numCandidates", delegateEndpoints.size())
                           .add("selectionStrategy", selectionStrategy().getClass())
                           .add("initialized", whenReady().isDone())
+                          .add("initialSelectionTimeoutMillis", initialSelectionTimeoutMillis)
+                          .add("selectionTimeoutMillis", selectionTimeoutMillis)
+                          .add("contextGroupChain", contextGroupChain)
                           .toString();
     }
 }

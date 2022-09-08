@@ -48,7 +48,7 @@ import io.netty.util.concurrent.EventExecutor;
  * will happen from an I/O thread, meaning the order of the filtering will match the
  * order that the {@code delegate} processes the objects in.
  */
-public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
+public abstract class FilteredStreamMessage<T, U> extends AggregationSupport implements StreamMessage<U> {
 
     private static final Logger logger = LoggerFactory.getLogger(FilteredStreamMessage.class);
 
