@@ -107,7 +107,6 @@ public abstract class AbstractArmeriaAutoConfiguration {
      * Wrap {@link Server} with {@link SmartLifecycle}.
      */
     @Bean
-    @ConditionalOnMissingBean(SmartLifecycle.class)
     public SmartLifecycle armeriaServerGracefulShutdownLifecycle(Server server) {
         return new ArmeriaServerGracefulShutdownLifecycle(server);
     }
