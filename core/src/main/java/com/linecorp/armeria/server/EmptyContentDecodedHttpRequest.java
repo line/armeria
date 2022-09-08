@@ -41,6 +41,8 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private final boolean keepAlive;
     private final RoutingContext routingContext;
     private final ExchangeType exchangeType;
+    private final long requestStartTimeNanos;
+    private final long requestStartTimeMicros;
     @Nullable
     private ServiceRequestContext ctx;
 
@@ -50,7 +52,8 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
 
     EmptyContentDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                    boolean keepAlive, RoutingContext routingContext,
-                                   ExchangeType exchangeType) {
+                                   ExchangeType exchangeType, long requestStartTimeNanos,
+                                   long requestStartTimeMicros) {
         delegate = HttpRequest.of(headers);
         this.eventLoop = eventLoop;
         this.id = id;
@@ -58,6 +61,8 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
         this.keepAlive = keepAlive;
         this.routingContext = routingContext;
         this.exchangeType = exchangeType;
+        this.requestStartTimeNanos = requestStartTimeNanos;
+        this.requestStartTimeMicros = requestStartTimeMicros;
     }
 
     @Override
@@ -183,12 +188,22 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     }
 
     @Override
-    public boolean isAggregated() {
+    public boolean needsAggregation() {
         return false;
     }
 
     @Override
     public ExchangeType exchangeType() {
         return exchangeType;
+    }
+
+    @Override
+    public long requestStartTimeNanos() {
+        return requestStartTimeNanos;
+    }
+
+    @Override
+    public long requestStartTimeMicros() {
+        return requestStartTimeMicros;
     }
 }

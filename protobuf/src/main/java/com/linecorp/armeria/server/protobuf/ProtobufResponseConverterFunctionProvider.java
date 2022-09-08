@@ -15,7 +15,7 @@
  */
 package com.linecorp.armeria.server.protobuf;
 
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapUnaryAsyncType;
 
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
@@ -38,9 +38,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 public final class ProtobufResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
 
     @Override
-    public ResponseConverterFunction createResponseConverterFunction(
-            Type returnType,
-            ResponseConverterFunction responseConverter) {
+    public ResponseConverterFunction createResponseConverterFunction(Type returnType) {
         if (isSupportedType(returnType)) {
             return new ProtobufResponseConverterFunction();
         }
@@ -52,7 +50,7 @@ public final class ProtobufResponseConverterFunctionProvider implements Response
      * {@link ProtobufResponseConverterFunction}.
      */
     private static boolean isSupportedType(Type type) {
-        type = unwrapAsyncType(type);
+        type = unwrapUnaryAsyncType(type);
         if (type instanceof Class) {
             return MessageLite.class.isAssignableFrom((Class<?>) type);
         }
@@ -61,8 +59,7 @@ public final class ProtobufResponseConverterFunctionProvider implements Response
             final ParameterizedType parameterizedType = (ParameterizedType) type;
             final Class<?> rawType = (Class<?>) parameterizedType.getRawType();
 
-            if (Iterable.class.isAssignableFrom(rawType) ||
-                Stream.class.isAssignableFrom(rawType) ||
+            if (Iterable.class.isAssignableFrom(rawType) || Stream.class.isAssignableFrom(rawType) ||
                 Publisher.class.isAssignableFrom(rawType)) {
                 final Class<?> typeArgument = (Class<?>) parameterizedType.getActualTypeArguments()[0];
                 return Message.class.isAssignableFrom(typeArgument);

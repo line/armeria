@@ -26,7 +26,11 @@ class ClassUtilTest extends FunSuite {
   test("should unwrap Future type") {
     val method = classOf[ClassUtilTest].getDeclaredMethod("future")
     val returnType = method.getGenericReturnType
-    val tpe = ClassUtil.unwrapAsyncType(returnType)
+    
+    var tpe = ClassUtil.unwrapUnaryAsyncType(returnType)
+    assertThat(tpe.asInstanceOf[Class[_]]).isAssignableFrom(classOf[String])
+    
+    tpe = ClassUtil.unwrapAsyncType(returnType)
     assertThat(tpe.asInstanceOf[Class[_]]).isAssignableFrom(classOf[String])
   }
 

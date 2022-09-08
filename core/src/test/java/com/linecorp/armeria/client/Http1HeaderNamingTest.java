@@ -139,7 +139,6 @@ class Http1HeaderNamingTest {
             boolean hasXForwardedFor = false;
             for (;;) {
                 final String line = reader.readLine();
-                System.out.println(line);
                 if (Strings.isNullOrEmpty(line)) {
                     break;
                 }

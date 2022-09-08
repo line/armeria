@@ -6,12 +6,12 @@ dependencies {
     implementation project(':graphql-protocol')
     implementation project(':graphql')
 
-    runtimeOnly 'org.slf4j:slf4j-simple'
+    runtimeOnly libs.slf4j.simple
 
     testImplementation project(':junit5')
-    testImplementation 'net.javacrumbs.json-unit:json-unit-fluent'
-    testImplementation 'org.assertj:assertj-core'
-    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation libs.json.unit.fluent
+    testImplementation libs.assertj
+    testImplementation libs.junit5.jupiter.api
 }
 
 application {

@@ -2,25 +2,27 @@ dependencies {
     implementation project(':grpc-protocol')
     implementation project(':protobuf')
 
-    api 'com.google.protobuf:protobuf-java'
-    implementation 'com.google.protobuf:protobuf-java-util'
+    api libs.protobuf.java
+    implementation libs.protobuf.java.util
 
     // gRPC
-    [ 'grpc-core', 'grpc-protobuf', 'grpc-services', 'grpc-stub' ].each {
-        api "io.grpc:$it"
-    }
+    api libs.grpc.core
+    api libs.grpc.protobuf
+    api libs.grpc.services
+    api libs.grpc.stub
+
     // gRPC-Kotlin
-    optionalImplementation 'io.grpc:grpc-kotlin-stub'
-    optionalImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core'
+    optionalImplementation libs.grpc.kotlin
+    optionalImplementation libs.kotlin.coroutines.core
 
-    api 'org.curioswitch.curiostack:protobuf-jackson'
+    api libs.protobuf.jackson
 
-    testImplementation 'com.google.api:gax-grpc'
-    testImplementation 'io.grpc:grpc-okhttp'
-    testImplementation 'io.grpc:grpc-testing'
-    testImplementation 'io.micrometer:micrometer-registry-prometheus'
-    testImplementation 'io.projectreactor:reactor-test'
-    testImplementation 'org.reactivestreams:reactive-streams-tck'
+    testImplementation libs.gax.grpc
+    testImplementation libs.grpc.okhttp
+    testImplementation libs.grpc.testing
+    testImplementation libs.micrometer.prometheus
+    testImplementation libs.reactor.test
+    testImplementation libs.reactivestreams.tck
 }
 
 tasks {

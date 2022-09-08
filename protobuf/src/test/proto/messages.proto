@@ -28,6 +28,10 @@ message SimpleResponse {
   int32 status = 2;
 }
 
+message SimpleRepeatedResponse {
+  repeated string messages = 1;
+}
+
 // The type of payload that should be returned.
 enum PayloadType {
   // Compressable text format.

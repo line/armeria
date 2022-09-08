@@ -23,7 +23,7 @@ import com.google.common.collect.Iterables
 import com.linecorp.armeria.common._
 import com.linecorp.armeria.common.annotation.{Nullable, UnstableApi}
 import com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom
-import com.linecorp.armeria.internal.server.annotation.ClassUtil.{typeToClass, unwrapAsyncType}
+import com.linecorp.armeria.internal.server.annotation.ClassUtil.{typeToClass, unwrapUnaryAsyncType}
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.{defaultJsonPrinter, isProtobuf}
@@ -75,7 +75,7 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
   // Use java.lang.Boolean as the return type.
   // Because scala.Boolean is equivalent to Java primitive boolean that does not allow null.
   override def isResponseStreaming(returnType: Type, @Nullable produceType: MediaType): java.lang.Boolean = {
-    val clazz = typeToClass(unwrapAsyncType(returnType))
+    val clazz = typeToClass(unwrapUnaryAsyncType(returnType))
     if (clazz == null) {
       return null
     }

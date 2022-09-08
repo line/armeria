@@ -1,9 +1,9 @@
 dependencies {
     testImplementation project(':grpc')
-    testImplementation 'com.squareup.okhttp:okhttp:2.7.5'
-    testImplementation 'io.grpc:grpc-core'
-    testImplementation 'io.grpc:grpc-interop-testing'
-    testImplementation 'io.grpc:grpc-okhttp'
-    testImplementation 'io.grpc:grpc-testing'
-    testImplementation 'org.apache.hbase:hbase-shaded-client'
+    testImplementation libs.okhttp2
+    testImplementation libs.grpc.core
+    testImplementation libs.grpc.interop.testing
+    testImplementation libs.grpc.okhttp
+    testImplementation libs.grpc.testing
+    testImplementation libs.hbase
 }

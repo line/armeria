@@ -119,14 +119,16 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
         final RequestHeadersBuilder grpcHeaders = clientHeaders.toBuilder();
 
         final MediaType framedContentType;
-        if (contentType.is(MediaType.PROTOBUF)) {
+        if (contentType.isProtobuf()) {
             framedContentType = GrpcSerializationFormats.PROTO.mediaType();
         } else if (contentType.is(MediaType.JSON)) {
             framedContentType = GrpcSerializationFormats.JSON.mediaType();
         } else {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    MediaType.PLAIN_TEXT_UTF_8,
-                                   "Unsupported media type. Only application/protobuf is supported.");
+                                   "Unsupported media type. Only application/protobuf, " +
+                                   "application/x-protobuf, application/x-google-protobuf" +
+                                   "and application/json are supported.");
         }
         grpcHeaders.contentType(framedContentType);
 
@@ -149,8 +151,8 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
                 if (t != null) {
                     responseFuture.completeExceptionally(t);
                 } else {
-                    frameAndServe(unwrap(), ctx, grpcHeaders.build(),
-                                  clientRequest.content(), responseFuture, null);
+                    frameAndServe(unwrap(), ctx, grpcHeaders.build(), clientRequest.content(),
+                                  responseFuture, null, contentType);
                 }
             }
             return null;

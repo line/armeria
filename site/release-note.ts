@@ -258,6 +258,7 @@ function renderReleaseNotes(pullRequests: PullRequest[]): string {
     .flatMap((pr) => pr.users)
     .sortBy()
     .uniq()
+    .filter((user) => user !== "CLAassistant")
     .map((user) => `  '${user}'`)
     .join(',\n')
     .value();
