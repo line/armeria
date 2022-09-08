@@ -5,8 +5,9 @@ date: 2022-09-08
 ## 🌟 New features
 
 - You can now repeatedly aggregate an <type://HttpRequest> and <type://HttpResponse> when using
-  <type://HttpRequest#aggregate()> and <type://HttpResponse#aggregate()>. If an <type://HttpRequest> and
-  <type://HttpResponse> is aggregated before, the cached value is returned for the next calls. #3789 #4366
+  <type://HttpRequest#aggregate()> and <type://HttpResponse#aggregate()>. If an <type://HttpRequest> or an
+  <type://HttpResponse> is aggregated before, the cached <type://AggregatedHttpRequest> or
+  <type://AggregatedHttpResponse> is returned for subsequent calls. #3789 #4366
   ```java
   HttpRequest request = ...;
   AggregatedHttpRequest aggregatedReq0 = request.aggregate().join();
@@ -18,8 +19,8 @@ date: 2022-09-08
   AggregatedHttpResponse aggregatedRes1 = response.aggregate().join();
   assert aggregatedRes0 == aggregatedRes1;
   ```
-- You can now customize the behavior of auto refresh for `AddressResolverGroup` with
-  <type://DnsResolverGroupBuilder> #4400
+- You can now customize the behavior of auto-refresh for an `AddressResolverGroup` with
+  <type://DnsResolverGroupBuilder>. #4400
   ```java 
   // Disable auto refresh 
   ClientFactory
@@ -33,7 +34,7 @@ date: 2022-09-08
   ClientFactory
     .builder()
     .domainNameResolverCustomizer(customizer -> { 
-      customizer.autoRefreshTimeout(Duration.ofDays(1)) // 👈👈👈
+      customizer.autoRefreshTimeout(Duration.ofDays(1)); // 👈👈👈
     })
     .build(); 
   
@@ -79,15 +80,15 @@ date: 2022-09-08
     }
   }
   ```
-- <type://DocService> now automatically generates a specification of an annotated service for well known types. #4309 #4322
+- <type://DocService> now automatically generates a specification of annotated services for well known types. #4309 #4322
   - Java POJO
   - Kotlin data class
   - Scala case class
   - Protocol Buffers' `Message`
   - ScalaPB's `GeneratedMessage`
-- You can now upload files to your <type://GraphqlService> when using 
+- You can now upload files to your <type://GraphqlService> using
   [GraphQL multipart requests](https://github.com/jaydenseric/graphql-multipart-request-spec). #3971 #4199
-- You can now use `armeria-version-catalog` module to easily import Armeria dependencies
+- You can now use `armeria-version-catalog` module to easily import Armeria and Armeria's direct dependencies
   using [Gradle's version catalog](https://docs.gradle.org/current/userguide/platforms.html#sec:version-catalog-plugin). #4377
   ```groovy
   // in settings.gradle
@@ -102,7 +103,7 @@ date: 2022-09-08
 
 ## 📈 Improvements
 
-- `CompositeException` now shows full stack traces for all nested exceptions 
+- `CompositeException` now shows full stack traces of all nested exceptions
   when `-Dcom.linecorp.armeria.verboseExceptions=true` is set. #4347 #4356
 
 ## 🛠️ Bug fixes
@@ -131,12 +132,12 @@ date: 2022-09-08
 - HTTP/2 graceful shutdown timeout is correctly set using <type://ClientFactory#idleTimeoutMillis()>. #4381
 - Unframed <typeplural://GrpcService> now support `application/x-protobuf` and `application/x-google-protobuf`
   media types. #4355 #4364
-- You can now use a custom `JsonFormat.Printer` for <type://ProtobufResponseConverterFunction>  #4301 #4336
+- You can now use a custom `JsonFormat.Printer` for <type://ProtobufResponseConverterFunction>.  #4301 #4336
 
 ## 📃 Documentation
 
 - You can now learn how to write a gRPC service and client with Armeria by walking through
-   [the gRPC tutorial](/tutorials/grpc/blog). #3987
+  [the gRPC tutorial](/tutorials/grpc/blog). #3987
   - Special thanks to @freevie who volunteered for this.
 
 ## 🏚️ Deprecations
