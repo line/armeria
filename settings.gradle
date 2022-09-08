@@ -3,7 +3,9 @@ rootProject.name = 'armeria'
 apply from: "${rootDir}/gradle/scripts/settings-flags.gradle"
 
 // Published BOM projects
-includeWithFlags ':bom',                                 'bom', 'publish'
+includeWithFlags ':bom',                                 'bom'
+// Published version catalog projects
+includeWithFlags ':version-catalog',                     'version-catalog'
 
 // Published Java projects
 includeWithFlags ':annotation-processor',                'java', 'publish', 'relocate'
@@ -78,6 +80,7 @@ includeWithFlags ':it:builders',                    'java'
 includeWithFlags ':it:context-storage',             'java'
 includeWithFlags ':it:dgs',                         'java'
 includeWithFlags ':it:flags-cyclic-dep',            'java'
+includeWithFlags ':it:graphql-multipart',           'java'
 includeWithFlags ':it:grpcweb',                     'java', 'akka-grpc_2.13'
 includeWithFlags ':it:grpc:java',                   'java'
 includeWithFlags ':it:grpc:kotlin',                 'java', 'relocate', 'kotlin-grpc', 'kotlin'
@@ -98,6 +101,7 @@ includeWithFlags ':it:spring:boot2-tomcat8',        'java', 'relocate'
 includeWithFlags ':it:spring:boot2-tomcat9',        'java', 'relocate'
 includeWithFlags ':it:spring:webflux-security',     'java', 'relocate'
 includeWithFlags ':it:thrift-fullcamel',            'java', 'relocate'
+includeWithFlags ':it:trace-context-leak',          'java', 'relocate'
 includeWithFlags ':jetty9.3',                       'java', 'relocate'
 includeWithFlags ':testing-internal',               'java', 'relocate'
 includeWithFlags ':thrift0.12',                     'java', 'relocate'
@@ -146,3 +150,5 @@ includeWithFlags ':examples:spring-boot-webflux',                  'java'
 includeWithFlags ':examples:static-files',                         'java'
 includeWithFlags ':examples:thrift',                               'java'
 includeWithFlags ':examples:tutorials:rest-api-annotated-service', 'java'
+includeWithFlags ':examples:tutorials:grpc-tutorial',              'java'
+project(':examples:tutorials:grpc-tutorial').projectDir = file('examples/tutorials/grpc')

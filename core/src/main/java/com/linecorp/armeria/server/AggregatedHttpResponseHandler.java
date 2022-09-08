@@ -37,6 +37,7 @@ import com.linecorp.armeria.unsafe.PooledObjects;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2Error;
 
 final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
@@ -54,21 +55,32 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
     @Override
     public Void apply(@Nullable AggregatedHttpResponse response, @Nullable Throwable cause) {
+        final EventLoop eventLoop = reqCtx.eventLoop();
+        if (eventLoop.inEventLoop()) {
+            apply0(response, cause);
+        } else {
+            eventLoop.execute(() -> apply0(response, cause));
+        }
+        return null;
+    }
+
+    private void apply0(@Nullable AggregatedHttpResponse response, @Nullable Throwable cause) {
         clearTimeout();
         if (cause != null) {
+            cause = Exceptions.peel(cause);
             recoverAndWrite(cause);
-            return null;
+            return;
         }
 
         assert response != null;
         if (failIfStreamOrSessionClosed()) {
             PooledObjects.close(response.content());
-            return null;
+            return;
         }
 
         logBuilder().startResponse();
         write(response, null);
-        return null;
+        return;
     }
 
     private void write(AggregatedHttpResponse response, @Nullable Throwable cause) {
@@ -81,6 +93,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         if (cause instanceof HttpResponseException) {
             toAggregatedHttpResponse((HttpResponseException) cause).handleAsync((res, cause0) -> {
                 if (cause0 != null) {
+                    cause0 = Exceptions.peel(cause0);
                     write(internalServerErrorResponse, cause0);
                 } else {
                     write(res, cause);

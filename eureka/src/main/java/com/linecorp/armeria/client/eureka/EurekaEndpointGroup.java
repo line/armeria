@@ -410,4 +410,11 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
         }
         return endpoint;
     }
+
+    @Override
+    public String toString() {
+        return toStringHelper()
+                .add("requestHeaders", requestHeaders)
+                .toString();
+    }
 }

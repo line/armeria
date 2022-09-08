@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.stream.NonOverridableStreamMessageWrapper;
 
@@ -26,6 +28,12 @@ final class StreamMessageBasedHttpResponse
 
     StreamMessageBasedHttpResponse(StreamMessage<? extends HttpObject> delegate) {
         super(delegate);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public CompletableFuture<AggregatedHttpResponse> aggregate(AggregationOptions options) {
+        return super.aggregate(options);
     }
 
     @Override

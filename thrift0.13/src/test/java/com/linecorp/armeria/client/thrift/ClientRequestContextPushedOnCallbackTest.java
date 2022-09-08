@@ -18,8 +18,7 @@ package com.linecorp.armeria.client.thrift;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.CompletableFuture;
 
 import org.apache.thrift.async.AsyncMethodCallback;
 import org.junit.jupiter.api.Test;
@@ -51,27 +50,26 @@ class ClientRequestContextPushedOnCallbackTest {
 
     @Test
     void pushedContextOnAsyncMethodCallback() throws Exception {
-        final AtomicReference<ClientRequestContext> ctxHolder = new AtomicReference<>();
+        final CompletableFuture<ClientRequestContext> ctxHolder = new CompletableFuture<>();
         final AsyncIface client = ThriftClients.newClient(server.httpUri() + "/hello", AsyncIface.class);
 
         final ClientRequestContext ctx;
-        final CountDownLatch latch = new CountDownLatch(1);
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             client.hello("foo", new AsyncMethodCallback<String>() {
                 @Override
                 public void onComplete(String response) {
                     assertThat(response).isEqualTo("Hello, foo!");
-                    ctxHolder.set(RequestContext.currentOrNull());
-                    latch.countDown();
+                    ctxHolder.complete(RequestContext.currentOrNull());
                 }
 
                 @Override
-                public void onError(Exception exception) {}
+                public void onError(Exception exception) {
+                    ctxHolder.completeExceptionally(exception);
+                }
             });
             ctx = captor.get();
         }
 
-        latch.await();
         assertThat(ctx).isSameAs(ctxHolder.get());
     }
 
@@ -82,9 +80,8 @@ class ClientRequestContextPushedOnCallbackTest {
     }
 
     private static void checkContextOnAsyncMethodCallbackOnError(AsyncIface client) throws Exception {
-        final AtomicReference<ClientRequestContext> ctxHolder = new AtomicReference<>();
+        final CompletableFuture<ClientRequestContext> ctxHolder = new CompletableFuture<>();
         final ClientRequestContext ctx;
-        final CountDownLatch latch = new CountDownLatch(1);
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             client.hello("foo", new AsyncMethodCallback<String>() {
                 @Override
@@ -92,14 +89,12 @@ class ClientRequestContextPushedOnCallbackTest {
 
                 @Override
                 public void onError(Exception exception) {
-                    ctxHolder.set(RequestContext.currentOrNull());
-                    latch.countDown();
+                    ctxHolder.complete(RequestContext.currentOrNull());
                 }
             });
             ctx = captor.get();
         }
 
-        latch.await();
         assertThat(ctx).isSameAs(ctxHolder.get());
     }
 

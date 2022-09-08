@@ -16,8 +16,12 @@
 
 package com.linecorp.armeria.server;
 
+import java.util.concurrent.CompletableFuture;
+
 import javax.annotation.Nonnull;
 
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -78,6 +82,12 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
         if (trailers != null) {
             ctx.logBuilder().requestTrailers(trailers);
         }
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
+        return super.aggregate(options);
     }
 
     @Override
@@ -176,7 +186,7 @@ final class AggregatingDecodedHttpRequest extends AggregatingStreamMessage<HttpO
     }
 
     @Override
-    public boolean isAggregated() {
+    public boolean needsAggregation() {
         return true;
     }
 

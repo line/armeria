@@ -31,7 +31,7 @@ import io.netty.util.concurrent.EventExecutor;
  * Wraps a {@link StreamMessage} and forwards its method invocations to {@code delegate}.
  * @param <T> the type of elements
  */
-public class StreamMessageWrapper<T> implements StreamMessage<T> {
+public class StreamMessageWrapper<T> extends AggregationSupport implements StreamMessage<T> {
 
     private final StreamMessage<? extends T> delegate;
 

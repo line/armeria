@@ -4,9 +4,11 @@ import org.jsoup.select.Elements
 
 import java.util.concurrent.atomic.AtomicBoolean
 
+import static java.lang.Math.min
+
 buildscript {
     dependencies {
-        classpath 'org.jsoup:jsoup:1.14.3'
+        classpath libs.jsoup
     }
 }
 
@@ -287,7 +289,8 @@ class TestsReportTask extends DefaultTask {
                 // Create an link to directly create an issue from the error message
                 String ghIssueTitle = URLEncoder.encode("Test failure: `$method`", "UTF-8")
                 // 8k is the maximum allowed URL length for GitHub
-                String ghIssueBody = URLEncoder.encode("```\n${detail.substring(0, 6000)}\n```\n", "UTF-8")
+                String ghIssueBody = URLEncoder.encode(
+                        "```\n${detail.substring(0, min(6000, detail.length()))}\n```\n", "UTF-8")
                 String ghIssueLink =
                         "https://github.com/line/armeria/issues/new?title=$ghIssueTitle&body=$ghIssueBody"
                 String ghSearchQuery = URLEncoder.encode("is:issue $method", "UTF-8")

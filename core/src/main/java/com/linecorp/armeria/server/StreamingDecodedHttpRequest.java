@@ -189,7 +189,7 @@ final class StreamingDecodedHttpRequest extends DefaultHttpRequest implements De
     }
 
     @Override
-    public boolean isAggregated() {
+    public boolean needsAggregation() {
         return false;
     }
 
