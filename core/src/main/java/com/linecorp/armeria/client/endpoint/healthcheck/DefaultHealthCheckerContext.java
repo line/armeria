@@ -90,7 +90,7 @@ final class DefaultHealthCheckerContext
         this.handle = handle;
     }
 
-    boolean isInitialized() {
+    boolean initializationStarted() {
         return handle != null;
     }
 
@@ -298,6 +298,10 @@ final class DefaultHealthCheckerContext
         return MoreObjects.toStringHelper(this)
                           .add("originalEndpoint", originalEndpoint)
                           .add("endpoint", endpoint)
+                          .add("initializationStarted", initializationStarted())
+                          .add("initialized", initialCheckFuture.isDone())
+                          .add("destroyed", destroyed)
+                          .add("refCnt", refCnt)
                           .toString();
     }
 }

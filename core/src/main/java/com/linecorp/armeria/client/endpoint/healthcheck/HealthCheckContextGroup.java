@@ -60,7 +60,7 @@ final class HealthCheckContextGroup {
         final List<CompletableFuture<Void>> futures =
                 contexts.values().stream()
                         .peek(context -> {
-                            if (!context.isInitialized()) {
+                            if (!context.initializationStarted()) {
                                 // A newly created context
                                 context.init(checkerFactory.apply(context));
                             }
@@ -108,6 +108,7 @@ final class HealthCheckContextGroup {
         return MoreObjects.toStringHelper(this)
                           .add("contexts", contexts)
                           .add("candidates", candidates)
+                          .add("initialized", initFutures != null && initFutures.isDone())
                           .toString();
     }
 }
