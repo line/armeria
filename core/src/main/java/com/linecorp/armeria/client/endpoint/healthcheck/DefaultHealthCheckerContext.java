@@ -28,6 +28,7 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.ClientOptions;
@@ -89,7 +90,7 @@ final class DefaultHealthCheckerContext
         this.handle = handle;
     }
 
-    boolean isInitialized() {
+    boolean initializationStarted() {
         return handle != null;
     }
 
@@ -290,5 +291,17 @@ final class DefaultHealthCheckerContext
             return destroy();
         }
         return null;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("originalEndpoint", originalEndpoint)
+                          .add("endpoint", endpoint)
+                          .add("initializationStarted", initializationStarted())
+                          .add("initialized", initialCheckFuture.isDone())
+                          .add("destroyed", destroyed)
+                          .add("refCnt", refCnt)
+                          .toString();
     }
 }

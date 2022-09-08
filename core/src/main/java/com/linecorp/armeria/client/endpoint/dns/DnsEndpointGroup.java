@@ -208,4 +208,13 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
             }
         }
     }
+
+    @Override
+    public String toString() {
+        return toStringHelper()
+                .add("questions", questions)
+                .add("logPrefix", logPrefix)
+                .add("attemptsSoFar", attemptsSoFar)
+                .toString();
+    }
 }
