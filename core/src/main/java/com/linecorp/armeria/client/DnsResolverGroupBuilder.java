@@ -185,7 +185,7 @@ public final class DnsResolverGroupBuilder extends AbstractDnsResolverBuilder {
         ToLongFunction<String> autoRefreshTimeoutFunction = this.autoRefreshTimeoutFunction;
         Backoff autoRefreshBackoff = this.autoRefreshBackoff;
         if (!autoRefresh && (autoRefreshTimeoutFunction != null || autoRefreshBackoff != null)) {
-            throw new IllegalStateException("Can't set 'autoRefreshTimeoutFunction' or 'autoRefreshBackoff' " +
+            throw new IllegalStateException("Can't set 'autoRefreshTimeout()' or 'autoRefreshBackoff()' " +
                                             "if 'autoRefresh' is disabled");
         }
 

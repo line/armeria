@@ -31,6 +31,7 @@ import org.slf4j.LoggerFactory;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -75,14 +76,14 @@ final class DefaultDnsCache implements DnsCache {
                                 return;
                             }
 
-                            final boolean evicted = cause.wasEvicted();
+                            final boolean evicted = cause == RemovalCause.SIZE;
                             if (evicted) {
                                 if (!evictionWarned) {
                                     evictionWarned = true;
                                     logger.warn(
-                                            "{} is evicted due to '{}'. Please consider increasing the " +
-                                            "maximum size or expiration timeout of the DNS cache. cache spec:" +
-                                            " {}", key, cause, cacheSpec);
+                                            "{} is evicted due to size. Please consider increasing the " +
+                                            "maximum size of the DNS cache. cache spec:" +
+                                            " {}", key, cacheSpec);
                                 } else {
                                     logger.debug("{} is evicted due to {}.", key, cause);
                                 }
