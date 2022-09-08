@@ -41,9 +41,8 @@ public interface DnsCacheListener {
                    @Nullable UnknownHostException cause);
 
     /**
-     * Invoked when an eviction occurred for the {@link DnsRecord}s. The eviction may occur due to exceeding
-     * a maximum size or timed expiration. The cause may vary depending on the
-     * {@link DnsCacheBuilder#cacheSpec(String)} of the {@link DnsCache}.
+     * Invoked when an eviction occurred for the {@link DnsRecord}s. The eviction occurs due to exceeding
+     * the maximum size.
      *
      * @param question the DNS question.
      * @param records the result of a successful DNS resolution. {@code null} if failed.
