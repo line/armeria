@@ -361,9 +361,11 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
             try {
                 return super.get(timeout, unit);
             } catch (TimeoutException e) {
-                throw new TimeoutException(
+                final TimeoutException timeoutException = new TimeoutException(
                         InitialEndpointsFuture.class.getSimpleName() + " is timed out after " +
                         unit.toMillis(timeout) + " milliseconds. endpoint group: " + DynamicEndpointGroup.this);
+                timeoutException.initCause(e);
+                throw timeoutException;
             }
         }
     }
