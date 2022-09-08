@@ -8,7 +8,7 @@ import static java.lang.Math.min
 
 buildscript {
     dependencies {
-        classpath 'org.jsoup:jsoup:1.14.3'
+        classpath libs.jsoup
     }
 }
 
