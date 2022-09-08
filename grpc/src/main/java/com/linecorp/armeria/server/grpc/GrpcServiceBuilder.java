@@ -130,6 +130,9 @@ public final class GrpcServiceBuilder {
     @Nullable
     private UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler;
 
+    @Nullable
+    private HttpJsonTranscodingOptions httpJsonTranscodingOptions;
+
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
     private int maxRequestMessageLength = AbstractMessageDeframer.NO_MAX_INBOUND_MESSAGE_SIZE;
@@ -657,6 +660,13 @@ public final class GrpcServiceBuilder {
         return this;
     }
 
+    @UnstableApi
+    public GrpcServiceBuilder enableHttpJsonTranscoding(HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
+        this.enableHttpJsonTranscoding = true;
+        this.httpJsonTranscodingOptions = httpJsonTranscodingOptions;
+        return this;
+    }
+
     /**
      * Sets an error handler which handles an exception raised while serving a gRPC request transcoded from
      * an HTTP/JSON request. By default, {@link UnframedGrpcErrorHandler#ofJson()} would be set.
@@ -981,7 +991,10 @@ public final class GrpcServiceBuilder {
             grpcService = HttpJsonTranscodingService.of(
                     grpcService,
                     httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
-                                                            : UnframedGrpcErrorHandler.ofJson());
+                                                            : UnframedGrpcErrorHandler.ofJson(),
+                    httpJsonTranscodingOptions != null ? httpJsonTranscodingOptions
+                                                            : HttpJsonTranscodingOptions.of(false));
+
         }
         if (handlerRegistry.containsDecorators()) {
             grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
