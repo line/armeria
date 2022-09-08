@@ -12,7 +12,7 @@ date: 2022-09-08
   AggregatedHttpRequest aggregatedReq0 = request.aggregate().join();
   AggregatedHttpRequest aggregatedReq1 = request.aggregate().join();
   assert aggregatedReq0 == aggregatedReq1;
-  
+
   HttpResponse response = ...;
   AggregatedHttpResponse aggregatedRes0 = response.aggregate().join();
   AggregatedHttpResponse aggregatedRes1 = response.aggregate().join();
@@ -56,16 +56,16 @@ date: 2022-09-08
     .build();
   ```
 - You can now export <type://RequestOnlyLog#requestCause()> and <type://RequestLog#responseCause()> to MDC
-  by specifying `req.cause` and `res.cause` to an appender of Logback.
+  by specifying `req.cause` and `res.cause` to an appender of a Logback configuration.
   ```xml
   <?xml version="1.0" encoding="UTF-8"?>
   <configuration>
-  <appender name="RCEA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
-    ...
-    <export>req.cause</export>  <!-- 👈👈👈 -->
-    <export>res.cause</export>  <!-- 👈👈👈 -->
-    ...
-  </appender>
+    <appender name="RCEA" class="com.linecorp.armeria.common.logback.RequestContextExportingAppender">
+      ...
+      <export>req.cause</export>  <!-- 👈👈👈 -->
+      <export>res.cause</export>  <!-- 👈👈👈 -->
+      ...
+    </appender>
   </configuration>
   ```
 - You can now trace a <type://RequestContext> leak by specifying `-Dcom.linecorp.armeria.requestContextLeakDetectionSampler=<sampler-spec>`
@@ -79,8 +79,12 @@ date: 2022-09-08
     }
   }
   ```
-- <type://DocService> now automatically generates a specification for a JSON object or a protobuf message used 
-  in an annotated service's parameter or return type. #4309 #4322
+- <type://DocService> now automatically generates a specification of an annotated service for well known types. #4309 #4322
+  - Java POJO
+  - Kotlin data class
+  - Scala case class
+  - Protocol Buffers' message
+  - ScalaPB's `GeneratedMessage`
 - You can now upload files to your <type://GraphqlService> when using 
   [GraphQL multipart requests](https://github.com/jaydenseric/graphql-multipart-request-spec). #3971 #4199
 - You can now use `armeria-version-catalog` module to easily import Armeria dependencies
