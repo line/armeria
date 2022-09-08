@@ -85,7 +85,6 @@ public final class CompositeException extends RuntimeException {
      * list of suppressed exceptions.
      *
      * @param exceptions the Throwables to have as initially suppressed exceptions
-     *
      * @throws IllegalArgumentException if {@code exceptions} is empty.
      */
     public CompositeException(Throwable... exceptions) {
@@ -97,7 +96,6 @@ public final class CompositeException extends RuntimeException {
      * list of suppressed exceptions.
      *
      * @param errors the Throwables to have as initially suppressed exceptions
-     *
      * @throws IllegalArgumentException if {@code errors} is empty.
      */
     public CompositeException(Iterable<? extends Throwable> errors) {
@@ -132,7 +130,7 @@ public final class CompositeException extends RuntimeException {
      * Retrieves the list of exceptions that make up the {@code CompositeException}.
      *
      * @return the exceptions that make up the {@code CompositeException},
-     * as a {@link List} of {@link Throwable}s
+     *         as a {@link List} of {@link Throwable}s
      */
     public List<Throwable> getExceptions() {
         return exceptions;
