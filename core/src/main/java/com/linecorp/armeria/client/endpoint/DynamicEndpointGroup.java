@@ -343,6 +343,9 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
         return toStringHelper().toString();
     }
 
+    /**
+     * Returns {@link ToStringHelper} that contains fields information.
+     */
     protected ToStringHelper toStringHelper() {
         return MoreObjects.toStringHelper(this)
                           .omitNullValues()
