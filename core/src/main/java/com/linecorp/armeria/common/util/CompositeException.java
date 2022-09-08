@@ -75,7 +75,7 @@ public final class CompositeException extends RuntimeException {
 
     private final List<Throwable> exceptions;
     private final String message;
-    private final Sampler<Class<? extends Throwable>> verboseExceptionSampler;
+    private boolean isVerboseException;
 
     @Nullable
     private Throwable cause;
@@ -83,6 +83,7 @@ public final class CompositeException extends RuntimeException {
     /**
      * Constructs a CompositeException with the given array of Throwables as the
      * list of suppressed exceptions.
+     *
      * @param exceptions the Throwables to have as initially suppressed exceptions
      *
      * @throws IllegalArgumentException if {@code exceptions} is empty.
@@ -94,6 +95,7 @@ public final class CompositeException extends RuntimeException {
     /**
      * Constructs a CompositeException with the given array of Throwables as the
      * list of suppressed exceptions.
+     *
      * @param errors the Throwables to have as initially suppressed exceptions
      *
      * @throws IllegalArgumentException if {@code errors} is empty.
@@ -123,14 +125,14 @@ public final class CompositeException extends RuntimeException {
         }
         exceptions = ImmutableList.copyOf(deDupedExceptions);
         message = exceptions.size() + " exceptions occurred. ";
-        this.verboseExceptionSampler = verboseExceptionSampler;
+        isVerboseException = verboseExceptionSampler.isSampled(getClass());
     }
 
     /**
      * Retrieves the list of exceptions that make up the {@code CompositeException}.
      *
      * @return the exceptions that make up the {@code CompositeException},
-     *         as a {@link List} of {@link Throwable}s
+     * as a {@link List} of {@link Throwable}s
      */
     public List<Throwable> getExceptions() {
         return exceptions;
@@ -175,8 +177,6 @@ public final class CompositeException extends RuntimeException {
 
                         final StackTraceElement[] st = inner.getStackTrace();
                         if (st.length > 0) {
-                            final boolean isVerboseException =
-                                    verboseExceptionSampler.isSampled(innerClass);
                             final int maxStackTraceSize =
                                     isVerboseException ? st.length
                                                        : Math.min(DEFAULT_MAX_NUM_STACK_TRACES, st.length);
@@ -272,7 +272,9 @@ public final class CompositeException extends RuntimeException {
     }
 
     abstract static class PrintStreamOrWriter {
-        /** Prints the specified string as a line on this StreamOrWriter. */
+        /**
+         * Prints the specified string as a line on this StreamOrWriter.
+         */
         abstract void println(Object o);
     }
 
@@ -326,6 +328,7 @@ public final class CompositeException extends RuntimeException {
 
     /**
      * Returns the number of suppressed exceptions.
+     *
      * @return the number of suppressed exceptions
      */
     public int size() {
