@@ -344,11 +344,11 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
                                                   Function<AnnotatedElement, @Nullable T> extractor) {
         // There are no standard rules to get properties of a response object. But we might assume that a
         // response object is a gettable object. Before directly accessing private fields, try the patterns that
-        // are commonly used in gettable objects. Although the constructor has the characteristics of settable,
+        // are commonly used in gettable objects. Although the constructor has the characteristics of setters,
         // it is added just in case.
         //
-        // - Java POJO style setters such as `void setName(String name)`.
-        // - Non-standard setters such as `void name(String name)`.
+        // - Java POJO style getters such as `String getName()`.
+        // - Non-standard getters such as `String name()`.
         // - Private fields.
         // - A single constructor as a last resort.
 

@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin;
 
 /**
- * Creates a new {@link NamedTypeInfo} dynamically via Java SPI (Service Provider Interface).
+ * Creates a new {@link NamedTypeInfo} loaded dynamically via Java SPI (Service Provider Interface).
  * The loaded {@link NamedTypeInfoProvider}s are used in the {@link DocServicePlugin}s to extract
  * a {@link NamedTypeInfo} from the given {@code typeDescriptor}.
  */
