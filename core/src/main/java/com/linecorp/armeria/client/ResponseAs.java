@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Predicate;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -32,6 +33,7 @@ import com.google.common.collect.ImmutableList;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.JacksonObjectMapperProvider;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -105,17 +107,19 @@ public interface ResponseAs<T, R> {
         return aggregateAndConvert(AggregatedResponseAs.json(clazz));
     }
 
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified non-container type using the default {@link ObjectMapper}.
+     * {@link Predicate} type argument specify what type of response is allowed.
+     *
+     * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
+     * {@link Map}. Use {@link #json(TypeReference)} for the container type.
+     *
+     * @see JacksonObjectMapperProvider
+     */
     @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz,
-                                                        HttpStatusPredicate predicate) {
-        requireNonNull(clazz, "clazz");
-        requireNonNull(predicate, "predicate");
-        return aggregateAndConvert(AggregatedResponseAs.json(clazz, predicate));
-    }
-
-    @UnstableApi
-    static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz,
-                                                        HttpStatusClassPredicate predicate) {
+                                                        Predicate<HttpStatus> predicate) {
         requireNonNull(clazz, "clazz");
         requireNonNull(predicate, "predicate");
         return aggregateAndConvert(AggregatedResponseAs.json(clazz, predicate));
@@ -135,18 +139,17 @@ public interface ResponseAs<T, R> {
         return aggregateAndConvert(AggregatedResponseAs.json(clazz, mapper));
     }
 
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified non-container type using the specified {@link ObjectMapper}.
+     * {@link Predicate} type argument specify what type of response is allowed.
+     *
+     * <p>Note that this method should NOT be used if the result type is a container ({@link Collection} or
+     * {@link Map}. Use {@link #json(TypeReference, ObjectMapper)} for the container type.
+     */
     @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz, ObjectMapper mapper,
-                                                        HttpStatusPredicate predicate) {
-        requireNonNull(clazz, "clazz");
-        requireNonNull(mapper, "mapper");
-        requireNonNull(predicate, "predicate");
-        return aggregateAndConvert(AggregatedResponseAs.json(clazz, mapper, predicate));
-    }
-
-    @UnstableApi
-    static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz, ObjectMapper mapper,
-                                                        HttpStatusClassPredicate predicate) {
+                                                        Predicate<HttpStatus> predicate) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
         requireNonNull(predicate, "predicate");
@@ -165,17 +168,16 @@ public interface ResponseAs<T, R> {
         return aggregateAndConvert(AggregatedResponseAs.json(typeRef));
     }
 
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified Java type using the default {@link ObjectMapper}.
+     * {@link Predicate} type argument specify what type of response is allowed.
+     *
+     * @see JacksonObjectMapperProvider
+     */
     @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
-                                                        HttpStatusPredicate predicate) {
-        requireNonNull(typeRef, "typeRef");
-        requireNonNull(predicate, "predicate");
-        return aggregateAndConvert(AggregatedResponseAs.json(typeRef, predicate));
-    }
-
-    @UnstableApi
-    static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
-                                                        HttpStatusClassPredicate predicate) {
+                                                        Predicate<HttpStatus> predicate) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(predicate, "predicate");
         return aggregateAndConvert(AggregatedResponseAs.json(typeRef, predicate));
@@ -193,18 +195,14 @@ public interface ResponseAs<T, R> {
         return aggregateAndConvert(AggregatedResponseAs.json(typeRef, mapper));
     }
 
+    /**
+     * Aggregates an {@link HttpResponse} and deserializes the JSON {@link AggregatedHttpResponse#content()}
+     * into the specified Java type using the specified {@link ObjectMapper}.
+     * {@link Predicate} type argument specify what type of response is allowed.
+     */
     @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
-                                                        ObjectMapper mapper, HttpStatusPredicate predicate) {
-        requireNonNull(typeRef, "typeRef");
-        requireNonNull(mapper, "mapper");
-        requireNonNull(predicate, "predicate");
-        return aggregateAndConvert(AggregatedResponseAs.json(typeRef, mapper, predicate));
-    }
-
-    @UnstableApi
-    static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
-                                                        ObjectMapper mapper, HttpStatusClassPredicate predicate) {
+                                                        ObjectMapper mapper, Predicate<HttpStatus> predicate) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
         requireNonNull(predicate, "predicate");

@@ -25,6 +25,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Predicate;
 
 import org.reactivestreams.Publisher;
 
@@ -258,7 +259,8 @@ public final class WebClientRequestPreparation
      * }</pre>
      *
      * <p>Note that this method should NOT be used if the result type is a container such as
-     * {@link Collection} or {@link Map}. Use {@link #asJson(TypeReference, HttpStatusClass)} for the container type.
+     * {@link Collection} or {@link Map}.
+     * Use {@link #asJson(TypeReference, HttpStatusClass)} for the container type.
      *
      * @throws InvalidHttpResponseException if the {@link HttpStatusClass} of the response is not
      *                                      same to {@link HttpStatusClass} type argument or fails to decode
@@ -275,7 +277,7 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified non-container type using
      * the default {@link ObjectMapper}.
-     * {@link HttpStatusPredicate} type argument specify what type of response is allowed.
+     * {@link Predicate} type argument specify what type of response is allowed.
      * For example:
      * <pre>{@code
      * WebClient client = WebClient.of("https://api.example.com");
@@ -283,56 +285,23 @@ public final class WebClientRequestPreparation
      *     client.prepare()
      *           .get("/v1/items/1")
      *           .asJson(MyObject.class,
-     *                   new HttpStatusPredicate(HttpStatus.INTERNAL_SERVER_ERROR))
+     *                   httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
      *           .execute();
      * }</pre>
      *
      * <p>Note that this method should NOT be used if the result type is a container such as
-     * {@link Collection} or {@link Map}. Use {@link #asJson(TypeReference, HttpStatusPredicate)}
+     * {@link Collection} or {@link Map}. Use {@link #asJson(TypeReference, Predicate)}
      * for the container type.
      *
      * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
      *                                      same to {@link HttpStatus} given as a parameter of
-     *                                      {@link HttpStatusPredicate} type argument or fails to decode
+     *                                      {@link Predicate} method or fails to decode
      *                                      the response body into the result type.
      * @see JacksonObjectMapperProvider
      */
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
-                                                                              HttpStatusPredicate predicate) {
-        requireNonNull(clazz, "clazz");
-        requireNonNull(predicate, "predicate");
-        return asEntity(ResponseAs.json(clazz, predicate));
-    }
-
-    /**
-     * Deserializes the JSON content of the {@link HttpResponse} into the specified non-container type using
-     * the default {@link ObjectMapper}.
-     * {@link HttpStatusClassPredicate} type argument specify what type of response is allowed.
-     * For example:
-     * <pre>{@code
-     * WebClient client = WebClient.of("https://api.example.com");
-     * CompletableFuture<ResponseEntity<MyObject>> response =
-     *     client.prepare()
-     *           .get("/v1/items/1")
-     *           .asJson(MyObject.class,
-     *                   new HttpStatusClassPredicate(HttpStatusClass.SERVER_ERROR))
-     *           .execute();
-     * }</pre>
-     *
-     * <p>Note that this method should NOT be used if the result type is a container such as
-     * {@link Collection} or {@link Map}. Use {@link #asJson(TypeReference, HttpStatusClassPredicate)}
-     * for the container type.
-     *
-     * @throws InvalidHttpResponseException if the {@link HttpStatusClass} of the response is not
-     *                                      same to {@link HttpStatusClass} given as a parameter of
-     *                                      {@link HttpStatusClassPredicate} type argument or fails to decode
-     *                                      the response body into the result type.
-     * @see JacksonObjectMapperProvider
-     */
-    @UnstableApi
-    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
-                                                                              HttpStatusClassPredicate predicate) {
+                                                                              Predicate<HttpStatus> predicate) {
         requireNonNull(clazz, "clazz");
         requireNonNull(predicate, "predicate");
         return asEntity(ResponseAs.json(clazz, predicate));
@@ -433,7 +402,7 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified non-container type using
      * the specified {@link ObjectMapper}.
-     * {@link HttpStatusPredicate} type argument specify what type of response is allowed.
+     * {@link Predicate} type argument specify what type of response is allowed.
      * For example:
      * <pre>{@code
      * ObjectMapper mapper = ...;
@@ -442,58 +411,23 @@ public final class WebClientRequestPreparation
      *     client.prepare()
      *           .get("/v1/items/1")
      *           .asJson(MyObject.class, mapper,
-     *                   new HttpStatusPredicate(HttpStatus.INTERNAL_SERVER_ERROR))
+     *                   httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
      *           .execute();
      * }</pre>
      *
      * <p>Note that this method should NOT be used if the result type is a container such as
-     * {@link Collection} or {@link Map}. Use {@link #asJson(TypeReference, ObjectMapper, HttpStatusPredicate)}
+     * {@link Collection} or {@link Map}. Use {@link #asJson(TypeReference, ObjectMapper, Predicate)}
      * for the container type.
      *
      * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
      *                                      same to {@link HttpStatus} given as a parameter of
-     *                                      {@link HttpStatusPredicate} type argument or fails to decode
+     *                                      {@link Predicate} type argument or fails to decode
      *                                      the response body into the result type.
      */
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
                                                                               ObjectMapper mapper,
-                                                                              HttpStatusPredicate predicate) {
-        requireNonNull(clazz, "clazz");
-        requireNonNull(mapper, "mapper");
-        requireNonNull(predicate, "predicate");
-        return asEntity(ResponseAs.json(clazz, mapper, predicate));
-    }
-
-    /**
-     * Deserializes the JSON content of the {@link HttpResponse} into the specified non-container type using
-     * the specified {@link ObjectMapper}.
-     * {@link HttpStatusClassPredicate} type argument specify what type of response is allowed.
-     * For example:
-     * <pre>{@code
-     * ObjectMapper mapper = ...;
-     * WebClient client = WebClient.of("https://api.example.com");
-     * CompletableFuture<ResponseEntity<MyObject>> response =
-     *     client.prepare()
-     *           .get("/v1/items/1")
-     *           .asJson(MyObject.class, mapper,
-     *                   new HttpStatusClassPredicate(HttpStatusClass.SERVER_ERROR))
-     *           .execute();
-     * }</pre>
-     *
-     * <p>Note that this method should NOT be used if the result type is a container such as
-     * {@link Collection} or {@link Map}. Use {@link #asJson(TypeReference, ObjectMapper, HttpStatusClassPredicate)}
-     * for the container type.
-     *
-     * @throws InvalidHttpResponseException if the {@link HttpStatusClass} of the response is not
-     *                                      same to {@link HttpStatusClass} given as a parameter of
-     *                                      {@link HttpStatusClassPredicate} type argument or fails to decode
-     *                                      the response body into the result type.
-     */
-    @UnstableApi
-    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
-                                                                              ObjectMapper mapper,
-                                                                              HttpStatusClassPredicate predicate) {
+                                                                              Predicate<HttpStatus> predicate) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
         requireNonNull(predicate, "predicate");
@@ -585,7 +519,7 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the default
      * {@link ObjectMapper}.
-     * {@link HttpStatusPredicate} type argument specify what type of response is allowed.
+     * {@link Predicate} type argument specify what type of response is allowed.
      * This method is useful when you want to deserialize the content into a container
      * type such as {@link List} and {@link Map}.
      * For example:
@@ -595,50 +529,19 @@ public final class WebClientRequestPreparation
      *     client.prepare()
      *           .get("/v1/items/1")
      *           .asJson(new TypeReference<List<MyObject>> {},
-     *                   new HttpStatusPredicate(HttpStatus.INTERNAL_SERVER_ERROR))
+     *                   httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
      *           .execute();
      * }</pre>
      *
      * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
      *                                      same to {@link HttpStatus} given as a parameter of
-     *                                      {@link HttpStatusPredicate} type argument or fails to decode
+     *                                      {@link Predicate} type argument or fails to decode
      *                                      the response body into the result type.
      * @see JacksonObjectMapperProvider
      */
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
-            TypeReference<? extends T> typeRef, HttpStatusPredicate predicate) {
-        requireNonNull(typeRef, "typeRef");
-        requireNonNull(predicate, "predicate");
-        return asEntity(ResponseAs.json(typeRef, predicate));
-    }
-
-    /**
-     * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the default
-     * {@link ObjectMapper}.
-     * {@link HttpStatusClassPredicate} type argument specify what type of response is allowed.
-     * This method is useful when you want to deserialize the content into a container
-     * type such as {@link List} and {@link Map}.
-     * For example:
-     * <pre>{@code
-     * WebClient client = WebClient.of("https://api.example.com");
-     * CompletableFuture<ResponseEntity<List<MyObject>>> response =
-     *     client.prepare()
-     *           .get("/v1/items/1")
-     *           .asJson(new TypeReference<List<MyObject>> {},
-     *                   new HttpStatusClassPredicate(HttpStatusClass.SERVER_ERROR))
-     *           .execute();
-     * }</pre>
-     *
-     * @throws InvalidHttpResponseException if the {@link HttpStatusClass} of the response is not
-     *                                      same to {@link HttpStatusClass} given as a parameter of
-     *                                      {@link HttpStatusClassPredicate} type argument or fails to decode
-     *                                      the response body into the result type.
-     * @see JacksonObjectMapperProvider
-     */
-    @UnstableApi
-    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
-            TypeReference<? extends T> typeRef, HttpStatusClassPredicate predicate) {
+            TypeReference<? extends T> typeRef, Predicate<HttpStatus> predicate) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(predicate, "predicate");
         return asEntity(ResponseAs.json(typeRef, predicate));
@@ -730,7 +633,7 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the
      * specified {@link ObjectMapper}.
-     * {@link HttpStatusPredicate} type argument specify what type of response is allowed.
+     * {@link Predicate} type argument specify what type of response is allowed.
      * This method is useful when you want to deserialize the content into a
      * container type such as {@link List} and {@link Map}.
      * For example:
@@ -741,50 +644,18 @@ public final class WebClientRequestPreparation
      *     client.prepare()
      *           .get("/v1/items/1")
      *           .asJson(new TypeReference<List<MyObject>> {}, mapper,
-     *                   new HttpStatusPredicate(HttpStatus.INTERNAL_SERVER_ERROR))
+     *                   httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
      *           .execute();
      * }</pre>
      *
      * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
      *                                      same to {@link HttpStatus} given as a parameter of
-     *                                      {@link HttpStatusPredicate} type argument or fails to decode
+     *                                      {@link Predicate} type argument or fails to decode
      *                                      the response body into the result type.
      */
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
-            TypeReference<? extends T> typeRef, ObjectMapper mapper, HttpStatusPredicate predicate) {
-        requireNonNull(typeRef, "typeRef");
-        requireNonNull(mapper, "mapper");
-        requireNonNull(predicate, "predicate");
-        return asEntity(ResponseAs.json(typeRef, mapper, predicate));
-    }
-
-    /**
-     * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the
-     * specified {@link ObjectMapper}.
-     * {@link HttpStatusClassPredicate} type argument specify what type of response is allowed.
-     * This method is useful when you want to deserialize the content into a
-     * container type such as {@link List} and {@link Map}.
-     * For example:
-     * <pre>{@code
-     * ObjectMapper mapper = ...;
-     * WebClient client = WebClient.of("https://api.example.com");
-     * CompletableFuture<ResponseEntity<List<MyObject>>> response =
-     *     client.prepare()
-     *           .get("/v1/items/1")
-     *           .asJson(new TypeReference<List<MyObject>> {}, mapper,
-     *                   new HttpStatusClassPredicate(HttpStatusClass.SERVER_ERROR))
-     *           .execute();
-     * }</pre>
-     *
-     * @throws InvalidHttpResponseException if the {@link HttpStatusClass} of the response is not
-     *                                      same to {@link HttpStatusClass} given as a parameter of
-     *                                      {@link HttpStatusClassPredicate} type argument or fails to decode
-     *                                      the response body into the result type.
-     */
-    @UnstableApi
-    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
-            TypeReference<? extends T> typeRef, ObjectMapper mapper, HttpStatusClassPredicate predicate) {
+            TypeReference<? extends T> typeRef, ObjectMapper mapper, Predicate<HttpStatus> predicate) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
         requireNonNull(predicate, "predicate");

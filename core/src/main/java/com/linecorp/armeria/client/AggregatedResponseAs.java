@@ -17,11 +17,14 @@
 package com.linecorp.armeria.client;
 
 import java.io.IOException;
+import java.util.function.Predicate;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.JacksonUtil;
@@ -42,13 +45,7 @@ final class AggregatedResponseAs {
     }
 
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz,
-                                                                          HttpStatusPredicate predicate) {
-        return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, clazz),
-                                                 predicate);
-    }
-
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz,
-                                                                          HttpStatusClassPredicate predicate) {
+                                                                          Predicate<HttpStatus> predicate) {
         return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, clazz),
                                                  predicate);
     }
@@ -60,14 +57,7 @@ final class AggregatedResponseAs {
 
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz,
                                                                           ObjectMapper mapper,
-                                                                          HttpStatusPredicate predicate) {
-        return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, clazz),
-                                                 predicate);
-    }
-
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz,
-                                                                          ObjectMapper mapper,
-                                                                          HttpStatusClassPredicate predicate) {
+                                                                          Predicate<HttpStatus> predicate) {
         return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, clazz),
                                                  predicate);
     }
@@ -77,13 +67,7 @@ final class AggregatedResponseAs {
     }
 
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
-                                                                          HttpStatusPredicate predicate) {
-        return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, typeRef),
-                                                 predicate);
-    }
-
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
-                                                                          HttpStatusClassPredicate predicate) {
+                                                                          Predicate<HttpStatus> predicate) {
         return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, typeRef),
                                                  predicate);
     }
@@ -95,14 +79,7 @@ final class AggregatedResponseAs {
 
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
                                                                           ObjectMapper mapper,
-                                                                          HttpStatusPredicate predicate) {
-        return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, typeRef),
-                                                 predicate);
-    }
-
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
-                                                                          ObjectMapper mapper,
-                                                                          HttpStatusClassPredicate predicate) {
+                                                                          Predicate<HttpStatus> predicate) {
         return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, typeRef),
                                                  predicate);
     }
@@ -117,18 +94,17 @@ final class AggregatedResponseAs {
 
     private static <T> ResponseEntity<T> newJsonResponseEntity(AggregatedHttpResponse response,
                                                                JsonDecoder<T> decoder,
-                                                               HttpStatusPredicate predicate) {
+                                                               Predicate<HttpStatus> predicate) {
         if (!predicate.test(response.status())) {
-            throw newInvalidHttpStatusResponseException(response, predicate);
-        }
-        return createJsonResponseEntity(response, decoder);
-    }
-
-    private static <T> ResponseEntity<T> newJsonResponseEntity(AggregatedHttpResponse response,
-                                                               JsonDecoder<T> decoder,
-                                                               HttpStatusClassPredicate predicate) {
-        if (!predicate.test(response.status().codeClass())) {
-            throw newInvalidHttpStatusClassResponseException(response, predicate);
+            if (predicate instanceof HttpStatusPredicate) {
+                throw newInvalidHttpStatusResponseException(
+                        response, ((HttpStatusPredicate) predicate).status());
+            } else if (predicate instanceof HttpStatusClassPredicate) {
+                throw newInvalidHttpStatusClassResponseException(
+                        response, ((HttpStatusClassPredicate) predicate).statusClass());
+            } else {
+                throw newInvalidPredicateResponseException(response);
+            }
         }
         return createJsonResponseEntity(response, decoder);
     }
@@ -151,18 +127,25 @@ final class AggregatedResponseAs {
     }
 
     private static InvalidHttpResponseException newInvalidHttpStatusResponseException(
-            AggregatedHttpResponse response, HttpStatusPredicate predicate) {
+            AggregatedHttpResponse response, HttpStatus status) {
         return new InvalidHttpResponseException(
                 response, "status: " + response.status() +
-                          " (expect: the " + predicate.status().reasonPhrase() + " class (" +
-                          predicate.status().codeAsText() + "). response: " + response, null);
+                          " (expect: the " + status.reasonPhrase() + " class (" + status.codeAsText() +
+                          "). response: " + response, null);
     }
 
     private static InvalidHttpResponseException newInvalidHttpStatusClassResponseException(
-            AggregatedHttpResponse response, HttpStatusClassPredicate predicate) {
+            AggregatedHttpResponse response, HttpStatusClass httpStatusClass) {
         return new InvalidHttpResponseException(
                 response, "status: " + response.status() +
-                          " (expect: the " + predicate.statusClass() + " class response: " + response, null);
+                          " (expect: the " + httpStatusClass + " class response: " + response, null);
+    }
+
+    private static InvalidHttpResponseException newInvalidPredicateResponseException(
+            AggregatedHttpResponse response) {
+        return new InvalidHttpResponseException(
+                response, "status: " + response.status() +
+                          " is not expected by predicate method. response: " + response, null);
     }
 
     @FunctionalInterface

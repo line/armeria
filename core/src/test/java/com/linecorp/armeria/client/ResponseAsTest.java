@@ -33,6 +33,7 @@ import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 
@@ -107,6 +108,18 @@ class ResponseAsTest {
     }
 
     @Test
+    void jsonObject_predicate() {
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        final HttpResponse response = HttpResponse.ofJson(myObject);
+
+        final ResponseEntity<MyObject> entity =
+                ResponseAs.json(MyObject.class, new HttpStatusPredicate(HttpStatus.OK))
+                          .as(response).join();
+        assertThat(entity.content()).isEqualTo(myObject);
+    }
+
+    @Test
     void jsonObject_customMapper() {
         final HttpResponse response = HttpResponse.of("{ 'id': 10 }");
 
@@ -114,6 +127,21 @@ class ResponseAsTest {
                                             .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
                                             .build();
         final ResponseEntity<MyObject> entity = ResponseAs.json(MyObject.class, mapper).as(response).join();
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        assertThat(entity.content()).isEqualTo(myObject);
+    }
+
+    @Test
+    void jsonObject_customMapper_predicate() {
+        final HttpResponse response = HttpResponse.of("{ 'id': 10 }");
+
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+        final ResponseEntity<MyObject> entity =
+                ResponseAs.json(MyObject.class, mapper, new HttpStatusPredicate(HttpStatus.OK))
+                          .as(response).join();
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         assertThat(entity.content()).isEqualTo(myObject);
@@ -132,6 +160,19 @@ class ResponseAsTest {
     }
 
     @Test
+    void jsonGeneric_predicate() {
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        final HttpResponse response = HttpResponse.ofJson(ImmutableList.of(myObject));
+
+        final ResponseEntity<List<MyObject>> entity =
+                ResponseAs.json(new TypeReference<List<MyObject>>() {}, new HttpStatusPredicate(HttpStatus.OK))
+                          .as(response).join();
+        final List<MyObject> content = entity.content();
+        assertThat(content).containsExactly(myObject);
+    }
+
+    @Test
     void jsonGeneric_customMapper() {
         final HttpResponse response = HttpResponse.of("[{ 'id': 10 }]");
         final JsonMapper mapper = JsonMapper.builder()
@@ -139,6 +180,22 @@ class ResponseAsTest {
                                             .build();
         final ResponseEntity<List<MyObject>> entity =
                 ResponseAs.json(new TypeReference<List<MyObject>>() {}, mapper).as(response).join();
+        final List<MyObject> content = entity.content();
+        final MyObject myObject = new MyObject();
+        myObject.setId(10);
+        assertThat(content).containsExactly(myObject);
+    }
+
+    @Test
+    void jsonGeneric_customMapper_predicate() {
+        final HttpResponse response = HttpResponse.of("[{ 'id': 10 }]");
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+        final ResponseEntity<List<MyObject>> entity = ResponseAs.json(new TypeReference<List<MyObject>>() {},
+                                                                      mapper,
+                                                                      new HttpStatusPredicate(HttpStatus.OK))
+                                                                .as(response).join();
         final List<MyObject> content = entity.content();
         final MyObject myObject = new MyObject();
         myObject.setId(10);

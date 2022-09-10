@@ -41,6 +41,8 @@ import com.linecorp.armeria.common.Cookie;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Delete;
@@ -126,6 +128,58 @@ class RestClientTest {
             assertThat(response.getHeader()).isEqualTo("header-value");
             assertThat(response.getCookie()).isEqualTo("cookie-value");
             assertThat(response.getContent()).isEqualTo("content");
+
+            final RestResponse response_executeWithHttpStatus =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(RestResponse.class, HttpStatus.OK)
+                               .join()
+                               .content();
+
+            assertThat(response_executeWithHttpStatus.getId()).isEqualTo("1");
+            assertThat(response_executeWithHttpStatus.getMethod()).isEqualTo(method.toString());
+            assertThat(response_executeWithHttpStatus.getQuery()).isEqualTo("query-value");
+            assertThat(response_executeWithHttpStatus.getHeader()).isEqualTo("header-value");
+            assertThat(response_executeWithHttpStatus.getCookie()).isEqualTo("cookie-value");
+            assertThat(response_executeWithHttpStatus.getContent()).isEqualTo("content");
+
+            final RestResponse response_executeWithHttpStatusClass =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(RestResponse.class, HttpStatusClass.SUCCESS)
+                               .join()
+                               .content();
+
+            assertThat(response_executeWithHttpStatusClass.getId()).isEqualTo("1");
+            assertThat(response_executeWithHttpStatusClass.getMethod()).isEqualTo(method.toString());
+            assertThat(response_executeWithHttpStatusClass.getQuery()).isEqualTo("query-value");
+            assertThat(response_executeWithHttpStatusClass.getHeader()).isEqualTo("header-value");
+            assertThat(response_executeWithHttpStatusClass.getCookie()).isEqualTo("cookie-value");
+            assertThat(response_executeWithHttpStatusClass.getContent()).isEqualTo("content");
+
+            final RestResponse response_executeWithPredicate =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(RestResponse.class,
+                                        httpStatus -> httpStatus.equals(HttpStatus.OK))
+                               .join()
+                               .content();
+
+            assertThat(response_executeWithPredicate.getId()).isEqualTo("1");
+            assertThat(response_executeWithPredicate.getMethod()).isEqualTo(method.toString());
+            assertThat(response_executeWithPredicate.getQuery()).isEqualTo("query-value");
+            assertThat(response_executeWithPredicate.getHeader()).isEqualTo("header-value");
+            assertThat(response_executeWithPredicate.getCookie()).isEqualTo("cookie-value");
+            assertThat(response_executeWithPredicate.getContent()).isEqualTo("content");
         }
     }
 

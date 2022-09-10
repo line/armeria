@@ -120,7 +120,7 @@ class WebClientPreparationExchangeTypeTest {
             client.prepare()
                   .post("/json")
                   .content("foo")
-                  .asJson(String.class, HttpStatus.valueOf(200))
+                  .asJson(String.class, HttpStatus.OK)
                   .execute();
         }).isEqualTo(ExchangeType.UNARY);
     }
@@ -131,7 +131,19 @@ class WebClientPreparationExchangeTypeTest {
             client.prepare()
                   .post("/json")
                   .content("foo")
-                  .asJson(String.class, HttpStatusClass.valueOf(200))
+                  .asJson(String.class, HttpStatusClass.SUCCESS)
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
+    }
+
+    @Test
+    void responseJson_withPredicate() {
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(String.class,
+                          httpStatus -> httpStatus.equals(HttpStatus.OK))
                   .execute();
         }).isEqualTo(ExchangeType.UNARY);
     }

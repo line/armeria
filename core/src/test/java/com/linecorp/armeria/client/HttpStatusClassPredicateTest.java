@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 
 class HttpStatusClassPredicateTest {
@@ -27,33 +28,33 @@ class HttpStatusClassPredicateTest {
     @Test
     public void httpStatusClassIsEqualToTestArgument() {
         assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(100))
-                           .test(HttpStatusClass.valueOf(100))).isTrue();
+                           .test(HttpStatus.valueOf(100))).isTrue();
         assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(200))
-                           .test(HttpStatusClass.valueOf(200))).isTrue();
+                           .test(HttpStatus.valueOf(200))).isTrue();
         assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(300))
-                           .test(HttpStatusClass.valueOf(300))).isTrue();
+                           .test(HttpStatus.valueOf(300))).isTrue();
         assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(400))
-                           .test(HttpStatusClass.valueOf(400))).isTrue();
+                           .test(HttpStatus.valueOf(400))).isTrue();
         assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(500))
-                           .test(HttpStatusClass.valueOf(500))).isTrue();
+                           .test(HttpStatus.valueOf(500))).isTrue();
         assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(600))
-                           .test(HttpStatusClass.valueOf(600))).isTrue();
+                           .test(HttpStatus.valueOf(600))).isTrue();
     }
 
     @Test
     public void httpStatusClassIsNotEqualToTestArgument() {
         assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(200))
-                           .test(HttpStatusClass.valueOf(300))).isFalse();
+                           .test(HttpStatus.valueOf(300))).isFalse();
         assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(300))
-                           .test(HttpStatusClass.valueOf(200))).isFalse();
+                           .test(HttpStatus.valueOf(200))).isFalse();
         assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(100))
-                           .test(HttpStatusClass.valueOf(600))).isFalse();
+                           .test(HttpStatus.valueOf(600))).isFalse();
         assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(600))
-                           .test(HttpStatusClass.valueOf(100))).isFalse();
+                           .test(HttpStatus.valueOf(100))).isFalse();
         assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(600))
-                           .test(HttpStatusClass.valueOf(200))).isFalse();
+                           .test(HttpStatus.valueOf(200))).isFalse();
         assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(100))
-                           .test(HttpStatusClass.valueOf(300))).isFalse();
+                           .test(HttpStatus.valueOf(300))).isFalse();
     }
 
     @Test
