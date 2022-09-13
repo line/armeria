@@ -282,7 +282,8 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
-     * Creates a new {@link StreamMessage} that streams the specified {@link OutputStream}.
+     * Creates a new {@link ByteStreamMessage} that publishes {@link HttpData}s from the specified
+     * {@linkplain Consumer outputStreamConsumer}.
      *
      * <p>For example:<pre>{@code
      * ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
@@ -302,20 +303,36 @@ public interface StreamMessage<T> extends Publisher<T> {
      */
     static ByteStreamMessage fromOutputStream(Consumer<OutputStream> outputStreamConsumer) {
         final RequestContext ctx = RequestContext.currentOrNull();
-        ExecutorService blockingTaskExecutor = null;
+        final ExecutorService blockingTaskExecutor;
         if (ctx instanceof ServiceRequestContext) {
             blockingTaskExecutor = ((ServiceRequestContext) ctx).blockingTaskExecutor();
-        }
-        if (blockingTaskExecutor == null) {
+        } else {
             blockingTaskExecutor = CommonPools.blockingTaskExecutor();
         }
         return fromOutputStream(outputStreamConsumer, blockingTaskExecutor);
     }
 
     /**
-     * Creates a new {@link StreamMessage} that streams the specified {@link OutputStream}.
+     * Creates a new {@link ByteStreamMessage} that publishes {@link HttpData}s from the specified
+     * {@linkplain Consumer outputStreamConsumer}.
      *
-     * @param executor the executor to execute {@link OutputStream#write}
+     * <p>For example:<pre>{@code
+     * ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
+     *     try {
+     *         for (int i = 0; i < 5; i++) {
+     *             os.write(i);
+     *         }
+     *         os.close();
+     *     } catch (IOException e) {
+     *         throw new RuntimeException(e);
+     *     }
+     * });
+     * byte[] result = byteStreamMessage.collectBytes().join();
+     *
+     * assert Arrays.equals(result, new byte[] { 0, 1, 2, 3, 4 });
+     * }</pre>
+     *
+     * @param blockingTaskExecutor the blocking task executor to execute {@link OutputStream#write}
      */
     static ByteStreamMessage fromOutputStream(Consumer<OutputStream> outputStreamConsumer,
                                               Executor blockingTaskExecutor) {
