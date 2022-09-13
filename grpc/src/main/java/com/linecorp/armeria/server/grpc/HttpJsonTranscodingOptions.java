@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.server.grpc;
 
+/**
+ * User provided options for customizing {@link HttpJsonTranscodingService}.
+ */
 public final class HttpJsonTranscodingOptions {
 
     private final boolean camelCaseQueryParams;

@@ -660,6 +660,38 @@ public final class GrpcServiceBuilder {
         return this;
     }
 
+    /**
+     * Sets whether the service handles HTTP/JSON requests using the gRPC wire protocol.
+     * Provide {@link HttpJsonTranscodingOptions} to customize HttpJsonTranscoding.
+     *
+     * <p>Example:
+     * <pre>{@code
+     * HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.buider()
+     *                                                                .camelCaseQueryParams(true)
+     *                                                                ...
+     *                                                                .build()
+     *
+     * GrpcService.builder()
+     *            // Enable HttpJsonTranscoding and use the specified HttpJsonTranscodingOption
+     *            .enableHttpJsonTranscoding(options)
+     *            .build()}</pre>
+     *
+     * <p>Limitations:
+     * <ul>
+     *     <li>Only unary methods (single request, single response) are supported.</li>
+     *     <li>
+     *         Message compression is not supported.
+     *         {@link EncodingService} should be used instead for
+     *         transport level encoding.
+     *     </li>
+     *     <li>
+     *         Transcoding will not work if the {@link GrpcService} is configured with
+     *         {@link ServerBuilder#serviceUnder(String, HttpService)}.
+     *     </li>
+     * </ul>
+     *
+     * @see <a href="https://cloud.google.com/endpoints/docs/grpc/transcoding">Transcoding HTTP/JSON to gRPC</a>
+     */
     @UnstableApi
     public GrpcServiceBuilder enableHttpJsonTranscoding(HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
         this.enableHttpJsonTranscoding = true;
@@ -994,7 +1026,6 @@ public final class GrpcServiceBuilder {
                                                             : UnframedGrpcErrorHandler.ofJson(),
                     httpJsonTranscodingOptions != null ? httpJsonTranscodingOptions
                                                             : HttpJsonTranscodingOptions.of(false));
-
         }
         if (handlerRegistry.containsDecorators()) {
             grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
