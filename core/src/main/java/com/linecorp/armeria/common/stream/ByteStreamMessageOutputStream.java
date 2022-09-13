@@ -212,7 +212,7 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
 
         @Override
         public void write(int b) throws IOException {
-            final HttpData data = HttpData.copyOf(new byte[] { (byte) b });
+            final HttpData data = HttpData.wrap(new byte[] { (byte) b });
             if (!streamWriter.tryWrite(data)) {
                 throw new IOException("Stream closed");
             }
