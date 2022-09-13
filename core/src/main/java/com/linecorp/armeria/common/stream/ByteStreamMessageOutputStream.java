@@ -34,16 +34,16 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class ByteStreamMessageOutputStream implements ByteStreamMessage {
 
-    private final StreamMessageAndWriter<HttpData> streamWriter = new DefaultStreamMessage<>();
-    private final ByteStreamMessage delegate = ByteStreamMessage.of(streamWriter);
+    private final StreamMessageAndWriter<HttpData> outputStreamWriter = new DefaultStreamMessage<>();
+    private final ByteStreamMessage delegate = ByteStreamMessage.of(outputStreamWriter);
 
-    private final Consumer<OutputStream> outputStreamWriter;
+    private final Consumer<OutputStream> outputStreamConsumer;
     private final Executor executor;
 
-    ByteStreamMessageOutputStream(Consumer<OutputStream> outputStreamWriter, Executor executor) {
-        requireNonNull(outputStreamWriter, "outputStreamWriter");
+    ByteStreamMessageOutputStream(Consumer<OutputStream> outputStreamConsumer, Executor executor) {
+        requireNonNull(outputStreamConsumer, "outputStreamConsumer");
         requireNonNull(executor, "executor");
-        this.outputStreamWriter = outputStreamWriter;
+        this.outputStreamConsumer = outputStreamConsumer;
         this.executor = executor;
     }
 
@@ -77,7 +77,7 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor eventExecutor,
                           SubscriptionOption... options) {
         final Subscriber<HttpData> outputStreamSubscriber = new OutputStreamSubscriber(
-                subscriber, eventExecutor, streamWriter, outputStreamWriter, executor);
+                subscriber, eventExecutor, outputStreamWriter, outputStreamConsumer, executor);
         delegate.subscribe(outputStreamSubscriber, eventExecutor, options);
     }
 
@@ -96,8 +96,8 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
         private final Subscriber<? super HttpData> downstream;
         private final EventExecutor eventExecutor;
 
-        private final StreamMessageAndWriter<HttpData> streamWriter;
-        private final Consumer<OutputStream> outputStreamWriter;
+        private final StreamMessageAndWriter<HttpData> outputStreamWriter;
+        private final Consumer<OutputStream> outputStreamConsumer;
         private final Executor executor;
 
         @Nullable
@@ -106,18 +106,18 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
 
         OutputStreamSubscriber(Subscriber<? super HttpData> downstream,
                                EventExecutor eventExecutor,
-                               StreamMessageAndWriter<HttpData> streamWriter,
-                               Consumer<OutputStream> outputStreamWriter,
+                               StreamMessageAndWriter<HttpData> outputStreamWriter,
+                               Consumer<OutputStream> outputStreamConsumer,
                                Executor executor) {
             requireNonNull(downstream, "downstream");
             requireNonNull(eventExecutor, "eventExecutor");
-            requireNonNull(streamWriter, "streamWriter");
             requireNonNull(outputStreamWriter, "outputStreamWriter");
+            requireNonNull(outputStreamConsumer, "outputStreamConsumer");
             requireNonNull(executor, "executor");
             this.downstream = downstream;
             this.eventExecutor = eventExecutor;
-            this.streamWriter = streamWriter;
             this.outputStreamWriter = outputStreamWriter;
+            this.outputStreamConsumer = outputStreamConsumer;
             this.executor = executor;
         }
 
@@ -126,8 +126,8 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
             requireNonNull(subscription, "subscription");
             upstream = subscription;
             downstream.onSubscribe(this);
-            CompletableFuture.runAsync(() -> outputStreamWriter
-                                     .accept(new StreamWriterOutputStream(streamWriter)), executor)
+            CompletableFuture.runAsync(() -> outputStreamConsumer
+                                     .accept(new StreamWriterOutputStream(outputStreamWriter)), executor)
                              .whenComplete((res, cause) -> {
                                  if (cause != null) {
                                      onError(cause);
@@ -153,7 +153,7 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
             }
             completed = true;
             downstream.onError(t);
-            streamWriter.close();
+            outputStreamWriter.close();
         }
 
         @Override
@@ -163,7 +163,7 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
             }
             completed = true;
             downstream.onComplete();
-            streamWriter.close();
+            outputStreamWriter.close();
         }
 
         @Override
@@ -200,7 +200,7 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
             }
             completed = true;
             upstream.cancel();
-            streamWriter.close();
+            outputStreamWriter.close();
         }
     }
 

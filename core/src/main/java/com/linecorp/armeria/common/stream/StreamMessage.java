@@ -300,7 +300,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * assert Arrays.equals(result, new byte[] { 0, 1, 2, 3, 4 });
      * }</pre>
      */
-    static ByteStreamMessage fromOutputStream(Consumer<OutputStream> outputStreamWriter) {
+    static ByteStreamMessage fromOutputStream(Consumer<OutputStream> outputStreamConsumer) {
         final RequestContext ctx = RequestContext.currentOrNull();
         ExecutorService blockingTaskExecutor = null;
         if (ctx instanceof ServiceRequestContext) {
@@ -309,7 +309,7 @@ public interface StreamMessage<T> extends Publisher<T> {
         if (blockingTaskExecutor == null) {
             blockingTaskExecutor = CommonPools.blockingTaskExecutor();
         }
-        return fromOutputStream(outputStreamWriter, blockingTaskExecutor);
+        return fromOutputStream(outputStreamConsumer, blockingTaskExecutor);
     }
 
     /**
@@ -317,8 +317,8 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * @param executor the executor to execute {@link OutputStream#write}
      */
-    static ByteStreamMessage fromOutputStream(Consumer<OutputStream> outputStreamWriter, Executor executor) {
-        return new ByteStreamMessageOutputStream(outputStreamWriter, executor);
+    static ByteStreamMessage fromOutputStream(Consumer<OutputStream> outputStreamConsumer, Executor executor) {
+        return new ByteStreamMessageOutputStream(outputStreamConsumer, executor);
     }
 
     /**
