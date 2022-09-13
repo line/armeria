@@ -126,13 +126,14 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
             requireNonNull(subscription, "subscription");
             upstream = subscription;
             downstream.onSubscribe(this);
-            CompletableFuture.runAsync(() -> outputStreamConsumer
-                                     .accept(new StreamWriterOutputStream(outputStreamWriter)), blockingTaskExecutor)
-                             .whenComplete((res, cause) -> {
-                                 if (cause != null) {
-                                     onError(cause);
-                                 }
-                             });
+            blockingTaskExecutor.execute(() -> {
+                try {
+                    outputStreamConsumer.accept(new StreamWriterOutputStream(outputStreamWriter));
+                } catch (Throwable t) {
+                    onError(t);
+                    upstream.cancel();
+                }
+            });
         }
 
         @Override
