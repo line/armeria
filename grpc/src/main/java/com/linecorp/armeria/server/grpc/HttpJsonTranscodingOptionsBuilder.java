@@ -16,17 +16,27 @@
 
 package com.linecorp.armeria.server.grpc;
 
+/**
+ * builder for {@link HttpJsonTranscodingOptions}.
+ */
 public class HttpJsonTranscodingOptionsBuilder {
 
-    private boolean camelCaseQueryParams = false;
+    private boolean camelCaseQueryParams;
 
     HttpJsonTranscodingOptionsBuilder() {}
 
+    /**
+     * enables camelCase query parameters for Http Json Transcoding endpoints.
+     * provided by {@link HttpJsonTranscodingService}.
+     */
     public HttpJsonTranscodingOptionsBuilder useCamelCaseQueryParams() {
         this.camelCaseQueryParams = true;
         return this;
     }
 
+    /**
+     * builds {@link HttpJsonTranscodingOptions}.
+     */
     public HttpJsonTranscodingOptions build() {
         return HttpJsonTranscodingOptions.of(camelCaseQueryParams);
     }
