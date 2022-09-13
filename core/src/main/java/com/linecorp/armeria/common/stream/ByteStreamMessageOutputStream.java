@@ -154,7 +154,6 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
             }
             completed = true;
             downstream.onError(t);
-            outputStreamWriter.close();
         }
 
         @Override
@@ -164,7 +163,6 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
             }
             completed = true;
             downstream.onComplete();
-            outputStreamWriter.close();
         }
 
         @Override
@@ -201,7 +199,6 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
             }
             completed = true;
             upstream.cancel();
-            outputStreamWriter.close();
         }
     }
 
