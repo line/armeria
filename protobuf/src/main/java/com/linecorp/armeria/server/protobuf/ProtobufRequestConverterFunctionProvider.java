@@ -82,7 +82,7 @@ public final class ProtobufRequestConverterFunctionProvider implements RequestCo
         return ResultType.UNKNOWN;
     }
 
-    private static boolean isProtobufMessage(Class<?> clazz) {
+    static boolean isProtobufMessage(Class<?> clazz) {
         return Message.class.isAssignableFrom(clazz);
     }
 }

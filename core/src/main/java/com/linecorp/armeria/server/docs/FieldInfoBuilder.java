@@ -24,7 +24,6 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -39,8 +38,7 @@ public final class FieldInfoBuilder {
 
     private FieldRequirement requirement = FieldRequirement.UNSPECIFIED;
     private FieldLocation location = FieldLocation.UNSPECIFIED;
-    @Nullable
-    private DescriptionInfo descriptionInfo;
+    private DescriptionInfo descriptionInfo = DescriptionInfo.empty();
 
     FieldInfoBuilder(String name, TypeSignature typeSignature) {
         this.name = requireNonNull(name, "name");
@@ -94,7 +92,7 @@ public final class FieldInfoBuilder {
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this).omitNullValues()
+        return MoreObjects.toStringHelper(this)
                           .add("name", name)
                           .add("location", location)
                           .add("requirement", requirement)

@@ -109,21 +109,24 @@ class AnnotatedDocServiceTest {
             }
             sb.annotatedService("/service", new MyService());
             sb.serviceUnder("/docs",
-                    DocService.builder()
-                              .exampleHeaders(EXAMPLE_HEADERS_ALL)
-                              .exampleHeaders(MyService.class, EXAMPLE_HEADERS_SERVICE)
-                              .exampleHeaders(MyService.class, "pathParams", EXAMPLE_HEADERS_METHOD)
-                              .examplePaths(MyService.class, "pathParams",
-                                            "/service/hello1/foo/hello3/bar")
-                              .exampleQueries(MyService.class, "foo", "query=10", "query=20")
-                              .exampleRequests(MyService.class, "pathParams",
-                                               ImmutableList.of(mapper.readTree("{\"hello\":\"armeria\"}")))
-                              .examplePaths(MyService.class, "pathParamsWithQueries",
-                                            "/service/hello1/foo", "/service/hello1/bar")
-                              .exampleQueries(MyService.class, "pathParamsWithQueries", "hello3=hello4")
-                              .exclude(DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude1").or(
-                                       DocServiceFilter.ofMethodName(MyService.class.getName(), "exclude2")))
-                              .build());
+                            DocService.builder()
+                                      .exampleHeaders(EXAMPLE_HEADERS_ALL)
+                                      .exampleHeaders(MyService.class, EXAMPLE_HEADERS_SERVICE)
+                                      .exampleHeaders(MyService.class, "pathParams", EXAMPLE_HEADERS_METHOD)
+                                      .examplePaths(MyService.class, "pathParams",
+                                                    "/service/hello1/foo/hello3/bar")
+                                      .exampleQueries(MyService.class, "foo", "query=10", "query=20")
+                                      .exampleRequests(MyService.class, "pathParams",
+                                                       ImmutableList.of(
+                                                               mapper.readTree("{\"hello\":\"armeria\"}")))
+                                      .examplePaths(MyService.class, "pathParamsWithQueries",
+                                                    "/service/hello1/foo", "/service/hello1/bar")
+                                      .exampleQueries(MyService.class, "pathParamsWithQueries", "hello3=hello4")
+                                      .exclude(DocServiceFilter.ofMethodName(MyService.class.getName(),
+                                                                             "exclude1").or(
+                                              DocServiceFilter.ofMethodName(MyService.class.getName(),
+                                                                            "exclude2")))
+                                      .build());
             sb.serviceUnder("/excludeAll/", DocService.builder()
                                                       .exclude(DocServiceFilter.ofAnnotated())
                                                       .build());
@@ -154,7 +157,7 @@ class AnnotatedDocServiceTest {
                 MyService.class, DescriptionInfo.of("My service class"));
 
         final JsonNode expectedJson = mapper.valueToTree(AnnotatedDocServicePlugin.generate(
-                serviceDescription, methodInfos));
+                serviceDescription, methodInfos, typeDescriptor -> null));
         addExamples(expectedJson);
 
         final WebClient client = WebClient.of(server.httpUri());
@@ -194,7 +197,7 @@ class AnnotatedDocServiceTest {
                                          TypeSignature.ofContainer("CompletableFuture",
                                                                    TypeSignature.ofUnresolved("")),
                                          ImmutableList.of(), ImmutableList.of(), ImmutableList.of(endpoint),
-                                         httpMethod, null);
+                                         httpMethod, DescriptionInfo.empty());
                   methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
               });
     }
@@ -209,7 +212,7 @@ class AnnotatedDocServiceTest {
         final MethodInfo methodInfo = new MethodInfo(
                 "ints", TypeSignature.ofList(INT),
                 fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, null);
+                ImmutableList.of(endpoint), HttpMethod.GET, DescriptionInfo.empty());
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -222,7 +225,7 @@ class AnnotatedDocServiceTest {
                 FieldInfo.builder("hello4", STRING).requirement(REQUIRED).location(PATH).build());
         final MethodInfo methodInfo = new MethodInfo(
                 "pathParams", STRING, fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, null);
+                ImmutableList.of(endpoint), HttpMethod.GET, DescriptionInfo.empty());
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -235,7 +238,7 @@ class AnnotatedDocServiceTest {
                 FieldInfo.builder("hello3", STRING).requirement(REQUIRED).location(QUERY).build());
         final MethodInfo methodInfo = new MethodInfo(
                 "pathParamsWithQueries", STRING, fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, null);
+                ImmutableList.of(endpoint), HttpMethod.GET, DescriptionInfo.empty());
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -251,7 +254,7 @@ class AnnotatedDocServiceTest {
                          .build());
         final MethodInfo methodInfo = new MethodInfo(
                 "regex", TypeSignature.ofList(TypeSignature.ofList(STRING)), fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, null);
+                ImmutableList.of(endpoint), HttpMethod.GET, DescriptionInfo.empty());
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -261,7 +264,7 @@ class AnnotatedDocServiceTest {
                                                   .build();
         final MethodInfo methodInfo = new MethodInfo(
                 "prefix", STRING, ImmutableList.of(), ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, null);
+                ImmutableList.of(endpoint), HttpMethod.GET, DescriptionInfo.empty());
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -271,9 +274,10 @@ class AnnotatedDocServiceTest {
                                                                       MediaType.JSON_UTF_8)
                                                   .build();
         final MethodInfo methodInfo = new MethodInfo(
-                "consumes", TypeSignature.ofContainer("BiFunction", TypeSignature.ofBase("JsonNode"),
+                "consumes", TypeSignature.ofContainer("BiFunction", TypeSignature.ofNamed(JsonNode.class),
                                                       TypeSignature.ofUnresolved(""), STRING),
-                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(endpoint), HttpMethod.GET, null);
+                ImmutableList.of(), ImmutableList.of(), ImmutableList.of(endpoint), HttpMethod.GET,
+                DescriptionInfo.empty());
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -283,8 +287,8 @@ class AnnotatedDocServiceTest {
                                                   .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(compositeBean());
         final MethodInfo methodInfo = new MethodInfo(
-                "bean", TypeSignature.ofBase("HttpResponse"), fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, null);
+                "bean", TypeSignature.ofNamed(HttpResponse.class), fieldInfos, ImmutableList.of(),
+                ImmutableList.of(endpoint), HttpMethod.GET, DescriptionInfo.empty());
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -296,8 +300,8 @@ class AnnotatedDocServiceTest {
                                                    .availableMimeTypes(MediaType.JSON_UTF_8)
                                                    .build();
         final MethodInfo methodInfo = new MethodInfo(
-                "multi", TypeSignature.ofBase("HttpResponse"), ImmutableList.of(), ImmutableList.of(),
-                ImmutableList.of(endpoint1, endpoint2), HttpMethod.GET, null);
+                "multi", TypeSignature.ofNamed(HttpResponse.class), ImmutableList.of(), ImmutableList.of(),
+                ImmutableList.of(endpoint1, endpoint2), HttpMethod.GET, DescriptionInfo.empty());
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -305,12 +309,22 @@ class AnnotatedDocServiceTest {
         final EndpointInfo endpoint1 = EndpointInfo.builder("*", "exact:/service/json")
                                                    .availableMimeTypes(MediaType.JSON_UTF_8)
                                                    .build();
+        final FieldInfo jsonRequest =
+                FieldInfo.builder(JsonRequest.class.getName(), AnnotatedDocServicePlugin.OBJECT,
+                                  ImmutableList.of(FieldInfo.builder("foo", INT)
+                                                            .requirement(REQUIRED)
+                                                            .build(),
+                                                   FieldInfo.builder("bar", STRING)
+                                                            .requirement(REQUIRED)
+                                                            .build()))
+                         .requirement(REQUIRED)
+                         .build();
         final MethodInfo methodInfo1 = new MethodInfo(
-                "json", STRING, ImmutableList.of(), ImmutableList.of(),
-                ImmutableList.of(endpoint1), HttpMethod.POST, null);
+                "json", STRING, ImmutableList.of(jsonRequest), ImmutableList.of(),
+                ImmutableList.of(endpoint1), HttpMethod.POST, DescriptionInfo.empty());
         final MethodInfo methodInfo2 = new MethodInfo(
-                "json", STRING, ImmutableList.of(), ImmutableList.of(),
-                ImmutableList.of(endpoint1), HttpMethod.PUT, null);
+                "json", STRING, ImmutableList.of(jsonRequest), ImmutableList.of(),
+                ImmutableList.of(endpoint1), HttpMethod.PUT, DescriptionInfo.empty());
         final Set<MethodInfo> methods = methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>());
         methods.add(methodInfo1);
         methods.add(methodInfo2);
@@ -321,11 +335,11 @@ class AnnotatedDocServiceTest {
                                                   .availableMimeTypes(MediaType.JSON_UTF_8)
                                                   .build();
         final List<FieldInfo> fieldInfos = ImmutableList.of(
-                FieldInfo.builder("period", TypeSignature.ofBase("Period"))
+                FieldInfo.builder("period", TypeSignature.ofNamed(Period.class))
                          .requirement(REQUIRED).location(QUERY).build());
         final MethodInfo methodInfo = new MethodInfo(
-                "period", TypeSignature.ofBase("HttpResponse"), fieldInfos, ImmutableList.of(),
-                ImmutableList.of(endpoint), HttpMethod.GET, null);
+                "period", TypeSignature.ofNamed(HttpResponse.class), fieldInfos, ImmutableList.of(),
+                ImmutableList.of(endpoint), HttpMethod.GET, DescriptionInfo.empty());
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -357,7 +371,7 @@ class AnnotatedDocServiceTest {
                                           " B-->D;\n" +
                                           " C-->D;";
         final MethodInfo methodInfo = new MethodInfo(
-                "mermaid", TypeSignature.ofBase("HttpResponse"), fieldInfos, ImmutableList.of(),
+                "mermaid", TypeSignature.ofNamed(HttpResponse.class), fieldInfos, ImmutableList.of(),
                 ImmutableList.of(endpoint), HttpMethod.GET,
                 DescriptionInfo.of(mermaidDescription, Markup.MERMAID));
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
