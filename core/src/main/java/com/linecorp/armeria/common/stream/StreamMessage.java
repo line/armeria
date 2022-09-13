@@ -317,8 +317,9 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * @param executor the executor to execute {@link OutputStream#write}
      */
-    static ByteStreamMessage fromOutputStream(Consumer<OutputStream> outputStreamConsumer, Executor executor) {
-        return new ByteStreamMessageOutputStream(outputStreamConsumer, executor);
+    static ByteStreamMessage fromOutputStream(Consumer<OutputStream> outputStreamConsumer,
+                                              Executor blockingTaskExecutor) {
+        return new ByteStreamMessageOutputStream(outputStreamConsumer, blockingTaskExecutor);
     }
 
     /**
@@ -887,7 +888,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      */
     @UnstableApi
     default <E extends Throwable> StreamMessage<T> recoverAndResume(Class<E> causeClass,
-            Function<? super E, ? extends StreamMessage<T>> function) {
+                                                                    Function<? super E, ? extends StreamMessage<T>> function) {
         requireNonNull(causeClass, "causeClass");
         requireNonNull(function, "function");
         return recoverAndResume(cause -> {

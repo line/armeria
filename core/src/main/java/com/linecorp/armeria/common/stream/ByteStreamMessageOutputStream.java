@@ -38,13 +38,13 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
     private final ByteStreamMessage delegate = ByteStreamMessage.of(outputStreamWriter);
 
     private final Consumer<OutputStream> outputStreamConsumer;
-    private final Executor executor;
+    private final Executor blockingTaskExecutor;
 
-    ByteStreamMessageOutputStream(Consumer<OutputStream> outputStreamConsumer, Executor executor) {
+    ByteStreamMessageOutputStream(Consumer<OutputStream> outputStreamConsumer, Executor blockingTaskExecutor) {
         requireNonNull(outputStreamConsumer, "outputStreamConsumer");
-        requireNonNull(executor, "executor");
+        requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         this.outputStreamConsumer = outputStreamConsumer;
-        this.executor = executor;
+        this.blockingTaskExecutor = blockingTaskExecutor;
     }
 
     @Override
@@ -74,11 +74,11 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
     }
 
     @Override
-    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor eventExecutor,
+    public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         final Subscriber<HttpData> outputStreamSubscriber = new OutputStreamSubscriber(
-                subscriber, eventExecutor, outputStreamWriter, outputStreamConsumer, executor);
-        delegate.subscribe(outputStreamSubscriber, eventExecutor, options);
+                subscriber, executor, outputStreamWriter, outputStreamConsumer, blockingTaskExecutor);
+        delegate.subscribe(outputStreamSubscriber, executor, options);
     }
 
     @Override
@@ -94,31 +94,31 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
     private static final class OutputStreamSubscriber implements Subscriber<HttpData>, Subscription {
 
         private final Subscriber<? super HttpData> downstream;
-        private final EventExecutor eventExecutor;
+        private final EventExecutor executor;
 
         private final StreamMessageAndWriter<HttpData> outputStreamWriter;
         private final Consumer<OutputStream> outputStreamConsumer;
-        private final Executor executor;
+        private final Executor blockingTaskExecutor;
 
         @Nullable
         private Subscription upstream;
         private boolean completed;
 
         OutputStreamSubscriber(Subscriber<? super HttpData> downstream,
-                               EventExecutor eventExecutor,
+                               EventExecutor executor,
                                StreamMessageAndWriter<HttpData> outputStreamWriter,
                                Consumer<OutputStream> outputStreamConsumer,
-                               Executor executor) {
+                               Executor blockingTaskExecutor) {
             requireNonNull(downstream, "downstream");
-            requireNonNull(eventExecutor, "eventExecutor");
+            requireNonNull(executor, "executor");
             requireNonNull(outputStreamWriter, "outputStreamWriter");
             requireNonNull(outputStreamConsumer, "outputStreamConsumer");
-            requireNonNull(executor, "executor");
+            requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
             this.downstream = downstream;
-            this.eventExecutor = eventExecutor;
+            this.executor = executor;
             this.outputStreamWriter = outputStreamWriter;
             this.outputStreamConsumer = outputStreamConsumer;
-            this.executor = executor;
+            this.blockingTaskExecutor = blockingTaskExecutor;
         }
 
         @Override
@@ -127,7 +127,7 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
             upstream = subscription;
             downstream.onSubscribe(this);
             CompletableFuture.runAsync(() -> outputStreamConsumer
-                                     .accept(new StreamWriterOutputStream(outputStreamWriter)), executor)
+                                     .accept(new StreamWriterOutputStream(outputStreamWriter)), blockingTaskExecutor)
                              .whenComplete((res, cause) -> {
                                  if (cause != null) {
                                      onError(cause);
@@ -168,10 +168,10 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
 
         @Override
         public void request(long n) {
-            if (eventExecutor.inEventLoop()) {
+            if (executor.inEventLoop()) {
                 request0(n);
             } else {
-                eventExecutor.execute(() -> request0(n));
+                executor.execute(() -> request0(n));
             }
         }
 
@@ -187,10 +187,10 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
 
         @Override
         public void cancel() {
-            if (eventExecutor.inEventLoop()) {
+            if (executor.inEventLoop()) {
                 cancel0();
             } else {
-                eventExecutor.execute(this::cancel0);
+                executor.execute(this::cancel0);
             }
         }
 
