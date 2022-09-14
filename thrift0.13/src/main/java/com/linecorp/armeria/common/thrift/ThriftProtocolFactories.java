@@ -19,6 +19,8 @@ package com.linecorp.armeria.common.thrift;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.reflect.Constructor;
+
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TCompactProtocol;
 import org.apache.thrift.protocol.TJSONProtocol;
@@ -34,6 +36,21 @@ import com.linecorp.armeria.internal.common.thrift.DefaultThriftProtocolFactoryP
  * Provides a set of well-known {@link TProtocolFactory}s.
  */
 public final class ThriftProtocolFactories {
+
+    private static final boolean IS_THRIFT_091;
+
+    static {
+        boolean isThrift091 = false;
+        try {
+            final Constructor<TBinaryProtocol.Factory> ignored =
+                    TBinaryProtocol.Factory.class.getConstructor(boolean.class, boolean.class,
+                                                                 long.class, long.class);
+        } catch (NoSuchMethodException e) {
+            e.printStackTrace();
+            isThrift091 = true;
+        }
+        IS_THRIFT_091 = isThrift091;
+    }
 
     /**
      * {@link TProtocolFactory} for Thrift TBinary protocol.
@@ -120,7 +137,21 @@ public final class ThriftProtocolFactories {
         final int maxStringLength0 = maxStringLength == 0 ? -1 : maxStringLength;
         final int maxContainerLength0 = maxContainerLength == 0 ? -1 : maxContainerLength;
 
-        // Thrift 0.9.x does not a constructor taking only maxStringLength and maxContainerLength.
+        if (IS_THRIFT_091) {
+            // Thrift 0.9.1 does not support a message length limit.
+            return new TBinaryProtocol.Factory() {
+                private static final long serialVersionUID = 1315460223026778806L;
+
+                @Override
+                public String toString() {
+                    return MoreObjects.toStringHelper(this)
+                                      .addValue("BINARY")
+                                      .toString();
+                }
+            };
+        }
+
+        // Thrift 0.9.2 or above does not have a constructor taking only maxStringLength and maxContainerLength.
         // https://github.com/apache/thrift/blob/0.9.3/lib/java/src/org/apache/thrift/protocol/TBinaryProtocol.java#L68-L77
         return new TBinaryProtocol.Factory(false, true, maxStringLength0, maxContainerLength0) {
             private static final long serialVersionUID = -9020693963961565748L;
@@ -149,6 +180,20 @@ public final class ThriftProtocolFactories {
         checkArgument(maxContainerLength >= 0, "maxContainerLength: %s (expected: >= 0)", maxContainerLength);
         final int maxStringLength0 = maxStringLength == 0 ? -1 : maxStringLength;
         final int maxContainerLength0 = maxContainerLength == 0 ? -1 : maxContainerLength;
+
+        if (IS_THRIFT_091) {
+            // Thrift 0.9.1 does not support a message length limit.
+            return new TCompactProtocol.Factory() {
+                private static final long serialVersionUID = 4430306676070073610L;
+
+                @Override
+                public String toString() {
+                    return MoreObjects.toStringHelper(this)
+                                      .addValue("COMPACT")
+                                      .toString();
+                }
+            };
+        }
 
         return new TCompactProtocol.Factory(maxStringLength0, maxContainerLength0) {
             private static final long serialVersionUID = 1629726795326210377L;
