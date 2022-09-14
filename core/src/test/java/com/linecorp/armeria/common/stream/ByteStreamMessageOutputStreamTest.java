@@ -23,6 +23,7 @@ import static org.awaitility.Awaitility.await;
 
 import java.io.IOException;
 import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.hamcrest.Matchers;
@@ -151,20 +152,24 @@ class ByteStreamMessageOutputStreamTest {
     }
 
     @Test
-    void writeAfterStreamClosed() {
+    void writeAfterStreamClosed() throws InterruptedException {
+        final CountDownLatch wait = new CountDownLatch(1);
+        final CountDownLatch end = new CountDownLatch(1);
         final ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
             try {
                 for (int i = 0; i < 5; i++) {
-                    if (i < 3) {
+                    if (i < 2) {
                         os.write(i);
                     } else {
+                        wait.await();
                         assertThatThrownBy(() -> os.write(0))
                                 .isInstanceOf(IOException.class)
                                 .hasMessage("Stream closed");
                     }
                 }
                 assertThatCode(os::close).doesNotThrowAnyException();
-            } catch (IOException e) {
+                end.countDown();
+            } catch (IOException | InterruptedException e) {
                 throw new RuntimeException(e);
             }
         });
@@ -172,7 +177,9 @@ class ByteStreamMessageOutputStreamTest {
         StepVerifier.create(byteStreamMessage, 2)
                     .expectNext(httpData(0), httpData(1))
                     .then(byteStreamMessage::abort)
+                    .then(wait::countDown)
                     .verifyError(AbortedStreamException.class);
+        end.await();
     }
 
     @Test
@@ -182,6 +189,7 @@ class ByteStreamMessageOutputStreamTest {
                 .peek(x -> {
                     if (x == 13) {
                         streamMessage.abort();
+                        await().untilAsserted(() -> assertThat(streamMessage.isOpen()).isFalse());
                     }
                 })
                 .map(ByteStreamMessageOutputStreamTest::httpData);
