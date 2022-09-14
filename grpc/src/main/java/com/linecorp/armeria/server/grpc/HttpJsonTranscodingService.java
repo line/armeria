@@ -299,10 +299,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         final ImmutableMap.Builder<String, Field> builder = ImmutableMap.builder();
         desc.getFields().forEach(field -> {
             final JavaType type = field.getJavaType();
-            String key = namePrefix + field.getName();
-            if (useCamelCaseKeys) {
-                key = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, key);
-            }
+            final String key = namePrefix + field.getName();
+            final String camelCaseKey = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, key);
             switch (type) {
                 case INT:
                 case LONG:
@@ -313,15 +311,19 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 case BYTE_STRING:
                 case ENUM:
                     // Use field name which is specified in proto file.
-                    builder.put(namePrefix + field.getName(),
-                                new Field(field, parentNames, field.getJavaType()));
+                    builder.put(key, new Field(field, parentNames, field.getJavaType()));
+                    if (useCamelCaseKeys && key != camelCaseKey) {
+                        builder.put(camelCaseKey, new Field(field, parentNames, field.getJavaType()));
+                    }
                     break;
                 case MESSAGE:
                     @Nullable
                     final JavaType wellKnownFieldType = getJavaTypeForWellKnownTypes(field);
                     if (wellKnownFieldType != null) {
-                        builder.put(namePrefix + field.getName(),
-                                    new Field(field, parentNames, wellKnownFieldType));
+                        builder.put(key, new Field(field, parentNames, wellKnownFieldType));
+                        if (useCamelCaseKeys && key != camelCaseKey) {
+                            builder.put(camelCaseKey, new Field(field, parentNames, wellKnownFieldType));
+                        }
                         break;
                     }
 
@@ -368,8 +370,10 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                             throw e;
                         }
 
-                        builder.put(namePrefix + field.getName(),
-                                    new Field(field, parentNames, JavaType.MESSAGE));
+                        builder.put(key, new Field(field, parentNames, JavaType.MESSAGE));
+                        if (useCamelCaseKeys && key != camelCaseKey) {
+                            builder.put(camelCaseKey, new Field(field, parentNames, JavaType.MESSAGE));
+                        }
                     }
                     break;
             }

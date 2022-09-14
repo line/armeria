@@ -29,8 +29,8 @@ public class HttpJsonTranscodingOptionsBuilder {
      * enables camelCase query parameters for Http Json Transcoding endpoints.
      * provided by {@link HttpJsonTranscodingService}.
      */
-    public HttpJsonTranscodingOptionsBuilder useCamelCaseQueryParams() {
-        this.camelCaseQueryParams = true;
+    public HttpJsonTranscodingOptionsBuilder camelCaseQueryParams(boolean camelCaseQueryParams) {
+        this.camelCaseQueryParams = camelCaseQueryParams;
         return this;
     }
 

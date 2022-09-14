@@ -23,11 +23,11 @@ public final class HttpJsonTranscodingOptions {
 
     private final boolean camelCaseQueryParams;
 
-    static HttpJsonTranscodingOptionsBuilder builder() {
+    public static HttpJsonTranscodingOptionsBuilder builder() {
         return new HttpJsonTranscodingOptionsBuilder();
     }
 
-    static HttpJsonTranscodingOptions of(boolean camelCaseQueryParams) {
+    public static HttpJsonTranscodingOptions of(boolean camelCaseQueryParams) {
         return new HttpJsonTranscodingOptions(camelCaseQueryParams);
     }
 
@@ -35,7 +35,7 @@ public final class HttpJsonTranscodingOptions {
         this.camelCaseQueryParams = camelCaseQueryParams;
     }
 
-    Boolean camelCaseQueryParams() {
+    public boolean camelCaseQueryParams() {
         return this.camelCaseQueryParams;
     }
 }

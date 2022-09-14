@@ -45,6 +45,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.CaseFormat;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.WebClient;
@@ -80,6 +81,7 @@ import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV1;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV2;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV2.SubMessage;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV3;
+import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV4;
 import com.linecorp.armeria.grpc.testing.Transcoding.Message;
 import com.linecorp.armeria.grpc.testing.Transcoding.MessageType;
 import com.linecorp.armeria.grpc.testing.Transcoding.Recursive;
@@ -91,6 +93,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
@@ -123,6 +126,16 @@ public class HttpJsonTranscodingTest {
             final String text = request.getMessageId() + ':' +
                                 request.getRevisionList().stream().map(String::valueOf)
                                        .collect(Collectors.joining(":"));
+            responseObserver.onNext(Message.newBuilder().setText(text).build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void getMessageV4(GetMessageRequestV4 request, StreamObserver<Message> responseObserver) {
+            final String text = request.getMessageId() + ':' +
+                                request.getQueryParameter() + ':' +
+                                request.getParentField().getChildField() + ':' +
+                                request.getParentField().getChildField2();
             responseObserver.onNext(Message.newBuilder().setText(text).build());
             responseObserver.onCompleted();
         }
@@ -271,26 +284,35 @@ public class HttpJsonTranscodingTest {
     }
 
     @RegisterExtension
-    static final ServerExtension server = createServer(false);
+    static final ServerExtension server = createServer(false, false);
 
     @RegisterExtension
-    static final ServerExtension serverPreservingProtoFieldNames = createServer(true);
+    static final ServerExtension serverPreservingProtoFieldNames = createServer(true, false);
+
+    @RegisterExtension
+    static final ServerExtension serverCamelCaseQueryParameters = createServer(false, true);
 
     private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     private final WebClient webClient = WebClient.builder(server.httpUri()).build();
 
-    final WebClient webClientPreservingProtoFieldNames =
+    private final WebClient webClientPreservingProtoFieldNames =
             WebClient.builder(serverPreservingProtoFieldNames.httpUri()).build();
 
-    static ServerExtension createServer(boolean preservingProtoFieldNames) {
+    private final WebClient webClientCamelCaseQueryParameters =
+            WebClient.builder(serverCamelCaseQueryParameters.httpUri()).build();
+
+    static ServerExtension createServer(boolean preservingProtoFieldNames, boolean camelCaseQueryParams) {
+        HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.builder()
+                .camelCaseQueryParams(camelCaseQueryParams)
+                .build();
         return new ServerExtension() {
             @Override
             protected void configure(ServerBuilder sb) throws Exception {
                 final GrpcServiceBuilder grpcServiceBuilder =
                         GrpcService.builder()
                                    .addService(new HttpJsonTranscodingTestService())
-                                   .enableHttpJsonTranscoding(true);
+                                   .enableHttpJsonTranscoding(options);
                 if (preservingProtoFieldNames) {
                     grpcServiceBuilder.jsonMarshallerFactory(service -> GrpcJsonMarshaller
                             .builder()
@@ -741,6 +763,31 @@ public class HttpJsonTranscodingTest {
         assertThat(updateMessageV2.get("httpMethod").asText()).isEqualTo("PATCH");
         assertThat(pathMapping(updateMessageV2)).containsExactlyInAnyOrder("/v2/messages/:message_id",
                                                                            "/foo/v2/messages/:message_id");
+    }
+
+    @Test
+    void shouldAcceptCamelCaseQueryParamsOnOption() throws JsonProcessingException {
+        final QueryParamsBuilder query = QueryParams.builder();
+        query.add("queryParameter", "testQuery")
+             .add("parentField.childField", "testChildField")
+             .add("parentField.childField2","testChildField2");
+
+        final AggregatedHttpResponse response =
+                webClientCamelCaseQueryParameters.get("/v4/messages/1?" + query.toQueryString())
+                         .aggregate().join();
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(root.get("text").asText()).isEqualTo("1:testQuery:testChildField:testChildField2");
+
+        final QueryParamsBuilder query2 = QueryParams.builder();
+        query2.add("query_parameter", "testQuery")
+             .add("parent_field.child_field", "testChildField")
+             .add("parent_field.child_field_2","testChildField2");
+
+        final AggregatedHttpResponse response2 =
+                webClientCamelCaseQueryParameters.get("/v4/messages/1?" + query2.toQueryString())
+                                                 .aggregate().join();
+        final JsonNode root2 = mapper.readTree(response2.contentUtf8());
+        assertThat(root2.get("text").asText()).isEqualTo("1:testQuery:testChildField:testChildField2");
     }
 
     public static JsonNode findMethod(JsonNode methods, String name) {
