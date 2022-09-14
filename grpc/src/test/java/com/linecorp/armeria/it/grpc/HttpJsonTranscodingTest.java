@@ -45,7 +45,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.CaseFormat;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.WebClient;
@@ -303,7 +302,7 @@ public class HttpJsonTranscodingTest {
             WebClient.builder(serverCamelCaseQueryParameters.httpUri()).build();
 
     static ServerExtension createServer(boolean preservingProtoFieldNames, boolean camelCaseQueryParams) {
-        HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.builder()
+        final HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.builder()
                 .camelCaseQueryParams(camelCaseQueryParams)
                 .build();
         return new ServerExtension() {
