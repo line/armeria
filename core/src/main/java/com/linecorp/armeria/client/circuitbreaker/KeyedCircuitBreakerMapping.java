@@ -16,6 +16,9 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerMappingUtil.host;
+import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerMappingUtil.method;
+import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerMappingUtil.path;
 import static java.util.Objects.requireNonNull;
 import static java.util.stream.Collectors.joining;
 
@@ -25,10 +28,7 @@ import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Stream;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.Endpoint;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RpcRequest;
 
 /**
  * A {@link CircuitBreakerMapping} that binds a {@link CircuitBreaker} to a combination of host, method and/or
@@ -72,29 +72,5 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
             return circuitBreaker;
         }
         return mapping.computeIfAbsent(key, mapKey -> factory.apply(host, method, path));
-    }
-
-    private static String host(ClientRequestContext ctx) {
-        final Endpoint endpoint = ctx.endpoint();
-        if (endpoint == null) {
-            return "UNKNOWN";
-        } else {
-            final String ipAddr = endpoint.ipAddr();
-            if (ipAddr == null || endpoint.isIpAddrOnly()) {
-                return endpoint.authority();
-            } else {
-                return endpoint.authority() + '/' + ipAddr;
-            }
-        }
-    }
-
-    private static String method(ClientRequestContext ctx) {
-        final RpcRequest rpcReq = ctx.rpcRequest();
-        return rpcReq != null ? rpcReq.method() : ctx.method().name();
-    }
-
-    private static String path(ClientRequestContext ctx) {
-        final HttpRequest request = ctx.request();
-        return request == null ? "" : request.path();
     }
 }

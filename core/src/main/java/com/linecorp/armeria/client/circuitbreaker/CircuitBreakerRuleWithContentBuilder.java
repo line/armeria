@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.internal.client.AbstractRuleBuilderUtil;
+import com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerConverterUtil;
 
 /**
  * A builder for creating a new {@link CircuitBreakerRuleWithContent}.
@@ -81,7 +82,7 @@ public final class CircuitBreakerRuleWithContentBuilder<T extends Response>
         final CircuitBreakerRule first = CircuitBreakerRuleBuilder.build(ruleFilter, decision,
                                                                          responseTrailersFilter() != null);
         if (!hasResponseFilter) {
-            return CircuitBreakerRuleUtil.fromCircuitBreakerRule(first);
+            return CircuitBreakerConverterUtil.fromCircuitBreakerRule(first);
         }
 
         final CircuitBreakerRuleWithContent<T> second = (ctx, content, cause) -> {

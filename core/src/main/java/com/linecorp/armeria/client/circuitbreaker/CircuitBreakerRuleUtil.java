@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,6 +15,8 @@
  */
 
 package com.linecorp.armeria.client.circuitbreaker;
+
+import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerConverterUtil.fromCircuitBreakerRule;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
@@ -36,39 +38,6 @@ final class CircuitBreakerRuleUtil {
             UnmodifiableFuture.completedFuture(CircuitBreakerDecision.ignore());
     static final CompletableFuture<CircuitBreakerDecision> NEXT_DECISION =
             UnmodifiableFuture.completedFuture(CircuitBreakerDecision.next());
-
-    static <T extends Response> CircuitBreakerRuleWithContent<T> fromCircuitBreakerRule(
-            CircuitBreakerRule circuitBreakerRule) {
-        return new CircuitBreakerRuleWithContent<T>() {
-            @Override
-            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
-                                                                                 @Nullable T response,
-                                                                                 @Nullable Throwable cause) {
-                return circuitBreakerRule.shouldReportAsSuccess(ctx, cause);
-            }
-
-            @Override
-            public boolean requiresResponseTrailers() {
-                return circuitBreakerRule.requiresResponseTrailers();
-            }
-        };
-    }
-
-    static <T extends Response> CircuitBreakerRule fromCircuitBreakerRuleWithContent(
-            CircuitBreakerRuleWithContent<T> circuitBreakerRuleWithContent) {
-        return new CircuitBreakerRule() {
-            @Override
-            public CompletionStage<CircuitBreakerDecision> shouldReportAsSuccess(ClientRequestContext ctx,
-                                                                                 @Nullable Throwable cause) {
-                return circuitBreakerRuleWithContent.shouldReportAsSuccess(ctx, null, cause);
-            }
-
-            @Override
-            public boolean requiresResponseTrailers() {
-                return circuitBreakerRuleWithContent.requiresResponseTrailers();
-            }
-        };
-    }
 
     static CircuitBreakerRule orElse(CircuitBreakerRule first, CircuitBreakerRule second) {
 

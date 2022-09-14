@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static com.google.common.base.Preconditions.checkState;
-import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.fromCircuitBreakerRuleWithContent;
 import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
@@ -30,7 +28,6 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.CompletionActions;
 
 /**
@@ -44,78 +41,14 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractCircuitBreakerClient.class);
 
-    @Nullable
-    private final CircuitBreakerRule rule;
-
-    @Nullable
-    private final CircuitBreakerRule fromRuleWithContent;
-
-    @Nullable
-    private final CircuitBreakerRuleWithContent<O> ruleWithContent;
-
     private final CircuitBreakerMapping mapping;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
-                                 CircuitBreakerRule rule) {
-        this(delegate, mapping, requireNonNull(rule, "rule"), null);
-    }
-
-    /**
-     * Creates a new instance that decorates the specified {@link Client}.
-     */
-    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
-                                 CircuitBreakerRuleWithContent<O> ruleWithContent) {
-        this(delegate, mapping, null, requireNonNull(ruleWithContent, "ruleWithContent"));
-    }
-
-    /**
-     * Creates a new instance that decorates the specified {@link Client}.
-     */
-    private AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
-                                         @Nullable CircuitBreakerRule rule,
-                                         @Nullable CircuitBreakerRuleWithContent<O> ruleWithContent) {
+    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping) {
         super(delegate);
         this.mapping = requireNonNull(mapping, "mapping");
-        this.rule = rule;
-        this.ruleWithContent = ruleWithContent;
-        if (ruleWithContent != null) {
-            fromRuleWithContent = fromCircuitBreakerRuleWithContent(ruleWithContent);
-        } else {
-            fromRuleWithContent = null;
-        }
-    }
-
-    /**
-     * Returns the {@link CircuitBreakerRule}.
-     *
-     * @throws IllegalStateException if the {@link CircuitBreakerRule} is not set
-     */
-    final CircuitBreakerRule rule() {
-        checkState(rule != null, "rule is not set.");
-        return rule;
-    }
-
-    /**
-     * Returns the {@link CircuitBreakerRuleWithContent}.
-     *
-     * @throws IllegalStateException if the {@link CircuitBreakerRuleWithContent} is not set
-     */
-    final CircuitBreakerRuleWithContent<O> ruleWithContent() {
-        checkState(ruleWithContent != null, "ruleWithContent is not set.");
-        return ruleWithContent;
-    }
-
-    /**
-     * Returns the {@link CircuitBreakerRule} derived from {@link #ruleWithContent()}.
-     *
-     * @throws IllegalStateException if the {@link CircuitBreakerRuleWithContent} is not set
-     */
-    final CircuitBreakerRule fromRuleWithContent() {
-        checkState(ruleWithContent != null, "ruleWithContent is not set.");
-        return fromRuleWithContent;
     }
 
     @Override
@@ -146,7 +79,10 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
      * Reports a success or a failure to the specified {@link CircuitBreaker} according to the completed value
      * of the specified {@code future}. If the completed value is {@link CircuitBreakerDecision#ignore()},
      * this doesn't do anything.
+     *
+     * @deprecated Do not use this method.
      */
+    @Deprecated
     protected static void reportSuccessOrFailure(CircuitBreaker circuitBreaker,
                                                  CompletionStage<CircuitBreakerDecision> future) {
         future.handle((decision, unused) -> {

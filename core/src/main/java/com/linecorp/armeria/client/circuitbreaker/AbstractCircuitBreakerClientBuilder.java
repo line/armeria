@@ -16,14 +16,12 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * A skeletal builder implementation that builds a new {@link AbstractCircuitBreakerClient} or
@@ -31,13 +29,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
  *
  * @param <O> the type of incoming {@link Response} of the {@link Client}
  */
-public abstract class AbstractCircuitBreakerClientBuilder<O extends Response> {
-
-    @Nullable
-    private final CircuitBreakerRule rule;
-
-    @Nullable
-    private final CircuitBreakerRuleWithContent<O> ruleWithContent;
+public abstract class AbstractCircuitBreakerClientBuilder<O extends Response>
+        extends CircuitBreakerRuleSetter<O> {
 
     private CircuitBreakerMapping mapping = CircuitBreakerMapping.ofDefault();
 
@@ -45,31 +38,14 @@ public abstract class AbstractCircuitBreakerClientBuilder<O extends Response> {
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
      */
     AbstractCircuitBreakerClientBuilder(CircuitBreakerRule rule) {
-        this(requireNonNull(rule, "rule"), null);
+        super(requireNonNull(rule, "rule"), null);
     }
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRuleWithContent}.
      */
     AbstractCircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<O> ruleWithContent) {
-        this(null, requireNonNull(ruleWithContent, "ruleWithContent"));
-    }
-
-    private AbstractCircuitBreakerClientBuilder(
-            @Nullable CircuitBreakerRule rule,
-            @Nullable CircuitBreakerRuleWithContent<O> ruleWithContent) {
-        this.rule = rule;
-        this.ruleWithContent = ruleWithContent;
-    }
-
-    final CircuitBreakerRule rule() {
-        checkState(rule != null, "rule is not set.");
-        return rule;
-    }
-
-    final CircuitBreakerRuleWithContent<O> ruleWithContent() {
-        checkState(ruleWithContent != null, "ruleWithContent is not set.");
-        return ruleWithContent;
+        super(null, requireNonNull(ruleWithContent, "ruleWithContent"));
     }
 
     /**
@@ -90,8 +66,8 @@ public abstract class AbstractCircuitBreakerClientBuilder<O extends Response> {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("rule", rule)
-                          .add("ruleWithContent", ruleWithContent)
+                          .add("rule", rawRule())
+                          .add("ruleWithContent", rawRuleWithContent())
                           .add("mapping", mapping)
                           .toString();
     }

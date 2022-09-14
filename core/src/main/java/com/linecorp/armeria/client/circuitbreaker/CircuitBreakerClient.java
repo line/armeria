@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.circuitbreaker;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
-import java.util.concurrent.CompletionStage;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
@@ -28,16 +27,14 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
+import com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerReporter;
 
 /**
  * An {@link HttpClient} decorator that handles failures of HTTP requests based on circuit breaker pattern.
  */
 public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpRequest, HttpResponse>
-        implements HttpClient {
+        implements HttpClient, CircuitBreakerClientCallbacks<CircuitBreaker> {
 
     /**
      * Creates a new decorator using the specified {@link CircuitBreaker} instance and
@@ -248,16 +245,14 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
         return new CircuitBreakerClientBuilder(ruleWithContent, maxContentLength);
     }
 
-    private final boolean needsContentInRule;
-    private final int maxContentLength;
+    private final CircuitBreakerReporter<CircuitBreaker> reporter;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
     CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping, CircuitBreakerRule rule) {
-        super(delegate, mapping, rule);
-        needsContentInRule = false;
-        maxContentLength = 0;
+        super(delegate, mapping);
+        reporter = new CircuitBreakerReporter<>(requireNonNull(rule, "rule"), null, false, 0, this);
     }
 
     /**
@@ -273,69 +268,31 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
      */
     CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping,
                          CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent, int maxContentLength) {
-        super(delegate, mapping, ruleWithContent);
-        needsContentInRule = true;
-        this.maxContentLength = maxContentLength;
+        super(delegate, mapping);
+        reporter = new CircuitBreakerReporter<>(null, requireNonNull(ruleWithContent, "ruleWithContent"),
+                                                true, maxContentLength, this);
     }
 
     @Override
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req, CircuitBreaker circuitBreaker)
             throws Exception {
-        final CircuitBreakerRule rule = needsContentInRule ? fromRuleWithContent() : rule();
         final HttpResponse response;
         try {
             response = unwrap().execute(ctx, req);
         } catch (Throwable cause) {
-            reportSuccessOrFailure(circuitBreaker, rule.shouldReportAsSuccess(ctx, cause));
+            reporter.reportSuccessOrFailure(circuitBreaker, ctx, cause);
             throw cause;
         }
-
-        final RequestLogProperty property =
-                rule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_TRAILERS
-                                                : RequestLogProperty.RESPONSE_HEADERS;
-
-        if (!needsContentInRule) {
-            reportResult(ctx, circuitBreaker, property);
-            return response;
-        } else {
-            return reportResultWithContent(ctx, response, circuitBreaker, property);
-        }
+        return reporter.report(ctx, circuitBreaker, response);
     }
 
-    private void reportResult(ClientRequestContext ctx, CircuitBreaker circuitBreaker,
-                              RequestLogProperty logProperty) {
-        ctx.log().whenAvailable(logProperty).thenAccept(log -> {
-            final Throwable resCause =
-                    log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
-            reportSuccessOrFailure(circuitBreaker, rule().shouldReportAsSuccess(ctx, resCause));
-        });
+    @Override
+    public void onSuccess(CircuitBreaker circuitBreaker, ClientRequestContext ctx) {
+        circuitBreaker.onSuccess();
     }
 
-    private HttpResponse reportResultWithContent(ClientRequestContext ctx, HttpResponse response,
-                                                 CircuitBreaker circuitBreaker,
-                                                 RequestLogProperty logProperty) {
-
-        final HttpResponseDuplicator duplicator = response.toDuplicator(ctx.eventLoop().withoutContext(),
-                                                                        ctx.maxResponseLength());
-        final TruncatingHttpResponse truncatingHttpResponse =
-                new TruncatingHttpResponse(duplicator.duplicate(), maxContentLength);
-        final HttpResponse duplicate = duplicator.duplicate();
-        duplicator.close();
-
-        ctx.log().whenAvailable(logProperty).thenAccept(log -> {
-            try {
-                final CompletionStage<CircuitBreakerDecision> f =
-                        ruleWithContent().shouldReportAsSuccess(ctx, truncatingHttpResponse, null);
-                f.handle((unused1, unused2) -> {
-                    truncatingHttpResponse.abort();
-                    return null;
-                });
-                reportSuccessOrFailure(circuitBreaker, f);
-            } catch (Throwable cause) {
-                duplicator.abort(cause);
-            }
-        });
-
-        return duplicate;
+    @Override
+    public void onFailure(CircuitBreaker circuitBreaker, ClientRequestContext ctx) {
+        circuitBreaker.onFailure();
     }
 }
