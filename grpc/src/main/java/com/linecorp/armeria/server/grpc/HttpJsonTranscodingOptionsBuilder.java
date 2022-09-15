@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static com.google.common.base.Preconditions.checkState;
 
 /**
  * builder for {@link HttpJsonTranscodingOptions}.
@@ -38,8 +38,6 @@ public class HttpJsonTranscodingOptionsBuilder {
      * original field name are considered valid inputs.
      */
     public HttpJsonTranscodingOptionsBuilder useCamelCaseQueryParams(boolean useCamelCaseQueryParams) {
-        checkArgument(useCamelCaseQueryParams || useProtoFieldNameQueryParams,
-                      "Can't disable both useCamelCaseQueryParams and useProtoFieldNameQueryParams");
         this.useCamelCaseQueryParams = useCamelCaseQueryParams;
         return this;
     }
@@ -55,16 +53,19 @@ public class HttpJsonTranscodingOptionsBuilder {
      */
     public HttpJsonTranscodingOptionsBuilder useProtoFieldNameQueryParams(
             boolean useProtoFieldNameQueryParams) {
-        checkArgument(useProtoFieldNameQueryParams || useCamelCaseQueryParams,
-                      "Can't disable both useProtoFieldNameQueryParams and useCamelCaseQueryParams");
         this.useProtoFieldNameQueryParams = useProtoFieldNameQueryParams;
         return this;
     }
 
     /**
-     * builds {@link HttpJsonTranscodingOptions}.
+     * Returns a new created {@link HttpJsonTranscodingOptions}.
+     *
+     * @throws IllegalStateException if both {@link #useProtoFieldNameQueryParams(boolean)} and
+     *                               {@link #useCamelCaseQueryParams(boolean)} are set to {@code false}.
      */
     public HttpJsonTranscodingOptions build() {
+        checkState(useProtoFieldNameQueryParams || useCamelCaseQueryParams,
+                   "Can't disable both useProtoFieldNameQueryParams and useCamelCaseQueryParams");
         return new DefaultHttpJsonTranscodingOptions(useCamelCaseQueryParams, useProtoFieldNameQueryParams);
     }
 }

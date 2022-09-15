@@ -665,10 +665,11 @@ public final class GrpcServiceBuilder {
      *
      * <p>Example:
      * <pre>{@code
-     * HttpJsonTranscodingOptions options = HttpJsonTranscodingOptions.buider()
-     *                                                                .camelCaseQueryParams(true)
-     *                                                                ...
-     *                                                                .build()
+     * HttpJsonTranscodingOptions options =
+     *   HttpJsonTranscodingOptions.builder()
+     *                             .useCamelCaseQueryParams(true)
+     *                             ...
+     *                             .build()
      *
      * GrpcService.builder()
      *            // Enable HttpJsonTranscoding and use the specified HttpJsonTranscodingOption
