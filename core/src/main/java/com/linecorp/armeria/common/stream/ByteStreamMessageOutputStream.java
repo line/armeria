@@ -28,7 +28,6 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.util.concurrent.EventExecutor;
 
@@ -77,7 +76,7 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
         final Subscriber<HttpData> outputStreamSubscriber = new OutputStreamSubscriber(
-                subscriber, executor, outputStreamWriter, outputStreamConsumer, blockingTaskExecutor);
+                subscriber, outputStreamWriter, outputStreamConsumer, blockingTaskExecutor);
         delegate.subscribe(outputStreamSubscriber, executor, options);
     }
 
@@ -91,31 +90,23 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
         delegate.abort(cause);
     }
 
-    private static final class OutputStreamSubscriber implements Subscriber<HttpData>, Subscription {
+    private static final class OutputStreamSubscriber implements Subscriber<HttpData> {
 
         private final Subscriber<? super HttpData> downstream;
-        private final EventExecutor executor;
-
         private final StreamMessageAndWriter<HttpData> outputStreamWriter;
         private final Consumer<OutputStream> outputStreamConsumer;
         private final Executor blockingTaskExecutor;
-
-        @Nullable
-        private Subscription upstream;
         private boolean completed;
 
         OutputStreamSubscriber(Subscriber<? super HttpData> downstream,
-                               EventExecutor executor,
                                StreamMessageAndWriter<HttpData> outputStreamWriter,
                                Consumer<OutputStream> outputStreamConsumer,
                                Executor blockingTaskExecutor) {
             requireNonNull(downstream, "downstream");
-            requireNonNull(executor, "executor");
             requireNonNull(outputStreamWriter, "outputStreamWriter");
             requireNonNull(outputStreamConsumer, "outputStreamConsumer");
             requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
             this.downstream = downstream;
-            this.executor = executor;
             this.outputStreamWriter = outputStreamWriter;
             this.outputStreamConsumer = outputStreamConsumer;
             this.blockingTaskExecutor = blockingTaskExecutor;
@@ -124,14 +115,13 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
         @Override
         public void onSubscribe(Subscription subscription) {
             requireNonNull(subscription, "subscription");
-            upstream = subscription;
-            downstream.onSubscribe(this);
+            downstream.onSubscribe(subscription);
             blockingTaskExecutor.execute(() -> {
                 try {
                     outputStreamConsumer.accept(new StreamWriterOutputStream(outputStreamWriter));
                 } catch (Throwable t) {
                     onError(t);
-                    upstream.cancel();
+                    subscription.cancel();
                 }
             });
         }
@@ -163,42 +153,6 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
             }
             completed = true;
             downstream.onComplete();
-        }
-
-        @Override
-        public void request(long n) {
-            if (executor.inEventLoop()) {
-                request0(n);
-            } else {
-                executor.execute(() -> request0(n));
-            }
-        }
-
-        private void request0(long n) {
-            if (n <= 0) {
-                onError(new IllegalArgumentException(
-                        "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
-                upstream.cancel();
-                return;
-            }
-            upstream.request(n);
-        }
-
-        @Override
-        public void cancel() {
-            if (executor.inEventLoop()) {
-                cancel0();
-            } else {
-                executor.execute(this::cancel0);
-            }
-        }
-
-        private void cancel0() {
-            if (completed) {
-                return;
-            }
-            completed = true;
-            upstream.cancel();
         }
     }
 
