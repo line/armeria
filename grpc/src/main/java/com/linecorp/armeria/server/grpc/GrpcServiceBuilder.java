@@ -130,8 +130,7 @@ public final class GrpcServiceBuilder {
     @Nullable
     private UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler;
 
-    @Nullable
-    private HttpJsonTranscodingOptions httpJsonTranscodingOptions;
+    private HttpJsonTranscodingOptions httpJsonTranscodingOptions = HttpJsonTranscodingOptions.ofDefault();
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 
@@ -694,7 +693,9 @@ public final class GrpcServiceBuilder {
      */
     @UnstableApi
     public GrpcServiceBuilder enableHttpJsonTranscoding(HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
-        this.enableHttpJsonTranscoding = true;
+        requireNonNull(httpJsonTranscodingOptions, "httpJsonTranscodingOptions");
+
+        enableHttpJsonTranscoding = true;
         this.httpJsonTranscodingOptions = httpJsonTranscodingOptions;
         return this;
     }
@@ -1024,8 +1025,7 @@ public final class GrpcServiceBuilder {
                     grpcService,
                     httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
                                                             : UnframedGrpcErrorHandler.ofJson(),
-                    httpJsonTranscodingOptions != null ? httpJsonTranscodingOptions
-                                                            : HttpJsonTranscodingOptions.of(false));
+                    httpJsonTranscodingOptions);
         }
         if (handlerRegistry.containsDecorators()) {
             grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);

@@ -168,9 +168,17 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
                 final Route route = routeAndVariables.getKey();
                 final List<PathVariable> pathVariables = routeAndVariables.getValue();
-                final Map<String, Field> fields =
+                final Map<String, Field> originalFields =
                         buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
-                                    httpJsonTranscodingOptions.camelCaseQueryParams());
+                                    false);
+                final Map<String, Field> camelCaseFields;
+                if (httpJsonTranscodingOptions.useCamelCaseQueryParams()) {
+                    camelCaseFields =
+                            buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
+                                        true);
+                } else {
+                    camelCaseFields = ImmutableMap.of();
+                }
 
                 if (specs.containsKey(route)) {
                     logger.warn("{} is not added because the route is duplicate: {}", httpRule, route);
@@ -180,7 +188,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 final String responseBody = getResponseBody(topLevelFields, httpRule.getResponseBody());
                 int order = 0;
                 specs.put(route, new TranscodingSpec(order++, httpRule, methodDefinition,
-                                                     serviceDesc, methodDesc, fields, pathVariables,
+                                                     serviceDesc, methodDesc, originalFields, camelCaseFields,
+                                                     pathVariables,
                                                      responseBody));
                 for (HttpRule additionalHttpRule : httpRule.getAdditionalBindingsList()) {
                     @Nullable
@@ -189,7 +198,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                     if (additionalRouteAndVariables != null) {
                         specs.put(additionalRouteAndVariables.getKey(),
                                     new TranscodingSpec(order++, additionalHttpRule, methodDefinition,
-                                                        serviceDesc, methodDesc, fields,
+                                                        serviceDesc, methodDesc, originalFields,
+                                                        camelCaseFields,
                                                         additionalRouteAndVariables.getValue(),
                                                         responseBody));
                     }
@@ -201,7 +211,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             // We don't need to create a new HttpJsonTranscodingService instance in this case.
             return delegate;
         }
-        return new HttpJsonTranscodingService(delegate, ImmutableMap.copyOf(specs), unframedGrpcErrorHandler);
+        return new HttpJsonTranscodingService(delegate, ImmutableMap.copyOf(specs), unframedGrpcErrorHandler,
+                                              httpJsonTranscodingOptions);
     }
 
     @Nullable
@@ -299,8 +310,13 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         final ImmutableMap.Builder<String, Field> builder = ImmutableMap.builder();
         desc.getFields().forEach(field -> {
             final JavaType type = field.getJavaType();
-            final String key = namePrefix + field.getName();
-            final String camelCaseKey = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, key);
+            final String fieldName;
+            if (useCamelCaseKeys) {
+                fieldName = CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, field.getName());
+            } else {
+                fieldName = field.getName();
+            }
+            final String key = namePrefix + fieldName;
             switch (type) {
                 case INT:
                 case LONG:
@@ -312,18 +328,12 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 case ENUM:
                     // Use field name which is specified in proto file.
                     builder.put(key, new Field(field, parentNames, field.getJavaType()));
-                    if (useCamelCaseKeys && key != camelCaseKey) {
-                        builder.put(camelCaseKey, new Field(field, parentNames, field.getJavaType()));
-                    }
                     break;
                 case MESSAGE:
                     @Nullable
                     final JavaType wellKnownFieldType = getJavaTypeForWellKnownTypes(field);
                     if (wellKnownFieldType != null) {
                         builder.put(key, new Field(field, parentNames, wellKnownFieldType));
-                        if (useCamelCaseKeys && key != camelCaseKey) {
-                            builder.put(camelCaseKey, new Field(field, parentNames, wellKnownFieldType));
-                        }
                         break;
                     }
 
@@ -357,7 +367,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         builder.putAll(buildFields(typeDesc,
                                                    ImmutableList.<String>builder()
                                                                 .addAll(parentNames)
-                                                                .add(field.getName())
+                                                                .add(fieldName)
                                                                 .build(),
                                                    ImmutableSet.<Descriptor>builder()
                                                                .addAll(visitedTypes)
@@ -371,9 +381,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         }
 
                         builder.put(key, new Field(field, parentNames, JavaType.MESSAGE));
-                        if (useCamelCaseKeys && key != camelCaseKey) {
-                            builder.put(camelCaseKey, new Field(field, parentNames, JavaType.MESSAGE));
-                        }
                     }
                     break;
             }
@@ -499,16 +506,19 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
     private final Map<Route, TranscodingSpec> routeAndSpecs;
     private final Set<Route> routes;
+    private final HttpJsonTranscodingOptions httpJsonTranscodingOptions;
 
     private HttpJsonTranscodingService(GrpcService delegate,
                                        Map<Route, TranscodingSpec> routeAndSpecs,
-                                       UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
+                                       UnframedGrpcErrorHandler unframedGrpcErrorHandler,
+                                       HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
         super(delegate, unframedGrpcErrorHandler);
         this.routeAndSpecs = routeAndSpecs;
         routes = ImmutableSet.<Route>builder()
                              .addAll(delegate.routes())
                              .addAll(routeAndSpecs.keySet())
                              .build();
+        this.httpJsonTranscodingOptions = httpJsonTranscodingOptions;
     }
 
     @Override
@@ -521,7 +531,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         final Set<String> paramNames = spec.pathVariables.stream().map(PathVariable::name)
                                                          .collect(toImmutableSet());
         final Map<String, Parameter> parameterTypes =
-                spec.fields.entrySet().stream().collect(
+                spec.originalFields.entrySet().stream().collect(
                         toImmutableMap(Entry::getKey,
                                        fieldEntry -> new Parameter(fieldEntry.getValue().type(),
                                                                    fieldEntry.getValue().isRepeated())));
@@ -607,9 +617,9 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
     /**
      * Converts the HTTP request to gRPC JSON with the {@link TranscodingSpec}.
      */
-    private static HttpData convertToJson(ServiceRequestContext ctx,
-                                          AggregatedHttpRequest request,
-                                          TranscodingSpec spec) throws IOException {
+    private HttpData convertToJson(ServiceRequestContext ctx,
+                                   AggregatedHttpRequest request,
+                                   TranscodingSpec spec) throws IOException {
         try {
             switch (request.method()) {
                 case GET:
@@ -688,24 +698,38 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         }).collect(toImmutableMap(Entry::getKey, Entry::getValue));
     }
 
-    private static HttpData setParametersAndWriteJson(ObjectNode root,
-                                                      ServiceRequestContext ctx,
-                                                      TranscodingSpec spec) throws JsonProcessingException {
+    private HttpData setParametersAndWriteJson(ObjectNode root,
+                                               ServiceRequestContext ctx,
+                                               TranscodingSpec spec) throws JsonProcessingException {
         // Generate path variable name/value map.
         final Map<String, String> resolvedPathVars = populatePathVariables(ctx, spec.pathVariables);
 
-        setParametersToNode(root, resolvedPathVars.entrySet(), spec);
-        if (ctx.query() != null) {
-            setParametersToNode(root, QueryParams.fromQueryString(ctx.query()), spec);
+        setParametersToNode(root, resolvedPathVars.entrySet(), spec, true);
+        final QueryParams params = ctx.queryParams();
+        if (!params.isEmpty()) {
+            setParametersToNode(root, params, spec, false);
         }
         return HttpData.wrap(mapper.writeValueAsBytes(root));
     }
 
-    private static void setParametersToNode(ObjectNode root,
-                                            Iterable<Entry<String, String>> parameters,
-                                            TranscodingSpec spec) {
+    private void setParametersToNode(ObjectNode root,
+                                     Iterable<Entry<String, String>> parameters,
+                                     TranscodingSpec spec, boolean pathVariables) {
         for (Map.Entry<String, String> entry : parameters) {
-            final Field field = spec.fields.get(entry.getKey());
+            Field field = null;
+            if (pathVariables) {
+                // The original field name should be used for the path variable
+                field = spec.originalFields.get(entry.getKey());
+            } else {
+                // A query parameter can be matched with either a original field name or a camel case name
+                // depending on the `HttpJsonTranscodingOptions`.
+                if (httpJsonTranscodingOptions.useProtoFieldNameQueryParams()) {
+                    field = spec.originalFields.get(entry.getKey());
+                }
+                if (field == null && httpJsonTranscodingOptions.useCamelCaseQueryParams()) {
+                    field = spec.camelCaseFields.get(entry.getKey());
+                }
+            }
             if (field == null) {
                 // Ignore unknown parameters.
                 continue;
@@ -810,7 +834,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         private final ServerMethodDefinition<?, ?> method;
         private final Descriptors.ServiceDescriptor serviceDescriptor;
         private final Descriptors.MethodDescriptor methodDescriptor;
-        private final Map<String, Field> fields;
+        private final Map<String, Field> originalFields;
+        private final Map<String, Field> camelCaseFields;
         private final List<PathVariable> pathVariables;
         @Nullable
         private final String responseBody;
@@ -820,7 +845,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                 ServerMethodDefinition<?, ?> method,
                                 ServiceDescriptor serviceDescriptor,
                                 MethodDescriptor methodDescriptor,
-                                Map<String, Field> fields,
+                                Map<String, Field> originalFields,
+                                Map<String, Field> camelCaseFields,
                                 List<PathVariable> pathVariables,
                                 @Nullable String responseBody) {
             this.order = order;
@@ -828,7 +854,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             this.method = method;
             this.serviceDescriptor = serviceDescriptor;
             this.methodDescriptor = methodDescriptor;
-            this.fields = fields;
+            this.originalFields = originalFields;
+            this.camelCaseFields = camelCaseFields;
             this.pathVariables = pathVariables;
             this.responseBody = responseBody;
         }

@@ -16,35 +16,35 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * User provided options for customizing {@link HttpJsonTranscodingService}.
  */
-public final class HttpJsonTranscodingOptions {
-
-    private final boolean camelCaseQueryParams;
+@UnstableApi
+public interface HttpJsonTranscodingOptions {
 
     /**
      * Returns a new {@link HttpJsonTranscodingOptionsBuilder}.
      */
-    public static HttpJsonTranscodingOptionsBuilder builder() {
+    static HttpJsonTranscodingOptionsBuilder builder() {
         return new HttpJsonTranscodingOptionsBuilder();
     }
 
     /**
-     * Creates a new {@link HttpJsonTranscodingOptions} from given parameter(s).
+     * Returns the default {@link HttpJsonTranscodingOptions}.
      */
-    public static HttpJsonTranscodingOptions of(boolean camelCaseQueryParams) {
-        return new HttpJsonTranscodingOptions(camelCaseQueryParams);
-    }
-
-    private HttpJsonTranscodingOptions(boolean camelCaseQueryParams) {
-        this.camelCaseQueryParams = camelCaseQueryParams;
+    static HttpJsonTranscodingOptions ofDefault() {
+        return DefaultHttpJsonTranscodingOptions.DEFAULT;
     }
 
     /**
-     * Returns the set camelCaseQueryParams option value.
+     * Returns whether to use a field name converted into lowerCamelCase to match query parameters.
      */
-    public boolean camelCaseQueryParams() {
-        return this.camelCaseQueryParams;
-    }
+    boolean useCamelCaseQueryParams();
+
+    /**
+     * Returns whether to use the original field name in .proto file to match query parameters.
+     */
+    boolean useProtoFieldNameQueryParams();
 }

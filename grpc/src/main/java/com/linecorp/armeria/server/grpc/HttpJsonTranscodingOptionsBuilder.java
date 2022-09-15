@@ -16,21 +16,48 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.base.Preconditions.checkArgument;
+
 /**
  * builder for {@link HttpJsonTranscodingOptions}.
  */
 public class HttpJsonTranscodingOptionsBuilder {
 
-    private boolean camelCaseQueryParams;
+    private boolean useCamelCaseQueryParams;
+    private boolean useProtoFieldNameQueryParams = true;
 
     HttpJsonTranscodingOptionsBuilder() {}
 
     /**
-     * enables camelCase query parameters for Http Json Transcoding endpoints.
-     * provided by {@link HttpJsonTranscodingService}.
+     * Sets whether to use lowerCamelCase query parameters for HTTP-JSON Transcoding endpoints.
+     * This option is disabled by default.
+     *
+     * <p>Note that this option is added as an OR condition without disabling
+     * {@link #useProtoFieldNameQueryParams(boolean)}. If {@link #useCamelCaseQueryParams(boolean)} and
+     * {@link #useProtoFieldNameQueryParams(boolean)} are set to {@code true}, both lowerCamelCase and the
+     * original field name are considered valid inputs.
      */
-    public HttpJsonTranscodingOptionsBuilder camelCaseQueryParams(boolean camelCaseQueryParams) {
-        this.camelCaseQueryParams = camelCaseQueryParams;
+    public HttpJsonTranscodingOptionsBuilder useCamelCaseQueryParams(boolean useCamelCaseQueryParams) {
+        checkArgument(useCamelCaseQueryParams || useProtoFieldNameQueryParams,
+                      "Can't disable both useCamelCaseQueryParams and useProtoFieldNameQueryParams");
+        this.useCamelCaseQueryParams = useCamelCaseQueryParams;
+        return this;
+    }
+
+    /**
+     * Sets whether to use the original field name in .proto file to match query parameters.
+     * This option is enabled by default.
+     *
+     * <p>Note that this option is added as an OR condition without disabling
+     * {@link #useCamelCaseQueryParams(boolean)}. If {@link #useProtoFieldNameQueryParams(boolean)} and
+     * {@link #useCamelCaseQueryParams(boolean)} are set to {@code true}, both lowerCamelCase and the
+     * original field name are considered valid inputs.
+     */
+    public HttpJsonTranscodingOptionsBuilder useProtoFieldNameQueryParams(
+            boolean useProtoFieldNameQueryParams) {
+        checkArgument(useProtoFieldNameQueryParams || useCamelCaseQueryParams,
+                      "Can't disable both useProtoFieldNameQueryParams and useCamelCaseQueryParams");
+        this.useProtoFieldNameQueryParams = useProtoFieldNameQueryParams;
         return this;
     }
 
@@ -38,6 +65,6 @@ public class HttpJsonTranscodingOptionsBuilder {
      * builds {@link HttpJsonTranscodingOptions}.
      */
     public HttpJsonTranscodingOptions build() {
-        return HttpJsonTranscodingOptions.of(camelCaseQueryParams);
+        return new DefaultHttpJsonTranscodingOptions(useCamelCaseQueryParams, useProtoFieldNameQueryParams);
     }
 }
