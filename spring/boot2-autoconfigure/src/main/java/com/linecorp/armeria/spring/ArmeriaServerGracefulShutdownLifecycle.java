@@ -22,13 +22,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.SmartLifecycle;
 
+import com.linecorp.armeria.internal.spring.ArmeriaServerSmartLifecycle;
 import com.linecorp.armeria.server.Server;
 
 /**
  * Make Armeria {@link Server} utilize spring's SmartLifecycle feature.
  * So Armeria will shutdown before other web servers and beans in the context.
  */
-final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
+final class ArmeriaServerGracefulShutdownLifecycle implements ArmeriaServerSmartLifecycle {
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerGracefulShutdownLifecycle.class);
 

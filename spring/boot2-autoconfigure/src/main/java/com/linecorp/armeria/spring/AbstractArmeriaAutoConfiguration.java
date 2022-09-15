@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
+import com.linecorp.armeria.internal.spring.ArmeriaServerSmartLifecycle;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServerPort;
@@ -107,7 +108,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
      * Wrap {@link Server} with {@link SmartLifecycle}.
      */
     @Bean
-    @ConditionalOnMissingBean(SmartLifecycle.class)
+    @ConditionalOnMissingBean(ArmeriaServerSmartLifecycle.class)
     public SmartLifecycle armeriaServerGracefulShutdownLifecycle(Server server) {
         return new ArmeriaServerGracefulShutdownLifecycle(server);
     }

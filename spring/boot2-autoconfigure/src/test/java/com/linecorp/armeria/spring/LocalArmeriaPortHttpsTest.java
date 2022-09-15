@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.spring.ArmeriaServerSmartLifecycle;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.LocalArmeriaPortHttpsTest.TestConfiguration;
@@ -55,7 +56,7 @@ public class LocalArmeriaPortHttpsTest {
     static class TestConfiguration {
 
         @Bean
-        SmartLifecycle smartLifecycle(Server server) {
+        ArmeriaServerSmartLifecycle smartLifecycle(Server server) {
             return new RetryableArmeriaServerGracefulShutdownLifecycle(server, 8);
         }
     }
