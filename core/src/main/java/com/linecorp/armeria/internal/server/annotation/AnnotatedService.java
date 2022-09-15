@@ -79,7 +79,6 @@ import com.linecorp.armeria.server.annotation.ServiceName;
 public final class AnnotatedService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
 
-
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
     private static final CompletableFuture<AggregatedResult>
