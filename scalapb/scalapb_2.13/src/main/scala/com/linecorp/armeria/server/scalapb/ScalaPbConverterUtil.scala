@@ -46,6 +46,9 @@ private[scalapb] object ScalaPbConverterUtil {
       case parameterizedType: ParameterizedType =>
         val rawType = parameterizedType.getRawType.asInstanceOf[Class[_]]
         val typeArguments = parameterizedType.getActualTypeArguments
+        if (!typeArguments(0).isInstanceOf[Class[_]]) {
+          return ResultType.UNKNOWN
+        }
         val firstType = typeArguments(0).asInstanceOf[Class[_]]
 
         val typeArgumentsLength = typeArguments.length
@@ -63,6 +66,7 @@ private[scalapb] object ScalaPbConverterUtil {
           else
             ResultType.UNKNOWN
         else if (typeArgumentsLength == 2 &&
+          typeArguments(1).isInstanceOf[Class[_]] &&
           isProtobufMessage(typeArguments(1).asInstanceOf[Class[_]])) {
           if (!classOf[String].isAssignableFrom(firstType))
             throw new IllegalStateException(
@@ -85,6 +89,9 @@ private[scalapb] object ScalaPbConverterUtil {
       case parameterizedType: ParameterizedType =>
         val rawType = parameterizedType.getRawType.asInstanceOf[Class[_]]
         val typeArguments = parameterizedType.getActualTypeArguments
+        if (!typeArguments(0).isInstanceOf[Class[_]]) {
+          return false
+        }
         val firstType = typeArguments(0).asInstanceOf[Class[_]]
 
         typeArguments.length == 1 &&

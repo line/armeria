@@ -26,6 +26,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
@@ -33,12 +34,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Publisher;
 
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
+
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.protobuf.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Produces;
+import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import reactor.core.publisher.Mono;
@@ -49,14 +54,16 @@ class ProtobufResponseConverterFunctionTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.annotatedService("/ProtobufService", new ProtobufService());
+            sb.annotatedService("/ExchangeTypeProtobufService", new ExchangeTypeProtobufService());
+            // nested annotated services don't throw an exception
+            sb.annotatedService("/NestedProtobufService", new NestedProtobufService());
         }
     };
 
     @Test
     void responseStreaming_converter() throws NoSuchMethodException {
         final ProtobufResponseConverterFunction converter = new ProtobufResponseConverterFunction();
-        for (Method method : ProtobufService.class.getDeclaredMethods()) {
+        for (Method method : ExchangeTypeProtobufService.class.getDeclaredMethods()) {
             if (!Modifier.isPublic(method.getModifiers())) {
                 continue;
             }
@@ -86,7 +93,7 @@ class ProtobufResponseConverterFunctionTest {
     @Test
     void responseStreaming_exchangeType() throws NoSuchMethodException {
         final ProtobufResponseConverterFunction converter = new ProtobufResponseConverterFunction();
-        for (Method method : ProtobufService.class.getDeclaredMethods()) {
+        for (Method method : ExchangeTypeProtobufService.class.getDeclaredMethods()) {
             if (!Modifier.isPublic(method.getModifiers())) {
                 continue;
             }
@@ -113,7 +120,20 @@ class ProtobufResponseConverterFunctionTest {
         }
     }
 
-    private static final class ProtobufService {
+    @Test
+    void nestedProtobuf() {
+        final ProtobufResponseConverterFunctionProvider provider = new ProtobufResponseConverterFunctionProvider();
+        for (Method method : NestedProtobufService.class.getDeclaredMethods()) {
+            if (!Modifier.isPublic(method.getModifiers())) {
+                continue;
+            }
+            final ResponseConverterFunction fn = provider.createResponseConverterFunction(
+                    method.getGenericReturnType());
+            assertThat(fn).isNull();
+        }
+    }
+
+    private static final class ExchangeTypeProtobufService {
         @Streaming("false")
         @Get("/simple")
         public SimpleResponse simple() {
@@ -199,6 +219,33 @@ class ProtobufResponseConverterFunctionTest {
         @Get("/unknown")
         public Publisher<SimpleResponse> unknown() {
             return null;
+        }
+    }
+
+    private static class NestedProtobufService {
+
+        @Get("/nestedList")
+        @Produces(MediaTypeNames.JSON)
+        public Publisher<List<SimpleResponse>> nestedList() {
+            return Mono.just(ImmutableList.of(SimpleResponse.newBuilder()
+                                                            .setMessage("nestedList")
+                                                            .build()));
+        }
+
+        @Get("/doubleNestedList")
+        @Produces(MediaTypeNames.JSON)
+        public Publisher<List<List<SimpleResponse>>> doubleNestedList() {
+            return Mono.just(ImmutableList.of(ImmutableList.of(SimpleResponse.newBuilder()
+                                                                             .setMessage("doubleNestedList")
+                                                                             .build())));
+        }
+
+        @Get("/mapOfList")
+        @Produces(MediaTypeNames.JSON)
+        public Map<String, List<SimpleResponse>> mapOfList() {
+            return ImmutableMap.of("key", ImmutableList.of(SimpleResponse.newBuilder()
+                                                                         .setMessage("mapOfList")
+                                                                         .build()));
         }
     }
 

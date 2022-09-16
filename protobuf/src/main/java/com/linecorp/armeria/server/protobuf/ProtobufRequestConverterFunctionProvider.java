@@ -57,22 +57,34 @@ public final class ProtobufRequestConverterFunctionProvider implements RequestCo
             final ParameterizedType parameterizedType = (ParameterizedType) type;
             final Class<?> rawType = (Class<?>) parameterizedType.getRawType();
             if (List.class.isAssignableFrom(rawType)) {
-                final Class<?> typeArgument = (Class<?>) parameterizedType.getActualTypeArguments()[0];
-                if (isProtobufMessage(typeArgument)) {
+                final Type actualTypeArgument = parameterizedType.getActualTypeArguments()[0];
+                if (!(actualTypeArgument instanceof Class<?>)) {
+                    return ResultType.UNKNOWN;
+                }
+                if (isProtobufMessage((Class<?>) actualTypeArgument)) {
                     return ResultType.LIST_PROTOBUF;
                 }
             } else if (Set.class.isAssignableFrom(rawType)) {
-                final Class<?> typeArgument = (Class<?>) parameterizedType.getActualTypeArguments()[0];
-                if (isProtobufMessage(typeArgument)) {
+                final Type actualTypeArgument = parameterizedType.getActualTypeArguments()[0];
+                if (!(actualTypeArgument instanceof Class<?>)) {
+                    return ResultType.UNKNOWN;
+                }
+                if (isProtobufMessage((Class<?>) actualTypeArgument)) {
                     return ResultType.SET_PROTOBUF;
                 }
             } else if (Map.class.isAssignableFrom(rawType)) {
                 final Type[] typeArguments = parameterizedType.getActualTypeArguments();
+                if (!(typeArguments[0] instanceof Class<?>)) {
+                    return ResultType.UNKNOWN;
+                }
                 final Class<?> keyType = (Class<?>) typeArguments[0];
                 if (!String.class.isAssignableFrom(keyType)) {
                     throw new IllegalStateException(
                             keyType + " cannot be used for the key type of Map. " +
                             "(expected: Map<String, ?>)");
+                }
+                if (!(typeArguments[1] instanceof Class<?>)) {
+                    return ResultType.UNKNOWN;
                 }
                 if (isProtobufMessage((Class<?>) typeArguments[1])) {
                     return ResultType.MAP_PROTOBUF;
