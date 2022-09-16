@@ -164,7 +164,8 @@ class ProtobufRequestConverterFunctionTest {
     @Test
     void nestedProtobufParameter() {
         final ProtobufRequestConverterFunction converter = new ProtobufRequestConverterFunction();
-        final ProtobufRequestConverterFunctionProvider provider = new ProtobufRequestConverterFunctionProvider();
+        final ProtobufRequestConverterFunctionProvider provider =
+                new ProtobufRequestConverterFunctionProvider();
         for (Method method : NestedProtobufService.class.getDeclaredMethods()) {
             if (!Modifier.isPublic(method.getModifiers())) {
                 continue;

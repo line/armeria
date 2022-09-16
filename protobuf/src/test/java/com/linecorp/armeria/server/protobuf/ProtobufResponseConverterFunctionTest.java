@@ -122,7 +122,8 @@ class ProtobufResponseConverterFunctionTest {
 
     @Test
     void nestedProtobuf() {
-        final ProtobufResponseConverterFunctionProvider provider = new ProtobufResponseConverterFunctionProvider();
+        final ProtobufResponseConverterFunctionProvider provider =
+                new ProtobufResponseConverterFunctionProvider();
         for (Method method : NestedProtobufService.class.getDeclaredMethods()) {
             if (!Modifier.isPublic(method.getModifiers())) {
                 continue;
