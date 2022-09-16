@@ -162,6 +162,7 @@ final class MimeParser {
 
         switch (state) {
             case START_MESSAGE:
+            case START_PART_OR_END_MESSAGE:
             case END_MESSAGE:
                 closed = true;
                 break;
@@ -201,42 +202,30 @@ final class MimeParser {
                             return;
                         }
                         logger.trace("Skipped the preamble.");
-                        state = State.START_PART;
+                        state = State.START_PART_OR_END_MESSAGE;
                         break;
 
-                    case START_PART:
-                        logger.trace("state={}", State.START_PART);
-                        bodyPartHeadersBuilder = HttpHeaders.builder();
-                        bodyPartBuilder = BodyPart.builder();
-                        state = State.HEADERS;
-                        break;
-
-                    case HEADERS:
-                        logger.trace("state={}", State.HEADERS);
+                    case START_PART_OR_END_MESSAGE:
+                        logger.trace("state={}", State.START_PART_OR_END_MESSAGE);
                         final String headerLine = readHeaderLine();
                         if (headerLine == null) {
                             // Need more data; DecodedHttpStreamMessage will handle.
                             return;
                         }
-                        if (!headerLine.isEmpty()) {
-                            final int index = headerLine.indexOf(':');
-                            if (index < 0) {
-                                throw new MimeParsingException("Invalid header line: " + headerLine);
-                            }
-                            final String key = headerLine.substring(0, index).trim();
-                            // Skip ':' from value
-                            final String value = headerLine.substring(index + 1).trim();
-                            bodyPartHeadersBuilder.add(key, value);
-                            break;
-                        }
-                        state = State.BODY;
-                        startOfLine = true;
+                        bodyPartHeadersBuilder = HttpHeaders.builder();
+                        bodyPartBuilder = BodyPart.builder();
+                        state = State.HEADERS;
+                        handleHeaderLine(headerLine);
+                        break;
 
-                        bodyPartPublisher = multipartDecoder.onBodyPartBegin();
-                        final BodyPart bodyPart = bodyPartBuilder.headers(bodyPartHeadersBuilder.build())
-                                                                 .content(bodyPartPublisher)
-                                                                 .build();
-                        out.add(bodyPart);
+                    case HEADERS:
+                        logger.trace("state={}", State.HEADERS);
+                        final String headerLine0 = readHeaderLine();
+                        if (headerLine0 == null) {
+                            // Need more data; DecodedHttpStreamMessage will handle.
+                            return;
+                        }
+                        handleHeaderLine(headerLine0);
                         break;
 
                     case BODY:
@@ -265,7 +254,7 @@ final class MimeParser {
                         if (done) {
                             state = State.END_MESSAGE;
                         } else {
-                            state = State.START_PART;
+                            state = State.START_PART_OR_END_MESSAGE;
                         }
                         bodyPartPublisher.close();
                         bodyPartPublisher = null;
@@ -286,6 +275,28 @@ final class MimeParser {
         } catch (Throwable ex) {
             throw new MimeParsingException(ex);
         }
+    }
+
+    private void handleHeaderLine(String headerLine) {
+        if (!headerLine.isEmpty()) {
+            final int index = headerLine.indexOf(':');
+            if (index < 0) {
+                throw new MimeParsingException("Invalid header line: " + headerLine);
+            }
+            final String key = headerLine.substring(0, index).trim();
+            // Skip ':' from value
+            final String value = headerLine.substring(index + 1).trim();
+            bodyPartHeadersBuilder.add(key, value);
+            return;
+        }
+        state = State.BODY;
+        startOfLine = true;
+
+        bodyPartPublisher = multipartDecoder.onBodyPartBegin();
+        final BodyPart bodyPart = bodyPartBuilder.headers(bodyPartHeadersBuilder.build())
+                                                 .content(bodyPartPublisher)
+                                                 .build();
+        out.add(bodyPart);
     }
 
     /**
@@ -606,8 +617,9 @@ final class MimeParser {
 
         /**
          * The state set when a new part is detected. It is set for each part.
+         * It is also set when a multipart has empty body.
          */
-        START_PART,
+        START_PART_OR_END_MESSAGE,
 
         /**
          * The state set for each header line of a part.

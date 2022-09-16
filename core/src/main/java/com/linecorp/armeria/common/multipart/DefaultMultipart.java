@@ -173,7 +173,7 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
 
     @Override
     public boolean isEmpty() {
-        return parts.isEmpty();
+        return false;
     }
 
     @Override
