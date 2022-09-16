@@ -105,7 +105,7 @@ class AnnotatedServiceMultipartTest {
                                                      .build();
         final HttpRequest request =
                 HttpRequest.of(headers, HttpData.ofUtf8(
-                        "--ArmeriaBoundary\n" +
+                        "--" + boundary + '\n' +
                         "content-disposition:form-data; name=\"file1\"; filename=\"foo.txt\"\n" +
                         "content-type:application/octet-stream\n" +
                         '\n' +
