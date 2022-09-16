@@ -170,6 +170,9 @@ class ProtobufRequestConverterFunctionTest {
             if (!Modifier.isPublic(method.getModifiers())) {
                 continue;
             }
+            if (method.getParameters().length == 0) {
+                continue;
+            }
             final RequestConverterFunction fn = provider.createRequestConverterFunction(
                     method.getParameters()[0].getParameterizedType(), converter);
             assertThat(fn).isNull();

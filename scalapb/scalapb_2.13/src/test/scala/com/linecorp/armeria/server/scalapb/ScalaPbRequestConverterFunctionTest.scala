@@ -116,8 +116,10 @@ class ScalaPbRequestConverterFunctionTest {
     val provider = new ScalaPbRequestConverterFunctionProvider
     val converter = null
     for (method <- classOf[NestedProtobufService].getDeclaredMethods) {
-      val fn = provider.createRequestConverterFunction(method.getParameters()(0).getParameterizedType, converter)
-      assert(fn == null)
+      if (!method.getParameters.isEmpty) {
+        val fn = provider.createRequestConverterFunction(method.getParameters()(0).getParameterizedType, converter)
+        assert(fn == null)
+      }
     }
   }
 }
