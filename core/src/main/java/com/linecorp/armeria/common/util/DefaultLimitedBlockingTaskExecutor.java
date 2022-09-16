@@ -29,10 +29,16 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.throttling.ThrottlingService;
+import com.linecorp.armeria.server.throttling.ThrottlingStrategy;
 
 final class DefaultLimitedBlockingTaskExecutor implements LimitedBlockingTaskExecutor {
     private static final Logger logger = LoggerFactory.getLogger(DefaultLimitedBlockingTaskExecutor.class);
@@ -49,6 +55,11 @@ final class DefaultLimitedBlockingTaskExecutor implements LimitedBlockingTaskExe
         final ThreadPoolExecutor executor = unwrapThreadPoolExecutor();
         final Supplier<Integer> supplier = () -> executor.getQueue().size();
         currentQueueSize = SettableIntSupplier.of(supplier.get());
+    }
+
+    @Override
+    public Function<? super HttpService, ThrottlingService> asDecorator(@Nullable String name) {
+        return ThrottlingService.newDecorator(ThrottlingStrategy.blockingTaskLimiting(this, name));
     }
 
     @Override

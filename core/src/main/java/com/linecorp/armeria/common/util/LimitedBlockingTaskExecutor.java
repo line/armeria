@@ -21,23 +21,30 @@ import java.util.function.Function;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.throttling.ThrottlingService;
-import com.linecorp.armeria.server.throttling.ThrottlingStrategy;
 
 /**
  * Provides an executor interface which
  * is used for recognizing the status of the count of the queued tasks meets the given limit.
+ *
+ * <p>To throttle using the limit, please refer {@code BlockingTaskLimitingThrottlingStrategy}.
  */
 public interface LimitedBlockingTaskExecutor extends BlockingTaskExecutor {
 
     /**
-     * Wraps {@link BlockingTaskExecutor} throttling in fixed limit.
+     * Wraps {@link BlockingTaskExecutor} with fixed limit.
+     *
+     * @param blockingTaskExecutor The executor which executes blocking tasks
+     * @param limit Fixed threshold of the count of the queued tasks.
      */
     static LimitedBlockingTaskExecutor wrap(BlockingTaskExecutor blockingTaskExecutor, int limit) {
         return new DefaultLimitedBlockingTaskExecutor(blockingTaskExecutor, SettableIntSupplier.of(limit));
     }
 
     /**
-     * Wraps {@link BlockingTaskExecutor} throttling in dynamic limit using {@link SettableIntSupplier}.
+     * Wraps {@link BlockingTaskExecutor} with dynamic limit using {@link SettableIntSupplier}.
+     *
+     * @param blockingTaskExecutor The executor which executes blocking tasks
+     * @param limitSupplier Dynamic threshold of the count of the queued tasks.
      */
     static LimitedBlockingTaskExecutor wrap(BlockingTaskExecutor blockingTaskExecutor,
                                             SettableIntSupplier limitSupplier) {
@@ -47,10 +54,7 @@ public interface LimitedBlockingTaskExecutor extends BlockingTaskExecutor {
     /**
      * Returns a new decorator to throttle giving {@link LimitedBlockingTaskExecutor}.
      */
-    static Function<? super HttpService, ThrottlingService> asDecorator(LimitedBlockingTaskExecutor executor,
-                                                                        @Nullable String name) {
-        return ThrottlingService.newDecorator(ThrottlingStrategy.blockingTaskLimiting(executor, name));
-    }
+    Function<? super HttpService, ThrottlingService> asDecorator(@Nullable String name);
 
     /**
      * Returns whether the queue hits the given limit or not.
