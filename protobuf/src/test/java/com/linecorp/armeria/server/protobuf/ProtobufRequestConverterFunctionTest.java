@@ -162,7 +162,7 @@ class ProtobufRequestConverterFunctionTest {
     }
 
     @Test
-    void invalidProtobufParameter() {
+    void nestedProtobufParameter() {
         final ProtobufRequestConverterFunction converter = new ProtobufRequestConverterFunction();
         final ProtobufRequestConverterFunctionProvider provider = new ProtobufRequestConverterFunctionProvider();
         for (Method method : NestedProtobufService.class.getDeclaredMethods()) {
