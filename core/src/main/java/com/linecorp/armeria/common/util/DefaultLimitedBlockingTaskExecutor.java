@@ -47,14 +47,13 @@ final class DefaultLimitedBlockingTaskExecutor implements LimitedBlockingTaskExe
 
     private final SettableIntSupplier limitSupplier;
 
-    private final SettableIntSupplier currentQueueSize;
+    private final Supplier<Integer> currentQueueingSize;
 
     DefaultLimitedBlockingTaskExecutor(BlockingTaskExecutor delegate, SettableIntSupplier limitSupplier) {
         this.delegate = delegate;
         this.limitSupplier = limitSupplier;
         final ThreadPoolExecutor executor = unwrapThreadPoolExecutor();
-        final Supplier<Integer> supplier = () -> executor.getQueue().size();
-        currentQueueSize = SettableIntSupplier.of(supplier.get());
+        currentQueueingSize = () -> executor.getQueue().size();
     }
 
     @Override
@@ -160,7 +159,7 @@ final class DefaultLimitedBlockingTaskExecutor implements LimitedBlockingTaskExe
     @Override
     public boolean hitLimit() {
         checkArgument(limitSupplier.getAsInt() > 0, "limit must larger than zero");
-        return currentQueueSize.getAsInt() < limitSupplier.getAsInt();
+        return currentQueueingSize.get() >= limitSupplier.getAsInt();
     }
 
     private ThreadPoolExecutor unwrapThreadPoolExecutor() {
@@ -168,11 +167,11 @@ final class DefaultLimitedBlockingTaskExecutor implements LimitedBlockingTaskExe
             final Field executor = getClass().getSuperclass().getSuperclass().getSuperclass()
                                              .getDeclaredField("executor");
             executor.setAccessible(true);
-            final BlockingTaskExecutor blockingTaskExecutor =
-                    (BlockingTaskExecutor) executor.get(this);
-            final Field delegate = blockingTaskExecutor.getClass().getDeclaredField("delegate");
+            final LimitedBlockingTaskExecutor limitedBlockingTaskExecutor =
+                    (LimitedBlockingTaskExecutor) executor.get(this);
+            final Field delegate = limitedBlockingTaskExecutor.getClass().getDeclaredField("delegate");
             delegate.setAccessible(true);
-            return (ThreadPoolExecutor) delegate.get(blockingTaskExecutor);
+            return (ThreadPoolExecutor) delegate.get(limitedBlockingTaskExecutor);
         } catch (NoSuchFieldException | IllegalAccessException | RuntimeException e) {
             logger.info("Cannot unwrap ThreadPoolExecutor", e);
             throw new IllegalStateException("Cannot throttle unwrap ThreadPoolExecutor", e);
