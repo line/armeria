@@ -18,12 +18,10 @@ package com.linecorp.armeria.server.graphql;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.dataloader.DataLoaderRegistry;
-import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,11 +35,7 @@ import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
 
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
-import graphql.ExecutionResultImpl;
 import graphql.GraphQL;
-import graphql.GraphQLError;
-import graphql.GraphqlErrorException;
-import graphql.validation.ValidationError;
 
 final class DefaultGraphqlService extends AbstractGraphqlService implements GraphqlService {
 
@@ -53,11 +47,14 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     private final boolean useBlockingTaskExecutor;
 
+    private final GraphqlErrorsHandler errorsHandler;
+
     DefaultGraphqlService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry,
-                          boolean useBlockingTaskExecutor) {
+                          boolean useBlockingTaskExecutor, GraphqlErrorsHandler errorsHandler) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
         this.dataLoaderRegistry = requireNonNull(dataLoaderRegistry, "dataLoaderRegistry");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
+        this.errorsHandler = errorsHandler;
     }
 
     @Override
@@ -100,41 +97,9 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         } else {
             future = graphQL.executeAsync(input);
         }
-        return HttpResponse.from(future.handle((executionResult, cause) -> {
-            if (cause != null) {
-                // graphQL.executeAsync() returns an error in the executionResult with getErrors().
-                // Use 500 Internal Server Error because this cause might be unexpected.
-                final ExecutionResult error = newExecutionResult(cause);
-                return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR, produceType,
-                                           error.toSpecification());
-            }
-            final List<GraphQLError> errors = executionResult.getErrors();
-            if (!errors.isEmpty() && errors.stream().anyMatch(ValidationError.class::isInstance)) {
-                // The server SHOULD deny execution with a status code of 400 Bad Request for
-                // invalidate documentation.
-                return HttpResponse.ofJson(HttpStatus.BAD_REQUEST, produceType,
-                                           executionResult.toSpecification());
-            }
-            return toHttpResponse(executionResult, produceType);
-        }));
-    }
 
-    private static HttpResponse toHttpResponse(ExecutionResult executionResult, MediaType produceType) {
-        // TODO: When WebSocket is implemented, it should be removed.
-        if (executionResult.getData() instanceof Publisher) {
-            logger.warn("executionResult.getData() returns a {} that is not supported yet.",
-                        executionResult.getData().toString());
-            final ExecutionResult error =
-                    newExecutionResult(new UnsupportedOperationException("WebSocket is not implemented"));
-            return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED, produceType, error.toSpecification());
-        }
-        return HttpResponse.ofJson(produceType, executionResult.toSpecification());
-    }
-
-    private static ExecutionResult newExecutionResult(Throwable cause) {
-        return new ExecutionResultImpl(GraphqlErrorException.newErrorException()
-                                                            .message(cause.getMessage())
-                                                            .cause(cause)
-                                                            .build());
+        return HttpResponse.from(
+                future.handle((executionResult, cause) ->
+                                      errorsHandler.handle(ctx, input, produceType, executionResult, cause)));
     }
 }
