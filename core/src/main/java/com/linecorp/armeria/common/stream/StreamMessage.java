@@ -287,11 +287,10 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * <p>For example:<pre>{@code
      * ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
-     *     try {
+     *     try (os) {
      *         for (int i = 0; i < 5; i++) {
      *             os.write(i);
      *         }
-     *         os.close();
      *     } catch (IOException e) {
      *         throw new RuntimeException(e);
      *     }
@@ -318,11 +317,10 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * <p>For example:<pre>{@code
      * ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
-     *     try {
+     *     try (os) {
      *         for (int i = 0; i < 5; i++) {
      *             os.write(i);
      *         }
-     *         os.close();
      *     } catch (IOException e) {
      *         throw new RuntimeException(e);
      *     }
