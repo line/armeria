@@ -330,7 +330,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * assert Arrays.equals(result, new byte[] { 0, 1, 2, 3, 4 });
      * }</pre>
      *
-     * @param blockingTaskExecutor the blocking task executor to execute {@link OutputStream#write}
+     * @param blockingTaskExecutor the blocking task executor to execute {@link OutputStream#write(int)}
      */
     static ByteStreamMessage fromOutputStream(Consumer<? super OutputStream> outputStreamConsumer,
                                               Executor blockingTaskExecutor) {
