@@ -36,10 +36,11 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
     private final StreamMessageAndWriter<HttpData> outputStreamWriter = new DefaultStreamMessage<>();
     private final ByteStreamMessage delegate = ByteStreamMessage.of(outputStreamWriter);
 
-    private final Consumer<OutputStream> outputStreamConsumer;
+    private final Consumer<? super OutputStream> outputStreamConsumer;
     private final Executor blockingTaskExecutor;
 
-    ByteStreamMessageOutputStream(Consumer<OutputStream> outputStreamConsumer, Executor blockingTaskExecutor) {
+    ByteStreamMessageOutputStream(Consumer<? super OutputStream> outputStreamConsumer,
+                                  Executor blockingTaskExecutor) {
         requireNonNull(outputStreamConsumer, "outputStreamConsumer");
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         this.outputStreamConsumer = outputStreamConsumer;
@@ -94,12 +95,12 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
 
         private final Subscriber<? super HttpData> downstream;
         private final StreamMessageAndWriter<HttpData> outputStreamWriter;
-        private final Consumer<OutputStream> outputStreamConsumer;
+        private final Consumer<? super OutputStream> outputStreamConsumer;
         private final Executor blockingTaskExecutor;
 
         OutputStreamSubscriber(Subscriber<? super HttpData> downstream,
                                StreamMessageAndWriter<HttpData> outputStreamWriter,
-                               Consumer<OutputStream> outputStreamConsumer,
+                               Consumer<? super OutputStream> outputStreamConsumer,
                                Executor blockingTaskExecutor) {
             requireNonNull(downstream, "downstream");
             requireNonNull(outputStreamWriter, "outputStreamWriter");
