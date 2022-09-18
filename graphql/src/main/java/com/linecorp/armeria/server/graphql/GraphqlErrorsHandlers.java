@@ -37,8 +37,6 @@ final class GraphqlErrorsHandlers {
 
     private static final Logger logger = LoggerFactory.getLogger(GraphqlErrorsHandlers.class);
 
-    private GraphqlErrorsHandlers() {}
-
     /**
      * Returns a {@link HttpResponse} based on {@link Throwable} or List of {@link GraphQLError}.
      * @param errorsMappingFunction The function which maps the {@link GraphQLError} to an {@link HttpStatus}
@@ -54,12 +52,13 @@ final class GraphqlErrorsHandlers {
                                            error.toSpecification());
             }
             final List<GraphQLError> errors = executionResult.getErrors();
-
             final HttpStatus httpStatus = mappingFunction.apply(ctx, input, errors);
             assert httpStatus != null; // withDefault
             return toHttpResponse(httpStatus, executionResult, produceType);
         };
     }
+
+    private GraphqlErrorsHandlers() {}
 
     /**
      * Return {@link HttpResponse} based {@link HttpStatus}, {@link ExecutionResult}, {@link MediaType}.

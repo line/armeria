@@ -26,6 +26,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import graphql.ExecutionInput;
 import graphql.GraphQLError;
+import graphql.validation.ValidationError;
 
 /**
  * A mapping function that converts a List of {@link GraphQLError} into an {@link HttpStatus}.
@@ -34,7 +35,7 @@ import graphql.GraphQLError;
 public interface GraphqlErrorsMappingFunction {
 
     /**
-     * Return default mapping function.
+     * Return default mapping function which checks null and {@link ValidationError}.
      */
     static GraphqlErrorsMappingFunction of() {
         return (ctx, input, errors) -> GraphqlStatus.graphqlErrorsToHttpStatus(errors);

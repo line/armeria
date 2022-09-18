@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.graphql;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -36,6 +37,14 @@ public interface GraphqlErrorsHandler {
      */
     static GraphqlErrorsHandler of() {
         return GraphqlErrorsHandlers.of(GraphqlErrorsMappingFunction.of());
+    }
+
+    /**
+     * Returns a {@link HttpResponse} based on {@link Throwable} or List of {@link GraphQLError}.
+     * @param errorsMappingFunction the function which maps the {@link GraphQLError} to an {@link HttpStatus}.
+     */
+    static GraphqlErrorsHandler of(GraphqlErrorsMappingFunction errorsMappingFunction) {
+        return GraphqlErrorsHandlers.of(errorsMappingFunction);
     }
 
     /**
