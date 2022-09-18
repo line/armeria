@@ -189,7 +189,7 @@ class ByteStreamMessageOutputStreamTest {
                 .peek(x -> {
                     if (x == 13) {
                         streamMessage.abort();
-                        await().untilAsserted(() -> assertThat(streamMessage.isOpen()).isFalse());
+                        streamMessage.whenComplete().join();
                     }
                 })
                 .map(ByteStreamMessageOutputStreamTest::httpData);
