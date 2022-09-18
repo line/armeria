@@ -96,7 +96,6 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
         private final StreamMessageAndWriter<HttpData> outputStreamWriter;
         private final Consumer<OutputStream> outputStreamConsumer;
         private final Executor blockingTaskExecutor;
-        private boolean completed;
 
         OutputStreamSubscriber(Subscriber<? super HttpData> downstream,
                                StreamMessageAndWriter<HttpData> outputStreamWriter,
@@ -129,29 +128,17 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
         @Override
         public void onNext(HttpData data) {
             requireNonNull(data, "data");
-            if (completed) {
-                data.close();
-                return;
-            }
             downstream.onNext(data);
         }
 
         @Override
         public void onError(Throwable t) {
             requireNonNull(t, "t");
-            if (completed) {
-                return;
-            }
-            completed = true;
             downstream.onError(t);
         }
 
         @Override
         public void onComplete() {
-            if (completed) {
-                return;
-            }
-            completed = true;
             downstream.onComplete();
         }
     }
