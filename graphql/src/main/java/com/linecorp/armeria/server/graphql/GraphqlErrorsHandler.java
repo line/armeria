@@ -27,7 +27,7 @@ import graphql.ExecutionResult;
 import graphql.GraphQLError;
 
 /**
- * Error handler which map a GraphQL errors to an {@link HttpResponse}.
+ * A handler that maps GraphQL errors to an {@link HttpResponse}.
  */
 @FunctionalInterface
 public interface GraphqlErrorsHandler {
