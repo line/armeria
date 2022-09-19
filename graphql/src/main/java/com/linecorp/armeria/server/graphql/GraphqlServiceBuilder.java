@@ -237,7 +237,7 @@ public final class GraphqlServiceBuilder {
      * Sets the {@link GraphqlErrorsHandler}.
      */
     public GraphqlServiceBuilder errorsHandler(GraphqlErrorsHandler errorsHandler) {
-        this.errorsHandler = errorsHandler;
+        this.errorsHandler = requireNonNull(errorsHandler, "errorsHandler");
         return this;
     }
 
