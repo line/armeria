@@ -129,7 +129,8 @@ public final class ProtobufNamedTypeInfoProvider implements NamedTypeInfoProvide
         final TypeSignature typeSignature = newFieldTypeInfo(fieldDescriptor);
         final Object typeDescriptor = typeSignature.namedTypeDescriptor();
         final FieldInfoBuilder builder;
-        if (typeDescriptor instanceof Descriptor && visiting.add((Descriptor) typeDescriptor)) {
+        if (typeDescriptor instanceof Descriptor && visiting.add((Descriptor) typeDescriptor) &&
+            !((Descriptor) typeDescriptor).getFields().isEmpty()) {
             builder = FieldInfo.builder(fieldDescriptor.getName(), typeSignature,
                                         newFieldInfos((Descriptor) typeDescriptor, visiting));
         } else {
