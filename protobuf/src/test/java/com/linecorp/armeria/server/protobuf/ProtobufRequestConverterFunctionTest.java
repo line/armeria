@@ -157,8 +157,7 @@ class ProtobufRequestConverterFunctionTest {
                                          HttpData.ofUtf8(json));
         assertThatThrownBy(() -> converter.convertRequest(ctx, req, typeToken.getRawType(),
                                                           (ParameterizedType) typeToken.getType()))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("cannot be used for the key type of Map.");
+                .isInstanceOf(FallthroughException.class);
     }
 
     @Test
