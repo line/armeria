@@ -43,7 +43,7 @@ public interface GraphqlErrorsHandler {
 
     /**
      * Returns a composed {@link GraphqlErrorsHandler} that applies this first and the specified
-     * other later if this returns null.
+     * other later if this returns {@code null}.
      */
     default GraphqlErrorsHandler orElse(GraphqlErrorsHandler other) {
         requireNonNull(other, "other");
