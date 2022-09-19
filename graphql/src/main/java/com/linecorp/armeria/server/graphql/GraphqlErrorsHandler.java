@@ -34,11 +34,14 @@ import graphql.GraphQLError;
 @FunctionalInterface
 public interface GraphqlErrorsHandler {
 
+    GraphqlErrorsHandler defaultGraphqlErrorsHandler
+            = GraphqlErrorsHandlers.of(GraphqlErrorsMappingFunction.of());
+
     /**
      * Returns the default {@link GraphqlErrorsHandler}.
      */
     static GraphqlErrorsHandler of() {
-        return GraphqlErrorsHandlers.of(GraphqlErrorsMappingFunction.of());
+        return defaultGraphqlErrorsHandler;
     }
 
     /**
