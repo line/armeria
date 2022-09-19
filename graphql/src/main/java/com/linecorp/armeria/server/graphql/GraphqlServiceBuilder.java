@@ -263,9 +263,11 @@ public final class GraphqlServiceBuilder {
         for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistries) {
             configurer.accept(dataLoaderRegistry);
         }
-        errorsHandler = errorsHandler != null ? errorsHandler : GraphqlErrorsHandler.of();
-        return new DefaultGraphqlService(builder.build(), dataLoaderRegistry, useBlockingTaskExecutor,
-                                         errorsHandler);
+        errorsHandler = errorsHandler != null ? errorsHandler : GraphqlErrorsHandlers.of();
+        return new DefaultGraphqlService(builder.build(),
+                                         dataLoaderRegistry,
+                                         useBlockingTaskExecutor,
+                                         errorsHandler.orElse(GraphqlErrorsHandlers.of()));
     }
 
     private GraphQLSchema buildSchema() {

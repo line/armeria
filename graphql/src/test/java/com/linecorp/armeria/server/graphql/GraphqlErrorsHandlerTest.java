@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.graphql;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.File;
+import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -26,12 +27,16 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import graphql.ExecutionInput;
+import graphql.ExecutionResult;
 import graphql.GraphQLError;
 import graphql.GraphqlErrorException;
 import graphql.schema.DataFetcher;
@@ -44,6 +49,20 @@ public class GraphqlErrorsHandlerTest {
         protected void configure(ServerBuilder sb) throws Exception {
             final File graphqlSchemaFile =
                     new File(getClass().getResource("/test.graphqls").toURI());
+
+            final GraphqlErrorsHandler errorsHandler = new GraphqlErrorsHandler() {
+                @Override
+                public @Nullable HttpResponse handle(ServiceRequestContext ctx, ExecutionInput input,
+                                                     ExecutionResult result, MediaType negotiatedProduceType,
+                                                     @Nullable Throwable cause) {
+                    final List<GraphQLError> errors = result.getErrors();
+                    if (errors.stream().map(GraphQLError::getMessage).anyMatch(m -> m.endsWith("foo"))) {
+                        return HttpResponse.ofJson(HttpStatus.OK);
+                    }
+                    return null;
+                }
+            };
+
             final GraphqlService service =
                     GraphqlService.builder()
                                   .schemaFile(graphqlSchemaFile)
@@ -55,13 +74,7 @@ public class GraphqlErrorsHandlerTest {
                                       c.type("Query",
                                              typeWiring -> typeWiring.dataFetcher("error", error));
                                   })
-                                  .errorsHandler(GraphqlErrorsHandlers.of((ctx, input, errors) -> {
-                                      if (errors.stream().map(GraphQLError::getMessage)
-                                                .anyMatch(m -> m.endsWith("foo"))) {
-                                          return HttpStatus.OK;
-                                      }
-                                      return null;
-                                  }))
+                                  .errorsHandler(errorsHandler)
                                   .build();
             sb.service("/graphql", service);
         }
@@ -94,6 +107,6 @@ public class GraphqlErrorsHandlerTest {
                                                .build();
         final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
                                                                  .execute(request);
-        assertThat(response.status()).isEqualTo(HttpStatus.UNKNOWN);
+        assertThat(response.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
     }
 }

@@ -215,7 +215,7 @@ class GraphqlServiceTest {
         final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
                                                                  .execute(request);
 
-        assertThat(response.status()).isEqualTo(HttpStatus.UNKNOWN);
+        assertThat(response.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
         assertThatJson(response.contentUtf8())
                 .withMatcher("errors",
                              new CustomTypeSafeMatcher<List<Map<String, String>>>("errors") {

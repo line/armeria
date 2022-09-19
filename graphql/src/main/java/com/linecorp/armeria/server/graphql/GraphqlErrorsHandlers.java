@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server.graphql;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.List;
 
 import org.slf4j.Logger;
@@ -37,24 +35,22 @@ final class GraphqlErrorsHandlers {
 
     private static final Logger logger = LoggerFactory.getLogger(GraphqlErrorsHandlers.class);
 
-    /**
-     * Returns a {@link HttpResponse} based on {@link Throwable} or List of {@link GraphQLError}.
-     * @param errorsMappingFunction The function which maps the {@link GraphQLError} to an {@link HttpStatus}
-     */
-    static GraphqlErrorsHandler of(GraphqlErrorsMappingFunction errorsMappingFunction) {
-        return (ctx, input, produceType, executionResult, cause) -> {
-            if (cause != null) {
-                // graphQL.executeAsync() returns an error in the executionResult with getErrors().
-                // Use 500 Internal Server Error because this cause might be unexpected.
-                final ExecutionResult error = newExecutionResult(cause);
-                return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR, produceType,
-                                           error.toSpecification());
-            }
-            final List<GraphQLError> errors = executionResult.getErrors();
-            final HttpStatus httpStatus = errorsMappingFunction.orElse(GraphqlErrorsMappingFunction.of())
-                                                               .apply(ctx, input, errors);
-            return toHttpResponse(requireNonNull(httpStatus, "httpStatus"), executionResult, produceType);
-        };
+    private static final GraphqlErrorsHandler defaultErrorsHandler =
+            (ctx, input, result, negotiatedProduceType, cause) -> {
+                if (cause != null) {
+                    // graphQL.executeAsync() returns an error in the executionResult with getErrors().
+                    // Use 500 Internal Server Error because this cause might be unexpected.
+                    final ExecutionResult error = newExecutionResult(cause);
+                    return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR, negotiatedProduceType,
+                                               error.toSpecification());
+                }
+                final List<GraphQLError> errors = result.getErrors();
+                final HttpStatus httpStatus = graphqlErrorsToHttpStatus(errors);
+                return toHttpResponse(httpStatus, result, negotiatedProduceType);
+            };
+
+    static GraphqlErrorsHandler of() {
+        return defaultErrorsHandler;
     }
 
     private GraphqlErrorsHandlers() {}
@@ -72,7 +68,7 @@ final class GraphqlErrorsHandlers {
     /**
      * Return {@link HttpStatus} based List of {@link GraphQLError}.
      */
-    static HttpStatus graphqlErrorsToHttpStatus(List<GraphQLError> errors) {
+    private static HttpStatus graphqlErrorsToHttpStatus(List<GraphQLError> errors) {
         if (errors.isEmpty()) {
             return HttpStatus.OK;
         }
@@ -81,7 +77,7 @@ final class GraphqlErrorsHandlers {
             // invalidate documentation.
             return HttpStatus.BAD_REQUEST;
         }
-        return HttpStatus.UNKNOWN;
+        return HttpStatus.SERVICE_UNAVAILABLE;
     }
 
     /**
@@ -90,17 +86,5 @@ final class GraphqlErrorsHandlers {
     private static HttpResponse toHttpResponse(HttpStatus httpStatus, ExecutionResult executionResult,
                                                MediaType produceType) {
         return HttpResponse.ofJson(httpStatus, produceType, executionResult.toSpecification());
-    }
-
-    /**
-     * Ensure that GraphqlErrorMappingFunction never returns null by falling back to the default.
-     */
-    private static GraphqlErrorsMappingFunction withDefault(
-            GraphqlErrorsMappingFunction errorsMappingFunction) {
-        requireNonNull(errorsMappingFunction, "errorsMappingFunction");
-        if (errorsMappingFunction == GraphqlErrorsMappingFunction.of()) {
-            return errorsMappingFunction;
-        }
-        return errorsMappingFunction.orElse(GraphqlErrorsMappingFunction.of());
     }
 }

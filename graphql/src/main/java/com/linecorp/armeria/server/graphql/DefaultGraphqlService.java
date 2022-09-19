@@ -99,7 +99,6 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         } else {
             future = graphQL.executeAsync(input);
         }
-
         return HttpResponse.from(
                 future.handle((executionResult, cause) -> {
                     if (cause == null && executionResult.getErrors().isEmpty()) {
@@ -114,7 +113,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
                                                    error.toSpecification());
                     }
 
-                    return errorsHandler.handle(ctx, input, produceType, executionResult, cause);
+                    return errorsHandler.handle(ctx, input, executionResult, produceType, cause);
                 }));
     }
 }

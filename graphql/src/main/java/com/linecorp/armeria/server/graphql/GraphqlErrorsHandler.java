@@ -19,14 +19,12 @@ package com.linecorp.armeria.server.graphql;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
-import graphql.GraphQLError;
 
 /**
  * A handler that maps GraphQL errors to an {@link HttpResponse}.
@@ -34,32 +32,13 @@ import graphql.GraphQLError;
 @FunctionalInterface
 public interface GraphqlErrorsHandler {
 
-    GraphqlErrorsHandler defaultGraphqlErrorsHandler
-            = GraphqlErrorsHandlers.of(GraphqlErrorsMappingFunction.of());
-
     /**
-     * Returns the default {@link GraphqlErrorsHandler}.
-     */
-    static GraphqlErrorsHandler of() {
-        return defaultGraphqlErrorsHandler;
-    }
-
-    /**
-     * Returns a {@link GraphqlErrorsHandler} with the {@link GraphqlErrorsMappingFunction} that returns a
-     * different {@link HttpStatus} depending on the errors raised in the {@link GraphqlService}.
-     * @param errorsMappingFunction the function which maps the {@link GraphQLError} to an {@link HttpStatus}.
-     */
-    static GraphqlErrorsHandler of(GraphqlErrorsMappingFunction errorsMappingFunction) {
-        requireNonNull(errorsMappingFunction, "errorsMappingFunction");
-        return GraphqlErrorsHandlers.of(errorsMappingFunction);
-    }
-
-    /**
-     * Maps the GraphQL {@link ExecutionResult} to the {@link HttpResponse}.
+     * Maps the {@link ServiceRequestContext}, {@link ExecutionInput}, {@link ExecutionResult},
+     * {@link MediaType}, {@link Throwable} to the {@link HttpResponse}.
      */
     @Nullable
-    HttpResponse handle(ServiceRequestContext ctx, ExecutionInput input, MediaType produceType,
-                        ExecutionResult executionResult, @Nullable Throwable cause);
+    HttpResponse handle(ServiceRequestContext ctx, ExecutionInput input,
+                        ExecutionResult result, MediaType negotiatedProduceType, @Nullable Throwable cause);
 
     /**
      * Returns a composed {@link GraphqlErrorsHandler} that applies this first and the specified
