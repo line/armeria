@@ -29,6 +29,7 @@ import graphql.ExecutionResult;
 /**
  * A handler that maps GraphQL errors or a {@link Throwable} to an {@link HttpResponse}.
  */
+@UnstableApi
 @FunctionalInterface
 public interface GraphqlErrorsHandler {
 
