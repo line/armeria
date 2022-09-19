@@ -41,7 +41,7 @@ import graphql.GraphQLError;
 import graphql.GraphqlErrorException;
 import graphql.schema.DataFetcher;
 
-public class GraphqlErrorsHandlerTest {
+class GraphqlErrorsHandlerTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
