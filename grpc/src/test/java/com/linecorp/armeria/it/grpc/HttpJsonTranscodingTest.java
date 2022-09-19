@@ -45,6 +45,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.client.BlockingWebClient;
@@ -94,6 +95,7 @@ import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamNaming;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
@@ -310,10 +312,17 @@ public class HttpJsonTranscodingTest {
 
     static ServerExtension createServer(boolean preservingProtoFieldNames, boolean camelCaseQueryParams,
                                         boolean protoFieldNameQueryParams) {
+        final ImmutableList.Builder<HttpJsonTranscodingQueryParamNaming> queryParamNaming =
+                ImmutableList.builder();
+        if (camelCaseQueryParams) {
+            queryParamNaming.add(HttpJsonTranscodingQueryParamNaming.LOWER_CAMEL_CASE);
+        }
+        if (protoFieldNameQueryParams) {
+            queryParamNaming.add(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD);
+        }
         final HttpJsonTranscodingOptions options =
                 HttpJsonTranscodingOptions.builder()
-                                          .useCamelCaseQueryParams(camelCaseQueryParams)
-                                          .useProtoFieldNameQueryParams(protoFieldNameQueryParams)
+                                          .queryParamNaming(queryParamNaming.build())
                                           .build();
         return new ServerExtension() {
             @Override

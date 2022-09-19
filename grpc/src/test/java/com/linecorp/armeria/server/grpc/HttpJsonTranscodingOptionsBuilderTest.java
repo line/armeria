@@ -21,13 +21,14 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import org.junit.jupiter.api.Test;
 
+import com.google.common.collect.ImmutableList;
+
 class HttpJsonTranscodingOptionsBuilderTest {
 
     @Test
-    void shouldNotDisableBothCamelAndProtoName() {
+    void shouldDisallowEmptyNaming() {
         assertThatThrownBy(() -> HttpJsonTranscodingOptions.builder()
-                                                           .useCamelCaseQueryParams(false)
-                                                           .useProtoFieldNameQueryParams(false)
+                                                           .queryParamNaming(ImmutableList.of())
                                                            .build())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessage("Can't disable both useProtoFieldNameQueryParams and useCamelCaseQueryParams");
@@ -37,30 +38,32 @@ class HttpJsonTranscodingOptionsBuilderTest {
     void shouldReturnConfiguredSettings() {
         final HttpJsonTranscodingOptions withCamelCase =
                 HttpJsonTranscodingOptions.builder()
-                                          .useCamelCaseQueryParams(true)
+                                          .queryParamNaming(
+                                                  HttpJsonTranscodingQueryParamNaming.LOWER_CAMEL_CASE)
                                           .build();
-        assertThat(withCamelCase.useCamelCaseQueryParams()).isTrue();
-        assertThat(withCamelCase.useProtoFieldNameQueryParams()).isTrue();
+        assertThat(withCamelCase.queryParamNamings())
+                .containsExactly(HttpJsonTranscodingQueryParamNaming.LOWER_CAMEL_CASE);
 
         final HttpJsonTranscodingOptions onlyCamelCase =
                 HttpJsonTranscodingOptions.builder()
-                                          .useCamelCaseQueryParams(true)
-                                          .useProtoFieldNameQueryParams(false)
+                                          .queryParamNaming(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD)
                                           .build();
-        assertThat(onlyCamelCase.useCamelCaseQueryParams()).isTrue();
-        assertThat(onlyCamelCase.useProtoFieldNameQueryParams()).isFalse();
+        assertThat(onlyCamelCase.queryParamNamings())
+                .containsExactly(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD);
 
         final HttpJsonTranscodingOptions onlyOriginalField =
                 HttpJsonTranscodingOptions.builder()
-                                          .useCamelCaseQueryParams(false)
-                                          .useProtoFieldNameQueryParams(true)
+                                          .queryParamNaming(ImmutableList.of(
+                                                  HttpJsonTranscodingQueryParamNaming.LOWER_CAMEL_CASE,
+                                                  HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD))
                                           .build();
-        assertThat(onlyOriginalField.useCamelCaseQueryParams()).isFalse();
-        assertThat(onlyOriginalField.useProtoFieldNameQueryParams()).isTrue();
+        assertThat(onlyOriginalField.queryParamNamings())
+                .containsExactlyInAnyOrder(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD,
+                                           HttpJsonTranscodingQueryParamNaming.LOWER_CAMEL_CASE);
 
         final HttpJsonTranscodingOptions defaultOptions =
-                HttpJsonTranscodingOptions.ofDefault();
-        assertThat(defaultOptions.useCamelCaseQueryParams()).isFalse();
-        assertThat(defaultOptions.useProtoFieldNameQueryParams()).isTrue();
+                HttpJsonTranscodingOptions.of();
+        assertThat(defaultOptions.queryParamNamings())
+                .containsExactly(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD);
     }
 }

@@ -16,56 +16,74 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import static com.google.common.base.Preconditions.checkState;
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
+
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Set;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.Iterables;
+import com.google.protobuf.Message;
+
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
  * builder for {@link HttpJsonTranscodingOptions}.
  */
 public class HttpJsonTranscodingOptionsBuilder {
 
-    private boolean useCamelCaseQueryParams;
-    private boolean useProtoFieldNameQueryParams = true;
+    private static final EnumSet<HttpJsonTranscodingQueryParamNaming> DEFAULT_QUERY_PARAM_NAMING =
+            EnumSet.of(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD);
+
+    @Nullable
+    private Set<HttpJsonTranscodingQueryParamNaming> queryParamNamings;
 
     HttpJsonTranscodingOptionsBuilder() {}
 
     /**
-     * Sets whether to use lowerCamelCase query parameters for HTTP-JSON Transcoding endpoints.
-     * This option is disabled by default.
-     *
-     * <p>Note that this option is added as an OR condition without disabling
-     * {@link #useProtoFieldNameQueryParams(boolean)}. If {@link #useCamelCaseQueryParams(boolean)} and
-     * {@link #useProtoFieldNameQueryParams(boolean)} are set to {@code true}, both lowerCamelCase and the
-     * original field name are considered valid inputs.
+     * Adds the specified {@link HttpJsonTranscodingQueryParamNaming} which is used to match {@link QueryParams}
+     * of a {@link HttpRequest} with fields in a {@link Message}.
+     * If not set, {@link HttpJsonTranscodingQueryParamNaming#ORIGINAL_FIELD} is used by default.
      */
-    public HttpJsonTranscodingOptionsBuilder useCamelCaseQueryParams(boolean useCamelCaseQueryParams) {
-        this.useCamelCaseQueryParams = useCamelCaseQueryParams;
+    public HttpJsonTranscodingOptionsBuilder queryParamNaming(
+            HttpJsonTranscodingQueryParamNaming... queryParamNamings) {
+        requireNonNull(queryParamNamings, "queryParamNamings");
+        queryParamNaming(ImmutableList.copyOf(queryParamNamings));
         return this;
     }
 
     /**
-     * Sets whether to use the original field name in .proto file to match query parameters.
-     * This option is enabled by default.
-     *
-     * <p>Note that this option is added as an OR condition without disabling
-     * {@link #useCamelCaseQueryParams(boolean)}. If {@link #useProtoFieldNameQueryParams(boolean)} and
-     * {@link #useCamelCaseQueryParams(boolean)} are set to {@code true}, both lowerCamelCase and the
-     * original field name are considered valid inputs.
+     * Adds the specified {@link HttpJsonTranscodingQueryParamNaming} which is used to match {@link QueryParams}
+     * of a {@link HttpRequest} with fields in a {@link Message}.
+     * If not set, {@link HttpJsonTranscodingQueryParamNaming#ORIGINAL_FIELD} is used by default.
      */
-    public HttpJsonTranscodingOptionsBuilder useProtoFieldNameQueryParams(
-            boolean useProtoFieldNameQueryParams) {
-        this.useProtoFieldNameQueryParams = useProtoFieldNameQueryParams;
+    public HttpJsonTranscodingOptionsBuilder queryParamNaming(
+            Iterable<HttpJsonTranscodingQueryParamNaming> queryParamNamings) {
+        requireNonNull(queryParamNamings, "queryParamNamings");
+        checkArgument(!Iterables.isEmpty(queryParamNamings), "Can't set an empty queryParamNamings");
+        if (this.queryParamNamings == null) {
+            this.queryParamNamings = new HashSet<>();
+        }
+        this.queryParamNamings.addAll(ImmutableList.copyOf(queryParamNamings));
         return this;
     }
+
 
     /**
      * Returns a new created {@link HttpJsonTranscodingOptions}.
      *
-     * @throws IllegalStateException if both {@link #useProtoFieldNameQueryParams(boolean)} and
-     *                               {@link #useCamelCaseQueryParams(boolean)} are set to {@code false}.
      */
     public HttpJsonTranscodingOptions build() {
-        checkState(useProtoFieldNameQueryParams || useCamelCaseQueryParams,
-                   "Can't disable both useProtoFieldNameQueryParams and useCamelCaseQueryParams");
-        return new DefaultHttpJsonTranscodingOptions(useCamelCaseQueryParams, useProtoFieldNameQueryParams);
+        final EnumSet<HttpJsonTranscodingQueryParamNaming> paramNamings;
+        if (queryParamNamings == null) {
+            paramNamings = DEFAULT_QUERY_PARAM_NAMING;
+        } else {
+            paramNamings = EnumSet.copyOf(queryParamNamings);
+        }
+        return new DefaultHttpJsonTranscodingOptions(paramNamings);
     }
 }

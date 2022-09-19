@@ -16,7 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import java.util.Objects;
+import java.util.EnumSet;
+import java.util.Set;
 
 import com.google.common.base.MoreObjects;
 
@@ -24,22 +25,10 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
 
     static final HttpJsonTranscodingOptions DEFAULT = HttpJsonTranscodingOptions.builder().build();
 
-    private final boolean useCamelCaseQueryParams;
-    private final boolean useProtoFieldNameQueryParams;
+    private EnumSet<HttpJsonTranscodingQueryParamNaming> queryParamNamings;
 
-    DefaultHttpJsonTranscodingOptions(boolean useCamelCaseQueryParams, boolean useProtoFieldNameQueryParams) {
-        this.useCamelCaseQueryParams = useCamelCaseQueryParams;
-        this.useProtoFieldNameQueryParams = useProtoFieldNameQueryParams;
-    }
-
-    @Override
-    public boolean useCamelCaseQueryParams() {
-        return useCamelCaseQueryParams;
-    }
-
-    @Override
-    public boolean useProtoFieldNameQueryParams() {
-        return useProtoFieldNameQueryParams;
+    DefaultHttpJsonTranscodingOptions(EnumSet<HttpJsonTranscodingQueryParamNaming> queryParamNamings) {
+        this.queryParamNamings = queryParamNamings;
     }
 
     @Override
@@ -51,20 +40,23 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
             return false;
         }
         final HttpJsonTranscodingOptions that = (HttpJsonTranscodingOptions) o;
-        return useProtoFieldNameQueryParams == that.useProtoFieldNameQueryParams() &&
-               useCamelCaseQueryParams == that.useCamelCaseQueryParams();
+        return queryParamNamings.equals(that.queryParamNamings());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(useProtoFieldNameQueryParams, useCamelCaseQueryParams);
+        return queryParamNamings.hashCode();
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("useCamelCaseQueryParams", useCamelCaseQueryParams)
-                          .add("useProtoFieldNameQueryParams", useProtoFieldNameQueryParams)
+                          .add("queryParamNamings", queryParamNamings)
                           .toString();
+    }
+
+    @Override
+    public Set<HttpJsonTranscodingQueryParamNaming> queryParamNamings() {
+        return queryParamNamings;
     }
 }

@@ -16,11 +16,16 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import java.util.Set;
+
+import com.google.protobuf.Message;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * User provided options for customizing {@link HttpJsonTranscodingService}.
  */
+@SuppressWarnings("InterfaceMayBeAnnotatedFunctional")
 @UnstableApi
 public interface HttpJsonTranscodingOptions {
 
@@ -34,17 +39,13 @@ public interface HttpJsonTranscodingOptions {
     /**
      * Returns the default {@link HttpJsonTranscodingOptions}.
      */
-    static HttpJsonTranscodingOptions ofDefault() {
+    static HttpJsonTranscodingOptions of() {
         return DefaultHttpJsonTranscodingOptions.DEFAULT;
     }
 
     /**
-     * Returns whether to use a field name converted into lowerCamelCase to match query parameters.
+     * Returns the {@link HttpJsonTranscodingQueryParamNaming}s which is used to match fields in a
+     * {@link Message} with query parameters.
      */
-    boolean useCamelCaseQueryParams();
-
-    /**
-     * Returns whether to use the original field name in .proto file to match query parameters.
-     */
-    boolean useProtoFieldNameQueryParams();
+    Set<HttpJsonTranscodingQueryParamNaming> queryParamNamings();
 }

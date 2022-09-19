@@ -130,7 +130,7 @@ public final class GrpcServiceBuilder {
     @Nullable
     private UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler;
 
-    private HttpJsonTranscodingOptions httpJsonTranscodingOptions = HttpJsonTranscodingOptions.ofDefault();
+    private HttpJsonTranscodingOptions httpJsonTranscodingOptions = HttpJsonTranscodingOptions.of();
 
     private Set<SerializationFormat> supportedSerializationFormats = DEFAULT_SUPPORTED_SERIALIZATION_FORMATS;
 

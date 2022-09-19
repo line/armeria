@@ -172,7 +172,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
                                     false);
                 final Map<String, Field> camelCaseFields;
-                if (httpJsonTranscodingOptions.useCamelCaseQueryParams()) {
+                if (httpJsonTranscodingOptions.queryParamNamings()
+                                              .contains(HttpJsonTranscodingQueryParamNaming.LOWER_CAMEL_CASE)) {
                     camelCaseFields =
                             buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
                                         true);
@@ -506,7 +507,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
     private final Map<Route, TranscodingSpec> routeAndSpecs;
     private final Set<Route> routes;
-    private final HttpJsonTranscodingOptions httpJsonTranscodingOptions;
+    private final boolean useCamelCaseQueryParams;
+    private final boolean useProtoFieldNameQueryParams;
 
     private HttpJsonTranscodingService(GrpcService delegate,
                                        Map<Route, TranscodingSpec> routeAndSpecs,
@@ -518,7 +520,12 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                              .addAll(delegate.routes())
                              .addAll(routeAndSpecs.keySet())
                              .build();
-        this.httpJsonTranscodingOptions = httpJsonTranscodingOptions;
+        useCamelCaseQueryParams =
+                httpJsonTranscodingOptions.queryParamNamings()
+                                          .contains(HttpJsonTranscodingQueryParamNaming.LOWER_CAMEL_CASE);
+        useProtoFieldNameQueryParams =
+                httpJsonTranscodingOptions.queryParamNamings()
+                                          .contains(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD);
     }
 
     @Override
@@ -723,10 +730,10 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             } else {
                 // A query parameter can be matched with either a original field name or a camel case name
                 // depending on the `HttpJsonTranscodingOptions`.
-                if (httpJsonTranscodingOptions.useProtoFieldNameQueryParams()) {
+                if (useProtoFieldNameQueryParams) {
                     field = spec.originalFields.get(entry.getKey());
                 }
-                if (field == null && httpJsonTranscodingOptions.useCamelCaseQueryParams()) {
+                if (field == null && useCamelCaseQueryParams) {
                     field = spec.camelCaseFields.get(entry.getKey());
                 }
             }
