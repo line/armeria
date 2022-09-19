@@ -41,7 +41,7 @@ You need to register a ScalaPB gRPC stub to a <type://GrpcService> using a <type
 and add it to the <type://ServerBuilder>:
 
 ```scala
-import com.linecorp.armeria.common.scalapb.ScalaPBJsonMarshaller
+import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller
 import com.linecorp.armeria.server.Server
 import com.linecorp.armeria.server.docs.DocService
 import com.linecorp.armeria.server.grpc.GrpcService
@@ -53,8 +53,8 @@ val grpcService =
         // Add your ScalaPB gRPC stub using `bindService()`
         .addService(YourServiceGrpc.bindService(
           new YourServiceImpl, ExecutionContext.global))
-        // Register `ScalaPBJsonMarshaller` for supporting gRPC JSON format.
-        .jsonMarshallerFactory(_ => ScalaPBJsonMarshaller())
+        // Register `ScalaPbJsonMarshaller` for supporting gRPC JSON format.
+        .jsonMarshallerFactory(_ => ScalaPbJsonMarshaller())
         .enableUnframedRequests(true)
         .build()
 
@@ -86,7 +86,7 @@ import com.linecorp.armeria.common.scalapb.ScalaPbJsonMarshaller
 val client = 
   GrpcClients.builder("http://127.0.0.1:8080/")
              .serializationFormat(GrpcSerializationFormats.JSON)
-             // Register 'ScalaPBJsonMarshaller' for enabling gRPC JSON serialization format
+             // Register 'ScalaPbJsonMarshaller' for enabling gRPC JSON serialization format
              .jsonMarshallerFactory(_ => ScalaPbJsonMarshaller())
              .build(classOf[HelloServiceBlockingStub])
     
