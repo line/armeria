@@ -34,8 +34,7 @@ import graphql.ExecutionResult;
 public interface GraphqlErrorsHandler {
 
     /**
-     * Maps the {@link ServiceRequestContext}, {@link ExecutionInput}, {@link ExecutionResult},
-     * {@link MediaType}, {@link Throwable} to the {@link HttpResponse}.
+     * Maps {@link ExecutionResult#getErrors()} or the specified {@link Throwable} to an {@link HttpResponse}.
      */
     @Nullable
     HttpResponse handle(ServiceRequestContext ctx, ExecutionInput input,
