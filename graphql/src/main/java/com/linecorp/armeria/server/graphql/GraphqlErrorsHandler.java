@@ -40,7 +40,8 @@ public interface GraphqlErrorsHandler {
     }
 
     /**
-     * Returns a {@link HttpResponse} based on {@link Throwable} or List of {@link GraphQLError}.
+     * Returns a {@link GraphqlErrorsHandler} with the {@link GraphqlErrorsMappingFunction} that returns a
+     * different {@link HttpStatus} depending on the errors raised in the {@link GraphqlService}.
      * @param errorsMappingFunction the function which maps the {@link GraphQLError} to an {@link HttpStatus}.
      */
     static GraphqlErrorsHandler of(GraphqlErrorsMappingFunction errorsMappingFunction) {
