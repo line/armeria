@@ -45,6 +45,7 @@ public interface GraphqlErrorsHandler {
      * @param errorsMappingFunction the function which maps the {@link GraphQLError} to an {@link HttpStatus}.
      */
     static GraphqlErrorsHandler of(GraphqlErrorsMappingFunction errorsMappingFunction) {
+        requireNonNull(errorsMappingFunction, "errorsMappingFunction");
         return GraphqlErrorsHandlers.of(errorsMappingFunction);
     }
 
