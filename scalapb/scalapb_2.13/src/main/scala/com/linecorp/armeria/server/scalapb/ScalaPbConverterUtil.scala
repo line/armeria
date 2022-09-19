@@ -46,6 +46,9 @@ private[scalapb] object ScalaPbConverterUtil {
       case parameterizedType: ParameterizedType =>
         val rawType = parameterizedType.getRawType.asInstanceOf[Class[_]]
         val typeArguments = parameterizedType.getActualTypeArguments
+        if (!typeArguments(0).isInstanceOf[Class[_]]) {
+          return ResultType.UNKNOWN
+        }
         val firstType = typeArguments(0).asInstanceOf[Class[_]]
 
         val typeArgumentsLength = typeArguments.length
@@ -63,12 +66,11 @@ private[scalapb] object ScalaPbConverterUtil {
           else
             ResultType.UNKNOWN
         else if (typeArgumentsLength == 2 &&
+          typeArguments(1).isInstanceOf[Class[_]] &&
           isProtobufMessage(typeArguments(1).asInstanceOf[Class[_]])) {
           if (!classOf[String].isAssignableFrom(firstType))
-            throw new IllegalStateException(
-              s"$firstType cannot be used for the key type of Map. (expected: Map[String, _])")
-
-          if (classOf[Map[_, _]].isAssignableFrom(rawType))
+            ResultType.UNKNOWN
+          else if (classOf[Map[_, _]].isAssignableFrom(rawType))
             ResultType.SCALA_MAP_PROTOBUF
           else if (classOf[java.util.Map[_, _]].isAssignableFrom(rawType))
             ResultType.MAP_PROTOBUF
@@ -85,6 +87,9 @@ private[scalapb] object ScalaPbConverterUtil {
       case parameterizedType: ParameterizedType =>
         val rawType = parameterizedType.getRawType.asInstanceOf[Class[_]]
         val typeArguments = parameterizedType.getActualTypeArguments
+        if (!typeArguments(0).isInstanceOf[Class[_]]) {
+          return false
+        }
         val firstType = typeArguments(0).asInstanceOf[Class[_]]
 
         typeArguments.length == 1 &&
