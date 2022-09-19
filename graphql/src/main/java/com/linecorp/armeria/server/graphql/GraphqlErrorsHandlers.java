@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
-import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,7 +70,7 @@ final class GraphqlErrorsHandlers {
     /**
      * Return {@link ExecutionResult} based {@link Throwable}.
      */
-    private static ExecutionResult newExecutionResult(Throwable cause) {
+    protected static ExecutionResult newExecutionResult(Throwable cause) {
         return new ExecutionResultImpl(GraphqlErrorException.newErrorException()
                                                             .message(cause.getMessage())
                                                             .cause(cause)

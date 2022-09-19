@@ -16,12 +16,14 @@
 
 package com.linecorp.armeria.server.graphql;
 
+import static com.linecorp.armeria.server.graphql.GraphqlErrorsHandlers.newExecutionResult;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.dataloader.DataLoaderRegistry;
+import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -99,7 +101,20 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         }
 
         return HttpResponse.from(
-                future.handle((executionResult, cause) ->
-                                      errorsHandler.handle(ctx, input, produceType, executionResult, cause)));
+                future.handle((executionResult, cause) -> {
+                    if (cause == null && executionResult.getErrors().isEmpty()) {
+                        return HttpResponse.ofJson(produceType, executionResult.toSpecification());
+                    }
+                    if (executionResult.getData() instanceof Publisher) {
+                        logger.warn("executionResult.getData() returns a {} that is not supported yet.",
+                                    executionResult.getData().toString());
+                        final ExecutionResult error = newExecutionResult(
+                                new UnsupportedOperationException("WebSocket is not implemented"));
+                        return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED, produceType,
+                                                   error.toSpecification());
+                    }
+
+                    return errorsHandler.handle(ctx, input, produceType, executionResult, cause);
+                }));
     }
 }
