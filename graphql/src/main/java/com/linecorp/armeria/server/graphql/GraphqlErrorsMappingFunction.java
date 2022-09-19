@@ -34,11 +34,14 @@ import graphql.validation.ValidationError;
 @FunctionalInterface
 public interface GraphqlErrorsMappingFunction {
 
+    GraphqlErrorsMappingFunction defaultGraphqlErrorsMappingFunction
+            = (ctx, input, errors) ->  GraphqlErrorsHandlers.graphqlErrorsToHttpStatus(errors);
+
     /**
      * Return default mapping function which checks null and {@link ValidationError}.
      */
     static GraphqlErrorsMappingFunction of() {
-        return (ctx, input, errors) -> GraphqlErrorsHandlers.graphqlErrorsToHttpStatus(errors);
+        return defaultGraphqlErrorsMappingFunction;
     }
 
     /**

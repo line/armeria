@@ -42,7 +42,6 @@ final class GraphqlErrorsHandlers {
      * @param errorsMappingFunction The function which maps the {@link GraphQLError} to an {@link HttpStatus}
      */
     static GraphqlErrorsHandler of(GraphqlErrorsMappingFunction errorsMappingFunction) {
-        final GraphqlErrorsMappingFunction mappingFunction = withDefault(errorsMappingFunction);
         return (ctx, input, produceType, executionResult, cause) -> {
             if (cause != null) {
                 // graphQL.executeAsync() returns an error in the executionResult with getErrors().
@@ -52,9 +51,9 @@ final class GraphqlErrorsHandlers {
                                            error.toSpecification());
             }
             final List<GraphQLError> errors = executionResult.getErrors();
-            final HttpStatus httpStatus = mappingFunction.apply(ctx, input, errors);
-            assert httpStatus != null; // withDefault
-            return toHttpResponse(httpStatus, executionResult, produceType);
+            final HttpStatus httpStatus = errorsMappingFunction.orElse(GraphqlErrorsMappingFunction.of())
+                                                               .apply(ctx, input, errors);
+            return toHttpResponse(requireNonNull(httpStatus, "httpStatus"), executionResult, produceType);
         };
     }
 
@@ -89,6 +88,7 @@ final class GraphqlErrorsHandlers {
                                                MediaType produceType) {
         return HttpResponse.ofJson(httpStatus, produceType, executionResult.toSpecification());
     }
+
     /**
      * Ensure that GraphqlErrorMappingFunction never returns null by falling back to the default.
      */

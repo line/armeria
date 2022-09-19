@@ -57,6 +57,25 @@ public interface GraphqlErrorsHandler {
     /**
      * Maps the GraphQL {@link ExecutionResult} to the {@link HttpResponse}.
      */
+    @Nullable
     HttpResponse handle(ServiceRequestContext ctx, ExecutionInput input, MediaType produceType,
                         ExecutionResult executionResult, @Nullable Throwable cause);
+
+    /**
+     * Returns a composed {@link GraphqlErrorsHandler} that applies this first and the specified
+     * other later if this returns null.
+     */
+    default GraphqlErrorsHandler orElse(GraphqlErrorsHandler other) {
+        requireNonNull(other, "other");
+        if (this == other) {
+            return this;
+        }
+        return (ctx, input, produceType, executionResult, cause) -> {
+            final HttpResponse response = handle(ctx, input, produceType, executionResult, cause);
+            if (response != null) {
+                return response;
+            }
+            return other.handle(ctx, input, produceType, executionResult, cause);
+        };
+    }
 }
