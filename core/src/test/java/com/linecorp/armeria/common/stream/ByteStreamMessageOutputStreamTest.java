@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.CountDownLatch;
@@ -38,11 +39,10 @@ class ByteStreamMessageOutputStreamTest {
     @Test
     void write() {
         final ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
-            try {
+            try (Closeable ignored = os) {
                 for (byte b : "abcde".getBytes()) {
                     os.write(b);
                 }
-                os.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -69,10 +69,9 @@ class ByteStreamMessageOutputStreamTest {
     @Test
     void writeOffset() {
         final ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
-            try {
+            try (Closeable ignored = os) {
                 final byte[] bytes = "_foobarbaz_".getBytes();
                 os.write(bytes, 1, bytes.length - 2);
-                os.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -101,12 +100,11 @@ class ByteStreamMessageOutputStreamTest {
     void blockingWrite() throws InterruptedException {
         final AtomicInteger count = new AtomicInteger();
         final ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
-            try {
+            try (Closeable ignored = os) {
                 for (int i = 0; i < 3; i++) {
                     os.write(i);
                     count.incrementAndGet();
                 }
-                os.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -128,7 +126,7 @@ class ByteStreamMessageOutputStreamTest {
     @Test
     void writeAfterClosed() {
         final ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
-            try {
+            try (Closeable ignored = os) {
                 for (int i = 0; i < 5; i++) {
                     os.write(i);
                 }
@@ -156,7 +154,7 @@ class ByteStreamMessageOutputStreamTest {
         final CountDownLatch wait = new CountDownLatch(1);
         final CountDownLatch end = new CountDownLatch(1);
         final ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
-            try {
+            try (Closeable ignored = os) {
                 for (int i = 0; i < 5; i++) {
                     if (i < 2) {
                         os.write(i);
@@ -204,7 +202,7 @@ class ByteStreamMessageOutputStreamTest {
     @Test
     void write_error_thrown() {
         final ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
-            try {
+            try (Closeable ignored = os) {
                 for (int i = 0; i < 5; i++) {
                     if (i < 3) {
                         os.write(i);
@@ -212,7 +210,6 @@ class ByteStreamMessageOutputStreamTest {
                         throw new RuntimeException();
                     }
                 }
-                os.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
@@ -304,11 +301,10 @@ class ByteStreamMessageOutputStreamTest {
 
     private static ByteStreamMessage newByteStreamMessage() {
         return StreamMessage.fromOutputStream(os -> {
-            try {
+            try (Closeable ignored = os) {
                 for (int i = 0; i < 5; i++) {
                     os.write(i);
                 }
-                os.close();
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
