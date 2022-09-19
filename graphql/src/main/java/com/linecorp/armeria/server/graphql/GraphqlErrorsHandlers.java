@@ -65,14 +65,6 @@ final class GraphqlErrorsHandlers {
      */
     private static HttpResponse toHttpResponse(HttpStatus httpStatus, ExecutionResult executionResult,
                                                MediaType produceType) {
-        // TODO: When WebSocket is implemented, it should be removed.
-        if (executionResult.getData() instanceof Publisher) {
-            logger.warn("executionResult.getData() returns a {} that is not supported yet.",
-                        executionResult.getData().toString());
-            final ExecutionResult error =
-                    newExecutionResult(new UnsupportedOperationException("WebSocket is not implemented"));
-            return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED, produceType, error.toSpecification());
-        }
         return HttpResponse.ofJson(httpStatus, produceType, executionResult.toSpecification());
     }
 
