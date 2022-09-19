@@ -69,10 +69,8 @@ private[scalapb] object ScalaPbConverterUtil {
           typeArguments(1).isInstanceOf[Class[_]] &&
           isProtobufMessage(typeArguments(1).asInstanceOf[Class[_]])) {
           if (!classOf[String].isAssignableFrom(firstType))
-            throw new IllegalStateException(
-              s"$firstType cannot be used for the key type of Map. (expected: Map[String, _])")
-
-          if (classOf[Map[_, _]].isAssignableFrom(rawType))
+            ResultType.UNKNOWN
+          else if (classOf[Map[_, _]].isAssignableFrom(rawType))
             ResultType.SCALA_MAP_PROTOBUF
           else if (classOf[java.util.Map[_, _]].isAssignableFrom(rawType))
             ResultType.MAP_PROTOBUF

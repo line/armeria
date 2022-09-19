@@ -214,5 +214,7 @@ private[scalapb] object ScalaPbRequestConverterFunctionTest {
     def nestedList(param: List[List[SimpleRequest]]) = ???
 
     def nestedMap(param: Map[String, List[SimpleRequest]]) = ???
+
+    def intKeyMap(param: Map[Int, SimpleRequest]) = ???
   }
 }

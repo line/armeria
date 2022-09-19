@@ -79,9 +79,7 @@ public final class ProtobufRequestConverterFunctionProvider implements RequestCo
                 }
                 final Class<?> keyType = (Class<?>) typeArguments[0];
                 if (!String.class.isAssignableFrom(keyType)) {
-                    throw new IllegalStateException(
-                            keyType + " cannot be used for the key type of Map. " +
-                            "(expected: Map<String, ?>)");
+                    return ResultType.UNKNOWN;
                 }
                 if (!(typeArguments[1] instanceof Class<?>)) {
                     return ResultType.UNKNOWN;

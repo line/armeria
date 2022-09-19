@@ -199,6 +199,11 @@ class ProtobufRequestConverterFunctionTest {
         @Produces(MediaTypeNames.JSON)
         public void nestedValue(Map<String, List<SimpleRequest>> param) {
         }
+
+        @Get("/nonStringKey")
+        @Produces(MediaTypeNames.JSON)
+        public void nonStringKey(Map<Integer, SimpleResponse> param) {
+        }
     }
 
     private static class ProtobufArguments implements ArgumentsProvider {
