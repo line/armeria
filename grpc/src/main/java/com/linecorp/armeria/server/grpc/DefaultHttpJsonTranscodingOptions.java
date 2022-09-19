@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.grpc;
 
 import java.util.EnumSet;
+import java.util.Objects;
 import java.util.Set;
 
 import com.google.common.base.MoreObjects;
@@ -25,10 +26,23 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
 
     static final HttpJsonTranscodingOptions DEFAULT = HttpJsonTranscodingOptions.builder().build();
 
-    private EnumSet<HttpJsonTranscodingQueryParamNaming> queryParamNamings;
+    private final EnumSet<HttpJsonTranscodingQueryParamNaming> queryParamNamings;
+    private final UnframedGrpcErrorHandler errorHandler;
 
-    DefaultHttpJsonTranscodingOptions(EnumSet<HttpJsonTranscodingQueryParamNaming> queryParamNamings) {
+    DefaultHttpJsonTranscodingOptions(EnumSet<HttpJsonTranscodingQueryParamNaming> queryParamNamings,
+                                      UnframedGrpcErrorHandler errorHandler) {
         this.queryParamNamings = queryParamNamings;
+        this.errorHandler = errorHandler;
+    }
+
+    @Override
+    public Set<HttpJsonTranscodingQueryParamNaming> queryParamNamings() {
+        return queryParamNamings;
+    }
+
+    @Override
+    public UnframedGrpcErrorHandler errorHandler() {
+        return errorHandler;
     }
 
     @Override
@@ -40,23 +54,19 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
             return false;
         }
         final HttpJsonTranscodingOptions that = (HttpJsonTranscodingOptions) o;
-        return queryParamNamings.equals(that.queryParamNamings());
+        return queryParamNamings.equals(that.queryParamNamings()) && errorHandler.equals(that.errorHandler());
     }
 
     @Override
     public int hashCode() {
-        return queryParamNamings.hashCode();
+        return Objects.hash(queryParamNamings, errorHandler);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
                           .add("queryParamNamings", queryParamNamings)
+                          .add("errorHandler", errorHandler)
                           .toString();
-    }
-
-    @Override
-    public Set<HttpJsonTranscodingQueryParamNaming> queryParamNamings() {
-        return queryParamNamings;
     }
 }

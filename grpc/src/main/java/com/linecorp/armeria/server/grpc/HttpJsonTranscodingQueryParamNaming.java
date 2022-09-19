@@ -20,11 +20,13 @@ import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.QueryParams;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A naming rule to map {@link QueryParams} of an {@link HttpRequest} to fields in a {@link Message} for
  * HTTP-JSON transcoding endpoint.
  */
+@UnstableApi
 public enum HttpJsonTranscodingQueryParamNaming {
     /**
      * Converts

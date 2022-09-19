@@ -25,7 +25,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 /**
  * User provided options for customizing {@link HttpJsonTranscodingService}.
  */
-@SuppressWarnings("InterfaceMayBeAnnotatedFunctional")
 @UnstableApi
 public interface HttpJsonTranscodingOptions {
 
@@ -48,4 +47,10 @@ public interface HttpJsonTranscodingOptions {
      * {@link Message} with query parameters.
      */
     Set<HttpJsonTranscodingQueryParamNaming> queryParamNamings();
+
+    /**
+     * Return the {@link UnframedGrpcErrorHandler} which handles an exception raised while serving a gRPC
+     * request transcoded from an HTTP/JSON request.
+     */
+    UnframedGrpcErrorHandler errorHandler();
 }

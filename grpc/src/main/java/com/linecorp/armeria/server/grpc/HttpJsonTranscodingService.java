@@ -127,10 +127,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
      * to support HTTP/JSON to gRPC transcoding, a new {@link HttpJsonTranscodingService} instance
      * would be returned. Otherwise, the {@code delegate} would be returned.
      */
-    static GrpcService of(GrpcService delegate, UnframedGrpcErrorHandler unframedGrpcErrorHandler,
-                          HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
+    static GrpcService of(GrpcService delegate, HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
         requireNonNull(delegate, "delegate");
-        requireNonNull(unframedGrpcErrorHandler, "unframedGrpcErrorHandler");
         requireNonNull(httpJsonTranscodingOptions, "httpJsonTranscodingOptions");
 
         final Map<Route, TranscodingSpec> specs = new HashMap<>();
@@ -212,8 +210,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
             // We don't need to create a new HttpJsonTranscodingService instance in this case.
             return delegate;
         }
-        return new HttpJsonTranscodingService(delegate, ImmutableMap.copyOf(specs), unframedGrpcErrorHandler,
-                                              httpJsonTranscodingOptions);
+        return new HttpJsonTranscodingService(delegate, ImmutableMap.copyOf(specs), httpJsonTranscodingOptions);
     }
 
     @Nullable
@@ -512,9 +509,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
 
     private HttpJsonTranscodingService(GrpcService delegate,
                                        Map<Route, TranscodingSpec> routeAndSpecs,
-                                       UnframedGrpcErrorHandler unframedGrpcErrorHandler,
                                        HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
-        super(delegate, unframedGrpcErrorHandler);
+        super(delegate, httpJsonTranscodingOptions.errorHandler());
         this.routeAndSpecs = routeAndSpecs;
         routes = ImmutableSet.<Route>builder()
                              .addAll(delegate.routes())

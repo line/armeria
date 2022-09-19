@@ -30,14 +30,18 @@ import com.google.protobuf.Message;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.QueryParams;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * builder for {@link HttpJsonTranscodingOptions}.
+ * A builder for {@link HttpJsonTranscodingOptions}.
  */
+@UnstableApi
 public class HttpJsonTranscodingOptionsBuilder {
 
     private static final EnumSet<HttpJsonTranscodingQueryParamNaming> DEFAULT_QUERY_PARAM_NAMING =
             EnumSet.of(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD);
+
+    private UnframedGrpcErrorHandler errorHandler = UnframedGrpcErrorHandler.ofJson();
 
     @Nullable
     private Set<HttpJsonTranscodingQueryParamNaming> queryParamNamings;
@@ -72,10 +76,19 @@ public class HttpJsonTranscodingOptionsBuilder {
         return this;
     }
 
+    /**
+     * Sets an error handler which handles an exception raised while serving a gRPC request transcoded from
+     * an HTTP/JSON request. By default, {@link UnframedGrpcErrorHandler#ofJson()} would be set.
+     */
+    @UnstableApi
+    public HttpJsonTranscodingOptionsBuilder errorHandler(UnframedGrpcErrorHandler errorHandler) {
+        requireNonNull(errorHandler, "errorHandler");
+        this.errorHandler = errorHandler;
+        return this;
+    }
 
     /**
      * Returns a new created {@link HttpJsonTranscodingOptions}.
-     *
      */
     public HttpJsonTranscodingOptions build() {
         final EnumSet<HttpJsonTranscodingQueryParamNaming> paramNamings;
@@ -84,6 +97,6 @@ public class HttpJsonTranscodingOptionsBuilder {
         } else {
             paramNamings = EnumSet.copyOf(queryParamNamings);
         }
-        return new DefaultHttpJsonTranscodingOptions(paramNamings);
+        return new DefaultHttpJsonTranscodingOptions(paramNamings, errorHandler);
     }
 }

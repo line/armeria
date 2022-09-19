@@ -674,7 +674,8 @@ public final class GrpcServiceBuilder {
      * GrpcService.builder()
      *            // Enable HttpJsonTranscoding and use the specified HttpJsonTranscodingOption
      *            .enableHttpJsonTranscoding(options)
-     *            .build()}</pre>
+     *            .build()
+     * }</pre>
      *
      * <p>Limitations:
      * <ul>
@@ -704,8 +705,11 @@ public final class GrpcServiceBuilder {
     /**
      * Sets an error handler which handles an exception raised while serving a gRPC request transcoded from
      * an HTTP/JSON request. By default, {@link UnframedGrpcErrorHandler#ofJson()} would be set.
+     *
+     * @deprecated Use {@link HttpJsonTranscodingOptionsBuilder#errorHandler(UnframedGrpcErrorHandler)} instead.
      */
     @UnstableApi
+    @Deprecated
     public GrpcServiceBuilder httpJsonTranscodingErrorHandler(
             UnframedGrpcErrorHandler httpJsonTranscodingErrorHandler) {
         requireNonNull(httpJsonTranscodingErrorHandler, "httpJsonTranscodingErrorHandler");
@@ -1022,11 +1026,18 @@ public final class GrpcServiceBuilder {
                                                      : UnframedGrpcErrorHandler.of());
         }
         if (enableHttpJsonTranscoding) {
-            grpcService = HttpJsonTranscodingService.of(
-                    grpcService,
-                    httpJsonTranscodingErrorHandler != null ? httpJsonTranscodingErrorHandler
-                                                            : UnframedGrpcErrorHandler.ofJson(),
-                    httpJsonTranscodingOptions);
+            final HttpJsonTranscodingOptions httpJsonTranscodingOptions;
+            if (httpJsonTranscodingErrorHandler != null) {
+                httpJsonTranscodingOptions =
+                        HttpJsonTranscodingOptions.builder()
+                                                  .queryParamNaming(
+                                                          this.httpJsonTranscodingOptions.queryParamNamings())
+                                                  .errorHandler(httpJsonTranscodingErrorHandler)
+                                                  .build();
+            } else {
+                httpJsonTranscodingOptions = this.httpJsonTranscodingOptions;
+            }
+            grpcService = HttpJsonTranscodingService.of(grpcService, httpJsonTranscodingOptions);
         }
         if (handlerRegistry.containsDecorators()) {
             grpcService = new GrpcDecoratingService(grpcService, handlerRegistry);
