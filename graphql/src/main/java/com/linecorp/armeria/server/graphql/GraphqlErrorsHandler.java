@@ -33,7 +33,7 @@ import graphql.GraphQLError;
 public interface GraphqlErrorsHandler {
 
     /**
-     * Returns a {@link HttpResponse} based on {@link Throwable} or List of {@link GraphQLError}.
+     * Returns the default {@link GraphqlErrorsHandler}.
      */
     static GraphqlErrorsHandler of() {
         return GraphqlErrorsHandlers.of(GraphqlErrorsMappingFunction.of());
