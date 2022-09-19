@@ -66,7 +66,7 @@ final class GraphqlErrorsHandlers {
     }
 
     /**
-     * Return {@link HttpStatus} based List of {@link GraphQLError}.
+     * Return an {@link HttpStatus} based on the specified list of {@link GraphQLError}s.
      */
     private static HttpStatus graphqlErrorsToHttpStatus(List<GraphQLError> errors) {
         if (errors.isEmpty()) {
