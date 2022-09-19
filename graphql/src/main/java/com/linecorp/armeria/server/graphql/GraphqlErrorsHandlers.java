@@ -31,6 +31,7 @@ import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
 import graphql.GraphQLError;
 import graphql.GraphqlErrorException;
+import graphql.validation.ValidationError;
 
 final class GraphqlErrorsHandlers {
 
@@ -60,23 +61,34 @@ final class GraphqlErrorsHandlers {
     private GraphqlErrorsHandlers() {}
 
     /**
-     * Return {@link HttpResponse} based {@link HttpStatus}, {@link ExecutionResult}, {@link MediaType}.
-     */
-    private static HttpResponse toHttpResponse(HttpStatus httpStatus, ExecutionResult executionResult,
-                                               MediaType produceType) {
-        return HttpResponse.ofJson(httpStatus, produceType, executionResult.toSpecification());
-    }
-
-    /**
      * Return {@link ExecutionResult} based {@link Throwable}.
      */
-    protected static ExecutionResult newExecutionResult(Throwable cause) {
+    static ExecutionResult newExecutionResult(Throwable cause) {
         return new ExecutionResultImpl(GraphqlErrorException.newErrorException()
                                                             .message(cause.getMessage())
                                                             .cause(cause)
                                                             .build());
     }
 
+    static HttpStatus graphqlErrorsToHttpStatus(List<GraphQLError> errors) {
+        if (errors.isEmpty()) {
+            return HttpStatus.OK;
+        }
+        if (errors.stream().anyMatch(ValidationError.class::isInstance)) {
+            // The server SHOULD deny execution with a status code of 400 Bad Request for
+            // invalidate documentation.
+            return HttpStatus.BAD_REQUEST;
+        }
+        return HttpStatus.UNKNOWN;
+    }
+
+    /**
+     * Return {@link HttpResponse} based {@link HttpStatus}, {@link ExecutionResult}, {@link MediaType}.
+     */
+    private static HttpResponse toHttpResponse(HttpStatus httpStatus, ExecutionResult executionResult,
+                                               MediaType produceType) {
+        return HttpResponse.ofJson(httpStatus, produceType, executionResult.toSpecification());
+    }
     /**
      * Ensure that GraphqlErrorMappingFunction never returns null by falling back to the default.
      */

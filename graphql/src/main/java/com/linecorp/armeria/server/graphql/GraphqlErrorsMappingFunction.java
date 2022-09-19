@@ -38,7 +38,7 @@ public interface GraphqlErrorsMappingFunction {
      * Return default mapping function which checks null and {@link ValidationError}.
      */
     static GraphqlErrorsMappingFunction of() {
-        return (ctx, input, errors) -> GraphqlStatus.graphqlErrorsToHttpStatus(errors);
+        return (ctx, input, errors) -> GraphqlErrorsHandlers.graphqlErrorsToHttpStatus(errors);
     }
 
     /**
