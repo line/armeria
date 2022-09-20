@@ -120,8 +120,7 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
                 try {
                     outputStreamConsumer.accept(new StreamWriterOutputStream(outputStreamWriter));
                 } catch (Throwable t) {
-                    onError(t);
-                    subscription.cancel();
+                    outputStreamWriter.abort(t);
                 }
             });
         }
