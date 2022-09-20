@@ -102,10 +102,6 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         }
         return HttpResponse.from(
                 future.handle((executionResult, cause) -> {
-                    if (executionResult.getErrors().isEmpty() && cause == null) {
-                        return HttpResponse.ofJson(negotiatedProduceType, executionResult.toSpecification());
-                    }
-
                     if (executionResult.getData() instanceof Publisher) {
                         logger.warn("executionResult.getData() returns a {} that is not supported yet.",
                                     executionResult.getData().toString());
@@ -113,6 +109,10 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
                                 new UnsupportedOperationException("WebSocket is not implemented"));
                         return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED, negotiatedProduceType,
                                                    error.toSpecification());
+                    }
+
+                    if (executionResult.getErrors().isEmpty() && cause == null) {
+                        return HttpResponse.ofJson(negotiatedProduceType, executionResult.toSpecification());
                     }
 
                     return errorsHandler.handle(ctx, input, executionResult, negotiatedProduceType, cause);

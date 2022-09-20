@@ -76,7 +76,7 @@ class GraphqlServiceSubscriptionTest {
                                                          .execute(request)
                                                          .aggregate().join();
 
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.status()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
         assertThatJson(response.contentUtf8())
                 .withMatcher("errors",
                              new CustomTypeSafeMatcher<List<Map<String, String>>>("errors") {
