@@ -16,14 +16,11 @@
 
 package com.linecorp.armeria.server.graphql;
 
-import java.util.List;
-
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 
 import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
-import graphql.GraphQLError;
 import graphql.GraphqlErrorException;
 import graphql.validation.ValidationError;
 
@@ -38,12 +35,19 @@ final class GraphqlErrorsHandlers {
                     return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR, negotiatedProduceType,
                                                error.toSpecification());
                 }
-                final List<GraphQLError> errors = result.getErrors();
-                final HttpStatus httpStatus = graphqlErrorsToHttpStatus(errors);
+
+                final HttpStatus httpStatus;
+                if (result.getErrors().stream().anyMatch(ValidationError.class::isInstance)) {
+                    // The server SHOULD deny execution with a status code of 400 Bad Request for
+                    // invalidate documentation.
+                    httpStatus = HttpStatus.BAD_REQUEST;
+                } else {
+                    assert !result.getErrors().isEmpty(); // Checked in DefaultGraphqlService#execute
+                    httpStatus = HttpStatus.SERVICE_UNAVAILABLE;
+                }
+
                 return HttpResponse.ofJson(httpStatus, negotiatedProduceType, result.toSpecification());
             };
-
-    private GraphqlErrorsHandlers() {}
 
     /**
      * Return {@link ExecutionResult} based {@link Throwable}.
@@ -55,18 +59,5 @@ final class GraphqlErrorsHandlers {
                                                             .build());
     }
 
-    /**
-     * Return an {@link HttpStatus} based on the specified list of {@link GraphQLError}s.
-     */
-    private static HttpStatus graphqlErrorsToHttpStatus(List<GraphQLError> errors) {
-        if (errors.isEmpty()) {
-            return HttpStatus.OK;
-        }
-        if (errors.stream().anyMatch(ValidationError.class::isInstance)) {
-            // The server SHOULD deny execution with a status code of 400 Bad Request for
-            // invalidate documentation.
-            return HttpStatus.BAD_REQUEST;
-        }
-        return HttpStatus.SERVICE_UNAVAILABLE;
-    }
+    private GraphqlErrorsHandlers() {}
 }
