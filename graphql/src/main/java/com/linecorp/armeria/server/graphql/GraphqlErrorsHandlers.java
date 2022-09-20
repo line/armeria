@@ -36,17 +36,12 @@ final class GraphqlErrorsHandlers {
                                                error.toSpecification());
                 }
 
-                final HttpStatus httpStatus;
                 if (result.getErrors().stream().anyMatch(ValidationError.class::isInstance)) {
-                    // The server SHOULD deny execution with a status code of 400 Bad Request for
-                    // invalidate documentation.
-                    httpStatus = HttpStatus.BAD_REQUEST;
-                } else {
-                    assert !result.getErrors().isEmpty(); // Checked in DefaultGraphqlService#execute
-                    httpStatus = HttpStatus.SERVICE_UNAVAILABLE;
+                    return HttpResponse.ofJson(
+                            HttpStatus.BAD_REQUEST, negotiatedProduceType, result.toSpecification());
                 }
 
-                return HttpResponse.ofJson(httpStatus, negotiatedProduceType, result.toSpecification());
+                return HttpResponse.ofJson(negotiatedProduceType, result.toSpecification());
             };
 
     /**

@@ -50,7 +50,7 @@ class GraphqlErrorsHandlerTest {
                     = (ctx, input, result, negotiatedProduceType, cause) -> {
                 final List<GraphQLError> errors = result.getErrors();
                 if (errors.stream().map(GraphQLError::getMessage).anyMatch(m -> m.endsWith("foo"))) {
-                    return HttpResponse.ofJson(HttpStatus.OK);
+                    return HttpResponse.ofJson(HttpStatus.BAD_REQUEST);
                 }
                 return null;
             };
@@ -88,7 +88,7 @@ class GraphqlErrorsHandlerTest {
                                                .content(MediaType.GRAPHQL, "{foo}")
                                                .build();
         final AggregatedHttpResponse response = server.blockingWebClient().execute(request);
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
@@ -97,6 +97,6 @@ class GraphqlErrorsHandlerTest {
                                                .content(MediaType.GRAPHQL, "{error}")
                                                .build();
         final AggregatedHttpResponse response = server.blockingWebClient().execute(request);
-        assertThat(response.status()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
     }
 }
