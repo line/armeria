@@ -1,5 +1,12 @@
 // A testing module that ensures compatibility between thrift0.9 module and libthrift0.9.1.
 // TODO(ikhoon): Remove this module when Armeria drops support for Thrift 0.9.1
+
+if (org.gradle.internal.os.OperatingSystem.current().isWindows()) {
+    // Thrift 0.9.1 is vulnerable so it is not recommended to use it in production.
+    // Tests only Linux and macOS for simplicity of maintaining the thrift 0.9.1 compiler binaries.
+    return
+}
+
 dependencies {
     testImplementation(project(':thrift0.9')) {
         exclude group: 'org.apache.thrift', module: 'libthrift'
@@ -16,6 +23,11 @@ dependencies {
     testImplementation libs.micrometer.prometheus
     testImplementation libs.prometheus
 }
+
+ext {
+    thriftPath = "${projectDir}/compiler/thrift.${rootProject.osdetector.classifier}"
+}
+
 
 task generateSources(type: Copy) {
     from("${rootProject.projectDir}/thrift0.13/src/test") {
