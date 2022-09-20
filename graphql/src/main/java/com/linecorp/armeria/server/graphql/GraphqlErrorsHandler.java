@@ -39,7 +39,7 @@ public interface GraphqlErrorsHandler {
      * Return the default {@link GraphqlErrorsHandler}.
      */
     static GraphqlErrorsHandler of() {
-        return GraphqlErrorsHandlers.GRAPHQL_ERRORS_HANDLER;
+        return GraphqlErrorsHandlers.defaultErrorsHandler;
     }
 
     /**

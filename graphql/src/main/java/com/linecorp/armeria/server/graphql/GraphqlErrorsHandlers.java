@@ -26,7 +26,7 @@ import graphql.validation.ValidationError;
 
 final class GraphqlErrorsHandlers {
 
-    static final GraphqlErrorsHandler GRAPHQL_ERRORS_HANDLER =
+    static final GraphqlErrorsHandler defaultErrorsHandler =
             (ctx, input, result, negotiatedProduceType, cause) -> {
                 if (cause != null) {
                     // graphQL.executeAsync() returns an error in the executionResult with getErrors().
