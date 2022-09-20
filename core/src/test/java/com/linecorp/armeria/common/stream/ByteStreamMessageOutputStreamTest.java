@@ -202,7 +202,7 @@ class ByteStreamMessageOutputStreamTest {
     @Test
     void write_error_thrown() {
         final ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
-            try (Closeable ignored = os) {
+            try {
                 for (int i = 0; i < 5; i++) {
                     if (i < 3) {
                         os.write(i);
