@@ -61,8 +61,8 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     @Override
     protected HttpResponse executeGraphql(ServiceRequestContext ctx, GraphqlRequest req) throws Exception {
-        final MediaType produceType = GraphqlUtil.produceType(ctx.request().headers());
-        if (produceType == null) {
+        final MediaType negotiatedProduceType = GraphqlUtil.produceType(ctx.request().headers());
+        if (negotiatedProduceType == null) {
             return HttpResponse.of(HttpStatus.NOT_ACCEPTABLE, MediaType.PLAIN_TEXT,
                                    "Only application/graphql+json and application/json compatible " +
                                    "media types are acceptable");
@@ -89,10 +89,11 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
                        .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
                        .dataLoaderRegistry(dataLoaderRegistry)
                        .build();
-        return execute(ctx, executionInput, produceType);
+        return execute(ctx, executionInput, negotiatedProduceType);
     }
 
-    private HttpResponse execute(ServiceRequestContext ctx, ExecutionInput input, MediaType produceType) {
+    private HttpResponse execute(
+            ServiceRequestContext ctx, ExecutionInput input, MediaType negotiatedProduceType) {
         final CompletableFuture<ExecutionResult> future;
         if (useBlockingTaskExecutor) {
             future = CompletableFuture.supplyAsync(() -> graphQL.execute(input), ctx.blockingTaskExecutor());
@@ -101,19 +102,20 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         }
         return HttpResponse.from(
                 future.handle((executionResult, cause) -> {
-                    if (cause == null && executionResult.getErrors().isEmpty()) {
-                        return HttpResponse.ofJson(produceType, executionResult.toSpecification());
+                    if (executionResult.getErrors().isEmpty() && cause == null) {
+                        return HttpResponse.ofJson(negotiatedProduceType, executionResult.toSpecification());
                     }
+
                     if (executionResult.getData() instanceof Publisher) {
                         logger.warn("executionResult.getData() returns a {} that is not supported yet.",
                                     executionResult.getData().toString());
                         final ExecutionResult error = newExecutionResult(
                                 new UnsupportedOperationException("WebSocket is not implemented"));
-                        return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED, produceType,
+                        return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED, negotiatedProduceType,
                                                    error.toSpecification());
                     }
 
-                    return errorsHandler.handle(ctx, input, executionResult, produceType, cause);
+                    return errorsHandler.handle(ctx, input, executionResult, negotiatedProduceType, cause);
                 }));
     }
 }
