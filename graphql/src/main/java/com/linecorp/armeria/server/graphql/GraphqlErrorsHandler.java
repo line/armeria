@@ -19,12 +19,15 @@ package com.linecorp.armeria.server.graphql;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
+import graphql.GraphQLError;
 
 /**
  * A handler that maps GraphQL errors or a {@link Throwable} to an {@link HttpResponse}.
@@ -32,6 +35,13 @@ import graphql.ExecutionResult;
 @UnstableApi
 @FunctionalInterface
 public interface GraphqlErrorsHandler {
+
+    /**
+     * Return an {@link HttpStatus} based on the specified list of {@link GraphQLError}s.
+     */
+    static GraphqlErrorsHandler of() {
+        return GraphqlErrorsHandlers.defaultErrorsHandler;
+    }
 
     /**
      * Maps {@link ExecutionResult#getErrors()} or the specified {@link Throwable} to an {@link HttpResponse}.

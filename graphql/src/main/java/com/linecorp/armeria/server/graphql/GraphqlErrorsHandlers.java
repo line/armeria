@@ -18,12 +18,8 @@ package com.linecorp.armeria.server.graphql;
 
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
 
 import graphql.ExecutionResult;
 import graphql.ExecutionResultImpl;
@@ -33,9 +29,7 @@ import graphql.validation.ValidationError;
 
 final class GraphqlErrorsHandlers {
 
-    private static final Logger logger = LoggerFactory.getLogger(GraphqlErrorsHandlers.class);
-
-    private static final GraphqlErrorsHandler defaultErrorsHandler =
+    static final GraphqlErrorsHandler defaultErrorsHandler =
             (ctx, input, result, negotiatedProduceType, cause) -> {
                 if (cause != null) {
                     // graphQL.executeAsync() returns an error in the executionResult with getErrors().
@@ -46,12 +40,8 @@ final class GraphqlErrorsHandlers {
                 }
                 final List<GraphQLError> errors = result.getErrors();
                 final HttpStatus httpStatus = graphqlErrorsToHttpStatus(errors);
-                return toHttpResponse(httpStatus, result, negotiatedProduceType);
+                return HttpResponse.ofJson(httpStatus, negotiatedProduceType, result.toSpecification());
             };
-
-    static GraphqlErrorsHandler of() {
-        return defaultErrorsHandler;
-    }
 
     private GraphqlErrorsHandlers() {}
 
@@ -78,13 +68,5 @@ final class GraphqlErrorsHandlers {
             return HttpStatus.BAD_REQUEST;
         }
         return HttpStatus.SERVICE_UNAVAILABLE;
-    }
-
-    /**
-     * Return {@link HttpResponse} based {@link HttpStatus}, {@link ExecutionResult}, {@link MediaType}.
-     */
-    private static HttpResponse toHttpResponse(HttpStatus httpStatus, ExecutionResult executionResult,
-                                               MediaType produceType) {
-        return HttpResponse.ofJson(httpStatus, produceType, executionResult.toSpecification());
     }
 }
