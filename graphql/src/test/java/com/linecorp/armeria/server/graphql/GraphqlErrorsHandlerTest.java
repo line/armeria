@@ -50,7 +50,7 @@ class GraphqlErrorsHandlerTest {
                     = (ctx, input, result, negotiatedProduceType, cause) -> {
                 final List<GraphQLError> errors = result.getErrors();
                 if (errors.stream().map(GraphQLError::getMessage).anyMatch(m -> m.endsWith("foo"))) {
-                    return HttpResponse.ofJson(HttpStatus.BAD_REQUEST);
+                    return HttpResponse.of(HttpStatus.BAD_REQUEST);
                 }
                 return null;
             };
