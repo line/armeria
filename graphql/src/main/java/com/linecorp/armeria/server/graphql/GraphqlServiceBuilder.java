@@ -235,6 +235,7 @@ public final class GraphqlServiceBuilder {
 
     /**
      * Sets the {@link GraphqlErrorsHandler}.
+     * If not specified, {@link GraphqlErrorsHandler#of()} is used by default.
      */
     public GraphqlServiceBuilder errorsHandler(GraphqlErrorsHandler errorsHandler) {
         this.errorsHandler = requireNonNull(errorsHandler, "errorsHandler");
