@@ -26,7 +26,6 @@ import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.spring.ArmeriaServerSmartLifecycle;
 import com.linecorp.armeria.server.Server;
 
 /**
