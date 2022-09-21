@@ -28,10 +28,9 @@ class HttpJsonTranscodingOptionsBuilderTest {
     @Test
     void shouldDisallowEmptyNaming() {
         assertThatThrownBy(() -> HttpJsonTranscodingOptions.builder()
-                                                           .queryParamNaming(ImmutableList.of())
-                                                           .build())
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Can't disable both useProtoFieldNameQueryParams and useCamelCaseQueryParams");
+                                                           .queryParamNaming(ImmutableList.of()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("Can't set an empty queryParamNamings");
     }
 
     @Test
