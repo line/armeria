@@ -80,7 +80,7 @@ public final class GraphqlServiceBuilder {
     private GraphQLSchema schema;
 
     @Nullable
-    private GraphqlErrorsHandler errorsHandler;
+    private GraphqlErrorHandler errorsHandler;
 
     GraphqlServiceBuilder() {}
 
@@ -234,10 +234,10 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
-     * Sets the {@link GraphqlErrorsHandler}.
-     * If not specified, {@link GraphqlErrorsHandler#of()} is used by default.
+     * Sets the {@link GraphqlErrorHandler}.
+     * If not specified, {@link GraphqlErrorHandler#of()} is used by default.
      */
-    public GraphqlServiceBuilder errorsHandler(GraphqlErrorsHandler errorsHandler) {
+    public GraphqlServiceBuilder errorsHandler(GraphqlErrorHandler errorsHandler) {
         this.errorsHandler = requireNonNull(errorsHandler, "errorsHandler");
         return this;
     }
@@ -265,11 +265,11 @@ public final class GraphqlServiceBuilder {
             configurer.accept(dataLoaderRegistry);
         }
 
-        final GraphqlErrorsHandler errorsHandler;
+        final GraphqlErrorHandler errorsHandler;
         if (this.errorsHandler == null) {
-            errorsHandler = GraphqlErrorsHandler.of();
+            errorsHandler = GraphqlErrorHandler.of();
         } else {
-            errorsHandler = this.errorsHandler.orElse(GraphqlErrorsHandler.of());
+            errorsHandler = this.errorsHandler.orElse(GraphqlErrorHandler.of());
         }
         return new DefaultGraphqlService(builder.build(),
                                          dataLoaderRegistry,

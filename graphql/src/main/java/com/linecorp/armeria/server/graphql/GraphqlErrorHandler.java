@@ -33,13 +33,13 @@ import graphql.ExecutionResult;
  */
 @UnstableApi
 @FunctionalInterface
-public interface GraphqlErrorsHandler {
+public interface GraphqlErrorHandler {
 
     /**
-     * Return the default {@link GraphqlErrorsHandler}.
+     * Return the {@link DefaultGraphqlErrorHandler}.
      */
-    static GraphqlErrorsHandler of() {
-        return GraphqlErrorsHandlers.defaultErrorsHandler;
+    static GraphqlErrorHandler of() {
+        return DefaultGraphqlErrorHandler.INSTANCE;
     }
 
     /**
@@ -50,10 +50,10 @@ public interface GraphqlErrorsHandler {
                         ExecutionResult result, MediaType negotiatedProduceType, @Nullable Throwable cause);
 
     /**
-     * Returns a composed {@link GraphqlErrorsHandler} that applies this first and the specified
+     * Returns a composed {@link GraphqlErrorHandler} that applies this first and the specified
      * other later if this returns {@code null}.
      */
-    default GraphqlErrorsHandler orElse(GraphqlErrorsHandler other) {
+    default GraphqlErrorHandler orElse(GraphqlErrorHandler other) {
         requireNonNull(other, "other");
         if (this == other) {
             return this;

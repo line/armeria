@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.graphql;
 
-import static com.linecorp.armeria.server.graphql.GraphqlErrorsHandlers.newExecutionResult;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
@@ -37,7 +36,9 @@ import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
 
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
+import graphql.ExecutionResultImpl;
 import graphql.GraphQL;
+import graphql.GraphqlErrorException;
 
 final class DefaultGraphqlService extends AbstractGraphqlService implements GraphqlService {
 
@@ -49,10 +50,10 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     private final boolean useBlockingTaskExecutor;
 
-    private final GraphqlErrorsHandler errorsHandler;
+    private final GraphqlErrorHandler errorsHandler;
 
     DefaultGraphqlService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry,
-                          boolean useBlockingTaskExecutor, GraphqlErrorsHandler errorsHandler) {
+                          boolean useBlockingTaskExecutor, GraphqlErrorHandler errorsHandler) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
         this.dataLoaderRegistry = requireNonNull(dataLoaderRegistry, "dataLoaderRegistry");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
@@ -117,5 +118,12 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
                     return errorsHandler.handle(ctx, input, executionResult, negotiatedProduceType, cause);
                 }));
+    }
+
+    static ExecutionResult newExecutionResult(Throwable cause) {
+        return new ExecutionResultImpl(GraphqlErrorException.newErrorException()
+                                                            .message(cause.getMessage())
+                                                            .cause(cause)
+                                                            .build());
     }
 }

@@ -37,7 +37,7 @@ import graphql.GraphQLError;
 import graphql.GraphqlErrorException;
 import graphql.schema.DataFetcher;
 
-class GraphqlErrorsHandlerTest {
+class GraphqlErrorHandlerTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -46,7 +46,7 @@ class GraphqlErrorsHandlerTest {
             final File graphqlSchemaFile =
                     new File(getClass().getResource("/test.graphqls").toURI());
 
-            final GraphqlErrorsHandler errorsHandler
+            final GraphqlErrorHandler errorsHandler
                     = (ctx, input, result, negotiatedProduceType, cause) -> {
                 final List<GraphQLError> errors = result.getErrors();
                 if (errors.stream().map(GraphQLError::getMessage).anyMatch(m -> m.endsWith("foo"))) {
