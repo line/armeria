@@ -515,6 +515,11 @@ public final class GrpcClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public GrpcClientBuilder authority(String authority) {
+        return (GrpcClientBuilder) super.authority(authority);
+    }
+
+    @Override
     public GrpcClientBuilder auth(BasicToken token) {
         return (GrpcClientBuilder) super.auth(token);
     }

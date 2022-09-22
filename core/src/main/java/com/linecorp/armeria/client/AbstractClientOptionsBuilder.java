@@ -18,6 +18,7 @@ package com.linecorp.armeria.client;
 import static com.linecorp.armeria.client.ClientOptions.REDIRECT_CONFIG;
 import static java.util.Objects.requireNonNull;
 
+import java.net.URI;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.LinkedHashMap;
@@ -33,6 +34,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -41,6 +43,7 @@ import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 /**
  * A skeletal builder implementation for {@link ClientOptions}.
@@ -321,6 +324,27 @@ public class AbstractClientOptionsBuilder {
         requireNonNull(headers, "headers");
         this.headers.setObject(headers);
         return this;
+    }
+
+    /**
+     * (Advanced user only) Sets the authoritative name of the remote server. This value is passed as the
+     * value of the {@code :authority} pseudo-header in HTTP/2 or the {@code "Host"} header in HTTP/1.1.
+     * If {@code null}, the authoritative name is automatically populated from one of the following values.
+     * <ul>
+     *   <li>A base {@link URI} specified when creating a {@link Client}.</li>
+     *   <li>An absolute path specified when sending a {@link Request}.</li>
+     *   <li>An {@link HttpHeaderNames#AUTHORITY} header specified in {@link RequestHeaders}.</li>
+     * </ul>
+     *
+     * <p>Note that the authority does not change the remote peer which a {@link Request} is sent to.
+     * It only overrides the value of {@code :authority} or {@code "Host"} header. This is generally unsafe.
+     * There is no security verification of the overridden value, such as making sure the authority matches
+     * the server's TLS certificate.
+     */
+    public AbstractClientOptionsBuilder authority(String authority) {
+        requireNonNull(authority, "authority");
+        ArmeriaHttpUtil.validateAuthority(authority);
+        return setHeader(HttpHeaderNames.AUTHORITY, authority);
     }
 
     /**

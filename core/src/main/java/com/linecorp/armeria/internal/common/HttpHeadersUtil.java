@@ -47,8 +47,7 @@ public final class HttpHeadersUtil {
         return builder.build();
     }
 
-    public static RequestHeaders mergeRequestHeaders(RequestHeaders headers,
-                                                     HttpHeaders additionalHeaders) {
+    public static RequestHeaders mergeRequestHeaders(RequestHeaders headers, HttpHeaders additionalHeaders) {
         if (additionalHeaders.isEmpty()) {
             return headers;
         }

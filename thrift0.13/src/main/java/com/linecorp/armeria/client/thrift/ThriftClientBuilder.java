@@ -324,6 +324,11 @@ public final class ThriftClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ThriftClientBuilder authority(String authority) {
+        return (ThriftClientBuilder) super.authority(authority);
+    }
+
+    @Override
     public ThriftClientBuilder auth(BasicToken token) {
         return (ThriftClientBuilder) super.auth(token);
     }

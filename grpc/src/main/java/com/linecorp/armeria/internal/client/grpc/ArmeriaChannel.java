@@ -22,6 +22,7 @@ import java.net.URI;
 import java.util.EnumMap;
 import java.util.Map;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
@@ -132,6 +133,10 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
 
         final HttpClient client;
 
+        final String callAuthority = callOptions.getAuthority();
+        if (!Strings.isNullOrEmpty(callAuthority)) {
+            ctx.setAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, callAuthority);
+        }
         CallCredentials credentials = callOptions.getCredentials();
         if (credentials == NullCallCredentials.INSTANCE) {
             credentials = null;
@@ -142,7 +147,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
             }
         }
         if (credentials != null) {
-            client = new CallCredentialsDecoratingClient(httpClient, credentials, method, authority());
+            client = new CallCredentialsDecoratingClient(httpClient, credentials, method,
+                                                         callAuthority != null ? callAuthority : authority());
         } else {
             client = httpClient;
         }
@@ -225,8 +231,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 null,
                 REQUEST_OPTIONS_MAP.get(methodDescriptor.getType()),
                 System.nanoTime(),
-                SystemInfo.currentTimeMicros(),
-                /* hasBaseUri */ true);
+                SystemInfo.currentTimeMicros());
     }
 
     private static RequestOptions newRequestOptions(ExchangeType exchangeType) {

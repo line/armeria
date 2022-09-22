@@ -397,4 +397,10 @@ public final class FutureTransformingRequestPreparation<T>
         delegate.exchangeType(exchangeType);
         return this;
     }
+
+    @Override
+    public FutureTransformingRequestPreparation<T> authority(String authority) {
+        delegate.authority(authority);
+        return this;
+    }
 }

@@ -199,6 +199,11 @@ public final class RestClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
+    public RestClientBuilder authority(String authority) {
+        return (RestClientBuilder) super.authority(authority);
+    }
+
+    @Override
     public RestClientBuilder setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         return (RestClientBuilder) super.setHeaders(headers);

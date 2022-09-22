@@ -246,6 +246,11 @@ public final class ClientBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ClientBuilder authority(String authority) {
+        return (ClientBuilder) super.authority(authority);
+    }
+
+    @Override
     public ClientBuilder auth(BasicToken token) {
         return (ClientBuilder) super.auth(token);
     }

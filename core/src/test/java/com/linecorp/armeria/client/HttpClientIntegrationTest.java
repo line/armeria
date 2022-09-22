@@ -81,7 +81,6 @@ import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.HttpHeaderUtil;
-import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -447,32 +446,24 @@ class HttpClientIntegrationTest {
      */
     @Test
     void testAuthorityOverridableByClientOption() throws Exception {
-        try (ClientFactory factory = ClientFactory.builder()
-                                                  .addressResolverGroupFactory(
-                                                          unused -> MockAddressResolverGroup.localhost())
-                                                  .build()) {
+        // An authority header should be overridden with a client created with a base URI.
+        BlockingWebClient client = WebClient.builder(server.httpUri())
+                                            .setHeader(HttpHeaderNames.AUTHORITY, "foo:8080")
+                                            .build()
+                                            .blocking();
 
-            // An authority header should not be overridden on a client created with a base URI.
-            BlockingWebClient client = WebClient.builder(server.httpUri())
-                                                .setHeader(HttpHeaderNames.AUTHORITY, "foo:8080")
-                                                .factory(factory)
-                                                .build()
-                                                .blocking();
+        AggregatedHttpResponse response = client.get("/authority");
+        assertThat(response.contentUtf8()).isEqualTo("foo:8080");
 
-            AggregatedHttpResponse response = client.get("/authority");
-            assertThat(response.contentUtf8()).isEqualTo("127.0.0.1:" + server.httpPort());
+        // An authority header should be overridden with a client created with a non-base URI.
+        final String additionalAuthority = "foo:" + server.httpPort();
+        client = WebClient.builder()
+                          .setHeader(HttpHeaderNames.AUTHORITY, additionalAuthority)
+                          .build()
+                          .blocking();
 
-            // An authority header should override an Endpoint on a client created with a non-base URI.
-            final String additionalAuthority = "foo:" + server.httpPort();
-            client = WebClient.builder()
-                              .setHeader(HttpHeaderNames.AUTHORITY, additionalAuthority)
-                              .factory(factory)
-                              .build()
-                              .blocking();
-
-            response = client.get(server.httpUri().resolve("/authority").toString());
-            assertThat(response.contentUtf8()).isEqualTo(additionalAuthority);
-        }
+        response = client.get(server.httpUri().resolve("/authority").toString());
+        assertThat(response.contentUtf8()).isEqualTo(additionalAuthority);
     }
 
     /**

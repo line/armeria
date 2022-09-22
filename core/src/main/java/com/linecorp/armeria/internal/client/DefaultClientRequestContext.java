@@ -35,7 +35,8 @@ import java.util.function.Function;
 
 import javax.net.ssl.SSLSession;
 
-import com.linecorp.armeria.client.Client;
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -45,7 +46,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AttributesGetters;
 import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.ExchangeType;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -80,7 +80,6 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
 
@@ -117,7 +116,6 @@ public final class DefaultClientRequestContext
     @Nullable
     private final ServiceRequestContext root;
 
-    private final boolean hasBaseUri;
     private final ClientOptions options;
     private final RequestLogBuilder log;
     private final CancellationScheduler responseCancellationScheduler;
@@ -161,7 +159,7 @@ public final class DefaultClientRequestContext
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(eventLoop, meterRegistry, sessionProtocol,
              id, method, path, query, fragment, options, req, rpcReq, requestOptions, serviceRequestContext(),
-             responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros, false);
+             responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros);
     }
 
     /**
@@ -176,19 +174,17 @@ public final class DefaultClientRequestContext
      * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
      * @param requestStartTimeMicros the number of microseconds since the epoch,
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
-     * @param hasBaseUri whether a {@link Client} which initiates this {@link ClientRequestContext} was
-     *                   created with a base {@link URI}.
      */
     public DefaultClientRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions,
-            long requestStartTimeNanos, long requestStartTimeMicros, boolean hasBaseUri) {
+            long requestStartTimeNanos, long requestStartTimeMicros) {
         this(null, meterRegistry, sessionProtocol,
              id, method, path, query, fragment, options, req, rpcReq, requestOptions,
              serviceRequestContext(), /* responseCancellationScheduler */ null,
-             requestStartTimeNanos, requestStartTimeMicros, hasBaseUri);
+             requestStartTimeNanos, requestStartTimeMicros);
     }
 
     private DefaultClientRequestContext(
@@ -197,13 +193,12 @@ public final class DefaultClientRequestContext
             @Nullable String query, @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq, RequestOptions requestOptions,
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
-            long requestStartTimeNanos, long requestStartTimeMicros, boolean hasBaseUri) {
+            long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, sessionProtocol, id, method, path, query,
               firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING), req, rpcReq,
               getAttributes(root));
 
         this.eventLoop = eventLoop;
-        this.hasBaseUri = hasBaseUri;
         this.options = requireNonNull(options, "options");
         this.fragment = fragment;
         this.root = root;
@@ -238,7 +233,14 @@ public final class DefaultClientRequestContext
             setAttr((AttributeKey<Object>) attr.getKey(), attr.getValue());
         }
 
-        additionalRequestHeaders = options.get(ClientOptions.HEADERS);
+        final HttpHeaders additionalRequestHeaders = options.get(ClientOptions.HEADERS);
+        final String alternativeAuthority = requestOptions.authority();
+        if (Strings.isNullOrEmpty(alternativeAuthority)) {
+            this.additionalRequestHeaders = additionalRequestHeaders;
+        } else {
+            this.additionalRequestHeaders = additionalRequestHeaders.withMutations(
+                    builder -> builder.set(HttpHeaderNames.AUTHORITY, alternativeAuthority));
+        }
 
         final Consumer<ClientRequestContext> customizer = options.contextCustomizer();
         final Consumer<ClientRequestContext> threadLocalCustomizer = copyThreadLocalCustomizer();
@@ -283,7 +285,7 @@ public final class DefaultClientRequestContext
             //         an additional authority.
             runContextCustomizer();
 
-            endpointGroup = mapEndpoint(endpointGroup, hasBaseUri);
+            endpointGroup = mapEndpoint(endpointGroup);
             if (endpointGroup instanceof Endpoint) {
                 return initEndpoint((Endpoint) endpointGroup);
             } else {
@@ -296,18 +298,9 @@ public final class DefaultClientRequestContext
         }
     }
 
-    private EndpointGroup mapEndpoint(EndpointGroup endpointGroup, boolean hasBaseUri) {
+    private EndpointGroup mapEndpoint(EndpointGroup endpointGroup) {
         if (endpointGroup instanceof Endpoint) {
-            Endpoint endpoint = (Endpoint) endpointGroup;
-            if (!hasBaseUri) {
-                // If a WebClient was created without a base URI, an authority header could be
-                // the host of an Endpoint.
-                final String authority = additionalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
-                if (authority != null) {
-                    endpoint = Endpoint.parse(authority);
-                }
-            }
-            return requireNonNull(options().endpointRemapper().apply(endpoint),
+            return requireNonNull(options().endpointRemapper().apply((Endpoint) endpointGroup),
                                   "endpointRemapper returned null.");
         } else {
             return endpointGroup;
@@ -414,14 +407,6 @@ public final class DefaultClientRequestContext
         }
     }
 
-    private long connectTimeoutMillis() {
-        final Integer boxedConnectTimeoutMillis =
-                (Integer) options.factory().options().channelOptions().get(
-                        ChannelOption.CONNECT_TIMEOUT_MILLIS);
-        return boxedConnectTimeoutMillis != null ? boxedConnectTimeoutMillis.longValue()
-                                                 : Flags.defaultConnectTimeoutMillis();
-    }
-
     private void failEarly(Throwable cause) {
         final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
         final HttpRequest req = request();
@@ -481,7 +466,6 @@ public final class DefaultClientRequestContext
         // See https://github.com/line/armeria/pull/3251 and https://github.com/line/armeria/issues/3248.
 
         eventLoop = ctx.eventLoop().withoutContext();
-        hasBaseUri = ctx.hasBaseUri;
         options = ctx.options();
         this.endpointGroup = endpointGroup;
         updateEndpoint(endpoint);

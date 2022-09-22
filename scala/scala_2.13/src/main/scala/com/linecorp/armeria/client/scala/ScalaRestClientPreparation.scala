@@ -145,6 +145,11 @@ final class ScalaRestClientPreparation private[scala] (delegate: RestClientPrepa
     this
   }
 
+  override def authority(authority: String): ScalaRestClientPreparation = {
+    delegate.authority(authority)
+    this
+  }
+
   override def content(content: String): ScalaRestClientPreparation = {
     delegate.content(content)
     this

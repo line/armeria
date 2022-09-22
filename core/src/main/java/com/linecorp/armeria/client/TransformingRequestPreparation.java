@@ -322,4 +322,10 @@ public class TransformingRequestPreparation<T, R> implements WebRequestPreparati
         delegate.attr(key, value);
         return this;
     }
+
+    @Override
+    public TransformingRequestPreparation<T, R> authority(String authority) {
+        delegate.authority(authority);
+        return this;
+    }
 }

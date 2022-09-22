@@ -387,6 +387,11 @@ public final class EurekaEndpointGroupBuilder extends AbstractWebClientBuilder
     }
 
     @Override
+    public EurekaEndpointGroupBuilder authority(String authority) {
+        return (EurekaEndpointGroupBuilder) super.authority(authority);
+    }
+
+    @Override
     public EurekaEndpointGroupBuilder auth(BasicToken token) {
         return (EurekaEndpointGroupBuilder) super.auth(token);
     }

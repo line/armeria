@@ -201,6 +201,11 @@ public final class WebClientBuilder extends AbstractWebClientBuilder {
     }
 
     @Override
+    public WebClientBuilder authority(String authority) {
+        return (WebClientBuilder) super.authority(authority);
+    }
+
+    @Override
     public WebClientBuilder auth(BasicToken token) {
         return (WebClientBuilder) super.auth(token);
     }

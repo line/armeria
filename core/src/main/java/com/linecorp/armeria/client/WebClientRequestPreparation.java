@@ -375,6 +375,12 @@ public final class WebClientRequestPreparation
         return this;
     }
 
+    @Override
+    public WebClientRequestPreparation authority(String authority) {
+        requestOptionsBuilder().authority(authority);
+        return this;
+    }
+
     private RequestOptionsBuilder requestOptionsBuilder() {
         if (requestOptionsBuilder == null) {
             requestOptionsBuilder = RequestOptions.builder();

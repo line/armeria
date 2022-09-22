@@ -449,6 +449,12 @@ public final class BlockingWebClientRequestPreparation
     }
 
     @Override
+    public BlockingWebClientRequestPreparation authority(String authority) {
+        delegate.authority(authority);
+        return this;
+    }
+
+    @Override
     public <V> BlockingWebClientRequestPreparation attr(AttributeKey<V> key, @Nullable V value) {
         delegate.attr(key, value);
         return this;

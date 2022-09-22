@@ -28,6 +28,7 @@ import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
 import io.netty.util.AttributeKey;
 
@@ -44,6 +45,8 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
     private Map<AttributeKey<?>, Object> attributes;
     @Nullable
     private ExchangeType exchangeType;
+    @Nullable
+    private String authority;
 
     RequestOptionsBuilder(@Nullable RequestOptions options) {
         if (options != null) {
@@ -55,6 +58,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
                 attributes = new HashMap<>(attrs);
             }
             exchangeType = options.exchangeType();
+            authority = options.authority();
         }
     }
 
@@ -121,12 +125,20 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
         return this;
     }
 
+    @Override
+    public RequestOptionsBuilder authority(String authority) {
+        requireNonNull(authority, "authority");
+        ArmeriaHttpUtil.validateAuthority(authority);
+        this.authority = authority;
+        return this;
+    }
+
     /**
      * Returns a newly created {@link RequestOptions} with the properties specified so far.
      */
     public RequestOptions build() {
         if (responseTimeoutMillis < 0 && writeTimeoutMillis < 0 &&
-            maxResponseLength < 0 && attributes == null && exchangeType == null) {
+            maxResponseLength < 0 && attributes == null && exchangeType == null && authority == null) {
             return EMPTY;
         } else {
             final Map<AttributeKey<?>, Object> attributes;
@@ -136,7 +148,7 @@ public final class RequestOptionsBuilder implements RequestOptionsSetters {
                 attributes = ImmutableMap.copyOf(this.attributes);
             }
             return new DefaultRequestOptions(responseTimeoutMillis, writeTimeoutMillis,
-                                             maxResponseLength, attributes, exchangeType);
+                                             maxResponseLength, attributes, exchangeType, authority);
         }
     }
 }

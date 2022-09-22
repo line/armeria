@@ -30,6 +30,7 @@
  */
 package com.linecorp.armeria.internal.common;
 
+import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static io.netty.util.AsciiString.EMPTY_STRING;
 import static io.netty.util.ByteProcessor.FIND_COMMA;
@@ -55,6 +56,7 @@ import com.google.common.base.Joiner;
 import com.google.common.base.Splitter;
 import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
@@ -204,7 +206,7 @@ public final class ArmeriaHttpUtil {
     }
 
     static final Set<AsciiString> ADDITIONAL_REQUEST_HEADER_DISALLOWED_LIST = ImmutableSet.of(
-            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.AUTHORITY);
+            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD);
 
     private static final Set<AsciiString> REQUEST_PSEUDO_HEADERS = ImmutableSet.of(
             HttpHeaderNames.METHOD, HttpHeaderNames.SCHEME, HttpHeaderNames.AUTHORITY,
@@ -1096,6 +1098,19 @@ public final class ArmeriaHttpUtil {
                 writer.accept(output, HttpHeaderNames.HOST, v);
             }
         }
+    }
+
+    public static void validateAuthority(String authority) {
+        requireNonNull(authority, "authority");
+
+        if (authority.charAt(authority.length() - 1) == ':') {
+            // HostAndPort.fromString() does not validate an authority that ends with ':' such as "0.0.0.0:"
+            throw new IllegalArgumentException("Missing port number: " + authority);
+        }
+
+        // Delegate validation to `HostAndPort`
+        final HostAndPort hostAndPort = HostAndPort.fromString(authority);
+        checkArgument(!hostAndPort.getHost().isEmpty(), "Not a valid domain name");
     }
 
     // TODO(minwoox): Will provide this interface to public API

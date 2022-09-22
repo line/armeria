@@ -22,6 +22,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
@@ -31,6 +33,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class AdditionalAuthorityTest {
@@ -39,11 +42,15 @@ class AdditionalAuthorityTest {
     static ServerExtension serverA = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            sb.decorator(LoggingService.newDecorator());
             sb.virtualHost("foo")
               .service("/", (ctx, req) -> HttpResponse.of("foo/" + req.authority()));
 
             sb.virtualHost("bar")
               .service("/", (ctx, req) -> HttpResponse.of("bar/" + req.authority()));
+
+            sb.virtualHost("baz")
+              .service("/", (ctx, req) -> HttpResponse.of("baz/" + req.authority()));
         }
     };
 
@@ -56,11 +63,12 @@ class AdditionalAuthorityTest {
     };
 
     private static BlockingWebClient client;
+    private static ClientFactory clientFactory;
     private static int serverAPort;
 
     @BeforeAll
     static void beforeAll() {
-        final ClientFactory clientFactory =
+        clientFactory =
                 ClientFactory.builder()
                              .addressResolverGroupFactory(
                                      eventLoop -> MockAddressResolverGroup.localhost())
@@ -75,11 +83,11 @@ class AdditionalAuthorityTest {
 
     @AfterAll
     static void afterAll() {
-        client.options().factory().closeAsync();
+        clientFactory.closeAsync();
     }
 
     @Test
-    void additionalAuthorityHasHighestPrecedence() {
+    void shouldRespectAuthorityInAdditionalHeaders() {
         try (SafeCloseable ignored = Clients.withContextCustomizer(
                 ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY,
                                                       "bar:" + serverAPort))) {
@@ -90,13 +98,88 @@ class AdditionalAuthorityTest {
     }
 
     @Test
-    void requestHeader() {
+    void shouldRespectAuthorityInClient() {
+        final BlockingWebClient client = WebClient.builder()
+                                                  .factory(clientFactory)
+                                                  .authority("foo")
+                                                  .build()
+                                                  .blocking();
+
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            // A request is sent to 'bar' but 'foo' is used for :authority.
+            assertThat(client.get("http://bar:" + serverAPort).contentUtf8())
+                    .isEqualTo("foo/foo");
+            final Endpoint endpoint = captor.get().endpoint();
+            assertThat(endpoint.authority()).isEqualTo("bar:" + serverAPort);
+        }
+    }
+
+    @Test
+    void shouldRespectAuthorityInRequestOptions() {
+        final BlockingWebClient client = WebClient.builder()
+                                                  .factory(clientFactory)
+                                                  .authority("foo")
+                                                  .build()
+                                                  .blocking();
+
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final String content = client.prepare()
+                                         .get("http://bar:" + serverAPort)
+                                         .authority("baz")
+                                         .execute()
+                                         .contentUtf8();
+            // Make sure that the authority in the request options overrides the authority specified in the
+            // client builder.
+            assertThat(content).isEqualTo("baz/baz");
+
+            final Endpoint endpoint = captor.get().endpoint();
+            assertThat(endpoint.authority()).isEqualTo("bar:" + serverAPort);
+        }
+    }
+
+    @Test
+    void shouldUseAuthorityAsEndpointWithNonBaseUriClient() {
         final HttpRequest request = HttpRequest.of(RequestHeaders.builder(HttpMethod.GET, "/")
                                                                  .scheme("http")
                                                                  .authority("bar:" + serverAPort)
                                                                  .build());
         assertThat(client.execute(request).contentUtf8())
                 .isEqualTo("bar/bar:" + serverAPort);
+    }
+
+    @Test
+    void shouldIgnoreAuthorityInRequestWithBaseUriClient() {
+        final HttpRequest request = HttpRequest.of(RequestHeaders.builder(HttpMethod.GET, "/")
+                                                                 .scheme("http")
+                                                                 .authority("bar:" + serverAPort)
+                                                                 .build());
+        final BlockingWebClient baseClient = WebClient.builder("http://foo:" + serverAPort)
+                                                      .factory(clientFactory)
+                                                      .build()
+                                                      .blocking();
+
+        // Ignore the authority in the RequestHeaders and use the base URI as an authority header.
+        // Neither the Endpoint nor the authority has changed.
+        assertThat(baseClient.execute(request).contentUtf8())
+                .isEqualTo("foo/foo:" + serverAPort);
+    }
+
+    @Test
+    void shouldNotUseAuthorityAsEndpointWithBaseUriWebClient() {
+        final int serverBPort = serverB.httpPort();
+        final WebClient clientA = WebClient.builder("http://foo:" + serverBPort)
+                                           .factory(client.options().factory())
+                                           .build();
+
+        try (SafeCloseable ignored = Clients.withContextCustomizer(
+                ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY,
+                                                      "bar:" + serverAPort))) {
+
+            final HttpRequest request2 = HttpRequest.of(HttpMethod.GET, "/");
+            // The default authority (`foo`) got overridden to `bar` but the endpoint (serverB) has not changed.
+            assertThat(clientA.execute(request2).aggregate().join().contentUtf8())
+                    .isEqualTo("serverB/bar:" + serverAPort);
+        }
     }
 
     @Test
@@ -115,73 +198,17 @@ class AdditionalAuthorityTest {
                 "foo/foo:" + serverAPort);
     }
 
-    @Test
-    void shouldIgnoreInvalidAdditionalAuthority() {
-        // Missing a closing bracket
-        try (SafeCloseable ignored = Clients.withContextCustomizer(
-                ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, "[::1"))) {
+    @CsvSource({ "[::1, Invalid bracketed host/port",
+                 ":8080, Not a valid domain name",
+                 "foo:, Missing port number" })
+    @ParameterizedTest
+    void validateAuthority(String invalidAuthority, String message) {
+        assertThatThrownBy(() -> WebClient.builder().authority(invalidAuthority))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(message);
 
-            assertThatThrownBy(() -> client.get("http://foo:" + serverAPort))
-                    .isInstanceOf(UnprocessedRequestException.class)
-                    .hasCauseInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Invalid bracketed host/port");
-        }
-
-        // Port only
-        try (SafeCloseable ignored = Clients.withContextCustomizer(
-                ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, ":8080"))) {
-
-            final HttpRequest request = HttpRequest.of(RequestHeaders.builder(HttpMethod.GET, "/")
-                                                                     .scheme("http")
-                                                                     .authority("bar:" + serverAPort)
-                                                                     .build());
-
-            assertThatThrownBy(() -> client.execute(request))
-                    .isInstanceOf(UnprocessedRequestException.class)
-                    .hasCauseInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Not a valid domain name");
-        }
-
-        // Missing a port number
-        try (SafeCloseable ignored = Clients.withContextCustomizer(
-                ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY, "foo:"))) {
-
-            final HttpRequest request = HttpRequest.of(RequestHeaders.builder(HttpMethod.GET, "/")
-                                                                     .scheme("http")
-                                                                     .authority("bar:" + serverAPort)
-                                                                     .build());
-
-            assertThatThrownBy(() -> client.execute(request))
-                    .isInstanceOf(UnprocessedRequestException.class)
-                    .hasCauseInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("Missing port number");
-        }
-    }
-
-    @Test
-    void shouldNotUseAuthorityAsEndpointWithBaseUriWebClient() {
-        final int serverBPort = serverB.httpPort();
-        final WebClient clientA = WebClient.builder("http://foo:" + serverBPort)
-                                           .factory(client.options().factory())
-                                           .build();
-
-        final HttpRequest request = HttpRequest.of(RequestHeaders.builder(HttpMethod.GET, "/")
-                                                                 .scheme("http")
-                                                                 .authority("bar:" + serverAPort)
-                                                                 .build());
-        assertThat(clientA.execute(request).aggregate().join().contentUtf8())
-                // Ignore the authority in the RequestHeaders and use the base URI as an authority header.
-                .isEqualTo("serverB/foo:" + serverBPort);
-
-        try (SafeCloseable ignored = Clients.withContextCustomizer(
-                ctx -> ctx.addAdditionalRequestHeader(HttpHeaderNames.AUTHORITY,
-                                                      "bar:" + serverAPort))) {
-
-            final HttpRequest request2 = HttpRequest.of(HttpMethod.GET, "/");
-            assertThat(clientA.execute(request2).aggregate().join().contentUtf8())
-                    // Ignore the authority in the additional headers and
-                    // use the base URI as an authority header.
-                    .isEqualTo("serverB/foo:" + serverBPort);
-        }
+        assertThatThrownBy(() -> WebClient.of().prepare().authority(invalidAuthority))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining(message);
     }
 }

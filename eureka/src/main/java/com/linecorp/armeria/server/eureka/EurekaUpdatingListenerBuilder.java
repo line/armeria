@@ -485,6 +485,11 @@ public final class EurekaUpdatingListenerBuilder extends AbstractWebClientBuilde
     }
 
     @Override
+    public EurekaUpdatingListenerBuilder authority(String authority) {
+        return (EurekaUpdatingListenerBuilder) super.authority(authority);
+    }
+
+    @Override
     public EurekaUpdatingListenerBuilder setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
         return (EurekaUpdatingListenerBuilder) super.setHeaders(headers);

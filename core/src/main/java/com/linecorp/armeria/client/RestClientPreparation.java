@@ -287,6 +287,12 @@ public final class RestClientPreparation implements RequestPreparationSetters {
     }
 
     @Override
+    public RestClientPreparation authority(String authority) {
+        delegate.authority(authority);
+        return this;
+    }
+
+    @Override
     public RestClientPreparation requestOptions(RequestOptions requestOptions) {
         delegate.requestOptions(requestOptions);
         return this;

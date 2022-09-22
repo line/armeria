@@ -168,6 +168,11 @@ public final class ClientOptionsBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ClientOptionsBuilder authority(String authority) {
+        return (ClientOptionsBuilder) super.authority(authority);
+    }
+
+    @Override
     public ClientOptionsBuilder successFunction(SuccessFunction successFunction) {
         return (ClientOptionsBuilder) super.successFunction(successFunction);
     }

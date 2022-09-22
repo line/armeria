@@ -29,7 +29,8 @@ import io.netty.util.AttributeKey;
 
 final class DefaultRequestOptions implements RequestOptions {
 
-    static final DefaultRequestOptions EMPTY = new DefaultRequestOptions(-1, -1, -1, ImmutableMap.of(), null);
+    static final DefaultRequestOptions EMPTY =
+            new DefaultRequestOptions(-1, -1, -1, ImmutableMap.of(), null, null);
 
     private final long responseTimeoutMillis;
     private final long writeTimeoutMillis;
@@ -37,15 +38,18 @@ final class DefaultRequestOptions implements RequestOptions {
     private final Map<AttributeKey<?>, Object> attributeMap;
     @Nullable
     private final ExchangeType exchangeType;
+    @Nullable
+    private final String authority;
 
     DefaultRequestOptions(long responseTimeoutMillis, long writeTimeoutMillis,
                           long maxResponseLength, Map<AttributeKey<?>, Object> attributeMap,
-                          @Nullable ExchangeType exchangeType) {
+                          @Nullable ExchangeType exchangeType, @Nullable String authority) {
         this.responseTimeoutMillis = responseTimeoutMillis;
         this.writeTimeoutMillis = writeTimeoutMillis;
         this.maxResponseLength = maxResponseLength;
         this.attributeMap = attributeMap;
         this.exchangeType = exchangeType;
+        this.authority = authority;
     }
 
     @Override
@@ -74,28 +78,34 @@ final class DefaultRequestOptions implements RequestOptions {
     }
 
     @Override
+    public String authority() {
+        return authority;
+    }
+
+    @Override
     public boolean equals(Object o) {
         if (this == o) {
             return true;
         }
 
-        if (!(o instanceof DefaultRequestOptions)) {
+        if (!(o instanceof RequestOptions)) {
             return false;
         }
 
-        final DefaultRequestOptions that = (DefaultRequestOptions) o;
+        final RequestOptions that = (RequestOptions) o;
 
-        return responseTimeoutMillis == that.responseTimeoutMillis &&
-               writeTimeoutMillis == that.writeTimeoutMillis &&
-               maxResponseLength == that.maxResponseLength &&
-               attributeMap.equals(that.attributeMap) &&
-               exchangeType == that.exchangeType;
+        return responseTimeoutMillis == that.responseTimeoutMillis() &&
+               writeTimeoutMillis == that.writeTimeoutMillis() &&
+               maxResponseLength == that.maxResponseLength() &&
+               attributeMap.equals(that.attrs()) &&
+               exchangeType == that.exchangeType() &&
+               Objects.equals(authority, that.authority());
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(responseTimeoutMillis, writeTimeoutMillis, maxResponseLength,
-                            attributeMap, exchangeType);
+                            attributeMap, exchangeType, authority);
     }
 
     @Override
@@ -106,6 +116,7 @@ final class DefaultRequestOptions implements RequestOptions {
                           .add("maxResponseLength", maxResponseLength)
                           .add("attributeMap", attributeMap)
                           .add("exchangeType", exchangeType)
+                          .add("authority", authority)
                           .toString();
     }
 }

@@ -406,6 +406,11 @@ public final class ArmeriaRetrofitBuilder extends AbstractClientOptionsBuilder {
     }
 
     @Override
+    public ArmeriaRetrofitBuilder authority(String authority) {
+        return (ArmeriaRetrofitBuilder) super.authority(authority);
+    }
+
+    @Override
     public ArmeriaRetrofitBuilder auth(BasicToken token) {
         return (ArmeriaRetrofitBuilder) super.auth(token);
     }
