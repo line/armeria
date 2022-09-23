@@ -424,13 +424,6 @@ final class MimeParser {
 
         final int length = in.readableBytes();
 
-        // Consider all the whitespace. e.g. boundary+whitespace+"\r\n"
-        int linearWhiteSpace = 0;
-        for (int i = boundaryStartOffset + boundaryLength;
-             i < length && (in.getByte(i) == ' ' || in.getByte(i) == '\t'); i++) {
-            ++linearWhiteSpace;
-        }
-
         // Three valid cases:
         // boundary+"--" + "whatever after --" // closing boundary
         // boundary+whitespace+"\n"
@@ -455,6 +448,13 @@ final class MimeParser {
                 return;
             }
             throwInvalidBoundaryException(followingCharOffset + 2);
+        }
+
+        // Consider all the whitespace. e.g. boundary+whitespace+"\r\n"
+        int linearWhiteSpace = 0;
+        for (int i = boundaryStartOffset + boundaryLength;
+             i < length && (in.getByte(i) == ' ' || in.getByte(i) == '\t'); i++) {
+            ++linearWhiteSpace;
         }
 
         // Check the rest.
