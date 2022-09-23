@@ -432,12 +432,35 @@ final class MimeParser {
         }
 
         // Three valid cases:
+        // boundary+"--" + "whatever after --" // closing boundary
         // boundary+whitespace+"\n"
         // boundary+whitespace+"\r\n"
-        // boundary+whitespace+"--" + "whatever after --"
 
-        final int followingCharOffset = boundaryStartOffset + boundaryLength + linearWhiteSpace;
+        // Check the closing boundary first.
+        int followingCharOffset = boundaryStartOffset + boundaryLength;
         if (followingCharOffset >= length) {
+            // Need more data.
+            return;
+        }
+
+        if (in.getByte(followingCharOffset) == '-') {
+            if (followingCharOffset + 1 >= length) {
+                // Need more data.
+                return;
+            }
+            if (in.getByte(followingCharOffset + 1) == '-') {
+                in.skipBytes(followingCharOffset + 2);
+                done = true;
+                state = State.END_MESSAGE;
+                return;
+            }
+            throwInvalidBoundaryException(followingCharOffset + 2);
+        }
+
+        // Check the rest.
+        followingCharOffset = boundaryStartOffset + boundaryLength + linearWhiteSpace;
+        if (followingCharOffset >= length) {
+            // Need more data.
             return;
         }
 
@@ -462,20 +485,6 @@ final class MimeParser {
             throwInvalidBoundaryException(followingCharOffset + 2);
         }
 
-        if (followingChar == '-') {
-            if (followingCharOffset + 1 >= length) {
-                // Need one more character.
-                return;
-            }
-
-            if (in.getByte(followingCharOffset + 1) == '-') {
-                in.skipBytes(followingCharOffset + 2);
-                done = true;
-                state = State.END_MESSAGE;
-                return;
-            }
-            throwInvalidBoundaryException(followingCharOffset + 2);
-        }
         throwInvalidBoundaryException(followingCharOffset + 1);
     }
 

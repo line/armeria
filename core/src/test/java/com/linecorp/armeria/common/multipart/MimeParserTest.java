@@ -149,6 +149,11 @@ class MimeParserTest {
         assertThatThrownBy(() -> parse("boundary", data3))
                 .isInstanceOf(MimeParsingException.class)
                 .hasMessage("Invalid boundary: --boundary-f");
+
+        final byte[] data4 = ("--" + boundary + " --").getBytes();
+        assertThatThrownBy(() -> parse("boundary", data4))
+                .isInstanceOf(MimeParsingException.class)
+                .hasMessage("Invalid boundary: --boundary -");
     }
 
     @Test
