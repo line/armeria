@@ -131,7 +131,7 @@ class DefaultClientRequestContextTest {
         assertThat(derivedCtx.maxResponseLength()).isEqualTo(originalCtx.maxResponseLength());
         assertThat(derivedCtx.responseTimeoutMillis()).isEqualTo(originalCtx.responseTimeoutMillis());
         assertThat(derivedCtx.writeTimeoutMillis()).isEqualTo(originalCtx.writeTimeoutMillis());
-        assertThat(derivedCtx.additionalRequestHeaders()).isSameAs(originalCtx.additionalRequestHeaders());
+        assertThat(derivedCtx.additionalRequestHeaders()).isEqualTo(originalCtx.additionalRequestHeaders());
         // the attribute is derived as well
         assertThat(derivedCtx.attr(foo)).isEqualTo("foo");
 
