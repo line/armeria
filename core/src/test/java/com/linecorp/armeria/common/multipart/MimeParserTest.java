@@ -75,23 +75,6 @@ class MimeParserTest {
     }
 
     @Test
-    void testNoPreambule() {
-        final String boundary = "boundary";
-        final byte[] chunk1 = ("--" + boundary +
-                               "Content-Id: part1\n" +
-                               '\n' +
-                               "1\n" +
-                               "--" + boundary + "--").getBytes();
-
-        final List<AggregatedBodyPart> parts = parse("boundary", chunk1);
-        assertThat(parts).hasSize(1);
-
-        final AggregatedBodyPart part1 = parts.get(0);
-        assertThat(part1.headers().get('-' + boundary + "Content-Id")).isEqualTo("part1");
-        assertThat(part1.contentUtf8()).isEqualTo("1");
-    }
-
-    @Test
     void testEndMessageEvent() {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + '\n' +
@@ -133,6 +116,38 @@ class MimeParserTest {
         final AggregatedBodyPart part2 = parts.get(1);
         assertThat(part2.headers().get("Content-Id")).isEqualTo("part2");
         assertThat(part2.contentUtf8()).isEqualTo("2");
+    }
+
+    @Test
+    void ignoreAfterEndingBoundary() {
+        final String boundary = "boundary";
+        final byte[] chunk1 = ("--" + boundary + "--foobarbaz").getBytes();
+
+        final List<AggregatedBodyPart> parts = parse("boundary", chunk1);
+        assertThat(parts).isEmpty();
+    }
+
+
+    @Test
+    void invalidBoundary() {
+        final String boundary = "boundary";
+        final byte[] data1 = ("--" + boundary + "foo").getBytes();
+
+        assertThatThrownBy(() -> parse("boundary", data1))
+                .isInstanceOf(MimeParsingException.class)
+                .hasMessage("Invalid boundary: --boundaryf");
+
+        final byte[] data2 = ("--" + boundary + "\rfoo\n").getBytes();
+
+        assertThatThrownBy(() -> parse("boundary", data2))
+                .isInstanceOf(MimeParsingException.class)
+                .hasMessage("Invalid boundary: --boundary\rf");
+
+        final byte[] data3 = ("--" + boundary + "-foo-").getBytes();
+
+        assertThatThrownBy(() -> parse("boundary", data3))
+                .isInstanceOf(MimeParsingException.class)
+                .hasMessage("Invalid boundary: --boundary-f");
     }
 
     @Test

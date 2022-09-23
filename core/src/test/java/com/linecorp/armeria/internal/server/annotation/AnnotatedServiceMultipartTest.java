@@ -97,6 +97,24 @@ class AnnotatedServiceMultipartTest {
     }
 
     @Test
+    void emptyBodyPart2() {
+        final String boundary = "ArmeriaBoundary";
+        final MediaType contentType = MediaType.MULTIPART_FORM_DATA.withParameter("boundary", boundary);
+        final RequestHeaders headers = RequestHeaders.builder(HttpMethod.POST, "/uploadWithMultipartObject")
+                                                     .contentType(contentType)
+                                                     .build();
+        final HttpRequest request =
+                HttpRequest.of(headers, HttpData.ofUtf8(
+                        "--" + boundary + "--\n" +
+                        "content-disposition:form-data; name=\"file1\"; filename=\"foo.txt\"\n" +
+                        "content-type:application/octet-stream\n" +
+                        '\n' +
+                        "foo\n"));
+        final AggregatedHttpResponse response = server.blockingWebClient().execute(request);
+        assertThat(response.contentUtf8()).isEqualTo("{}");
+    }
+
+    @Test
     void missingEndingBoundary() {
         final String boundary = "ArmeriaBoundary";
         final MediaType contentType = MediaType.MULTIPART_FORM_DATA.withParameter("boundary", boundary);
