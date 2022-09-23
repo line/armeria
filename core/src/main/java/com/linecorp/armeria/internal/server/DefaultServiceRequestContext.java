@@ -31,7 +31,6 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 import java.util.function.Consumer;
 
 import javax.annotation.Nonnull;
@@ -79,14 +78,6 @@ public final class DefaultServiceRequestContext
         extends NonWrappingRequestContext
         implements ServiceRequestContext {
 
-    private static final AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders>
-            additionalResponseHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            DefaultServiceRequestContext.class, HttpHeaders.class, "additionalResponseHeaders");
-
-    private static final AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders>
-            additionalResponseTrailersUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            DefaultServiceRequestContext.class, HttpHeaders.class, "additionalResponseTrailers");
-
     private static final InetSocketAddress UNKNOWN_ADDR = new InetSocketAddress("0.0.0.0", 1);
 
     private final Channel ch;
@@ -109,10 +100,8 @@ public final class DefaultServiceRequestContext
     private ContextAwareScheduledExecutorService blockingTaskExecutor;
     private long maxRequestLength;
 
-    @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseHeadersUpdater`
-    private volatile HttpHeaders additionalResponseHeaders;
-    @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalResponseTrailersUpdater`
-    private volatile HttpHeaders additionalResponseTrailers;
+    private final HttpHeadersBuilder additionalResponseHeaders;
+    private final HttpHeadersBuilder additionalResponseTrailers;
 
     @Nullable
     private String strVal;
@@ -144,7 +133,7 @@ public final class DefaultServiceRequestContext
 
         this(cfg, ch, meterRegistry, sessionProtocol, id, routingContext, routingResult, exchangeType,
              req, sslSession, proxiedAddresses, clientAddress, /* requestCancellationScheduler */ null,
-             requestStartTimeNanos, requestStartTimeMicros, HttpHeaders.of(), HttpHeaders.of());
+             requestStartTimeNanos, requestStartTimeMicros, HttpHeaders.builder(), HttpHeaders.builder());
     }
 
     public DefaultServiceRequestContext(
@@ -154,7 +143,7 @@ public final class DefaultServiceRequestContext
             InetAddress clientAddress,
             @Nullable CancellationScheduler requestCancellationScheduler,
             long requestStartTimeNanos, long requestStartTimeMicros,
-            HttpHeaders additionalResponseHeaders, HttpHeaders additionalResponseTrailers) {
+            HttpHeadersBuilder additionalResponseHeaders, HttpHeadersBuilder additionalResponseTrailers) {
 
         super(meterRegistry, sessionProtocol, id,
               requireNonNull(routingContext, "routingContext").method(), routingContext.path(),
@@ -368,70 +357,52 @@ public final class DefaultServiceRequestContext
 
     @Override
     public HttpHeaders additionalResponseHeaders() {
-        return additionalResponseHeaders;
+        return additionalResponseHeaders.build();
     }
 
     @Override
     public void setAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        mutateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
-                                        builder -> builder.setObject(name, value));
+        additionalResponseHeaders.setObject(name, value);
     }
 
     @Override
     public void addAdditionalResponseHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        mutateAdditionalResponseHeaders(additionalResponseHeadersUpdater,
-                                        builder -> builder.addObject(name, value));
+        additionalResponseHeaders.addObject(name, value);
     }
 
     @Override
     public void mutateAdditionalResponseHeaders(Consumer<HttpHeadersBuilder> mutator) {
         requireNonNull(mutator, "mutator");
-        mutateAdditionalResponseHeaders(additionalResponseHeadersUpdater, mutator);
-    }
-
-    private void mutateAdditionalResponseHeaders(
-            AtomicReferenceFieldUpdater<DefaultServiceRequestContext, HttpHeaders> atomicUpdater,
-            Consumer<HttpHeadersBuilder> mutator) {
-        for (;;) {
-            final HttpHeaders oldValue = atomicUpdater.get(this);
-            final HttpHeadersBuilder builder = oldValue.toBuilder();
-            mutator.accept(builder);
-            final HttpHeaders newValue = builder.build();
-            if (atomicUpdater.compareAndSet(this, oldValue, newValue)) {
-                return;
-            }
-        }
+        mutator.accept(additionalResponseHeaders);
     }
 
     @Override
     public HttpHeaders additionalResponseTrailers() {
-        return additionalResponseTrailers;
+        return additionalResponseTrailers.build();
     }
 
     @Override
     public void setAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        mutateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
-                                        builder -> builder.setObject(name, value));
+        additionalResponseTrailers.setObject(name, value);
     }
 
     @Override
     public void addAdditionalResponseTrailer(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        mutateAdditionalResponseHeaders(additionalResponseTrailersUpdater,
-                                        builder -> builder.addObject(name, value));
+        additionalResponseTrailers.addObject(name, value);
     }
 
     @Override
     public void mutateAdditionalResponseTrailers(Consumer<HttpHeadersBuilder> mutator) {
         requireNonNull(mutator, "mutator");
-        mutateAdditionalResponseHeaders(additionalResponseTrailersUpdater, mutator);
+        mutator.accept(additionalResponseTrailers);
     }
 
     @Override

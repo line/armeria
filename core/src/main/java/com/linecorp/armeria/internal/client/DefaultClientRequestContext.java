@@ -91,10 +91,6 @@ public final class DefaultClientRequestContext
         extends NonWrappingRequestContext
         implements ClientRequestContextExtension {
 
-    private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, HttpHeaders>
-            additionalRequestHeadersUpdater = AtomicReferenceFieldUpdater.newUpdater(
-            DefaultClientRequestContext.class, HttpHeaders.class, "additionalRequestHeaders");
-
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DefaultClientRequestContext, CompletableFuture>
             whenInitializedUpdater = AtomicReferenceFieldUpdater.newUpdater(
@@ -124,8 +120,7 @@ public final class DefaultClientRequestContext
     private long writeTimeoutMillis;
     private long maxResponseLength;
 
-    @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalRequestHeadersUpdater`
-    private volatile HttpHeaders additionalRequestHeaders;
+    private final HttpHeadersBuilder additionalRequestHeaders;
 
     @Nullable
     private String strVal;
@@ -238,7 +233,7 @@ public final class DefaultClientRequestContext
             setAttr((AttributeKey<Object>) attr.getKey(), attr.getValue());
         }
 
-        additionalRequestHeaders = options.get(ClientOptions.HEADERS);
+        additionalRequestHeaders = options.get(ClientOptions.HEADERS).toBuilder();
 
         final Consumer<ClientRequestContext> customizer = options.contextCustomizer();
         final Consumer<ClientRequestContext> threadLocalCustomizer = copyThreadLocalCustomizer();
@@ -494,7 +489,7 @@ public final class DefaultClientRequestContext
                 new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
-        additionalRequestHeaders = ctx.additionalRequestHeaders();
+        additionalRequestHeaders = ctx.additionalRequestHeaders().toBuilder();
 
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
@@ -694,35 +689,27 @@ public final class DefaultClientRequestContext
 
     @Override
     public HttpHeaders additionalRequestHeaders() {
-        return additionalRequestHeaders;
+        return additionalRequestHeaders.build();
     }
 
     @Override
     public void setAdditionalRequestHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        mutateAdditionalRequestHeaders(builder -> builder.setObject(name, value));
+        additionalRequestHeaders.setObject(name, value);
     }
 
     @Override
     public void addAdditionalRequestHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
         requireNonNull(value, "value");
-        mutateAdditionalRequestHeaders(builder -> builder.addObject(name, value));
+        additionalRequestHeaders.addObject(name, value);
     }
 
     @Override
     public void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator) {
         requireNonNull(mutator, "mutator");
-        for (;;) {
-            final HttpHeaders oldValue = additionalRequestHeaders;
-            final HttpHeadersBuilder builder = oldValue.toBuilder();
-            mutator.accept(builder);
-            final HttpHeaders newValue = builder.build();
-            if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
-                return;
-            }
-        }
+        mutator.accept(additionalRequestHeaders);
     }
 
     @Override
