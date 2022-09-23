@@ -227,7 +227,7 @@ final class MimeParser {
                             // Skip ':' from value
                             final String value = headerLine.substring(index + 1).trim();
                             bodyPartHeadersBuilder.add(key, value);
-                            return;
+                            break;
                         }
                         state = State.BODY;
                         startOfLine = true;
@@ -482,8 +482,7 @@ final class MimeParser {
     private void throwInvalidBoundaryException(int length) {
         final ByteBuf byteBuf = in.readBytes(length);
         try {
-            throw new MimeParsingException(
-                    "Invalid boundary: " + new String(ByteBufUtil.getBytes(byteBuf)));
+            throw new MimeParsingException("Invalid boundary: " + new String(ByteBufUtil.getBytes(byteBuf)));
         } finally {
             byteBuf.release();
         }

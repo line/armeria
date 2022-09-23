@@ -119,32 +119,33 @@ class MimeParserTest {
     }
 
     @Test
-    void ignoreAfterEndingBoundary() {
+    void ignoreAfterClosingBoundary() {
         final String boundary = "boundary";
         final byte[] chunk1 = ("--" + boundary + "--foobarbaz").getBytes();
 
-        final List<AggregatedBodyPart> parts = parse("boundary", chunk1);
+        List<AggregatedBodyPart> parts = parse("boundary", chunk1);
+        assertThat(parts).isEmpty();
+
+        final byte[] chunk2 = ("--" + boundary + '-').getBytes();
+        final byte[] chunk3 = ("--" + boundary + "-foobarbaz").getBytes();
+        parts = parse("boundary", ImmutableList.of(chunk2, chunk3));
         assertThat(parts).isEmpty();
     }
-
 
     @Test
     void invalidBoundary() {
         final String boundary = "boundary";
         final byte[] data1 = ("--" + boundary + "foo").getBytes();
-
         assertThatThrownBy(() -> parse("boundary", data1))
                 .isInstanceOf(MimeParsingException.class)
                 .hasMessage("Invalid boundary: --boundaryf");
 
         final byte[] data2 = ("--" + boundary + "\rfoo\n").getBytes();
-
         assertThatThrownBy(() -> parse("boundary", data2))
                 .isInstanceOf(MimeParsingException.class)
                 .hasMessage("Invalid boundary: --boundary\rf");
 
         final byte[] data3 = ("--" + boundary + "-foo-").getBytes();
-
         assertThatThrownBy(() -> parse("boundary", data3))
                 .isInstanceOf(MimeParsingException.class)
                 .hasMessage("Invalid boundary: --boundary-f");
