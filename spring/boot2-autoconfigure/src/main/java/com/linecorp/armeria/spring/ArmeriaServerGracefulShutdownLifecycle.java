@@ -28,7 +28,7 @@ import com.linecorp.armeria.server.Server;
  * Make Armeria {@link Server} utilize spring's SmartLifecycle feature.
  * So Armeria will shutdown before other web servers and beans in the context.
  */
-final class ArmeriaServerGracefulShutdownLifecycle implements SmartLifecycle {
+final class ArmeriaServerGracefulShutdownLifecycle implements ArmeriaServerSmartLifecycle {
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerGracefulShutdownLifecycle.class);
 
