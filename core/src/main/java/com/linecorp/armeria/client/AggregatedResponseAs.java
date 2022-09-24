@@ -30,6 +30,8 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
 final class AggregatedResponseAs {
+    private static final HttpStatusClassPredicates SUCCESS_PREDICATE
+            = HttpStatusClassPredicates.of(HttpStatusClass.SUCCESS);
 
     static ResponseAs<AggregatedHttpResponse, ResponseEntity<byte[]>> bytes() {
         return response -> ResponseEntity.of(response.headers(), response.content().array(),
@@ -41,89 +43,68 @@ final class AggregatedResponseAs {
     }
 
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz) {
-        return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, clazz));
+        return json(clazz, SUCCESS_PREDICATE);
     }
 
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz,
-                                                                          Predicate<HttpStatus> predicate) {
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
+            Class<? extends T> clazz, Predicate<? super HttpStatus> predicate) {
         return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, clazz),
                                                  predicate);
     }
 
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz,
                                                                           ObjectMapper mapper) {
-        return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, clazz));
+        return json(clazz, mapper, SUCCESS_PREDICATE);
     }
 
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(Class<? extends T> clazz,
-                                                                          ObjectMapper mapper,
-                                                                          Predicate<HttpStatus> predicate) {
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
+            Class<? extends T> clazz, ObjectMapper mapper, Predicate<? super HttpStatus> predicate) {
         return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, clazz),
                                                  predicate);
     }
 
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef) {
-        return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, typeRef));
+        return json(typeRef, SUCCESS_PREDICATE);
     }
 
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
-                                                                          Predicate<HttpStatus> predicate) {
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
+            TypeReference<? extends T> typeRef, Predicate<? super HttpStatus> predicate) {
         return response -> newJsonResponseEntity(response, bytes -> JacksonUtil.readValue(bytes, typeRef),
                                                  predicate);
     }
 
     static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
                                                                           ObjectMapper mapper) {
-        return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, typeRef));
+        return json(typeRef, mapper, SUCCESS_PREDICATE);
     }
 
-    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
-                                                                          ObjectMapper mapper,
-                                                                          Predicate<HttpStatus> predicate) {
+    static <T> ResponseAs<AggregatedHttpResponse, ResponseEntity<T>> json(
+            TypeReference<? extends T> typeRef, ObjectMapper mapper, Predicate<? super HttpStatus> predicate) {
         return response -> newJsonResponseEntity(response, bytes -> mapper.readValue(bytes, typeRef),
                                                  predicate);
     }
 
     private static <T> ResponseEntity<T> newJsonResponseEntity(AggregatedHttpResponse response,
-                                                               JsonDecoder<T> decoder) {
-        if (!response.status().isSuccess()) {
-            throw newInvalidHttpResponseException(response);
-        }
-        return createJsonResponseEntity(response, decoder);
-    }
-
-    private static <T> ResponseEntity<T> newJsonResponseEntity(AggregatedHttpResponse response,
                                                                JsonDecoder<T> decoder,
-                                                               Predicate<HttpStatus> predicate) {
+                                                               Predicate<? super HttpStatus> predicate) {
         if (!predicate.test(response.status())) {
             if (predicate instanceof HttpStatusPredicate) {
                 throw newInvalidHttpStatusResponseException(
                         response, ((HttpStatusPredicate) predicate).status());
-            } else if (predicate instanceof HttpStatusClassPredicate) {
+            } else if (predicate instanceof HttpStatusClassPredicates) {
                 throw newInvalidHttpStatusClassResponseException(
-                        response, ((HttpStatusClassPredicate) predicate).statusClass());
+                        response, ((HttpStatusClassPredicates) predicate).statusClass());
             } else {
                 throw newInvalidPredicateResponseException(response);
             }
         }
-        return createJsonResponseEntity(response, decoder);
-    }
 
-    private static <T> ResponseEntity<T> createJsonResponseEntity(AggregatedHttpResponse response,
-                                                                  JsonDecoder<T> decoder) {
         try {
             return ResponseEntity.of(response.headers(), decoder.decode(response.content().array()),
                                      response.trailers());
         } catch (IOException e) {
             return Exceptions.throwUnsafely(new InvalidHttpResponseException(response, e));
         }
-    }
-
-    private static InvalidHttpResponseException newInvalidHttpResponseException(
-            AggregatedHttpResponse response) {
-        return new InvalidHttpResponseException(
-                response, "status: " + response.status() +
-                          " (expect: the success class (2xx). response: " + response, null);
     }
 
     private static InvalidHttpResponseException newInvalidHttpStatusResponseException(

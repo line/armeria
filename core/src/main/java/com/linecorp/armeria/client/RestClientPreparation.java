@@ -113,7 +113,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      * @see JacksonObjectMapperProvider
      */
     public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz,
-                                                            Predicate<HttpStatus> predicate) {
+                                                            Predicate<? super HttpStatus> predicate) {
         requireNonNull(clazz, "clazz");
         requireNonNull(predicate, "predicate");
         final CompletableFuture<? extends ResponseEntity<? extends T>> response =
@@ -169,7 +169,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      * {@link Predicate} type argument specify what type of response is allowed.
      */
     public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz, ObjectMapper mapper,
-                                                            Predicate<HttpStatus> predicate) {
+                                                            Predicate<? super HttpStatus> predicate) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
         requireNonNull(predicate, "predicate");
@@ -231,7 +231,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      * @see JacksonObjectMapperProvider
      */
     public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
-                                                            Predicate<HttpStatus> predicate) {
+                                                            Predicate<? super HttpStatus> predicate) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(predicate, "predicate");
         final CompletableFuture<? extends ResponseEntity<? extends T>> response =
@@ -291,7 +291,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      */
     public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
                                                             ObjectMapper mapper,
-                                                            Predicate<HttpStatus> predicate) {
+                                                            Predicate<? super HttpStatus> predicate) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
         requireNonNull(predicate, "predicate");

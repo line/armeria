@@ -79,7 +79,7 @@ class AggregatedResponseAsTest {
 
         final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
                 MyObject.class,
-                new HttpStatusPredicate(HttpStatus.OK)).as(response);
+                HttpStatusPredicate.of(HttpStatus.OK)).as(response);
         assertThat(entity.content()).isEqualTo(myObject);
     }
 
@@ -93,7 +93,7 @@ class AggregatedResponseAsTest {
 
         final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
                 MyObject.class,
-                new HttpStatusPredicate(HttpStatus.INTERNAL_SERVER_ERROR)).as(response);
+                HttpStatusPredicate.of(HttpStatus.INTERNAL_SERVER_ERROR)).as(response);
         assertThat(entity.content()).isEqualTo(myObject);
     }
 
@@ -106,7 +106,7 @@ class AggregatedResponseAsTest {
 
         final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
                 MyObject.class,
-                new HttpStatusClassPredicate(HttpStatusClass.SUCCESS)).as(response);
+                HttpStatusClassPredicates.of(HttpStatusClass.SUCCESS)).as(response);
         assertThat(entity.content()).isEqualTo(myObject);
     }
 
@@ -120,7 +120,7 @@ class AggregatedResponseAsTest {
 
         final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
                 MyObject.class,
-                new HttpStatusClassPredicate(HttpStatusClass.SERVER_ERROR)).as(response);
+                HttpStatusClassPredicates.of(HttpStatusClass.SERVER_ERROR)).as(response);
         assertThat(entity.content()).isEqualTo(myObject);
     }
 
@@ -148,7 +148,7 @@ class AggregatedResponseAsTest {
 
         assertThatThrownBy(() -> AggregatedResponseAs.json(MyObject.class).as(response))
                 .isInstanceOf(InvalidHttpResponseException.class)
-                .hasMessageContaining("(expect: the success class (2xx)");
+                .hasMessageContaining("(expect: the SUCCESS class");
     }
 
     @Test
@@ -161,7 +161,7 @@ class AggregatedResponseAsTest {
 
         assertThatThrownBy(() -> AggregatedResponseAs.json(
                 MyObject.class,
-                new HttpStatusPredicate(HttpStatus.INTERNAL_SERVER_ERROR)).as(response))
+                HttpStatusPredicate.of(HttpStatus.INTERNAL_SERVER_ERROR)).as(response))
                 .isInstanceOf(InvalidHttpResponseException.class)
                 .hasMessageContaining("status: 200 OK (expect: the Internal Server Error class (500)");
     }
@@ -176,7 +176,7 @@ class AggregatedResponseAsTest {
 
         assertThatThrownBy(() -> AggregatedResponseAs.json(
                 MyObject.class,
-                new HttpStatusClassPredicate(HttpStatusClass.SERVER_ERROR)).as(response))
+                HttpStatusClassPredicates.of(HttpStatusClass.SERVER_ERROR)).as(response))
                 .isInstanceOf(InvalidHttpResponseException.class)
                 .hasMessageContaining("status: 200 OK (expect: the SERVER_ERROR class response");
     }
@@ -229,7 +229,7 @@ class AggregatedResponseAsTest {
                                             .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
                                             .build();
         final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
-                MyObject.class, mapper, new HttpStatusPredicate(HttpStatus.OK)).as(response);
+                MyObject.class, mapper, HttpStatusPredicate.of(HttpStatus.OK)).as(response);
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         assertThat(entity.content()).isEqualTo(myObject);
@@ -244,7 +244,7 @@ class AggregatedResponseAsTest {
                                             .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
                                             .build();
         final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
-                MyObject.class, mapper, new HttpStatusPredicate(HttpStatus.INTERNAL_SERVER_ERROR)).as(response);
+                MyObject.class, mapper, HttpStatusPredicate.of(HttpStatus.INTERNAL_SERVER_ERROR)).as(response);
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         assertThat(entity.content()).isEqualTo(myObject);
@@ -260,7 +260,7 @@ class AggregatedResponseAsTest {
                                             .build();
         final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
                 MyObject.class, mapper,
-                new HttpStatusClassPredicate(HttpStatusClass.SUCCESS)).as(response);
+                HttpStatusClassPredicates.of(HttpStatusClass.SUCCESS)).as(response);
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         assertThat(entity.content()).isEqualTo(myObject);
@@ -276,7 +276,7 @@ class AggregatedResponseAsTest {
                                             .build();
         final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
                 MyObject.class, mapper,
-                new HttpStatusClassPredicate(HttpStatusClass.SERVER_ERROR)).as(response);
+                HttpStatusClassPredicates.of(HttpStatusClass.SERVER_ERROR)).as(response);
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         assertThat(entity.content()).isEqualTo(myObject);
@@ -319,7 +319,7 @@ class AggregatedResponseAsTest {
 
         final ResponseEntity<List<MyObject>> entity = AggregatedResponseAs.json(
                 new TypeReference<List<MyObject>>() {},
-                new HttpStatusPredicate(HttpStatus.OK)).as(response);
+                HttpStatusPredicate.of(HttpStatus.OK)).as(response);
         final List<MyObject> objects = entity.content();
         assertThat(objects).containsExactly(myObject);
     }
@@ -334,7 +334,7 @@ class AggregatedResponseAsTest {
 
         final ResponseEntity<List<MyObject>> entity = AggregatedResponseAs.json(
                 new TypeReference<List<MyObject>>() {},
-                new HttpStatusPredicate(HttpStatus.INTERNAL_SERVER_ERROR)).as(response);
+                HttpStatusPredicate.of(HttpStatus.INTERNAL_SERVER_ERROR)).as(response);
         final List<MyObject> objects = entity.content();
         assertThat(objects).containsExactly(myObject);
     }
@@ -348,7 +348,7 @@ class AggregatedResponseAsTest {
 
         final ResponseEntity<List<MyObject>> entity = AggregatedResponseAs.json(
                 new TypeReference<List<MyObject>>() {},
-                new HttpStatusClassPredicate(HttpStatusClass.SUCCESS)).as(response);
+                HttpStatusClassPredicates.of(HttpStatusClass.SUCCESS)).as(response);
         final List<MyObject> objects = entity.content();
         assertThat(objects).containsExactly(myObject);
     }
@@ -363,7 +363,7 @@ class AggregatedResponseAsTest {
 
         final ResponseEntity<List<MyObject>> entity = AggregatedResponseAs.json(
                 new TypeReference<List<MyObject>>() {},
-                new HttpStatusClassPredicate(HttpStatusClass.SERVER_ERROR)).as(response);
+                HttpStatusClassPredicates.of(HttpStatusClass.SERVER_ERROR)).as(response);
         final List<MyObject> objects = entity.content();
         assertThat(objects).containsExactly(myObject);
     }
@@ -406,7 +406,7 @@ class AggregatedResponseAsTest {
                                             .build();
         final ResponseEntity<List<MyObject>> entity =
                 AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {}, mapper,
-                                          new HttpStatusPredicate(HttpStatus.OK)).as(response);
+                                          HttpStatusPredicate.of(HttpStatus.OK)).as(response);
         final List<MyObject> content = entity.content();
         final MyObject myObject = new MyObject();
         myObject.setId(10);
@@ -422,7 +422,7 @@ class AggregatedResponseAsTest {
                                             .build();
         final ResponseEntity<List<MyObject>> entity =
                 AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {}, mapper,
-                                          new HttpStatusPredicate(HttpStatus.INTERNAL_SERVER_ERROR))
+                                          HttpStatusPredicate.of(HttpStatus.INTERNAL_SERVER_ERROR))
                                     .as(response);
         final List<MyObject> content = entity.content();
         final MyObject myObject = new MyObject();
@@ -440,7 +440,7 @@ class AggregatedResponseAsTest {
         final ResponseEntity<List<MyObject>> entity =
                 AggregatedResponseAs.json(
                         new TypeReference<List<MyObject>>() {}, mapper,
-                        new HttpStatusClassPredicate(HttpStatusClass.SUCCESS)).as(response);
+                        HttpStatusClassPredicates.of(HttpStatusClass.SUCCESS)).as(response);
         final List<MyObject> content = entity.content();
         final MyObject myObject = new MyObject();
         myObject.setId(10);
@@ -457,7 +457,7 @@ class AggregatedResponseAsTest {
         final ResponseEntity<List<MyObject>> entity =
                 AggregatedResponseAs.json(
                         new TypeReference<List<MyObject>>() {}, mapper,
-                        new HttpStatusClassPredicate(HttpStatusClass.SERVER_ERROR)).as(response);
+                        HttpStatusClassPredicates.of(HttpStatusClass.SERVER_ERROR)).as(response);
         final List<MyObject> content = entity.content();
         final MyObject myObject = new MyObject();
         myObject.setId(10);

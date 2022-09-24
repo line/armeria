@@ -114,7 +114,7 @@ class ResponseAsTest {
         final HttpResponse response = HttpResponse.ofJson(myObject);
 
         final ResponseEntity<MyObject> entity =
-                ResponseAs.json(MyObject.class, new HttpStatusPredicate(HttpStatus.OK))
+                ResponseAs.json(MyObject.class, HttpStatusPredicate.of(HttpStatus.OK))
                           .as(response).join();
         assertThat(entity.content()).isEqualTo(myObject);
     }
@@ -140,7 +140,7 @@ class ResponseAsTest {
                                             .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
                                             .build();
         final ResponseEntity<MyObject> entity =
-                ResponseAs.json(MyObject.class, mapper, new HttpStatusPredicate(HttpStatus.OK))
+                ResponseAs.json(MyObject.class, mapper, HttpStatusPredicate.of(HttpStatus.OK))
                           .as(response).join();
         final MyObject myObject = new MyObject();
         myObject.setId(10);
@@ -166,7 +166,7 @@ class ResponseAsTest {
         final HttpResponse response = HttpResponse.ofJson(ImmutableList.of(myObject));
 
         final ResponseEntity<List<MyObject>> entity =
-                ResponseAs.json(new TypeReference<List<MyObject>>() {}, new HttpStatusPredicate(HttpStatus.OK))
+                ResponseAs.json(new TypeReference<List<MyObject>>() {}, HttpStatusPredicate.of(HttpStatus.OK))
                           .as(response).join();
         final List<MyObject> content = entity.content();
         assertThat(content).containsExactly(myObject);
@@ -194,7 +194,7 @@ class ResponseAsTest {
                                             .build();
         final ResponseEntity<List<MyObject>> entity = ResponseAs.json(new TypeReference<List<MyObject>>() {},
                                                                       mapper,
-                                                                      new HttpStatusPredicate(HttpStatus.OK))
+                                                                      HttpStatusPredicate.of(HttpStatus.OK))
                                                                 .as(response).join();
         final List<MyObject> content = entity.content();
         final MyObject myObject = new MyObject();

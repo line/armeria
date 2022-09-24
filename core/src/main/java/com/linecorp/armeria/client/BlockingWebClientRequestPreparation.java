@@ -23,6 +23,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.function.Predicate;
 
 import org.reactivestreams.Publisher;
 
@@ -38,6 +39,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.JacksonObjectMapperProvider;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseEntity;
@@ -125,8 +127,8 @@ public final class BlockingWebClientRequestPreparation
      * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
      * or {@link Map}. Use {@link #asJson(TypeReference)} for the container type.
      *
-     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
-     *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not contained
+     *                                      {@link HttpStatusClass#SUCCESS} or fails to decode
      *                                      the response body into the result type.
      * @see JacksonObjectMapperProvider
      */
@@ -139,22 +141,113 @@ public final class BlockingWebClientRequestPreparation
 
     /**
      * Deserializes the JSON response content into the specified non-container type
+     * using the default {@link ObjectMapper}.
+     * {@link HttpStatus} type argument specify what type of response is allowed.
+     * For example:
+     * <pre>{@code
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+     * ResponseEntity<MyObject> response = client.prepare()
+     *                                           .get("/v1/items/1")
+     *                                           .asJson(MyObject.class, HttpStatus.INTERNAL_SERVER_ERROR)
+     *                                           .execute();
+     * }</pre>
+     *
+     * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
+     * or {@link Map}. Use {@link #asJson(TypeReference)} for the container type.
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
+     *                                      same to {@link HttpStatus} type argument or fails to decode
+     *                                      the response body into the result type.
+     * @see JacksonObjectMapperProvider
+     */
+    @UnstableApi
+    public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
+            Class<? extends T> clazz, HttpStatus httpStatus) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(httpStatus, "httpStatus");
+        return asJson(clazz, HttpStatusPredicate.of(httpStatus));
+    }
+
+    /**
+     * Deserializes the JSON response content into the specified non-container type
+     * using the default {@link ObjectMapper}.
+     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     * For example:
+     * <pre>{@code
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+     * ResponseEntity<MyObject> response = client.prepare()
+     *                                           .get("/v1/items/1")
+     *                                           .asJson(MyObject.class, HttpStatusClass.SERVER_ERROR)
+     *                                           .execute();
+     * }</pre>
+     *
+     * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
+     * or {@link Map}. Use {@link #asJson(TypeReference)} for the container type.
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatusClass} of the response is not
+     *                                      same to {@link HttpStatusClass} type argument or fails to decode
+     *                                      the response body into the result type.
+     * @see JacksonObjectMapperProvider
+     */
+    @UnstableApi
+    public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
+            Class<? extends T> clazz, HttpStatusClass httpStatusClass) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(httpStatusClass, "httpStatusClass");
+        return asJson(clazz, HttpStatusClassPredicates.of(httpStatusClass));
+    }
+
+    /**
+     * Deserializes the JSON response content into the specified non-container type
+     * using the default {@link ObjectMapper}.
+     * {@link Predicate} type argument specify what type of response is allowed.
+     * For example:
+     * <pre>{@code
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+     * ResponseEntity<MyObject> response = client.prepare()
+     *                                           .get("/v1/items/1")
+     *                                           .asJson(MyObject.class, HttpStatusClass.SERVER_ERROR)
+     *                                           .execute();
+     * }</pre>
+     *
+     * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
+     * or {@link Map}. Use {@link #asJson(TypeReference)} for the container type.
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
+     *                                      same to {@link HttpStatus} given as a parameter of
+     *                                      {@link Predicate} method or fails to decode
+     *                                      the response body into the result type.
+     * @see JacksonObjectMapperProvider
+     */
+    @UnstableApi
+    public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
+            Class<? extends T> clazz, Predicate<? super HttpStatus> predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(predicate, "predicate");
+        return as(AggregatedResponseAs.json(clazz, predicate));
+    }
+
+    /**
+     * Deserializes the JSON response content into the specified non-container type
      * using the specified {@link ObjectMapper}.
      * For example:
      * <pre>{@code
      * ObjectMapper mapper = ...;
      * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
-     * ResponseEntity<MyObject> response = client.prepare()
-     *                                           .get("/v1/items/1")
-     *                                           .asJson(MyObject.class, mapper)
-     *                                           .execute();
+     * ResponseEntity<MyObject> response =
+     *                              client.prepare()
+     *                                    .get("/v1/items/1")
+     *                                    .asJson(
+     *                                      MyObject.class, mapper,
+     *                                      httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
+     *                                    .execute();
      * }</pre>
      *
      * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
      * or {@link Map}. Use {@link #asJson(TypeReference, ObjectMapper)} for the container type.
      *
-     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
-     *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not contained
+     *                                      {@link HttpStatusClass#SUCCESS} or fails to decode
      *                                      the response body into the result type.
      */
     @UnstableApi
@@ -163,6 +256,101 @@ public final class BlockingWebClientRequestPreparation
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
         return as(AggregatedResponseAs.json(clazz, mapper));
+    }
+
+    /**
+     * Deserializes the JSON response content into the specified non-container type
+     * using the specified {@link ObjectMapper}.
+     * {@link HttpStatus} type argument specify what type of response is allowed.
+     * For example:
+     * <pre>{@code
+     * ObjectMapper mapper = ...;
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+     * ResponseEntity<MyObject> response = client.prepare()
+     *                                           .get("/v1/items/1")
+     *                                           .asJson(MyObject.class, mapper,
+     *                                                   HttpStatus.INTERNAL_SERVER_ERROR)
+     *                                           .execute();
+     * }</pre>
+     *
+     * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
+     * or {@link Map}. Use {@link #asJson(TypeReference, ObjectMapper)} for the container type.
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
+     *                                      same to {@link HttpStatus} type argument or fails to decode
+     *                                      the response body into the result type.
+     */
+    @UnstableApi
+    public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
+            Class<? extends T> clazz, ObjectMapper mapper, HttpStatus httpStatus) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(httpStatus, "httpStatus");
+        return asJson(clazz, mapper, HttpStatusPredicate.of(httpStatus));
+    }
+
+    /**
+     * Deserializes the JSON response content into the specified non-container type
+     * using the specified {@link ObjectMapper}.
+     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     * For example:
+     * <pre>{@code
+     * ObjectMapper mapper = ...;
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+     * ResponseEntity<MyObject> response = client.prepare()
+     *                                           .get("/v1/items/1")
+     *                                           .asJson(MyObject.class, mapper, HttpStatusClass.SERVER_ERROR)
+     *                                           .execute();
+     * }</pre>
+     *
+     * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
+     * or {@link Map}. Use {@link #asJson(TypeReference, ObjectMapper)} for the container type.
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatusClass} of the response is not
+     *                                      same to {@link HttpStatusClass} type argument or fails to decode
+     *                                      the response body into the result type.
+     */
+    @UnstableApi
+    public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
+            Class<? extends T> clazz, ObjectMapper mapper, HttpStatusClass httpStatusClass) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(httpStatusClass, "httpStatusClass");
+        return asJson(clazz, mapper, HttpStatusClassPredicates.of(httpStatusClass));
+    }
+
+    /**
+     * Deserializes the JSON response content into the specified non-container type
+     * using the specified {@link ObjectMapper}.
+     * {@link Predicate} type argument specify what type of response is allowed.
+     * For example:
+     * <pre>{@code
+     * ObjectMapper mapper = ...;
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+     * ResponseEntity<MyObject> response =
+     *                              client.prepare()
+     *                                  .get("/v1/items/1")
+     *                                  .asJson(
+     *                                       MyObject.class, mapper,
+     *                                       httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
+     *                                   .execute();
+     * }</pre>
+     *
+     * <p>Note that this method should NOT be used if the result type is a container such as {@link Collection}
+     * or {@link Map}. Use {@link #asJson(TypeReference, ObjectMapper)} for the container type.
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
+     *                                      same to {@link HttpStatus} given as a parameter of
+     *                                      {@link Predicate} type argument or fails to decode
+     *                                      the response body into the result type.
+     */
+    @UnstableApi
+    public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
+            Class<? extends T> clazz, ObjectMapper mapper, Predicate<? super HttpStatus> predicate) {
+        requireNonNull(clazz, "clazz");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        return as(AggregatedResponseAs.json(clazz, mapper, predicate));
     }
 
     /**
@@ -179,8 +367,8 @@ public final class BlockingWebClientRequestPreparation
      *           .execute();
      * }</pre>
      *
-     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
-     *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not contained
+     *                                      {@link HttpStatusClass#SUCCESS} or fails to decode
      *                                      the response body into the result type.
      * @see JacksonObjectMapperProvider
      */
@@ -189,6 +377,92 @@ public final class BlockingWebClientRequestPreparation
             TypeReference<? extends T> typeRef) {
         requireNonNull(typeRef, "typeRef");
         return as(AggregatedResponseAs.json(typeRef));
+    }
+
+    /**
+     * Deserializes the JSON response content into the specified Java type using
+     * the default {@link ObjectMapper}. This method is useful when you want to deserialize
+     * the content into a container type such as {@link List} and {@link Map}.
+     * {@link HttpStatus} type argument specify what type of response is allowed.
+     * For example:
+     * <pre>{@code
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+     * ResponseEntity<List<MyObject>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asJson(new TypeReference<List<MyObject>>() {}, HttpStatus.INTERNAL_SERVER_ERROR)
+     *           .execute();
+     * }</pre>
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
+     *                                      same to {@link HttpStatus} type argument or fails to decode
+     *                                      the response body into the result type.
+     * @see JacksonObjectMapperProvider
+     */
+    @UnstableApi
+    public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, HttpStatus httpStatus) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(httpStatus, "httpStatus");
+        return asJson(typeRef, HttpStatusPredicate.of(httpStatus));
+    }
+
+    /**
+     * Deserializes the JSON response content into the specified Java type using
+     * the default {@link ObjectMapper}. This method is useful when you want to deserialize
+     * the content into a container type such as {@link List} and {@link Map}.
+     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     * For example:
+     * <pre>{@code
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+     * ResponseEntity<List<MyObject>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asJson(new TypeReference<List<MyObject>>() {}, HttpStatusClass.SERVER_ERROR)
+     *           .execute();
+     * }</pre>
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatusClass} of the response is not
+     *                                      same to {@link HttpStatusClass} type argument or fails to decode
+     *                                      the response body into the result type.
+     * @see JacksonObjectMapperProvider
+     */
+    @UnstableApi
+    public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, HttpStatusClass httpStatusClass) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(httpStatusClass, "httpStatusClass");
+        return asJson(typeRef, HttpStatusClassPredicates.of(httpStatusClass));
+    }
+
+    /**
+     * Deserializes the JSON response content into the specified Java type using
+     * the default {@link ObjectMapper}. This method is useful when you want to deserialize
+     * the content into a container type such as {@link List} and {@link Map}.
+     * {@link Predicate} type argument specify what type of response is allowed.
+     * For example:
+     * <pre>{@code
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+     * ResponseEntity<List<MyObject>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asJson(new TypeReference<List<MyObject>>() {},
+     *                   httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
+     *           .execute();
+     * }</pre>
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
+     *                                      same to {@link HttpStatus} given as a parameter of
+     *                                      {@link Predicate} type argument or fails to decode
+     *                                      the response body into the result type.
+     * @see JacksonObjectMapperProvider
+     */
+    @UnstableApi
+    public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, Predicate<? super HttpStatus> predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(predicate, "predicate");
+        return as(AggregatedResponseAs.json(typeRef, predicate));
     }
 
     /**
@@ -205,8 +479,8 @@ public final class BlockingWebClientRequestPreparation
      *           .execute();
      * }</pre>
      *
-     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
-     *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not contained
+     *                                      {@link HttpStatusClass#SUCCESS} or fails to decode
      *                                      the response body into the result type.
      */
     @UnstableApi
@@ -215,6 +489,92 @@ public final class BlockingWebClientRequestPreparation
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
         return as(AggregatedResponseAs.json(typeRef, mapper));
+    }
+
+    /**
+     * Deserializes the JSON response content into the specified Java type using
+     * the specified {@link ObjectMapper}.
+     * {@link HttpStatus} type argument specify what type of response is allowed.
+     * For example:
+     * <pre>{@code
+     * ObjectMapper mapper = ...;
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+     * ResponseEntity<List<MyObject>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asJson(new TypeReference<List<MyObject>>() {}, mapper, HttpStatus.INTERNAL_SERVER_ERROR)
+     *           .execute();
+     * }</pre>
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
+     *                                      same to {@link HttpStatus} type argument or fails to decode
+     *                                      the response body into the result type.
+     */
+    @UnstableApi
+    public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, ObjectMapper mapper, HttpStatus httpStatus) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(httpStatus, "httpStatus");
+        return asJson(typeRef, mapper, HttpStatusPredicate.of(httpStatus));
+    }
+
+    /**
+     * Deserializes the JSON response content into the specified Java type using
+     * the specified {@link ObjectMapper}.
+     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     * For example:
+     * <pre>{@code
+     * ObjectMapper mapper = ...;
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+     * ResponseEntity<List<MyObject>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asJson(new TypeReference<List<MyObject>>() {}, mapper, HttpStatusClass.SERVER_ERROR)
+     *           .execute();
+     * }</pre>
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatusClass} of the response is not
+     *                                      same to {@link HttpStatusClass} type argument or fails to decode
+     *                                      the response body into the result type.
+     */
+    @UnstableApi
+    public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, ObjectMapper mapper, HttpStatusClass httpStatusClass) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(httpStatusClass, "httpStatusClass");
+        return asJson(typeRef, mapper, HttpStatusClassPredicates.of(httpStatusClass));
+    }
+
+    /**
+     * Deserializes the JSON response content into the specified Java type using
+     * the specified {@link ObjectMapper}.
+     * {@link Predicate} type argument specify what type of response is allowed.
+     * For example:
+     * <pre>{@code
+     * ObjectMapper mapper = ...;
+     * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
+     * ResponseEntity<List<MyObject>> response =
+     *     client.prepare()
+     *           .get("/v1/items/1")
+     *           .asJson(new TypeReference<List<MyObject>>() {}, mapper,
+     *                   httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
+     *           .execute();
+     * }</pre>
+     *
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
+     *                                      same to {@link HttpStatus} given as a parameter of
+     *                                      {@link Predicate} type argument or fails to decode
+     *                                      the response body into the result type.
+     */
+    @UnstableApi
+    public <T> TransformingRequestPreparation<AggregatedHttpResponse, ResponseEntity<T>> asJson(
+            TypeReference<? extends T> typeRef, ObjectMapper mapper, Predicate<? super HttpStatus> predicate) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
+        requireNonNull(predicate, "predicate");
+        return as(AggregatedResponseAs.json(typeRef, mapper, predicate));
     }
 
     @Override

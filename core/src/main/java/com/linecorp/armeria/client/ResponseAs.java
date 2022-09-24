@@ -119,7 +119,7 @@ public interface ResponseAs<T, R> {
      */
     @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz,
-                                                        Predicate<HttpStatus> predicate) {
+                                                        Predicate<? super HttpStatus> predicate) {
         requireNonNull(clazz, "clazz");
         requireNonNull(predicate, "predicate");
         return aggregateAndConvert(AggregatedResponseAs.json(clazz, predicate));
@@ -149,7 +149,7 @@ public interface ResponseAs<T, R> {
      */
     @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(Class<? extends T> clazz, ObjectMapper mapper,
-                                                        Predicate<HttpStatus> predicate) {
+                                                        Predicate<? super HttpStatus> predicate) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
         requireNonNull(predicate, "predicate");
@@ -177,7 +177,7 @@ public interface ResponseAs<T, R> {
      */
     @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
-                                                        Predicate<HttpStatus> predicate) {
+                                                        Predicate<? super HttpStatus> predicate) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(predicate, "predicate");
         return aggregateAndConvert(AggregatedResponseAs.json(typeRef, predicate));
@@ -202,7 +202,8 @@ public interface ResponseAs<T, R> {
      */
     @UnstableApi
     static <T> FutureResponseAs<ResponseEntity<T>> json(TypeReference<? extends T> typeRef,
-                                                        ObjectMapper mapper, Predicate<HttpStatus> predicate) {
+                                                        ObjectMapper mapper,
+                                                        Predicate<? super HttpStatus> predicate) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
         requireNonNull(predicate, "predicate");

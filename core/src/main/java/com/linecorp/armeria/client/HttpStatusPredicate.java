@@ -18,15 +18,29 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.HttpStatus;
 
 final class HttpStatusPredicate implements Predicate<HttpStatus> {
+    private static final Map<HttpStatus, HttpStatusPredicate> httpStatusPredicateMap;
+
+    static {
+        httpStatusPredicateMap = new HashMap<>();
+        for (int i = 0; i < 1000; i++) {
+            httpStatusPredicateMap.put(HttpStatus.valueOf(i), new HttpStatusPredicate(HttpStatus.valueOf(i)));
+        }
+    }
+
+    static HttpStatusPredicate of(HttpStatus httpStatus) {
+        return httpStatusPredicateMap.get(httpStatus);
+    }
 
     private final HttpStatus status;
 
-    HttpStatusPredicate(HttpStatus status) {
+    private HttpStatusPredicate(HttpStatus status) {
         this.status = requireNonNull(status, "status");
     }
 

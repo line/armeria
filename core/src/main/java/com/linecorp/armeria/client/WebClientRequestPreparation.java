@@ -204,13 +204,14 @@ public final class WebClientRequestPreparation
      * <p>Note that this method should NOT be used if the result type is a container such as
      * {@link Collection} or {@link Map}. Use {@link #asJson(TypeReference)} for the container type.
      *
-     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
-     *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not contained
+     *                                      {@link HttpStatusClass#SUCCESS} or fails to decode
      *                                      the response body into the result type.
      * @see JacksonObjectMapperProvider
      */
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz) {
+        requireNonNull(clazz, "clazz");
         requireNonNull(clazz, "clazz");
         return asEntity(ResponseAs.json(clazz));
     }
@@ -240,8 +241,9 @@ public final class WebClientRequestPreparation
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
                                                                               HttpStatus httpStatus) {
+        requireNonNull(clazz, "clazz");
         requireNonNull(httpStatus, "httpStatus");
-        return asJson(clazz, new HttpStatusPredicate(httpStatus));
+        return asJson(clazz, HttpStatusPredicate.of(httpStatus));
     }
 
     /**
@@ -270,8 +272,9 @@ public final class WebClientRequestPreparation
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
                                                                               HttpStatusClass httpStatusClass) {
+        requireNonNull(clazz, "clazz");
         requireNonNull(httpStatusClass, "httpStatusClass");
-        return asJson(clazz, new HttpStatusClassPredicate(httpStatusClass));
+        return asJson(clazz, HttpStatusClassPredicates.of(httpStatusClass));
     }
 
     /**
@@ -300,8 +303,8 @@ public final class WebClientRequestPreparation
      * @see JacksonObjectMapperProvider
      */
     @UnstableApi
-    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
-                                                                              Predicate<HttpStatus> predicate) {
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
+            Class<? extends T> clazz, Predicate<? super HttpStatus> predicate) {
         requireNonNull(clazz, "clazz");
         requireNonNull(predicate, "predicate");
         return asEntity(ResponseAs.json(clazz, predicate));
@@ -325,8 +328,8 @@ public final class WebClientRequestPreparation
      * {@link Collection} or {@link Map}. Use {@link #asJson(TypeReference, ObjectMapper)} for the container
      * type.
      *
-     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
-     *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not contained
+     *                                      {@link HttpStatusClass#SUCCESS} or fails to decode
      *                                      the response body into the result type.
      */
     @UnstableApi
@@ -364,8 +367,9 @@ public final class WebClientRequestPreparation
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
                                                                               ObjectMapper mapper,
                                                                               HttpStatus httpStatus) {
+        requireNonNull(clazz, "clazz");
         requireNonNull(httpStatus, "httpStatus");
-        return asJson(clazz, mapper, new HttpStatusPredicate(httpStatus));
+        return asJson(clazz, mapper, HttpStatusPredicate.of(httpStatus));
     }
 
     /**
@@ -395,8 +399,9 @@ public final class WebClientRequestPreparation
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
                                                                               ObjectMapper mapper,
                                                                               HttpStatusClass httpStatusClass) {
+        requireNonNull(clazz, "clazz");
         requireNonNull(httpStatusClass, "httpStatusClass");
-        return asJson(clazz, mapper, new HttpStatusClassPredicate(httpStatusClass));
+        return asJson(clazz, mapper, HttpStatusClassPredicates.of(httpStatusClass));
     }
 
     /**
@@ -425,9 +430,8 @@ public final class WebClientRequestPreparation
      *                                      the response body into the result type.
      */
     @UnstableApi
-    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(Class<? extends T> clazz,
-                                                                              ObjectMapper mapper,
-                                                                              Predicate<HttpStatus> predicate) {
+    public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
+            Class<? extends T> clazz, ObjectMapper mapper, Predicate<? super HttpStatus> predicate) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
         requireNonNull(predicate, "predicate");
@@ -448,8 +452,8 @@ public final class WebClientRequestPreparation
      *           .execute();
      * }</pre>
      *
-     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
-     *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not contained
+     *                                      {@link HttpStatusClass#SUCCESS} or fails to decode
      *                                      the response body into the result type.
      * @see JacksonObjectMapperProvider
      */
@@ -484,8 +488,9 @@ public final class WebClientRequestPreparation
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
             TypeReference<? extends T> typeRef, HttpStatus httpStatus) {
+        requireNonNull(typeRef, "typeRef");
         requireNonNull(httpStatus, "httpStatus");
-        return asJson(typeRef, new HttpStatusPredicate(httpStatus));
+        return asJson(typeRef, HttpStatusPredicate.of(httpStatus));
     }
 
     /**
@@ -512,8 +517,9 @@ public final class WebClientRequestPreparation
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
             TypeReference<? extends T> typeRef, HttpStatusClass httpStatusClass) {
+        requireNonNull(typeRef, "typeRef");
         requireNonNull(httpStatusClass, "httpStatusClass");
-        return asJson(typeRef, new HttpStatusClassPredicate(httpStatusClass));
+        return asJson(typeRef, HttpStatusClassPredicates.of(httpStatusClass));
     }
 
     /**
@@ -541,7 +547,7 @@ public final class WebClientRequestPreparation
      */
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
-            TypeReference<? extends T> typeRef, Predicate<HttpStatus> predicate) {
+            TypeReference<? extends T> typeRef, Predicate<? super HttpStatus> predicate) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(predicate, "predicate");
         return asEntity(ResponseAs.json(typeRef, predicate));
@@ -562,8 +568,8 @@ public final class WebClientRequestPreparation
      *           .execute();
      * }</pre>
      *
-     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not
-     *                                      {@linkplain HttpStatus#isSuccess() success} or fails to decode
+     * @throws InvalidHttpResponseException if the {@link HttpStatus} of the response is not contained
+     *                                      {@link HttpStatusClass#SUCCESS} or fails to decode
      *                                      the response body into the result type.
      */
     @UnstableApi
@@ -598,8 +604,10 @@ public final class WebClientRequestPreparation
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
             TypeReference<? extends T> typeRef, ObjectMapper mapper, HttpStatus httpStatus) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
         requireNonNull(httpStatus, "httpStatus");
-        return asJson(typeRef, mapper, new HttpStatusPredicate(httpStatus));
+        return asJson(typeRef, mapper, HttpStatusPredicate.of(httpStatus));
     }
 
     /**
@@ -626,8 +634,10 @@ public final class WebClientRequestPreparation
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
             TypeReference<? extends T> typeRef, ObjectMapper mapper, HttpStatusClass httpStatusClass) {
+        requireNonNull(typeRef, "typeRef");
+        requireNonNull(mapper, "mapper");
         requireNonNull(httpStatusClass, "httpStatusClass");
-        return asJson(typeRef, mapper, new HttpStatusClassPredicate(httpStatusClass));
+        return asJson(typeRef, mapper, HttpStatusClassPredicates.of(httpStatusClass));
     }
 
     /**
@@ -655,7 +665,7 @@ public final class WebClientRequestPreparation
      */
     @UnstableApi
     public <T> FutureTransformingRequestPreparation<ResponseEntity<T>> asJson(
-            TypeReference<? extends T> typeRef, ObjectMapper mapper, Predicate<HttpStatus> predicate) {
+            TypeReference<? extends T> typeRef, ObjectMapper mapper, Predicate<? super HttpStatus> predicate) {
         requireNonNull(typeRef, "typeRef");
         requireNonNull(mapper, "mapper");
         requireNonNull(predicate, "predicate");

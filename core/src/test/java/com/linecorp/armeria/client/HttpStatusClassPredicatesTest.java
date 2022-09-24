@@ -23,43 +23,43 @@ import org.junit.jupiter.api.Test;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.HttpStatusClass;
 
-class HttpStatusClassPredicateTest {
+class HttpStatusClassPredicatesTest {
 
     @Test
     public void httpStatusClassIsEqualToTestArgument() {
-        assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(100))
+        assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(100))
                            .test(HttpStatus.valueOf(100))).isTrue();
-        assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(200))
+        assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(200))
                            .test(HttpStatus.valueOf(200))).isTrue();
-        assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(300))
+        assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(300))
                            .test(HttpStatus.valueOf(300))).isTrue();
-        assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(400))
+        assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(400))
                            .test(HttpStatus.valueOf(400))).isTrue();
-        assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(500))
+        assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(500))
                            .test(HttpStatus.valueOf(500))).isTrue();
-        assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(600))
+        assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(600))
                            .test(HttpStatus.valueOf(600))).isTrue();
     }
 
     @Test
     public void httpStatusClassIsNotEqualToTestArgument() {
-        assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(200))
+        assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(200))
                            .test(HttpStatus.valueOf(300))).isFalse();
-        assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(300))
+        assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(300))
                            .test(HttpStatus.valueOf(200))).isFalse();
-        assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(100))
+        assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(100))
                            .test(HttpStatus.valueOf(600))).isFalse();
-        assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(600))
+        assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(600))
                            .test(HttpStatus.valueOf(100))).isFalse();
-        assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(600))
+        assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(600))
                            .test(HttpStatus.valueOf(200))).isFalse();
-        assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(100))
+        assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(100))
                            .test(HttpStatus.valueOf(300))).isFalse();
     }
 
     @Test
     public void statusClassMethodReturnHttpStatusClass() {
-        assertThat(new HttpStatusClassPredicate(HttpStatusClass.valueOf(200)).statusClass())
+        assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(200)).statusClass())
                 .isEqualTo(HttpStatusClass.valueOf(200));
     }
 }
