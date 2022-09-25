@@ -46,7 +46,7 @@ class GraphqlErrorHandlerTest {
             final File graphqlSchemaFile =
                     new File(getClass().getResource("/test.graphqls").toURI());
 
-            final GraphqlErrorHandler errorsHandler
+            final GraphqlErrorHandler errorHandler
                     = (ctx, input, result, negotiatedProduceType, cause) -> {
                 final List<GraphQLError> errors = result.getErrors();
                 if (errors.stream().map(GraphQLError::getMessage).anyMatch(m -> m.endsWith("foo"))) {
