@@ -50,7 +50,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     private final boolean useBlockingTaskExecutor;
 
-    private final GraphqlErrorHandler errorsHandler;
+    private final GraphqlErrorHandler errorHandler;
 
     DefaultGraphqlService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry,
                           boolean useBlockingTaskExecutor, GraphqlErrorHandler errorsHandler) {
