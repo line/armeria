@@ -44,8 +44,7 @@ enum DefaultGraphqlErrorHandler implements GraphqlErrorHandler {
             ExecutionInput input,
             ExecutionResult result,
             MediaType negotiatedProduceType,
-            @Nullable Throwable cause
-    ) {
+            @Nullable Throwable cause) {
         if (cause != null) {
             // graphQL.executeAsync() returns an error in the executionResult with getErrors().
             // Use 500 Internal Server Error because this cause might be unexpected.
