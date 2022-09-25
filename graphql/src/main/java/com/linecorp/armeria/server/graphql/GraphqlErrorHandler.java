@@ -46,8 +46,8 @@ public interface GraphqlErrorHandler {
      * Maps {@link ExecutionResult#getErrors()} or the specified {@link Throwable} to an {@link HttpResponse}.
      */
     @Nullable
-    HttpResponse handle(ServiceRequestContext ctx, ExecutionInput input,
-                        ExecutionResult result, MediaType negotiatedProduceType, @Nullable Throwable cause);
+    HttpResponse handle(
+            ServiceRequestContext ctx, ExecutionInput input, ExecutionResult result, @Nullable Throwable cause);
 
     /**
      * Returns a composed {@link GraphqlErrorHandler} that applies this first and the specified
@@ -58,12 +58,12 @@ public interface GraphqlErrorHandler {
         if (this == other) {
             return this;
         }
-        return (ctx, input, produceType, executionResult, cause) -> {
-            final HttpResponse response = handle(ctx, input, produceType, executionResult, cause);
+        return (ctx, input, executionResult, cause) -> {
+            final HttpResponse response = handle(ctx, input, executionResult, cause);
             if (response != null) {
                 return response;
             }
-            return other.handle(ctx, input, produceType, executionResult, cause);
+            return other.handle(ctx, input, executionResult, cause);
         };
     }
 }

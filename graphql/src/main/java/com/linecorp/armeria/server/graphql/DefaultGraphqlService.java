@@ -53,17 +53,17 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
     private final GraphqlErrorHandler errorHandler;
 
     DefaultGraphqlService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry,
-                          boolean useBlockingTaskExecutor, GraphqlErrorHandler errorsHandler) {
+                          boolean useBlockingTaskExecutor, GraphqlErrorHandler errorHandler) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
         this.dataLoaderRegistry = requireNonNull(dataLoaderRegistry, "dataLoaderRegistry");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
-        this.errorsHandler = errorsHandler;
+        this.errorHandler = errorHandler;
     }
 
     @Override
     protected HttpResponse executeGraphql(ServiceRequestContext ctx, GraphqlRequest req) throws Exception {
-        final MediaType negotiatedProduceType = GraphqlUtil.produceType(ctx.request().headers());
-        if (negotiatedProduceType == null) {
+        final MediaType produceType = GraphqlUtil.produceType(ctx.request().headers());
+        if (produceType == null) {
             return HttpResponse.of(HttpStatus.NOT_ACCEPTABLE, MediaType.PLAIN_TEXT,
                                    "Only application/graphql+json and application/json compatible " +
                                    "media types are acceptable");
@@ -90,11 +90,11 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
                        .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
                        .dataLoaderRegistry(dataLoaderRegistry)
                        .build();
-        return execute(ctx, executionInput, negotiatedProduceType);
+        return execute(ctx, executionInput, produceType);
     }
 
     private HttpResponse execute(
-            ServiceRequestContext ctx, ExecutionInput input, MediaType negotiatedProduceType) {
+            ServiceRequestContext ctx, ExecutionInput input, MediaType produceType) {
         final CompletableFuture<ExecutionResult> future;
         if (useBlockingTaskExecutor) {
             future = CompletableFuture.supplyAsync(() -> graphQL.execute(input), ctx.blockingTaskExecutor());
@@ -108,15 +108,15 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
                                     executionResult.getData().toString());
 
                         return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED,
-                                                   negotiatedProduceType,
+                                                   produceType,
                                                    toSpecification("WebSocket is not implemented"));
                     }
 
                     if (executionResult.getErrors().isEmpty() && cause == null) {
-                        return HttpResponse.ofJson(negotiatedProduceType, executionResult.toSpecification());
+                        return HttpResponse.ofJson(produceType, executionResult.toSpecification());
                     }
 
-                    return errorsHandler.handle(ctx, input, executionResult, negotiatedProduceType, cause);
+                    return errorHandler.handle(ctx, input, executionResult, cause);
                 }));
     }
 

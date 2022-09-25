@@ -47,7 +47,7 @@ class GraphqlErrorHandlerTest {
                     new File(getClass().getResource("/test.graphqls").toURI());
 
             final GraphqlErrorHandler errorHandler
-                    = (ctx, input, result, negotiatedProduceType, cause) -> {
+                    = (ctx, input, result, cause) -> {
                 final List<GraphQLError> errors = result.getErrors();
                 if (errors.stream().map(GraphQLError::getMessage).anyMatch(m -> m.endsWith("foo"))) {
                     return HttpResponse.of(HttpStatus.BAD_REQUEST);
@@ -66,7 +66,7 @@ class GraphqlErrorHandlerTest {
                                       c.type("Query",
                                              typeWiring -> typeWiring.dataFetcher("error", error));
                                   })
-                                  .errorsHandler(errorsHandler)
+                                  .errorHandler(errorHandler)
                                   .build();
             sb.service("/graphql", service);
         }
