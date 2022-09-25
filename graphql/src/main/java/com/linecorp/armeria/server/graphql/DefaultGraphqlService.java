@@ -18,6 +18,8 @@ package com.linecorp.armeria.server.graphql;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -36,9 +38,7 @@ import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
 
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
-import graphql.ExecutionResultImpl;
 import graphql.GraphQL;
-import graphql.GraphqlErrorException;
 
 final class DefaultGraphqlService extends AbstractGraphqlService implements GraphqlService {
 
@@ -106,10 +106,10 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
                     if (executionResult.getData() instanceof Publisher) {
                         logger.warn("executionResult.getData() returns a {} that is not supported yet.",
                                     executionResult.getData().toString());
-                        final ExecutionResult error = newExecutionResult(
-                                new UnsupportedOperationException("WebSocket is not implemented"));
-                        return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED, negotiatedProduceType,
-                                                   error.toSpecification());
+
+                        return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED,
+                                                   negotiatedProduceType,
+                                                   toSpecification("WebSocket is not implemented"));
                     }
 
                     if (executionResult.getErrors().isEmpty() && cause == null) {
@@ -120,10 +120,15 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
                 }));
     }
 
-    static ExecutionResult newExecutionResult(Throwable cause) {
-        return new ExecutionResultImpl(GraphqlErrorException.newErrorException()
-                                                            .message(cause.getMessage())
-                                                            .cause(cause)
-                                                            .build());
+    private static Map<String, Object> toSpecification(String message) {
+        requireNonNull(message, "message");
+
+        final Map<String, Object> errorMap = new LinkedHashMap<>();
+        errorMap.put("message", message);
+
+        final Map<String, Object> result = new LinkedHashMap<>();
+        result.put("errors", Collections.singletonList(errorMap));
+
+        return result;
     }
 }

@@ -1,6 +1,10 @@
 package com.linecorp.armeria.server.graphql;
 
-import static com.linecorp.armeria.server.graphql.DefaultGraphqlService.newExecutionResult;
+import static java.util.Objects.requireNonNull;
+
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import javax.annotation.Nonnull;
 
@@ -12,6 +16,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
+import graphql.GraphQLError;
 import graphql.validation.ValidationError;
 /*
  * Copyright 2022 LINE Corporation
@@ -44,9 +49,14 @@ enum DefaultGraphqlErrorHandler implements GraphqlErrorHandler {
         if (cause != null) {
             // graphQL.executeAsync() returns an error in the executionResult with getErrors().
             // Use 500 Internal Server Error because this cause might be unexpected.
-            final ExecutionResult error = newExecutionResult(cause);
-            return HttpResponse.ofJson(
-                    HttpStatus.INTERNAL_SERVER_ERROR, negotiatedProduceType, error.toSpecification());
+            final Map<String, Object> specification;
+            if (cause instanceof GraphQLError) {
+                specification = ((GraphQLError) cause).toSpecification();
+            } else {
+                specification = toSpecification(cause);
+            }
+
+            return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR, negotiatedProduceType, specification);
         }
 
         if (result.getErrors().stream().anyMatch(ValidationError.class::isInstance)) {
@@ -54,5 +64,17 @@ enum DefaultGraphqlErrorHandler implements GraphqlErrorHandler {
         }
 
         return HttpResponse.ofJson(negotiatedProduceType, result.toSpecification());
+    }
+
+    private static Map<String, Object> toSpecification(Throwable cause) {
+        requireNonNull(cause, "cause");
+
+        final Map<String, Object> errorMap = new LinkedHashMap<>();
+        errorMap.put("message", cause.getMessage());
+
+        final Map<String, Object> result = new LinkedHashMap<>();
+        result.put("errors", Collections.singletonList(errorMap));
+
+        return result;
     }
 }
