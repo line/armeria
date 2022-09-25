@@ -36,7 +36,7 @@ import graphql.ExecutionResult;
 public interface GraphqlErrorHandler {
 
     /**
-     * Return the {@link DefaultGraphqlErrorHandler}.
+     * Return the default {@link GraphqlErrorHandler}.
      */
     static GraphqlErrorHandler of() {
         return DefaultGraphqlErrorHandler.INSTANCE;
