@@ -19,7 +19,6 @@ package com.linecorp.armeria.server.graphql;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
