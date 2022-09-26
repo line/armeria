@@ -173,6 +173,9 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
 
     @Override
     public boolean isEmpty() {
+        // This is always false even parts.isEmpty() == true.
+        // It's because isEmpty() is called after this multipart is converted into a StreamMessage and the
+        // StreamMessage produces at least a closing boundary.
         return false;
     }
 

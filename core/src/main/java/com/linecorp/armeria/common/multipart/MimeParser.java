@@ -431,13 +431,13 @@ final class MimeParser {
 
         // Check the closing boundary first.
         int followingCharOffset = boundaryStartOffset + boundaryLength;
-        if (followingCharOffset >= length) {
+        if (followingCharOffset == length) {
             // Need more data.
             return;
         }
 
         if (in.getByte(followingCharOffset) == '-') {
-            if (followingCharOffset + 1 >= length) {
+            if (followingCharOffset + 1 == length) {
                 // Need more data.
                 return;
             }
@@ -459,7 +459,7 @@ final class MimeParser {
 
         // Check the rest.
         followingCharOffset = boundaryStartOffset + boundaryLength + linearWhiteSpace;
-        if (followingCharOffset >= length) {
+        if (followingCharOffset == length) {
             // Need more data.
             return;
         }
@@ -472,7 +472,7 @@ final class MimeParser {
         }
 
         if (followingChar == '\r') {
-            if (followingCharOffset + 1 >= length) {
+            if (followingCharOffset + 1 == length) {
                 // Need one more character.
                 return;
             }
