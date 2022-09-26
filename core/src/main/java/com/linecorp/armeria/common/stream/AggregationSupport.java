@@ -94,60 +94,51 @@ public abstract class AggregationSupport {
         final SubscriptionOption[] subscriptionOptions = alloc != null ? POOLED_OBJECTS : EMPTY_OPTIONS;
 
         if (!options.cacheResult()) {
+            final CompletableFuture<?> aggregation = this.aggregation;
             if (aggregation != null) {
-                throw new IllegalStateException("the stream was aggregated already. options: " + options);
+                return handleAggregation(options, aggregation);
             }
-            if (aggregationUpdater.compareAndSet(this, null, NO_CACHE)) {
-                EventExecutor executor = options.executor();
-                if (executor == null) {
-                    executor = httpMessage.defaultSubscriberExecutor();
-                }
-                return httpMessage.collect(executor, subscriptionOptions)
-                                  .thenApply(objects -> aggregate(objects, headers, alloc));
-            } else {
-                throw new IllegalStateException("the stream was aggregated already. options: " + options);
+            if (!aggregationUpdater.compareAndSet(this, null, NO_CACHE)) {
+                final CompletableFuture<Object> aggregation0 = this.aggregation;
+                assert aggregation0 != null;
+                return handleAggregation(options, aggregation0);
             }
-        }
-
-        final CompletableFuture<?> aggregation = this.aggregation;
-        if (aggregation != null) {
-            if (aggregation == NO_CACHE) {
-                throw new IllegalStateException(
-                        "the stream was aggregated previously without cache. options: " + options);
-            }
-
-            //noinspection unchecked
-            return (CompletableFuture<U>) aggregation;
-        }
-
-        final CompletableFuture<U> aggregationFuture = new CompletableFuture<>();
-        if (aggregationUpdater.compareAndSet(this, null, aggregationFuture)) {
-            // Propagate the result to `aggregation`
             EventExecutor executor = options.executor();
             if (executor == null) {
                 executor = httpMessage.defaultSubscriberExecutor();
             }
-            httpMessage.collect(executor, subscriptionOptions)
-                       .thenApply(objects -> aggregate(objects, headers, alloc)).handle((res, cause) -> {
-                           if (cause != null) {
-                               cause = Exceptions.peel(cause);
-                               aggregationFuture.completeExceptionally(cause);
-                           } else {
-                               //noinspection unchecked
-                               aggregationFuture.complete((U) res);
-                           }
-                           return null;
-                       });
-            return aggregationFuture;
+            return httpMessage.collect(executor, subscriptionOptions)
+                              .thenApply(objects -> aggregate(objects, headers, alloc));
         }
 
-        final CompletableFuture<?> aggregation0 = this.aggregation;
-        if (aggregation0 == NO_CACHE) {
-            throw new IllegalStateException(
-                    "the stream was aggregated previously without cache. " + "options: " + options);
+        final CompletableFuture<?> aggregation = this.aggregation;
+        if (aggregation != null) {
+            return handleAggregation(options, aggregation);
         }
-        //noinspection unchecked
-        return (CompletableFuture<U>) aggregation0;
+
+        final CompletableFuture<U> aggregationFuture = new CompletableFuture<>();
+        if (!aggregationUpdater.compareAndSet(this, null, aggregationFuture)) {
+            final CompletableFuture<?> aggregation0 = this.aggregation;
+            assert aggregation0 != null;
+            return handleAggregation(options, aggregation0);
+        }
+        // Propagate the result to `aggregation`
+        EventExecutor executor = options.executor();
+        if (executor == null) {
+            executor = httpMessage.defaultSubscriberExecutor();
+        }
+        httpMessage.collect(executor, subscriptionOptions)
+                   .thenApply(objects -> aggregate(objects, headers, alloc)).handle((res, cause) -> {
+                       if (cause != null) {
+                           cause = Exceptions.peel(cause);
+                           aggregationFuture.completeExceptionally(cause);
+                       } else {
+                           //noinspection unchecked
+                           aggregationFuture.complete((U) res);
+                       }
+                       return null;
+                   });
+        return aggregationFuture;
     }
 
     @SuppressWarnings("unchecked")
@@ -159,5 +150,16 @@ public abstract class AggregationSupport {
         } else {
             return (U) HttpMessageAggregator.aggregateResponse(objects, allocator);
         }
+    }
+
+    private static <U extends AggregatedHttpMessage> CompletableFuture<U> handleAggregation(
+            AggregationOptions options, CompletableFuture<?> aggregation) {
+        if (aggregation == NO_CACHE) {
+            throw new IllegalStateException(
+                    "the stream was aggregated previously without cache. options: " + options);
+        }
+
+        //noinspection unchecked
+        return (CompletableFuture<U>) aggregation;
     }
 }

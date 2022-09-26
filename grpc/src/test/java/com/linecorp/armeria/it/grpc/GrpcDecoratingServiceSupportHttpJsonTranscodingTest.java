@@ -51,6 +51,11 @@ class GrpcDecoratingServiceSupportHttpJsonTranscodingTest {
             final GrpcService grpcService = GrpcService.builder().addService(
                     new HttpJsonTranscodingTestService()).enableHttpJsonTranscoding(true).build();
             sb.requestTimeoutMillis(5000);
+            sb.decorator((delegate, ctx, req) -> {
+                // We can aggregate request if it's not a streaming request.
+                req.aggregate();
+                return delegate.serve(ctx, req);
+            });
             sb.decorator(LoggingService.newDecorator());
             sb.service(grpcService);
         }

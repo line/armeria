@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.HttpMessageAggregator.aggregateData;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
@@ -40,8 +39,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
-import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -100,14 +97,14 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     @Override
     void startDeframing() {
-        req.collect(ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS).handle((objects, cause) -> {
+        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((aggregatedHttpRequest, cause) -> {
             if (cause != null) {
                 onError(cause);
                 return null;
             }
 
             try {
-                onRequestMessage(deframe(objects), true);
+                onRequestMessage(requestDeframer.deframe(aggregatedHttpRequest.content()), true);
             } catch (Exception ex) {
                 // An exception could be raised when the deframer detects malformed data which is released by
                 // the try-with-resource block. So `objects` don't need to be released here.
@@ -115,21 +112,6 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             }
             return null;
         });
-    }
-
-    private DeframedMessage deframe(List<HttpObject> objects) {
-        if (objects.size() == 1) {
-            final HttpObject object = objects.get(0);
-            if (object instanceof HttpData) {
-                return requestDeframer.deframe((HttpData) object);
-            } else {
-                logger.warn("{} An invalid HTTP object is received: {} (expected: {})",
-                            ctx, object, HttpData.class.getName());
-                return requestDeframer.deframe(HttpData.empty());
-            }
-        } else {
-            return requestDeframer.deframe(objects);
-        }
     }
 
     @Override
