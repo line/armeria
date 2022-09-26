@@ -45,8 +45,7 @@ public final class ThriftProtocolFactories {
             final Constructor<TBinaryProtocol.Factory> ignored =
                     TBinaryProtocol.Factory.class.getConstructor(boolean.class, boolean.class,
                                                                  long.class, long.class);
-        } catch (NoSuchMethodException e) {
-            e.printStackTrace();
+        } catch (NoSuchMethodException ignored) {
             isThrift091 = true;
         }
         IS_THRIFT_091 = isThrift091;
