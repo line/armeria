@@ -101,9 +101,6 @@ public class CgLibServiceNameTest {
         assertThat(proxiedMyAnnotatedService.getClass().getSimpleName())
                 .contains("MyAnnotatedService$$EnhancerBySpringCGLIB$$");
         assertThat(requestLog.serviceName()).isEqualTo(MyAnnotatedService.class.getName());
-
-        final AggregatedHttpResponse response = client.get("/internal/docs/specification.json");
-        System.out.println(response.contentUtf8());
     }
 
     @Test
@@ -114,6 +111,5 @@ public class CgLibServiceNameTest {
         assertThatJson(response.contentUtf8())
                 .node("services[0].name")
                 .isEqualTo(MyAnnotatedService.class.getName());
-        System.out.println(response.contentUtf8());
     }
 }
