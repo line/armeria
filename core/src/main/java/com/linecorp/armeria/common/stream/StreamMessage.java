@@ -287,18 +287,24 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * <p>For example:<pre>{@code
      * ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
-     *     try (os) {
+     *     try {
      *         for (int i = 0; i < 5; i++) {
      *             os.write(i);
      *         }
+     *         os.close();
      *     } catch (IOException e) {
-     *         throw new RuntimeException(e);
+     *         throw new UncheckedIOException(e);
      *     }
      * });
      * byte[] result = byteStreamMessage.collectBytes().join();
      *
      * assert Arrays.equals(result, new byte[] { 0, 1, 2, 3, 4 });
      * }</pre>
+     *
+     * <p>Please note that the try-with-resources statement is not used to call {@code os.close()}
+     * automatically. It's because when an exception is raised in the {@link Consumer},
+     * the {@link OutputStream} is closed by the {@link StreamMessage} and the exception is propagated
+     * to the {@link Subscriber} automatically.
      */
     static ByteStreamMessage fromOutputStream(Consumer<? super OutputStream> outputStreamConsumer) {
         final RequestContext ctx = RequestContext.currentOrNull();
@@ -317,18 +323,24 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * <p>For example:<pre>{@code
      * ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
-     *     try (os) {
+     *     try {
      *         for (int i = 0; i < 5; i++) {
      *             os.write(i);
      *         }
+     *         os.close();
      *     } catch (IOException e) {
-     *         throw new RuntimeException(e);
+     *         throw new UncheckedIOException(e);
      *     }
      * });
      * byte[] result = byteStreamMessage.collectBytes().join();
      *
      * assert Arrays.equals(result, new byte[] { 0, 1, 2, 3, 4 });
      * }</pre>
+     *
+     * <p>Please note that the try-with-resources statement is not used to call {@code os.close()}
+     * automatically. It's because when an exception is raised in the {@link Consumer},
+     * the {@link OutputStream} is closed by the {@link StreamMessage} and the exception is propagated
+     * to the {@link Subscriber} automatically.
      *
      * @param blockingTaskExecutor the blocking task executor to execute {@link OutputStream#write(int)}
      */
