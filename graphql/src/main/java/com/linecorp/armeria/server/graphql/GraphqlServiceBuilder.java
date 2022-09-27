@@ -38,7 +38,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.util.ResourceUtil;
@@ -79,9 +78,6 @@ public final class GraphqlServiceBuilder {
 
     @Nullable
     private GraphQLSchema schema;
-    // TODO(minwoox): Change the produce type to MediaType.GRAPHQL_RESPONSE_JSON
-    //                after the produce type is settled down
-    private MediaType defaultProduceType = MediaType.GRAPHQL_JSON;
 
     GraphqlServiceBuilder() {}
 
@@ -235,17 +231,6 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
-     * Sets the default produce type which is used when the request headers does not have an accept header.
-     * {@link MediaType#GRAPHQL_JSON} is used by default for backward compatibility, but it will be changed to
-     * {@link MediaType#GRAPHQL_RESPONSE_JSON} as described in the
-     * <a href="https://github.com/graphql/graphql-over-http/pull/215">Change media type</a>.
-     */
-    public GraphqlServiceBuilder defaultProduceType(MediaType defaultProduceType) {
-        this.defaultProduceType = requireNonNull(defaultProduceType, "defaultProduceType");
-        return this;
-    }
-
-    /**
      * Creates a {@link GraphqlService}.
      */
     public GraphqlService build() {
@@ -267,8 +252,7 @@ public final class GraphqlServiceBuilder {
         for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistries) {
             configurer.accept(dataLoaderRegistry);
         }
-        return new DefaultGraphqlService(builder.build(), dataLoaderRegistry, defaultProduceType,
-                                         useBlockingTaskExecutor);
+        return new DefaultGraphqlService(builder.build(), dataLoaderRegistry, useBlockingTaskExecutor);
     }
 
     private GraphQLSchema buildSchema() {

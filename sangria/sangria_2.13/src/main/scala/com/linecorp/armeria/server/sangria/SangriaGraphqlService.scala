@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.linecorp.armeria.common.HttpStatus.{BAD_REQUEST, INTERNAL_SERVER_ERROR}
 import com.linecorp.armeria.common.annotation.UnstableApi
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest
-import com.linecorp.armeria.common.{HttpHeaderNames, HttpHeaders, HttpResponse, HttpStatus, MediaType}
+import com.linecorp.armeria.common._
 import com.linecorp.armeria.internal.common.JacksonUtil
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil
 import com.linecorp.armeria.scala.implicits._
@@ -59,7 +59,7 @@ final class SangriaGraphqlService[Ctx, Val] private[sangria] (
 ) extends AbstractGraphqlService {
 
   override def executeGraphql(ctx: ServiceRequestContext, req: GraphqlRequest): HttpResponse = {
-    val produceType = GraphqlUtil.produceType(ctx.request().headers(), MediaType.GRAPHQL_JSON)
+    val produceType = GraphqlUtil.produceType(ctx.request().headers())
     if (produceType == null) {
       return HttpResponse.of(
         HttpStatus.NOT_ACCEPTABLE,
@@ -67,7 +67,8 @@ final class SangriaGraphqlService[Ctx, Val] private[sangria] (
         "Only %s, %s and %s compatible media types are acceptable",
         MediaType.GRAPHQL_RESPONSE_JSON,
         MediaType.GRAPHQL_JSON,
-        MediaType.JSON)
+        MediaType.JSON
+      )
     }
 
     QueryParser.parse(req.query()) match {

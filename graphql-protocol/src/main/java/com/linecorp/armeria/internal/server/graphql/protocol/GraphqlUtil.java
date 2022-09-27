@@ -42,16 +42,17 @@ public final class GraphqlUtil {
      * specification</a>.
      */
     @Nullable
-    public static MediaType produceType(RequestHeaders headers, MediaType defaultProduceType) {
+    public static MediaType produceType(RequestHeaders headers) {
         final List<MediaType> acceptTypes = headers.accept();
         // Check the accept header first.
         if (!acceptTypes.isEmpty()) {
             for (MediaType accept : acceptTypes) {
                 if (MediaType.ANY_TYPE.is(accept) || MediaType.ANY_APPLICATION_TYPE.is(accept)) {
-                    return defaultProduceType;
+                    // This will be changed to return MediaType.GRAPHQL_RESPONSE_JSON after 2025.
+                    // https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#legacy-watershed-1
+                    return MediaType.JSON;
                 }
-                if (accept.is(defaultProduceType) ||
-                    accept.is(MediaType.GRAPHQL_RESPONSE_JSON) ||
+                if (accept.is(MediaType.GRAPHQL_RESPONSE_JSON) ||
                     accept.is(MediaType.GRAPHQL_JSON) ||
                     accept.is(MediaType.JSON)) {
                     return accept;
@@ -66,7 +67,9 @@ public final class GraphqlUtil {
             return null;
         }
 
-        return defaultProduceType;
+        // This will be changed to return MediaType.GRAPHQL_RESPONSE_JSON after 2025.
+        // https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#legacy-watershed-1
+        return MediaType.JSON;
     }
 
     private GraphqlUtil() {}

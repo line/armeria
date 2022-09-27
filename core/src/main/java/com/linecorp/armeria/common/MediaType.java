@@ -782,7 +782,10 @@ public final class MediaType {
     /**
      * The GraphQL response content type is changed from {@link #GRAPHQL_JSON} to {@link #GRAPHQL_RESPONSE_JSON}
      * in this PR. <a href="https://github.com/graphql/graphql-over-http/pull/215">Change media type</a>
+     *
+     * @deprecated Use {@link #GRAPHQL_RESPONSE_JSON} if the client can recognize the media type.
      */
+    @Deprecated
     public static final MediaType GRAPHQL_JSON = createConstant(APPLICATION_TYPE, "graphql+json");
 
     /**

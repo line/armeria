@@ -88,7 +88,7 @@ class AbstractGraphqlServiceTest {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/graphql?" + query.toQueryString());
         final ServiceRequestContext ctx = ServiceRequestContext.of(request);
         testGraphqlService.serve(ctx, request);
-        assertThat(testGraphqlService.produceType).isEqualTo(MediaType.GRAPHQL_JSON);
+        assertThat(testGraphqlService.produceType).isEqualTo(MediaType.JSON);
     }
 
     @ArgumentsSource(MediaTypeProvider.class)
@@ -373,7 +373,7 @@ class AbstractGraphqlServiceTest {
         @Override
         protected HttpResponse executeGraphql(ServiceRequestContext ctx, GraphqlRequest req) throws Exception {
             graphqlRequest = req;
-            produceType = GraphqlUtil.produceType(ctx.request().headers(), MediaType.GRAPHQL_JSON);
+            produceType = GraphqlUtil.produceType(ctx.request().headers());
             return HttpResponse.of(HttpStatus.OK);
         }
     }
