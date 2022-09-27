@@ -373,7 +373,7 @@ class AbstractGraphqlServiceTest {
         @Override
         protected HttpResponse executeGraphql(ServiceRequestContext ctx, GraphqlRequest req) throws Exception {
             graphqlRequest = req;
-            produceType = GraphqlUtil.produceType(ctx.request().headers());
+            produceType = GraphqlUtil.produceType(ctx.request().headers(), MediaType.GRAPHQL_JSON);
             return HttpResponse.of(HttpStatus.OK);
         }
     }

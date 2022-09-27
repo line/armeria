@@ -33,7 +33,7 @@ class GraphqlUtilTest {
     @ParameterizedTest
     @MethodSource("provideMediaType")
     void test(RequestHeaders requestHeaders, MediaType actual) {
-        final MediaType expected = GraphqlUtil.produceType(requestHeaders);
+        final MediaType expected = GraphqlUtil.produceType(requestHeaders, MediaType.GRAPHQL_JSON);
         assertThat(actual).isEqualTo(expected);
     }
 
@@ -66,7 +66,8 @@ class GraphqlUtilTest {
                              MediaType.GRAPHQL_JSON),
                 Arguments.of(RequestHeaders.builder(HttpMethod.GET, "/graphql")
                                            .contentType(MediaType.ANY_TYPE)
-                                           .accept(MediaType.GRAPHQL)
+                                           // https://graphql.org/learn/serving-over-http/#post-request
+                                           .accept(MediaType.GRAPHQL) // Invalid accept type.
                                            .build(),
                              null),
                 Arguments.of(RequestHeaders.builder(HttpMethod.GET, "/graphql")
@@ -88,7 +89,12 @@ class GraphqlUtilTest {
                                            .contentType(MediaType.JSON)
                                            .accept(MediaType.GRAPHQL_JSON)
                                            .build(),
-                             MediaType.GRAPHQL_JSON)
+                             MediaType.GRAPHQL_JSON),
+                Arguments.of(RequestHeaders.builder(HttpMethod.POST, "/graphql")
+                                           .contentType(MediaType.JSON)
+                                           .accept(MediaType.GRAPHQL_RESPONSE_JSON)
+                                           .build(),
+                             MediaType.GRAPHQL_RESPONSE_JSON)
         );
     }
 }

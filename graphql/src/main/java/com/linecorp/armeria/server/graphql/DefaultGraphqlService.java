@@ -51,22 +51,25 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     private final DataLoaderRegistry dataLoaderRegistry;
 
+    private MediaType defaultProduceType;
     private final boolean useBlockingTaskExecutor;
 
     DefaultGraphqlService(GraphQL graphQL, DataLoaderRegistry dataLoaderRegistry,
-                          boolean useBlockingTaskExecutor) {
+                          MediaType defaultProduceType, boolean useBlockingTaskExecutor) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
         this.dataLoaderRegistry = requireNonNull(dataLoaderRegistry, "dataLoaderRegistry");
+        this.defaultProduceType = requireNonNull(defaultProduceType, "defaultProduceType");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
     }
 
     @Override
     protected HttpResponse executeGraphql(ServiceRequestContext ctx, GraphqlRequest req) throws Exception {
-        final MediaType produceType = GraphqlUtil.produceType(ctx.request().headers());
+        final MediaType produceType = GraphqlUtil.produceType(ctx.request().headers(), defaultProduceType);
         if (produceType == null) {
             return HttpResponse.of(HttpStatus.NOT_ACCEPTABLE, MediaType.PLAIN_TEXT,
-                                   "Only application/graphql+json and application/json compatible " +
-                                   "media types are acceptable");
+                                   "Only %s, %s and %s compatible media types are acceptable",
+                                   MediaType.GRAPHQL_RESPONSE_JSON,
+                                   MediaType.GRAPHQL_JSON, MediaType.JSON);
         }
 
         final ExecutionInput.Builder builder = ExecutionInput.newExecutionInput(req.query());

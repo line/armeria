@@ -58,6 +58,7 @@ class GraphqlServiceSubscriptionTest {
                                       c.type("Subscription",
                                              typeWiring -> typeWiring.dataFetcher("hello", dataFetcher()));
                                   })
+                                  .defaultProduceType(MediaType.GRAPHQL_RESPONSE_JSON)
                                   .build();
             sb.service("/graphql", service);
         }
@@ -77,6 +78,7 @@ class GraphqlServiceSubscriptionTest {
                                                          .aggregate().join();
 
         assertThat(response.status()).isEqualTo(HttpStatus.NOT_IMPLEMENTED);
+        assertThat(response.contentType()).isEqualTo(MediaType.GRAPHQL_RESPONSE_JSON);
         assertThatJson(response.contentUtf8())
                 .withMatcher("errors",
                              new CustomTypeSafeMatcher<List<Map<String, String>>>("errors") {

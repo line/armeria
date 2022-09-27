@@ -59,12 +59,15 @@ final class SangriaGraphqlService[Ctx, Val] private[sangria] (
 ) extends AbstractGraphqlService {
 
   override def executeGraphql(ctx: ServiceRequestContext, req: GraphqlRequest): HttpResponse = {
-    val produceType = GraphqlUtil.produceType(ctx.request().headers())
+    val produceType = GraphqlUtil.produceType(ctx.request().headers(), MediaType.GRAPHQL_JSON)
     if (produceType == null) {
       return HttpResponse.of(
         HttpStatus.NOT_ACCEPTABLE,
         MediaType.PLAIN_TEXT,
-        "Only application/graphql+json and application/json compatible media types are acceptable")
+        "Only %s, %s and %s compatible media types are acceptable",
+        MediaType.GRAPHQL_RESPONSE_JSON,
+        MediaType.GRAPHQL_JSON,
+        MediaType.JSON)
     }
 
     QueryParser.parse(req.query()) match {
