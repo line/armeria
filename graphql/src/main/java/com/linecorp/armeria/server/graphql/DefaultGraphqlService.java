@@ -65,9 +65,8 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         final MediaType produceType = GraphqlUtil.produceType(ctx.request().headers());
         if (produceType == null) {
             return HttpResponse.of(HttpStatus.NOT_ACCEPTABLE, MediaType.PLAIN_TEXT,
-                                   "Only %s, %s and %s compatible media types are acceptable",
-                                   MediaType.GRAPHQL_RESPONSE_JSON,
-                                   MediaType.GRAPHQL_JSON, MediaType.JSON);
+                                   "Only %s and %s compatible media types are acceptable",
+                                   MediaType.GRAPHQL_RESPONSE_JSON, MediaType.JSON);
         }
 
         final ExecutionInput.Builder builder = ExecutionInput.newExecutionInput(req.query());

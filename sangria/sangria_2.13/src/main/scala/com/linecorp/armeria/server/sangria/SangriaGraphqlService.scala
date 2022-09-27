@@ -20,7 +20,7 @@ import com.fasterxml.jackson.databind.{JsonNode, ObjectMapper}
 import com.linecorp.armeria.common.HttpStatus.{BAD_REQUEST, INTERNAL_SERVER_ERROR}
 import com.linecorp.armeria.common.annotation.UnstableApi
 import com.linecorp.armeria.common.graphql.protocol.GraphqlRequest
-import com.linecorp.armeria.common._
+import com.linecorp.armeria.common.{HttpHeaderNames, HttpHeaders, HttpResponse, HttpStatus, MediaType}
 import com.linecorp.armeria.internal.common.JacksonUtil
 import com.linecorp.armeria.internal.server.graphql.protocol.GraphqlUtil
 import com.linecorp.armeria.scala.implicits._
@@ -64,9 +64,8 @@ final class SangriaGraphqlService[Ctx, Val] private[sangria] (
       return HttpResponse.of(
         HttpStatus.NOT_ACCEPTABLE,
         MediaType.PLAIN_TEXT,
-        "Only %s, %s and %s compatible media types are acceptable",
+        "Only %s and %s compatible media types are acceptable",
         MediaType.GRAPHQL_RESPONSE_JSON,
-        MediaType.GRAPHQL_JSON,
         MediaType.JSON
       )
     }
