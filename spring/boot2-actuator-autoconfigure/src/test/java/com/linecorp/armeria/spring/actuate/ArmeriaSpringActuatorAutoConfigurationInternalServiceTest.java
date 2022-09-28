@@ -30,6 +30,7 @@ import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.test.autoconfigure.actuate.metrics.AutoConfigureMetrics;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Bean;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
 
@@ -38,10 +39,12 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.server.Server;
+import com.linecorp.armeria.spring.ArmeriaServerSmartLifecycle;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.InternalServiceId;
 import com.linecorp.armeria.spring.InternalServices;
+import com.linecorp.armeria.spring.RetryableArmeriaServerGracefulShutdownLifecycle;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationSecureTest.TestConfiguration;
 
 @SpringBootTest(classes = TestConfiguration.class)
@@ -58,7 +61,12 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     private static final Logger TEST_LOGGER = LoggerFactory.getLogger(TEST_LOGGER_NAME);
 
     @SpringBootApplication
-    static class TestConfiguration {}
+    static class TestConfiguration {
+        @Bean
+        ArmeriaServerSmartLifecycle smartLifecycle(Server server) {
+            return new RetryableArmeriaServerGracefulShutdownLifecycle(server, 8);
+        }
+    }
 
     @LocalManagementPort
     private Integer actuatorPort;
