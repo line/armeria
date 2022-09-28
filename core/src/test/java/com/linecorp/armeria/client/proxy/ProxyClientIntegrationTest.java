@@ -30,7 +30,6 @@ import java.net.ServerSocket;
 import java.net.SocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -113,9 +112,7 @@ class ProxyClientIntegrationTest {
             sb.port(0, SessionProtocol.HTTP);
             sb.port(0, SessionProtocol.HTTPS);
             sb.tlsSelfSigned();
-            sb.service(PROXY_PATH, (ctx, req) -> {
-                return HttpResponse.delayed(HttpResponse.of(SUCCESS_RESPONSE), Duration.ofMillis(200));
-            });
+            sb.service(PROXY_PATH, (ctx, req) -> HttpResponse.of(SUCCESS_RESPONSE));
         }
     };
 
@@ -258,13 +255,12 @@ class ProxyClientIntegrationTest {
                                   .useHttp2Preface(true)
                                   .build()) {
 
-            final WebClient webClient = WebClient.builder(SessionProtocol.H2C, backendServer.httpEndpoint())
+            final WebClient webClient = WebClient.builder(SessionProtocol.H1C, backendServer.httpEndpoint())
                                                  .factory(clientFactory)
                                                  .decorator(LoggingClient.newDecorator())
                                                  .build();
             final CompletableFuture<AggregatedHttpResponse> responseFuture =
                     webClient.get(PROXY_PATH).aggregate();
-            webClient.get(PROXY_PATH).aggregate();
             final AggregatedHttpResponse response = responseFuture.join();
             assertThat(response.status()).isEqualTo(HttpStatus.OK);
             assertThat(response.contentUtf8()).isEqualTo(SUCCESS_RESPONSE);
