@@ -23,7 +23,10 @@ import java.util.Map.Entry;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.AbstractClientOptionsBuilder;
+import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.RequestOptionsBuilder;
 
 /**
  * Builds a {@link RequestHeaders}.
@@ -81,11 +84,74 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
 
     /**
      * Sets the {@code ":authority"} header.
+     *
+     * <p>Note that if this {@link RequestHeaders} is sent via a base-URI {@link Client}, the specified the
+     * authority header is overwritten by the base-URI. If this {@link RequestHeaders} is sent via non-base
+     * {@link Client}, the authority header value is potentially used as the endpoint.
+     * <pre>{@code
+     * WebClient nonBaseClient = WebClient.of();
+     * RequestHeaders headers =
+     *     RequestHeaders.builder(HttpMethod.GET, "/")
+     *                   .scheme("http")
+     *                   .authority("my-example.com")
+     *                   .build();
+     * HttpRequest request = HttpRequest.of(headers);
+     * // Sends the request to "my-example.com"
+     * nonBaseClient.execute(request);
+     *
+     * WebClient baseClient = WebClient.of("proxy-example.com");
+     * RequestHeaders headers =
+     *     RequestHeaders.builder(HttpMethod.GET, "/")
+     *                   .scheme("http")
+     *                   .authority("my-example.com")
+     *                   .build();
+     * HttpRequest request = HttpRequest.of(headers);
+     * // The authority headers is overwritten to "proxy-example.com", and then
+     * // the request is sent to "proxy-example.com"
+     * baseClient.execute(request);
+     * }
+     * </pre>
+     *
+     * <p>To set the {@code :authority} header and the target endpoint of the {@link HttpRequest} to
+     * different values, refer to {@link AbstractClientOptionsBuilder#authority(String)} or
+     * {@link RequestOptionsBuilder#authority(String)}.
      */
     RequestHeadersBuilder authority(String authority);
 
     /**
      * Sets the {@code ":authority"} header from the specified {@link Endpoint}.
+     *
+     * <p>Note that if this {@link RequestHeaders} is sent via a base-URI {@link Client}, the specified the
+     * authority header is overwritten by the base-URI. If this {@link RequestHeaders} is sent via non-base
+     * {@link Client}, the authority header value is potentially used as the endpoint.
+     * <pre>{@code
+     * Endpoint exampleEndpoint = Endpoint.of("my-example.com");
+     * WebClient nonBaseClient = WebClient.of();
+     * RequestHeaders headers =
+     *     RequestHeaders.builder(HttpMethod.GET, "/")
+     *                   .scheme("http")
+     *                   .authority(exampleEndpoint)
+     *                   .build();
+     * HttpRequest request = HttpRequest.of(headers);
+     * // Sends the request to "my-example.com"
+     * nonBaseClient.execute(request);
+     *
+     * WebClient baseClient = WebClient.of("proxy-example.com");
+     * RequestHeaders headers =
+     *     RequestHeaders.builder(HttpMethod.GET, "/")
+     *                   .scheme("http")
+     *                   .authority(exampleEndpoint)
+     *                   .build();
+     * HttpRequest request = HttpRequest.of(headers);
+     * // The authority headers is overwritten to "proxy-example.com", and then
+     * // the request is sent to "proxy-example.com"
+     * baseClient.execute(request);
+     * }
+     * </pre>
+     *
+     * <p>To set the {@code :authority} header and the target endpoint of the {@link HttpRequest} to
+     * different values, refer to {@link AbstractClientOptionsBuilder#authority(String)} or
+     * {@link RequestOptionsBuilder#authority(String)}.
      *
      * @throws IllegalArgumentException if the specified {@link Endpoint} refers to a group
      */
