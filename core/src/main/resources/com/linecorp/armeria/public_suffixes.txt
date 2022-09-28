@@ -122,6 +122,7 @@
 1337.pictures
 16-b.it
 1kapp.com
+2.azurestaticapps.net
 2.bg
 2000.hu
 2038.io
