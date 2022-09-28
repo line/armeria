@@ -37,7 +37,7 @@ import com.linecorp.armeria.internal.common.thrift.DefaultThriftProtocolFactoryP
  */
 public final class ThriftProtocolFactories {
 
-    private static final boolean IS_THRIFT_091;
+    static final boolean IS_THRIFT_091;
 
     static {
         boolean isThrift091 = false;
