@@ -604,6 +604,10 @@ public final class MediaTypeNames {
      * {@value #GRAPHQL_JSON}.
      */
     public static final String GRAPHQL_JSON = "application/graphql+json";
+    /**
+     * {@value #GRAPHQL_JSON}.
+     */
+    public static final String GRAPHQL_RESPONSE_JSON = "application/graphql-response+json";
 
     private MediaTypeNames() {}
 }
