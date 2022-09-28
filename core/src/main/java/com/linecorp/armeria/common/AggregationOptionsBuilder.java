@@ -36,6 +36,7 @@ public final class AggregationOptionsBuilder {
     @Nullable
     private ByteBufAllocator alloc;
     private boolean cacheResult;
+    private boolean preferCached = true;
 
     AggregationOptionsBuilder() {}
 
@@ -50,9 +51,9 @@ public final class AggregationOptionsBuilder {
 
     /**
      * Returns whether to cache the aggregation result. This option is disabled by default.
-     * Note that this method and {@link #alloc(ByteBufAllocator)} are mutually exclusive.
-     * If {@link #alloc(ByteBufAllocator)}} is set and this option is enabled, an {@link IllegalStateException}
-     * will be raised.
+     * Note that this method and {@link #usePooledObjects(ByteBufAllocator)} are mutually exclusive.
+     * If {@link #usePooledObjects(ByteBufAllocator)}} is set and this option is enabled,
+     * an {@link IllegalStateException} will be raised.
      */
     public AggregationOptionsBuilder cacheResult(boolean cache) {
         if (alloc != null) {
@@ -71,7 +72,10 @@ public final class AggregationOptionsBuilder {
      * Therefore, that this method and {@link #cacheResult(boolean)} are mutually exclusive.
      * If {@link #cacheResult(boolean)} is enabled and this option is set, an {@link IllegalStateException} will
      * be raised.
+     *
+     * @deprecated Use {@link #usePooledObjects(ByteBufAllocator, boolean)}.
      */
+    @Deprecated
     public AggregationOptionsBuilder alloc(ByteBufAllocator alloc) {
         requireNonNull(alloc, "alloc");
         if (cacheResult) {
@@ -82,9 +86,58 @@ public final class AggregationOptionsBuilder {
     }
 
     /**
+     * (Advanced users only) Sets the {@link ByteBufAllocator#DEFAULT} that can be used to create
+     * {@link PooledObjects} without making a copy. If the {@link HttpMessage} is already aggregated and cached,
+     * this option is ineffective and the cached {@link AggregatedHttpMessage} is returned.
+     *
+     * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
+     * Therefore, that this method and {@link #cacheResult(boolean)} are mutually exclusive.
+     * If {@link #cacheResult(boolean)} is enabled and this option is set, an {@link IllegalStateException} will
+     * be raised.
+     */
+    public AggregationOptionsBuilder usePooledObjects() {
+        return usePooledObjects(ByteBufAllocator.DEFAULT);
+    }
+
+    /**
+     * (Advanced users only) Sets the {@link ByteBufAllocator#DEFAULT} that can be used to create
+     * {@link PooledObjects} without making a copy. If the {@link HttpMessage} is already aggregated and cached,
+     * this option is ineffective and the cached {@link AggregatedHttpMessage} is returned.
+     *
+     * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
+     * Therefore, that this method and {@link #cacheResult(boolean)} are mutually exclusive.
+     * If {@link #cacheResult(boolean)} is enabled and this option is set, an {@link IllegalStateException} will
+     * be raised.
+     */
+    public AggregationOptionsBuilder usePooledObjects(ByteBufAllocator alloc) {
+        return usePooledObjects(requireNonNull(alloc, "alloc"), true);
+    }
+
+    /**
+     * (Advanced users only) Sets the {@link ByteBufAllocator} that can be used to create
+     * {@link PooledObjects} without making a copy. If the {@link HttpMessage} is already aggregated and cached,
+     * the cached {@link AggregatedHttpMessage} is returned if {@code preferCached} is {@code true}.
+     * if {@code preferCached} is {@code false}, an {@link IllegalStateException} will be raised.
+     *
+     * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
+     * Therefore, that this method and {@link #cacheResult(boolean)} are mutually exclusive.
+     * If {@link #cacheResult(boolean)} is enabled and this option is set, an {@link IllegalStateException} will
+     * be raised.
+     */
+    public AggregationOptionsBuilder usePooledObjects(ByteBufAllocator alloc, boolean preferCached) {
+        requireNonNull(alloc, "alloc");
+        if (cacheResult) {
+            throw new IllegalStateException("Can't cache pooled objects");
+        }
+        this.alloc = alloc;
+        this.preferCached = preferCached;
+        return this;
+    }
+
+    /**
      * Returns a newly created {@link AggregationOptions} with the properties set so far.
      */
     public AggregationOptions build() {
-        return new DefaultAggregationOptions(executor, alloc, cacheResult);
+        return new DefaultAggregationOptions(executor, alloc, preferCached, cacheResult);
     }
 }

@@ -48,6 +48,7 @@ import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.circuitbreaker.FailFastException;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.CompletableRpcResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
@@ -168,30 +169,34 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                 throw t;
             }
 
-            httpResponse.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((res, cause) -> {
-                if (cause != null) {
-                    handlePreDecodeException(ctx, reply, func, Exceptions.peel(cause));
-                    return null;
-                }
+            httpResponse.aggregate(AggregationOptions.builder()
+                                                     .usePooledObjects(ctx.alloc())
+                                                     .executor(ctx.eventLoop())
+                                                     .build())
+                        .handle((res, cause) -> {
+                            if (cause != null) {
+                                handlePreDecodeException(ctx, reply, func, Exceptions.peel(cause));
+                                return null;
+                            }
 
-                try (HttpData content = res.content()) {
-                    final HttpStatus status = res.status();
-                    if (status.code() != HttpStatus.OK.code()) {
-                        handlePreDecodeException(
-                                ctx, reply, func,
-                                new InvalidResponseHeadersException(res.headers()));
-                        return null;
-                    }
+                            try (HttpData content = res.content()) {
+                                final HttpStatus status = res.status();
+                                if (status.code() != HttpStatus.OK.code()) {
+                                    handlePreDecodeException(
+                                            ctx, reply, func,
+                                            new InvalidResponseHeadersException(res.headers()));
+                                    return null;
+                                }
 
-                    try {
-                        handle(ctx, seqId, reply, func, content);
-                    } catch (Throwable t) {
-                        handlePreDecodeException(ctx, reply, func, t);
-                    }
-                }
+                                try {
+                                    handle(ctx, seqId, reply, func, content);
+                                } catch (Throwable t) {
+                                    handlePreDecodeException(ctx, reply, func, t);
+                                }
+                            }
 
-                return null;
-            }).exceptionally(CompletionActions::log);
+                            return null;
+                        }).exceptionally(CompletionActions::log);
         } catch (Throwable cause) {
             handlePreDecodeException(ctx, reply, func, cause);
         }

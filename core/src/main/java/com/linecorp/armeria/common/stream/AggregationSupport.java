@@ -93,11 +93,12 @@ public abstract class AggregationSupport {
         final ByteBufAllocator alloc = options.alloc();
         final SubscriptionOption[] subscriptionOptions = alloc != null ? POOLED_OBJECTS : EMPTY_OPTIONS;
 
+        final CompletableFuture<?> aggregation = this.aggregation;
+        if (aggregation != null) {
+            return handleAggregation(options, aggregation);
+        }
+
         if (!options.cacheResult()) {
-            final CompletableFuture<?> aggregation = this.aggregation;
-            if (aggregation != null) {
-                return handleAggregation(options, aggregation);
-            }
             if (!aggregationUpdater.compareAndSet(this, null, NO_CACHE)) {
                 final CompletableFuture<Object> aggregation0 = this.aggregation;
                 assert aggregation0 != null;
@@ -109,11 +110,6 @@ public abstract class AggregationSupport {
             }
             return httpMessage.collect(executor, subscriptionOptions)
                               .thenApply(objects -> aggregate(objects, headers, alloc));
-        }
-
-        final CompletableFuture<?> aggregation = this.aggregation;
-        if (aggregation != null) {
-            return handleAggregation(options, aggregation);
         }
 
         final CompletableFuture<U> aggregationFuture = new CompletableFuture<>();
@@ -154,6 +150,9 @@ public abstract class AggregationSupport {
 
     private static <U extends AggregatedHttpMessage> CompletableFuture<U> handleAggregation(
             AggregationOptions options, CompletableFuture<?> aggregation) {
+        if (!options.preferCached()) {
+            throw new IllegalStateException("the stream was aggregated previously. options: " + options);
+        }
         if (aggregation == NO_CACHE) {
             throw new IllegalStateException(
                     "the stream was aggregated previously without cache. options: " + options);

@@ -697,7 +697,11 @@ public interface HttpResponse extends Response, HttpMessage {
      * }</pre>
      *
      * @see PooledObjects
+     *
+     * @deprecated Use {@link #aggregate(AggregationOptions)} with
+     *             {@link AggregationOptions#usePooledObjects(ByteBufAllocator)}.
      */
+    @Deprecated
     @UnstableApi
     default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(ByteBufAllocator alloc) {
         return aggregateWithPooledObjects(defaultSubscriberExecutor(), alloc);
@@ -717,14 +721,18 @@ public interface HttpResponse extends Response, HttpMessage {
      * // An `IllegalStateException` will be raised.
      * response.aggregateWithPooledObjects(executor, alloc).join();
      * }</pre>
+     *
+     * @deprecated Use {@link #aggregate(AggregationOptions)} with
+     *             {@link AggregationOptions#usePooledObjects(ByteBufAllocator)}.
      */
+    @Deprecated
     default CompletableFuture<AggregatedHttpResponse> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
         return aggregate(AggregationOptions.builder()
                                            .executor(executor)
-                                           .alloc(alloc)
+                                           .usePooledObjects(alloc)
                                            .build());
     }
 

@@ -34,6 +34,7 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -441,7 +442,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             } else {
                 final AggregatedHttpResponseHandler resHandler =
                         new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req);
-                res.aggregateWithPooledObjects(eventLoop, ctx.alloc()).handle(resHandler);
+                res.aggregate(AggregationOptions.builder()
+                                                .usePooledObjects(ctx.alloc())
+                                                .executor(eventLoop)
+                                                .build())
+                   .handle(resHandler);
             }
         }
     }

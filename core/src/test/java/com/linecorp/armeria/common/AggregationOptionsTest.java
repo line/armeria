@@ -49,7 +49,7 @@ class AggregationOptionsTest {
     void disallowPooledObjectWithCache() {
         assertThatThrownBy(() -> {
             AggregationOptions.builder()
-                              .alloc(ByteBufAllocator.DEFAULT)
+                              .usePooledObjects(ByteBufAllocator.DEFAULT)
                               .cacheResult(true)
                               .build();
         }).isInstanceOf(IllegalStateException.class)
@@ -77,13 +77,13 @@ class AggregationOptionsTest {
     @ParameterizedTest
     void httpRequest_notCached_withPooledObjects(HttpRequest request) {
         final ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
-        final AggregatedHttpRequest agg0 = request.aggregateWithPooledObjects(alloc).join();
+        final AggregatedHttpRequest agg0 = request.aggregate(AggregationOptions.usePooledObjects(alloc)).join();
         assertThat(agg0.method()).isEqualTo(HttpMethod.GET);
         assertThat(agg0.path()).isEqualTo("/abc");
         assertThat(agg0.content().toStringUtf8()).isEqualTo("12");
         agg0.content().close();
 
-        assertThatThrownBy(() -> request.aggregateWithPooledObjects(alloc).join())
+        assertThatThrownBy(() -> request.aggregate(AggregationOptions.usePooledObjects(alloc)).join())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("the stream was aggregated");
 
@@ -99,7 +99,8 @@ class AggregationOptionsTest {
         assertThat(agg0.method()).isEqualTo(HttpMethod.GET);
         assertThat(agg0.path()).isEqualTo("/abc");
         assertThat(agg0.content().toStringUtf8()).isEqualTo("12");
-        final AggregatedHttpRequest agg1 = request.aggregateWithPooledObjects(ByteBufAllocator.DEFAULT).join();
+        final ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
+        final AggregatedHttpRequest agg1 = request.aggregate(AggregationOptions.usePooledObjects(alloc)).join();
         if (request instanceof HeaderOverridingHttpRequest) {
             // A new object is created for the overridden header .
             assertThat(agg1).isEqualTo(agg0);
@@ -107,6 +108,24 @@ class AggregationOptionsTest {
         } else {
             assertThat(agg1).isSameAs(agg0);
         }
+    }
+
+    @ArgumentsSource(HttpRequestProvider.class)
+    @ParameterizedTest
+    void httpRequest_cached_exceptionWhenNoPreferCached(HttpRequest request) {
+        final ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
+        final AggregatedHttpRequest agg0 =
+                request.aggregate().join();
+        assertThat(agg0.method()).isEqualTo(HttpMethod.GET);
+        assertThat(agg0.path()).isEqualTo("/abc");
+        assertThat(agg0.content().toStringUtf8()).isEqualTo("12");
+
+        assertThatThrownBy(() -> request.aggregate(AggregationOptions.builder()
+                                                                     .usePooledObjects(alloc, false)
+                                                                     .build())
+                                        .join())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("the stream was aggregated");
     }
 
     @ArgumentsSource(HttpResponseProvider.class)
@@ -122,13 +141,18 @@ class AggregationOptionsTest {
     @ArgumentsSource(HttpResponseProvider.class)
     @ParameterizedTest
     void httpResponse_notCached_withPooledObjects(HttpResponse response) {
-        final ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
-        final AggregatedHttpResponse agg0 = response.aggregateWithPooledObjects(alloc).join();
+        final AggregatedHttpResponse agg0 = response.aggregate(AggregationOptions.builder()
+                                                                                 .usePooledObjects()
+                                                                                 .build())
+                                                    .join();
         assertThat(agg0.status()).isEqualTo(HttpStatus.OK);
         assertThat(agg0.content().toStringUtf8()).isEqualTo("12");
         agg0.content().close();
 
-        assertThatThrownBy(() -> response.aggregateWithPooledObjects(alloc).join())
+        assertThatThrownBy(() -> response.aggregate(AggregationOptions.builder()
+                                                                      .usePooledObjects()
+                                                                      .build())
+                                         .join())
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("the stream was aggregated");
 
@@ -143,9 +167,27 @@ class AggregationOptionsTest {
         final AggregatedHttpResponse agg0 = response.aggregate().join();
         assertThat(agg0.status()).isEqualTo(HttpStatus.OK);
         assertThat(agg0.content().toStringUtf8()).isEqualTo("12");
-        final AggregatedHttpResponse agg1 = response.aggregateWithPooledObjects(ByteBufAllocator.DEFAULT)
-                                                    .join();
+        final AggregatedHttpResponse agg1 =
+                response.aggregate(AggregationOptions.builder().usePooledObjects().build())
+                        .join();
         assertThat(agg1).isSameAs(agg0);
+    }
+
+    @ArgumentsSource(HttpResponseProvider.class)
+    @ParameterizedTest
+    void httpResponse_cached_exceptionWhenNoPreferCached(HttpResponse response) {
+        final ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
+        final AggregatedHttpResponse agg0 =
+                response.aggregate().join();
+        assertThat(agg0.status()).isEqualTo(HttpStatus.OK);
+        assertThat(agg0.content().toStringUtf8()).isEqualTo("12");
+
+        assertThatThrownBy(() -> response.aggregate(AggregationOptions.builder()
+                                                                      .usePooledObjects(alloc, false)
+                                                                      .build())
+                                         .join())
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("the stream was aggregated");
     }
 
     @Test

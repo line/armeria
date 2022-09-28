@@ -26,6 +26,7 @@ import java.util.concurrent.Executor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -97,21 +98,25 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     @Override
     void startDeframing() {
-        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((aggregatedHttpRequest, cause) -> {
-            if (cause != null) {
-                onError(cause);
-                return null;
-            }
+        req.aggregate(AggregationOptions.builder()
+                                        .usePooledObjects(ctx.alloc())
+                                        .executor(ctx.eventLoop())
+                                        .build())
+           .handle((aggregatedHttpRequest, cause) -> {
+               if (cause != null) {
+                   onError(cause);
+                   return null;
+               }
 
-            try {
-                onRequestMessage(requestDeframer.deframe(aggregatedHttpRequest.content()), true);
-            } catch (Exception ex) {
-                // An exception could be raised when the deframer detects malformed data which is released by
-                // the try-with-resource block. So `objects` don't need to be released here.
-                onError(ex);
-            }
-            return null;
-        });
+               try {
+                   onRequestMessage(requestDeframer.deframe(aggregatedHttpRequest.content()), true);
+               } catch (Exception ex) {
+                   // An exception could be raised when the deframer detects malformed data which is released by
+                   // the try-with-resource block. So `objects` don't need to be released here.
+                   onError(ex);
+               }
+               return null;
+           });
     }
 
     @Override

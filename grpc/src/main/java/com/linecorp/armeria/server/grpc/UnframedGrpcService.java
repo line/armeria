@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -146,7 +147,10 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
                                RequestLogProperty.RESPONSE_CONTENT);
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((clientRequest, t) -> {
+        req.aggregate(AggregationOptions.builder()
+                                        .usePooledObjects(ctx.alloc())
+                                        .executor(ctx.eventLoop())
+                                        .build()).handle((clientRequest, t) -> {
             try (SafeCloseable ignore = ctx.push()) {
                 if (t != null) {
                     responseFuture.completeExceptionally(t);
