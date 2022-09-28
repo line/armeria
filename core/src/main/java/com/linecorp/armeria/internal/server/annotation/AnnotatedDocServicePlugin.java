@@ -143,13 +143,15 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         serviceConfigs.forEach(sc -> {
             final AnnotatedService service = sc.service().as(AnnotatedService.class);
             if (service != null) {
-                final String className = service.object().getClass().getName();
+                final Class<?> serviceClass = ClassUtil.getUserClass(service.object().getClass());
+                final String className = serviceClass.getName();
                 final String methodName = service.method().getName();
                 if (!filter.test(name(), className, methodName)) {
                     return;
                 }
-                addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), service, namedTypeInfoProvider);
-                addServiceDescription(serviceDescription, service);
+                addMethodInfo(methodInfos, sc.virtualHost().hostnamePattern(), service, serviceClass,
+                              namedTypeInfoProvider);
+                addServiceDescription(serviceDescription, serviceClass);
             }
         });
 
@@ -157,21 +159,19 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
     }
 
     private static void addServiceDescription(Map<Class<?>, DescriptionInfo> serviceDescription,
-                                              AnnotatedService service) {
-        final Class<?> clazz = service.object().getClass();
-        serviceDescription.computeIfAbsent(clazz, AnnotatedServiceFactory::findDescription);
+                                              Class<?> serviceClass) {
+        serviceDescription.computeIfAbsent(serviceClass, AnnotatedServiceFactory::findDescription);
     }
 
     private static void addMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos,
                                       String hostnamePattern, AnnotatedService service,
-                                      NamedTypeInfoProvider namedTypeInfoProvider) {
+                                      Class<?> serviceClass, NamedTypeInfoProvider namedTypeInfoProvider) {
         final Route route = service.route();
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
         final Method method = service.method();
         final String name = method.getName();
         final TypeSignature returnTypeSignature = getReturnTypeSignature(method);
         final List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers(), namedTypeInfoProvider);
-        final Class<?> clazz = service.object().getClass();
         route.methods().forEach(
                 httpMethod -> {
                     final MethodInfo methodInfo = new MethodInfo(
@@ -179,7 +179,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                             ImmutableList.of(endpoint), httpMethod,
                             AnnotatedServiceFactory.findDescription(method));
 
-                    methodInfos.computeIfAbsent(clazz, unused -> new HashSet<>()).add(methodInfo);
+                    methodInfos.computeIfAbsent(serviceClass, unused -> new HashSet<>()).add(methodInfo);
                 });
     }
 

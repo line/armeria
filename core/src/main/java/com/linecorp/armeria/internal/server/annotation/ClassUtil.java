@@ -30,6 +30,26 @@ import com.linecorp.armeria.common.annotation.Nullable;
 public final class ClassUtil {
 
     /**
+     * The CGLIB class separator: {@code "$$"}.
+     */
+    private static final String CGLIB_CLASS_SEPARATOR = "$$";
+
+    /**
+     * Returns the user-defined class for the given class: usually simply the given class,
+     * but the original class in case of a CGLIB-generated subclass.
+     */
+    public static Class<?> getUserClass(Class<?> clazz) {
+        // Forked from https://github.com/spring-projects/spring-framework/blob/1565f4b83e7c48eeec9dc74f7eb042dce4dbb49a/spring-core/src/main/java/org/springframework/util/ClassUtils.java#L896-L904
+        if (clazz.getName().contains(CGLIB_CLASS_SEPARATOR)) {
+            final Class<?> superclass = clazz.getSuperclass();
+            if (superclass != null && superclass != Object.class) {
+                return superclass;
+            }
+        }
+        return clazz;
+    }
+
+    /**
      * Converts the specified {@link Type} to a {@link Class} instance.
      */
     @Nullable
