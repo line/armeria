@@ -22,6 +22,7 @@ task generateTestSources(type: Copy) {
     from "${rootProject.projectDir}/spring/boot2-autoconfigure/src/test/java"
     into "${project.ext.genSrcDir}/test/java"
     include '**/RetryableArmeriaServerGracefulShutdownLifecycle.java'
+    include '**/RetryableArmeriaServerGracefulShutdownLifecycleConfiguration.java'
 }
 
 task generateSources(type: Copy) {

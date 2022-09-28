@@ -56,12 +56,7 @@ import com.linecorp.armeria.spring.ArmeriaSslConfigurationTest.TestConfiguration
 public class ArmeriaSslConfigurationTest {
 
     @SpringBootApplication
-    static class TestConfiguration {
-        @Bean
-        ArmeriaServerSmartLifecycle smartLifecycle(Server server) {
-            return new RetryableArmeriaServerGracefulShutdownLifecycle(server, 8);
-        }
-    }
+    static class TestConfiguration {}
 
     private static final ClientFactory clientFactory =
             ClientFactory.builder()
