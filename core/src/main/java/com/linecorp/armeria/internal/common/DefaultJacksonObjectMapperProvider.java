@@ -23,6 +23,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 
 import com.linecorp.armeria.common.JacksonObjectMapperProvider;
@@ -42,6 +43,10 @@ enum DefaultJacksonObjectMapperProvider implements JacksonObjectMapperProvider {
         // Create the default ObjectMapper with the modules provided by SPI.
         jsonMapperBuilder.findAndAddModules();
         final ObjectMapper mapper = jsonMapperBuilder.build();
+
+        // Serialize java.time objects in standard ISO-8601 string representation.
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
         final Set<Object> registeredModuleIds = mapper.getRegisteredModuleIds();
         if (registeredModuleIds.contains("com.fasterxml.jackson.module.scala.DefaultScalaModule")) {
             // Disallow null values for non-Option fields. Option[A] is commonly preferred.

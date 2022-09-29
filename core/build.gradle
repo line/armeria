@@ -102,6 +102,8 @@ dependencies {
     api libs.jackson.core
     api libs.jackson.annotations
     api libs.jackson.databind
+    api libs.jackson.datatype.jdk8
+    api libs.jackson.datatype.jsr310
 
     // Micrometer and other metric-related stuff
     api libs.micrometer.core
