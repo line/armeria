@@ -116,6 +116,11 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public HttpHeaders defaultRequestHeaders() {
+        return unwrap().defaultRequestHeaders();
+    }
+
+    @Override
     public HttpHeaders additionalRequestHeaders() {
         return unwrap().additionalRequestHeaders();
     }

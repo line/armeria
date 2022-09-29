@@ -237,7 +237,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             }
 
             final HttpRequestDuplicator newReqDuplicator =
-                    newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders, redirectUri.toString());
+                    newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders, redirectUri);
 
             final String redirectFullUri;
             try {
@@ -269,9 +269,15 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
     private static HttpRequestDuplicator newReqDuplicator(HttpRequestDuplicator reqDuplicator,
                                                           ResponseHeaders responseHeaders,
-                                                          RequestHeaders requestHeaders, String newUriString) {
+                                                          RequestHeaders requestHeaders, URI newUri) {
         final RequestHeadersBuilder builder = requestHeaders.toBuilder();
-        builder.path(newUriString);
+        builder.path(newUri.toString());
+        final String newAuthority = newUri.getAuthority();
+        if (newAuthority != null) {
+            // Update the old authority with the new one because the request is redirected to a different
+            // domain.
+            builder.authority(newAuthority);
+        }
         final HttpMethod method = requestHeaders.method();
         if (responseHeaders.status() == HttpStatus.SEE_OTHER &&
             !(method == HttpMethod.GET || method == HttpMethod.HEAD)) {

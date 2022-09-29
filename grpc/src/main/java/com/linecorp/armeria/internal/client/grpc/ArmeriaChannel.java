@@ -22,6 +22,7 @@ import java.net.URI;
 import java.util.EnumMap;
 import java.util.Map;
 
+import com.google.common.base.Strings;
 import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.client.ClientBuilderParams;
@@ -36,6 +37,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -118,12 +120,17 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
     }
 
     @Override
-    public <I, O> ClientCall<I, O> newCall(
-            MethodDescriptor<I, O> method, CallOptions callOptions) {
-        final HttpRequestWriter req = HttpRequest.streaming(
-                RequestHeaders.of(HttpMethod.POST, uri().getPath() + method.getFullMethodName(),
-                                  HttpHeaderNames.CONTENT_TYPE, serializationFormat.mediaType(),
-                                  HttpHeaderNames.TE, HttpHeaderValues.TRAILERS));
+    public <I, O> ClientCall<I, O> newCall(MethodDescriptor<I, O> method, CallOptions callOptions) {
+        final RequestHeadersBuilder headersBuilder =
+                RequestHeaders.builder(HttpMethod.POST, uri().getPath() + method.getFullMethodName())
+                              .contentType(serializationFormat.mediaType())
+                              .set(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS.toString());
+        final String callAuthority = callOptions.getAuthority();
+        if (!Strings.isNullOrEmpty(callAuthority)) {
+            headersBuilder.authority(callAuthority);
+        }
+
+        final HttpRequestWriter req = HttpRequest.streaming(headersBuilder.build());
         final DefaultClientRequestContext ctx = newContext(HttpMethod.POST, req, method);
 
         ctx.logBuilder().serializationFormat(serializationFormat);
@@ -142,7 +149,8 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
             }
         }
         if (credentials != null) {
-            client = new CallCredentialsDecoratingClient(httpClient, credentials, method, authority());
+            client = new CallCredentialsDecoratingClient(httpClient, credentials, method,
+                                                         callAuthority != null ? callAuthority : authority());
         } else {
             client = httpClient;
         }
@@ -225,8 +233,7 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
                 null,
                 REQUEST_OPTIONS_MAP.get(methodDescriptor.getType()),
                 System.nanoTime(),
-                SystemInfo.currentTimeMicros(),
-                /* hasBaseUri */ true);
+                SystemInfo.currentTimeMicros());
     }
 
     private static RequestOptions newRequestOptions(ExchangeType exchangeType) {

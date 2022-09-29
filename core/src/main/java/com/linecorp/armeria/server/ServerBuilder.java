@@ -44,6 +44,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -67,9 +68,12 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.TlsSetters;
@@ -1620,6 +1624,80 @@ public final class ServerBuilder implements TlsSetters {
      */
     public ServerBuilder disableDateHeader() {
         enableDateHeader = false;
+        return this;
+    }
+
+    /**
+     * Adds the default HTTP header for an {@link HttpResponse} served by the default {@link VirtualHost}.
+     *
+     * <p>Note that the default header could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostBuilder#addHeader(CharSequence, Object)}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#addHeader(CharSequence, Object)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#addHeader(CharSequence, Object)}</li>
+     * </ul>
+     */
+    public ServerBuilder addHeader(CharSequence name, Object value) {
+        virtualHostTemplate.addHeader(name, value);
+        return this;
+    }
+
+    /**
+     * Adds the default HTTP headers for an {@link HttpResponse} served by the default {@link VirtualHost}.
+     *
+     * <p>Note that the default headers could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostBuilder#addHeader(CharSequence, Object)}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#addHeader(CharSequence, Object)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#addHeader(CharSequence, Object)}</li>
+     * </ul>
+     */
+    public ServerBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        virtualHostTemplate.addHeaders(defaultHeaders);
+        return this;
+    }
+
+    /**
+     * Adds the default HTTP header for an {@link HttpResponse} served by the default {@link VirtualHost}.
+     *
+     * <p>Note that the default header could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostBuilder#setHeader(CharSequence, Object)}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#setHeader(CharSequence, Object)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#setHeader(CharSequence, Object)}</li>
+     * </ul>
+     */
+    public ServerBuilder setHeader(CharSequence name, Object value) {
+        virtualHostTemplate.setHeader(name, value);
+        return this;
+    }
+
+    /**
+     * Sets the default HTTP headers for an {@link HttpResponse} served by the default {@link VirtualHost}.
+     *
+     * <p>Note that the default headers could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostBuilder#setHeaders(Iterable)}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#setHeaders(Iterable)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#setHeaders(Iterable)}</li>
+     * </ul>
+     */
+    public ServerBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        virtualHostTemplate.setHeaders(defaultHeaders);
         return this;
     }
 

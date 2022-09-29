@@ -101,7 +101,11 @@ abstract class AbstractHttpResponseHandler {
         final int id = req.id();
         final int streamId = req.streamId();
 
-        ResponseHeaders headers = mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders());
+        final ServerConfig config = reqCtx.config().server().config();
+        ResponseHeaders headers = mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders(),
+                                                       reqCtx.config().defaultHeaders(),
+                                                       config.isServerHeaderEnabled(),
+                                                       config.isDateHeaderEnabled());
         final HttpData content = res.content();
         final boolean contentEmpty = content.isEmpty();
         final HttpHeaders trailers = mergeTrailers(res.trailers(), reqCtx.additionalResponseTrailers());
