@@ -1,28 +1,27 @@
 [versions]
-akka = "2.6.19"
+akka = "2.6.20"
 bouncycastle = "1.70"
 brotli4j = "1.8.0"
 curator = "5.3.0"
-dagger = "2.43.2"
+dagger = "2.44"
 dropwizard1 = "1.3.29"
-dropwizard2 = "2.1.1"
+dropwizard2 = "2.1.2"
 errorprone = "2.15.0"
 eureka = "1.10.17"
-graphql-kotlin = "6.2.2"
+graphql-kotlin = "6.2.5"
 grpc-kotlin = "1.3.0"
-groovy = "3.0.5"
+groovy = "3.0.12"
 guava = "31.1-jre"
 hamcrest = "2.2"
 jetty93 = '9.3.30.v20211001'
 jetty94 = "9.4.48.v20220622"
 jmh = "1.35"
 json-unit = "2.35.0"
-junit5 = "5.9.0"
 kotlin = "1.7.10"
 kotlin-coroutine = "1.6.4"
-micrometer = "1.9.3"
+micrometer = "1.9.4"
 micrometer13 = "1.3.20"
-mockito = "4.7.0"
+mockito = "4.8.0"
 monix = "3.4.1"
 munit = "0.7.29"
 okhttp4 = "4.10.0"
@@ -30,30 +29,30 @@ opensaml = "3.4.6"
 protobuf = "3.21.1"
 reactive-grpc = "1.2.3"
 reactive-streams = "1.0.4"
-reactor = "3.4.22"
+reactor = "3.4.23"
 resteasy = "5.0.4.Final"
 retrofit2 = "2.9.0"
-sangria = "3.2.0"
+sangria = "3.3.0"
 sangria-slowlog = "2.0.4"
 scala-java8-compat = "1.0.2"
 scalapb = "0.11.11"
 scalapb-json = "0.12.0"
 slf4j = "1.7.36"
 spring-boot1 = "1.5.22.RELEASE"
-spring-boot2 = "2.7.3"
+spring-boot2 = "2.7.4"
 tomcat8 = "8.5.81"
 tomcat9 = "9.0.65"
 
 [boms]
-brave = { module = "io.zipkin.brave:brave-bom", version = "5.13.11" }
+brave = { module = "io.zipkin.brave:brave-bom", version = "5.14.0" }
 dropwizard-metrics = { module = "io.dropwizard.metrics:metrics-bom", version = "4.2.12" }
 # Ensure that we use the same Protobuf version as what gRPC depends on.
 # See: https://github.com/grpc/grpc-java/blob/master/gradle/libs.versions.toml
 #      (Switch to the right tag and look for "protobuf".)
-grpc-java = { module = "io.grpc:grpc-bom", version = "1.49.0" }
+grpc-java = { module = "io.grpc:grpc-bom", version = "1.49.1" }
 jackson = { module = "com.fasterxml.jackson:jackson-bom", version = "2.13.4" }
-junit5 = { module = "org.junit:junit-bom", version = "5.9.0" }
-netty = { module = "io.netty:netty-bom", version = "4.1.79.Final" }
+junit5 = { module = "org.junit:junit-bom", version = "5.9.1" }
+netty = { module = "io.netty:netty-bom", version = "4.1.82.Final" }
 
 # Akka is used only for testing in it:grpcweb module.
 [libraries.akka-http-cors_v213]
@@ -182,7 +181,7 @@ version.ref = "dagger"
 # DGS is used only for testing in it:dgs module.
 [libraries.dgs]
 module = "com.netflix.graphql.dgs:graphql-dgs-client"
-version = "5.0.5"
+version = "5.2.4"
 
 [libraries.dropwizard1-core]
 module = "io.dropwizard:dropwizard-core"
@@ -257,7 +256,7 @@ version.ref = "eureka"
 
 [libraries.fastutil]
 module = "it.unimi.dsi:fastutil"
-version = "8.5.8"
+version = "8.5.9"
 relocations = { from = "it.unimi.dsi.fastutil", to = "com.linecorp.armeria.internal.shaded.fastutil" }
 
 # Finagle is used only for testing in zookeeper module.
@@ -280,11 +279,11 @@ version = "4.3.1"
 # gax-grpc is only used for gRPC test module.
 [libraries.gax-grpc]
 module = "com.google.api:gax-grpc"
-version = "2.19.0"
+version = "2.19.1"
 
 [libraries.graphql-java]
 module = "com.graphql-java:graphql-java"
-version = "19.0"
+version = "19.2"
 
 [libraries.graphql-kotlin-client]
 module = "com.expediagroup:graphql-kotlin-client"
@@ -302,7 +301,7 @@ version.ref = "graphql-kotlin"
 # Groovy is only used for testing consul
 [libraries.groovy-xml]
 module = "org.codehaus.groovy:groovy-xml"
-version = "3.0.12"
+version.ref = "groovy"
 
 [libraries.grpc-core]
 module = "io.grpc:grpc-core"
@@ -433,7 +432,7 @@ version = "2.0.1.Final"
 
 [libraries.jctools]
 module = "org.jctools:jctools-core"
-version = "3.3.0"
+version = "4.0.1"
 relocations = { from = "org.jctools", to = "com.linecorp.armeria.internal.shaded.jctools" }
 
 [libraries.jetty93-annotations]
@@ -502,7 +501,7 @@ version.ref = "json-unit"
 # JSoup is only used for Gradle script and SAML testing.
 [libraries.jsoup]
 module = "org.jsoup:jsoup"
-version = "1.15.2"
+version = "1.15.3"
 
 [libraries.junit4]
 module = "junit:junit"
@@ -535,7 +534,7 @@ javadocs = "https://www.javadoc.io/doc/com.auth0/java-jwt/4.0.0/"
 
 [libraries.kafka]
 module = "org.apache.kafka:kafka-clients"
-version = "3.2.1"
+version = "3.3.0"
 javadocs = "https://kafka.apache.org/30/javadoc/"
 
 [libraries.kotlin-allopen]
@@ -572,11 +571,11 @@ javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.11/"
 [libraries.micrometer-core]
 module = "io.micrometer:micrometer-core"
 version.ref = "micrometer"
-javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.9.1/"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.9.4/"
 [libraries.micrometer-prometheus]
 module = "io.micrometer:micrometer-registry-prometheus"
 version.ref = "micrometer"
-javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.9.1/"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.9.4/"
 [libraries.micrometer-spring-legacy]
 module = "io.micrometer:micrometer-spring-legacy"
 version.ref = "micrometer"
@@ -644,7 +643,7 @@ module = "io.netty:netty-transport-native-epoll"
 module = 'io.netty:netty-tcnative-boringssl-static'
 [libraries.netty-io_uring]
 module = "io.netty.incubator:netty-incubator-transport-native-io_uring"
-version = "0.0.14.Final"
+version = "0.0.15.Final"
 
 [libraries.prometheus]
 module = "io.prometheus:simpleclient_common"
@@ -819,10 +818,10 @@ version.ref = "sangria-slowlog"
 # you also need to change the scala version in `scala.gradle`.
 [libraries.scala_v212]
 module = "org.scala-lang:scala-library"
-version = "2.12.16"
+version = "2.12.17"
 [libraries.scala_v213]
 module = "org.scala-lang:scala-library"
-version = "2.13.8"
+version = "2.13.9"
 [libraries.scala_v3]
 module = "org.scala-lang:scala3-library_3"
 version = "3.2.0"
@@ -891,7 +890,7 @@ version.ref = "slf4j"
 
 [libraries.spring-web]
 module = "org.springframework:spring-web"
-version = "5.3.22"
+version = "5.3.23"
 
 [libraries.spring-boot1-autoconfigure]
 module = "org.springframework.boot:spring-boot-autoconfigure"
@@ -1027,14 +1026,14 @@ module = "org.dmonix.junit:zookeeper-junit"
 version = "1.2"
 
 [plugins]
-jmh = { id = "me.champeau.jmh", version = "0.6.7" }
-osdetector = { id = "com.google.osdetector", version = "1.6.2" }
+jmh = { id = "me.champeau.jmh", version = "0.6.8" }
+osdetector = { id = "com.google.osdetector", version = "1.7.1" }
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
 kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
 scalafmt = { id = "cz.alenkacz.gradle.scalafmt", version = "1.16.2" }
 nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version = "1.1.0" }
-ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "10.1.0" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version = "11.0.0" }
 errorprone = { id = "net.ltgt.errorprone", version = "2.0.2" }
 node-gradle = { id = "com.github.node-gradle.node", version = "3.4.0" }
 spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot2" }
