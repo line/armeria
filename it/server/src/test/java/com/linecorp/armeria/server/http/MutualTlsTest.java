@@ -17,7 +17,7 @@
 package com.linecorp.armeria.server.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -76,12 +76,11 @@ class MutualTlsTest {
     }
 
     @Test
-    void duplicateTlsKey() {
-        assertThatThrownBy(() -> {
+    void shouldAllowOverridingTlsKey() {
+        assertThatCode(() -> {
             ClientFactory.builder()
                          .tls(clientCert.certificateFile(), clientCert.privateKeyFile())
                          .tls(clientCert.privateKey(), clientCert.certificate());
-        }).isInstanceOf(IllegalStateException.class)
-          .hasMessageContaining("TLS key and certificates are set already.");
+        }).doesNotThrowAnyException();
     }
 }
