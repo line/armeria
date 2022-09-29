@@ -17,6 +17,8 @@
 package com.linecorp.armeria.spring;
 
 import org.springframework.boot.autoconfigure.AutoConfigureBefore;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -27,6 +29,8 @@ import com.linecorp.armeria.server.Server;
  */
 @AutoConfigureBefore(ArmeriaAutoConfiguration.class)
 @Configuration
+@ConditionalOnClass(Server.class)
+@ConditionalOnProperty(name = "armeria.server-enabled", havingValue = "true", matchIfMissing = true)
 public class RetryableArmeriaServerGracefulShutdownLifecycleConfiguration {
 
     @Bean
