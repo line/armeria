@@ -80,6 +80,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.server.FileAggregatedMultipart;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
@@ -535,7 +536,7 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofPathVariable(String name,
                                                          AnnotatedElement annotatedElement,
                                                          AnnotatedElement typeElement, Class<?> type,
-                                                         @Nullable DescriptionInfo description) {
+                                                         DescriptionInfo description) {
         return new Builder(annotatedElement, type)
                 .annotationType(Param.class)
                 .httpElementName(name)
@@ -549,7 +550,7 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofQueryParam(String name,
                                                        AnnotatedElement annotatedElement,
                                                        AnnotatedElement typeElement, Class<?> type,
-                                                       @Nullable DescriptionInfo description,
+                                                       DescriptionInfo description,
                                                        @Nullable String serviceQueryDelimiter) {
         String queryDelimiter = serviceQueryDelimiter;
         final Delimiter delimiter = annotatedElement.getAnnotation(Delimiter.class);
@@ -575,7 +576,7 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofFileParam(String name,
                                                       AnnotatedElement annotatedElement,
                                                       AnnotatedElement typeElement, Class<?> type,
-                                                      @Nullable DescriptionInfo description) {
+                                                      DescriptionInfo description) {
         return new Builder(annotatedElement, type)
                 .annotationType(Param.class)
                 .httpElementName(name)
@@ -590,7 +591,7 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofHeader(String name,
                                                    AnnotatedElement annotatedElement,
                                                    AnnotatedElement typeElement, Class<?> type,
-                                                   @Nullable DescriptionInfo description) {
+                                                   DescriptionInfo description) {
         return new Builder(annotatedElement, type)
                 .annotationType(Header.class)
                 .httpElementName(name)
@@ -608,7 +609,7 @@ final class AnnotatedValueResolver {
                                                           Class<?> type, Set<String> pathParams,
                                                           List<RequestObjectResolver> objectResolvers,
                                                           DependencyInjector dependencyInjector,
-                                                          @Nullable DescriptionInfo description) {
+                                                          DescriptionInfo description) {
         // To do recursive resolution like a bean inside another bean, the original object resolvers should
         // be passed into the AnnotatedBeanFactoryRegistry#register.
         final BeanFactoryId beanFactoryId = AnnotatedBeanFactoryRegistry.register(
@@ -873,6 +874,16 @@ final class AnnotatedValueResolver {
                                            element.getClass().getSimpleName());
     }
 
+    static boolean isAnnotatedNullable(AnnotatedElement annotatedElement) {
+        for (Annotation a : annotatedElement.getAnnotations()) {
+            final String annotationTypeName = a.annotationType().getName();
+            if (annotationTypeName.endsWith(".Nullable")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Nullable
     private final Class<? extends Annotation> annotationType;
 
@@ -892,7 +903,6 @@ final class AnnotatedValueResolver {
     @Nullable
     private final Object defaultValue;
 
-    @Nullable
     private final DescriptionInfo description;
 
     private final BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver;
@@ -912,7 +922,7 @@ final class AnnotatedValueResolver {
                                    @Nullable Class<?> containerType, Class<?> elementType,
                                    @Nullable ParameterizedType parameterizedElementType,
                                    @Nullable String defaultValue,
-                                   @Nullable DescriptionInfo description,
+                                   DescriptionInfo description,
                                    BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver,
                                    @Nullable BeanFactoryId beanFactoryId,
                                    AggregationStrategy aggregationStrategy) {
@@ -923,7 +933,7 @@ final class AnnotatedValueResolver {
         this.shouldWrapValueAsOptional = shouldWrapValueAsOptional;
         this.elementType = requireNonNull(elementType, "elementType");
         this.parameterizedElementType = parameterizedElementType;
-        this.description = description;
+        this.description = requireNonNull(description, "description");
         this.containerType = containerType;
         this.resolver = requireNonNull(resolver, "resolver");
         this.beanFactoryId = beanFactoryId;
@@ -987,7 +997,6 @@ final class AnnotatedValueResolver {
         return defaultValue;
     }
 
-    @Nullable
     DescriptionInfo description() {
         return description;
     }
@@ -1067,8 +1076,7 @@ final class AnnotatedValueResolver {
         private boolean pathVariable;
         private boolean supportContainer;
         private boolean supportDefault;
-        @Nullable
-        private DescriptionInfo description;
+        private DescriptionInfo description = DescriptionInfo.empty();
         @Nullable
         private BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver;
         @Nullable
@@ -1136,7 +1144,7 @@ final class AnnotatedValueResolver {
         /**
          * Sets the description of the {@link AnnotatedElement}.
          */
-        private Builder description(@Nullable DescriptionInfo description) {
+        private Builder description(DescriptionInfo description) {
             this.description = description;
             return this;
         }
@@ -1352,16 +1360,6 @@ final class AnnotatedValueResolver {
                         "Unsupported or invalid parameter type: " + parameterizedType, cause);
             }
             return toRawType(elementType);
-        }
-
-        private static boolean isAnnotatedNullable(AnnotatedElement annotatedElement) {
-            for (Annotation a : annotatedElement.getAnnotations()) {
-                final String annotationTypeName = a.annotationType().getName();
-                if (annotationTypeName.endsWith(".Nullable")) {
-                    return true;
-                }
-            }
-            return false;
         }
 
         @Nullable

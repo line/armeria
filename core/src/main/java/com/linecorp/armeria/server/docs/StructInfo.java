@@ -27,6 +27,7 @@ import java.util.Set;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 
@@ -40,29 +41,68 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public final class StructInfo implements NamedTypeInfo {
 
     private final String name;
-    private final List<FieldInfo> fields;
     @Nullable
+    private final String alias;
+    private final List<FieldInfo> fields;
     private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
      */
     public StructInfo(String name, Iterable<FieldInfo> fields) {
-        this(name, fields, null);
+        this(name, null, fields, DescriptionInfo.empty());
     }
 
     /**
      * Creates a new instance.
      */
-    public StructInfo(String name, Iterable<FieldInfo> fields, @Nullable DescriptionInfo descriptionInfo) {
+    public StructInfo(String name, Iterable<FieldInfo> fields, DescriptionInfo descriptionInfo) {
+        this(name, null, fields, descriptionInfo);
+    }
+
+    /**
+     * Creates a new instance.
+     */
+    public StructInfo(String name, @Nullable String alias, Iterable<FieldInfo> fields,
+                      DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
+        this.alias = alias;
         this.fields = ImmutableList.copyOf(requireNonNull(fields, "fields"));
-        this.descriptionInfo = descriptionInfo;
+        this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
     }
 
     @Override
     public String name() {
         return name;
+    }
+
+    /**
+     * Returns the alias of the {@link #name()}.
+     * An alias could be set when a {@link StructInfo} has two different names.
+     *
+     * <p>For example, if a {@link StructInfo} is extracted from a {@code com.google.protobuf.Message},
+     * the {@link StructInfo#name()} is set to the full name defined in the proto file and the
+     * {@link StructInfo#alias()} is set to the {@linkplain Class#getName() name} of the generated
+     * {@link Class}.
+     */
+    @Nullable
+    @JsonInclude(Include.NON_NULL)
+    @JsonProperty
+    public String alias() {
+        return alias;
+    }
+
+    /**
+     * Returns a new {@link StructInfo} with the specified {@code alias}.
+     * Returns {@code this} if this {@link StructInfo} has the same {@link FieldInfo}s.
+     */
+    public StructInfo withAlias(String alias) {
+        requireNonNull(alias, "alias");
+        if (alias.equals(this.alias)) {
+            return this;
+        }
+
+        return new StructInfo(name, alias, fields, descriptionInfo);
     }
 
     /**
@@ -74,14 +114,38 @@ public final class StructInfo implements NamedTypeInfo {
     }
 
     /**
+     * Returns a new {@link StructInfo} with the specified {@link FieldInfo}s.
+     * Returns {@code this} if this {@link StructInfo} has the same {@link FieldInfo}s.
+     */
+    public StructInfo withFields(Iterable<FieldInfo> fields) {
+        requireNonNull(fields, "fields");
+        if (fields.equals(this.fields)) {
+            return this;
+        }
+
+        return new StructInfo(name, alias, fields, descriptionInfo);
+    }
+
+    /**
      * Returns the description information of this struct.
      */
     @JsonProperty
     @Override
-    @JsonInclude(Include.NON_NULL)
-    @Nullable
     public DescriptionInfo descriptionInfo() {
         return descriptionInfo;
+    }
+
+    /**
+     * Returns a new {@link StructInfo} with the specified {@link DescriptionInfo}.
+     * Returns {@code this} if this {@link StructInfo} has the same {@link DescriptionInfo}.
+     */
+    public StructInfo withDescriptionInfo(DescriptionInfo descriptionInfo) {
+        requireNonNull(descriptionInfo, "descriptionInfo");
+        if (descriptionInfo.equals(this.descriptionInfo)) {
+            return this;
+        }
+
+        return new StructInfo(name, alias, fields, descriptionInfo);
     }
 
     @Override
@@ -102,16 +166,25 @@ public final class StructInfo implements NamedTypeInfo {
         }
 
         final StructInfo that = (StructInfo) o;
-        return name.equals(that.name) && fields.equals(that.fields);
+        return name.equals(that.name) &&
+               Objects.equals(alias, that.alias) &&
+               fields.equals(that.fields) &&
+               descriptionInfo.equals(that.descriptionInfo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, fields);
+        return Objects.hash(name, alias, fields, descriptionInfo);
     }
 
     @Override
     public String toString() {
-        return name;
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("name", name)
+                          .add("alias", alias)
+                          .add("fields", fields)
+                          .add("descriptionInfo", descriptionInfo)
+                          .toString();
     }
 }

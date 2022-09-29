@@ -34,10 +34,13 @@ import org.junit.jupiter.api.Test;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.EndpointsRampingUpEntry.EndpointAndStep;
 import com.linecorp.armeria.client.endpoint.WeightRampingUpStrategy.RampingUpEndpointWeightSelector;
 import com.linecorp.armeria.client.endpoint.WeightedRandomDistributionEndpointSelector.Entry;
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.HttpRequest;
 
 import io.netty.channel.DefaultEventLoop;
 import io.netty.util.concurrent.ScheduledFuture;
@@ -372,6 +375,15 @@ final class WeightRampingUpStrategyTest {
         while ((scheduledFuture = scheduledFutures.poll()) != null) {
             verify(scheduledFuture, times(1)).cancel(true);
         }
+    }
+
+    @Test
+    void shouldReturnNullWhenEndpointGroupIsNotReady() {
+        final DynamicEndpointGroup endpointGroup = new DynamicEndpointGroup();
+        final EndpointSelector endpointSelector =
+                EndpointSelectionStrategy.rampingUp().newSelector(endpointGroup);
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        assertThat(endpointSelector.selectNow(ctx)).isNull();
     }
 
     private static RampingUpEndpointWeightSelector setInitialEndpoints(DynamicEndpointGroup endpointGroup,

@@ -87,10 +87,10 @@ final class WebOperationServiceUtil {
     }
 
     static void addAdditionalPath(ServerBuilder sb, List<Integer> exposedPorts,
-                                          SimpleHttpCodeStatusMapper statusMapper, WebOperation operation,
-                                          WebOperationRequestPredicate predicate,
-                                          Set<HealthEndpointGroup> additionalGroups,
-                                          @Nullable CorsServiceBuilder cors) {
+                                  SimpleHttpCodeStatusMapper statusMapper, WebOperation operation,
+                                  WebOperationRequestPredicate predicate,
+                                  Set<HealthEndpointGroup> additionalGroups,
+                                  @Nullable CorsServiceBuilder cors) {
         for (HealthEndpointGroup group : additionalGroups) {
             final AdditionalHealthEndpointPath additionalPath = group.getAdditionalPath();
             if (additionalPath != null) {

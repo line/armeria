@@ -31,7 +31,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -41,9 +40,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.ListMultimap;
-import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -96,8 +93,14 @@ public final class DocService extends SimpleDecoratingHttpService {
     static final List<DocServicePlugin> plugins = ImmutableList.copyOf(ServiceLoader.load(
             DocServicePlugin.class, DocService.class.getClassLoader()));
 
+    static final List<NamedTypeInfoProvider> spiNamedTypeInfoProviders =
+            ImmutableList.copyOf(ServiceLoader.load(
+                    NamedTypeInfoProvider.class, DocService.class.getClassLoader()));
+
     static {
         logger.debug("Available {}s: {}", DocServicePlugin.class.getSimpleName(), plugins);
+        logger.debug("Available {}s: {}", NamedTypeInfoProvider.class.getSimpleName(),
+                     spiNamedTypeInfoProviders);
     }
 
     /**
@@ -107,12 +110,10 @@ public final class DocService extends SimpleDecoratingHttpService {
         return new DocServiceBuilder();
     }
 
-    private final Map<String, ListMultimap<String, HttpHeaders>> exampleHeaders;
-    private final Map<String, ListMultimap<String, String>> exampleRequests;
-    private final Map<String, ListMultimap<String, String>> examplePaths;
-    private final Map<String, ListMultimap<String, String>> exampleQueries;
+    private final ExampleSupport exampleSupport;
     private final List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers;
     private final DocServiceFilter filter;
+    private final NamedTypeInfoProvider namedTypeInfoProvider;
 
     @Nullable
     private Server server;
@@ -123,7 +124,8 @@ public final class DocService extends SimpleDecoratingHttpService {
     public DocService() {
         this(/* exampleHeaders */ ImmutableMap.of(), /* exampleRequests */ ImmutableMap.of(),
                 /* examplePaths */ ImmutableMap.of(), /* exampleQueries */ ImmutableMap.of(),
-                /* injectedScriptSuppliers */ ImmutableList.of(), DocServiceBuilder.ALL_SERVICES);
+                /* injectedScriptSuppliers */ ImmutableList.of(), DocServiceBuilder.ALL_SERVICES,
+                                  null);
     }
 
     /**
@@ -134,19 +136,19 @@ public final class DocService extends SimpleDecoratingHttpService {
                Map<String, ListMultimap<String, String>> examplePaths,
                Map<String, ListMultimap<String, String>> exampleQueries,
                List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
-               DocServiceFilter filter) {
+               DocServiceFilter filter, @Nullable NamedTypeInfoProvider namedTypeInfoProvider) {
 
         super(FileService.builder(new DocServiceVfs())
                          .serveCompressedFiles(true)
                          .autoDecompress(true)
                          .build());
-
-        this.exampleHeaders = immutableCopyOf(exampleHeaders, "exampleHeaders");
-        this.exampleRequests = immutableCopyOf(exampleRequests, "exampleRequests");
-        this.examplePaths = immutableCopyOf(examplePaths, "examplePaths");
-        this.exampleQueries = immutableCopyOf(exampleQueries, "exampleQueries");
+        exampleSupport = new ExampleSupport(immutableCopyOf(exampleHeaders, "exampleHeaders"),
+                                            immutableCopyOf(exampleRequests, "exampleRequests"),
+                                            immutableCopyOf(examplePaths, "examplePaths"),
+                                            immutableCopyOf(exampleQueries, "exampleQueries"));
         this.injectedScriptSuppliers = requireNonNull(injectedScriptSuppliers, "injectedScriptSuppliers");
         this.filter = requireNonNull(filter, "filter");
+        this.namedTypeInfoProvider = composeNamedTypeInfoProvider(namedTypeInfoProvider);
     }
 
     private static <T> Map<String, ListMultimap<String, T>> immutableCopyOf(
@@ -155,6 +157,27 @@ public final class DocService extends SimpleDecoratingHttpService {
 
         return map.entrySet().stream().collect(toImmutableMap(
                 Entry::getKey, e -> ImmutableListMultimap.copyOf(e.getValue())));
+    }
+
+    private static NamedTypeInfoProvider composeNamedTypeInfoProvider(
+            @Nullable NamedTypeInfoProvider namedTypeInfoProvider) {
+        return typeDescriptor -> {
+            if (namedTypeInfoProvider != null) {
+                // Respect user-defined provider first.
+                final NamedTypeInfo namedTypeInfo = namedTypeInfoProvider.newNamedTypeInfo(typeDescriptor);
+                if (namedTypeInfo != null) {
+                    return namedTypeInfo;
+                }
+            }
+
+            for (NamedTypeInfoProvider provider : spiNamedTypeInfoProviders) {
+                final NamedTypeInfo namedTypeInfo = provider.newNamedTypeInfo(typeDescriptor);
+                if (namedTypeInfo != null) {
+                    return namedTypeInfo;
+                }
+            }
+            return null;
+        };
     }
 
     @Override
@@ -183,10 +206,10 @@ public final class DocService extends SimpleDecoratingHttpService {
                               .filter(se -> virtualHosts.contains(se.virtualHost()))
                               .collect(toImmutableList());
 
-                ServiceSpecification spec = generate(services, filter);
-
-                spec = addDocStrings(spec, services);
-                spec = addExamples(spec);
+                final DocStringSupport docStringSupport = new DocStringSupport(services);
+                ServiceSpecification spec = generate(services);
+                spec = docStringSupport.addDocStrings(spec);
+                spec = exampleSupport.addExamples(spec);
 
                 final List<Version> versions = ImmutableList.copyOf(
                         Version.getAll(DocService.class.getClassLoader()).values());
@@ -199,193 +222,19 @@ public final class DocService extends SimpleDecoratingHttpService {
         });
     }
 
-    private static ServiceSpecification generate(List<ServiceConfig> services, DocServiceFilter filter) {
+    private ServiceSpecification generate(List<ServiceConfig> services) {
         return ServiceSpecification.merge(
                 plugins.stream()
                        .map(plugin -> plugin.generateSpecification(
-                               findSupportedServices(plugin, services), filter))
+                               findSupportedServices(plugin, services), filter, namedTypeInfoProvider))
                        .collect(toImmutableList()));
-    }
-
-    private static ServiceSpecification addDocStrings(ServiceSpecification spec, List<ServiceConfig> services) {
-        final Map<String, DescriptionInfo> descriptionInfos =
-                plugins.stream()
-                       .flatMap(plugin -> plugin.loadDocStrings(findSupportedServices(plugin, services))
-                                                .entrySet().stream())
-                       .collect(toImmutableMap(Entry::getKey, Entry::getValue, (a, b) -> a));
-
-        return new ServiceSpecification(
-                spec.services().stream()
-                    .map(service -> addServiceDocStrings(service, descriptionInfos))
-                    .collect(toImmutableList()),
-                spec.enums().stream()
-                    .map(e -> addEnumDocStrings(e, descriptionInfos))
-                    .collect(toImmutableList()),
-                spec.structs().stream()
-                    .map(s -> addStructDocStrings(s, descriptionInfos))
-                    .collect(toImmutableList()),
-                spec.exceptions().stream()
-                    .map(e -> addExceptionDocStrings(e, descriptionInfos))
-                    .collect(toImmutableList()),
-                spec.exampleHeaders());
-    }
-
-    private static ServiceInfo addServiceDocStrings(ServiceInfo service,
-                                                    Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(service.name(), service.descriptionInfo(), descriptionInfos);
-        return new ServiceInfo(
-                service.name(),
-                service.methods().stream()
-                       .map(method -> addMethodDocStrings(service, method, descriptionInfos))
-                       .collect(toImmutableList()),
-                service.exampleHeaders(),
-                descriptionInfo);
-    }
-
-    private static MethodInfo addMethodDocStrings(ServiceInfo service, MethodInfo method,
-                                                  Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(service.name() + '/' + method.name(), method.descriptionInfo(),
-                                descriptionInfos);
-        return new MethodInfo(method.name(),
-                              method.returnTypeSignature(),
-                              method.parameters().stream()
-                                    .map(field -> addParameterDocString(service, method,
-                                                                        field, descriptionInfos))
-                                    .collect(toImmutableList()),
-                              method.exceptionTypeSignatures(),
-                              method.endpoints(),
-                              method.exampleHeaders(),
-                              method.exampleRequests(),
-                              method.examplePaths(),
-                              method.exampleQueries(),
-                              method.httpMethod(),
-                              descriptionInfo);
-    }
-
-    private static FieldInfo addParameterDocString(ServiceInfo service, MethodInfo method, FieldInfo field,
-                                                   Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(service.name() + '/' + method.name() + '/' + field.name(),
-                                field.descriptionInfo(), descriptionInfos);
-        return new FieldInfo(field.name(),
-                             field.location(),
-                             field.requirement(),
-                             field.typeSignature(),
-                             field.childFieldInfos(),
-                             descriptionInfo);
-    }
-
-    private static EnumInfo addEnumDocStrings(EnumInfo e, Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(e.name(), e.descriptionInfo(), descriptionInfos);
-        return new EnumInfo(e.name(),
-                            e.values().stream()
-                             .map(v -> addEnumValueDocString(e, v, descriptionInfos))
-                             .collect(toImmutableList()),
-                            descriptionInfo);
-    }
-
-    private static EnumValueInfo addEnumValueDocString(EnumInfo e, EnumValueInfo v,
-                                                       Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(e.name() + '/' + v.name(), v.descriptionInfo(), descriptionInfos);
-        return new EnumValueInfo(v.name(), v.intValue(), descriptionInfo);
-    }
-
-    private static StructInfo addStructDocStrings(StructInfo struct,
-                                                  Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(struct.name(), struct.descriptionInfo(), descriptionInfos);
-        return new StructInfo(struct.name(),
-                              struct.fields().stream()
-                                    .map(field -> addFieldDocString(struct, field, descriptionInfos))
-                                    .collect(toImmutableList()),
-                              descriptionInfo);
-    }
-
-    private static ExceptionInfo addExceptionDocStrings(ExceptionInfo e,
-                                                        Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(e.name(), e.descriptionInfo(), descriptionInfos);
-        return new ExceptionInfo(e.name(),
-                                 e.fields().stream()
-                                  .map(field -> addFieldDocString(e, field, descriptionInfos))
-                                  .collect(toImmutableList()), descriptionInfo);
-    }
-
-    private static FieldInfo addFieldDocString(NamedTypeInfo parent, FieldInfo field,
-                                               Map<String, DescriptionInfo> descriptionInfos) {
-        final DescriptionInfo descriptionInfo =
-                findDescription(parent.name() + '/' + field.name(), field.descriptionInfo(),
-                                descriptionInfos);
-        return new FieldInfo(field.name(),
-                             field.location(),
-                             field.requirement(),
-                             field.typeSignature(),
-                             field.childFieldInfos(),
-                             descriptionInfo);
-    }
-
-    @Nullable
-    private static DescriptionInfo findDescription(String key, @Nullable DescriptionInfo currentDescriptionInfo,
-                                                   Map<String, DescriptionInfo> descriptionInfos) {
-        if (currentDescriptionInfo != null) {
-            return currentDescriptionInfo;
-        }
-
-        return descriptionInfos.get(key);
-    }
-
-    private ServiceSpecification addExamples(ServiceSpecification spec) {
-        return new ServiceSpecification(
-                spec.services().stream()
-                    .map(this::addServiceExamples)
-                    .collect(toImmutableList()),
-                spec.enums(), spec.structs(), spec.exceptions(),
-                Iterables.concat(spec.exampleHeaders(),
-                                 exampleHeaders.getOrDefault("", ImmutableListMultimap.of()).get("")));
-    }
-
-    private ServiceInfo addServiceExamples(ServiceInfo service) {
-        final ListMultimap<String, HttpHeaders> exampleHeaders =
-                this.exampleHeaders.getOrDefault(service.name(), ImmutableListMultimap.of());
-        final ListMultimap<String, String> exampleRequests =
-                this.exampleRequests.getOrDefault(service.name(), ImmutableListMultimap.of());
-        final ListMultimap<String, String> examplePaths =
-                this.examplePaths.getOrDefault(service.name(), ImmutableListMultimap.of());
-        final ListMultimap<String, String> exampleQueries =
-                this.exampleQueries.getOrDefault(service.name(), ImmutableListMultimap.of());
-
-        // Reconstruct ServiceInfo with the examples.
-        return new ServiceInfo(
-                service.name(),
-                // Reconstruct MethodInfos with the examples.
-                service.methods().stream().map(m -> new MethodInfo(
-                        m.name(), m.returnTypeSignature(), m.parameters(), m.exceptionTypeSignatures(),
-                        m.endpoints(),
-                        // Show the examples added via `DocServiceBuilder` before the examples
-                        // generated by the plugin.
-                        concatAndDedup(exampleHeaders.get(m.name()), m.exampleHeaders()),
-                        concatAndDedup(exampleRequests.get(m.name()), m.exampleRequests()),
-                        concatAndDedup(examplePaths.get(m.name()), m.examplePaths()),
-                        concatAndDedup(exampleQueries.get(m.name()), m.exampleQueries()),
-                        m.httpMethod(), m.descriptionInfo()))::iterator,
-                Iterables.concat(service.exampleHeaders(), exampleHeaders.get("")),
-                service.descriptionInfo());
-    }
-
-    private static <T> Iterable<T> concatAndDedup(Iterable<T> first, Iterable<T> second) {
-        return Stream.concat(Streams.stream(first), Streams.stream(second)).distinct()
-                     .collect(toImmutableList());
     }
 
     private DocServiceVfs vfs() {
         return (DocServiceVfs) ((FileService) unwrap()).config().vfs();
     }
 
-    private static Set<ServiceConfig> findSupportedServices(
+    static Set<ServiceConfig> findSupportedServices(
             DocServicePlugin plugin, List<ServiceConfig> services) {
         final Set<Class<? extends Service<?, ?>>> supportedServiceTypes = plugin.supportedServiceTypes();
         return services.stream()

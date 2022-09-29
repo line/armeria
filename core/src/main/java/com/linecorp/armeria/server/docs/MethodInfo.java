@@ -24,8 +24,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -57,7 +55,6 @@ public final class MethodInfo {
     private final List<String> examplePaths;
     private final List<String> exampleQueries;
     private final HttpMethod httpMethod;
-    @Nullable
     private final DescriptionInfo descriptionInfo;
 
     /**
@@ -69,7 +66,7 @@ public final class MethodInfo {
                       Iterable<TypeSignature> exceptionTypeSignatures,
                       Iterable<EndpointInfo> endpoints,
                       HttpMethod httpMethod,
-                      @Nullable DescriptionInfo descriptionInfo) {
+                      DescriptionInfo descriptionInfo) {
         this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
                 /* exampleHeaders */ ImmutableList.of(), /* exampleRequests */ ImmutableList.of(),
                 /* examplePaths */ ImmutableList.of(), /* exampleQueries */ ImmutableList.of(),
@@ -89,7 +86,7 @@ public final class MethodInfo {
                       Iterable<String> examplePaths,
                       Iterable<String> exampleQueries,
                       HttpMethod httpMethod,
-                      @Nullable DescriptionInfo descriptionInfo) {
+                      DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
 
         this.returnTypeSignature = requireNonNull(returnTypeSignature, "returnTypeSignature");
@@ -125,7 +122,7 @@ public final class MethodInfo {
         this.exampleQueries = exampleQueriesBuilder.build();
 
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
-        this.descriptionInfo = descriptionInfo;
+        this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
     }
 
     /**
@@ -158,6 +155,21 @@ public final class MethodInfo {
     @JsonProperty
     public List<FieldInfo> parameters() {
         return parameters;
+    }
+
+    /**
+     * Returns a new {@link MethodInfo} with the specified {@link DescriptionInfo}.
+     * Returns {@code this} if this {@link MethodInfo} has the same {@link DescriptionInfo}.
+     */
+    public MethodInfo withParameters(Iterable<FieldInfo> parameters) {
+        requireNonNull(parameters, "parameters");
+        if (parameters.equals(this.parameters)) {
+            return this;
+        }
+
+        return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
+                              exampleHeaders, exampleRequests, examplePaths, exampleQueries, httpMethod,
+                              descriptionInfo);
     }
 
     /**
@@ -213,10 +225,23 @@ public final class MethodInfo {
      * Returns the description information of the function.
      */
     @JsonProperty
-    @JsonInclude(Include.NON_NULL)
-    @Nullable
     public DescriptionInfo descriptionInfo() {
         return descriptionInfo;
+    }
+
+    /**
+     * Returns a new {@link MethodInfo} with the specified {@link DescriptionInfo}.
+     * Returns {@code this} if this {@link MethodInfo} has the same {@link DescriptionInfo}.
+     */
+    public MethodInfo withDescriptionInfo(DescriptionInfo descriptionInfo) {
+        requireNonNull(descriptionInfo, "descriptionInfo");
+        if (descriptionInfo.equals(this.descriptionInfo)) {
+            return this;
+        }
+
+        return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
+                              exampleHeaders, exampleRequests, examplePaths, exampleQueries, httpMethod,
+                              descriptionInfo);
     }
 
     @Override
@@ -235,13 +260,14 @@ public final class MethodInfo {
                parameters().equals(that.parameters()) &&
                exceptionTypeSignatures().equals(that.exceptionTypeSignatures()) &&
                endpoints().equals(that.endpoints()) &&
-               httpMethod() == that.httpMethod();
+               httpMethod() == that.httpMethod() &&
+               descriptionInfo().equals(that.descriptionInfo());
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(name(), returnTypeSignature(), parameters(), exceptionTypeSignatures(),
-                            endpoints(), httpMethod());
+                            endpoints(), httpMethod(), descriptionInfo());
     }
 
     @Override
@@ -253,6 +279,7 @@ public final class MethodInfo {
                           .add("exceptionTypeSignatures", exceptionTypeSignatures())
                           .add("endpoints", endpoints())
                           .add("httpMethod", httpMethod())
+                          .add("descriptionInfo", descriptionInfo())
                           .toString();
     }
 }

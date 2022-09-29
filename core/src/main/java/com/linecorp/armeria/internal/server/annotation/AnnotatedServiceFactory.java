@@ -21,6 +21,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
 import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getAllMethods;
@@ -166,20 +168,21 @@ public final class AnnotatedServiceFactory {
                       .collect(toImmutableList());
     }
 
-    private static HttpStatus defaultResponseStatus(Method method) {
+    private static HttpStatus defaultResponseStatus(Method method, Class<?> clazz) {
         final StatusCode statusCodeAnnotation = AnnotationUtil.findFirst(method, StatusCode.class);
-        if (statusCodeAnnotation == null) {
-            // Set a default HTTP status code for a response depending on the return type of the method.
-            final Class<?> returnType = method.getReturnType();
-            return returnType == Void.class ||
-                   returnType == void.class ||
-                   KotlinUtil.isSuspendingAndReturnTypeUnit(method) ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+        if (statusCodeAnnotation != null) {
+            return HttpStatus.valueOf(statusCodeAnnotation.value());
         }
 
-        final int statusCode = statusCodeAnnotation.value();
-        checkArgument(statusCode >= 0,
-                      "invalid HTTP status code: %s (expected: >= 0)", statusCode);
-        return HttpStatus.valueOf(statusCode);
+        if (!producibleMediaTypes(method, clazz).isEmpty()) {
+            return HttpStatus.OK;
+        }
+        // Set a default HTTP status code for a response depending on the return type of the method.
+        final Class<?> returnType = typeToClass(unwrapAsyncType(method.getGenericReturnType()));
+
+        return returnType == Void.class ||
+               returnType == void.class ||
+               KotlinUtil.isSuspendingAndReturnTypeUnit(method) ? HttpStatus.NO_CONTENT : HttpStatus.OK;
     }
 
     private static <T extends Annotation> void setAdditionalHeader(HttpHeadersBuilder headers,
@@ -251,7 +254,7 @@ public final class AnnotatedServiceFactory {
         final HttpHeaders responseHeaders = responseHeaders(method, clazz, classAlias, methodAlias);
         final HttpHeaders responseTrailers = responseTrailers(method, clazz, classAlias, methodAlias);
 
-        final HttpStatus defaultStatus = defaultResponseStatus(method);
+        final HttpStatus defaultStatus = defaultResponseStatus(method, clazz);
         if (defaultStatus.isContentAlwaysEmpty() && !responseTrailers.isEmpty()) {
             logger.warn("A response with HTTP status code '{}' cannot have a content. " +
                         "Trailers defined at '{}' might be ignored if HTTP/1.1 is used.",
@@ -582,7 +585,6 @@ public final class AnnotatedServiceFactory {
     /**
      * Returns the description of the specified {@link AnnotatedElement}.
      */
-    @Nullable
     static DescriptionInfo findDescription(AnnotatedElement annotatedElement) {
         requireNonNull(annotatedElement, "annotatedElement");
         final Description description = AnnotationUtil.findFirst(annotatedElement, Description.class);
@@ -590,7 +592,7 @@ public final class AnnotatedServiceFactory {
             final String value = description.value();
             if (DefaultValues.isSpecified(value)) {
                 checkArgument(!value.isEmpty(), "value is empty.");
-                return DescriptionInfo.of(description.value(), description.markup());
+                return DescriptionInfo.from(description);
             }
         } else if (annotatedElement instanceof Parameter) {
             // JavaDoc/KDoc descriptions only exist for method parameters
@@ -602,24 +604,24 @@ public final class AnnotatedServiceFactory {
             final Properties cachedProperties = DOCUMENTATION_PROPERTIES_CACHE.getIfPresent(fileName);
             if (cachedProperties != null) {
                 final String propertyValue = cachedProperties.getProperty(propertyName);
-                return propertyValue != null ? DescriptionInfo.of(propertyValue) : null;
+                return propertyValue != null ? DescriptionInfo.of(propertyValue) : DescriptionInfo.empty();
             }
             try (InputStream stream = AnnotatedServiceFactory.class.getClassLoader()
                                                                    .getResourceAsStream(fileName)) {
                 if (stream == null) {
-                    return null;
+                    return DescriptionInfo.empty();
                 }
                 final Properties properties = new Properties();
                 properties.load(stream);
                 DOCUMENTATION_PROPERTIES_CACHE.put(fileName, properties);
 
                 final String propertyValue = properties.getProperty(propertyName);
-                return propertyValue != null ? DescriptionInfo.of(propertyValue) : null;
+                return propertyValue != null ? DescriptionInfo.of(propertyValue) : DescriptionInfo.empty();
             } catch (IOException exception) {
                 logger.warn("Failed to load an API description file: {}", fileName, exception);
             }
         }
-        return null;
+        return DescriptionInfo.empty();
     }
 
     /**

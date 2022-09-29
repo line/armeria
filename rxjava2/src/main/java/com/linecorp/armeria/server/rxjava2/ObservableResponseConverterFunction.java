@@ -16,7 +16,7 @@
 package com.linecorp.armeria.server.rxjava2;
 
 import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
-import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapUnaryAsyncType;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.reflect.Type;
@@ -81,7 +81,7 @@ public final class ObservableResponseConverterFunction implements ResponseConver
 
     @Override
     public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
-        final Class<?> clazz = typeToClass(unwrapAsyncType(returnType));
+        final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(returnType));
         if (clazz == null) {
             return null;
         }

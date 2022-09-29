@@ -82,8 +82,9 @@ export interface Field {
 
 export interface Struct {
   name: string;
+  alias?: string;
   fields: Field[];
-  descriptionInfo?: DescriptionInfo;
+  descriptionInfo: DescriptionInfo;
 }
 
 export interface SpecificationData {
@@ -112,6 +113,14 @@ function createMapByName<T extends NamedObject>(objs: T[]): Map<string, T> {
   return new Map(objs.map((obj) => [obj.name, obj] as [string, T]));
 }
 
+function createMapByAlias(objs: Struct[]): Map<string, Struct> {
+  return new Map(
+    objs
+      .filter((obj) => obj)
+      .map((obj) => [obj.alias, obj] as [string, Struct]),
+  );
+}
+
 function hasUniqueNames<T extends NamedObject>(map: Map<string, T>): boolean {
   const names = new Set();
   for (const key of map.keys()) {
@@ -129,6 +138,8 @@ export class Specification {
 
   private readonly structsByName: Map<string, Struct>;
 
+  private readonly structsByAlias: Map<string, Struct>;
+
   private readonly uniqueEnumNames: boolean;
 
   private readonly uniqueServiceNames: boolean;
@@ -144,6 +155,7 @@ export class Specification {
       ...this.data.structs,
       ...this.data.exceptions,
     ]);
+    this.structsByAlias = createMapByAlias(this.data.structs);
 
     this.uniqueEnumNames = hasUniqueNames(this.enumsByName);
     this.uniqueServiceNames = hasUniqueNames(this.servicesByName);
@@ -207,7 +219,7 @@ export class Specification {
     if (type) {
       return this.getTypeLink(type.name, 'enum');
     }
-    type = this.structsByName.get(part);
+    type = this.structsByName.get(part) || this.structsByAlias.get(part);
     if (type) {
       return this.getTypeLink(type.name, 'struct');
     }

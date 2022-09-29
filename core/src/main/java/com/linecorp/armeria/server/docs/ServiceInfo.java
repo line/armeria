@@ -26,12 +26,11 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Sets;
 
@@ -50,7 +49,6 @@ public final class ServiceInfo {
     private final String name;
     private final Set<MethodInfo> methods;
     private final List<HttpHeaders> exampleHeaders;
-    @Nullable
     private final DescriptionInfo descriptionInfo;
 
     /**
@@ -58,7 +56,7 @@ public final class ServiceInfo {
      */
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods) {
-        this(name, methods, null);
+        this(name, methods, DescriptionInfo.empty());
     }
 
     /**
@@ -66,7 +64,7 @@ public final class ServiceInfo {
      */
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods,
-                       @Nullable DescriptionInfo descriptionInfo) {
+                       DescriptionInfo descriptionInfo) {
         this(name, methods, ImmutableList.of(), descriptionInfo);
     }
 
@@ -76,12 +74,12 @@ public final class ServiceInfo {
     public ServiceInfo(String name,
                        Iterable<MethodInfo> methods,
                        Iterable<HttpHeaders> exampleHeaders,
-                       @Nullable DescriptionInfo descriptionInfo) {
+                       DescriptionInfo descriptionInfo) {
 
         this.name = requireNonNull(name, "name");
         this.methods = mergeEndpoints(requireNonNull(methods));
         this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
-        this.descriptionInfo = descriptionInfo;
+        this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
     }
 
     /**
@@ -98,6 +96,19 @@ public final class ServiceInfo {
     @JsonProperty
     public Set<MethodInfo> methods() {
         return methods;
+    }
+
+    /**
+     * Returns a new {@link ServiceInfo} with the specified {@link MethodInfo}s.
+     * Returns {@code this} if this {@link ServiceInfo} has the same {@link MethodInfo}s.
+     */
+    public ServiceInfo withMethods(Iterable<MethodInfo> methods) {
+        requireNonNull(methods, "methods");
+        if (methods.equals(this.methods)) {
+            return this;
+        }
+
+        return new ServiceInfo(name, methods, exampleHeaders, descriptionInfo);
     }
 
     /**
@@ -135,14 +146,31 @@ public final class ServiceInfo {
      * Returns all enum, struct and exception {@link TypeSignature}s referred to by this service.
      */
     public Set<TypeSignature> findNamedTypes() {
+        final Set<TypeSignature> requestNamedTypes = findNamedTypes(true);
+        final Set<TypeSignature> responseNamedType = findNamedTypes(false);
+        final int estimatedSize = requestNamedTypes.size() + responseNamedType.size();
+        return ImmutableSet.<TypeSignature>builderWithExpectedSize(estimatedSize)
+                           .addAll(requestNamedTypes)
+                           .addAll(responseNamedType)
+                           .build();
+    }
+
+    /**
+     * Returns all {@link TypeSignature} of {@link MethodInfo#parameters()} of {@link #methods()} if
+     * {@code request} is set to true. Otherwise, returns all {@link MethodInfo#returnTypeSignature()} and
+     * {@link MethodInfo#exceptionTypeSignatures()} of the {@link #methods()}.
+     */
+    public Set<TypeSignature> findNamedTypes(boolean request) {
         final Set<TypeSignature> collectedNamedTypes = new HashSet<>();
         methods().forEach(m -> {
-            findNamedTypes(collectedNamedTypes, m.returnTypeSignature());
-            m.parameters().forEach(p -> findNamedTypes(collectedNamedTypes, p.typeSignature()));
-            m.exceptionTypeSignatures().forEach(s -> findNamedTypes(collectedNamedTypes, s));
+            if (request) {
+                m.parameters().forEach(p -> findNamedTypes(collectedNamedTypes, p.typeSignature()));
+            } else {
+                findNamedTypes(collectedNamedTypes, m.returnTypeSignature());
+                m.exceptionTypeSignatures().forEach(s -> findNamedTypes(collectedNamedTypes, s));
+            }
         });
-
-        return ImmutableSortedSet.copyOf(comparing(TypeSignature::name), collectedNamedTypes);
+        return ImmutableSet.copyOf(collectedNamedTypes);
     }
 
     static void findNamedTypes(Set<TypeSignature> collectedNamedTypes, TypeSignature typeSignature) {
@@ -157,12 +185,24 @@ public final class ServiceInfo {
 
     /**
      * Returns the description information of the service.
+     * If not available, {@link DescriptionInfo#empty()} is returned.
      */
     @JsonProperty
-    @JsonInclude(Include.NON_NULL)
-    @Nullable
     public DescriptionInfo descriptionInfo() {
         return descriptionInfo;
+    }
+
+    /**
+     * Returns a new {@link ServiceInfo} with the specified {@link DescriptionInfo}.
+     * Returns {@code this} if this {@link ServiceInfo} has the same {@link DescriptionInfo}.
+     */
+    public ServiceInfo withDescriptionInfo(DescriptionInfo descriptionInfo) {
+        requireNonNull(descriptionInfo, "descriptionInfo");
+        if (descriptionInfo.equals(this.descriptionInfo)) {
+            return this;
+        }
+
+        return new ServiceInfo(name, methods, exampleHeaders, descriptionInfo);
     }
 
     /**
@@ -171,6 +211,19 @@ public final class ServiceInfo {
     @JsonProperty
     public List<HttpHeaders> exampleHeaders() {
         return exampleHeaders;
+    }
+
+    /**
+     * Returns a new {@link ServiceInfo} with the specified example headers.
+     * Returns {@code this} if this {@link ServiceInfo} has the same example headers.
+     */
+    public ServiceInfo withExampleHeaders(Iterable<HttpHeaders> exampleHeaders) {
+        requireNonNull(exampleHeaders, "exampleHeaders");
+        if (exampleHeaders.equals(this.exampleHeaders)) {
+            return this;
+        }
+
+        return new ServiceInfo(name, methods, exampleHeaders, descriptionInfo);
     }
 
     @Override

@@ -219,16 +219,16 @@ public interface ServiceRequestContext extends RequestContext {
     @MustBeClosed
     default SafeCloseable push() {
         final RequestContext oldCtx = RequestContextUtil.getAndSet(this);
-        if (oldCtx == this) {
-            // Reentrance
-            return noopSafeCloseable();
-        }
-
         if (oldCtx == null) {
             return RequestContextUtil.invokeHookAndPop(this, null);
         }
 
-        if (oldCtx.root() == this) {
+        if (oldCtx.unwrapAll() == unwrapAll()) {
+            // Reentrance
+            return noopSafeCloseable();
+        }
+
+        if (RequestContextUtil.equalsIgnoreWrapper(oldCtx.root(), this)) {
             return RequestContextUtil.invokeHookAndPop(this, oldCtx);
         }
 
