@@ -339,7 +339,8 @@ public class AbstractClientOptionsBuilder {
      * <p>Note that the authority does not change the remote peer which a {@link Request} is sent to.
      * It only overrides the value of {@code :authority} or {@code "Host"} header. This is generally unsafe.
      * There is no security verification of the overridden value, such as making sure the authority matches
-     * the server's TLS certificate.
+     * the server's TLS certificate. The hostname of the endpoint of the {@link Request} is used to verify
+     * the certificate.
      */
     public AbstractClientOptionsBuilder authority(String authority) {
         requireNonNull(authority, "authority");
