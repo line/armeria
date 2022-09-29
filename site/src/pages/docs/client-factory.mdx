@@ -45,9 +45,9 @@ Additionally, you can specify various options such as a different CA certificate
 cipher suites with <type://ClientFactoryBuilder#tlsCustomizer(Consumer)> .
 
 ```java
-try (InputStream keyCertChainInputStream = ...,
+try (InputStream keyCertChainInputStream = ...;
      InputStream keyInputStream = ...) {
-  ClientFactory builder =
+  ClientFactory factory =
     ClientFactory
       .builder()
       .tls(keyCertChainInputStream, keyInputStream)
@@ -134,12 +134,12 @@ ClientFactory factory =
   ClientFactory
     .builder()
     .maxNumEventLoopsFunction(endpoint -> {
-     if (endpoint.equals(Endpoint.of("lotsOfTraffic.com"))) {
-    // We are going to use all EventLoops to send requests.
-    return Integer.MAX_VALUE;
-     }
-     // We use just one `EventLoop` per endpoint for the rest.
-     return 1;
+      if (endpoint.equals(Endpoint.of("lotsOfTraffic.com"))) {
+        // We are going to use all EventLoops to send requests.
+        return Integer.MAX_VALUE;
+      }
+      // We use just one `EventLoop` per endpoint for the rest.
+      return 1;
     })
     .build();
 WebClient.builder().factory(factory).build();

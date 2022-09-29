@@ -122,7 +122,6 @@ public final class ClientFactoryBuilder implements TlsSetters {
     private int maxNumEventLoopsPerHttp1Endpoint;
     private final List<ToIntFunction<Endpoint>> maxNumEventLoopsFunctions = new ArrayList<>();
     private boolean tlsNoVerifySet;
-    private boolean tlsKeyCertSet;
     private final Set<String> insecureHosts = new HashSet<>();
 
     ClientFactoryBuilder() {
@@ -404,6 +403,7 @@ public final class ClientFactoryBuilder implements TlsSetters {
      */
     @Override
     public ClientFactoryBuilder tls(KeyManagerFactory keyManagerFactory) {
+        requireNonNull(keyManagerFactory, "keyManagerFactory");
         return tlsCustomizer(customizer -> customizer.keyManager(keyManagerFactory));
     }
 
