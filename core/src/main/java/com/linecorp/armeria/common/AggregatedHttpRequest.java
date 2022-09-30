@@ -300,6 +300,6 @@ public interface AggregatedHttpRequest extends AggregatedHttpMessage {
      */
     default HttpRequest toHttpRequest(RequestHeaders headers) {
         requireNonNull(headers, "headers");
-        return HttpRequest.of(maybeModifyContentLength(headers, content()), content(), trailers());
+        return HttpRequest.of(headers, content(), trailers());
     }
 }
