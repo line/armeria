@@ -17,6 +17,7 @@
 package com.linecorp.armeria.spring.web.reactive;
 
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
@@ -29,6 +30,7 @@ import org.springframework.core.env.Environment;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 
+@AutoConfigureBefore(ArmeriaReactiveWebServerFactoryAutoConfiguration.class)
 @Configuration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
 @ConditionalOnClass(Server.class)
