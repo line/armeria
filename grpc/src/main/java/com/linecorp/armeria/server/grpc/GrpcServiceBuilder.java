@@ -1030,8 +1030,8 @@ public final class GrpcServiceBuilder {
             if (httpJsonTranscodingErrorHandler != null) {
                 httpJsonTranscodingOptions =
                         HttpJsonTranscodingOptions.builder()
-                                                  .queryParamNaming(
-                                                          this.httpJsonTranscodingOptions.queryParamNamings())
+                                                  .queryParamMatchRules(
+                                                          this.httpJsonTranscodingOptions.queryParamMatchRules())
                                                   .errorHandler(httpJsonTranscodingErrorHandler)
                                                   .build();
             } else {

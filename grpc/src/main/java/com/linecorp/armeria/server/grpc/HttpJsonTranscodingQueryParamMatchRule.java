@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * HTTP-JSON transcoding endpoint.
  */
 @UnstableApi
-public enum HttpJsonTranscodingQueryParamNaming {
+public enum HttpJsonTranscodingQueryParamMatchRule {
     /**
      * Converts
      * <a href="https://developers.google.com/protocol-buffers/docs/style#message_and_field_names">underscore_separated_names</a>

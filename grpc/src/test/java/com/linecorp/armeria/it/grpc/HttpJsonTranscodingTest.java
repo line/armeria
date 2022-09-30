@@ -95,7 +95,7 @@ import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
 import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
-import com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamNaming;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
@@ -312,17 +312,17 @@ public class HttpJsonTranscodingTest {
 
     static ServerExtension createServer(boolean preservingProtoFieldNames, boolean camelCaseQueryParams,
                                         boolean protoFieldNameQueryParams) {
-        final ImmutableList.Builder<HttpJsonTranscodingQueryParamNaming> queryParamNaming =
+        final ImmutableList.Builder<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules =
                 ImmutableList.builder();
         if (camelCaseQueryParams) {
-            queryParamNaming.add(HttpJsonTranscodingQueryParamNaming.LOWER_CAMEL_CASE);
+            queryParamMatchRules.add(HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE);
         }
         if (protoFieldNameQueryParams) {
-            queryParamNaming.add(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD);
+            queryParamMatchRules.add(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
         }
         final HttpJsonTranscodingOptions options =
                 HttpJsonTranscodingOptions.builder()
-                                          .queryParamNaming(queryParamNaming.build())
+                                          .queryParamMatchRules(queryParamMatchRules.build())
                                           .build();
         return new ServerExtension() {
             @Override

@@ -170,8 +170,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
                                     false);
                 final Map<String, Field> camelCaseFields;
-                if (httpJsonTranscodingOptions.queryParamNamings()
-                                              .contains(HttpJsonTranscodingQueryParamNaming.LOWER_CAMEL_CASE)) {
+                if (httpJsonTranscodingOptions.queryParamMatchRules()
+                                              .contains(HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE)) {
                     camelCaseFields =
                             buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
                                         true);
@@ -517,11 +517,11 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                              .addAll(routeAndSpecs.keySet())
                              .build();
         useCamelCaseQueryParams =
-                httpJsonTranscodingOptions.queryParamNamings()
-                                          .contains(HttpJsonTranscodingQueryParamNaming.LOWER_CAMEL_CASE);
+                httpJsonTranscodingOptions.queryParamMatchRules()
+                                          .contains(HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE);
         useProtoFieldNameQueryParams =
-                httpJsonTranscodingOptions.queryParamNamings()
-                                          .contains(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD);
+                httpJsonTranscodingOptions.queryParamMatchRules()
+                                          .contains(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
     }
 
     @Override

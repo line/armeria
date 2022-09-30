@@ -28,41 +28,41 @@ class HttpJsonTranscodingOptionsBuilderTest {
     @Test
     void shouldDisallowEmptyNaming() {
         assertThatThrownBy(() -> HttpJsonTranscodingOptions.builder()
-                                                           .queryParamNaming(ImmutableList.of()))
+                                                           .queryParamMatchRules(ImmutableList.of()))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessage("Can't set an empty queryParamNamings");
+                .hasMessage("Can't set an empty queryParamMatchRules");
     }
 
     @Test
     void shouldReturnConfiguredSettings() {
         final HttpJsonTranscodingOptions withCamelCase =
                 HttpJsonTranscodingOptions.builder()
-                                          .queryParamNaming(
-                                                  HttpJsonTranscodingQueryParamNaming.LOWER_CAMEL_CASE)
+                                          .queryParamMatchRules(
+                                                  HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE)
                                           .build();
-        assertThat(withCamelCase.queryParamNamings())
-                .containsExactly(HttpJsonTranscodingQueryParamNaming.LOWER_CAMEL_CASE);
+        assertThat(withCamelCase.queryParamMatchRules())
+                .containsExactly(HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE);
 
         final HttpJsonTranscodingOptions onlyCamelCase =
                 HttpJsonTranscodingOptions.builder()
-                                          .queryParamNaming(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD)
+                                          .queryParamMatchRules(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD)
                                           .build();
-        assertThat(onlyCamelCase.queryParamNamings())
-                .containsExactly(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD);
+        assertThat(onlyCamelCase.queryParamMatchRules())
+                .containsExactly(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
 
         final HttpJsonTranscodingOptions onlyOriginalField =
                 HttpJsonTranscodingOptions.builder()
-                                          .queryParamNaming(ImmutableList.of(
-                                                  HttpJsonTranscodingQueryParamNaming.LOWER_CAMEL_CASE,
-                                                  HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD))
+                                          .queryParamMatchRules(ImmutableList.of(
+                                                  HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE,
+                                                  HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD))
                                           .build();
-        assertThat(onlyOriginalField.queryParamNamings())
-                .containsExactlyInAnyOrder(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD,
-                                           HttpJsonTranscodingQueryParamNaming.LOWER_CAMEL_CASE);
+        assertThat(onlyOriginalField.queryParamMatchRules())
+                .containsExactlyInAnyOrder(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD,
+                                           HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE);
 
         final HttpJsonTranscodingOptions defaultOptions =
                 HttpJsonTranscodingOptions.of();
-        assertThat(defaultOptions.queryParamNamings())
-                .containsExactly(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD);
+        assertThat(defaultOptions.queryParamMatchRules())
+                .containsExactly(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
     }
 }

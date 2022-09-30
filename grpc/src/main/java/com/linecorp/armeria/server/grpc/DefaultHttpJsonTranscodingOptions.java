@@ -26,18 +26,18 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
 
     static final HttpJsonTranscodingOptions DEFAULT = HttpJsonTranscodingOptions.builder().build();
 
-    private final EnumSet<HttpJsonTranscodingQueryParamNaming> queryParamNamings;
+    private final EnumSet<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules;
     private final UnframedGrpcErrorHandler errorHandler;
 
-    DefaultHttpJsonTranscodingOptions(EnumSet<HttpJsonTranscodingQueryParamNaming> queryParamNamings,
+    DefaultHttpJsonTranscodingOptions(EnumSet<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules,
                                       UnframedGrpcErrorHandler errorHandler) {
-        this.queryParamNamings = queryParamNamings;
+        this.queryParamMatchRules = queryParamMatchRules;
         this.errorHandler = errorHandler;
     }
 
     @Override
-    public Set<HttpJsonTranscodingQueryParamNaming> queryParamNamings() {
-        return queryParamNamings;
+    public Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules() {
+        return queryParamMatchRules;
     }
 
     @Override
@@ -54,18 +54,18 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
             return false;
         }
         final HttpJsonTranscodingOptions that = (HttpJsonTranscodingOptions) o;
-        return queryParamNamings.equals(that.queryParamNamings()) && errorHandler.equals(that.errorHandler());
+        return queryParamMatchRules.equals(that.queryParamMatchRules()) && errorHandler.equals(that.errorHandler());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(queryParamNamings, errorHandler);
+        return Objects.hash(queryParamMatchRules, errorHandler);
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("queryParamNamings", queryParamNamings)
+                          .add("queryParamMatchRules", queryParamMatchRules)
                           .add("errorHandler", errorHandler)
                           .toString();
     }

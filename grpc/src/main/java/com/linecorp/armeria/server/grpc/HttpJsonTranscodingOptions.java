@@ -43,10 +43,10 @@ public interface HttpJsonTranscodingOptions {
     }
 
     /**
-     * Returns the {@link HttpJsonTranscodingQueryParamNaming}s which is used to match fields in a
+     * Returns the {@link HttpJsonTranscodingQueryParamMatchRule}s which is used to match fields in a
      * {@link Message} with query parameters.
      */
-    Set<HttpJsonTranscodingQueryParamNaming> queryParamNamings();
+    Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules();
 
     /**
      * Return the {@link UnframedGrpcErrorHandler} which handles an exception raised while serving a gRPC

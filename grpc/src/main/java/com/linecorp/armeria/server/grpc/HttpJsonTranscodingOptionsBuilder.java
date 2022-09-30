@@ -38,41 +38,41 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public class HttpJsonTranscodingOptionsBuilder {
 
-    private static final EnumSet<HttpJsonTranscodingQueryParamNaming> DEFAULT_QUERY_PARAM_NAMING =
-            EnumSet.of(HttpJsonTranscodingQueryParamNaming.ORIGINAL_FIELD);
+    private static final EnumSet<HttpJsonTranscodingQueryParamMatchRule> DEFAULT_QUERY_PARAM_NAMING =
+            EnumSet.of(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
 
     private UnframedGrpcErrorHandler errorHandler = UnframedGrpcErrorHandler.ofJson();
 
     @Nullable
-    private Set<HttpJsonTranscodingQueryParamNaming> queryParamNamings;
+    private Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules;
 
     HttpJsonTranscodingOptionsBuilder() {}
 
     /**
-     * Adds the specified {@link HttpJsonTranscodingQueryParamNaming} which is used to match {@link QueryParams}
+     * Adds the specified {@link HttpJsonTranscodingQueryParamMatchRule} which is used to match {@link QueryParams}
      * of a {@link HttpRequest} with fields in a {@link Message}.
-     * If not set, {@link HttpJsonTranscodingQueryParamNaming#ORIGINAL_FIELD} is used by default.
+     * If not set, {@link HttpJsonTranscodingQueryParamMatchRule#ORIGINAL_FIELD} is used by default.
      */
-    public HttpJsonTranscodingOptionsBuilder queryParamNaming(
-            HttpJsonTranscodingQueryParamNaming... queryParamNamings) {
-        requireNonNull(queryParamNamings, "queryParamNamings");
-        queryParamNaming(ImmutableList.copyOf(queryParamNamings));
+    public HttpJsonTranscodingOptionsBuilder queryParamMatchRules(
+            HttpJsonTranscodingQueryParamMatchRule... queryParamMatchRules) {
+        requireNonNull(queryParamMatchRules, "queryParamMatchRules");
+        queryParamMatchRules(ImmutableList.copyOf(queryParamMatchRules));
         return this;
     }
 
     /**
-     * Adds the specified {@link HttpJsonTranscodingQueryParamNaming} which is used to match {@link QueryParams}
+     * Adds the specified {@link HttpJsonTranscodingQueryParamMatchRule} which is used to match {@link QueryParams}
      * of a {@link HttpRequest} with fields in a {@link Message}.
-     * If not set, {@link HttpJsonTranscodingQueryParamNaming#ORIGINAL_FIELD} is used by default.
+     * If not set, {@link HttpJsonTranscodingQueryParamMatchRule#ORIGINAL_FIELD} is used by default.
      */
-    public HttpJsonTranscodingOptionsBuilder queryParamNaming(
-            Iterable<HttpJsonTranscodingQueryParamNaming> queryParamNamings) {
-        requireNonNull(queryParamNamings, "queryParamNamings");
-        checkArgument(!Iterables.isEmpty(queryParamNamings), "Can't set an empty queryParamNamings");
-        if (this.queryParamNamings == null) {
-            this.queryParamNamings = new HashSet<>();
+    public HttpJsonTranscodingOptionsBuilder queryParamMatchRules(
+            Iterable<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules) {
+        requireNonNull(queryParamMatchRules, "queryParamMatchRules");
+        checkArgument(!Iterables.isEmpty(queryParamMatchRules), "Can't set an empty queryParamMatchRules");
+        if (this.queryParamMatchRules == null) {
+            this.queryParamMatchRules = new HashSet<>();
         }
-        this.queryParamNamings.addAll(ImmutableList.copyOf(queryParamNamings));
+        this.queryParamMatchRules.addAll(ImmutableList.copyOf(queryParamMatchRules));
         return this;
     }
 
@@ -91,11 +91,11 @@ public class HttpJsonTranscodingOptionsBuilder {
      * Returns a new created {@link HttpJsonTranscodingOptions}.
      */
     public HttpJsonTranscodingOptions build() {
-        final EnumSet<HttpJsonTranscodingQueryParamNaming> paramNamings;
-        if (queryParamNamings == null) {
+        final EnumSet<HttpJsonTranscodingQueryParamMatchRule> paramNamings;
+        if (queryParamMatchRules == null) {
             paramNamings = DEFAULT_QUERY_PARAM_NAMING;
         } else {
-            paramNamings = EnumSet.copyOf(queryParamNamings);
+            paramNamings = EnumSet.copyOf(queryParamMatchRules);
         }
         return new DefaultHttpJsonTranscodingOptions(paramNamings, errorHandler);
     }
