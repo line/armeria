@@ -94,7 +94,7 @@ class ProtobufNamedTypeInfoProviderTest {
     void newStructInfo() throws Exception {
         final StructInfo structInfo = ProtobufNamedTypeInfoProvider.newStructInfo(TestMessage.getDescriptor());
         assertThat(structInfo.name()).isEqualTo("armeria.protobuf.testing.TestMessage");
-        assertThat(structInfo.fields()).hasSize(18);
+        assertThat(structInfo.fields()).hasSize(19);
         assertThat(structInfo.fields().get(0).name()).isEqualTo("bool");
         assertThat(structInfo.fields().get(0).typeSignature()).isEqualTo(BOOL);
         assertThat(structInfo.fields().get(1).name()).isEqualTo("int32");
@@ -143,6 +143,9 @@ class ProtobufNamedTypeInfoProviderTest {
         assertThat(self.name()).isEqualTo("self");
         // Don't visit the field infos of a circular type
         assertThat(self.childFieldInfos()).isEmpty();
+        final FieldInfo emptyNested = structInfo.fields().get(18);
+        assertThat(emptyNested.name()).isEqualTo("empty_nested");
+        assertThat(emptyNested.childFieldInfos()).isEmpty();
 
         assertThat(self.typeSignature().signature())
                 .isEqualTo("armeria.protobuf.testing.TestMessage");
