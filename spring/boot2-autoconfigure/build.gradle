@@ -1,6 +1,6 @@
 dependencies {
     // To let a user choose between thrift and thrift0.9.
-    compileOnly project(':thrift0.16')
+    compileOnly project(':thrift0.17')
     implementation project(':logback')
 
     // TODO(anuraaga): Consider removing these since this module does not have related functionality.
@@ -13,7 +13,7 @@ dependencies {
     annotationProcessor libs.spring.boot2.configuration.processor
 
     testImplementation project(':grpc')
-    testImplementation project(':thrift0.16')
+    testImplementation project(':thrift0.17')
     testImplementation libs.spring.boot2.starter
     testImplementation libs.spring.boot2.starter.actuator
     testImplementation libs.spring.boot2.starter.test
