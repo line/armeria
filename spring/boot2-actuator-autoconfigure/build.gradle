@@ -19,10 +19,11 @@ dependencies {
 // Copy common files from boot2-autoconfigure module to gen-src directory in order to use them as
 // a source/test set.
 task generateTestSources(type: Copy) {
-    from "${rootProject.projectDir}/spring/boot2-autoconfigure/src/test/java"
-    into "${project.ext.genSrcDir}/test/java"
+    from "${rootProject.projectDir}/spring/boot2-autoconfigure/src/test"
+    into "${project.ext.genSrcDir}/test"
     include '**/RetryableArmeriaServerGracefulShutdownLifecycle.java'
     include '**/RetryableArmeriaServerGracefulShutdownLifecycleConfiguration.java'
+    include '**/META-INF/spring.factories'
 }
 
 task generateSources(type: Copy) {
