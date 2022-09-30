@@ -18,8 +18,6 @@ package com.linecorp.armeria.server.graphql;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
@@ -27,6 +25,9 @@ import org.dataloader.DataLoaderRegistry;
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -120,15 +121,9 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
                 }));
     }
 
-    private static Map<String, Object> toSpecification(String message) {
+    static Map<String, Object> toSpecification(String message) {
         requireNonNull(message, "message");
-
-        final Map<String, Object> errorMap = new LinkedHashMap<>();
-        errorMap.put("message", message);
-
-        final Map<String, Object> result = new LinkedHashMap<>();
-        result.put("errors", Collections.singletonList(errorMap));
-
-        return result;
+        final Map<String, Object> error = ImmutableMap.of("message", message);
+        return ImmutableMap.of("errors", ImmutableList.of(error));
     }
 }

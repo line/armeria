@@ -18,8 +18,6 @@ package com.linecorp.armeria.server.graphql;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import javax.annotation.Nonnull;
@@ -71,13 +69,13 @@ enum DefaultGraphqlErrorHandler implements GraphqlErrorHandler {
 
     private static Map<String, Object> toSpecification(Throwable cause) {
         requireNonNull(cause, "cause");
+        final String message;
+        if (cause.getMessage() != null) {
+            message = cause.getMessage();
+        } else {
+            message = cause.toString();
+        }
 
-        final Map<String, Object> errorMap = new LinkedHashMap<>();
-        errorMap.put("message", cause.getMessage());
-
-        final Map<String, Object> result = new LinkedHashMap<>();
-        result.put("errors", Collections.singletonList(errorMap));
-
-        return result;
+        return DefaultGraphqlService.toSpecification(message);
     }
 }
