@@ -129,4 +129,20 @@ public interface Unwrappable {
             unwrapped = inner;
         }
     }
+
+    /**
+     * Reference checking this {@link Unwrappable} to another {@link Unwrappable}, ignoring wrappers.
+     * Two {@link Unwrappable} are considered equal ignoring wrappers if they are of the same object reference
+     * after {@link #unwrapAll()}.
+     * @param other The {@link Unwrappable} to compare this {@link Unwrappable} against
+     * @return true if the argument is not {@code null}, and it represents a same object reference after
+     *         {@code unwrapAll()}, false otherwise.
+     */
+    @UnstableApi
+    default boolean equalsIgnoreWrapper(@Nullable Unwrappable other) {
+        if (other == null) {
+            return false;
+        }
+        return unwrapAll() == other.unwrapAll();
+    }
 }

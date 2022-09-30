@@ -42,6 +42,7 @@ import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
+import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
@@ -73,7 +74,8 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
 
     @Override
     public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
-                                                      DocServiceFilter filter) {
+                                                      DocServiceFilter filter,
+                                                      NamedTypeInfoProvider namedTypeInfoProvider) {
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(filter, "filter");
 
@@ -102,7 +104,7 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
         final Class<?> clazz = service.getClass();
         final MethodInfo methodInfo = new MethodInfo(
                 name, JSON, fieldInfos, ImmutableList.of(), // Ignore exceptions.
-                ImmutableList.of(endpoint), HttpMethod.POST, null);
+                ImmutableList.of(endpoint), HttpMethod.POST, DescriptionInfo.empty());
         methodInfos.computeIfAbsent(clazz, unused -> new HashSet<>()).add(methodInfo);
     }
 
@@ -143,7 +145,7 @@ public final class GraphqlDocServicePlugin implements DocServicePlugin {
                 .map(entry -> {
                     final Class<?> service = entry.getKey();
                     return new ServiceInfo(service.getName(), entry.getValue(),
-                                           serviceDescription.get(service));
+                                           serviceDescription.getOrDefault(service, DescriptionInfo.empty()));
                 })
                 .collect(toImmutableSet());
 

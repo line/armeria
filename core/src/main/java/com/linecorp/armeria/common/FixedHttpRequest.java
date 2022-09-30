@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import java.util.concurrent.CompletableFuture;
+
 import com.linecorp.armeria.internal.common.stream.EmptyFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.OneElementFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
@@ -42,6 +44,12 @@ final class FixedHttpRequest {
         public RequestHeaders headers() {
             return headers;
         }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
+            return super.aggregate(options);
+        }
     }
 
     // TODO(ikhoon): Make `FixedHttpRequest`s implement AggregatedHttpRequest
@@ -59,6 +67,12 @@ final class FixedHttpRequest {
         public RequestHeaders headers() {
             return headers;
         }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
+            return super.aggregate(options);
+        }
     }
 
     static final class TwoElementFixedHttpRequest
@@ -75,6 +89,12 @@ final class FixedHttpRequest {
         public RequestHeaders headers() {
             return headers;
         }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
+            return super.aggregate(options);
+        }
     }
 
     static final class RegularFixedHttpRequest
@@ -90,6 +110,12 @@ final class FixedHttpRequest {
         @Override
         public RequestHeaders headers() {
             return headers;
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
+            return super.aggregate(options);
         }
     }
 

@@ -37,7 +37,7 @@ class ServiceInfoTest {
         final EndpointInfo endpoint = EndpointInfo.builder("*", endpointPathMapping)
                 .availableMimeTypes(MediaType.JSON_UTF_8).build();
         return new MethodInfo(methodName, TypeSignature.ofBase("T"), ImmutableList.of(), ImmutableList.of(),
-                              ImmutableList.of(endpoint), method, null);
+                              ImmutableList.of(endpoint), method, DescriptionInfo.empty());
     }
 
     @Test

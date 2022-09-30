@@ -35,7 +35,7 @@ class MethodInfoTest {
                               /* endpoints */ ImmutableList.of(), /* exampleHeaders */ ImmutableList.of(),
                               /* exampleRequests */ ImmutableList.of(),
                               examplePaths, exampleQueries,
-                              HttpMethod.GET, null);
+                              HttpMethod.GET, DescriptionInfo.empty());
     }
 
     @Test

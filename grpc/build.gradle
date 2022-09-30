@@ -1,5 +1,6 @@
 dependencies {
     implementation project(':grpc-protocol')
+    implementation project(':protobuf')
 
     api libs.protobuf.java
     implementation libs.protobuf.java.util

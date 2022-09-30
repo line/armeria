@@ -174,6 +174,18 @@ public final class TypeSignature {
     }
 
     /**
+     * Creates a new type signature for the optional type with the specified element type signature.
+     * This method is a shortcut for:
+     * <pre>{@code
+     * ofContainer("optional", elementTypeSignature);
+     * }</pre>
+     */
+    public static TypeSignature ofOptional(TypeSignature elementTypeSignature) {
+        requireNonNull(elementTypeSignature, "elementTypeSignature");
+        return ofContainer("optional", elementTypeSignature);
+    }
+
+    /**
      * Creates a new named type signature for the specified type.
      */
     public static TypeSignature ofNamed(Class<?> namedType) {
@@ -284,6 +296,13 @@ public final class TypeSignature {
      */
     public boolean isContainer() {
         return !typeParameters.isEmpty();
+    }
+
+    /**
+     * Returns {@code true} if this type signature represents an optional type.
+     */
+    public boolean isOptional() {
+        return isContainer() && "optional".equals(name);
     }
 
     /**

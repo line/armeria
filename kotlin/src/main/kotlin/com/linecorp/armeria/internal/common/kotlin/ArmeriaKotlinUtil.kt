@@ -107,6 +107,12 @@ internal fun isMarkedNullable(element: AnnotatedElement): Boolean {
                 else -> false
             }
         }
+        is Method -> element.kotlinFunction?.returnType?.isMarkedNullable ?: false
         else -> false
     }
 }
+
+/**
+ * Returns true if the [Class] is a Kotlin data class.
+ */
+internal fun isData(clazz: Class<*>): Boolean = clazz.kotlin.isData

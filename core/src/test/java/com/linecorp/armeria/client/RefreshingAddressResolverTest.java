@@ -30,11 +30,17 @@ import static org.awaitility.Awaitility.await;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Stream;
 
+import org.assertj.core.api.AbstractIntegerAssert;
+import org.assertj.core.api.AbstractStringAssert;
+import org.hamcrest.Matchers;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -44,6 +50,7 @@ import com.google.common.collect.ImmutableMap;
 import com.linecorp.armeria.client.RefreshingAddressResolver.CacheEntry;
 import com.linecorp.armeria.client.endpoint.dns.TestDnsServer;
 import com.linecorp.armeria.client.retry.Backoff;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.internal.client.dns.ByteArrayDnsRecord;
 import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
@@ -55,6 +62,7 @@ import io.netty.channel.EventLoop;
 import io.netty.handler.codec.dns.DatagramDnsQuery;
 import io.netty.handler.codec.dns.DefaultDnsQuestion;
 import io.netty.handler.codec.dns.DefaultDnsResponse;
+import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
 import io.netty.handler.codec.dns.DnsSection;
@@ -84,27 +92,23 @@ class RefreshingAddressResolverTest {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
                 final Future<InetSocketAddress> foo = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
-                await().untilAsserted(() -> assertThat(foo.isSuccess()).isTrue());
-                InetSocketAddress addr = foo.getNow();
-                assertThat(addr.getAddress().getHostAddress()).isEqualTo("1.1.1.1");
-                assertThat(addr.getPort()).isEqualTo(36462);
+                assertIpAddress(foo).isEqualTo("1.1.1.1");
+                assertHostAddress(foo).isEqualTo("1.1.1.1");
+                assertPort(foo).isEqualTo(36462);
 
                 final Cache<String, CacheEntry> cache = group.cache();
                 assertThat(cache.estimatedSize()).isOne();
 
                 final Future<InetSocketAddress> bar = resolver.resolve(
                         InetSocketAddress.createUnresolved("bar.com", 36462));
-                await().untilAsserted(() -> assertThat(bar.isSuccess()).isTrue());
-                addr = bar.getNow();
-                assertThat(addr.getAddress().getHostAddress()).isEqualTo("1.2.3.4");
-                assertThat(addr.getPort()).isEqualTo(36462);
+                assertHostAddress(bar).isEqualTo("1.2.3.4");
+                assertPort(bar).isEqualTo(36462);
                 assertThat(cache.estimatedSize()).isEqualTo(2);
 
                 final Future<InetSocketAddress> foo1 = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 80));
-                addr = foo1.getNow();
-                assertThat(addr.getAddress().getHostAddress()).isEqualTo("1.1.1.1");
-                assertThat(addr.getPort()).isEqualTo(80);
+                assertHostAddress(foo1).isEqualTo("1.1.1.1");
+                assertPort(foo1).isEqualTo(80);
                 assertThat(cache.estimatedSize()).isEqualTo(2);
 
                 final List<InetAddress> addresses =
@@ -133,8 +137,7 @@ class RefreshingAddressResolverTest {
 
                 final Future<InetSocketAddress> foo = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
-                await().untilAsserted(() -> assertThat(foo.isSuccess()).isTrue());
-                assertThat(foo.getNow().getAddress().getHostAddress()).isEqualTo("1.1.1.1");
+                assertHostAddress(foo).isEqualTo("1.1.1.1");
 
                 Thread.sleep(1100); // wait until refresh cache entry (ttl + a)
 
@@ -158,8 +161,7 @@ class RefreshingAddressResolverTest {
 
                 final Future<InetSocketAddress> foo = resolver.resolve(
                         InetSocketAddress.createUnresolved("baz.com", 36462));
-                await().untilAsserted(() -> assertThat(foo.isSuccess()).isTrue());
-                assertThat(foo.getNow().getAddress().getHostAddress()).isEqualTo("1.1.1.1");
+                assertHostAddress(foo).isEqualTo("1.1.1.1");
 
                 final Cache<String, CacheEntry> cache = group.cache();
                 assertThat(cache.estimatedSize()).isOne();
@@ -193,7 +195,7 @@ class RefreshingAddressResolverTest {
         ) {
             final EventLoop eventLoop = eventLoopExtension.get();
             final DnsResolverGroupBuilder builder = builder(server);
-            builder.refreshBackoff(Backoff.ofDefault().withMaxAttempts(1));
+            builder.autoRefreshBackoff(Backoff.ofDefault().withMaxAttempts(1));
             try (RefreshingAddressResolverGroup group = builder.build(eventLoop)) {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
 
@@ -201,8 +203,7 @@ class RefreshingAddressResolverTest {
 
                 final Future<InetSocketAddress> foo = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
-                await().untilAsserted(() -> assertThat(foo.isSuccess()).isTrue());
-                assertThat(foo.getNow().getAddress().getHostAddress()).isEqualTo("1.1.1.1");
+                assertHostAddress(foo).isEqualTo("1.1.1.1");
 
                 server.setResponses(ImmutableMap.of());
 
@@ -345,8 +346,7 @@ class RefreshingAddressResolverTest {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
                 final Future<InetSocketAddress> future = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
-                await().until(future::isDone);
-                assertThat(future.getNow().getAddress().getHostAddress()).isEqualTo("0:0:0:0:0:0:0:1");
+                assertHostAddress(future).isEqualTo("0:0:0:0:0:0:0:1");
             }
         }
     }
@@ -368,8 +368,7 @@ class RefreshingAddressResolverTest {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
                 final Future<InetSocketAddress> future = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
-                await().until(future::isSuccess);
-                assertThat(future.getNow().getAddress().getHostAddress()).isEqualTo("1.1.1.1");
+                assertHostAddress(future).isEqualTo("1.1.1.1");
             }
         }
     }
@@ -391,8 +390,7 @@ class RefreshingAddressResolverTest {
                 final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
                 final Future<InetSocketAddress> future = resolver.resolve(
                         InetSocketAddress.createUnresolved("foo.com", 36462));
-                await().until(future::isSuccess);
-                assertThat(future.getNow().getAddress().getHostAddress()).isEqualTo("0:0:0:0:0:0:0:1");
+                assertHostAddress(future).isEqualTo("0:0:0:0:0:0:0:1");
             }
         }
     }
@@ -480,20 +478,15 @@ class RefreshingAddressResolverTest {
 
             final Future<InetSocketAddress> fooWithTrailingDot0 = resolver.resolve(
                     InetSocketAddress.createUnresolved("foo.com.", 36462));
-            await().untilAsserted(() -> assertThat(fooWithTrailingDot0.isSuccess()).isTrue());
-            // Should resolve hostname IP
-            assertThat(fooWithTrailingDot0.getNow().getAddress().getAddress())
-                    .isEqualTo(NetUtil.createByteArrayFromIpAddressString("1.1.1.1"));
+            assertIpAddress(fooWithTrailingDot0).isEqualTo("1.1.1.1");
             final CacheEntry fooWithTrailingDotCache0 = cache.getIfPresent("foo.com.");
             assertThat(cache.estimatedSize()).isOne();
 
             final Future<InetSocketAddress> foo0 = resolver.resolve(
                     InetSocketAddress.createUnresolved("foo.com", 36462));
-            await().untilAsserted(() -> assertThat(foo0.isSuccess()).isTrue());
-            final InetSocketAddress fooAddress0 = foo0.getNow();
             // Should resolve search domain IP
-            assertThat(fooAddress0.getAddress().getAddress())
-                    .isEqualTo(NetUtil.createByteArrayFromIpAddressString("2.2.2.2"));
+            assertIpAddress(foo0).isEqualTo("2.2.2.2");
+            final InetSocketAddress fooAddress0 = foo0.getNow();
 
             final CacheEntry fooCache0 = cache.getIfPresent("foo.com");
             final Future<InetSocketAddress> foo1 = resolver.resolve(
@@ -535,6 +528,394 @@ class RefreshingAddressResolverTest {
             assertThat(fooCache3.address()).isEqualTo(fooCache0.address());
             group.close();
         }
+    }
+
+    @Test
+    void disableAutoRefresh() throws InterruptedException {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("foo.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))) {
+
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsCache dnsCache = DnsCache.builder().build();
+            try (RefreshingAddressResolverGroup group = builder(false, server).enableAutoRefresh(false)
+                                                                              .dnsCache(dnsCache)
+                                                                              .build(eventLoop)) {
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+                final AtomicBoolean removed = new AtomicBoolean();
+                dnsCache.addListener(new DnsCacheListener() {
+                    @Override
+                    public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                          @Nullable UnknownHostException cause) {
+                        removed.set(true);
+                    }
+
+                    @Override
+                    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                           @Nullable UnknownHostException cause) {}
+                });
+
+                final Cache<String, CacheEntry> cache = group.cache();
+
+                final Future<InetSocketAddress> fooAddr = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com.", 36462));
+                assertIpAddress(fooAddr).isEqualTo("1.1.1.1");
+                assertThat(cache.estimatedSize()).isOne();
+
+                final DnsQuestionWithoutTrailingDot fooQuestion =
+                        DnsQuestionWithoutTrailingDot.of("foo.com.", A);
+                dnsCache.remove(fooQuestion);
+                // Wait until the removal event is delivered.
+                await().untilTrue(removed);
+
+                // Should not refresh the cached value.
+                final CacheEntry fooCache = cache.getIfPresent("foo.com.");
+                assertThat(fooCache).isNull();
+            }
+        }
+    }
+
+    @Test
+    void autoRefreshTimeoutFunction() throws InterruptedException {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("static.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("static.com.", "1.1.1.1")),
+                new DefaultDnsQuestion("dynamic.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("dynamic.com.", "2.2.2.2"))))) {
+
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsCache dnsCache = DnsCache.builder()
+                                              .executor(eventLoop)
+                                              .build();
+            try (RefreshingAddressResolverGroup group =
+                         builder(false, server)
+                                 // Refresh only 'static.com' domain
+                                 .autoRefreshTimeout(hostname -> {
+                                     if ("static.com.".equals(hostname)) {
+                                         return 60 * 1000;
+                                     }
+                                     // Don't refresh
+                                     return 0;
+                                 })
+                                 .dnsCache(dnsCache)
+                                 .build(eventLoop)) {
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+                final AtomicInteger removalCounter = new AtomicInteger();
+                dnsCache.addListener(new DnsCacheListener() {
+                    @Override
+                    public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                          @Nullable UnknownHostException cause) {
+                        removalCounter.incrementAndGet();
+                    }
+
+                    @Override
+                    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                           @Nullable UnknownHostException cause) {}
+                });
+
+                final Cache<String, CacheEntry> cache = group.cache();
+
+                final Future<InetSocketAddress> staticAddr = resolver.resolve(
+                        InetSocketAddress.createUnresolved("static.com.", 36462));
+                assertIpAddress(staticAddr).isEqualTo("1.1.1.1");
+                assertThat(cache.estimatedSize()).isOne();
+
+                final Future<InetSocketAddress> dynamicAddr = resolver.resolve(
+                        InetSocketAddress.createUnresolved("dynamic.com.", 36462));
+                assertIpAddress(dynamicAddr).isEqualTo("2.2.2.2");
+                assertThat(cache.estimatedSize()).isEqualTo(2);
+
+                final CacheEntry oldStaticCacheEntry = cache.getIfPresent("static.com.");
+
+                server.setResponses(
+                        ImmutableMap.of(
+                                new DefaultDnsQuestion("static.com.", A),
+                                new DefaultDnsResponse(0).addRecord(ANSWER,
+                                                                    newAddressRecord("static.com.", "1.1.1.2")),
+                                new DefaultDnsQuestion("dynamic.com.", A),
+                                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("dynamic.com.",
+                                                                                             "2.2.2.3"))));
+
+                final DnsQuestionWithoutTrailingDot staticQuestion =
+                        DnsQuestionWithoutTrailingDot.of("static.com.", "static.com.", A);
+                final DnsQuestionWithoutTrailingDot dynamicQuestion =
+                        DnsQuestionWithoutTrailingDot.of("dynamic.com.", "dynamic.com.", A);
+                dnsCache.remove(staticQuestion);
+                dnsCache.remove(dynamicQuestion);
+                // Wait until the removal event is delivered.
+                await().untilAtomic(removalCounter, Matchers.equalTo(2));
+
+                // Wait for the refresh task to be done.
+                Thread.sleep(2000);
+
+                final CacheEntry newStaticCacheEntry = cache.getIfPresent("static.com.");
+                final CacheEntry newDynamicCacheEntry = cache.getIfPresent("dynamic.com.");
+                assertThat(newStaticCacheEntry.address().getAddress())
+                        .isEqualTo(NetUtil.createByteArrayFromIpAddressString("1.1.1.2"));
+                // New CacheEntry should inherit the original creationTimeNanos
+                assertThat(oldStaticCacheEntry.originalCreationTimeNanos())
+                        .isEqualTo(newStaticCacheEntry.originalCreationTimeNanos());
+                assertThat(newDynamicCacheEntry).isNull();
+            }
+        }
+    }
+
+    @Test
+    void autoRefreshTimeout() throws InterruptedException {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("foo.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))) {
+
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsCache dnsCache = DnsCache.builder()
+                                              .executor(eventLoop)
+                                              .build();
+            try (RefreshingAddressResolverGroup group =
+                         builder(false, server)
+                                 .autoRefreshTimeoutMillis(5 * 1000) // refresh for 5 seconds
+                                 .dnsCache(dnsCache)
+                                 .build(eventLoop)) {
+
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+                final AtomicInteger removalCounter = new AtomicInteger();
+                dnsCache.addListener(new DnsCacheListener() {
+                    @Override
+                    public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                          @Nullable UnknownHostException cause) {
+                        removalCounter.incrementAndGet();
+                    }
+
+                    @Override
+                    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                           @Nullable UnknownHostException cause) {}
+                });
+
+                final Cache<String, CacheEntry> cache = group.cache();
+
+                final Future<InetSocketAddress> fooAddr = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com.", 36462));
+                assertIpAddress(fooAddr).isEqualTo("1.1.1.1");
+
+                assertThat(cache.estimatedSize()).isOne();
+                final DnsQuestionWithoutTrailingDot fooQuestion =
+                        DnsQuestionWithoutTrailingDot.of("foo.com.", A);
+                dnsCache.remove(fooQuestion);
+                await().untilAtomic(removalCounter, Matchers.equalTo(1));
+
+                // Wait for the refresh task to be done.
+                Thread.sleep(2000);
+
+                CacheEntry fooCacheEntry = cache.getIfPresent("foo.com.");
+                assertThat(fooCacheEntry.address().getAddress())
+                        .isEqualTo(NetUtil.createByteArrayFromIpAddressString("1.1.1.1"));
+
+                // Wait until the refresh timeout passes.
+                Thread.sleep(5000);
+                dnsCache.remove(fooQuestion);
+                // Wait for the refresh task to be done.
+                Thread.sleep(2000);
+                fooCacheEntry = cache.getIfPresent("foo.com.");
+                assertThat(fooCacheEntry).isNull();
+            }
+        }
+    }
+
+    @Test
+    void zeroAutoRefreshTimeout() throws InterruptedException {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("foo.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))) {
+
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsCache dnsCache = DnsCache.builder()
+                                              .executor(eventLoop)
+                                              .build();
+            try (RefreshingAddressResolverGroup group =
+                         builder(false, server)
+                                 .autoRefreshTimeout(hostname -> 0)
+                                 .dnsCache(dnsCache)
+                                 .build(eventLoop)) {
+
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+                final AtomicInteger removalCounter = new AtomicInteger();
+                dnsCache.addListener(new DnsCacheListener() {
+                    @Override
+                    public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                          @Nullable UnknownHostException cause) {
+                        removalCounter.incrementAndGet();
+                    }
+
+                    @Override
+                    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                           @Nullable UnknownHostException cause) {}
+                });
+
+                final Cache<String, CacheEntry> cache = group.cache();
+
+                final Future<InetSocketAddress> fooAddr = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com.", 36462));
+                assertIpAddress(fooAddr).isEqualTo("1.1.1.1");
+
+                assertThat(cache.estimatedSize()).isOne();
+                final DnsQuestionWithoutTrailingDot fooQuestion =
+                        DnsQuestionWithoutTrailingDot.of("foo.com.", A);
+                dnsCache.remove(fooQuestion);
+                await().untilAtomic(removalCounter, Matchers.equalTo(1));
+
+                // Wait for the refresh task to be done.
+                Thread.sleep(2000);
+
+                final CacheEntry fooCacheEntry = cache.getIfPresent("foo.com.");
+                // Should not refresh if the timeout is zero.
+                assertThat(fooCacheEntry).isNull();
+            }
+        }
+    }
+
+    @Test
+    void autoRefreshTimeoutWithFailedQuery() throws Exception {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("foo.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1"))))) {
+
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsCache dnsCache = DnsCache.builder()
+                                              .executor(eventLoop)
+                                              .build();
+            try (RefreshingAddressResolverGroup group =
+                         builder(false, server)
+                                 .autoRefreshTimeoutMillis(5 * 1000) // refresh for 5 seconds
+                                 .dnsCache(dnsCache)
+                                 .build(eventLoop)) {
+
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+                final AtomicInteger removalCounter = new AtomicInteger();
+                dnsCache.addListener(new DnsCacheListener() {
+                    @Override
+                    public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                          @Nullable UnknownHostException cause) {
+                        removalCounter.incrementAndGet();
+                    }
+
+                    @Override
+                    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                           @Nullable UnknownHostException cause) {}
+                });
+
+                final Cache<String, CacheEntry> cache = group.cache();
+
+                final Future<InetSocketAddress> fooAddr = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com.", 36462));
+                assertIpAddress(fooAddr).isEqualTo("1.1.1.1");
+
+                // Make a failed query
+                server.setResponses(ImmutableMap.of());
+
+                assertThat(cache.estimatedSize()).isOne();
+                final DnsQuestionWithoutTrailingDot fooQuestion =
+                        DnsQuestionWithoutTrailingDot.of("foo.com.", A);
+                dnsCache.remove(fooQuestion);
+                await().untilAtomic(removalCounter, Matchers.equalTo(1));
+
+                // Wait for the refresh task to be done.
+                Thread.sleep(2000);
+
+                // DnsCache should not be filled.
+                assertThat(dnsCache.get(fooQuestion)).isNull();
+
+                CacheEntry fooCacheEntry = cache.getIfPresent("foo.com.");
+                assertThat(fooCacheEntry.address().getAddress())
+                        .isEqualTo(NetUtil.createByteArrayFromIpAddressString("1.1.1.1"));
+
+                // Wait until the refresh timeout passes.
+                Thread.sleep(10000);
+                // Wait for the refresh task to be done.
+                Thread.sleep(2000);
+                fooCacheEntry = cache.getIfPresent("foo.com.");
+                assertThat(fooCacheEntry).isNull();
+            }
+        }
+    }
+
+    @Test
+    void shouldStopRefreshingOnEviction() throws InterruptedException {
+        try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
+                new DefaultDnsQuestion("foo.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("foo.com.", "1.1.1.1")),
+                new DefaultDnsQuestion("bar.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("bar.com.", "2.2.2.2")),
+                new DefaultDnsQuestion("baz.com.", A),
+                new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "3.3.3.3"))))) {
+
+            final EventLoop eventLoop = eventLoopExtension.get();
+            final DnsCache dnsCache = DnsCache.builder()
+                                              .executor(eventLoop)
+                                              .cacheSpec("maximumSize=2")
+                                              .build();
+            try (RefreshingAddressResolverGroup group =
+                         builder(false, server)
+                                 .dnsCache(dnsCache)
+                                 .build(eventLoop)) {
+                final AddressResolver<InetSocketAddress> resolver = group.getResolver(eventLoop);
+                final AtomicInteger removalCounter = new AtomicInteger();
+                final AtomicInteger evictionCounter = new AtomicInteger();
+                dnsCache.addListener(new DnsCacheListener() {
+                    @Override
+                    public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                          @Nullable UnknownHostException cause) {
+                        removalCounter.incrementAndGet();
+                    }
+
+                    @Override
+                    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                           @Nullable UnknownHostException cause) {
+                        // The old cache should be evicted first.
+                        assertThat(((DnsQuestionWithoutTrailingDot) question).originalName())
+                                .isEqualTo("foo.com.");
+                        evictionCounter.incrementAndGet();
+                    }
+                });
+
+                final Cache<String, CacheEntry> cache = group.cache();
+
+                final Future<InetSocketAddress> fooAddr = resolver.resolve(
+                        InetSocketAddress.createUnresolved("foo.com.", 36462));
+                assertIpAddress(fooAddr).isEqualTo("1.1.1.1");
+                assertThat(cache.estimatedSize()).isOne();
+
+                final Future<InetSocketAddress> barAddr = resolver.resolve(
+                        InetSocketAddress.createUnresolved("bar.com.", 36462));
+                assertIpAddress(barAddr).isEqualTo("2.2.2.2");
+
+                final Future<InetSocketAddress> bazAddr = resolver.resolve(
+                        InetSocketAddress.createUnresolved("baz.com.", 36462));
+                assertIpAddress(bazAddr).isEqualTo("3.3.3.3");
+                await().atMost(Duration.ofSeconds(20))
+                       .untilAtomic(evictionCounter, Matchers.equalTo(1));
+                assertThat(removalCounter).hasValue(0);
+
+                // Wait for the eviction event to be delivered.
+                Thread.sleep(2000);
+                assertThat(cache.estimatedSize()).isEqualTo(2);
+                assertThat(cache.asMap().keySet())
+                        .containsExactlyInAnyOrder("bar.com.", "baz.com.");
+            }
+        }
+    }
+
+    private static AbstractStringAssert<?> assertIpAddress(Future<InetSocketAddress> staticAddr) {
+        await().untilAsserted(() -> assertThat(staticAddr.isSuccess()).isTrue());
+        return assertThat(NetUtil.bytesToIpAddress(staticAddr.getNow().getAddress().getAddress()));
+    }
+
+    private static AbstractStringAssert<?> assertHostAddress(Future<InetSocketAddress> staticAddr) {
+        await().untilAsserted(() -> assertThat(staticAddr.isSuccess()).isTrue());
+        return assertThat(staticAddr.getNow().getAddress().getHostAddress());
+    }
+
+    private static AbstractIntegerAssert<?> assertPort(Future<InetSocketAddress> staticAddr) {
+        await().untilAsserted(() -> assertThat(staticAddr.isSuccess()).isTrue());
+        return assertThat(staticAddr.getNow().getPort());
     }
 
     private static DnsResolverGroupBuilder builder(TestDnsServer... servers) {

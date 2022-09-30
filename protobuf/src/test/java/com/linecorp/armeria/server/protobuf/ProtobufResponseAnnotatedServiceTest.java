@@ -218,8 +218,12 @@ class ProtobufResponseAnnotatedServiceTest {
     void protobufStreamResponse(String path) {
         final AggregatedHttpResponse response = client.get(path).aggregate().join();
         assertThat(response.status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        assertThat(cause).isInstanceOf(IllegalArgumentException.class)
-                         .hasMessageContaining("Cannot convert a");
+        assertThat(cause).isInstanceOf(IllegalStateException.class)
+                         .hasMessageContaining("cannot convert a result to HttpResponse");
+        assertThat(cause.getCause())
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Cannot convert a")
+                .hasMessageContaining("to Protocol Buffers wire format");
     }
 
     @Test

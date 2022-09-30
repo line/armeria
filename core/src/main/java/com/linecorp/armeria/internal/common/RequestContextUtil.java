@@ -30,7 +30,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.collect.MapMaker;
 import com.google.errorprone.annotations.MustBeClosed;
 
-import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
@@ -38,7 +37,9 @@ import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestContextStorageProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.server.DefaultServiceRequestContext;
+import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -63,8 +64,13 @@ public final class RequestContextUtil {
 
     static {
         final RequestContextStorageProvider provider = Flags.requestContextStorageProvider();
+        final Sampler<? super RequestContext> sampler = Flags.requestContextLeakDetectionSampler();
         try {
-            requestContextStorage = provider.newStorage();
+            if (sampler == Sampler.never()) {
+                requestContextStorage = provider.newStorage();
+            } else {
+                requestContextStorage = new LeakTracingRequestContextStorage(provider.newStorage(), sampler);
+            }
         } catch (Throwable t) {
             throw new IllegalStateException("Failed to create context storage. provider: " + provider, t);
         }
@@ -195,13 +201,19 @@ public final class RequestContextUtil {
         }
     }
 
+    public static boolean equalsIgnoreWrapper(@Nullable RequestContext ctx1, @Nullable RequestContext ctx2) {
+        if (ctx1 == null) {
+            return ctx2 == null;
+        }
+        return ctx1.equalsIgnoreWrapper(ctx2);
+    }
+
     @Nullable
     private static AutoCloseable invokeHook(RequestContext ctx) {
         final Supplier<? extends AutoCloseable> hook;
-        if (ctx instanceof DefaultServiceRequestContext) {
-            hook = ((DefaultServiceRequestContext) ctx).hook();
-        } else if (ctx instanceof DefaultClientRequestContext) {
-            hook = ((DefaultClientRequestContext) ctx).hook();
+        final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
+        if (ctxExtension != null) {
+            hook = ctxExtension.hook();
         } else {
             hook = null;
         }

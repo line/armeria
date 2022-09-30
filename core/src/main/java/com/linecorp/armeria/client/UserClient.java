@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AbstractUnwrappable;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
 
 import io.micrometer.core.instrument.MeterRegistry;
 

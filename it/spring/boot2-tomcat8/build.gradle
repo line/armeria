@@ -1,6 +1,5 @@
 final def SPRING_BOOT_VERSION = '2.1.18.RELEASE'
 final def SPRING_VERSION = '5.1.20.RELEASE'
-final def TOMCAT_VERSION = '8.5.78'
 
 dependencies {
     implementation(project(':spring:boot2-starter')) {
@@ -28,14 +27,9 @@ dependencies {
         }
     }
 
-    [ 'tomcat-embed-core', 'tomcat-embed-jasper', 'tomcat-embed-el' ].each {
-        implementation("org.apache.tomcat.embed:$it") {
-            version {
-                // Will fail the build if the override doesn't work
-                strictly TOMCAT_VERSION
-            }
-        }
-    }
+    implementation libs.tomcat8.core
+    implementation libs.tomcat8.jasper
+    implementation libs.tomcat8.el
 
     testImplementation("org.springframework.boot:spring-boot-starter-test") {
         version {

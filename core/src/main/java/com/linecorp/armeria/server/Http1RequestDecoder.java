@@ -223,7 +223,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                                                            keepAlive, inboundTrafficController, routingCtx);
 
                     // An aggregating request will be fired after all objects are collected.
-                    if (!req.isAggregated()) {
+                    if (!req.needsAggregation()) {
                         ctx.fireChannelRead(req);
                     }
                 } else {
@@ -286,7 +286,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     decodedReq.close();
-                    if (decodedReq.isAggregated()) {
+                    if (decodedReq.needsAggregation()) {
                         // An aggregated request is now ready to be fired.
                         ctx.fireChannelRead(decodedReq);
                     }

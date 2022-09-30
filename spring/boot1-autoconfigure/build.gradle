@@ -54,3 +54,10 @@ tasks.compileTestJava.dependsOn(project(':spring:boot2-autoconfigure').tasks.com
 tasks.withType(Checkstyle) {
     onlyIf { false }
 }
+
+// allows illegal access by cglib
+if (rootProject.ext.testJavaVersion >= 16) {
+    tasks.withType(Test) {
+        jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED'
+    }
+}

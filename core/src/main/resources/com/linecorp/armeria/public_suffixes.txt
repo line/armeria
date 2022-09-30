@@ -122,6 +122,7 @@
 1337.pictures
 16-b.it
 1kapp.com
+2.azurestaticapps.net
 2.bg
 2000.hu
 2038.io
@@ -137,9 +138,11 @@
 4lima.de
 4u.com
 5.bg
+5g.in
 6.bg
 611.to
 64-b.it
+6g.in
 7.bg
 8.bg
 9.bg
@@ -287,6 +290,7 @@ aguni.okinawa.jp
 ah.cn
 ah.no
 ai
+ai.in
 aibetsu.hokkaido.jp
 aichi.jp
 aid.pl
@@ -370,6 +374,7 @@ alwaysdata.net
 am
 am.br
 am.gov.br
+am.in
 am.leg.br
 ama.aichi.jp
 ama.shimane.jp
@@ -775,6 +780,7 @@ be
 be.ax
 be.eu.org
 be.gy
+beagleboard.io
 bearalvahki.no
 beardu.no
 beats
@@ -834,6 +840,7 @@ biella.it
 bieszczady.pl
 bievat.no
 bifuka.hokkaido.jp
+bihar.in
 bihoro.hokkaido.jp
 bike
 bilbao.museum
@@ -862,6 +869,7 @@ biz.et
 biz.fj
 biz.gl
 biz.id
+biz.in
 biz.ki
 biz.ls
 biz.mv
@@ -1098,6 +1106,7 @@ bus.museum
 busan.kr
 bushey.museum
 business
+business.in
 but.jp
 buy
 buyshop.jp
@@ -1123,6 +1132,7 @@ c66.me
 ca
 ca-central-1.elasticbeanstalk.com
 ca.eu.org
+ca.in
 ca.it
 ca.na
 ca.reclaim.cloud
@@ -1452,6 +1462,7 @@ cn-north-1.eb.amazonaws.com.cn
 cn-northwest-1.eb.amazonaws.com.cn
 cn.com
 cn.eu.org
+cn.in
 cn.it
 cn.ua
 cn.vu
@@ -1613,6 +1624,7 @@ com.hn
 com.hr
 com.ht
 com.im
+com.in
 com.io
 com.iq
 com.is
@@ -1737,6 +1749,7 @@ coop
 coop.ar
 coop.br
 coop.ht
+coop.in
 coop.km
 coop.mv
 coop.mw
@@ -1786,6 +1799,7 @@ crown
 crs
 cruise
 cruises
+cs.in
 cs.it
 cs.keliweb.cloud
 csx.cc
@@ -1902,6 +1916,7 @@ definima.io
 definima.net
 degree
 delaware.museum
+delhi.in
 delivery
 dell
 dell-ogliastra.it
@@ -2018,6 +2033,7 @@ dot
 dovre.no
 download
 dp.ua
+dr.in
 dr.na
 dr.tr
 drammen.no
@@ -2104,6 +2120,8 @@ eastafrica.museum
 eastasia.azurestaticapps.net
 eastcoast.museum
 eastus2.azurestaticapps.net
+easypanel.app
+easypanel.host
 eat
 eating-organic.net
 eaton.mi.us
@@ -2338,6 +2356,7 @@ epilepsy.museum
 epson
 equipment
 equipment.aero
+er.in
 ericsson
 erimo.hokkaido.jp
 erni
@@ -2611,6 +2630,10 @@ fr.eu.org
 fr.it
 fra1-de.cloudjiffy.net
 framer.app
+framer.media
+framer.photos
+framer.website
+framer.wiki
 framercanvas.com
 frana.no
 francaise.museum
@@ -3197,6 +3220,7 @@ guernsey.museum
 guge
 guide
 guitars
+gujarat.in
 gujo.gifu.jp
 gulen.no
 gunma.jp
@@ -3708,6 +3732,7 @@ info.fj
 info.gu
 info.ht
 info.hu
+info.in
 info.ke
 info.ki
 info.la
@@ -3749,6 +3774,7 @@ int.ci
 int.co
 int.cv
 int.eu.org
+int.in
 int.is
 int.la
 int.lk
@@ -3765,12 +3791,14 @@ intelligence.museum
 interactive.museum
 international
 internet-dns.de
+internet.in
 intl.tn
 intuit
 inuyama.aichi.jp
 investments
 inzai.chiba.jp
 io
+io.in
 io.kg
 iobb.net
 iopsys.se
@@ -4945,6 +4973,7 @@ md.ci
 md.us
 me
 me.eu.org
+me.in
 me.it
 me.ke
 me.so
@@ -6495,6 +6524,7 @@ pescara.it
 pet
 pf
 pfizer
+pg.in
 pg.it
 pgafan.net
 pgfog.com
@@ -6611,6 +6641,7 @@ portal.museum
 portland.museum
 portlligat.museum
 post
+post.in
 postman-echo.com
 posts-and-telecommunications.museum
 potager.org
@@ -6663,6 +6694,7 @@ pro.cy
 pro.ec
 pro.fj
 pro.ht
+pro.in
 pro.mv
 pro.na
 pro.om
@@ -7674,6 +7706,7 @@ stpetersburg.museum
 strand.no
 stranda.no
 stream
+streamlitapp.com
 stripper.jp
 stryn.no
 student.aero
@@ -8120,6 +8153,7 @@ transport.museum
 transporte.bo
 trapani.it
 travel
+travel.in
 travel.pl
 travel.tt
 travelchannel
@@ -8226,6 +8260,7 @@ tv.bb
 tv.bo
 tv.br
 tv.im
+tv.in
 tv.it
 tv.kg
 tv.na
@@ -8283,6 +8318,7 @@ ujitawara.kyoto.jp
 uk
 uk.com
 uk.eu.org
+uk.in
 uk.kg
 uk.net
 uk.oxa.cloud
@@ -8321,6 +8357,7 @@ unzen.nagasaki.jp
 uol
 uonuma.niigata.jp
 uozu.toyama.jp
+up.in
 upaas.kazteleport.kz
 upli.io
 upow.gov.pl
@@ -8356,6 +8393,7 @@ us.ax
 us.com
 us.eu.org
 us.gov.pl
+us.in
 us.kg
 us.na
 us.org
@@ -8485,6 +8523,27 @@ veterinaire.fr
 veterinaire.km
 vevelstad.no
 vf.no
+vfs.cloud9.af-south-1.amazonaws.com
+vfs.cloud9.ap-east-1.amazonaws.com
+vfs.cloud9.ap-northeast-1.amazonaws.com
+vfs.cloud9.ap-northeast-2.amazonaws.com
+vfs.cloud9.ap-northeast-3.amazonaws.com
+vfs.cloud9.ap-south-1.amazonaws.com
+vfs.cloud9.ap-southeast-1.amazonaws.com
+vfs.cloud9.ap-southeast-2.amazonaws.com
+vfs.cloud9.ca-central-1.amazonaws.com
+vfs.cloud9.eu-central-1.amazonaws.com
+vfs.cloud9.eu-north-1.amazonaws.com
+vfs.cloud9.eu-south-1.amazonaws.com
+vfs.cloud9.eu-west-1.amazonaws.com
+vfs.cloud9.eu-west-2.amazonaws.com
+vfs.cloud9.eu-west-3.amazonaws.com
+vfs.cloud9.me-south-1.amazonaws.com
+vfs.cloud9.sa-east-1.amazonaws.com
+vfs.cloud9.us-east-1.amazonaws.com
+vfs.cloud9.us-east-2.amazonaws.com
+vfs.cloud9.us-west-1.amazonaws.com
+vfs.cloud9.us-west-2.amazonaws.com
 vg
 vgs.no
 vi
@@ -8641,6 +8700,27 @@ website
 website.yandexcloud.net
 webspace.rocks
 webthings.io
+webview-assets.cloud9.af-south-1.amazonaws.com
+webview-assets.cloud9.ap-east-1.amazonaws.com
+webview-assets.cloud9.ap-northeast-1.amazonaws.com
+webview-assets.cloud9.ap-northeast-2.amazonaws.com
+webview-assets.cloud9.ap-northeast-3.amazonaws.com
+webview-assets.cloud9.ap-south-1.amazonaws.com
+webview-assets.cloud9.ap-southeast-1.amazonaws.com
+webview-assets.cloud9.ap-southeast-2.amazonaws.com
+webview-assets.cloud9.ca-central-1.amazonaws.com
+webview-assets.cloud9.eu-central-1.amazonaws.com
+webview-assets.cloud9.eu-north-1.amazonaws.com
+webview-assets.cloud9.eu-south-1.amazonaws.com
+webview-assets.cloud9.eu-west-1.amazonaws.com
+webview-assets.cloud9.eu-west-2.amazonaws.com
+webview-assets.cloud9.eu-west-3.amazonaws.com
+webview-assets.cloud9.me-south-1.amazonaws.com
+webview-assets.cloud9.sa-east-1.amazonaws.com
+webview-assets.cloud9.us-east-1.amazonaws.com
+webview-assets.cloud9.us-east-2.amazonaws.com
+webview-assets.cloud9.us-west-1.amazonaws.com
+webview-assets.cloud9.us-west-2.amazonaws.com
 wedding
 wedeploy.io
 wedeploy.me
@@ -8762,6 +8842,8 @@ xn--42c2d9a
 xn--45br5cyl
 xn--45brj9c
 xn--45q11c
+xn--4dbgdty6c.xn--4dbrk0ce
+xn--4dbrk0ce
 xn--4gbrim
 xn--4it168d.jp
 xn--4it797k.jp
@@ -8772,6 +8854,7 @@ xn--55qx5d
 xn--55qx5d.cn
 xn--55qx5d.hk
 xn--55qx5d.xn--j6w193g
+xn--5dbhl8d.xn--4dbrk0ce
 xn--5js045d.jp
 xn--5rtp49c.jp
 xn--5rtq34k.jp
@@ -8789,6 +8872,7 @@ xn--80aqecdr1a
 xn--80asehdb
 xn--80aswg
 xn--80au.xn--90a3ac
+xn--8dbq2a.xn--4dbrk0ce
 xn--8ltr62k.jp
 xn--8pvr4u.jp
 xn--8y0a063a
@@ -8910,6 +8994,7 @@ xn--h2brj9c8c
 xn--h3cuzk1di.xn--o3cw4h
 xn--hbmer-xqa.no
 xn--hcesuolo-7ya35b.no
+xn--hebda8b.xn--4dbrk0ce
 xn--hery-ira.nordland.no
 xn--hery-ira.xn--mre-og-romsdal-qqb.no
 xn--hgebostad-g3a.no

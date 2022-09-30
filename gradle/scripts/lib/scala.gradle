@@ -58,7 +58,7 @@ configure(scala212 + scala213 + scala3) {
 
 configure(scala212) {
     dependencies {
-        implementation('org.scala-lang:scala-library:2.12.15')
+        implementation('org.scala-lang:scala-library:2.12.16')
         if (managedVersions.containsKey('org.scalameta:munit_2.12')) {
             testImplementation "org.scalameta:munit_2.12:${managedVersions['org.scalameta:munit_2.12']}"
         }

@@ -79,8 +79,7 @@ public final class DnsUtil {
         DEFAULT_NDOTS = ndots;
     }
 
-    @Nullable
-    public static byte[] extractAddressBytes(DnsRecord record, Logger logger, String logPrefix) {
+    public static byte @Nullable [] extractAddressBytes(DnsRecord record, Logger logger, String logPrefix) {
         final DnsRecordType type = record.type();
         assert record instanceof ByteArrayDnsRecord;
         final byte[] content = ((ByteArrayDnsRecord) record).content();

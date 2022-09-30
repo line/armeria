@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.stream.AbortedStreamException
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.Blocking
+import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider
 import com.linecorp.armeria.server.annotation.Delete
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction
 import com.linecorp.armeria.server.annotation.Get
@@ -37,7 +38,6 @@ import com.linecorp.armeria.server.annotation.JacksonResponseConverterFunction
 import com.linecorp.armeria.server.annotation.Param
 import com.linecorp.armeria.server.annotation.ProducesJson
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider
 import com.linecorp.armeria.server.logging.LoggingService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import kotlinx.coroutines.CancellationException
@@ -318,7 +318,7 @@ class SuspendingAnnotatedServiceTest {
     }
 }
 
-internal class BarResponseConverterFunctionProvider : ResponseConverterFunctionProvider {
+internal class BarResponseConverterFunctionProvider : DelegatingResponseConverterFunctionProvider {
     override fun createResponseConverterFunction(
         returnType: Type,
         responseConverter: ResponseConverterFunction

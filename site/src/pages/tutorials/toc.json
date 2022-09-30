@@ -15,9 +15,16 @@
     "rest/blog/implement-update",
     "rest/blog/implement-delete"
   ],
-  "gRPC service":{
-    "Coming soon": null
-  },
+  "gRPC service":[
+    "grpc/blog",
+    "grpc/blog/define-service",
+    "grpc/blog/run-service",
+    "grpc/blog/implement-create",
+    "grpc/blog/implement-read",
+    "grpc/blog/implement-update",
+    "grpc/blog/implement-delete",
+    "grpc/blog/add-docservice"
+  ],
   "Thrift service":{
     "Coming soon": null
   }

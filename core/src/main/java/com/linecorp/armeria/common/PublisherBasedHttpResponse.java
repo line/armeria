@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import java.util.concurrent.CompletableFuture;
+
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
@@ -29,5 +31,11 @@ final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpO
 
     PublisherBasedHttpResponse(Publisher<? extends HttpObject> publisher) {
         super(publisher);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public CompletableFuture<AggregatedHttpResponse> aggregate(AggregationOptions options) {
+        return super.aggregate(options);
     }
 }
