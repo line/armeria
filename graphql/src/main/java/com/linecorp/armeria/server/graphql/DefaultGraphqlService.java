@@ -48,16 +48,16 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     private final GraphQL graphQL;
 
-    private final DataLoaderRegistryStrategy dataLoaderRegistryStrategy;
+    private final DataLoaderRegistryCreationStrategy dataLoaderRegistryCreationStrategy;
 
     private final boolean useBlockingTaskExecutor;
 
     DefaultGraphqlService(GraphQL graphQL,
-                          DataLoaderRegistryStrategy dataLoaderRegistryStrategy,
+                          DataLoaderRegistryCreationStrategy dataLoaderRegistryCreationStrategy,
                           boolean useBlockingTaskExecutor) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
-        this.dataLoaderRegistryStrategy = requireNonNull(dataLoaderRegistryStrategy,
-                                                         "dataLoaderRegistryStrategy");
+        this.dataLoaderRegistryCreationStrategy = requireNonNull(dataLoaderRegistryCreationStrategy,
+                                                                 "dataLoaderRegistryStrategy");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
     }
 
@@ -89,7 +89,7 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         final ExecutionInput executionInput =
                 builder.context(ctx)
                        .graphQLContext(GraphqlServiceContexts.graphqlContext(ctx))
-                       .dataLoaderRegistry(dataLoaderRegistryStrategy.apply(ctx))
+                       .dataLoaderRegistry(dataLoaderRegistryCreationStrategy.apply(ctx))
                        .build();
         return execute(ctx, executionInput, produceType);
     }
