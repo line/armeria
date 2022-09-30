@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.spring.web.reactive;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
@@ -38,13 +36,9 @@ import com.linecorp.armeria.spring.ArmeriaSettings;
 @Import(DataBufferFactoryWrapperConfiguration.class)
 public class RetryableArmeriaReactiveWebServerConfiguration {
 
-    private static final Logger logger =
-            LoggerFactory.getLogger(RetryableArmeriaReactiveWebServerConfiguration.class);
-
     @Bean
     public ArmeriaReactiveWebServerFactory armeriaReactiveWebServerFactory(
             ConfigurableListableBeanFactory beanFactory, Environment environment) {
-        logger.info("########### retryable server factory");
         return new RetryableArmeriaReactiveWebServerFactory(beanFactory, environment);
     }
 }
