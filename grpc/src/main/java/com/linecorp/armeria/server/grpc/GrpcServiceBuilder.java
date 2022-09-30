@@ -660,14 +660,14 @@ public final class GrpcServiceBuilder {
     }
 
     /**
-     * Sets whether the service handles HTTP/JSON requests using the gRPC wire protocol.
+     * Enables HTTP/JSON transcoding using the gRPC wire protocol.
      * Provide {@link HttpJsonTranscodingOptions} to customize HttpJsonTranscoding.
      *
      * <p>Example:
      * <pre>{@code
      * HttpJsonTranscodingOptions options =
      *   HttpJsonTranscodingOptions.builder()
-     *                             .useCamelCaseQueryParams(true)
+     *                             .queryParamMatchRules(ORIGINAL_FIELD)
      *                             ...
      *                             .build()
      *
@@ -696,7 +696,6 @@ public final class GrpcServiceBuilder {
     @UnstableApi
     public GrpcServiceBuilder enableHttpJsonTranscoding(HttpJsonTranscodingOptions httpJsonTranscodingOptions) {
         requireNonNull(httpJsonTranscodingOptions, "httpJsonTranscodingOptions");
-
         enableHttpJsonTranscoding = true;
         this.httpJsonTranscodingOptions = httpJsonTranscodingOptions;
         return this;
@@ -1029,11 +1028,12 @@ public final class GrpcServiceBuilder {
             final HttpJsonTranscodingOptions httpJsonTranscodingOptions;
             if (httpJsonTranscodingErrorHandler != null) {
                 httpJsonTranscodingOptions =
-                        HttpJsonTranscodingOptions.builder()
-                                                  .queryParamMatchRules(
-                                                          this.httpJsonTranscodingOptions.queryParamMatchRules())
-                                                  .errorHandler(httpJsonTranscodingErrorHandler)
-                                                  .build();
+                        HttpJsonTranscodingOptions
+                                .builder()
+                                .queryParamMatchRules(
+                                        this.httpJsonTranscodingOptions.queryParamMatchRules())
+                                .errorHandler(httpJsonTranscodingErrorHandler)
+                                .build();
             } else {
                 httpJsonTranscodingOptions = this.httpJsonTranscodingOptions;
             }

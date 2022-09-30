@@ -48,8 +48,8 @@ public final class HttpJsonTranscodingOptionsBuilder {
     HttpJsonTranscodingOptionsBuilder() {}
 
     /**
-     * Adds the specified {@link HttpJsonTranscodingQueryParamMatchRule} which is used to match {@link QueryParams}
-     * of a {@link HttpRequest} with fields in a {@link Message}.
+     * Adds the specified {@link HttpJsonTranscodingQueryParamMatchRule} which is used
+     * to match {@link QueryParams} of a {@link HttpRequest} with fields in a {@link Message}.
      * If not set, {@link HttpJsonTranscodingQueryParamMatchRule#ORIGINAL_FIELD} is used by default.
      */
     public HttpJsonTranscodingOptionsBuilder queryParamMatchRules(
@@ -60,8 +60,8 @@ public final class HttpJsonTranscodingOptionsBuilder {
     }
 
     /**
-     * Adds the specified {@link HttpJsonTranscodingQueryParamMatchRule} which is used to match {@link QueryParams}
-     * of a {@link HttpRequest} with fields in a {@link Message}.
+     * Adds the specified {@link HttpJsonTranscodingQueryParamMatchRule} which is used
+     * to match {@link QueryParams} of a {@link HttpRequest} with fields in a {@link Message}.
      * If not set, {@link HttpJsonTranscodingQueryParamMatchRule#ORIGINAL_FIELD} is used by default.
      */
     public HttpJsonTranscodingOptionsBuilder queryParamMatchRules(

@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -37,32 +39,26 @@ class HttpJsonTranscodingOptionsBuilderTest {
     void shouldReturnConfiguredSettings() {
         final HttpJsonTranscodingOptions withCamelCase =
                 HttpJsonTranscodingOptions.builder()
-                                          .queryParamMatchRules(
-                                                  HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE)
+                                          .queryParamMatchRules(LOWER_CAMEL_CASE)
                                           .build();
         assertThat(withCamelCase.queryParamMatchRules())
-                .containsExactly(HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE);
+                .containsExactly(LOWER_CAMEL_CASE);
 
         final HttpJsonTranscodingOptions onlyCamelCase =
                 HttpJsonTranscodingOptions.builder()
-                                          .queryParamMatchRules(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD)
+                                          .queryParamMatchRules(ORIGINAL_FIELD)
                                           .build();
-        assertThat(onlyCamelCase.queryParamMatchRules())
-                .containsExactly(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
+        assertThat(onlyCamelCase.queryParamMatchRules()).containsExactly(ORIGINAL_FIELD);
 
         final HttpJsonTranscodingOptions onlyOriginalField =
                 HttpJsonTranscodingOptions.builder()
-                                          .queryParamMatchRules(ImmutableList.of(
-                                                  HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE,
-                                                  HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD))
+                                          .queryParamMatchRules(ImmutableList.of(LOWER_CAMEL_CASE,
+                                                                                 ORIGINAL_FIELD))
                                           .build();
         assertThat(onlyOriginalField.queryParamMatchRules())
-                .containsExactlyInAnyOrder(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD,
-                                           HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE);
+                .containsExactlyInAnyOrder(ORIGINAL_FIELD, LOWER_CAMEL_CASE);
 
-        final HttpJsonTranscodingOptions defaultOptions =
-                HttpJsonTranscodingOptions.of();
-        assertThat(defaultOptions.queryParamMatchRules())
-                .containsExactly(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
+        final HttpJsonTranscodingOptions defaultOptions = HttpJsonTranscodingOptions.of();
+        assertThat(defaultOptions.queryParamMatchRules()).containsExactly(ORIGINAL_FIELD);
     }
 }

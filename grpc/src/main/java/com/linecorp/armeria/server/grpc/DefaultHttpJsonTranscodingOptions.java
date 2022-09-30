@@ -54,7 +54,8 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
             return false;
         }
         final HttpJsonTranscodingOptions that = (HttpJsonTranscodingOptions) o;
-        return queryParamMatchRules.equals(that.queryParamMatchRules()) && errorHandler.equals(that.errorHandler());
+        return queryParamMatchRules.equals(that.queryParamMatchRules()) &&
+               errorHandler.equals(that.errorHandler());
     }
 
     @Override

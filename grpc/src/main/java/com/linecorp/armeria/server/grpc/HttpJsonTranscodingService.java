@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE;
 import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
@@ -170,8 +171,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
                                     false);
                 final Map<String, Field> camelCaseFields;
-                if (httpJsonTranscodingOptions.queryParamMatchRules()
-                                              .contains(HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE)) {
+                if (httpJsonTranscodingOptions.queryParamMatchRules().contains(LOWER_CAMEL_CASE)) {
                     camelCaseFields =
                             buildFields(methodDesc.getInputType(), ImmutableList.of(), ImmutableSet.of(),
                                         true);
@@ -518,7 +518,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                              .build();
         useCamelCaseQueryParams =
                 httpJsonTranscodingOptions.queryParamMatchRules()
-                                          .contains(HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE);
+                                          .contains(LOWER_CAMEL_CASE);
         useProtoFieldNameQueryParams =
                 httpJsonTranscodingOptions.queryParamMatchRules()
                                           .contains(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
