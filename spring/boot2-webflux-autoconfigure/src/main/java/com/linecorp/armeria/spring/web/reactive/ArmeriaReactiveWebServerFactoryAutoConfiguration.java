@@ -18,8 +18,8 @@ package com.linecorp.armeria.spring.web.reactive;
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
 import org.springframework.boot.autoconfigure.AutoConfigureOrder;
 import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
@@ -47,7 +47,7 @@ public class ArmeriaReactiveWebServerFactoryAutoConfiguration {
      * Returns a new {@link ArmeriaReactiveWebServerFactory} bean instance.
      */
     @Bean
-    @ConditionalOnBean(ArmeriaReactiveWebServerFactory.class)
+    @ConditionalOnMissingBean(ArmeriaReactiveWebServerFactory.class)
     public ArmeriaReactiveWebServerFactory armeriaReactiveWebServerFactory(
             ConfigurableListableBeanFactory beanFactory, Environment environment) {
         return new ArmeriaReactiveWebServerFactory(beanFactory, environment);
