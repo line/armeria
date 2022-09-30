@@ -40,6 +40,6 @@ class JacksonUtilTest {
         final ObjectMapper objectMapper = JacksonUtil.newDefaultObjectMapper();
         final String jrhee17BirthDay = "1991-09-26T00:00:00";
         final LocalDateTime instant = LocalDateTime.parse(jrhee17BirthDay);
-        assertThat(objectMapper.writeValueAsString(instant)).isEqualTo('"' + jrhee17BirthDay + '"');
+        assertThat(objectMapper.writeValueAsString(instant)).isEqualTo("[1991,9,26,0,0]");
     }
 }
