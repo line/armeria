@@ -29,11 +29,11 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public enum HttpJsonTranscodingQueryParamMatchRule {
     /**
-     * Converts
-     * <a href="https://developers.google.com/protocol-buffers/docs/style#message_and_field_names">underscore_separated_names</a>
-     * into lowerCamelCase and match them with {@link QueryParams} of an {@link HttpRequest}.
+     * Converts field names that are
+     * <a href="https://developers.google.com/protocol-buffers/docs/style#message_and_field_names">underscore_separated</a>
+     * into lowerCamelCase before matching with {@link QueryParams} of an {@link HttpRequest}.
      *
-     * <p>Note that field names in which {@code code underscore_separated_names} is not used may fail to
+     * <p>Note that field names which aren't {@code underscore_separated} may fail to
      * convert correctly to lowerCamelCase. Therefore, don't use this option if you aren't following
      * Protocol Buffer's
      * <a href="https://developers.google.com/protocol-buffers/docs/style">naming conventions</a>.

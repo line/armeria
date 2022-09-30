@@ -20,7 +20,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.EnumSet;
-import java.util.HashSet;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
@@ -36,9 +35,9 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A builder for {@link HttpJsonTranscodingOptions}.
  */
 @UnstableApi
-public class HttpJsonTranscodingOptionsBuilder {
+public final class HttpJsonTranscodingOptionsBuilder {
 
-    private static final EnumSet<HttpJsonTranscodingQueryParamMatchRule> DEFAULT_QUERY_PARAM_NAMING =
+    private static final EnumSet<HttpJsonTranscodingQueryParamMatchRule> DEFAULT_QUERY_PARAM_MATCH_RULES =
             EnumSet.of(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
 
     private UnframedGrpcErrorHandler errorHandler = UnframedGrpcErrorHandler.ofJson();
@@ -70,7 +69,7 @@ public class HttpJsonTranscodingOptionsBuilder {
         requireNonNull(queryParamMatchRules, "queryParamMatchRules");
         checkArgument(!Iterables.isEmpty(queryParamMatchRules), "Can't set an empty queryParamMatchRules");
         if (this.queryParamMatchRules == null) {
-            this.queryParamMatchRules = new HashSet<>();
+            this.queryParamMatchRules = EnumSet.noneOf(HttpJsonTranscodingQueryParamMatchRule.class);
         }
         this.queryParamMatchRules.addAll(ImmutableList.copyOf(queryParamMatchRules));
         return this;
@@ -91,12 +90,12 @@ public class HttpJsonTranscodingOptionsBuilder {
      * Returns a new created {@link HttpJsonTranscodingOptions}.
      */
     public HttpJsonTranscodingOptions build() {
-        final EnumSet<HttpJsonTranscodingQueryParamMatchRule> paramNamings;
+        final EnumSet<HttpJsonTranscodingQueryParamMatchRule> matchRules;
         if (queryParamMatchRules == null) {
-            paramNamings = DEFAULT_QUERY_PARAM_NAMING;
+            matchRules = DEFAULT_QUERY_PARAM_MATCH_RULES;
         } else {
-            paramNamings = EnumSet.copyOf(queryParamMatchRules);
+            matchRules = EnumSet.copyOf(queryParamMatchRules);
         }
-        return new DefaultHttpJsonTranscodingOptions(paramNamings, errorHandler);
+        return new DefaultHttpJsonTranscodingOptions(matchRules, errorHandler);
     }
 }

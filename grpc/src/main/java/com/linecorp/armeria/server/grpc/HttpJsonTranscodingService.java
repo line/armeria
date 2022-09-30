@@ -724,7 +724,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 // The original field name should be used for the path variable
                 field = spec.originalFields.get(entry.getKey());
             } else {
-                // A query parameter can be matched with either a original field name or a camel case name
+                // A query parameter can be matched with either an original field name or a camel case name
                 // depending on the `HttpJsonTranscodingOptions`.
                 if (useProtoFieldNameQueryParams) {
                     field = spec.originalFields.get(entry.getKey());
