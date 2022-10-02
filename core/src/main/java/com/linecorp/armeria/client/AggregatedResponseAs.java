@@ -30,8 +30,8 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
 final class AggregatedResponseAs {
-    private static final HttpStatusClassPredicates SUCCESS_PREDICATE
-            = HttpStatusClassPredicates.of(HttpStatusClass.SUCCESS);
+    private static final HttpStatusClassPredicates SUCCESS_PREDICATE =
+            HttpStatusClassPredicates.of(HttpStatusClass.SUCCESS);
 
     static ResponseAs<AggregatedHttpResponse, ResponseEntity<byte[]>> bytes() {
         return response -> ResponseEntity.of(response.headers(), response.content().array(),
@@ -95,7 +95,7 @@ final class AggregatedResponseAs {
                 throw newInvalidHttpStatusClassResponseException(
                         response, ((HttpStatusClassPredicates) predicate).statusClass());
             } else {
-                throw newInvalidPredicateResponseException(response);
+                throw newInvalidPredicateResponseException(response, predicate);
             }
         }
 
@@ -123,10 +123,11 @@ final class AggregatedResponseAs {
     }
 
     private static InvalidHttpResponseException newInvalidPredicateResponseException(
-            AggregatedHttpResponse response) {
+            AggregatedHttpResponse response, Predicate<? super HttpStatus> predicate) {
         return new InvalidHttpResponseException(
                 response, "status: " + response.status() +
-                          " is not expected by predicate method. response: " + response, null);
+                          " is not expected by predicate method. response: " + response +
+                          ", predicate: " + predicate, null);
     }
 
     @FunctionalInterface

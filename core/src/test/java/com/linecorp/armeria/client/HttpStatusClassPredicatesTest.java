@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.HttpStatusClass;
 class HttpStatusClassPredicatesTest {
 
     @Test
-    public void httpStatusClassIsEqualToTestArgument() {
+    void httpStatusClassIsEqualToTestArgument() {
         assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(100))
                            .test(HttpStatus.valueOf(100))).isTrue();
         assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(200))
@@ -42,7 +42,7 @@ class HttpStatusClassPredicatesTest {
     }
 
     @Test
-    public void httpStatusClassIsNotEqualToTestArgument() {
+    void httpStatusClassIsNotEqualToTestArgument() {
         assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(200))
                            .test(HttpStatus.valueOf(300))).isFalse();
         assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(300))
@@ -58,7 +58,7 @@ class HttpStatusClassPredicatesTest {
     }
 
     @Test
-    public void statusClassMethodReturnHttpStatusClass() {
+    void statusClassMethodReturnHttpStatusClass() {
         assertThat(HttpStatusClassPredicates.of(HttpStatusClass.valueOf(200)).statusClass())
                 .isEqualTo(HttpStatusClass.valueOf(200));
     }

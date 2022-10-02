@@ -44,18 +44,19 @@ final class HttpStatusClassPredicates implements Predicate<HttpStatus> {
             new HttpStatusClassPredicates(HttpStatusClass.UNKNOWN);
 
     static HttpStatusClassPredicates of(HttpStatusClass httpStatusClass) {
-        if (httpStatusClass == HttpStatusClass.INFORMATIONAL) {
-            return INFORMATIONAL_PREDICATE;
-        } else if (httpStatusClass == HttpStatusClass.SUCCESS) {
-            return SUCCESS_PREDICATE;
-        } else if (httpStatusClass == HttpStatusClass.REDIRECTION) {
-            return REDIRECTION_PREDICATE;
-        } else if (httpStatusClass == HttpStatusClass.CLIENT_ERROR) {
-            return CLIENT_ERROR_PREDICATE;
-        } else if (httpStatusClass == HttpStatusClass.SERVER_ERROR) {
-            return SERVER_ERROR_PREDICATE;
-        } else {
-            return UNKNOWN_PREDICATE;
+        switch (httpStatusClass) {
+            case INFORMATIONAL:
+                return INFORMATIONAL_PREDICATE;
+            case SUCCESS:
+                return SUCCESS_PREDICATE;
+            case REDIRECTION:
+                return REDIRECTION_PREDICATE;
+            case CLIENT_ERROR:
+                return CLIENT_ERROR_PREDICATE;
+            case SERVER_ERROR:
+                return SERVER_ERROR_PREDICATE;
+            default:
+                return UNKNOWN_PREDICATE;
         }
     }
 

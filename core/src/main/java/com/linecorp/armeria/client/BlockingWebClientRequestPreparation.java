@@ -142,13 +142,14 @@ public final class BlockingWebClientRequestPreparation
     /**
      * Deserializes the JSON response content into the specified non-container type
      * using the default {@link ObjectMapper}.
-     * {@link HttpStatus} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} is different from the {@link HttpStatus}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
      * ResponseEntity<MyObject> response = client.prepare()
      *                                           .get("/v1/items/1")
-     *                                           .asJson(MyObject.class, HttpStatus.INTERNAL_SERVER_ERROR)
+     *                                           .asJson(MyObject.class, HttpStatus.OK)
      *                                           .execute();
      * }</pre>
      *
@@ -171,13 +172,14 @@ public final class BlockingWebClientRequestPreparation
     /**
      * Deserializes the JSON response content into the specified non-container type
      * using the default {@link ObjectMapper}.
-     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatusClass} is different from the {@link HttpStatusClass}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
      * ResponseEntity<MyObject> response = client.prepare()
      *                                           .get("/v1/items/1")
-     *                                           .asJson(MyObject.class, HttpStatusClass.SERVER_ERROR)
+     *                                           .asJson(MyObject.class, HttpStatusClass.SUCCESS)
      *                                           .execute();
      * }</pre>
      *
@@ -200,13 +202,15 @@ public final class BlockingWebClientRequestPreparation
     /**
      * Deserializes the JSON response content into the specified non-container type
      * using the default {@link ObjectMapper}.
-     * {@link Predicate} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} in the {@link Predicate} method is different from
+     * the {@link HttpStatus} of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
      * ResponseEntity<MyObject> response = client.prepare()
      *                                           .get("/v1/items/1")
-     *                                           .asJson(MyObject.class, HttpStatusClass.SERVER_ERROR)
+     *                                           .asJson(MyObject.class,
+     *                                                   httpStatus -> httpStatus.equals(HttpStatus.OK))
      *                                           .execute();
      * }</pre>
      *
@@ -237,9 +241,7 @@ public final class BlockingWebClientRequestPreparation
      * ResponseEntity<MyObject> response =
      *                              client.prepare()
      *                                    .get("/v1/items/1")
-     *                                    .asJson(
-     *                                      MyObject.class, mapper,
-     *                                      httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
+     *                                    .asJson(MyObject.class, mapper)
      *                                    .execute();
      * }</pre>
      *
@@ -261,7 +263,8 @@ public final class BlockingWebClientRequestPreparation
     /**
      * Deserializes the JSON response content into the specified non-container type
      * using the specified {@link ObjectMapper}.
-     * {@link HttpStatus} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} is different from the {@link HttpStatus}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * ObjectMapper mapper = ...;
@@ -269,7 +272,7 @@ public final class BlockingWebClientRequestPreparation
      * ResponseEntity<MyObject> response = client.prepare()
      *                                           .get("/v1/items/1")
      *                                           .asJson(MyObject.class, mapper,
-     *                                                   HttpStatus.INTERNAL_SERVER_ERROR)
+     *                                                   HttpStatus.OK)
      *                                           .execute();
      * }</pre>
      *
@@ -292,14 +295,15 @@ public final class BlockingWebClientRequestPreparation
     /**
      * Deserializes the JSON response content into the specified non-container type
      * using the specified {@link ObjectMapper}.
-     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatusClass} is different from the {@link HttpStatusClass}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * ObjectMapper mapper = ...;
      * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
      * ResponseEntity<MyObject> response = client.prepare()
      *                                           .get("/v1/items/1")
-     *                                           .asJson(MyObject.class, mapper, HttpStatusClass.SERVER_ERROR)
+     *                                           .asJson(MyObject.class, mapper, HttpStatusClass.SUCCESS)
      *                                           .execute();
      * }</pre>
      *
@@ -322,7 +326,8 @@ public final class BlockingWebClientRequestPreparation
     /**
      * Deserializes the JSON response content into the specified non-container type
      * using the specified {@link ObjectMapper}.
-     * {@link Predicate} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} in the {@link Predicate} method is different from
+     * the {@link HttpStatus} of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * ObjectMapper mapper = ...;
@@ -332,7 +337,7 @@ public final class BlockingWebClientRequestPreparation
      *                                  .get("/v1/items/1")
      *                                  .asJson(
      *                                       MyObject.class, mapper,
-     *                                       httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
+     *                                       httpStatus -> httpStatus.equals(HttpStatus.OK))
      *                                   .execute();
      * }</pre>
      *
@@ -383,14 +388,15 @@ public final class BlockingWebClientRequestPreparation
      * Deserializes the JSON response content into the specified Java type using
      * the default {@link ObjectMapper}. This method is useful when you want to deserialize
      * the content into a container type such as {@link List} and {@link Map}.
-     * {@link HttpStatus} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} is different from the {@link HttpStatus}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
      * ResponseEntity<List<MyObject>> response =
      *     client.prepare()
      *           .get("/v1/items/1")
-     *           .asJson(new TypeReference<List<MyObject>>() {}, HttpStatus.INTERNAL_SERVER_ERROR)
+     *           .asJson(new TypeReference<List<MyObject>>() {}, HttpStatus.OK)
      *           .execute();
      * }</pre>
      *
@@ -411,14 +417,15 @@ public final class BlockingWebClientRequestPreparation
      * Deserializes the JSON response content into the specified Java type using
      * the default {@link ObjectMapper}. This method is useful when you want to deserialize
      * the content into a container type such as {@link List} and {@link Map}.
-     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatusClass} is different from the {@link HttpStatusClass}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
      * ResponseEntity<List<MyObject>> response =
      *     client.prepare()
      *           .get("/v1/items/1")
-     *           .asJson(new TypeReference<List<MyObject>>() {}, HttpStatusClass.SERVER_ERROR)
+     *           .asJson(new TypeReference<List<MyObject>>() {}, HttpStatusClass.SUCCESS)
      *           .execute();
      * }</pre>
      *
@@ -439,7 +446,8 @@ public final class BlockingWebClientRequestPreparation
      * Deserializes the JSON response content into the specified Java type using
      * the default {@link ObjectMapper}. This method is useful when you want to deserialize
      * the content into a container type such as {@link List} and {@link Map}.
-     * {@link Predicate} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} in the {@link Predicate} method is different from
+     * the {@link HttpStatus} of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * BlockingWebClient client = BlockingWebClient.of("https://api.example.com");
@@ -447,7 +455,7 @@ public final class BlockingWebClientRequestPreparation
      *     client.prepare()
      *           .get("/v1/items/1")
      *           .asJson(new TypeReference<List<MyObject>>() {},
-     *                   httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
+     *                   httpStatus -> httpStatus.equals(HttpStatus.OK))
      *           .execute();
      * }</pre>
      *
@@ -494,7 +502,8 @@ public final class BlockingWebClientRequestPreparation
     /**
      * Deserializes the JSON response content into the specified Java type using
      * the specified {@link ObjectMapper}.
-     * {@link HttpStatus} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} is different from the {@link HttpStatus}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * ObjectMapper mapper = ...;
@@ -502,7 +511,7 @@ public final class BlockingWebClientRequestPreparation
      * ResponseEntity<List<MyObject>> response =
      *     client.prepare()
      *           .get("/v1/items/1")
-     *           .asJson(new TypeReference<List<MyObject>>() {}, mapper, HttpStatus.INTERNAL_SERVER_ERROR)
+     *           .asJson(new TypeReference<List<MyObject>>() {}, mapper, HttpStatus.OK)
      *           .execute();
      * }</pre>
      *
@@ -522,7 +531,8 @@ public final class BlockingWebClientRequestPreparation
     /**
      * Deserializes the JSON response content into the specified Java type using
      * the specified {@link ObjectMapper}.
-     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatusClass} is different from the {@link HttpStatusClass}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * ObjectMapper mapper = ...;
@@ -530,7 +540,7 @@ public final class BlockingWebClientRequestPreparation
      * ResponseEntity<List<MyObject>> response =
      *     client.prepare()
      *           .get("/v1/items/1")
-     *           .asJson(new TypeReference<List<MyObject>>() {}, mapper, HttpStatusClass.SERVER_ERROR)
+     *           .asJson(new TypeReference<List<MyObject>>() {}, mapper, HttpStatusClass.SUCCESS)
      *           .execute();
      * }</pre>
      *
@@ -550,7 +560,8 @@ public final class BlockingWebClientRequestPreparation
     /**
      * Deserializes the JSON response content into the specified Java type using
      * the specified {@link ObjectMapper}.
-     * {@link Predicate} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} in the {@link Predicate} method is different from
+     * the {@link HttpStatus} of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * ObjectMapper mapper = ...;
@@ -559,7 +570,7 @@ public final class BlockingWebClientRequestPreparation
      *     client.prepare()
      *           .get("/v1/items/1")
      *           .asJson(new TypeReference<List<MyObject>>() {}, mapper,
-     *                   httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
+     *                   httpStatus -> httpStatus.equals(HttpStatus.OK))
      *           .execute();
      * }</pre>
      *

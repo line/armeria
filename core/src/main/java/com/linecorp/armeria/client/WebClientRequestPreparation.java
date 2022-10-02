@@ -219,14 +219,15 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified non-container type using
      * the default {@link ObjectMapper}.
-     * {@link HttpStatus} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} is different from the {@link HttpStatus}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * WebClient client = WebClient.of("https://api.example.com");
      * CompletableFuture<ResponseEntity<MyObject>> response =
      *     client.prepare()
      *           .get("/v1/items/1")
-     *           .asJson(MyObject.class, HttpStatus.INTERNAL_SERVER_ERROR)
+     *           .asJson(MyObject.class, HttpStatus.OK)
      *           .execute();
      * }</pre>
      *
@@ -249,14 +250,15 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified non-container type using
      * the default {@link ObjectMapper}.
-     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatusClass} is different from the {@link HttpStatusClass}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * WebClient client = WebClient.of("https://api.example.com");
      * CompletableFuture<ResponseEntity<MyObject>> response =
      *     client.prepare()
      *           .get("/v1/items/1")
-     *           .asJson(MyObject.class, HttpStatusClass.SERVER_ERROR)
+     *           .asJson(MyObject.class, HttpStatusClass.SUCCESS)
      *           .execute();
      * }</pre>
      *
@@ -280,7 +282,8 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified non-container type using
      * the default {@link ObjectMapper}.
-     * {@link Predicate} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} in the {@link Predicate} method is different from
+     * the {@link HttpStatus} of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * WebClient client = WebClient.of("https://api.example.com");
@@ -288,7 +291,7 @@ public final class WebClientRequestPreparation
      *     client.prepare()
      *           .get("/v1/items/1")
      *           .asJson(MyObject.class,
-     *                   httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
+     *                   httpStatus -> httpStatus.equals(HttpStatus.OK))
      *           .execute();
      * }</pre>
      *
@@ -343,7 +346,8 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified non-container type using
      * the specified {@link ObjectMapper}.
-     * {@link HttpStatus} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} is different from the {@link HttpStatus}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * ObjectMapper mapper = ...;
@@ -351,7 +355,7 @@ public final class WebClientRequestPreparation
      * CompletableFuture<ResponseEntity<MyObject>> response =
      *     client.prepare()
      *           .get("/v1/items/1")
-     *           .asJson(MyObject.class, mapper, HttpStatus.INTERNAL_SERVER_ERROR)
+     *           .asJson(MyObject.class, mapper, HttpStatus.OK)
      *           .execute();
      * }</pre>
      *
@@ -375,7 +379,8 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified non-container type using
      * the specified {@link ObjectMapper}.
-     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatusClass} is different from the {@link HttpStatusClass}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * ObjectMapper mapper = ...;
@@ -383,7 +388,7 @@ public final class WebClientRequestPreparation
      * CompletableFuture<ResponseEntity<MyObject>> response =
      *     client.prepare()
      *           .get("/v1/items/1")
-     *           .asJson(MyObject.class, mapper, HttpStatusClass.SERVER_ERROR)
+     *           .asJson(MyObject.class, mapper, HttpStatusClass.SUCCESS)
      *           .execute();
      * }</pre>
      *
@@ -407,7 +412,8 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified non-container type using
      * the specified {@link ObjectMapper}.
-     * {@link Predicate} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} in the {@link Predicate} method is different from
+     * the {@link HttpStatus} of the response, an {@link InvalidHttpResponseException} is raised.
      * For example:
      * <pre>{@code
      * ObjectMapper mapper = ...;
@@ -416,7 +422,7 @@ public final class WebClientRequestPreparation
      *     client.prepare()
      *           .get("/v1/items/1")
      *           .asJson(MyObject.class, mapper,
-     *                   httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
+     *                   httpStatus -> httpStatus.equals(HttpStatus.OK))
      *           .execute();
      * }</pre>
      *
@@ -467,7 +473,8 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the default
      * {@link ObjectMapper}.
-     * {@link HttpStatus} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} is different from the {@link HttpStatus}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * This method is useful when you want to deserialize the content into a container
      * type such as {@link List} and {@link Map}.
      * For example:
@@ -476,7 +483,7 @@ public final class WebClientRequestPreparation
      * CompletableFuture<ResponseEntity<List<MyObject>>> response =
      *     client.prepare()
      *           .get("/v1/items/1")
-     *           .asJson(new TypeReference<List<MyObject>> {}, HttpStatus.INTERNAL_SERVER_ERROR)
+     *           .asJson(new TypeReference<List<MyObject>> {}, HttpStatus.OK)
      *           .execute();
      * }</pre>
      *
@@ -496,7 +503,8 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the default
      * {@link ObjectMapper}.
-     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatusClass} is different from the {@link HttpStatusClass}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * This method is useful when you want to deserialize the content into a container
      * type such as {@link List} and {@link Map}.
      * For example:
@@ -505,7 +513,7 @@ public final class WebClientRequestPreparation
      * CompletableFuture<ResponseEntity<List<MyObject>>> response =
      *     client.prepare()
      *           .get("/v1/items/1")
-     *           .asJson(new TypeReference<List<MyObject>> {}, HttpStatusClass.SERVER_ERROR)
+     *           .asJson(new TypeReference<List<MyObject>> {}, HttpStatusClass.SUCCESS)
      *           .execute();
      * }</pre>
      *
@@ -525,7 +533,8 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the default
      * {@link ObjectMapper}.
-     * {@link Predicate} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} in the {@link Predicate} method is different from
+     * the {@link HttpStatus} of the response, an {@link InvalidHttpResponseException} is raised.
      * This method is useful when you want to deserialize the content into a container
      * type such as {@link List} and {@link Map}.
      * For example:
@@ -535,7 +544,7 @@ public final class WebClientRequestPreparation
      *     client.prepare()
      *           .get("/v1/items/1")
      *           .asJson(new TypeReference<List<MyObject>> {},
-     *                   httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
+     *                   httpStatus -> httpStatus.equals(HttpStatus.OK))
      *           .execute();
      * }</pre>
      *
@@ -583,7 +592,8 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the
      * specified {@link ObjectMapper}.
-     * {@link HttpStatus} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} is different from the {@link HttpStatus}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * This method is useful when you want to deserialize the content into a
      * container type such as {@link List} and {@link Map}.
      * For example:
@@ -593,7 +603,7 @@ public final class WebClientRequestPreparation
      * CompletableFuture<ResponseEntity<List<MyObject>>> response =
      *     client.prepare()
      *           .get("/v1/items/1")
-     *           .asJson(new TypeReference<List<MyObject>> {}, mapper, HttpStatus.INTERNAL_SERVER_ERROR)
+     *           .asJson(new TypeReference<List<MyObject>> {}, mapper, HttpStatus.OK)
      *           .execute();
      * }</pre>
      *
@@ -613,7 +623,8 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the
      * specified {@link ObjectMapper}.
-     * {@link HttpStatusClass} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatusClass} is different from the {@link HttpStatusClass}
+     * of the response, an {@link InvalidHttpResponseException} is raised.
      * This method is useful when you want to deserialize the content into a
      * container type such as {@link List} and {@link Map}.
      * For example:
@@ -623,7 +634,7 @@ public final class WebClientRequestPreparation
      * CompletableFuture<ResponseEntity<List<MyObject>>> response =
      *     client.prepare()
      *           .get("/v1/items/1")
-     *           .asJson(new TypeReference<List<MyObject>> {}, mapper, HttpStatusClass.SERVER_ERROR)
+     *           .asJson(new TypeReference<List<MyObject>> {}, mapper, HttpStatusClass.SUCCESS)
      *           .execute();
      * }</pre>
      *
@@ -643,7 +654,8 @@ public final class WebClientRequestPreparation
     /**
      * Deserializes the JSON content of the {@link HttpResponse} into the specified Java type using the
      * specified {@link ObjectMapper}.
-     * {@link Predicate} type argument specify what type of response is allowed.
+     * Note that if the specified {@link HttpStatus} in the {@link Predicate} method is different from
+     * the {@link HttpStatus} of the response, an {@link InvalidHttpResponseException} is raised.
      * This method is useful when you want to deserialize the content into a
      * container type such as {@link List} and {@link Map}.
      * For example:
@@ -654,7 +666,7 @@ public final class WebClientRequestPreparation
      *     client.prepare()
      *           .get("/v1/items/1")
      *           .asJson(new TypeReference<List<MyObject>> {}, mapper,
-     *                   httpStatus -> httpStatus.equals(HttpStatus.INTERNAL_SERVER_ERROR))
+     *                   httpStatus -> httpStatus.equals(HttpStatus.OK))
      *           .execute();
      * }</pre>
      *

@@ -25,46 +25,37 @@ import com.linecorp.armeria.common.HttpStatus;
 class HttpStatusPredicateTest {
 
     @Test
-    public void httpStatusIsEqualToTestArgument() {
-        assertThat(HttpStatusPredicate.of(HttpStatus.OK)
-                           .test(HttpStatus.OK)).isTrue();
+    void httpStatusIsEqualToTestArgument() {
+        assertThat(HttpStatusPredicate.of(HttpStatus.valueOf(200))
+                                      .test(HttpStatus.valueOf(200))).isTrue();
 
-        assertThat(HttpStatusPredicate.of(HttpStatus.MULTIPLE_CHOICES)
-                           .test(HttpStatus.MULTIPLE_CHOICES)).isTrue();
+        assertThat(HttpStatusPredicate.of(HttpStatus.valueOf(400))
+                                      .test(HttpStatus.valueOf(400))).isTrue();
 
-        assertThat(HttpStatusPredicate.of(HttpStatus.BAD_REQUEST)
-                           .test(HttpStatus.BAD_REQUEST)).isTrue();
+        assertThat(HttpStatusPredicate.of(HttpStatus.valueOf(0))
+                                      .test(HttpStatus.valueOf(0))).isTrue();
 
-        assertThat(HttpStatusPredicate.of(HttpStatus.INTERNAL_SERVER_ERROR)
-                           .test(HttpStatus.INTERNAL_SERVER_ERROR)).isTrue();
-
-        assertThat(HttpStatusPredicate.of(HttpStatus.UNKNOWN)
-                           .test(HttpStatus.UNKNOWN)).isTrue();
+        assertThat(HttpStatusPredicate.of(HttpStatus.valueOf(1000))
+                                      .test(HttpStatus.valueOf(1000))).isTrue();
     }
 
     @Test
-    public void httpStatusIsNotEqualToTestArgument() {
-        assertThat(HttpStatusPredicate.of(HttpStatus.OK)
-                           .test(HttpStatus.MULTIPLE_CHOICES)).isFalse();
+    void httpStatusIsNotEqualToTestArgument() {
+        assertThat(HttpStatusPredicate.of(HttpStatus.valueOf(200))
+                           .test(HttpStatus.valueOf(400))).isFalse();
 
-        assertThat(HttpStatusPredicate.of(HttpStatus.MULTIPLE_CHOICES)
-                           .test(HttpStatus.OK)).isFalse();
+        assertThat(HttpStatusPredicate.of(HttpStatus.valueOf(400))
+                                      .test(HttpStatus.valueOf(200))).isFalse();
 
-        assertThat(HttpStatusPredicate.of(HttpStatus.CONTINUE)
-                           .test(HttpStatus.UNKNOWN)).isFalse();
+        assertThat(HttpStatusPredicate.of(HttpStatus.valueOf(0))
+                                      .test(HttpStatus.valueOf(200))).isFalse();
 
-        assertThat(HttpStatusPredicate.of(HttpStatus.UNKNOWN)
-                           .test(HttpStatus.CONTINUE)).isFalse();
-
-        assertThat(HttpStatusPredicate.of(HttpStatus.UNKNOWN)
-                           .test(HttpStatus.OK)).isFalse();
-
-        assertThat(HttpStatusPredicate.of(HttpStatus.CONTINUE)
-                           .test(HttpStatus.MULTIPLE_CHOICES)).isFalse();
+        assertThat(HttpStatusPredicate.of(HttpStatus.valueOf(1000))
+                                      .test(HttpStatus.valueOf(200))).isFalse();
     }
 
     @Test
-    public void statusMethodReturnHttpStatus() {
+    void statusMethodReturnHttpStatus() {
         assertThat(HttpStatusPredicate.of(HttpStatus.OK).status())
                 .isEqualTo(HttpStatus.OK);
     }

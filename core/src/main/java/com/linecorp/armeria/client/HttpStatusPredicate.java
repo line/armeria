@@ -18,24 +18,30 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.HashMap;
-import java.util.Map;
 import java.util.function.Predicate;
+
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpStatus;
 
 final class HttpStatusPredicate implements Predicate<HttpStatus> {
-    private static final Map<HttpStatus, HttpStatusPredicate> httpStatusPredicateMap;
+    private static final ImmutableMap<HttpStatus, HttpStatusPredicate> httpStatusPredicateMap;
 
     static {
-        httpStatusPredicateMap = new HashMap<>();
+        final ImmutableMap.Builder<HttpStatus, HttpStatusPredicate> builder = new ImmutableMap.Builder<>();
         for (int i = 0; i < 1000; i++) {
-            httpStatusPredicateMap.put(HttpStatus.valueOf(i), new HttpStatusPredicate(HttpStatus.valueOf(i)));
+            builder.put(HttpStatus.valueOf(i), new HttpStatusPredicate(HttpStatus.valueOf(i)));
         }
+        httpStatusPredicateMap = builder.build();
     }
 
     static HttpStatusPredicate of(HttpStatus httpStatus) {
-        return httpStatusPredicateMap.get(httpStatus);
+        if (httpStatus.code() < 0 || httpStatus.code() >= 1000) {
+            return new HttpStatusPredicate(httpStatus);
+        } else {
+            final HttpStatusPredicate httpStatusPredicate = httpStatusPredicateMap.get(httpStatus);
+            return requireNonNull(httpStatusPredicate, "httpStatusPredicate");
+        }
     }
 
     private final HttpStatus status;
