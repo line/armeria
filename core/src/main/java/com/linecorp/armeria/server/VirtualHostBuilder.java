@@ -57,7 +57,6 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
-import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.HostAndPort;
 
@@ -65,6 +64,7 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -94,7 +94,7 @@ import io.netty.util.ReferenceCountUtil;
  * @see ServerBuilder
  * @see Route
  */
-public final class VirtualHostBuilder {
+public final class VirtualHostBuilder implements TlsSetters {
 
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
@@ -219,44 +219,24 @@ public final class VirtualHostBuilder {
         return this;
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile}
-     * and cleartext {@code keyFile}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(File keyCertChainFile, File keyFile) {
-        return tls(keyCertChainFile, keyFile, null);
+        return (VirtualHostBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile);
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile},
-     * {@code keyFile} and {@code keyPassword}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
         requireNonNull(keyCertChainFile, "keyCertChainFile");
         requireNonNull(keyFile, "keyFile");
         return tls(() -> SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword));
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainInputStream} and
-     * cleartext {@code keyInputStream}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream) {
-        return tls(keyCertChainInputStream, keyInputStream, null);
+        return (VirtualHostBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream);
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainInputStream},
-     * {@code keyInputStream} and {@code keyPassword}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream,
                                   @Nullable String keyPassword) {
         requireNonNull(keyCertChainInputStream, "keyCertChainInputStream");
@@ -277,43 +257,23 @@ public final class VirtualHostBuilder {
                                                      keyPassword));
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified cleartext {@link PrivateKey} and
-     * {@link X509Certificate} chain.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(PrivateKey key, X509Certificate... keyCertChain) {
-        return tls(key, null, keyCertChain);
+        return (VirtualHostBuilder) TlsSetters.super.tls(key, keyCertChain);
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified cleartext {@link PrivateKey} and
-     * {@link X509Certificate} chain.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
-        return tls(key, null, keyCertChain);
+        return (VirtualHostBuilder) TlsSetters.super.tls(key, keyCertChain);
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified cleartext {@link PrivateKey},
-     * {@code keyPassword} and {@link X509Certificate} chain.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(PrivateKey key, @Nullable String keyPassword,
                                   X509Certificate... keyCertChain) {
-        return tls(key, keyPassword, ImmutableList.copyOf(requireNonNull(keyCertChain, "keyCertChain")));
+        return (VirtualHostBuilder) TlsSetters.super.tls(key, keyPassword, keyCertChain);
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified cleartext {@link PrivateKey},
-     * {@code keyPassword} and {@link X509Certificate} chain.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(PrivateKey key, @Nullable String keyPassword,
                                   Iterable<? extends X509Certificate> keyCertChain) {
         requireNonNull(key, "key");
@@ -322,15 +282,10 @@ public final class VirtualHostBuilder {
             requireNonNull(keyCert, "keyCertChain contains null.");
         }
 
-        final X509Certificate[] keyCertChainArray = Iterables.toArray(keyCertChain, X509Certificate.class);
-        return tls(() -> SslContextBuilder.forServer(key, keyPassword, keyCertChainArray));
+        return tls(() -> SslContextBuilder.forServer(key, keyPassword, keyCertChain));
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@link KeyManagerFactory}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(KeyManagerFactory keyManagerFactory) {
         requireNonNull(keyManagerFactory, "keyManagerFactory");
         return tls(() -> SslContextBuilder.forServer(keyManagerFactory));
@@ -365,10 +320,7 @@ public final class VirtualHostBuilder {
         return this;
     }
 
-    /**
-     * Adds the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
-     * applied to the SSL session.
-     */
+    @Override
     public VirtualHostBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         requireNonNull(tlsCustomizer, "tlsCustomizer");
         tlsCustomizers.add(tlsCustomizer);
