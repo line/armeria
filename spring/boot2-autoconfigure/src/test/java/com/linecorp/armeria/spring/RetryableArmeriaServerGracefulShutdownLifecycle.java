@@ -32,7 +32,7 @@ import com.linecorp.armeria.server.Server;
  * A {@link SmartLifecycle} which retries to start the {@link Server} up to {@code maxAttempts}.
  * This is useful for testing that needs to bind a server to a random port number obtained in advance.
  */
-final class RetryableArmeriaServerGracefulShutdownLifecycle implements ArmeriaServerSmartLifecycle {
+public final class RetryableArmeriaServerGracefulShutdownLifecycle implements ArmeriaServerSmartLifecycle {
 
     private static final Logger logger =
             LoggerFactory.getLogger(RetryableArmeriaServerGracefulShutdownLifecycle.class);
@@ -41,7 +41,7 @@ final class RetryableArmeriaServerGracefulShutdownLifecycle implements ArmeriaSe
     private final int maxAttempts;
     private final Backoff backoff;
 
-    RetryableArmeriaServerGracefulShutdownLifecycle(Server server, int maxAttempts) {
+    public RetryableArmeriaServerGracefulShutdownLifecycle(Server server, int maxAttempts) {
         delegate = new ArmeriaServerGracefulShutdownLifecycle(server);
         this.maxAttempts = maxAttempts;
         backoff = Backoff.ofDefault();
