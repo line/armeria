@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.grpc;
 
-import java.util.EnumSet;
 import java.util.Objects;
 import java.util.Set;
 
@@ -26,10 +25,10 @@ final class DefaultHttpJsonTranscodingOptions implements HttpJsonTranscodingOpti
 
     static final HttpJsonTranscodingOptions DEFAULT = HttpJsonTranscodingOptions.builder().build();
 
-    private final EnumSet<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules;
+    private final Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules;
     private final UnframedGrpcErrorHandler errorHandler;
 
-    DefaultHttpJsonTranscodingOptions(EnumSet<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules,
+    DefaultHttpJsonTranscodingOptions(Set<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules,
                                       UnframedGrpcErrorHandler errorHandler) {
         this.queryParamMatchRules = queryParamMatchRules;
         this.errorHandler = errorHandler;

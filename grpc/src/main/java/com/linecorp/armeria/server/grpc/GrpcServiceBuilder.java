@@ -669,12 +669,12 @@ public final class GrpcServiceBuilder {
      *   HttpJsonTranscodingOptions.builder()
      *                             .queryParamMatchRules(ORIGINAL_FIELD)
      *                             ...
-     *                             .build()
+     *                             .build();
      *
      * GrpcService.builder()
      *            // Enable HttpJsonTranscoding and use the specified HttpJsonTranscodingOption
      *            .enableHttpJsonTranscoding(options)
-     *            .build()
+     *            .build();
      * }</pre>
      *
      * <p>Limitations:

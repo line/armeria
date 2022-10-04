@@ -24,6 +24,7 @@ import java.util.Set;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.common.collect.Sets;
 import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -49,7 +50,7 @@ public final class HttpJsonTranscodingOptionsBuilder {
 
     /**
      * Adds the specified {@link HttpJsonTranscodingQueryParamMatchRule} which is used
-     * to match {@link QueryParams} of a {@link HttpRequest} with fields in a {@link Message}.
+     * to match {@link QueryParams} of an {@link HttpRequest} with fields in a {@link Message}.
      * If not set, {@link HttpJsonTranscodingQueryParamMatchRule#ORIGINAL_FIELD} is used by default.
      */
     public HttpJsonTranscodingOptionsBuilder queryParamMatchRules(
@@ -61,7 +62,7 @@ public final class HttpJsonTranscodingOptionsBuilder {
 
     /**
      * Adds the specified {@link HttpJsonTranscodingQueryParamMatchRule} which is used
-     * to match {@link QueryParams} of a {@link HttpRequest} with fields in a {@link Message}.
+     * to match {@link QueryParams} of an {@link HttpRequest} with fields in a {@link Message}.
      * If not set, {@link HttpJsonTranscodingQueryParamMatchRule#ORIGINAL_FIELD} is used by default.
      */
     public HttpJsonTranscodingOptionsBuilder queryParamMatchRules(
@@ -87,14 +88,14 @@ public final class HttpJsonTranscodingOptionsBuilder {
     }
 
     /**
-     * Returns a new created {@link HttpJsonTranscodingOptions}.
+     * Returns a newly created {@link HttpJsonTranscodingOptions}.
      */
     public HttpJsonTranscodingOptions build() {
-        final EnumSet<HttpJsonTranscodingQueryParamMatchRule> matchRules;
+        final Set<HttpJsonTranscodingQueryParamMatchRule> matchRules;
         if (queryParamMatchRules == null) {
             matchRules = DEFAULT_QUERY_PARAM_MATCH_RULES;
         } else {
-            matchRules = EnumSet.copyOf(queryParamMatchRules);
+            matchRules = Sets.immutableEnumSet(queryParamMatchRules);
         }
         return new DefaultHttpJsonTranscodingOptions(matchRules, errorHandler);
     }
