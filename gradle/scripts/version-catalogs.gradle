@@ -95,8 +95,37 @@ if (dependenciesTomlFile.exists()) {
     }
 }
 
-static def addVersion(VersionCatalogBuilder libs, String alias, String version) {
-    libs.version(alias, version)
+static def addVersion(VersionCatalogBuilder libs, String alias, Object version) {
+    if (version instanceof String) {
+        libs.version(alias, version)
+    } else if (version instanceof TomlTable) {
+        libs.version(alias) { setRichVersion(it, version) }
+    } else {
+        throw new IllegalStateException("An invalid vesion declaration on ${alias}: ${version} (expected: string or objects compatible with MutableVersionConstraint)");
+    }
+}
+
+private static String setRichVersion(MutableVersionConstraint constraint, TomlTable version) {
+    if (version.contains("require")) {
+        constraint.require(version["require"])
+    }
+    if (version.contains("strictly")) {
+        constraint.strictly(version["strictly"])
+    }
+    if (version.contains("prefer")) {
+        constraint.prefer(version["prefer"])
+    }
+    if (version.contains("reject")) {
+        def rejected = version["reject"]
+        if (rejected instanceof TomlArray) {
+            constraint.reject(rejected.toList() as String[])
+        } else {
+            constraint.reject(rejected)
+        }
+    }
+    if (version["rejectAll"]) {
+        constraint.rejectAll()
+    }
 }
 
 static def addBom(VersionCatalogBuilder libs, String alias, TomlTable dependency, List<String> boms) {
@@ -134,28 +163,7 @@ static def addLibrary(VersionCatalogBuilder libs, String alias, TomlTable depend
         if (version.contains("ref")) {
             library.versionRef(version["ref"])
         } else {
-            library.version {
-                if (version.contains("require")) {
-                    require(version["require"])
-                }
-                if (version.contains("strictly")) {
-                    strictly(version["strictly"])
-                }
-                if (version.contains("prefer")) {
-                    prefer(version["prefer"])
-                }
-                if (version.contains("reject")) {
-                    def rejected = version["reject"]
-                    if (rejected instanceof TomlArray) {
-                        reject(rejected.toList() as String[])
-                    } else {
-                        reject(rejected)
-                    }
-                }
-                if (version["rejectAll"]) {
-                    rejectAll()
-                }
-            }
+            library.version { setRichVersion(it, version) }
         }
     }
 

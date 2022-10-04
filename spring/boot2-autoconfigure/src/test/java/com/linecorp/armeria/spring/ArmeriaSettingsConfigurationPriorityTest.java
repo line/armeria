@@ -46,11 +46,6 @@ public class ArmeriaSettingsConfigurationPriorityTest {
         ArmeriaServerConfigurator maxNumConnectionsConfigurator() {
             return builder -> builder.maxNumConnections(16);
         }
-
-        @Bean
-        ArmeriaServerSmartLifecycle smartLifecycle(Server server) {
-            return new RetryableArmeriaServerGracefulShutdownLifecycle(server, 8);
-        }
     }
 
     @Inject

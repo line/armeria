@@ -23,7 +23,7 @@ dependencies {
 
 jmh {
     duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
-    jmhVersion = libs.versions.jmh.get()
+    jmhVersion = libs.versions.jmh.core.get()
 
     def jmhIncludes = rootProject.findProperty('jmh.includes')
     if (jmhIncludes) {

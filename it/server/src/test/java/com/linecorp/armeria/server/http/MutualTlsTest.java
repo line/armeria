@@ -17,10 +17,12 @@
 package com.linecorp.armeria.server.http;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
@@ -28,22 +30,22 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.junit4.server.SelfSignedCertificateRule;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.SelfSignedCertificateExtension;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.netty.handler.ssl.ClientAuth;
 import io.netty.handler.ssl.util.InsecureTrustManagerFactory;
 
-public class ClientAuthIntegrationTest {
+class MutualTlsTest {
 
-    @ClassRule
-    public static SelfSignedCertificateRule serverCert = new SelfSignedCertificateRule();
+    @RegisterExtension
+    static SelfSignedCertificateExtension serverCert = new SelfSignedCertificateExtension();
 
-    @ClassRule
-    public static SelfSignedCertificateRule clientCert = new SelfSignedCertificateRule();
+    @RegisterExtension
+    static SelfSignedCertificateExtension clientCert = new SelfSignedCertificateExtension();
 
-    @ClassRule
-    public static ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.tls(serverCert.certificateFile(), serverCert.privateKeyFile());
@@ -58,18 +60,27 @@ public class ClientAuthIntegrationTest {
     };
 
     @Test
-    public void normal() {
+    void normal() {
         try (ClientFactory clientFactory =
                      ClientFactory.builder()
-                                  .tlsCustomizer(ctx -> ctx.keyManager(clientCert.certificateFile(),
-                                                                       clientCert.privateKeyFile()))
+                                  .tls(clientCert.certificateFile(), clientCert.privateKeyFile())
                                   .tlsNoVerify()
                                   .build()) {
-            final WebClient client = WebClient.builder(rule.httpsUri())
-                                              .factory(clientFactory)
-                                              .decorator(LoggingClient.builder().newDecorator())
-                                              .build();
-            assertThat(client.get("/").aggregate().join().status()).isEqualTo(HttpStatus.OK);
+            final BlockingWebClient client = WebClient.builder(server.httpsUri())
+                                                      .factory(clientFactory)
+                                                      .decorator(LoggingClient.newDecorator())
+                                                      .build()
+                                                      .blocking();
+            assertThat(client.get("/").status()).isEqualTo(HttpStatus.OK);
         }
+    }
+
+    @Test
+    void shouldAllowOverridingTlsKey() {
+        assertThatCode(() -> {
+            ClientFactory.builder()
+                         .tls(clientCert.certificateFile(), clientCert.privateKeyFile())
+                         .tls(clientCert.privateKey(), clientCert.certificate());
+        }).doesNotThrowAnyException();
     }
 }

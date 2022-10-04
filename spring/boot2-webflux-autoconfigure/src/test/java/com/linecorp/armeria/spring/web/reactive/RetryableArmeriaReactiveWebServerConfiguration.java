@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,43 +13,34 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
+
 package com.linecorp.armeria.spring.web.reactive;
 
 import org.springframework.beans.factory.config.ConfigurableListableBeanFactory;
-import org.springframework.boot.autoconfigure.AutoConfigureOrder;
-import org.springframework.boot.autoconfigure.EnableAutoConfiguration;
+import org.springframework.boot.autoconfigure.AutoConfigureBefore;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnWebApplication;
 import org.springframework.boot.autoconfigure.web.ServerProperties;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
-import org.springframework.core.Ordered;
 import org.springframework.core.env.Environment;
 
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.spring.ArmeriaSettings;
 
-/**
- * An {@linkplain EnableAutoConfiguration auto-configuration} for a reactive web server.
- */
-@AutoConfigureOrder(Ordered.HIGHEST_PRECEDENCE)
+@AutoConfigureBefore(ArmeriaReactiveWebServerFactoryAutoConfiguration.class)
 @Configuration
 @ConditionalOnWebApplication(type = ConditionalOnWebApplication.Type.REACTIVE)
 @ConditionalOnClass(Server.class)
 @EnableConfigurationProperties({ ServerProperties.class, ArmeriaSettings.class })
 @Import(DataBufferFactoryWrapperConfiguration.class)
-public class ArmeriaReactiveWebServerFactoryAutoConfiguration {
+public class RetryableArmeriaReactiveWebServerConfiguration {
 
-    /**
-     * Returns a new {@link ArmeriaReactiveWebServerFactory} bean instance.
-     */
     @Bean
-    @ConditionalOnMissingBean(ArmeriaReactiveWebServerFactory.class)
     public ArmeriaReactiveWebServerFactory armeriaReactiveWebServerFactory(
             ConfigurableListableBeanFactory beanFactory, Environment environment) {
-        return new ArmeriaReactiveWebServerFactory(beanFactory, environment);
+        return new RetryableArmeriaReactiveWebServerFactory(beanFactory, environment);
     }
 }
