@@ -1,0 +1,103 @@
+def scala212 = projectsWithFlags('scala_2.12')
+def scala213 = projectsWithFlags('scala_2.13')
+def scala3 = projectsWithFlags('scala_3')
+
+configure(scala212 + scala213 + scala3) {
+
+    apply plugin: 'scala'
+
+    compileScala.targetCompatibility = 1.8
+    ScalaCompileOptions.metaClass.useAnt = false
+
+    tasks.withType(ScalaCompile) {
+        scalaCompileOptions.with {
+            // Disable incremental compilation to avoid intermittent compile errors.
+            force = true
+        }
+    }
+
+    tasks.withType(Test) {
+        useJUnitPlatform {
+            // A workaround for 'java.lang.InternalError: Malformed class name'
+            // when testing scalapb module with Java 8. This bug was fixed in Java 9.
+            // - https://github.com/gradle/gradle/issues/8432
+            // - https://bugs.openjdk.java.net/browse/JDK-8057919
+            if (rootProject.ext.testJavaVersion == 8) {
+                exclude("**/*\$*\$*.class")
+            }
+        }
+    }
+
+    if (!rootProject.hasProperty('noLint')) {
+        apply plugin: 'cz.alenkacz.gradle.scalafmt'
+        // Run `scalafmt` to automatically format scala code from source sets
+        // https://github.com/alenkacz/gradle-scalafmt#tasks
+        project.ext.getLintTask().dependsOn tasks.checkScalafmt
+    }
+
+    if (project.hasFlags('publish')) {
+        task aggregatedScaladocs(
+                type: ScalaDoc,
+                description: 'Generate scaladocs from all child projects',
+                group: 'Documentation') {
+            destinationDir = file("$buildDir/docs/scaladoc")
+            title = "$project.name $version API"
+
+            subprojects.each { proj ->
+                proj.tasks.withType(ScalaDoc).each {
+                    source += proj.sourceSets.main.allJava
+                    source += proj.sourceSets.main.allScala
+                    classpath += proj.sourceSets.main.compileClasspath
+                    excludes += scaladoc.excludes
+                    includes += scaladoc.includes
+                }
+            }
+        }
+    }
+}
+
+configure(scala212) {
+    dependencies {
+        implementation('org.scala-lang:scala-library:2.12.17')
+        if (managedVersions.containsKey('org.scalameta:munit_2.12')) {
+            testImplementation "org.scalameta:munit_2.12:${managedVersions['org.scalameta:munit_2.12']}"
+        }
+    }
+    tasks.withType(ScalaCompile) {
+        scalaCompileOptions.with {
+            // A workaround for 'jvm-1.16' is not a valid choice for '-target'. bad option: '-target:jvm-1.16'
+            // Toolchain passes a wrong target parameter to the Scala compiler.
+            // - https://github.com/gradle/gradle/issues/19456
+            // - https://github.com/gradle/gradle/pull/18347
+            additionalParameters = [ '-target:jvm-1.8']
+        }
+    }
+}
+
+configure(scala213) {
+    dependencies {
+        implementation 'org.scala-lang:scala-library:2.13.9'
+        if (managedVersions.containsKey('org.scalameta:munit_2.13')) {
+            testImplementation "org.scalameta:munit_2.13:${managedVersions['org.scalameta:munit_2.13']}"
+        }
+    }
+    tasks.withType(ScalaCompile) {
+        scalaCompileOptions.with {
+            additionalParameters = [ '-target:1.8']
+        }
+    }
+}
+
+configure(scala3) {
+    dependencies {
+        implementation "org.scala-lang:scala3-library_3:${managedVersions['org.scala-lang:scala3-library_3']}"
+        if (managedVersions.containsKey('org.scalameta:munit_3')) {
+            testImplementation "org.scalameta:munit_3:${managedVersions['org.scalameta:munit_3']}"
+        }
+    }
+    tasks.withType(ScalaCompile) {
+        scalaCompileOptions.with {
+            additionalParameters = [ '-release:8']
+        }
+    }
+}

@@ -1,0 +1,116 @@
+// Enable JaCoCo test coverage when '-Pcoverage' option is specified.
+def jacocoEnabled = project.hasProperty('coverage')
+if (!jacocoEnabled) {
+    return
+}
+
+// Override JaCoCo version if needed
+def jacocoVersion = managedVersions.containsKey('org.jacoco:org.jacoco.ant') ?
+        managedVersions['org.jacoco:org.jacoco.ant'] : JacocoPlugin.DEFAULT_JACOCO_VERSION
+
+// Collect JaCoCo execution data for all modules.
+configure(projectsWithFlags('java')) {
+    if (project.hasFlags('no_aggregation')) {
+        return
+    }
+
+    apply plugin: 'jacoco'
+
+    project.addFlags('coverage')
+
+    jacoco {
+        toolVersion = jacocoVersion
+    }
+
+    tasks.withType(Test) {
+        jacoco {
+            enabled = true
+        }
+    }
+
+    // Do not generate per-module report; generate aggregated report only.
+    tasks.jacocoTestReport.configure {
+        onlyIf { false }
+    }
+}
+
+// Generate JaCoCo report from the collected execution data.
+configure(rootProject) {
+    configurations {
+        jacocoAnt {
+            visible = false
+        }
+    }
+
+    dependencies {
+        jacocoAnt "org.jacoco:org.jacoco.ant:${jacocoVersion}"
+    }
+
+    task jacocoTestReport(type: JacocoReport) {
+        def reportTask = delegate
+        reports {
+            csv.enabled = false
+            xml.enabled = true
+            xml.destination = file("${rootProject.buildDir}/report/jacoco/jacocoTestReport.xml")
+            html.enabled = true
+            html.destination = file("${rootProject.buildDir}/report/jacoco/html")
+        }
+
+        jacocoClasspath = configurations.jacocoAnt
+
+        afterProjectsWithFlags(['java', 'coverage']) { projects ->
+            // Set dependencies related with report generation and feed execution data.
+            projects.each { Project p ->
+                if (p.hasFlags('relocate')) {
+                    reportTask.dependsOn(p.tasks.shadedClasses.path)
+                }
+
+                p.tasks.withType(Test).each { testTask ->
+                    reportTask.dependsOn(testTask.path)
+                    reportTask.mustRunAfter(testTask)
+                    testTask.finalizedBy(reportTask)
+
+                    def dataFile = testTask.extensions.findByType(JacocoTaskExtension.class).destinationFile
+                    reportTask.doFirst {
+                        // Create an empty .exec file just in case the test task did not run.
+                        if (!dataFile.exists()) {
+                            dataFile.parentFile.mkdirs()
+                            try {
+                                dataFile.createNewFile()
+                            } catch (ignored) {}
+                        }
+                    }
+
+                    reportTask.executionData(testTask)
+                }
+            }
+
+            // Include all sources and classes directories so that the report includes other modules.
+            sourceDirectories.from = files(projectsWithFlags('java').inject([], { a, b ->
+                a + b.sourceSets.main.java.srcDirs.findAll { File srcDir ->
+                    // Exclude generated sources.
+                    return !srcDir.path.contains('/gen-src/') && !srcDir.path.contains('\\gen-src\\')
+                }
+            }))
+            classDirectories.from = files(projectsWithFlags('java').inject([], { a, b ->
+                if (b.hasFlags('no_aggregation')) {
+                    return a
+                }
+                if (b.hasFlags('relocate')) {
+                    return a + [b.tasks.shadedClasses.destinationDir]
+                }
+                return a + b.sourceSets.main.output.classesDirs
+            }))
+
+            // Exclude shaded classes from the report.
+            def exclusions = rootProject.ext.relocations.collect { "/${it['to'].replace('.', '/')}/**" }
+            def additionalExclusions = rootProject.findProperty('jacocoExclusions');
+            if (additionalExclusions) {
+                "${additionalExclusions}".split(',').each { exclusions.add("${it}") }
+            }
+            classDirectories.from = files(classDirectories.files.collect {
+                fileTree(dir: it, exclude: exclusions)
+            })
+        }
+    }
+}

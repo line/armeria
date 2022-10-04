@@ -1,0 +1,45 @@
+configure(projectsWithFlags('java', 'publish')) {
+    def generatedResourcesDir = project.file("${project.projectDir}/gen-src/main/resources")
+    sourceSets.main.resources.srcDir generatedResourcesDir
+    clean {
+        delete generatedResourcesDir
+    }
+
+    // Generate version.properties, similar to Netty.
+    task versionProperties {
+        def propsFile = project.file("${generatedResourcesDir}/META-INF/${project.group}.versions.properties")
+        outputs.file propsFile
+        doLast {
+            def artifactId = project.ext.artifactId
+
+            logger.info("Generating versions.properties for ${artifactId} ..")
+            def props = new Properties()
+            project.ext.repoStatus.each { k, v ->
+                props["${artifactId}.${k}"] = v
+            }
+
+            def upToDate = false
+            if (propsFile.exists()) {
+                def oldProps = new Properties()
+                propsFile.withInputStream { oldProps.load(it) }
+                if (oldProps == props) {
+                    upToDate = true
+                }
+            } else {
+                logger.info("${propsFile} does not exist.")
+            }
+
+            if (!upToDate) {
+                project.mkdir(propsFile.parentFile)
+                logger.info("Writing ${propsFile} ..")
+                propsFile.withOutputStream { props.store(it, null) }
+            } else {
+                logger.info("${propsFile} is up-to-date.")
+            }
+        }
+    }
+
+    // Ensure version.properties is available during the build.
+    tasks.sourcesJar.dependsOn(tasks.versionProperties)
+    tasks.processResources.dependsOn(tasks.versionProperties)
+}

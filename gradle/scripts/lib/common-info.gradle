@@ -1,0 +1,72 @@
+import java.time.LocalDateTime
+
+rootProject.ext {
+    projectName = project.findProperty('projectName')
+    projectUrl = project.findProperty('projectUrl')
+    projectDescription = project.findProperty('projectDescription')?: rootProject.name
+    authorName = project.findProperty('authorName')?: 'LINE Corporation'
+    authorEmail = project.findProperty('authorEmail')?: 'dl_oss_dev@linecorp.com'
+    authorUrl = project.findProperty('authorUrl')?: 'https://engineering.linecorp.com/en/'
+    inceptionYear = project.findProperty('inceptionYear')
+    licenseName = project.findProperty('licenseName')
+    licenseUrl = project.findProperty('licenseUrl')
+    scmUrl = project.findProperty('scmUrl')
+    scmConnection = project.findProperty('scmConnection')
+    scmDeveloperConnection = project.findProperty('scmDeveloperConnection')
+    copyrightFooter =
+            '&copy; Copyright ' + "${rootProject.ext.inceptionYear}&ndash;${LocalDateTime.now().year} " +
+            '<a href="' + rootProject.ext.authorUrl + '">' + rootProject.ext.authorName + '</a>. ' +
+            'All rights reserved.'
+    googleAnalyticsId = rootProject.findProperty('googleAnalyticsId')
+}
+
+subprojects {
+    ext {
+        projectName = rootProject.ext.projectName
+        projectUrl = rootProject.ext.projectUrl
+        projectDescription = rootProject.ext.projectDescription
+        authorName = rootProject.ext.authorName
+        authorEmail = rootProject.ext.authorEmail
+        authorUrl = rootProject.ext.authorUrl
+        inceptionYear = rootProject.ext.inceptionYear
+        licenseName = rootProject.ext.licenseName
+        licenseUrl = rootProject.ext.licenseUrl
+        scmUrl = rootProject.ext.scmUrl
+        scmConnection = rootProject.ext.scmConnection
+        scmDeveloperConnection = rootProject.ext.scmDeveloperConnection
+        copyrightFooter = rootProject.ext.copyrightFooter
+    }
+}
+
+allprojects {
+    ext {
+        artifactId = {
+            // Use the overridden one if available.
+            if (rootProject.ext.has('artifactIdOverrides')) {
+                def overrides = rootProject.ext.artifactIdOverrides
+                if (!(overrides instanceof Map)) {
+                    throw new IllegalStateException("artifactIdOverrides must be a Map: ${overrides}")
+                }
+
+                for (Map.Entry<String, String> e : overrides.entrySet()) {
+                    if (rootProject.project(e.key) == project) {
+                        return e.value
+                    }
+                }
+            }
+
+            // Generate from the project names otherwise.
+            List<Project> chain = []
+            Project p = project
+            for (;;) {
+                chain += p
+                p = p.parent
+                if (p == null) {
+                    break
+                }
+            }
+
+            return String.join('-', chain.reverse().collect { it.name })
+        }.call()
+    }
+}

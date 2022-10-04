@@ -1,0 +1,134 @@
+import groovy.text.SimpleTemplateEngine
+
+import java.util.regex.Pattern
+
+rootProject.ext {
+    versionPattern = rootProject.findProperty('versionPattern')?: /^[0-9]+\.[0-9]+\.[0-9]+$/
+}
+
+task release(
+        group: 'Publishing',
+        description: 'Releases a new version.') {
+
+    doLast {
+        if (gitPath == null) {
+            throw new IllegalStateException('Git is not available.')
+        }
+
+        if (!project.hasProperty('releaseVersion') || !project.hasProperty('nextVersion')) {
+            throw new InvalidUserDataException(
+                    "Specify 'releaseVersion' and 'nextVersion' properties.${System.lineSeparator()}" +
+                            'e.g. ./gradlew release -PreleaseVersion=0.1.2 -PnextVersion=0.1.3')
+        }
+
+        def releaseVersion = project.property('releaseVersion')
+        def nextVersion = project.property('nextVersion')
+
+        // Validate the specified version numbers.
+        if (!(releaseVersion =~ rootProject.ext.versionPattern)) {
+            throw new InvalidUserDataException(
+                    "invalid release version: ${releaseVersion} (expected: ${rootProject.ext.versionPattern})")
+        }
+        if (!(nextVersion =~ rootProject.ext.versionPattern)) {
+            throw new InvalidUserDataException(
+                    "invalid next version: ${nextVersion} (expected: ${rootProject.ext.versionPattern})")
+        }
+
+        // Ensure the repository is upstream.
+        def repoUri = "${project.ext.executeGit('config', '--get', 'remote.origin.url').trim()}"
+        def upstreamRepoUri = getUpstreamRepoUri()
+        def upstreamRepoHost = upstreamRepoUri.host?: ''
+        def upstreamRepoPath = upstreamRepoUri.path?: '/'
+        def originIsUpstream
+        if (repoUri.contains('://')) {
+            try {
+                def parsedRepoUri = URI.create(repoUri)
+                originIsUpstream =
+                        upstreamRepoHost == parsedRepoUri.host &&
+                        upstreamRepoPath == parsedRepoUri.path
+            } catch (ignored) {
+                originIsUpstream = false
+            }
+        } else {
+            def matcher = Pattern.compile('^(?:[^@]*@)?([^:/]+)[:/]?(.*)$').matcher(repoUri)
+            originIsUpstream = matcher.matches() &&
+                    matcher.group(1) == upstreamRepoHost &&
+                    "/${matcher.group(2)}" == upstreamRepoPath
+        }
+
+        if (!originIsUpstream) {
+            throw new InvalidUserDataException(
+                    "Release must be performed at the upstream repository: ${upstreamRepoHost}${upstreamRepoPath}")
+        }
+
+        // Ensure the repository is clean.
+        def gitStatusOut = project.ext.executeGit('status', '--porcelain')
+        if (!gitStatusOut.empty) {
+            throw new IllegalStateException(
+                    "Git repository is not clean:${System.lineSeparator()}${gitStatusOut}")
+        }
+
+        def tag = project.findProperty("tag")
+        if (tag == null) {
+            tag = "$rootProject.name-$releaseVersion"
+        }
+
+        def gradlePropsFile = project.file("${project.projectDir}/gradle.properties")
+        def gradlePropsContent = gradlePropsFile.getText('ISO-8859-1')
+        def versionPattern = /\nversion=[^\r\n]*(\r?\n)/
+        if (!(gradlePropsContent =~ versionPattern)) {
+            throw new IllegalStateException(
+                    "Cannot find a valid 'version' property from gradle.properties");
+        }
+
+        // Update the version to the release version, commit and tag.
+        gradlePropsFile.write(gradlePropsContent.replaceFirst(versionPattern, "\nversion=${releaseVersion}\$1"),
+                'ISO-8859-1')
+        project.ext.executeGit('add', gradlePropsFile.toString())
+        project.ext.executeGit('commit', '-m', "Release $tag")
+        project.ext.executeGit('tag', tag)
+
+        // Update the version to the next version and commit.
+        def actualNextVersion = "${nextVersion}-SNAPSHOT"
+        project.ext.executeGit('reset', '--hard', 'HEAD^')
+        gradlePropsFile.write(gradlePropsContent.replaceFirst(versionPattern, "\nversion=${actualNextVersion}\$1"),
+                'ISO-8859-1')
+        project.ext.executeGit('add', gradlePropsFile.toString())
+        project.ext.executeGit('commit', '-m', "Update the project version to ${actualNextVersion}")
+
+        // Push the commits and tags.
+        project.ext.executeGit('push', 'origin')
+        project.ext.executeGit('push', 'origin', tag)
+
+        println()
+        println "Tagged: ${tag}"
+
+        def postReleaseMessageFile = new File("${rootDir}", '.post-release-msg')
+        if (postReleaseMessageFile.exists()) {
+            println '-' * (tag.length() + 8)
+            print new SimpleTemplateEngine().createTemplate(postReleaseMessageFile).make([tag: tag, releaseVersion: releaseVersion])
+        }
+    }
+}
+
+def getUpstreamRepoUri() {
+    int schemeEndIndex = project.ext.scmDeveloperConnection.indexOf('://')
+    if (schemeEndIndex <= 0) {
+        rejectScmDeveloperConnection()
+    }
+    int schemeStartIndex = project.ext.scmDeveloperConnection.lastIndexOf(':', schemeEndIndex - 1)
+    try {
+        if (schemeStartIndex >= 0) {
+            return URI.create(project.ext.scmDeveloperConnection.substring(schemeStartIndex + 1))
+        } else {
+            return URI.create(project.ext.scmDeveloperConnection)
+        }
+    } catch (ignored) {
+        rejectScmDeveloperConnection()
+    }
+}
+
+def rejectScmDeveloperConnection() {
+    throw new IllegalStateException(
+            "scmDeveloperConnection must be a URI with scheme and authority: ${project.ext.scmDeveloperConnection}")
+}

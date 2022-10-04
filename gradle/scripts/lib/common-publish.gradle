@@ -1,0 +1,106 @@
+def isReleaseVersion = !(rootProject.version.endsWith('-SNAPSHOT'))
+def publishSignatureRequired = 'true' == rootProject.findProperty('publishSignatureRequired') &&
+                               'true' != System.getenv('JITPACK') &&
+                               !rootProject.hasProperty('nosign')
+def publishUrlForRelease = rootProject.findProperty('publishUrlForRelease')
+def publishUrlForSnapshot = rootProject.findProperty('publishUrlForSnapshot')
+def publishUsernameProperty = rootProject.findProperty('publishUsernameProperty')
+def publishPasswordProperty = rootProject.findProperty('publishPasswordProperty')
+
+def signingKeyId = rootProject.findProperty("signingKeyId")
+def signingKey = rootProject.findProperty("signingKey")
+def signingPassword = rootProject.findProperty("signingPassword")
+
+if (publishSignatureRequired) {
+    apply plugin: 'signing'
+}
+
+rootProject.ext {
+    isPublishing = { gradle.taskGraph.allTasks.find {
+        it.name =~ /(?:^|:)publish[^:]*ToSonatype[^:]*$/ } != null
+    }
+    if (publishSignatureRequired) {
+        isSigning = {
+            (rootProject.signing.signatory != null || signingKey != null) &&
+            (isReleaseVersion || rootProject.hasProperty('sign'))
+        }
+    } else {
+        isSigning = { false }
+    }
+
+    if (publishSignatureRequired) {
+        gradle.taskGraph.whenReady {
+            // Do *NOT* proceed if a user is publishing a release version and signatory is missing.
+            if (rootProject.ext.isPublishing() && isReleaseVersion &&
+                rootProject.signing.signatory == null && signingKey == null) {
+
+                throw new IllegalStateException(
+                        'Cannot publish a release version without a GPG key; missing signatory. ' +
+                        'Use "-Pnosign" option to disable PGP signing.')
+            }
+        }
+    }
+}
+
+subprojects {
+    ext {
+        isPublishing = rootProject.ext.isPublishing
+        isSigning = rootProject.ext.isSigning
+    }
+}
+
+def publishToStaging = rootProject.plugins.findPlugin('io.github.gradle-nexus.publish-plugin') != null
+if (publishToStaging) {
+    apply plugin: "io.github.gradle-nexus.publish-plugin"
+    nexusPublishing {
+        repositories {
+            sonatype {
+                nexusUrl.set(uri(publishUrlForRelease - "staging/deploy/maven2/"))
+                snapshotRepositoryUrl.set(uri(publishUrlForSnapshot))
+                username = project.findProperty(publishUsernameProperty)
+                password = project.findProperty(publishPasswordProperty)
+            }
+        }
+    }
+}
+
+configure(projectsWithFlags('publish')) {
+    apply plugin: 'maven-publish'
+
+    if (project.ext.isSigning()) {
+        apply plugin: 'signing'
+
+        signing {
+            if (System.getenv("CI") != null && signingKey != null) {
+                useInMemoryPgpKeys(signingKeyId, signingKey, signingPassword)
+            }
+            required { true }
+        }
+    }
+
+    if (!publishToStaging) {
+        publishing {
+            repositories {
+                maven {
+                    if (project.hasProperty('publishUrl')) {
+                        url project.findProperty('publishUrl')
+                    } else if (isReleaseVersion) {
+                        url publishUrlForRelease
+                    } else {
+                        url publishUrlForSnapshot
+                    }
+
+                    credentials {
+                        username = project.findProperty(publishUsernameProperty)
+                        password = project.findProperty(publishPasswordProperty)
+                    }
+                }
+            }
+        }
+    }
+
+    task install(
+            group: 'Publishing',
+            description: 'An alias of publishToMavenLocal',
+            dependsOn: tasks.publishToMavenLocal)
+}

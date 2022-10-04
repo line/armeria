@@ -1,0 +1,33 @@
+// JDK 9 or above does not require Jetty ALPN agent at all.
+if (JavaVersion.current() >= JavaVersion.VERSION_1_9 && rootProject.ext.testJavaVersion != 8) {
+    return
+}
+
+configure(projectsWithFlags('java')) {
+    // Use Jetty ALPN agent if dependencyManagement mentions it.
+    if (managedVersions.containsKey('org.mortbay.jetty.alpn:jetty-alpn-agent')) {
+        configurations {
+            alpnAgent {
+                visible = false
+                canBeConsumed = false
+            }
+        }
+
+        dependencies {
+            alpnAgent "org.mortbay.jetty.alpn:jetty-alpn-agent:${managedVersions['org.mortbay.jetty.alpn:jetty-alpn-agent']}"
+        }
+
+        task copyAlpnAgent(type: Copy) {
+            from configurations.alpnAgent
+            into "${project.buildDir}"
+            rename { String fileName ->
+                fileName.replaceFirst("-[0-9]+\\.[0-9]+\\.[0-9]+(?:\\.[^.]+)?\\.jar", ".jar")
+            }
+        }
+
+        tasks.withType(JavaForkOptions) {
+            dependsOn tasks.copyAlpnAgent
+            jvmArgs "-javaagent:${project.buildDir}/jetty-alpn-agent.jar"
+        }
+    }
+}

@@ -1,0 +1,142 @@
+def buildJdkVersion = 17
+if (rootProject.hasProperty('buildJdkVersion')) {
+    def jdkVersion = Integer.parseInt(rootProject.findProperty('buildJdkVersion'))
+    if (buildJdkVersion != jdkVersion) {
+        buildJdkVersion = jdkVersion
+        logger.quiet("Overriding JDK for build with ${buildJdkVersion}")
+    }
+}
+rootProject.ext.set("buildJdkVersion", buildJdkVersion)
+
+def testJavaVersion = buildJdkVersion
+if (rootProject.hasProperty('testJavaVersion')) {
+    def testVersion = Integer.parseInt(rootProject.findProperty('testJavaVersion'))
+    if (buildJdkVersion != testVersion) {
+        testJavaVersion = testVersion
+        logger.quiet("Overriding JRE for tests with ${testJavaVersion}")
+    }
+}
+rootProject.ext.set("testJavaVersion", testJavaVersion)
+
+// Enable checkstyle if the rule file exists.
+def checkstyleConfigDir = "${rootProject.projectDir}/settings/checkstyle"
+def checkstyleEnabled = !rootProject.hasProperty('noCheckstyle') &&
+        !rootProject.hasProperty('noLint') &&
+        new File(checkstyleConfigDir).isDirectory() &&
+        new File("${checkstyleConfigDir}/checkstyle.xml").isFile()
+
+configure(rootProject) {
+    apply plugin: 'eclipse'
+    apply plugin: 'idea'
+}
+
+configure(projectsWithFlags('java')) {
+
+    apply plugin: 'java-library'
+    apply plugin: 'eclipse'
+    apply plugin: 'idea'
+
+    archivesBaseName = project.ext.artifactId
+
+    // Delete the generated source directory on clean.
+    ext {
+        genSrcDir = "${projectDir}/gen-src"
+    }
+    clean {
+        delete project.ext.genSrcDir
+    }
+
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(rootProject.ext.buildJdkVersion)
+            implementation = JvmImplementation.VENDOR_SPECIFIC
+        }
+    }
+
+    // Add the generated source directories to the source sets.
+    project.sourceSets.all { sourceSet ->
+        sourceSet.java.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/java")
+        sourceSet.resources.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/resources")
+    }
+    afterEvaluate {
+        Task generateSourcesTask = project.tasks.findByName('generateSources')
+        if (generateSourcesTask != null) {
+            tasks.sourcesJar.dependsOn(generateSourcesTask)
+        }
+    }
+
+    java {
+        withJavadocJar()
+        withSourcesJar()
+
+        // Adds an optional configuration that can be used to define optional dependencies. While it's more
+        // idiomatic to define features for each set of optional dependencies (e.g., "prometheus",
+        // "dropwizard"), it's convenient to have a single one to fallback to.
+        registerFeature('optional') {
+            usingSourceSet(sourceSets.main)
+        }
+    }
+
+    // Set the sensible compiler options.
+    tasks.withType(JavaCompile) {
+        sourceCompatibility = project.findProperty('javaSourceCompatibility') ?: '1.8'
+        targetCompatibility = project.findProperty('javaTargetCompatibility') ?: '1.8'
+        options.encoding = 'UTF-8'
+        options.warnings = false
+        options.compilerArgs += '-parameters'
+    }
+
+    // Enable full exception logging for test failures.
+    tasks.withType(Test).configureEach {
+        testLogging.exceptionFormat = 'full'
+
+        // Use JUnit platform.
+        def flakyTests = rootProject.findProperty('flakyTests')
+        if (flakyTests == 'true') {
+            useJUnitPlatform {
+                includeTags 'FLAKY_TESTS'
+            }
+        } else if (flakyTests == 'false') {
+            useJUnitPlatform {
+                excludeTags 'FLAKY_TESTS'
+            }
+        } else {
+            if (flakyTests != null) {
+                throw new IllegalArgumentException("flakyTests: $flakyTests (expected: true, false or null)")
+            }
+            useJUnitPlatform()
+        }
+
+        // Use a different JRE for testing if necessary.
+        if (rootProject.ext.buildJdkVersion != rootProject.ext.testJavaVersion) {
+            javaLauncher = javaToolchains.launcherFor {
+                languageVersion = JavaLanguageVersion.of(rootProject.ext.testJavaVersion)
+            }
+        }
+    }
+
+    // Enforce checkstyle rules.
+    if (checkstyleEnabled) {
+        apply plugin: 'checkstyle'
+
+        checkstyle {
+            configFile = new File("${checkstyleConfigDir}/checkstyle.xml")
+            configProperties = ['checkstyleConfigDir': "$checkstyleConfigDir"]
+            if (managedVersions.containsKey('com.puppycrawl.tools:checkstyle')) {
+                toolVersion = managedVersions['com.puppycrawl.tools:checkstyle']
+            }
+        }
+
+        task checkstyle(group: 'Verification', description: 'Runs the checkstyle rules.') {}
+        project.sourceSets.all { SourceSet sourceSet ->
+            def dependencyTask = project.tasks.findByName("checkstyle${sourceSet.name.capitalize()}")
+            if (dependencyTask instanceof Checkstyle) {
+                tasks.checkstyle.dependsOn dependencyTask
+            }
+        }
+
+        def lintTask = project.ext.getLintTask()
+        lintTask.dependsOn tasks.checkstyle
+        tasks.check.dependsOn lintTask
+    }
+}

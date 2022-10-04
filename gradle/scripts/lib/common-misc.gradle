@@ -1,0 +1,61 @@
+allprojects {
+    ext {
+        hasSourceDirectory = this.&hasSourceDirectory.curry(project)
+        getGenerateSourcesTask = this.&getGenerateSourcesTask.curry(project)
+        getLintTask = this.&getLintTask.curry(project)
+    }
+}
+
+static boolean hasSourceDirectory(Project project, String name) {
+    def queue = [] as Queue
+    queue.add([
+            dir: new File(project.projectDir, 'src'),
+            depth: 0,
+    ])
+    while (queue.size() > 0) {
+        def e = queue.poll()
+
+        def children = e.dir.listFiles(new FileFilter() {
+            @Override
+            boolean accept(File pathname) {
+                return pathname.isDirectory()
+            }
+        })
+        for (child in children) {
+            if (child.getName() == name) {
+                return true
+            }
+            if (e.depth < 3) {
+                queue.add([
+                        dir  : child,
+                        depth: e.depth + 1,
+                ])
+            }
+        }
+    }
+    return false
+}
+
+static Task getGenerateSourcesTask(Project project) {
+    Task task = project.tasks.findByName('generateSources')
+    if (task == null) {
+        task = project.task([
+                group: 'Build', description: 'Generates required source files.'
+        ], 'generateSources');
+    }
+    return task
+}
+
+static Task getLintTask(Project project) {
+    Task task = project.tasks.findByName('lint')
+    if (task == null) {
+        task = project.task([
+                group: 'Verification', description: 'Runs all linting tools.'
+        ], 'lint')
+
+        if (project.tasks.findByName('check') != null) {
+            project.tasks.check.dependsOn(task)
+        }
+    }
+    return task
+}

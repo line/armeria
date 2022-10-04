@@ -1,0 +1,112 @@
+import static org.gradle.internal.os.OperatingSystem.WINDOWS
+import static org.gradle.internal.os.OperatingSystem.current
+
+rootProject.ext {
+    // The path to the 'git' command
+    gitPath = getGitPath()
+    executeGit = this.&executeGit.curry(rootProject)
+
+    // The Git repository status
+    repoStatus = getRepoStatus().asImmutable()
+}
+
+// Copy the properties to all projects for easier access.
+subprojects {
+    ext {
+        gitPath = rootProject.ext.gitPath
+        executeGit = this.&executeGit.curry(project)
+        repoStatus = rootProject.ext.repoStatus
+    }
+}
+
+private def getGitPath() {
+    if (rootProject.hasProperty('gitPath')) {
+        return rootProject.property('gitPath').toString()
+    }
+
+    // Find the location of the 'git' command.
+    try {
+        if (current() == WINDOWS) {
+            def commands = executeCommand('where.exe', 'git.exe')
+            // "where.exe" returns all available commands, so select the first git.exe.
+            return commands.split('\r\n|\n')[0]
+        } else {
+            return executeCommand('which', 'git')
+        }
+    } catch (e) {
+        logger.warn("Git not available: ${e}", e)
+        return null
+    }
+}
+
+private def getRepoStatus() {
+    // Make sure this method is executed only once during the build.
+    assert !rootProject.hasProperty('repoStatus')
+
+    // The default values taken from Netty.
+    def result = [
+            version : project.version,
+            longCommitHash : '0000000000000000000000000000000000000000',
+            shortCommitHash : '0000000',
+            commitDate : '1970-01-01 00:00:00 +0000',
+            repoStatus : 'unknown'
+    ]
+
+    // Make sure 'git' is available.
+    if (gitPath == null) {
+        return result
+    }
+
+    // Do not run 'git' if the project is not from a Git repository.
+    if (!rootProject.file("${rootProject.projectDir}/.git").isDirectory()) {
+        return result
+    }
+
+    // Retrieve the repository status from the Git repository.
+    try {
+        def gitLogOut = project.ext.executeGit('log', '-1', '--format=format:%h%x20%H%x20%cd', '--date=iso')
+        if (gitLogOut) {
+            logger.info("Latest commit: ${gitLogOut}")
+            def tokens = gitLogOut.tokenize(' ')
+            result.shortCommitHash = tokens[0]
+            result.longCommitHash = tokens[1]
+            result.commitDate = tokens[2..4].join(' ')
+        }
+
+        def gitStatusOut = project.ext.executeGit('status', '--porcelain')
+        if (!gitStatusOut.empty) {
+            result.repoStatus = 'dirty'
+            logger.info("Repository is dirty:${System.lineSeparator()}${gitStatusOut}")
+        } else {
+            result.repoStatus = 'clean'
+        }
+    } catch (e) {
+        logger.warn('Failed to retrieve the repository status:', e)
+    }
+
+    return result
+}
+
+static String executeGit(Project project, ...args) {
+    def command = [project.ext.gitPath]
+    args.each { command += it.toString() }
+    return executeCommand(command.toArray(new String[command.size()]))
+}
+
+private static String executeCommand(...command) {
+    def cmd = []
+    command.each { cmd += it.toString() }
+
+    def proc = cmd.execute()
+    def stdout = new StringWriter()
+    def stderr = new StringWriter()
+    proc.waitForProcessOutput(stdout, stderr)
+
+    if (proc.exitValue() != 0) {
+        throw new IOException(
+                "'${command}' exited with a non-zero exit code: ${proc.exitValue()}:" +
+                        "${System.lineSeparator()}${stderr.toString().trim()}")
+    }
+
+    return stdout.toString().trim()
+}

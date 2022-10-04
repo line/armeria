@@ -1,0 +1,118 @@
+def libDir = "${buildscript.sourceFile.parentFile}"
+
+configure(projectsWithFlags('java')) {
+    def thriftJsonEnabled = true
+    def fullCamel = false
+
+    ext {
+        thriftVersion = null
+        thriftPath = null
+        enableThriftFullCamel = { fullCamel = true }
+        disableThriftJson = { thriftJsonEnabled = false }
+    }
+
+    // TODO(anuraaga): Consider replacing with https://github.com/yodle/griddle
+    project.sourceSets.all { sourceSet ->
+        def scope = sourceSet.name
+        // Create the task assuming the source directory exists
+        // so that subprojects can refer to the task.
+        def task = project.tasks.create([
+                name: sourceSet.getTaskName('compile', 'thrift'),
+                group: 'Build',
+                description: "Compiles the ${sourceSet.name} .thrift files."
+        ])
+
+        def sourcesJarTask = project.tasks.findByName(sourceSet.getTaskName('sources', 'jar'))
+        if (sourcesJarTask) {
+            sourcesJarTask.dependsOn(task)
+        }
+
+        // Use afterEvaluate to give subprojects a chance to override the properties.
+        project.afterEvaluate {
+            def srcDirs = project.findProperty(sourceSet.getTaskName('', 'thriftSrcDirs'))
+            if (srcDirs == null) {
+                def defaultSrcDir = "${projectDir}/src/${scope}/thrift"
+                if (!project.file(defaultSrcDir).isDirectory()) {
+                    // Disable the compile*Thrift task which turned out to be unnecessary.
+                    task.enabled = false
+                    return
+                }
+                srcDirs = [defaultSrcDir]
+            }
+            if (!(srcDirs instanceof Iterable) || srcDirs instanceof CharSequence) {
+                srcDirs = [srcDirs]
+            }
+
+            def includeDirs = project.findProperty(sourceSet.getTaskName('', 'thriftIncludeDirs')) ?: []
+            if (!(includeDirs instanceof Iterable) || includeDirs instanceof CharSequence) {
+                includeDirs = [includeDirs]
+            }
+            def javaOutputDir = "${project.ext.genSrcDir}/${scope}/java"
+            def jsonOutputDir = "${project.ext.genSrcDir}/${scope}/resources"
+            task.configure {
+                srcDirs.each { inputs.dir it }
+                includeDirs.each { inputs.dir it }
+                outputs.dir javaOutputDir
+                outputs.dir jsonOutputDir
+
+                doFirst {
+                    def actualThriftPath
+                    if (project.findProperty('thriftPath') != null) {
+                        actualThriftPath = project.findProperty('thriftPath')
+                    } else {
+                        actualThriftPath =
+                                "${libDir}/thrift" +
+                                "/${project.findProperty('thriftVersion')?: '0.16'}" +
+                                "/thrift.${rootProject.osdetector.classifier}"
+                    }
+
+                    srcDirs.each { srcDir ->
+                        project.fileTree(srcDir) {
+                            include '**/*.thrift'
+                        }.each { sourceFile ->
+                            logger.info("Using ${actualThriftPath} to generate Java sources from ${sourceFile}")
+                            project.mkdir(javaOutputDir)
+                            def javaGenerator = 'java'
+                            if (fullCamel) {
+                                javaGenerator = 'java:fullcamel'
+                            }
+                            project.exec {
+                                commandLine actualThriftPath
+                                args '-gen', javaGenerator, '-out', javaOutputDir
+                                includeDirs.each {
+                                    args '-I', it
+                                }
+                                args sourceFile.absolutePath
+                            }
+                            if (thriftJsonEnabled) {
+                                logger.info("Using ${actualThriftPath} to generate JSON from ${sourceFile}")
+                                def outDir = "${jsonOutputDir}/META-INF/armeria/thrift"
+                                project.mkdir(outDir)
+                                project.exec {
+                                    commandLine actualThriftPath
+                                    args '-gen', 'json', '-out', outDir
+                                    includeDirs.each {
+                                        args '-I', it
+                                    }
+                                    args sourceFile.absolutePath
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            def processResourcesTask = tasks.findByName(sourceSet.getTaskName('process', 'resources'))
+            if (processResourcesTask != null) {
+                processResourcesTask.dependsOn(task)
+            }
+
+            def compileTask = tasks.findByName(sourceSet.getCompileTaskName('java'))
+            if (compileTask != null) {
+                compileTask.dependsOn(task)
+            }
+
+            project.ext.getGenerateSourcesTask().dependsOn(task)
+        }
+    }
+}

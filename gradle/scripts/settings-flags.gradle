@@ -1,0 +1,158 @@
+import org.gradle.util.GradleVersion;
+
+import java.util.concurrent.ConcurrentHashMap
+
+import static java.util.Objects.requireNonNull
+
+// version catalogs should be defined in the settings.gradle or directly imported files.
+// https://docs.gradle.org/current/userguide/platforms.html#sub:version-catalog-declaration
+apply from: "${rootDir}/gradle/scripts/version-catalogs.gradle"
+
+// Ensure the Gradle version first of all.
+GradleVersion minimumSupportedGradleVersion = GradleVersion.version('6.0')
+if (GradleVersion.current() < minimumSupportedGradleVersion) {
+    throw new IllegalStateException("${minimumSupportedGradleVersion} or above is required to build this project.")
+}
+
+// Add the 'includeWithFlags' directive to 'settings'.
+ext.includeWithFlags = this.&includeWithFlags
+
+def includeWithFlags(CharSequence path, ...flags) {
+    requireNonNull(path, "path is null.")
+    if (path.length() == 0) {
+        throw new IllegalArgumentException("path is empty.")
+    }
+
+    def pathStr = path.toString()
+    def actualFlags = addFlags(new LinkedHashSet(), flags)
+
+    settings.include pathStr
+
+    // Ensure all projects has the extension methods and properties.
+    if (!gradle.ext.has('installedFlagsExtension')) {
+        gradle.ext.installedFlagsExtension = true
+        gradle.projectsLoaded {
+            gradle.allprojects { p ->
+                p.ext.flags = Collections.emptySet()
+                p.ext.hasFlag = p.ext.hasFlags = this.&hasFlags.curry(p)
+                p.ext.assertFlag = p.ext.assertFlags = this.&assertFlags.curry(p)
+                p.ext.projectsWithFlag = p.ext.projectsWithFlags = this.&projectsWithFlags.curry(p)
+                p.ext.afterProjectsWithFlag = this.&afterProjectsWithFlag.curry(p)
+                p.ext.afterProjectsWithFlags = this.&afterProjectsWithFlags.curry(p)
+                p.ext.addFlag = p.ext.addFlags = { args -> p.ext.flags = addFlags(p.ext.flags, args) }
+            }
+        }
+    }
+
+    // Set the flags property.
+    gradle.projectsLoaded {
+        try {
+            gradle.rootProject.project(pathStr).ext.flags = actualFlags
+        } catch (UnknownProjectException ignored) {
+            // Ignore
+        }
+    }
+}
+
+static def addFlags(Set<String> actualFlags, ...flags) {
+    if (actualFlags == null) {
+        actualFlags = new LinkedHashSet<>()
+    } else {
+        actualFlags = new LinkedHashSet<>(actualFlags)
+    }
+
+    if (flags != null) {
+        if (flags instanceof CharSequence) {
+            actualFlags.add(flags.toString())
+        } else if (flags instanceof Iterable) {
+            flags.each { it ->
+                if (it instanceof CharSequence) {
+                    actualFlags.add(it.toString())
+                } else {
+                    throw new IllegalArgumentException("flags must contain only CharSequences: ${flags}")
+                }
+            }
+        } else if (flags instanceof Object[]) {
+            flags.each { it ->
+                if (it instanceof CharSequence) {
+                    actualFlags.add(it.toString())
+                } else {
+                    throw new IllegalArgumentException("flags must contain only CharSequences: ${flags}")
+                }
+            }
+        } else {
+            throw new IllegalArgumentException(
+                    "flags must be a CharSequence or an Iterable of CharSequences: ${flags}")
+        }
+    }
+
+    // 'trim' implies 'shade'
+    if (actualFlags.contains('trim')) {
+        actualFlags.add('shade')
+    }
+
+    // 'shade' implies 'relocate'.
+    if (actualFlags.contains('shade')) {
+        actualFlags.add('relocate')
+    }
+
+    // 'bom' implies 'publish'.
+    if (actualFlags.contains('bom')) {
+        actualFlags.add('publish')
+    }
+
+    return Collections.unmodifiableSet(actualFlags)
+}
+
+static def hasFlags(Project project, ...flags) {
+    if (!project.ext.has('flags')) {
+        return flags.length == 0
+    }
+
+    Set<String> actualFlags = project.ext.flags
+    for (def f in flags.flatten()) {
+        if (!(f instanceof CharSequence)) {
+            throw new IllegalArgumentException("not a CharSequence: ${f}")
+        }
+        if (!actualFlags.contains(f.toString())) {
+            return false
+        }
+    }
+
+    return true
+}
+
+static def assertFlags(Project project, ...flags) {
+    assert hasFlags(project, flags)
+}
+
+static def projectsWithFlags(Project project, ...flags) {
+    return new LinkedHashSet<Project>(
+            project.rootProject.allprojects.findAll {
+                it.ext.has('hasFlags') && it.ext.hasFlags(flags)
+            })
+}
+
+static void afterProjectsWithFlag(Project project, Object flag, Closure<Set<Project>> closure) {
+    afterProjectsWithFlags(project, [flag], closure)
+}
+
+static void afterProjectsWithFlags(Project project, Iterable<?> flags, Closure<Set<Project>> closure) {
+    def projects = projectsWithFlags(project, flags)
+    def remainingProjects = Collections.newSetFromMap(new ConcurrentHashMap<Project, Boolean>())
+    remainingProjects.addAll(projects)
+
+    projects.each { p ->
+        p.afterEvaluate {
+            remainingProjects.remove(p)
+            if (remainingProjects.isEmpty()) {
+                closure(projects)
+            }
+        }
+    }
+}
+
+// We add a "virtual project", with no source code, to control dependency management using Gradle's platform
+// functionality.
+includeWithFlags ':dependencyManagement', 'dependencyManagement'
+project(':dependencyManagement').projectDir = file("${rootProject.projectDir}/build/dependencyManagement")
