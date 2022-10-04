@@ -198,6 +198,9 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
             response.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), eventLoop))
                     .handle((aggregatedRes, cause) -> {
                         if (closed) {
+                            if (aggregatedRes != null) {
+                                aggregatedRes.content().close();
+                            }
                             return null;
                         }
                         if (cause != null) {
