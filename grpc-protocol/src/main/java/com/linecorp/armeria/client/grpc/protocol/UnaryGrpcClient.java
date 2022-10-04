@@ -178,10 +178,8 @@ public final class UnaryGrpcClient {
 
         @Override
         public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
-            final AggregationOptions aggregationOptions = AggregationOptions.builder()
-                                                                            .usePooledObjects(ctx.alloc())
-                                                                            .executor(ctx.eventLoop())
-                                                                            .build();
+            final AggregationOptions aggregationOptions =
+                    AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop());
             return HttpResponse.from(
                     req.aggregate(aggregationOptions)
                        .thenCompose(

@@ -442,10 +442,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             } else {
                 final AggregatedHttpResponseHandler resHandler =
                         new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req);
-                res.aggregate(AggregationOptions.builder()
-                                                .usePooledObjects(ctx.alloc())
-                                                .executor(eventLoop)
-                                                .build())
+                res.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), eventLoop))
                    .handle(resHandler);
             }
         }

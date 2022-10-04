@@ -147,20 +147,18 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
                                RequestLogProperty.RESPONSE_CONTENT);
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        req.aggregate(AggregationOptions.builder()
-                                        .usePooledObjects(ctx.alloc())
-                                        .executor(ctx.eventLoop())
-                                        .build()).handle((clientRequest, t) -> {
-            try (SafeCloseable ignore = ctx.push()) {
-                if (t != null) {
-                    responseFuture.completeExceptionally(t);
-                } else {
-                    frameAndServe(unwrap(), ctx, grpcHeaders.build(), clientRequest.content(),
-                                  responseFuture, null, contentType);
-                }
-            }
-            return null;
-        });
+        req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
+           .handle((clientRequest, t) -> {
+               try (SafeCloseable ignore = ctx.push()) {
+                   if (t != null) {
+                       responseFuture.completeExceptionally(t);
+                   } else {
+                       frameAndServe(unwrap(), ctx, grpcHeaders.build(), clientRequest.content(),
+                                     responseFuture, null, contentType);
+                   }
+               }
+               return null;
+           });
         return HttpResponse.from(responseFuture);
     }
 }

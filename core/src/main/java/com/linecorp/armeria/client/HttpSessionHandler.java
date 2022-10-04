@@ -205,9 +205,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final AggregatedHttpRequestHandler reqHandler = new AggregatedHttpRequestHandler(
                     channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
             try (SafeCloseable ignored = ctx.push()) {
-                req.aggregate(AggregationOptions.builder()
-                                                .usePooledObjects(ctx.alloc())
-                                                .executor(channel.eventLoop()).build())
+                req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), channel.eventLoop()))
                    .handle(reqHandler);
             }
         }

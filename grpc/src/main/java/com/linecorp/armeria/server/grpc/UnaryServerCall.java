@@ -23,9 +23,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -54,8 +51,6 @@ import io.grpc.Status;
  * via {@link Listener}, and writing messages passed back to the response.
  */
 final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
-
-    private static final Logger logger = LoggerFactory.getLogger(UnaryServerCall.class);
 
     private final HttpRequest req;
     private final CompletableFuture<HttpResponse> resFuture;
@@ -98,10 +93,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     @Override
     void startDeframing() {
-        req.aggregate(AggregationOptions.builder()
-                                        .usePooledObjects(ctx.alloc())
-                                        .executor(ctx.eventLoop())
-                                        .build())
+        req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
            .handle((aggregatedHttpRequest, cause) -> {
                if (cause != null) {
                    onError(cause);

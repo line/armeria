@@ -41,7 +41,7 @@ public final class AggregationOptionsBuilder {
     AggregationOptionsBuilder() {}
 
     /**
-     * Sets the {@link EventExecutor} to run the aggregation function on.
+     * Sets the {@link EventExecutor} to run the aggregation function.
      */
     public AggregationOptionsBuilder executor(EventExecutor executor) {
         requireNonNull(executor, "executor");
@@ -69,7 +69,7 @@ public final class AggregationOptionsBuilder {
      * is created.
      *
      * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
-     * Therefore, that this method and {@link #cacheResult(boolean)} are mutually exclusive.
+     * Therefore, this method and {@link #cacheResult(boolean)} are mutually exclusive.
      * If {@link #cacheResult(boolean)} is enabled and this option is set, an {@link IllegalStateException} will
      * be raised.
      *
@@ -91,7 +91,7 @@ public final class AggregationOptionsBuilder {
      * this option is ineffective and the cached {@link AggregatedHttpMessage} is returned.
      *
      * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
-     * Therefore, that this method and {@link #cacheResult(boolean)} are mutually exclusive.
+     * Therefore, this method and {@link #cacheResult(boolean)} are mutually exclusive.
      * If {@link #cacheResult(boolean)} is enabled and this option is set, an {@link IllegalStateException} will
      * be raised.
      */
@@ -105,7 +105,7 @@ public final class AggregationOptionsBuilder {
      * this option is ineffective and the cached {@link AggregatedHttpMessage} is returned.
      *
      * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
-     * Therefore, that this method and {@link #cacheResult(boolean)} are mutually exclusive.
+     * Therefore, this method and {@link #cacheResult(boolean)} are mutually exclusive.
      * If {@link #cacheResult(boolean)} is enabled and this option is set, an {@link IllegalStateException} will
      * be raised.
      */
@@ -120,7 +120,7 @@ public final class AggregationOptionsBuilder {
      * if {@code preferCached} is {@code false}, an {@link IllegalStateException} will be raised.
      *
      * <p>{@link PooledObjects} cannot be cached since they have their own life cycle.
-     * Therefore, that this method and {@link #cacheResult(boolean)} are mutually exclusive.
+     * Therefore, this method and {@link #cacheResult(boolean)} are mutually exclusive.
      * If {@link #cacheResult(boolean)} is enabled and this option is set, an {@link IllegalStateException} will
      * be raised.
      */

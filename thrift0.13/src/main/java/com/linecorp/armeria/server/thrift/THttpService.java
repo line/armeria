@@ -372,10 +372,7 @@ public final class THttpService extends DecoratingService<RpcRequest, RpcRespons
         final HttpResponse res = HttpResponse.from(responseFuture);
         ctx.logBuilder().serializationFormat(serializationFormat);
         ctx.logBuilder().defer(RequestLogProperty.REQUEST_CONTENT);
-        req.aggregate(AggregationOptions.builder()
-                                        .usePooledObjects(ctx.alloc())
-                                        .executor(ctx.eventLoop())
-                                        .build())
+        req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
            .handle((aReq, cause) -> {
                if (cause != null) {
                    final HttpResponse errorRes;

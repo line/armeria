@@ -45,6 +45,15 @@ public interface AggregationOptions {
     }
 
     /**
+     * Returns a new {@link AggregationOptions} that creates {@link PooledObjects} without making a copy using
+     * the {@link ByteBufAllocator}. The specified {@link EventExecutor} is used to
+     * run the aggregation function.
+     */
+    static AggregationOptions usePooledObjects(ByteBufAllocator alloc, EventExecutor executor) {
+        return builder().usePooledObjects(alloc).executor(executor).build();
+    }
+
+    /**
      * Returns the {@link EventExecutor} that executes the aggregation.
      */
     @Nullable

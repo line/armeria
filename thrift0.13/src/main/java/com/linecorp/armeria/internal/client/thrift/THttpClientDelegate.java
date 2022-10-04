@@ -169,10 +169,7 @@ final class THttpClientDelegate extends DecoratingClient<HttpRequest, HttpRespon
                 throw t;
             }
 
-            httpResponse.aggregate(AggregationOptions.builder()
-                                                     .usePooledObjects(ctx.alloc())
-                                                     .executor(ctx.eventLoop())
-                                                     .build())
+            httpResponse.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
                         .handle((res, cause) -> {
                             if (cause != null) {
                                 handlePreDecodeException(ctx, reply, func, Exceptions.peel(cause));

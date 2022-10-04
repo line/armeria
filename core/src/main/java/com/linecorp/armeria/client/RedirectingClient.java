@@ -139,10 +139,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
             execute0(ctx, redirectCtx, reqDuplicator, true);
         } else {
-            req.aggregate(AggregationOptions.builder()
-                                            .usePooledObjects(ctx.alloc())
-                                            .executor(ctx.eventLoop())
-                                            .build())
+            req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
                .handle((agg, cause) -> {
                    if (cause != null) {
                        handleException(ctx, null, responseFuture, cause, true);

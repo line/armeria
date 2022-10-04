@@ -195,10 +195,7 @@ public final class EurekaEndpointGroup extends DynamicEndpointGroup {
                 ctx = captor.get();
             }
             final EventLoop eventLoop = ctx.eventLoop().withoutContext();
-            response.aggregate(AggregationOptions.builder()
-                                                 .usePooledObjects(ctx.alloc())
-                                                 .executor(eventLoop)
-                                                 .build())
+            response.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), eventLoop))
                     .handle((aggregatedRes, cause) -> {
                         if (closed) {
                             return null;

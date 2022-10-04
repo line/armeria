@@ -165,10 +165,7 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             return;
         }
 
-        grpcResponse.aggregate(AggregationOptions.builder()
-                                                 .usePooledObjects(ctx.alloc())
-                                                 .executor(ctx.eventLoop())
-                                                 .build())
+        grpcResponse.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
                     .handle(
                             (framedResponse, t) -> {
                                 try (SafeCloseable ignore = ctx.push()) {
