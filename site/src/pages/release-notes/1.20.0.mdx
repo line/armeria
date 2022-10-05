@@ -25,7 +25,7 @@ date: 2022-10-05
                 .build();
   ```
 
-- You can now easily configure client-side a TLS key and certificates to support mTLS via
+- You can now easily configure client-side TLS key and certificates to support mTLS via
   <type://ClientFactoryBuilder#tls(File,File)>. #4410
   ```java
   File keyCertChainFile = ...;
@@ -44,9 +44,10 @@ date: 2022-10-05
   ```java
   HttpJsonTranscodingOptions options =
     HttpJsonTranscodingOptions.builder()
-                              // Try the original field name and camel case if
-                              // it's not found via the original field name.
-                              .queryParamMatchRules(LOWER_CAMEL_CASE, ORIGINAL_FIELD)
+                              // Try the original field name and camel case
+                              // if it's not found via the original name.
+                              .queryParamMatchRules(LOWER_CAMEL_CASE,
+                                                    ORIGINAL_FIELD)
                               ...
                               .build();
   GrpcService.builder()
@@ -56,6 +57,16 @@ date: 2022-10-05
 
 - You can now use <type://StreamMessage#fromOutputStream(Consumer)> to write data to a <type://StreamMessage>.
   #4402
+  ```java
+  StreamMessage.fromOutputStream(os -> {
+    // perform blocking operation
+    HttpData data0 = readDataFromBlockingDB(0);
+    os.write(data0);
+    HttpData data1 = readDataFromBlockingDB(1);
+    os.write(data1);
+    os.close();
+  }
+  ```
 
 - You can now convert an <type://AggregatedHttpRequest> to an <type://HttpRequest> with a new headers. #4441
   ```java
@@ -70,7 +81,7 @@ date: 2022-10-05
 ## 🛠️ Bug fixes
 
 - <type://GraphqlService> now respects the accept header correctly. #4451
-- <type://GrpcService> and <type://ThriftService> no longer throw double subscription exceptions when
+- <type://GrpcService> and <type://THttpService> no longer throw double subscription exceptions when
   the request is aggregated in a decorator. #4449
 - The content-length header is automatically removed from the <type://ResponseHeaders> for a response streaming
   in <type://GrpcService>. #4460
