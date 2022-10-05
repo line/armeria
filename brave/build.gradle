@@ -2,7 +2,7 @@ dependencies {
     api libs.brave
     api libs.brave.instrumentation.http
 
-    testImplementation project(':thrift0.16')
+    testImplementation project(':thrift0.17')
     testImplementation libs.brave.context.slf4j
     testImplementation libs.brave.instrumentation.http.tests
 }
