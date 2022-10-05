@@ -1,0 +1,139 @@
+---
+date: 2022-10-05
+---
+
+## 🌟 New features
+
+- You can now convert the GraphQL Error into an <type://HttpResponse> using <type://GraphqlErrorHandler>. #4435
+Example:
+```java
+GraphqlErrorHandler errorHandler = new GraphqlErrorHandler() {
+  @Override
+  public HttpResponse handle(ServiceRequestContext ctx, ExecutionInput input,
+                             ExecutionResult result, @Nullable Throwable cause) {
+    if (cause instanceof ) {
+
+    }
+  }
+};
+GraphqlService.builder()
+              .schemaFile(...)
+              .runtimeWiring(...)
+              .errorHandler(errorHandler)
+              .build();
+
+- You can now convert an <type://AggregatedHttpRequest> to an <type://HttpRequest> with a new headers. #4441
+  ```java
+  AggregatedHttpRequest req = ...
+  HttpRequest httpRequest = req.toHttpRequest(newHeaders);
+  ```
+```
+- No breaking changes: changes are only applied when the new camelCaseQueryParam option is set to true #4428
+- HttpJsonTranscoding endpoint can handle both snake_case and camelCase form of query parameters when option is set
+  ```java
+  HttpJsonTranscodingOptions options =
+    HttpJsonTranscodingOptions.builder()
+                              .queryParamMatchRules(LOWER_CAMEL_CASE)
+                              ...
+                              .build();
+  GrpcService.builder()
+             // Enable HttpJsonTranscoding and use the specified HttpJsonTranscodingOption
+             .enableHttpJsonTranscoding(options)
+             .build();
+  ```
+Some concerns with the current implementation:
+1. Would the name “HttpJsonTranscodingOptions” not be confused with the google.api.http protobuf option?
+2. CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, str) could lead to unexpected behavior: For instance, if str = “uint32Val”, the out come is “uint32val” which is totally unexpected
+3. Should both snake_case and camelCase form of query params both be allowed, as is the current behavior in my implementation? (What if both are set? -> currently, field will be re written)
+4. If a snake case form and camel case form of a same word sequence is both used in a message as field name simultaneously, there will be error (caused in HttpJsonTranscodingService#buildFields due to duplicated entry) should this corner case be dealt with? #4428
+- You can now easily configure client-side a TLS key and certificates to support mTLS using `ClientFactoryBuilder`. ```java File keyCertChainFile = ...; File keyFile = ...; ClientFactory builder =   ClientFactory     .builder()     .tls(keyCertChainFile, keyFile)     .build(); WebClient   .builder()   .factory(factory)   .build(); ``` #4410
+- You can now use `StreamMessage.fromOutputStream()` to write on `StreamMessage` via `OutputStream` #4402
+
+## 📈 Improvements
+
+- `GrpcService` and `ThriftService` no longer throw double subscription exceptions when the request is aggregated in a decorator. #4449
+- (Deprecated) `HttpRequest.aggregateWithPooledObjects()` and `HttpResponse.aggregateWithPooledObjects()` are deprecated.
+  - Use `HttpRequest.aggregate(aggregateOptions)` with `AggregationOptions#usePooledObjects(ByteBufAllocator)`. #4449
+
+## 🛠️ Bug fixes
+
+- <type://GraphqlService> now respects the accept header correctly. #4451
+- <type://GrpcService> and <type://ThriftService> no longer throw double subscription exceptions when
+  the request is aggregated in a decorator. #4449
+
+- A custom content-length is automatically stripped when response streaming is used in `GrpcService`. #4460
+- You no longer see a `NullPointerException` when using `EndpointSelectionStrategy.rampingUp()`. #4448
+- `DocService` is displayed correctly. #4436
+- You no longer see a 500 response when an empty multipart request is sent. #4432
+- Fix a bug where a dynamically proxied class name is exposed in `DocService` #4430
+- Users can now use `Protobuf[Request|Response]ConverterFunctionProvider` without encountering a potential `ClassCastException`. #4429
+- No breaking changes: changes are only applied when the new camelCaseQueryParam option is set to true #4428
+- HttpJsonTranscoding endpoint can handle both snake_case and camelCase form of query parameters when option is set
+  ```java
+  HttpJsonTranscodingOptions options =
+    HttpJsonTranscodingOptions.builder()
+                              .queryParamMatchRules(LOWER_CAMEL_CASE)
+                              ...
+                              .build();
+  GrpcService.builder()
+             // Enable HttpJsonTranscoding and use the specified HttpJsonTranscodingOption
+             .enableHttpJsonTranscoding(options)
+             .build();
+  ```
+Some concerns with the current implementation:
+1. Would the name “HttpJsonTranscodingOptions” not be confused with the google.api.http protobuf option?
+2. CaseFormat.LOWER_UNDERSCORE.to(CaseFormat.LOWER_CAMEL, str) could lead to unexpected behavior: For instance, if str = “uint32Val”, the out come is “uint32val” which is totally unexpected
+3. Should both snake_case and camelCase form of query params both be allowed, as is the current behavior in my implementation? (What if both are set? -> currently, field will be re written)
+4. If a snake case form and camel case form of a same word sequence is both used in a message as field name simultaneously, there will be error (caused in HttpJsonTranscodingService#buildFields due to duplicated entry) should this corner case be dealt with? #4428
+- Fixed a regression where `thrift0.9` is incompatible with Thrift 0.9.1 since 1.17.0 #4427
+- `enable-auto-injection` property is correctly added to the generated `spring-configuration-metadata.json` file. #4425
+
+## 📃 Documentation
+
+- N/A
+
+## 🏚️ Deprecations
+
+- <type://HttpRequest#aggregateWithPooledObjects(ByteBufAllocator)> and
+  <type://HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)> are deprecated. #4449
+  - Use <type://HttpRequest#aggregate(AggregationOptions)> with
+    <type://AggregationOptions#usePooledObjects(ByteBufAllocator)>.
+
+## ☢️ Breaking changes
+
+- N/A
+
+## ⛓ Dependencies
+
+You can use Thrift 0.17 with Armeria.
+- Brave 5.13.11 → 5.14.0
+- Dropwizard2 2.1.1 → 2.1.2
+- GraphQL Java 19.0 → 19.2
+- GraphQL Kotlin 6.2.2 → 6.2.5
+- gRPC Java 1.49.0 → 1.49.1
+- Kafka 3.2.1 → 3.3.0
+- Kotlin 1.7.10 → 1.7.20
+- Micrometer 1.9.3 → 1.9.4
+- Netty 4.1.79.Final → 4.1.82.Final
+  - io_uring 0.0.14.Final → 0.0.15.Final
+- Reactor 3.4.22 → 3.4.23
+- Sangria GraphQL 3.2.0 → 3.3.0
+- Scala 2.12.16 → 2.12.17, 2.13.8 → 2.13.9
+- Spring Boot 2.7.3 → 2.7.4
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'Bogyie',
+  'chungonn',
+  'heowc',
+  'ikhoon',
+  'injae-kim',
+  'j-min5u',
+  'jrhee17',
+  'ks-yim',
+  'minwoox',
+  'takezoe',
+  'tobias-',
+  'trustin'
+]} />
