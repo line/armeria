@@ -73,6 +73,7 @@
 *.oci.customer-oci.com
 *.ocp.customer-oci.com
 *.ocs.customer-oci.com
+*.on-acorn.io
 *.on-k3s.io
 *.on-rancher.cloud
 *.on-rio.io
@@ -2526,6 +2527,7 @@ firestone
 firewall-gateway.com
 firewall-gateway.de
 firewall-gateway.net
+firewalledreplit.co
 fireweb.app
 firm.co
 firm.dk
@@ -3596,6 +3598,7 @@ icu
 icurus.jp
 id
 id.au
+id.firewalledreplit.co
 id.forgerock.io
 id.ir
 id.lv

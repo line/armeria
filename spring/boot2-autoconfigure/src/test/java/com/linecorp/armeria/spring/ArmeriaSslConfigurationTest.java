@@ -55,8 +55,7 @@ import com.linecorp.armeria.spring.ArmeriaSslConfigurationTest.TestConfiguration
 public class ArmeriaSslConfigurationTest {
 
     @SpringBootApplication
-    static class TestConfiguration {
-    }
+    static class TestConfiguration {}
 
     private static final ClientFactory clientFactory =
             ClientFactory.builder()

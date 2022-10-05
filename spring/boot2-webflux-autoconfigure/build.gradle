@@ -8,7 +8,7 @@ configurations {
 
 dependencies {
     // To let a user choose between thrift and thrift0.9.
-    compileOnly project(':thrift0.16')
+    compileOnly project(':thrift0.17')
     implementation project(':logback')
 
     optionalApi libs.micrometer.prometheus
@@ -20,7 +20,7 @@ dependencies {
     annotationProcessor libs.spring.boot2.configuration.processor
 
     testImplementation project(':spring:boot2-actuator-autoconfigure')
-    testImplementation project(':thrift0.16')
+    testImplementation project(':thrift0.17')
     testImplementation libs.spring.boot2.starter.test
 }
 

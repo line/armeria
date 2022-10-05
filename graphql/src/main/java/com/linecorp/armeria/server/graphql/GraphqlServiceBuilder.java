@@ -79,6 +79,9 @@ public final class GraphqlServiceBuilder {
     @Nullable
     private GraphQLSchema schema;
 
+    @Nullable
+    private GraphqlErrorHandler errorHandler;
+
     GraphqlServiceBuilder() {}
 
     /**
@@ -231,6 +234,15 @@ public final class GraphqlServiceBuilder {
     }
 
     /**
+     * Sets the {@link GraphqlErrorHandler}.
+     * If not specified, {@link GraphqlErrorHandler#of()} is used by default.
+     */
+    public GraphqlServiceBuilder errorHandler(GraphqlErrorHandler errorHandler) {
+        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
+        return this;
+    }
+
+    /**
      * Creates a {@link GraphqlService}.
      */
     public GraphqlService build() {
@@ -252,7 +264,17 @@ public final class GraphqlServiceBuilder {
         for (Consumer<? super DataLoaderRegistry> configurer : dataLoaderRegistries) {
             configurer.accept(dataLoaderRegistry);
         }
-        return new DefaultGraphqlService(builder.build(), dataLoaderRegistry, useBlockingTaskExecutor);
+
+        final GraphqlErrorHandler errorHandler;
+        if (this.errorHandler == null) {
+            errorHandler = GraphqlErrorHandler.of();
+        } else {
+            errorHandler = this.errorHandler.orElse(GraphqlErrorHandler.of());
+        }
+        return new DefaultGraphqlService(builder.build(),
+                                         dataLoaderRegistry,
+                                         useBlockingTaskExecutor,
+                                         errorHandler);
     }
 
     private GraphQLSchema buildSchema() {

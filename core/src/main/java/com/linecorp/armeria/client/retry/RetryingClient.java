@@ -34,6 +34,7 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestDuplicator;
@@ -244,15 +245,16 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
             doExecute0(ctx, reqDuplicator, req, res, responseFuture);
         } else {
-            req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((agg, cause) -> {
-                if (cause != null) {
-                    handleException(ctx, null, responseFuture, cause, true);
-                } else {
-                    final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
-                    doExecute0(ctx, reqDuplicator, req, res, responseFuture);
-                }
-                return null;
-            });
+            req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
+               .handle((agg, cause) -> {
+                   if (cause != null) {
+                       handleException(ctx, null, responseFuture, cause, true);
+                   } else {
+                       final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
+                       doExecute0(ctx, reqDuplicator, req, res, responseFuture);
+                   }
+                   return null;
+               });
         }
         return res;
     }

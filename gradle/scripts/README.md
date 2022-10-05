@@ -112,6 +112,7 @@ sensible defaults. By applying them, you can:
    publishUrlForSnapshot=https://oss.sonatype.org/content/repositories/snapshots/
    publishUsernameProperty=ossrhUsername
    publishPasswordProperty=ossrhPassword
+   publishSignatureRequired=true
    googleAnalyticsId=UA-XXXXXXXX
    javaSourceCompatibility=1.8
    javaTargetCompatibility=1.8
@@ -502,6 +503,18 @@ $ ./gradlew test -PbuildJdkVersion=15 -PtestJavaVersion=8
     myproject-foo.version=0.0.1-SNAPSHOT
     ```
 
+- If [Gradle Nexus Publish Plugin](https://github.com/gradle-nexus/publish-plugin) is enabled in 
+ `<project_root>/build.gradle`, [staging function](https://help.sonatype.com/repomanager3/nexus-repository-administration/staging)
+  is used to publish the artifacts. It is great for publishing your open source to Sonatype, and then to Maven 
+  Central, in a fully automated fashion. 
+
+  ```groovy
+  // in build.gradle
+  plugins {
+    id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
+  }
+  ```
+
 ## Generating Maven BOM with `bom` flag
 
 If you configure a project with `bom` flag, the project will be configured to
@@ -514,6 +527,18 @@ Maven repository by `./gradlew publish`.
 // settings.gradle
 includeWithFlags ':bom', 'bom'
 ```
+
+If you want to publish multiple boms with different subprojects, you can use the `bomGroups` extension property.
+Specify each bom's name with the subprojects:
+```groovy
+ext {
+    bomGroups = [
+            ':module1': [':module1:submodule1', ':module1:submodule2'],
+            ':module2': [':module2:submodule1', ':module2:submodule2']
+    ]
+}
+```
+
 ## Sharing [dependency versions](https://docs.gradle.org/current/userguide/platforms.html#sec:version-catalog-plugin) with `version-catalog` flag
 
 If you configure a project with the `version-catalog` flag, the project will be configured to
