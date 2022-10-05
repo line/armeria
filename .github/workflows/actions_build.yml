@@ -43,6 +43,9 @@ jobs:
           - java: 17
             on: self-hosted
             snapshot: true
+          - java: 19
+            on: self-hosted
+            snapshot: true
 
     steps:
       - uses: actions/checkout@v2
@@ -123,7 +126,7 @@ jobs:
           -PbuildJdkVersion=17 \
           -PtestJavaVersion=${{ matrix.java }} \
           -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-17.outputs.path }},${{ steps.setup-jdk.outputs.path }}
-          
+
           SUMMARY_FILE="build/failed-tests-result.txt"
           if test -f "$SUMMARY_FILE"; then
             echo '### 🔴 Failed tests' >> $GITHUB_STEP_SUMMARY
@@ -259,7 +262,7 @@ jobs:
         if: failure()
         run: |
           ./gradlew --no-daemon --stacktrace --max-workers=1 -PnoWeb -PnoLint reportFailedTests
-          
+
           SUMMARY_FILE="build/failed-tests-result.txt"
           if test -f "$SUMMARY_FILE"; then
             echo '#### 🔴 Failed tests' >> $GITHUB_STEP_SUMMARY
