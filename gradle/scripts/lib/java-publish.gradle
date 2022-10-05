@@ -129,8 +129,11 @@ configure(projectsWithFlags('publish')) {
         }
     }
 
-    // For now, disable Gradle metadata generation until verifying it is correctly generated.
-    tasks.withType(GenerateModuleMetadata) {
-        enabled = false
+    // A version catalog need to publish Gradle metadata together to be correctly imported externally.
+    if (!hasFlags('version-catalog')) {
+        // For now, disable Gradle metadata generation until verifying it is correctly generated.
+        tasks.withType(GenerateModuleMetadata) {
+            enabled = false
+        }
     }
 }
