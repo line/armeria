@@ -19,6 +19,7 @@ import java.util.concurrent.Executor;
 
 import org.reactivestreams.Subscriber;
 
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -48,8 +49,10 @@ import io.netty.buffer.ByteBufAllocator;
  * <ul>
  *   <li>{@link StreamMessage#subscribe(Subscriber, SubscriptionOption...)} with
  *       {@link SubscriptionOption#WITH_POOLED_OBJECTS}</li>
- *   <li>{@link HttpRequest#aggregateWithPooledObjects(ByteBufAllocator)}</li>
- *   <li>{@link HttpResponse#aggregateWithPooledObjects(ByteBufAllocator)}</li>
+ *   <li>{@link HttpRequest#aggregate(AggregationOptions)} with
+ *       {@link AggregationOptions#usePooledObjects(ByteBufAllocator)}</li>
+ *   <li>{@link HttpResponse#aggregate(AggregationOptions)} with
+ *       {@link AggregationOptions#usePooledObjects(ByteBufAllocator)}</li>
  *   <li>{@link HttpFile#aggregateWithPooledObjects(Executor, ByteBufAllocator)}</li>
  * </ul>
  *

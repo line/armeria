@@ -33,6 +33,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -164,18 +165,19 @@ abstract class AbstractUnframedGrpcService extends SimpleDecoratingHttpService i
             return;
         }
 
-        grpcResponse.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle(
-                (framedResponse, t) -> {
-                    try (SafeCloseable ignore = ctx.push()) {
-                        if (t != null) {
-                            res.completeExceptionally(t);
-                        } else {
-                            deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
-                                              responseBodyConverter, responseContentType);
-                        }
-                    }
-                    return null;
-                });
+        grpcResponse.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
+                    .handle(
+                            (framedResponse, t) -> {
+                                try (SafeCloseable ignore = ctx.push()) {
+                                    if (t != null) {
+                                        res.completeExceptionally(t);
+                                    } else {
+                                        deframeAndRespond(ctx, framedResponse, res, unframedGrpcErrorHandler,
+                                                          responseBodyConverter, responseContentType);
+                                    }
+                                }
+                                return null;
+                            });
     }
 
     @VisibleForTesting
