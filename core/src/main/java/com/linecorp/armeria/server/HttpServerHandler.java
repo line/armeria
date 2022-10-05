@@ -81,6 +81,8 @@ import io.netty.handler.codec.http2.Http2Settings;
 import io.netty.handler.ssl.SslCloseCompletionEvent;
 import io.netty.handler.ssl.SslHandler;
 import io.netty.handler.ssl.SslHandshakeCompletionEvent;
+import io.netty.util.collection.IntObjectHashMap;
+import io.netty.util.collection.IntObjectMap;
 
 final class HttpServerHandler extends ChannelInboundHandlerAdapter implements HttpServer {
 
@@ -171,6 +173,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private final ProxiedAddresses proxiedAddresses;
 
     private final IdentityHashMap<DecodedHttpRequest, HttpResponse> unfinishedRequests;
+
+    // Holds next request ID and pending responses to preserve response ordering for HTTP/1 pipelining.
+    private int http1NextRequestId = 1;
+    @Nullable
+    private IntObjectMap<Runnable> pendingHttp1Responses;
+
     private boolean isReading;
     private boolean isCleaning;
     private boolean handledLastRequest;
@@ -255,6 +263,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         if (msg instanceof Http2Settings) {
             handleHttp2Settings(ctx, (Http2Settings) msg);
         } else {
+            if (!protocol.isMultiplex()) {
+                pendingHttp1Responses = new IntObjectHashMap<>();
+            }
             handleRequest(ctx, (DecodedHttpRequest) msg);
         }
     }
@@ -439,6 +450,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     }
 
                     if (unfinishedRequests.isEmpty() && handledLastRequest) {
+                        assert pendingHttp1Responses == null || pendingHttp1Responses.isEmpty();
                         ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
                     }
                 } catch (Throwable t) {

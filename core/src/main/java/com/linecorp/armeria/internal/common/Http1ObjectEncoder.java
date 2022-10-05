@@ -91,6 +91,11 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
     private int maxIdWithPendingWrites = Integer.MIN_VALUE;
 
     /**
+     * The ID of the last request whose response headers is written.
+     */
+    private int lastResponseHeadersId;
+
+    /**
      * The map which maps a request ID to its related pending response.
      */
     private final IntObjectMap<PendingWrites> pendingWritesMap = new IntObjectHashMap<>();
@@ -261,7 +266,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 flushPendingWrites(currentPendingWrites);
             }
 
-            final ChannelFuture future = ch.write(obj, promise);
+            final ChannelFuture future = write(obj, promise);
             if (!isPing(id)) {
                 keepAliveHandler().onReadOrWrite();
             }
@@ -307,6 +312,23 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         }
     }
 
+    private ChannelFuture write(HttpObject obj, ChannelPromise promise) {
+        // Use FQCN for Netty HttpResponse to avoid confusion with Armeria HttpResponse
+        //noinspection UnnecessaryFullyQualifiedName
+        if (obj instanceof io.netty.handler.codec.http.HttpResponse) {
+            if (lastResponseHeadersId >= currentId) {
+                // Response headers were written already. This may occur Http1RequestDecoder sends an error
+                // response while HttpResponseSubscriber writes a response headers and then waits for bodies.
+                ReferenceCountUtil.release(obj);
+                return writeReset(currentId, 1, Http2Error.PROTOCOL_ERROR);
+            } else {
+                lastResponseHeadersId = currentId;
+            }
+        }
+
+        return ch.write(obj, promise);
+    }
+
     private void flushPendingWrites(PendingWrites pendingWrites) {
         for (;;) {
             final Entry<HttpObject, ChannelPromise> e = pendingWrites.poll();
@@ -314,7 +336,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 break;
             }
 
-            ch.write(e.getKey(), e.getValue());
+            write(e.getKey(), e.getValue());
         }
     }
 
@@ -417,6 +439,10 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
     @Override
     public final boolean isClosed() {
         return closed || !channel().isActive();
+    }
+
+    protected final int currentId() {
+        return currentId;
     }
 
     private static final class PendingWrites extends ArrayDeque<Entry<HttpObject, ChannelPromise>> {
