@@ -39,6 +39,7 @@ import com.linecorp.armeria.client.redirect.TooManyRedirectsException;
 import com.linecorp.armeria.client.redirect.UnexpectedDomainRedirectException;
 import com.linecorp.armeria.client.redirect.UnexpectedProtocolRedirectException;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -138,15 +139,16 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
             execute0(ctx, redirectCtx, reqDuplicator, true);
         } else {
-            req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((agg, cause) -> {
-                if (cause != null) {
-                    handleException(ctx, null, responseFuture, cause, true);
-                } else {
-                    final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
-                    execute0(ctx, redirectCtx, reqDuplicator, true);
-                }
-                return null;
-            });
+            req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
+               .handle((agg, cause) -> {
+                   if (cause != null) {
+                       handleException(ctx, null, responseFuture, cause, true);
+                   } else {
+                       final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
+                       execute0(ctx, redirectCtx, reqDuplicator, true);
+                   }
+                   return null;
+               });
         }
         return res;
     }
