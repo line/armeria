@@ -4,7 +4,7 @@ date: 2022-10-05
 
 ## 🌟 New features
 
-- You can now convert the GraphQL Error into an <type://HttpResponse> using <type://GraphqlErrorHandler>. #4435
+- You can now handle a GraphQL error using <type://GraphqlErrorHandler>. #4435
   ```java
   GraphqlErrorHandler errorHandler = new GraphqlErrorHandler() {
     @Override
@@ -18,11 +18,12 @@ date: 2022-10-05
       ...
     }
   };
-  GraphqlService.builder()
-                .schemaFile(...)
-                .runtimeWiring(...)
-                .errorHandler(errorHandler)
-                .build();
+  GraphqlService
+    .builder()
+    .schemaFile(...)
+    .runtimeWiring(...)
+    .errorHandler(errorHandler) // 👈👈👈
+    .build();
   ```
 
 - You can now easily configure client-side TLS key and certificates to support mTLS via
@@ -31,32 +32,36 @@ date: 2022-10-05
   File keyCertChainFile = ...;
   File keyFile = ...;
   ClientFactory factory =
-    ClientFactory.builder()
-                 .tls(keyCertChainFile, keyFile)
-                 .build();
-  WebClient.builder()
-           .factory(factory)
-           .build();
+    ClientFactory
+      .builder()
+      .tls(keyCertChainFile, keyFile)
+      .build();
+  WebClient
+    .builder()
+    .factory(factory)
+    .build();
   ```
 
 - gRPC HTTP/JSON transcoding endpoint can now handle both the snake case and camel case query parameters
   using <type://HttpJsonTranscodingOptions>. #4428
   ```java
   HttpJsonTranscodingOptions options =
-    HttpJsonTranscodingOptions.builder()
-                              // Try the original field name and camel case
-                              // if it's not found via the original name.
-                              .queryParamMatchRules(LOWER_CAMEL_CASE,
-                                                    ORIGINAL_FIELD)
-                              ...
-                              .build();
-  GrpcService.builder()
-             .enableHttpJsonTranscoding(options)
-             .build();
+    HttpJsonTranscodingOptions
+      .builder()
+      // Try the original field name and camel case
+      // if it's not found via the original name.
+      .queryParamMatchRules(LOWER_CAMEL_CASE,
+                            ORIGINAL_FIELD)
+                            ...
+                            .build();
+  GrpcService
+    .builder()
+    .enableHttpJsonTranscoding(options)
+    .build();
   ```
 
-- You can now use <type://StreamMessage#fromOutputStream(Consumer)> to write data to a <type://StreamMessage>.
-  #4402
+- You can now use `OutputStream` to write data to a <type://StreamMessage> using
+  <type://StreamMessage#fromOutputStream(Consumer)>. #4402
   ```java
   StreamMessage.fromOutputStream(os -> {
     // perform blocking operation
@@ -68,7 +73,7 @@ date: 2022-10-05
   }
   ```
 
-- You can now convert an <type://AggregatedHttpRequest> to an <type://HttpRequest> with a new headers. #4441
+- You can now convert an <type://AggregatedHttpRequest> to an <type://HttpRequest> with new headers. #4441
   ```java
   AggregatedHttpRequest req = ...
   HttpRequest httpRequest = req.toHttpRequest(newHeaders);
@@ -83,8 +88,8 @@ date: 2022-10-05
 - <type://GraphqlService> now respects the accept header correctly. #4451
 - <type://GrpcService> and <type://THttpService> no longer throw double subscription exceptions when
   the request is aggregated in a decorator. #4449
-- The content-length header is automatically removed from the <type://ResponseHeaders> for a response streaming
-  in <type://GrpcService>. #4460
+- The content-length header is automatically removed from <type://ResponseHeaders> for a server
+  streaming response in <type://GrpcService>. #4460
 - You no longer see a `NullPointerException` when using <type://EndpointSelectionStrategy#rampingUp()>. #4448
 - <type://DocService> no longer throw an exception when a protobuf message doesn't have any fields. #4436
 - You no longer see a 500 response when an empty multipart request is sent. #4432
