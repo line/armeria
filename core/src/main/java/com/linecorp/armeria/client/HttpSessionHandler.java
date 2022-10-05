@@ -34,6 +34,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.HttpChannelPool.PoolKey;
 import com.linecorp.armeria.client.proxy.ProxyType;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -204,7 +205,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final AggregatedHttpRequestHandler reqHandler = new AggregatedHttpRequestHandler(
                     channel, requestEncoder, responseDecoder, req, res, ctx, writeTimeoutMillis);
             try (SafeCloseable ignored = ctx.push()) {
-                req.aggregateWithPooledObjects(channel.eventLoop(), ctx.alloc()).handle(reqHandler);
+                req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), channel.eventLoop()))
+                   .handle(reqHandler);
             }
         }
     }

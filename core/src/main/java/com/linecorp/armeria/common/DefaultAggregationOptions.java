@@ -31,12 +31,14 @@ final class DefaultAggregationOptions implements AggregationOptions {
     private final EventExecutor executor;
     @Nullable
     private final ByteBufAllocator alloc;
+    private final boolean preferCached;
     private final boolean cacheResult;
 
     DefaultAggregationOptions(@Nullable EventExecutor executor, @Nullable ByteBufAllocator alloc,
-                              boolean cacheResult) {
+                              boolean preferCached, boolean cacheResult) {
         this.executor = executor;
         this.alloc = alloc;
+        this.preferCached = preferCached;
         this.cacheResult = cacheResult;
     }
 
@@ -48,6 +50,11 @@ final class DefaultAggregationOptions implements AggregationOptions {
     @Override
     public boolean cacheResult() {
         return cacheResult;
+    }
+
+    @Override
+    public boolean preferCached() {
+        return preferCached;
     }
 
     @Override
@@ -65,13 +72,14 @@ final class DefaultAggregationOptions implements AggregationOptions {
         }
         final AggregationOptions that = (AggregationOptions) o;
         return cacheResult == that.cacheResult() &&
+               preferCached == that.preferCached() &&
                Objects.equals(executor, that.executor()) &&
                Objects.equals(alloc, that.alloc());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(executor, alloc, cacheResult);
+        return Objects.hash(executor, alloc, cacheResult, preferCached);
     }
 
     @Override
@@ -80,6 +88,7 @@ final class DefaultAggregationOptions implements AggregationOptions {
                           .add("executor", executor)
                           .add("alloc", alloc)
                           .add("cacheResult", cacheResult)
+                          .add("preferCached", preferCached)
                           .toString();
     }
 }
