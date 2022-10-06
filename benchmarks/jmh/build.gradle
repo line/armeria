@@ -6,7 +6,7 @@ dependencies {
     implementation project(':grpc')
     implementation project(':grpc-protocol')
     implementation project(':retrofit2')
-    implementation project(':thrift0.16')
+    implementation project(':thrift0.17')
     implementation project(':kotlin')
 
     implementation libs.retrofit2.converter.jackson
@@ -23,7 +23,7 @@ dependencies {
 
 jmh {
     duplicateClassesStrategy = DuplicatesStrategy.EXCLUDE
-    jmhVersion = libs.versions.jmh.get()
+    jmhVersion = libs.versions.jmh.core.get()
 
     def jmhIncludes = rootProject.findProperty('jmh.includes')
     if (jmhIncludes) {

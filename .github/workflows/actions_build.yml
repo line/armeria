@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        on: [ self-hosted, macos-latest, windows-latest ]
+        on: [ self-hosted, macos-12, windows-latest ]
         java: [ 17 ]
         include:
           - java: 8
@@ -38,7 +38,7 @@ jobs:
           - java: 17
             # TODO(ikhoon): Revert to self-hosted runners once the following error is fixed
             #               `Cannot expand ZIP '/actions-runner/../armeria-shaded-1.7.3-SNAPSHOT.jar' as it does not exist.`
-            on: macos-latest
+            on: macos-12
             coverage: true
           - java: 17
             on: self-hosted

@@ -39,6 +39,6 @@ public interface GraphqlService extends HttpService {
      * Returns a new {@link GraphqlService}.
      */
     static GraphqlService of(GraphQL graphQL) {
-        return new DefaultGraphqlService(graphQL, DataLoaderRegistryCreationStrategy.ofFixed(), false);
+        return new DefaultGraphqlService(graphQL, DataLoaderRegistryCreationStrategy.ofFixed(), false, GraphqlErrorHandler.of());
     }
 }

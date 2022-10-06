@@ -15,14 +15,12 @@
  */
 package com.linecorp.armeria.server.docs;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -53,8 +51,6 @@ public final class FieldInfoBuilder {
     FieldInfoBuilder(String name, TypeSignature typeSignature, Iterable<FieldInfo> childFieldInfos) {
         this.name = requireNonNull(name, "name");
         this.typeSignature = typeSignature;
-        checkArgument(!Iterables.isEmpty(requireNonNull(childFieldInfos, "childFieldInfos")),
-                      "childFieldInfos can't be empty.");
         this.childFieldInfos = ImmutableList.copyOf(childFieldInfos);
     }
 

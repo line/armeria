@@ -333,7 +333,8 @@ public final class TypeSignature {
             return false;
         }
 
-        return Objects.equals(namedTypeDescriptor, that.namedTypeDescriptor);
+        return Objects.equals(namedTypeDescriptor, that.namedTypeDescriptor) &&
+               Objects.equals(typeParameters, that.typeParameters);
     }
 
     @Override

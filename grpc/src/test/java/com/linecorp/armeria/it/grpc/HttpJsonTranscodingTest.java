@@ -45,8 +45,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -80,6 +82,7 @@ import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV1;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV2;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV2.SubMessage;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV3;
+import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV4;
 import com.linecorp.armeria.grpc.testing.Transcoding.Message;
 import com.linecorp.armeria.grpc.testing.Transcoding.MessageType;
 import com.linecorp.armeria.grpc.testing.Transcoding.Recursive;
@@ -91,6 +94,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
@@ -123,6 +128,16 @@ public class HttpJsonTranscodingTest {
             final String text = request.getMessageId() + ':' +
                                 request.getRevisionList().stream().map(String::valueOf)
                                        .collect(Collectors.joining(":"));
+            responseObserver.onNext(Message.newBuilder().setText(text).build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void getMessageV4(GetMessageRequestV4 request, StreamObserver<Message> responseObserver) {
+            final String text = request.getMessageId() + ':' +
+                                request.getQueryParameter() + ':' +
+                                request.getParentField().getChildField() + ':' +
+                                request.getParentField().getChildField2();
             responseObserver.onNext(Message.newBuilder().setText(text).build());
             responseObserver.onCompleted();
         }
@@ -271,26 +286,51 @@ public class HttpJsonTranscodingTest {
     }
 
     @RegisterExtension
-    static final ServerExtension server = createServer(false);
+    static final ServerExtension server = createServer(false, false, true);
 
     @RegisterExtension
-    static final ServerExtension serverPreservingProtoFieldNames = createServer(true);
+    static final ServerExtension serverPreservingProtoFieldNames = createServer(true, false, true);
+
+    @RegisterExtension
+    static final ServerExtension serverCamelCaseQueryOnlyParameters = createServer(false, true, false);
+
+    @RegisterExtension
+    static final ServerExtension serverCamelCaseQueryAndOriginalParameters = createServer(false, true, true);
 
     private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     private final WebClient webClient = WebClient.builder(server.httpUri()).build();
 
-    final WebClient webClientPreservingProtoFieldNames =
+    private final WebClient webClientPreservingProtoFieldNames =
             WebClient.builder(serverPreservingProtoFieldNames.httpUri()).build();
 
-    static ServerExtension createServer(boolean preservingProtoFieldNames) {
+    private final BlockingWebClient webClientCamelCaseQueryOnlyParameters =
+            serverCamelCaseQueryOnlyParameters.blockingWebClient();
+
+    private final BlockingWebClient webClientCamelCaseQueryAndOriginalParameters =
+            serverCamelCaseQueryAndOriginalParameters.blockingWebClient();
+
+    static ServerExtension createServer(boolean preservingProtoFieldNames, boolean camelCaseQueryParams,
+                                        boolean protoFieldNameQueryParams) {
+        final ImmutableList.Builder<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules =
+                ImmutableList.builder();
+        if (camelCaseQueryParams) {
+            queryParamMatchRules.add(HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE);
+        }
+        if (protoFieldNameQueryParams) {
+            queryParamMatchRules.add(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
+        }
+        final HttpJsonTranscodingOptions options =
+                HttpJsonTranscodingOptions.builder()
+                                          .queryParamMatchRules(queryParamMatchRules.build())
+                                          .build();
         return new ServerExtension() {
             @Override
             protected void configure(ServerBuilder sb) throws Exception {
                 final GrpcServiceBuilder grpcServiceBuilder =
                         GrpcService.builder()
                                    .addService(new HttpJsonTranscodingTestService())
-                                   .enableHttpJsonTranscoding(true);
+                                   .enableHttpJsonTranscoding(options);
                 if (preservingProtoFieldNames) {
                     grpcServiceBuilder.jsonMarshallerFactory(service -> GrpcJsonMarshaller
                             .builder()
@@ -741,6 +781,77 @@ public class HttpJsonTranscodingTest {
         assertThat(updateMessageV2.get("httpMethod").asText()).isEqualTo("PATCH");
         assertThat(pathMapping(updateMessageV2)).containsExactlyInAnyOrder("/v2/messages/:message_id",
                                                                            "/foo/v2/messages/:message_id");
+    }
+
+    @Test
+    void shouldAcceptOnlyCamelCaseQueryParams() throws JsonProcessingException {
+        final QueryParams query =
+                QueryParams.builder()
+                           .add("queryParameter", "testQuery")
+                           .add("parentField.childField", "testChildField")
+                           .add("parentField.childField2", "testChildField2")
+                           .build();
+
+        final JsonNode response =
+                webClientCamelCaseQueryOnlyParameters.prepare()
+                                                     .get("/v4/messages/1")
+                                                     .queryParams(query)
+                                                     .asJson(JsonNode.class)
+                                                     .execute()
+                                                     .content();
+        assertThat(response.get("text").asText()).isEqualTo("1:testQuery:testChildField:testChildField2");
+
+        final QueryParams query2 =
+                QueryParams.builder()
+                           .add("query_parameter", "testQuery")
+                           .add("parent_field.child_field", "testChildField")
+                           .add("parent_field.child_field_2", "testChildField2")
+                           .build();
+
+        final JsonNode response2 =
+                webClientCamelCaseQueryOnlyParameters.prepare()
+                                                     .get("/v4/messages/1")
+                                                     .queryParams(query2)
+                                                     .asJson(JsonNode.class)
+                                                     .execute()
+                                                     .content();
+        // Disallow snake_case parameters.
+        assertThat(response2.get("text").asText()).isEqualTo("1:::");
+    }
+
+    @Test
+    void shouldAcceptBothCamelCaseAndSnakeCaseQueryParams() throws JsonProcessingException {
+        final QueryParams query =
+                QueryParams.builder()
+                           .add("queryParameter", "testQuery")
+                           .add("parentField.childField", "testChildField")
+                           .add("parentField.childField2", "testChildField2")
+                           .build();
+
+        final JsonNode response =
+                webClientCamelCaseQueryAndOriginalParameters.prepare()
+                                                            .get("/v4/messages/1")
+                                                            .queryParams(query)
+                                                            .asJson(JsonNode.class)
+                                                            .execute()
+                                                            .content();
+        assertThat(response.get("text").asText()).isEqualTo("1:testQuery:testChildField:testChildField2");
+
+        final QueryParams query2 =
+                QueryParams.builder()
+                           .add("query_parameter", "testQuery")
+                           .add("parent_field.child_field", "testChildField")
+                           .add("parent_field.child_field_2", "testChildField2")
+                           .build();
+
+        final JsonNode response2 =
+                webClientCamelCaseQueryAndOriginalParameters.prepare()
+                                                            .get("/v4/messages/1")
+                                                            .queryParams(query2)
+                                                            .asJson(JsonNode.class)
+                                                            .execute()
+                                                            .content();
+        assertThat(response2.get("text").asText()).isEqualTo("1:testQuery:testChildField:testChildField2");
     }
 
     public static JsonNode findMethod(JsonNode methods, String name) {

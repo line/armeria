@@ -43,6 +43,11 @@ service HttpJsonTranscodingTestService {
       get:"/v3/messages/{message_id}"
     };
   }
+  rpc GetMessageV4(GetMessageRequestV4) returns (Message) {
+    option (google.api.http) = {
+      get:"/v4/messages/{message_id}"
+    };
+  }
 
   rpc UpdateMessageV1(UpdateMessageRequestV1) returns (Message) {
     option (google.api.http) = {
@@ -201,6 +206,16 @@ message GetMessageRequestV2 {
 message GetMessageRequestV3 {
   string message_id = 1;          // Mapped to URL path.
   repeated int64 revision = 2;    // Mapped to URL query parameter `revision`.
+}
+
+message GetMessageRequestV4 {
+  string message_id = 1;
+  string query_parameter = 2;
+  ParentMessage parent_field = 3;
+  message ParentMessage {
+     string child_field = 1;
+     string child_field_2 = 2;
+  }
 }
 
 message UpdateMessageRequestV1 {

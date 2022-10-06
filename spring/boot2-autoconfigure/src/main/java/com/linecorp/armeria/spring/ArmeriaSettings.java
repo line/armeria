@@ -1046,7 +1046,7 @@ public class ArmeriaSettings {
     /**
      * Returns whether to apply {@link SpringDependencyInjector} automatically.
      */
-    public boolean enableAutoInjection() {
+    public boolean isEnableAutoInjection() {
         return enableAutoInjection;
     }
 

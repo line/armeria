@@ -11,7 +11,7 @@ buildscript {
     dependencies {
         // These should be the only dependencies that need hard-coded versions.
         classpath 'com.github.ben-manes:gradle-versions-plugin:0.42.0'
-        classpath 'org.yaml:snakeyaml:1.29'
+        classpath 'org.yaml:snakeyaml:1.33'
     }
 }
 
@@ -210,34 +210,34 @@ configure(rootProject) {
             group: 'Build',
             description: 'Generates the file that contains dependency versions.') {
 
-        inputs.property("catalog", project.extensions.getByType(VersionCatalogsExtension))
         def f = file("${project.buildDir}/managed_versions.yml")
         outputs.file(f)
 
         doLast {
             f.parentFile.mkdir()
-            managedVersions = [:]
-            inputs.properties["catalog"].catalogNames.forEach { name ->
+            def managedVersions = [:]
+            def catalogs = project.extensions.getByType(VersionCatalogsExtension)
+            catalogs.catalogNames.forEach { name ->
                 def catalog = catalogs.named(name)
-                versions = [:] withDefault { [] }
+                def versions = [:].withDefault { [] }
                 catalog.libraryAliases.forEach { alias ->
                     def library = catalog.findLibrary(alias).get().get()
-                    versions["libraries"].add([alias: alias, module: library.toString])
+                    versions["libraries"].add([alias: alias, module: library.toString()])
                 }
 
                 catalog.pluginAliases.forEach { alias ->
                     def plugin = catalog.findPlugin(alias).get().get()
-                    versions["plugins"].add([alias: alias, plugin: plugin.toString])
+                    versions["plugins"].add([alias: alias, plugin: plugin.toString()])
                 }
 
                 catalog.versionAliases.forEach { alias ->
                     def version = catalog.findVersion(alias).get()
-                    versions["versions"].add([alias: alias, version: version])
+                    versions["versions"].add([alias: alias, version: version.toString()])
                 }
 
                 catalog.bundleAliases.forEach { alias ->
                     def bundle = catalog.findBundle(alias).get().get()
-                    versions["bundles"].add([alias: alias, bundle: bundle.toString])
+                    versions["bundles"].add([alias: alias, bundle: bundle.toString()])
                 }
                 managedVersions[name] = versions
             }
@@ -254,10 +254,10 @@ static def findLibrary(Project rootProject, String alias) {
     def catalog = catalogs.named("libs")
 
     def library = catalog.findLibrary(alias)
-    if (library.isEmpty()) {
-        return null
-    } else {
+    if (library.isPresent()) {
         return library.get()
+    } else {
+        return null
     }
 }
 
@@ -266,10 +266,10 @@ static def findPlugin(Project rootProject, String alias) {
     def catalog = catalogs.named("libs")
 
     def plugin = catalog.findPlugin(alias)
-    if (plugin.isEmpty()) {
-        return null
-    } else {
+    if (plugin.isPresent()) {
         return plugin.get()
+    } else {
+        return null
     }
 }
 

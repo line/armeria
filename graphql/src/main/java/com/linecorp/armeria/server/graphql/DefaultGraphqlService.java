@@ -18,13 +18,15 @@ package com.linecorp.armeria.server.graphql;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Publisher;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableMap;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -36,11 +38,7 @@ import com.linecorp.armeria.server.graphql.protocol.AbstractGraphqlService;
 
 import graphql.ExecutionInput;
 import graphql.ExecutionResult;
-import graphql.ExecutionResultImpl;
 import graphql.GraphQL;
-import graphql.GraphQLError;
-import graphql.GraphqlErrorException;
-import graphql.validation.ValidationError;
 
 final class DefaultGraphqlService extends AbstractGraphqlService implements GraphqlService {
 
@@ -52,13 +50,16 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
 
     private final boolean useBlockingTaskExecutor;
 
+    private final GraphqlErrorHandler errorHandler;
+
     DefaultGraphqlService(GraphQL graphQL,
                           DataLoaderRegistryCreationStrategy dataLoaderRegistryCreationStrategy,
-                          boolean useBlockingTaskExecutor) {
+                          boolean useBlockingTaskExecutor, GraphqlErrorHandler errorHandler) {
         this.graphQL = requireNonNull(graphQL, "graphQL");
         this.dataLoaderRegistryCreationStrategy = requireNonNull(dataLoaderRegistryCreationStrategy,
                                                                  "dataLoaderRegistryStrategy");
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
+        this.errorHandler = errorHandler;
     }
 
     @Override
@@ -94,48 +95,36 @@ final class DefaultGraphqlService extends AbstractGraphqlService implements Grap
         return execute(ctx, executionInput, produceType);
     }
 
-    private HttpResponse execute(ServiceRequestContext ctx, ExecutionInput input, MediaType produceType) {
+    private HttpResponse execute(
+            ServiceRequestContext ctx, ExecutionInput input, MediaType produceType) {
         final CompletableFuture<ExecutionResult> future;
         if (useBlockingTaskExecutor) {
             future = CompletableFuture.supplyAsync(() -> graphQL.execute(input), ctx.blockingTaskExecutor());
         } else {
             future = graphQL.executeAsync(input);
         }
-        return HttpResponse.from(future.handle((executionResult, cause) -> {
-            if (cause != null) {
-                // graphQL.executeAsync() returns an error in the executionResult with getErrors().
-                // Use 500 Internal Server Error because this cause might be unexpected.
-                final ExecutionResult error = newExecutionResult(cause);
-                return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR, produceType,
-                                           error.toSpecification());
-            }
-            final List<GraphQLError> errors = executionResult.getErrors();
-            if (!errors.isEmpty() && errors.stream().anyMatch(ValidationError.class::isInstance)) {
-                // The server SHOULD deny execution with a status code of 400 Bad Request for
-                // invalidate documentation.
-                return HttpResponse.ofJson(HttpStatus.BAD_REQUEST, produceType,
-                                           executionResult.toSpecification());
-            }
-            return toHttpResponse(executionResult, produceType);
-        }));
+        return HttpResponse.from(
+                future.handle((executionResult, cause) -> {
+                    if (executionResult.getData() instanceof Publisher) {
+                        logger.warn("executionResult.getData() returns a {} that is not supported yet.",
+                                    executionResult.getData().toString());
+
+                        return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED,
+                                                   produceType,
+                                                   toSpecification("WebSocket is not implemented"));
+                    }
+
+                    if (executionResult.getErrors().isEmpty() && cause == null) {
+                        return HttpResponse.ofJson(produceType, executionResult.toSpecification());
+                    }
+
+                    return errorHandler.handle(ctx, input, executionResult, cause);
+                }));
     }
 
-    private static HttpResponse toHttpResponse(ExecutionResult executionResult, MediaType produceType) {
-        // TODO: When WebSocket is implemented, it should be removed.
-        if (executionResult.getData() instanceof Publisher) {
-            logger.warn("executionResult.getData() returns a {} that is not supported yet.",
-                        executionResult.getData().toString());
-            final ExecutionResult error =
-                    newExecutionResult(new UnsupportedOperationException("WebSocket is not implemented"));
-            return HttpResponse.ofJson(HttpStatus.NOT_IMPLEMENTED, produceType, error.toSpecification());
-        }
-        return HttpResponse.ofJson(produceType, executionResult.toSpecification());
-    }
-
-    private static ExecutionResult newExecutionResult(Throwable cause) {
-        return new ExecutionResultImpl(GraphqlErrorException.newErrorException()
-                                                            .message(cause.getMessage())
-                                                            .cause(cause)
-                                                            .build());
+    static Map<String, Object> toSpecification(String message) {
+        requireNonNull(message, "message");
+        final Map<String, Object> error = ImmutableMap.of("message", message);
+        return ImmutableMap.of("errors", ImmutableList.of(error));
     }
 }
