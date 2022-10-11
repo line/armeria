@@ -602,7 +602,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, spec.method);
                         frameAndServe(unwrap(), ctx, grpcHeaders.build(),
                                       convertToJson(ctx, clientRequest, spec),
-                                      responseFuture, generateResponseBodyConverter(spec), MediaType.JSON);
+                                      responseFuture, generateResponseBodyConverter(spec), MediaType.JSON_UTF_8);
                     } catch (IllegalArgumentException iae) {
                         responseFuture.completeExceptionally(
                                 HttpStatusException.of(HttpStatus.BAD_REQUEST, iae));
