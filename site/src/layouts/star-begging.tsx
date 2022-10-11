@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import Iframe from 'react-iframe-click';
 
 import * as styles from './star-begging.module.less';
 
@@ -10,7 +11,7 @@ const StarBegging: React.FC = () => {
     if (localStorage.getItem('dismissed') !== 'true') {
       setTimeout(() => setDisplay(true), 10000); // 10 seconds
     }
-  });
+  }, []);
 
   function close() {
     setDisplay(false);
@@ -24,9 +25,11 @@ const StarBegging: React.FC = () => {
   }
 
   return (
-    <div id={styles.starBegging} className={display ? styles.on : styles.off }>
+    <div id={styles.starBegging} className={display ? styles.on : styles.off}>
       <p>
-        Like Armeria?<br/>Star us ⭐️
+        Like Armeria?
+        <br />
+        Star us ⭐️
       </p>
       <span
         role="button"
@@ -34,16 +37,20 @@ const StarBegging: React.FC = () => {
         className={styles.close}
         onClick={close}
         onKeyDown={handleKeyDown}
-      >×</span>
-      <iframe
+      >
+        ×
+      </span>
+      <Iframe
         id="starFrame"
         className="githubStar"
         title="github-stars"
-        src="https://ghbtns.com/github-btn.html?user=line&amp;repo=armeria&amp;type=star&amp;count=true&size=large"
+        // @ts-ignore
+        src="https://ghbtns.com/github-btn.html?user=line&repo=armeria&type=star&count=true&size=large"
         frameBorder="0"
         scrolling="0"
         width="150px"
         height="30px"
+        onInferredClick={() => close()}
       />
     </div>
   );
