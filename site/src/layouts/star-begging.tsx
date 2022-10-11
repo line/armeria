@@ -37,9 +37,7 @@ const StarBegging: React.FC = () => {
         className={styles.close}
         onClick={close}
         onKeyDown={handleKeyDown}
-      >
-        ×
-      </span>
+      >×</span> {/* eslint-disable-line prettier/prettier */}
       <Iframe
         id="starFrame"
         className="githubStar"
