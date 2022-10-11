@@ -359,6 +359,7 @@ public class HttpJsonTranscodingTest {
     void shouldGetMessageV1ByWebClient(String prefix) throws JsonProcessingException {
         final AggregatedHttpResponse response = webClient.get(prefix + "v1/messages/1").aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.get("text").asText()).isEqualTo("messages/1");
     }
 
@@ -382,6 +383,7 @@ public class HttpJsonTranscodingTest {
                 webClient.get(prefix + "v2/messages/1?revision=999&sub.subfield=sub&type=DETAIL")
                          .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.get("text").asText()).isEqualTo("1:999:sub:DETAIL");
     }
 
@@ -393,6 +395,7 @@ public class HttpJsonTranscodingTest {
                 webClient.get("/v2/messages/1?revision=999&sub.subfield=sub&type=UNKNOWN")
                          .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         // Return a default enum(value 0).
         assertThat(root.get("text").asText()).isEqualTo("1:999:sub:SIMPLE");
     }
@@ -414,6 +417,7 @@ public class HttpJsonTranscodingTest {
                 webClient.get("/v3/messages/1?revision=2&revision=3&revision=4")
                          .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.get("text").asText()).isEqualTo("1:2:3:4");
     }
 
@@ -423,6 +427,7 @@ public class HttpJsonTranscodingTest {
                 webClient.get("/v3/messages/1?revision=4&revision=3&revision=2")
                          .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.get("text").asText()).isEqualTo("1:4:3:2");
     }
 
@@ -448,6 +453,7 @@ public class HttpJsonTranscodingTest {
                                   HttpData.ofUtf8("{\"text\": \"v1\"}"))
                          .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.get("text").asText()).isEqualTo("1:v1");
     }
 
@@ -470,6 +476,7 @@ public class HttpJsonTranscodingTest {
                                   HttpData.ofUtf8("{\"text\": \"v2\"}"))
                          .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.get("text").asText()).isEqualTo("1:v2");
     }
 
@@ -481,6 +488,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response =
                 webClient.get("/v1/echo/" + timestamp + '/' + duration).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
         assertThat(root.get("duration").asText()).isEqualTo(duration);
     }
@@ -504,6 +512,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response =
                 webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.get("doubleVal").asDouble()).isEqualTo(123.456d, withPrecision(0.001d));
         assertThat(root.get("floatVal").asDouble()).isEqualTo(123.456f, withPrecision(0.001d));
         assertThat(root.get("int64Val").asLong()).isEqualTo(Long.MAX_VALUE);
@@ -526,6 +535,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response =
                 webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.get("doubleVal").asDouble()).isEqualTo(123.456d, withPrecision(0.001d));
         assertThat(root.get("floatVal")).isNull();
         assertThat(root.get("int64Val").asLong()).isEqualTo(Long.MAX_VALUE);
@@ -543,6 +553,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         final JsonNode value = root.get("value");
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(value).isNotNull().matches(v -> ((TreeNode) v).isObject());
         assertThat(value.get("intVal").asInt()).isOne();
         assertThat(value.get("stringVal").asText()).isEqualTo("1");
@@ -554,6 +565,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/list_value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         final JsonNode value = root.get("value");
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(value.isArray()).isTrue();
         assertThat(value.get(0).asText()).isEqualTo("1");
         assertThat(value.get(1).asText()).isEqualTo("2");
@@ -565,6 +577,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/list_value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         final JsonNode value = root.get("value");
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(value.isArray()).isTrue();
         assertThat(value.get(0).asInt()).isEqualTo(1);
         assertThat(value.get(1).asInt()).isEqualTo(2);
@@ -575,6 +588,7 @@ public class HttpJsonTranscodingTest {
         final String jsonContent = "\"1\"";
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.get("value").asText()).isEqualTo("1");
     }
 
@@ -583,6 +597,7 @@ public class HttpJsonTranscodingTest {
         final String jsonContent = "1";
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.get("value").asInt()).isEqualTo(1);
     }
 
@@ -596,6 +611,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/any", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         final JsonNode value = root.get("value");
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(value).isNotNull().matches(v -> ((TreeNode) v).isObject());
         assertThat(value.get("@type").asText()).isEqualTo("type.googleapis.com/google.protobuf.Duration");
         assertThat(value.get("value").asText()).isEqualTo("1.212s");
@@ -625,6 +641,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/recursive", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         final JsonNode value = root.get("value");
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(value).isNotNull().matches(v -> ((TreeNode) v).isObject());
         assertThat(value.get("value").asText()).isEqualTo("a");
         final JsonNode nested = value.get("nested");
@@ -643,6 +660,7 @@ public class HttpJsonTranscodingTest {
                 '}';
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/recursive2", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.get("value").asText()).isEqualTo("a");
         final JsonNode nested = root.get("nested");
         assertThat(nested).isNotNull().matches(v -> ((TreeNode) v).isObject());
@@ -670,6 +688,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response =
                 webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.get("doubleVal").asDouble()).isNaN();
         assertThat(root.get("floatVal").asDouble()).isInfinite();
     }
@@ -681,6 +700,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = webClient.get("/v1/echo/response_body/value?" +
                 query.toQueryString())
                 .aggregate().join();
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(response.contentUtf8()).isEqualTo("\"value\"");
     }
 
@@ -690,6 +710,7 @@ public class HttpJsonTranscodingTest {
                 "/v1/echo/response_body/repeated?array_field=value1&array_field=value2")
                 .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.isArray()).isTrue();
         assertThatJson(root).isEqualTo("[\"value1\",\"value2\"]");
     }
@@ -701,6 +722,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
                 "/v1/echo/response_body/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.has("structBody")).isTrue();
         assertThat(root.get("structBody").asText()).isEqualTo("struct_value");
     }
@@ -712,6 +734,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
                 "/v1/echo/response_body/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.isEmpty()).isTrue();
     }
 
@@ -722,6 +745,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
                 "/v1/echo/response_body/nomatch", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThatJson(root).isEqualTo("{\"value\":\"value\"," +
                                        "\"structBody\":{\"structBody\":\"struct_value\"}," +
                                        "\"arrayField\":[\"value1\",\"value2\"]}");
@@ -732,6 +756,7 @@ public class HttpJsonTranscodingTest {
         final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
                                                                 "/v1/echo/response_body/repeated", jsonContent);
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(response.contentUtf8()).isEqualTo("null");
     }
 
@@ -742,6 +767,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClientPreservingProtoFieldNames,
                                                                 "/v1/echo/response_body/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON);
         assertThat(root.has("struct_body")).isTrue();
         assertThat(root.get("struct_body").asText()).isEqualTo("struct_value");
     }
