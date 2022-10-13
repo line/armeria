@@ -105,6 +105,7 @@
 *.triton.zone
 *.tst.site
 *.uberspace.de
+*.user.fm
 *.user.localcert.dev
 *.usercontent.goog
 *.vps.myjino.ru
