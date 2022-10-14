@@ -47,129 +47,129 @@ public class ClientRequestContextWrapper
     @Override
     public ClientRequestContext newDerivedContext(RequestId id, @Nullable HttpRequest req,
                                                   @Nullable RpcRequest rpcReq, @Nullable Endpoint endpoint) {
-        return delegate().newDerivedContext(id, req, rpcReq, endpoint);
+        return unwrap().newDerivedContext(id, req, rpcReq, endpoint);
     }
 
     @Override
     public EndpointGroup endpointGroup() {
-        return delegate().endpointGroup();
+        return unwrap().endpointGroup();
     }
 
     @Override
     public Endpoint endpoint() {
-        return delegate().endpoint();
+        return unwrap().endpoint();
     }
 
     @Override
     public String fragment() {
-        return delegate().fragment();
+        return unwrap().fragment();
     }
 
     @Override
     public ClientOptions options() {
-        return delegate().options();
+        return unwrap().options();
     }
 
     @Override
     public long writeTimeoutMillis() {
-        return delegate().writeTimeoutMillis();
+        return unwrap().writeTimeoutMillis();
     }
 
     @Override
     public void setWriteTimeoutMillis(long writeTimeoutMillis) {
-        delegate().setWriteTimeoutMillis(writeTimeoutMillis);
+        unwrap().setWriteTimeoutMillis(writeTimeoutMillis);
     }
 
     @Override
     public void setWriteTimeout(Duration writeTimeout) {
-        delegate().setWriteTimeout(writeTimeout);
+        unwrap().setWriteTimeout(writeTimeout);
     }
 
     @Override
     public long responseTimeoutMillis() {
-        return delegate().responseTimeoutMillis();
+        return unwrap().responseTimeoutMillis();
     }
 
     @Override
     public void clearResponseTimeout() {
-        delegate().clearResponseTimeout();
+        unwrap().clearResponseTimeout();
     }
 
     @Override
     public void setResponseTimeoutMillis(TimeoutMode mode, long responseTimeoutMillis) {
-        delegate().setResponseTimeoutMillis(mode, responseTimeoutMillis);
+        unwrap().setResponseTimeoutMillis(mode, responseTimeoutMillis);
     }
 
     @Override
     public void setResponseTimeout(TimeoutMode mode, Duration responseTimeout) {
-        delegate().setResponseTimeout(mode, responseTimeout);
+        unwrap().setResponseTimeout(mode, responseTimeout);
     }
 
     @Override
     public long maxResponseLength() {
-        return delegate().maxResponseLength();
+        return unwrap().maxResponseLength();
     }
 
     @Override
     public void setMaxResponseLength(long maxResponseLength) {
-        delegate().setMaxResponseLength(maxResponseLength);
+        unwrap().setMaxResponseLength(maxResponseLength);
     }
 
     @Override
     public HttpHeaders additionalRequestHeaders() {
-        return delegate().additionalRequestHeaders();
+        return unwrap().additionalRequestHeaders();
     }
 
     @Override
     public void setAdditionalRequestHeader(CharSequence name, Object value) {
-        delegate().setAdditionalRequestHeader(name, value);
+        unwrap().setAdditionalRequestHeader(name, value);
     }
 
     @Override
     public void addAdditionalRequestHeader(CharSequence name, Object value) {
-        delegate().addAdditionalRequestHeader(name, value);
+        unwrap().addAdditionalRequestHeader(name, value);
     }
 
     @Override
     public void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator) {
-        delegate().additionalRequestHeaders();
+        unwrap().additionalRequestHeaders();
     }
 
     @Override
     public ExchangeType exchangeType() {
-        return delegate().exchangeType();
+        return unwrap().exchangeType();
     }
 
     @Override
     public boolean isCancelled() {
-        return delegate().isCancelled();
+        return unwrap().isCancelled();
     }
 
     @Override
     public boolean isTimedOut() {
-        return delegate().isTimedOut();
+        return unwrap().isTimedOut();
     }
 
     @Override
     public CompletableFuture<Throwable> whenResponseCancelling() {
-        return delegate().whenResponseCancelling();
+        return unwrap().whenResponseCancelling();
     }
 
     @Override
     public CompletableFuture<Throwable> whenResponseCancelled() {
-        return delegate().whenResponseCancelled();
+        return unwrap().whenResponseCancelled();
     }
 
     @Deprecated
     @Override
     public CompletableFuture<Void> whenResponseTimingOut() {
-        return delegate().whenResponseTimingOut();
+        return unwrap().whenResponseTimingOut();
     }
 
     @Deprecated
     @Override
     public CompletableFuture<Void> whenResponseTimedOut() {
-        return delegate().whenResponseTimedOut();
+        return unwrap().whenResponseTimedOut();
     }
 
     @Override
