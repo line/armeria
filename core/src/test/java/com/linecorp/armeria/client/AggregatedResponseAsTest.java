@@ -22,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
@@ -41,7 +43,6 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 class AggregatedResponseAsTest {
 
     private final ResponseHeaders headers = ResponseHeaders.of(200);
-    private final ResponseHeaders headersStatusCode500 = ResponseHeaders.of(500);
 
     @Test
     void bytes() {
@@ -70,8 +71,12 @@ class AggregatedResponseAsTest {
         assertThat(entity.content()).isEqualTo(myObject);
     }
 
-    @Test
-    void jsonObject_withHttpStatusPredicate_status200() throws JsonProcessingException {
+    @CsvSource({ "200", "500" })
+    @ParameterizedTest
+    void jsonObject_withHttpStatusPredicate(int statusCode) throws JsonProcessingException {
+        final ResponseHeaders headers = ResponseHeaders.of(statusCode);
+        final HttpStatus httpStatus = HttpStatus.valueOf(statusCode);
+
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         final byte[] content = JacksonUtil.writeValueAsBytes(myObject);
@@ -79,26 +84,16 @@ class AggregatedResponseAsTest {
 
         final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
                 MyObject.class,
-                HttpStatusPredicate.of(HttpStatus.OK)).as(response);
+                HttpStatusPredicate.of(httpStatus)).as(response);
         assertThat(entity.content()).isEqualTo(myObject);
     }
 
-    @Test
-    void jsonObject_withHttpStatusPredicate_status500() throws JsonProcessingException {
-        final MyObject myObject = new MyObject();
-        myObject.setId(10);
-        final byte[] content = JacksonUtil.writeValueAsBytes(myObject);
-        final AggregatedHttpResponse response = AggregatedHttpResponse.of(headersStatusCode500,
-                                                                          HttpData.wrap(content));
+    @CsvSource({ "200", "500" })
+    @ParameterizedTest
+    void jsonObject_withHttpStatusClassPredicate(int statusCode) throws JsonProcessingException {
+        final ResponseHeaders headers = ResponseHeaders.of(statusCode);
+        final HttpStatusClass httpStatusClass = HttpStatusClass.valueOf(statusCode);
 
-        final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
-                MyObject.class,
-                HttpStatusPredicate.of(HttpStatus.INTERNAL_SERVER_ERROR)).as(response);
-        assertThat(entity.content()).isEqualTo(myObject);
-    }
-
-    @Test
-    void jsonObject_withHttpStatusClassPredicate_status200() throws JsonProcessingException {
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         final byte[] content = JacksonUtil.writeValueAsBytes(myObject);
@@ -106,21 +101,7 @@ class AggregatedResponseAsTest {
 
         final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
                 MyObject.class,
-                HttpStatusClassPredicates.of(HttpStatusClass.SUCCESS)).as(response);
-        assertThat(entity.content()).isEqualTo(myObject);
-    }
-
-    @Test
-    void jsonObject_withHttpStatusClassPredicate_status500() throws JsonProcessingException {
-        final MyObject myObject = new MyObject();
-        myObject.setId(10);
-        final byte[] content = JacksonUtil.writeValueAsBytes(myObject);
-        final AggregatedHttpResponse response = AggregatedHttpResponse.of(headersStatusCode500,
-                                                                          HttpData.wrap(content));
-
-        final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
-                MyObject.class,
-                HttpStatusClassPredicates.of(HttpStatusClass.SERVER_ERROR)).as(response);
+                HttpStatusClassPredicates.of(httpStatusClass)).as(response);
         assertThat(entity.content()).isEqualTo(myObject);
     }
 
@@ -178,7 +159,7 @@ class AggregatedResponseAsTest {
                 MyObject.class,
                 HttpStatusClassPredicates.of(HttpStatusClass.SERVER_ERROR)).as(response))
                 .isInstanceOf(InvalidHttpResponseException.class)
-                .hasMessageContaining("status: 200 OK (expect: the SERVER_ERROR class response");
+                .hasMessageContaining("status: 200 OK (expect: the SERVER_ERROR class. response");
     }
 
     @Test
@@ -235,23 +216,31 @@ class AggregatedResponseAsTest {
         assertThat(entity.content()).isEqualTo(myObject);
     }
 
-    @Test
-    void jsonObject_customMapper_withHttpStatusPredicate_status500() {
+    @CsvSource({ "200", "500" })
+    @ParameterizedTest
+    void jsonObject_customMapper_withHttpStatusPredicate(int statusCode) {
+        final ResponseHeaders headers = ResponseHeaders.of(statusCode);
+        final HttpStatus httpStatus = HttpStatus.valueOf(statusCode);
+
         final AggregatedHttpResponse response =
-                AggregatedHttpResponse.of(headersStatusCode500, HttpData.ofUtf8("{ 'id': 10 }"));
+                AggregatedHttpResponse.of(headers, HttpData.ofUtf8("{ 'id': 10 }"));
 
         final JsonMapper mapper = JsonMapper.builder()
                                             .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
                                             .build();
         final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
-                MyObject.class, mapper, HttpStatusPredicate.of(HttpStatus.INTERNAL_SERVER_ERROR)).as(response);
+                MyObject.class, mapper, HttpStatusPredicate.of(httpStatus)).as(response);
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         assertThat(entity.content()).isEqualTo(myObject);
     }
 
-    @Test
-    void jsonObject_customMapper_withHttpStatusClassPredicate_status200() {
+    @CsvSource({ "200", "500" })
+    @ParameterizedTest
+    void jsonObject_customMapper_withHttpStatusClassPredicate(int statusCode) {
+        final ResponseHeaders headers = ResponseHeaders.of(statusCode);
+        final HttpStatusClass httpStatusClass = HttpStatusClass.valueOf(statusCode);
+
         final AggregatedHttpResponse response =
                 AggregatedHttpResponse.of(headers, HttpData.ofUtf8("{ 'id': 10 }"));
 
@@ -260,38 +249,7 @@ class AggregatedResponseAsTest {
                                             .build();
         final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
                 MyObject.class, mapper,
-                HttpStatusClassPredicates.of(HttpStatusClass.SUCCESS)).as(response);
-        final MyObject myObject = new MyObject();
-        myObject.setId(10);
-        assertThat(entity.content()).isEqualTo(myObject);
-    }
-
-    @Test
-    void jsonObject_customMapper_withHttpStatusClassPredicate_status500() {
-        final AggregatedHttpResponse response =
-                AggregatedHttpResponse.of(headersStatusCode500, HttpData.ofUtf8("{ 'id': 10 }"));
-
-        final JsonMapper mapper = JsonMapper.builder()
-                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
-                                            .build();
-        final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
-                MyObject.class, mapper,
-                HttpStatusClassPredicates.of(HttpStatusClass.SERVER_ERROR)).as(response);
-        final MyObject myObject = new MyObject();
-        myObject.setId(10);
-        assertThat(entity.content()).isEqualTo(myObject);
-    }
-
-    @Test
-    void jsonObject_customMapper_withPredicate() throws JsonProcessingException {
-        final AggregatedHttpResponse response =
-                AggregatedHttpResponse.of(headers, HttpData.ofUtf8("{ 'id': 10 }"));
-
-        final JsonMapper mapper = JsonMapper.builder()
-                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
-                                            .build();
-        final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
-                MyObject.class, mapper, httpStatus -> httpStatus.equals(HttpStatus.OK)).as(response);
+                HttpStatusClassPredicates.of(httpStatusClass)).as(response);
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         assertThat(entity.content()).isEqualTo(myObject);
@@ -310,8 +268,12 @@ class AggregatedResponseAsTest {
         assertThat(objects).containsExactly(myObject);
     }
 
-    @Test
-    void jsonGeneric_withHttpStatusPredicate_status200() throws JsonProcessingException {
+    @CsvSource({ "200", "500" })
+    @ParameterizedTest
+    void jsonGeneric_withHttpStatusPredicate(int statusCode) throws JsonProcessingException {
+        final ResponseHeaders headers = ResponseHeaders.of(statusCode);
+        final HttpStatus httpStatus = HttpStatus.valueOf(statusCode);
+
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         final byte[] content = JacksonUtil.writeValueAsBytes(ImmutableList.of(myObject));
@@ -319,28 +281,17 @@ class AggregatedResponseAsTest {
 
         final ResponseEntity<List<MyObject>> entity = AggregatedResponseAs.json(
                 new TypeReference<List<MyObject>>() {},
-                HttpStatusPredicate.of(HttpStatus.OK)).as(response);
+                HttpStatusPredicate.of(httpStatus)).as(response);
         final List<MyObject> objects = entity.content();
         assertThat(objects).containsExactly(myObject);
     }
 
-    @Test
-    void jsonGeneric_withHttpStatusPredicate_status500() throws JsonProcessingException {
-        final MyObject myObject = new MyObject();
-        myObject.setId(10);
-        final byte[] content = JacksonUtil.writeValueAsBytes(ImmutableList.of(myObject));
-        final AggregatedHttpResponse response = AggregatedHttpResponse.of(headersStatusCode500,
-                                                                          HttpData.wrap(content));
+    @CsvSource({ "200", "500" })
+    @ParameterizedTest
+    void jsonGeneric_withHttpStatusClassPredicate(int statusCode) throws JsonProcessingException {
+        final ResponseHeaders headers = ResponseHeaders.of(statusCode);
+        final HttpStatusClass httpStatusClass = HttpStatusClass.valueOf(statusCode);
 
-        final ResponseEntity<List<MyObject>> entity = AggregatedResponseAs.json(
-                new TypeReference<List<MyObject>>() {},
-                HttpStatusPredicate.of(HttpStatus.INTERNAL_SERVER_ERROR)).as(response);
-        final List<MyObject> objects = entity.content();
-        assertThat(objects).containsExactly(myObject);
-    }
-
-    @Test
-    void jsonGeneric_withHttpStatusClassPredicate_status200() throws JsonProcessingException {
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         final byte[] content = JacksonUtil.writeValueAsBytes(ImmutableList.of(myObject));
@@ -348,22 +299,7 @@ class AggregatedResponseAsTest {
 
         final ResponseEntity<List<MyObject>> entity = AggregatedResponseAs.json(
                 new TypeReference<List<MyObject>>() {},
-                HttpStatusClassPredicates.of(HttpStatusClass.SUCCESS)).as(response);
-        final List<MyObject> objects = entity.content();
-        assertThat(objects).containsExactly(myObject);
-    }
-
-    @Test
-    void jsonGeneric_withHttpStatusClassPredicate_status500() throws JsonProcessingException {
-        final MyObject myObject = new MyObject();
-        myObject.setId(10);
-        final byte[] content = JacksonUtil.writeValueAsBytes(ImmutableList.of(myObject));
-        final AggregatedHttpResponse response = AggregatedHttpResponse.of(headersStatusCode500,
-                                                                          HttpData.wrap(content));
-
-        final ResponseEntity<List<MyObject>> entity = AggregatedResponseAs.json(
-                new TypeReference<List<MyObject>>() {},
-                HttpStatusClassPredicates.of(HttpStatusClass.SERVER_ERROR)).as(response);
+                HttpStatusClassPredicates.of(httpStatusClass)).as(response);
         final List<MyObject> objects = entity.content();
         assertThat(objects).containsExactly(myObject);
     }
@@ -397,8 +333,12 @@ class AggregatedResponseAsTest {
         assertThat(content).containsExactly(myObject);
     }
 
-    @Test
-    void jsonGeneric_customMapper_withHttpStatusPredicate_status200() {
+    @CsvSource({ "200", "500" })
+    @ParameterizedTest
+    void jsonGeneric_customMapper_withHttpStatusPredicate(int statusCode) {
+        final ResponseHeaders headers = ResponseHeaders.of(statusCode);
+        final HttpStatus httpStatus = HttpStatus.valueOf(statusCode);
+
         final AggregatedHttpResponse response =
                 AggregatedHttpResponse.of(headers, HttpData.ofUtf8("[{ 'id': 10 }]"));
         final JsonMapper mapper = JsonMapper.builder()
@@ -406,32 +346,19 @@ class AggregatedResponseAsTest {
                                             .build();
         final ResponseEntity<List<MyObject>> entity =
                 AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {}, mapper,
-                                          HttpStatusPredicate.of(HttpStatus.OK)).as(response);
+                                          HttpStatusPredicate.of(httpStatus)).as(response);
         final List<MyObject> content = entity.content();
         final MyObject myObject = new MyObject();
         myObject.setId(10);
         assertThat(content).containsExactly(myObject);
     }
 
-    @Test
-    void jsonGeneric_customMapper_withHttpStatusPredicate_status500() {
-        final AggregatedHttpResponse response =
-                AggregatedHttpResponse.of(headersStatusCode500, HttpData.ofUtf8("[{ 'id': 10 }]"));
-        final JsonMapper mapper = JsonMapper.builder()
-                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
-                                            .build();
-        final ResponseEntity<List<MyObject>> entity =
-                AggregatedResponseAs.json(new TypeReference<List<MyObject>>() {}, mapper,
-                                          HttpStatusPredicate.of(HttpStatus.INTERNAL_SERVER_ERROR))
-                                    .as(response);
-        final List<MyObject> content = entity.content();
-        final MyObject myObject = new MyObject();
-        myObject.setId(10);
-        assertThat(content).containsExactly(myObject);
-    }
+    @CsvSource({ "200", "500" })
+    @ParameterizedTest
+    void jsonGeneric_customMapper_withHttpStatusClassPredicate(int statusCode) {
+        final ResponseHeaders headers = ResponseHeaders.of(statusCode);
+        final HttpStatusClass httpStatusClass = HttpStatusClass.valueOf(statusCode);
 
-    @Test
-    void jsonGeneric_customMapper_withHttpStatusClassPredicate_status200() {
         final AggregatedHttpResponse response =
                 AggregatedHttpResponse.of(headers, HttpData.ofUtf8("[{ 'id': 10 }]"));
         final JsonMapper mapper = JsonMapper.builder()
@@ -440,24 +367,7 @@ class AggregatedResponseAsTest {
         final ResponseEntity<List<MyObject>> entity =
                 AggregatedResponseAs.json(
                         new TypeReference<List<MyObject>>() {}, mapper,
-                        HttpStatusClassPredicates.of(HttpStatusClass.SUCCESS)).as(response);
-        final List<MyObject> content = entity.content();
-        final MyObject myObject = new MyObject();
-        myObject.setId(10);
-        assertThat(content).containsExactly(myObject);
-    }
-
-    @Test
-    void jsonGeneric_customMapper_withHttpStatusClassPredicate_status500() {
-        final AggregatedHttpResponse response =
-                AggregatedHttpResponse.of(headersStatusCode500, HttpData.ofUtf8("[{ 'id': 10 }]"));
-        final JsonMapper mapper = JsonMapper.builder()
-                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
-                                            .build();
-        final ResponseEntity<List<MyObject>> entity =
-                AggregatedResponseAs.json(
-                        new TypeReference<List<MyObject>>() {}, mapper,
-                        HttpStatusClassPredicates.of(HttpStatusClass.SERVER_ERROR)).as(response);
+                        HttpStatusClassPredicates.of(httpStatusClass)).as(response);
         final List<MyObject> content = entity.content();
         final MyObject myObject = new MyObject();
         myObject.setId(10);

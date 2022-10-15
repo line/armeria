@@ -119,7 +119,7 @@ final class AggregatedResponseAs {
             AggregatedHttpResponse response, HttpStatusClass httpStatusClass) {
         return new InvalidHttpResponseException(
                 response, "status: " + response.status() +
-                          " (expect: the " + httpStatusClass + " class response: " + response, null);
+                          " (expect: the " + httpStatusClass + " class. response: " + response, null);
     }
 
     private static InvalidHttpResponseException newInvalidPredicateResponseException(

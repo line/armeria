@@ -28,9 +28,11 @@ final class HttpStatusPredicate implements Predicate<HttpStatus> {
     private static final ImmutableMap<HttpStatus, HttpStatusPredicate> httpStatusPredicateMap;
 
     static {
-        final ImmutableMap.Builder<HttpStatus, HttpStatusPredicate> builder = new ImmutableMap.Builder<>();
+        final ImmutableMap.Builder<HttpStatus, HttpStatusPredicate> builder =
+                ImmutableMap.builderWithExpectedSize(1000);
         for (int i = 0; i < 1000; i++) {
-            builder.put(HttpStatus.valueOf(i), new HttpStatusPredicate(HttpStatus.valueOf(i)));
+            final HttpStatus status = HttpStatus.valueOf(i);
+            builder.put(status, new HttpStatusPredicate(HttpStatus.valueOf(i)));
         }
         httpStatusPredicateMap = builder.build();
     }

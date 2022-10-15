@@ -80,6 +80,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      *
      * @see JacksonObjectMapperProvider
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz,
                                                             HttpStatus httpStatus) {
         requireNonNull(clazz, "clazz");
@@ -96,6 +97,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      *
      * @see JacksonObjectMapperProvider
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz,
                                                             HttpStatusClass httpStatusClass) {
         requireNonNull(clazz, "clazz");
@@ -112,6 +114,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      *
      * @see JacksonObjectMapperProvider
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz,
                                                             Predicate<? super HttpStatus> predicate) {
         requireNonNull(clazz, "clazz");
@@ -125,6 +128,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      * Sends the HTTP request and converts the JSON response body as the {@code T} object using the specified
      * {@link ObjectMapper}.
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz, ObjectMapper mapper) {
         requireNonNull(clazz, "clazz");
         requireNonNull(mapper, "mapper");
@@ -138,6 +142,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      * {@link ObjectMapper}.
      * {@link HttpStatus} type argument specify what type of response is allowed.
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz, ObjectMapper mapper,
                                                             HttpStatus httpStatus) {
         requireNonNull(clazz, "clazz");
@@ -153,6 +158,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      * {@link ObjectMapper}.
      * {@link HttpStatusClass} type argument specify what type of response is allowed.
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz, ObjectMapper mapper,
                                                             HttpStatusClass httpStatusClass) {
         requireNonNull(clazz, "clazz");
@@ -168,6 +174,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      * {@link ObjectMapper}.
      * {@link Predicate} type argument specify what type of response is allowed.
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(Class<? extends T> clazz, ObjectMapper mapper,
                                                             Predicate<? super HttpStatus> predicate) {
         requireNonNull(clazz, "clazz");
@@ -184,6 +191,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      *
      * @see JacksonObjectMapperProvider
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef) {
         requireNonNull(typeRef, "typeRef");
         final CompletableFuture<? extends ResponseEntity<? extends T>> response =
@@ -198,6 +206,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      *
      * @see JacksonObjectMapperProvider
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
                                                             HttpStatus httpStatus) {
         requireNonNull(typeRef, "typeRef");
@@ -214,6 +223,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      *
      * @see JacksonObjectMapperProvider
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
                                                             HttpStatusClass httpStatusClass) {
         requireNonNull(typeRef, "typeRef");
@@ -230,6 +240,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      *
      * @see JacksonObjectMapperProvider
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
                                                             Predicate<? super HttpStatus> predicate) {
         requireNonNull(typeRef, "typeRef");
@@ -243,6 +254,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      * Sends the HTTP request and converts the JSON response body as the {@code T} object using the specified
      * {@link ObjectMapper}.
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
                                                             ObjectMapper mapper) {
         requireNonNull(typeRef, "typeRef");
@@ -257,6 +269,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      * {@link ObjectMapper}.
      * {@link HttpStatus} type argument specify what type of response is allowed.
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
                                                             ObjectMapper mapper,
                                                             HttpStatus httpStatus) {
@@ -273,6 +286,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      * {@link ObjectMapper}.
      * {@link HttpStatusClass} type argument specify what type of response is allowed.
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
                                                             ObjectMapper mapper,
                                                             HttpStatusClass httpStatusClass) {
@@ -289,6 +303,7 @@ public final class RestClientPreparation implements RequestPreparationSetters {
      * {@link ObjectMapper}.
      * {@link Predicate} type argument specify what type of response is allowed.
      */
+    @UnstableApi
     public <T> CompletableFuture<ResponseEntity<T>> execute(TypeReference<? extends T> typeRef,
                                                             ObjectMapper mapper,
                                                             Predicate<? super HttpStatus> predicate) {
