@@ -24,19 +24,13 @@ import com.linecorp.armeria.common.HttpResponse;
 /**
  * Builds a new {@link CircuitBreakerClient} or its decorator function.
  */
-public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerClientBuilder<HttpResponse> {
-    static final int DEFAULT_MAX_CONTENT_LENGTH = Integer.MAX_VALUE;
-
-    private final boolean needsContentInRule;
-    private final int maxContentLength;
+public final class CircuitBreakerClientBuilder extends HttpCircuitBreakerClientBuilder<CircuitBreaker> {
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
      */
     CircuitBreakerClientBuilder(CircuitBreakerRule rule) {
-        super(rule);
-        needsContentInRule = false;
-        maxContentLength = 0;
+        super(CircuitBreakerMapping.ofDefault(), rule);
     }
 
     /**
@@ -45,34 +39,28 @@ public final class CircuitBreakerClientBuilder extends AbstractCircuitBreakerCli
      */
     CircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
                                 int maxContentLength) {
-        super(ruleWithContent);
-        needsContentInRule = true;
-        this.maxContentLength = maxContentLength;
-    }
-
-    /**
-     * Returns a newly-created {@link CircuitBreakerClient} based on the properties of this builder.
-     */
-    public CircuitBreakerClient build(HttpClient delegate) {
-        if (needsContentInRule) {
-            return new CircuitBreakerClient(delegate, mapping(), ruleWithContent(), maxContentLength);
-        }
-
-        return new CircuitBreakerClient(delegate, mapping(), rule());
+        super(CircuitBreakerMapping.ofDefault(), ruleWithContent, maxContentLength);
     }
 
     /**
      * Returns a newly-created decorator that decorates an {@link HttpClient} with a new
      * {@link CircuitBreakerClient} based on the properties of this builder.
      */
+    @Override
     public Function<? super HttpClient, CircuitBreakerClient> newDecorator() {
-        return this::build;
+        return newDecorator(DefaultHttpCircuitBreakerHandlerFactory.INSTANCE);
     }
 
     // Methods that were overridden to change the return type.
 
     @Override
-    public CircuitBreakerClientBuilder mapping(CircuitBreakerMapping mapping) {
+    public CircuitBreakerClientBuilder mapping(
+            ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
         return (CircuitBreakerClientBuilder) super.mapping(mapping);
+    }
+
+    @Override
+    public CircuitBreakerClient build(HttpClient delegate) {
+        return build(delegate, DefaultHttpCircuitBreakerHandlerFactory.INSTANCE);
     }
 }

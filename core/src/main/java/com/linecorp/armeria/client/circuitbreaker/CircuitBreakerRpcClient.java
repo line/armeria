@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static com.linecorp.armeria.client.circuitbreaker.DefaultRpcCircuitBreakerHandlerFactory.INSTANCE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
@@ -25,14 +26,13 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
-import com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerReporter;
 
 /**
  * An {@link RpcClient} decorator that handles failures of RPC remote invocation based on
  * circuit breaker pattern.
  */
 public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<RpcRequest, RpcResponse>
-        implements RpcClient, CircuitBreakerClientCallbacks<CircuitBreaker> {
+        implements RpcClient {
 
     /**
      * Creates a new decorator using the specified {@link CircuitBreaker} instance and
@@ -60,7 +60,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
     newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         requireNonNull(mapping, "mapping");
         requireNonNull(ruleWithContent, "ruleWithContent");
-        return delegate -> new CircuitBreakerRpcClient(delegate, mapping, ruleWithContent);
+        return delegate -> new CircuitBreakerRpcClient(delegate, mapping, ruleWithContent, INSTANCE);
     }
 
     /**
@@ -126,39 +126,30 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
     /**
      * Creates a new instance that decorates the specified {@link RpcClient}.
      */
-    CircuitBreakerRpcClient(RpcClient delegate, CircuitBreakerMapping mapping,
-                            CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
-        super(delegate, mapping);
-        this.ruleWithContent = ruleWithContent;
+    CircuitBreakerRpcClient(RpcClient delegate, ClientCircuitBreakerGenerator<CircuitBreaker> mapping,
+                            CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent,
+                            CircuitBreakerHandlerFactory<CircuitBreaker, RpcRequest> factory) {
+        super(delegate, factory.generateHandler(mapping));
+        this.ruleWithContent = requireNonNull(ruleWithContent, "ruleWithContent");
     }
 
     @Override
-    protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req, CircuitBreaker circuitBreaker)
+    protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req)
             throws Exception {
         final RpcResponse response;
         try {
             response = unwrap().execute(ctx, req);
         } catch (Throwable cause) {
-            CircuitBreakerReporter.reportSuccessOrFailure(
-                    circuitBreaker, ctx, ruleWithContent.shouldReportAsSuccess(ctx, null, cause), this);
+            handler().reportSuccessOrFailure(
+                    ctx, ruleWithContent.shouldReportAsSuccess(ctx, null, cause), cause);
             throw cause;
         }
 
         response.handle((unused1, cause) -> {
-            CircuitBreakerReporter.reportSuccessOrFailure(
-                    circuitBreaker, ctx, ruleWithContent.shouldReportAsSuccess(ctx, null, cause), this);
+            handler().reportSuccessOrFailure(
+                    ctx, ruleWithContent.shouldReportAsSuccess(ctx, null, cause), cause);
             return null;
         });
         return response;
-    }
-
-    @Override
-    public void onSuccess(CircuitBreaker circuitBreaker, ClientRequestContext ctx) {
-        circuitBreaker.onSuccess();
-    }
-
-    @Override
-    public void onFailure(CircuitBreaker circuitBreaker, ClientRequestContext ctx) {
-        circuitBreaker.onFailure();
     }
 }

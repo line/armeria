@@ -16,18 +16,17 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.concurrent.CompletionStage;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
 
 /**
@@ -39,41 +38,30 @@ import com.linecorp.armeria.common.util.CompletionActions;
 public abstract class AbstractCircuitBreakerClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractCircuitBreakerClient.class);
-
-    private final CircuitBreakerMapping mapping;
+    private final CircuitBreakerClientHandler<?, I> handler;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping) {
+    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler<?, I> handler) {
         super(delegate);
-        this.mapping = requireNonNull(mapping, "mapping");
+        this.handler = handler;
     }
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        final CircuitBreaker circuitBreaker;
         try {
-            circuitBreaker = mapping.get(ctx, req);
-        } catch (Throwable t) {
-            logger.warn("Failed to get a circuit breaker from mapping", t);
+            handler.tryAcquireAndRequest(ctx, req);
+        } catch (CircuitBreakerAbortException e) {
             return unwrap().execute(ctx, req);
         }
-
-        if (circuitBreaker.tryRequest()) {
-            return doExecute(ctx, req, circuitBreaker);
-        } else {
-            // the circuit is tripped; raise an exception without delegating.
-            throw new FailFastException(circuitBreaker);
-        }
+        return doExecute(ctx, req);
     }
 
     /**
      * Invoked when the {@link CircuitBreaker} is in closed state.
      */
-    protected abstract O doExecute(ClientRequestContext ctx, I req, CircuitBreaker circuitBreaker)
-            throws Exception;
+    protected abstract O doExecute(ClientRequestContext ctx, I req) throws Exception;
 
     /**
      * Reports a success or a failure to the specified {@link CircuitBreaker} according to the completed value
@@ -84,7 +72,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
      */
     @Deprecated
     protected static void reportSuccessOrFailure(CircuitBreaker circuitBreaker,
-                                                 CompletionStage<CircuitBreakerDecision> future) {
+                                                 CompletionStage<@Nullable CircuitBreakerDecision> future) {
         future.handle((decision, unused) -> {
             if (decision != null) {
                 if (decision == CircuitBreakerDecision.success() || decision == CircuitBreakerDecision.next()) {
@@ -97,5 +85,20 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
             }
             return null;
         }).exceptionally(CompletionActions::log);
+    }
+
+    /**
+     * Returns the handler for this client.
+     */
+    @UnstableApi
+    protected CircuitBreakerClientHandler<?, I> handler() {
+        return handler;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("handler", handler)
+                          .toString();
     }
 }

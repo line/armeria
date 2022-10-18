@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -16,58 +16,95 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A skeletal builder implementation that builds a new {@link AbstractCircuitBreakerClient} or
  * its decorator function.
  *
+ * @param <CB> the type of CircuitBreaker implementation
  * @param <O> the type of incoming {@link Response} of the {@link Client}
  */
-public abstract class AbstractCircuitBreakerClientBuilder<O extends Response>
-        extends CircuitBreakerRuleSetter<O> {
+@UnstableApi
+public abstract class AbstractCircuitBreakerClientBuilder<CB, O extends Response> {
 
-    private CircuitBreakerMapping mapping = CircuitBreakerMapping.ofDefault();
+    @Nullable
+    private final CircuitBreakerRule rule;
+
+    @Nullable
+    private final CircuitBreakerRuleWithContent<O> ruleWithContent;
+    private ClientCircuitBreakerGenerator<CB> mapping;
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
      */
-    AbstractCircuitBreakerClientBuilder(CircuitBreakerRule rule) {
-        super(requireNonNull(rule, "rule"), null);
+    AbstractCircuitBreakerClientBuilder(ClientCircuitBreakerGenerator<CB> defaultMapping,
+                                        CircuitBreakerRule rule) {
+        this(defaultMapping, requireNonNull(rule, "rule"), null);
     }
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRuleWithContent}.
      */
-    AbstractCircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<O> ruleWithContent) {
-        super(null, requireNonNull(ruleWithContent, "ruleWithContent"));
+    AbstractCircuitBreakerClientBuilder(ClientCircuitBreakerGenerator<CB> defaultMapping,
+                                        CircuitBreakerRuleWithContent<O> ruleWithContent) {
+        this(defaultMapping, null, requireNonNull(ruleWithContent, "ruleWithContent"));
+    }
+
+    private AbstractCircuitBreakerClientBuilder(
+            ClientCircuitBreakerGenerator<CB> defaultMapping,
+            @Nullable CircuitBreakerRule rule,
+            @Nullable CircuitBreakerRuleWithContent<O> ruleWithContent) {
+        mapping = requireNonNull(defaultMapping, "defaultMapping");
+        this.rule = rule;
+        this.ruleWithContent = ruleWithContent;
     }
 
     /**
-     * Sets the {@link CircuitBreakerMapping}. If unspecified, {@link CircuitBreakerMapping#ofDefault()}
-     * will be used.
-     *
-     * @return {@code this} to support method chaining.
+     * Returns the {@link CircuitBreakerRule} set for this builder.
      */
-    public AbstractCircuitBreakerClientBuilder<O> mapping(CircuitBreakerMapping mapping) {
+    protected final CircuitBreakerRule rule() {
+        checkState(rule != null, "rule is not set.");
+        return rule;
+    }
+
+    /**
+     * Returns the {@link CircuitBreakerRuleWithContent} set for this builder.
+     */
+    protected final CircuitBreakerRuleWithContent<O> ruleWithContent() {
+        checkState(ruleWithContent != null, "ruleWithContent is not set.");
+        return ruleWithContent;
+    }
+
+    /**
+     * Sets the {@link ClientCircuitBreakerGenerator} which generates a {@link CB} instance
+     * for each request.
+     */
+    public AbstractCircuitBreakerClientBuilder<CB, O> mapping(ClientCircuitBreakerGenerator<CB> mapping) {
         this.mapping = requireNonNull(mapping, "mapping");
         return this;
     }
 
-    final CircuitBreakerMapping mapping() {
+    /**
+     * Returns the set {@link ClientCircuitBreakerGenerator}.
+     */
+    protected ClientCircuitBreakerGenerator<CB> mapping() {
         return mapping;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("rule", rawRule())
-                          .add("ruleWithContent", rawRuleWithContent())
+                          .add("rule", rule)
+                          .add("ruleWithContent", ruleWithContent)
                           .add("mapping", mapping)
                           .toString();
     }

@@ -22,19 +22,20 @@ import static java.util.Objects.requireNonNull;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Response;
-import com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerReporter;
 
 /**
  * An {@link HttpClient} decorator that handles failures of HTTP requests based on circuit breaker pattern.
  */
 public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<HttpRequest, HttpResponse>
-        implements HttpClient, CircuitBreakerClientCallbacks<CircuitBreaker> {
+        implements HttpClient {
 
     /**
      * Creates a new decorator using the specified {@link CircuitBreaker} instance and
@@ -73,7 +74,8 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRule rule) {
         requireNonNull(mapping, "mapping");
         requireNonNull(rule, "rule");
-        return delegate -> new CircuitBreakerClient(delegate, mapping, rule);
+        return delegate -> new CircuitBreakerClient(delegate, mapping, rule,
+                                                    DefaultHttpCircuitBreakerHandlerFactory.INSTANCE);
     }
 
     /**
@@ -228,7 +230,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
      */
     public static CircuitBreakerClientBuilder builder(
             CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
-        return builder(ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH);
+        return builder(ruleWithContent, HttpCircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH);
     }
 
     /**
@@ -245,14 +247,16 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
         return new CircuitBreakerClientBuilder(ruleWithContent, maxContentLength);
     }
 
-    private final CircuitBreakerReporter<CircuitBreaker> reporter;
+    private final HttpCircuitBreakerClientHandlerWrapper<?, HttpRequest> wrapper;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping, CircuitBreakerRule rule) {
-        super(delegate, mapping);
-        reporter = new CircuitBreakerReporter<>(requireNonNull(rule, "rule"), null, false, 0, this);
+    <CB> CircuitBreakerClient(HttpClient delegate, ClientCircuitBreakerGenerator<CB> mapping,
+                              CircuitBreakerRule rule,
+                              CircuitBreakerHandlerFactory<CB, HttpRequest> factory) {
+        super(delegate, factory.generateHandler(mapping));
+        wrapper = new HttpCircuitBreakerClientHandlerWrapper<>(handler(), rule, null, false, 0);
     }
 
     /**
@@ -260,39 +264,38 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
      */
     CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping,
                          CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
-        this(delegate, mapping, ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH);
+        this(delegate, mapping, ruleWithContent, HttpCircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH,
+             DefaultHttpCircuitBreakerHandlerFactory.INSTANCE);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping,
-                         CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent, int maxContentLength) {
-        super(delegate, mapping);
-        reporter = new CircuitBreakerReporter<>(null, requireNonNull(ruleWithContent, "ruleWithContent"),
-                                                true, maxContentLength, this);
+    <CB> CircuitBreakerClient(HttpClient delegate, ClientCircuitBreakerGenerator<CB> mapping,
+                              CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent, int maxContentLength,
+                              CircuitBreakerHandlerFactory<CB, HttpRequest> factory) {
+        super(delegate, factory.generateHandler(mapping));
+        wrapper = new HttpCircuitBreakerClientHandlerWrapper<>(handler(), null, ruleWithContent,
+                                                               true, maxContentLength);
     }
 
     @Override
-    protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req, CircuitBreaker circuitBreaker)
+    protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req)
             throws Exception {
         final HttpResponse response;
         try {
             response = unwrap().execute(ctx, req);
         } catch (Throwable cause) {
-            reporter.reportSuccessOrFailure(circuitBreaker, ctx, cause);
+            wrapper.reportSuccessOrFailure(ctx, cause);
             throw cause;
         }
-        return reporter.report(ctx, circuitBreaker, response);
+        return wrapper.report(ctx, response);
     }
 
     @Override
-    public void onSuccess(CircuitBreaker circuitBreaker, ClientRequestContext ctx) {
-        circuitBreaker.onSuccess();
-    }
-
-    @Override
-    public void onFailure(CircuitBreaker circuitBreaker, ClientRequestContext ctx) {
-        circuitBreaker.onFailure();
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("wrapper", wrapper)
+                          .toString();
     }
 }

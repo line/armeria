@@ -16,25 +16,18 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.internal.common.circuitbreaker.DefaultHttpCircuitBreakerClientHandler;
 
-/**
- * A collection of callback methods which are invoked by a circuit breaker client
- * implementation when reporting the call result.
- * This can be useful when a single client implementation must support
- * multiple circuit breaker implementations.
- */
-@UnstableApi
-public interface CircuitBreakerClientCallbacks<CB> {
+final class DefaultHttpCircuitBreakerHandlerFactory
+        implements CircuitBreakerHandlerFactory<CircuitBreaker, HttpRequest> {
 
-    /**
-     * Invoked when a call succeeds.
-     */
-    void onSuccess(CB circuitBreaker, ClientRequestContext ctx);
+    static final DefaultHttpCircuitBreakerHandlerFactory INSTANCE =
+            new DefaultHttpCircuitBreakerHandlerFactory();
 
-    /**
-     * Invoked when a call fails.
-     */
-    void onFailure(CB circuitBreaker, ClientRequestContext ctx);
+    @Override
+    public CircuitBreakerClientHandler<CircuitBreaker, HttpRequest> generateHandler(
+            ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
+        return new DefaultHttpCircuitBreakerClientHandler(mapping);
+    }
 }

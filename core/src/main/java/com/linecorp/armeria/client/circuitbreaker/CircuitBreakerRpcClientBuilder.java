@@ -16,26 +16,38 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
 /**
  * Builds a new {@link CircuitBreakerRpcClient} or its decorator function.
  */
 public final class CircuitBreakerRpcClientBuilder
-        extends AbstractCircuitBreakerClientBuilder<RpcResponse> {
+        extends AbstractCircuitBreakerClientBuilder<CircuitBreaker, RpcResponse> {
 
     CircuitBreakerRpcClientBuilder(CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
-        super(ruleWithContent);
+        super(CircuitBreakerMapping.ofDefault(), requireNonNull(ruleWithContent, "ruleWithContent"));
     }
 
     /**
      * Returns a newly-created {@link CircuitBreakerRpcClient} based on the properties of this builder.
      */
     public CircuitBreakerRpcClient build(RpcClient delegate) {
-        return new CircuitBreakerRpcClient(delegate, mapping(), ruleWithContent());
+        return build(delegate, DefaultRpcCircuitBreakerHandlerFactory.INSTANCE);
+    }
+
+    /**
+     * Returns a newly-created {@link CircuitBreakerRpcClient} based on the properties of this builder.
+     */
+    public CircuitBreakerRpcClient build(
+            RpcClient delegate,
+            CircuitBreakerHandlerFactory<CircuitBreaker, RpcRequest> factory) {
+        return new CircuitBreakerRpcClient(delegate, mapping(), ruleWithContent(), factory);
     }
 
     /**
@@ -49,7 +61,7 @@ public final class CircuitBreakerRpcClientBuilder
     // Methods that were overridden to change the return type.
 
     @Override
-    public CircuitBreakerRpcClientBuilder mapping(CircuitBreakerMapping mapping) {
+    public CircuitBreakerRpcClientBuilder mapping(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
         return (CircuitBreakerRpcClientBuilder) super.mapping(mapping);
     }
 }
