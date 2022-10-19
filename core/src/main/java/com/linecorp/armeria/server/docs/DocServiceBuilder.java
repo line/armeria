@@ -63,6 +63,7 @@ public final class DocServiceBuilder {
 
     @Nullable
     private NamedTypeInfoProvider namedTypeInfoProvider;
+    private boolean lazyLoad;
 
     DocServiceBuilder() {}
 
@@ -479,6 +480,16 @@ public final class DocServiceBuilder {
         return this;
     }
 
+    /**
+     * Determines whether the specifications for the {@link DocService} should be loaded on
+     * demand rather than on server startup. This can be useful if loading {@link DocService}
+     * takes a long time and blocks server startup. {@code lazyLoad} is disabled by default.
+     */
+    public DocServiceBuilder lazyLoad(boolean lazyLoad) {
+        this.lazyLoad = lazyLoad;
+        return this;
+    }
+
     private void putExampleRequest(String serviceName, String methodName, String serializedExampleRequest) {
         exampleRequests.computeIfAbsent(serviceName, unused -> ArrayListMultimap.create())
                        .put(methodName, serializedExampleRequest);
@@ -553,6 +564,6 @@ public final class DocServiceBuilder {
     public DocService build() {
         return new DocService(exampleHeaders, exampleRequests, examplePaths, exampleQueries,
                               injectedScriptSuppliers, unifyFilter(includeFilter, excludeFilter),
-                              namedTypeInfoProvider);
+                              namedTypeInfoProvider, lazyLoad);
     }
 }
