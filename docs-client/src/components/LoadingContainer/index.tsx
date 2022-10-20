@@ -41,9 +41,7 @@ const LoadingContainer: React.FunctionComponent<LoadingContainerProps> = ({
     );
   }
   if (status === SpecLoadingStatus.FAILED) {
-    return (
-      <Alert severity="warning">{failureMessage}</Alert>
-    );
+    return <Alert severity="warning">{failureMessage}</Alert>;
   }
   return children;
 };
