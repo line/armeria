@@ -53,6 +53,7 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
+import com.linecorp.armeria.internal.server.ResponseCompleteException;
 import com.linecorp.armeria.server.HttpResponseException;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServiceConfig;
@@ -1049,7 +1050,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         if (requestCause instanceof HttpStatusException || requestCause instanceof HttpResponseException) {
             // Log the requestCause only when an Http{Status,Response}Exception was created with a cause.
             this.requestCause = requestCause.getCause();
-        } else {
+        } else if (!(requestCause instanceof ResponseCompleteException)) {
             this.requestCause = requestCause;
         }
         updateFlags(flags);

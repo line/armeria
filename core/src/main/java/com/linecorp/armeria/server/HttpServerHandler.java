@@ -63,6 +63,7 @@ import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
+import com.linecorp.armeria.internal.server.ResponseCompleteException;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -412,7 +413,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             res.whenComplete().handleAsync((ret, cause) -> {
                 try {
                     if (cause == null) {
-                        req.abort();
+                        req.abort(ResponseCompleteException.get());
                     } else {
                         req.abort(cause);
                     }

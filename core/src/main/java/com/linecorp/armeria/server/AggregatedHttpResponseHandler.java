@@ -80,7 +80,6 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
         logBuilder().startResponse();
         write(response, null);
-        return;
     }
 
     private void write(AggregatedHttpResponse response, @Nullable Throwable cause) {
