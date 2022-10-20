@@ -70,8 +70,10 @@ allprojects {
         jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
         jvmArgs "-XX:HeapDumpPath=${rootProject.buildDir}"
 
-        // required by blockhound for jvm 13+
-        jvmArgs "-XX:+AllowRedefinitionToAddDeleteMethods"
+        // required by blockhound for jvm 13+. See https://github.com/reactor/BlockHound/issues/33.
+        if (rootProject.ext.testJavaVersion >= 13) {
+            jvmArgs "-XX:+AllowRedefinitionToAddDeleteMethods"
+        }
 
         // Use verbose exception/response reporting for easier debugging.
         systemProperty 'com.linecorp.armeria.verboseExceptions', 'true'
