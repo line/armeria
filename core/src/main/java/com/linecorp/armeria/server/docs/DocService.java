@@ -46,7 +46,6 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
-import com.google.common.util.concurrent.MoreExecutors;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -119,8 +118,6 @@ public final class DocService extends SimpleDecoratingHttpService {
     @Nullable
     private Server server;
 
-    private final boolean lazyLoad;
-
     /**
      * Creates a new instance.
      */
@@ -128,7 +125,7 @@ public final class DocService extends SimpleDecoratingHttpService {
         this(/* exampleHeaders */ ImmutableMap.of(), /* exampleRequests */ ImmutableMap.of(),
                 /* examplePaths */ ImmutableMap.of(), /* exampleQueries */ ImmutableMap.of(),
                 /* injectedScriptSuppliers */ ImmutableList.of(), DocServiceBuilder.ALL_SERVICES,
-                                  null, false);
+                                  null);
     }
 
     /**
@@ -139,32 +136,28 @@ public final class DocService extends SimpleDecoratingHttpService {
                Map<String, ListMultimap<String, String>> examplePaths,
                Map<String, ListMultimap<String, String>> exampleQueries,
                List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
-               DocServiceFilter filter, @Nullable NamedTypeInfoProvider namedTypeInfoProvider,
-               boolean lazyLoad) {
+               DocServiceFilter filter, @Nullable NamedTypeInfoProvider namedTypeInfoProvider) {
         this(new ExampleSupport(immutableCopyOf(exampleHeaders, "exampleHeaders"),
                                 immutableCopyOf(exampleRequests, "exampleRequests"),
                                 immutableCopyOf(examplePaths, "examplePaths"),
                                 immutableCopyOf(exampleQueries, "exampleQueries")),
-             injectedScriptSuppliers, filter, namedTypeInfoProvider, lazyLoad);
+             injectedScriptSuppliers, filter, namedTypeInfoProvider);
     }
 
-    DocService(ExampleSupport exampleSupport,
-               List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
-               DocServiceFilter filter, @Nullable NamedTypeInfoProvider namedTypeInfoProvider,
-               boolean lazyLoad) {
+    private DocService(ExampleSupport exampleSupport,
+                       List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
+                       DocServiceFilter filter, @Nullable NamedTypeInfoProvider namedTypeInfoProvider) {
         this(new SpecificationLoader(exampleSupport, filter, namedTypeInfoProvider),
-             injectedScriptSuppliers, lazyLoad);
+             injectedScriptSuppliers);
     }
 
-    DocService(SpecificationLoader specificationLoader,
-               List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
-               boolean lazyLoad) {
+    private DocService(SpecificationLoader specificationLoader,
+                       List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers) {
         super(FileService.builder(new DocServiceVfs(specificationLoader))
                          .serveCompressedFiles(true)
                          .autoDecompress(true)
                          .build());
         this.injectedScriptSuppliers = requireNonNull(injectedScriptSuppliers, "injectedScriptSuppliers");
-        this.lazyLoad = lazyLoad;
     }
 
     private static <T> Map<String, ListMultimap<String, T>> immutableCopyOf(
@@ -201,10 +194,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                               .filter(se -> virtualHosts.contains(se.virtualHost()))
                               .collect(toImmutableList());
                 vfs().specificationLoader.updateServices(services);
-                if (lazyLoad) {
-                    return;
-                }
-                vfs().specificationLoader.preload();
+                vfs().specificationLoader.triggerPreload(config.blockingTaskExecutor());
             }
         });
     }
@@ -262,10 +252,8 @@ public final class DocService extends SimpleDecoratingHttpService {
             return targetPaths.contains(path);
         }
 
-        void preload() {
-            targetPaths.forEach(path -> {
-                load(path, MoreExecutors.directExecutor()).join();
-            });
+        void triggerPreload(Executor executor) {
+            targetPaths.forEach(path -> load(path, executor));
         }
 
         CompletableFuture<AggregatedHttpFile> load(String path, Executor executor) {
@@ -355,14 +343,13 @@ public final class DocService extends SimpleDecoratingHttpService {
 
     static final class DocServiceVfs extends AbstractHttpVfs {
         private final SpecificationLoader specificationLoader;
+
         DocServiceVfs(SpecificationLoader specificationLoader) {
             this.specificationLoader = specificationLoader;
         }
 
         private final HttpVfs staticFiles = HttpVfs.of(DocService.class.getClassLoader(),
                                                        "com/linecorp/armeria/server/docs");
-
-        private final Map<String, CompletableFuture<AggregatedHttpFile>> files = new ConcurrentHashMap<>();
 
         @Deprecated
         @Override
