@@ -157,6 +157,9 @@ dependencies {
     optionalImplementation libs.brotli4j.linux
     optionalImplementation libs.brotli4j.osx
     optionalImplementation libs.brotli4j.windows
+
+    // Blockhound
+    implementation libs.blockhound
 }
 
 if (!rootProject.hasProperty('noWeb')) {

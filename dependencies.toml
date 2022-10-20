@@ -5,6 +5,7 @@ akka-grpc-runtime = "1.0.3"
 apache-httpclient = "4.5.13"
 assertj = "3.23.1"
 awaitility = "4.2.0"
+blockhound = "1.0.6.RELEASE"
 bouncycastle = "1.70"
 brave = "5.14.0"
 brotli4j = "1.8.0"
@@ -164,6 +165,14 @@ version.ref = "assertj"
 [libraries.awaitility]
 module = "org.awaitility:awaitility"
 version.ref = "awaitility"
+
+[libraries.blockhound-junit-platform]
+module="io.projectreactor.tools:blockhound-junit-platform"
+version.ref = "blockhound"
+
+[libraries.blockhound]
+module="io.projectreactor.tools:blockhound"
+version.ref = "blockhound"
 
 [libraries.bouncycastle-bcpkix]
 module = "org.bouncycastle:bcpkix-jdk15on"

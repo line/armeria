@@ -70,6 +70,9 @@ allprojects {
         jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
         jvmArgs "-XX:HeapDumpPath=${rootProject.buildDir}"
 
+        // required by blockhound for jvm 13+
+        jvmArgs "-XX:+AllowRedefinitionToAddDeleteMethods"
+
         // Use verbose exception/response reporting for easier debugging.
         systemProperty 'com.linecorp.armeria.verboseExceptions', 'true'
         systemProperty 'com.linecorp.armeria.verboseResponses', 'true'
@@ -175,6 +178,7 @@ configure(projectsWithFlags('java')) {
         testImplementation libs.apache.httpclient
         testImplementation libs.hamcrest
         testImplementation libs.hamcrest.library
+        testRuntimeOnly libs.blockhound.junit.platform
     }
 
     tasks.withType(JavaCompile) { task ->
