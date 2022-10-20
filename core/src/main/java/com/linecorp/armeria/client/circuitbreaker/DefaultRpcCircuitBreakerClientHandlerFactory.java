@@ -16,18 +16,17 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.RpcRequest;
 
-/**
- * A factory for creating a {@link CircuitBreakerClientHandler}.
- */
-@UnstableApi
-public interface CircuitBreakerHandlerFactory<CB, I extends Request>  {
+final class DefaultRpcCircuitBreakerClientHandlerFactory
+        implements CircuitBreakerClientHandlerFactory<CircuitBreaker, RpcRequest> {
 
-    /**
-     * Generates a {@link CircuitBreakerClientHandler}. One may override this method
-     * to use a custom {@link CircuitBreakerClientHandler} with {@link CircuitBreakerClient}.
-     */
-    CircuitBreakerClientHandler<CB, I> generateHandler(ClientCircuitBreakerGenerator<CB> mapping);
+    public static final DefaultRpcCircuitBreakerClientHandlerFactory INSTANCE =
+            new DefaultRpcCircuitBreakerClientHandlerFactory();
+
+    @Override
+    public CircuitBreakerClientHandler<RpcRequest> generateHandler(
+            ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
+        return new DefaultRpcCircuitBreakerClientHandler(mapping);
+    }
 }

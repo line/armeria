@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static com.linecorp.armeria.client.circuitbreaker.DefaultRpcCircuitBreakerHandlerFactory.INSTANCE;
+import static com.linecorp.armeria.client.circuitbreaker.DefaultRpcCircuitBreakerClientHandlerFactory.INSTANCE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;

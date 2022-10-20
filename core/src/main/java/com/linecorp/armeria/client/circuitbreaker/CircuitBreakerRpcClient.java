@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static com.linecorp.armeria.client.circuitbreaker.DefaultRpcCircuitBreakerHandlerFactory.INSTANCE;
+import static com.linecorp.armeria.client.circuitbreaker.DefaultRpcCircuitBreakerClientHandlerFactory.INSTANCE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
@@ -118,7 +118,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      */
     public static CircuitBreakerRpcClientBuilder builder(
             CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
-        return new CircuitBreakerRpcClientBuilder(ruleWithContent);
+        return new CircuitBreakerRpcClientBuilder(INSTANCE, ruleWithContent);
     }
 
     private final CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent;
@@ -128,25 +128,26 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      */
     CircuitBreakerRpcClient(RpcClient delegate, ClientCircuitBreakerGenerator<CircuitBreaker> mapping,
                             CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent,
-                            CircuitBreakerHandlerFactory<CircuitBreaker, RpcRequest> factory) {
-        super(delegate, factory.generateHandler(mapping));
+                            CircuitBreakerClientHandlerFactory<CircuitBreaker, RpcRequest> factory) {
+        super(delegate, factory, mapping);
         this.ruleWithContent = requireNonNull(ruleWithContent, "ruleWithContent");
     }
 
     @Override
-    protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req)
+    protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req,
+                                    CircuitBreakerClientHandler<RpcRequest> handler)
             throws Exception {
         final RpcResponse response;
         try {
             response = unwrap().execute(ctx, req);
         } catch (Throwable cause) {
-            handler().reportSuccessOrFailure(
+            handler.reportSuccessOrFailure(
                     ctx, ruleWithContent.shouldReportAsSuccess(ctx, null, cause), cause);
             throw cause;
         }
 
         response.handle((unused1, cause) -> {
-            handler().reportSuccessOrFailure(
+            handler.reportSuccessOrFailure(
                     ctx, ruleWithContent.shouldReportAsSuccess(ctx, null, cause), cause);
             return null;
         });

@@ -17,39 +17,19 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RpcRequest;
-import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.circuitbreaker.AbstractCircuitBreakerClientHandler;
 
-import io.netty.util.AttributeKey;
-
 class DefaultRpcCircuitBreakerClientHandler
-        extends AbstractCircuitBreakerClientHandler<CircuitBreaker, RpcRequest, RpcResponse> {
-
-    private static final AttributeKey<CircuitBreaker> CIRCUIT_BREAKER =
-            AttributeKey.valueOf(DefaultRpcCircuitBreakerClientHandler.class, "CIRCUIT_BREAKER");
+        extends AbstractCircuitBreakerClientHandler<CircuitBreaker, RpcRequest> {
 
     DefaultRpcCircuitBreakerClientHandler(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
         super(mapping);
     }
 
-    private static CircuitBreaker circuitBreaker(RequestContext ctx) {
-        final CircuitBreaker circuitBreaker = ctx.attr(CIRCUIT_BREAKER);
-        if (circuitBreaker == null) {
-            throw new IllegalStateException("Attempting to report to a null CircuitBreaker");
-        }
-        return circuitBreaker;
-    }
-
     @Override
-    protected void circuitBreaker(RequestContext ctx, CircuitBreaker circuitBreaker) {
-        ctx.setAttr(CIRCUIT_BREAKER, circuitBreaker);
-    }
-
-    @Override
-    protected void tryRequest(RequestContext ctx, CircuitBreaker circuitBreaker) {
+    protected void tryRequest(ClientRequestContext ctx, CircuitBreaker circuitBreaker) {
         if (!circuitBreaker.tryRequest()) {
             throw new FailFastException(circuitBreaker);
         }
@@ -57,11 +37,11 @@ class DefaultRpcCircuitBreakerClientHandler
 
     @Override
     public void onSuccess(ClientRequestContext ctx) {
-        circuitBreaker(ctx).onSuccess();
+        circuitBreaker().onSuccess();
     }
 
     @Override
     public void onFailure(ClientRequestContext ctx, @Nullable Throwable cause) {
-        circuitBreaker(ctx).onFailure();
+        circuitBreaker().onFailure();
     }
 }

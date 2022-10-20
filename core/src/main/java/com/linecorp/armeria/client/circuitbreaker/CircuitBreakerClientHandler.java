@@ -26,11 +26,11 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 /**
  * A generic handler containing callback methods which are invoked by
  * {@link CircuitBreakerClient}. It may be useful to create a custom
- * implementation in conjunction with {@link CircuitBreakerHandlerFactory}
+ * implementation in conjunction with {@link CircuitBreakerClientHandlerFactory}
  * if one wishes to use a custom CircuitBreaker with {@link CircuitBreakerClient}.
  */
 @UnstableApi
-public interface CircuitBreakerClientHandler<CB, I extends Request> {
+public interface CircuitBreakerClientHandler<I extends Request> {
 
     /**
      * Invoked by {@link CircuitBreakerClient} right before executing a request.

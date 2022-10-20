@@ -18,49 +18,86 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import java.util.function.Function;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Builds a new {@link CircuitBreakerClient} or its decorator function.
  */
-public final class CircuitBreakerClientBuilder extends HttpCircuitBreakerClientBuilder<CircuitBreaker> {
+public final class CircuitBreakerClientBuilder<CB>
+        extends AbstractCircuitBreakerClientBuilder<CB, HttpRequest, HttpResponse> {
+
+    static final int DEFAULT_MAX_CONTENT_LENGTH = Integer.MAX_VALUE;
+    private final boolean needsContentInRule;
+    private final int maxContentLength;
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
      */
-    CircuitBreakerClientBuilder(CircuitBreakerRule rule) {
-        super(CircuitBreakerMapping.ofDefault(), rule);
+    @UnstableApi
+    public CircuitBreakerClientBuilder(CircuitBreakerClientHandlerFactory<CB, HttpRequest> defaultFactory,
+                                       ClientCircuitBreakerGenerator<CB> defaultMapping,
+                                       CircuitBreakerRule rule) {
+        super(defaultFactory, defaultMapping, rule);
+        needsContentInRule = false;
+        maxContentLength = 0;
     }
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRuleWithContent} and
      * the specified {@code maxContentLength}.
      */
-    CircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
-                                int maxContentLength) {
-        super(CircuitBreakerMapping.ofDefault(), ruleWithContent, maxContentLength);
+    @UnstableApi
+    public CircuitBreakerClientBuilder(CircuitBreakerClientHandlerFactory<CB, HttpRequest> defaultFactory,
+                                       ClientCircuitBreakerGenerator<CB> defaultMapping,
+                                       CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
+                                       int maxContentLength) {
+        super(defaultFactory, defaultMapping, ruleWithContent);
+        needsContentInRule = true;
+        this.maxContentLength = maxContentLength;
     }
 
     /**
      * Returns a newly-created decorator that decorates an {@link HttpClient} with a new
      * {@link CircuitBreakerClient} based on the properties of this builder.
      */
-    @Override
     public Function<? super HttpClient, CircuitBreakerClient> newDecorator() {
-        return newDecorator(DefaultHttpCircuitBreakerHandlerFactory.INSTANCE);
+        return this::build;
+    }
+
+    /**
+     * Returns a newly-created {@link CircuitBreakerClient} based on the properties of this builder.
+     */
+    public CircuitBreakerClient build(HttpClient delegate) {
+        if (needsContentInRule) {
+            return new CircuitBreakerClient(delegate, mapping(), ruleWithContent(),
+                                            maxContentLength, factory());
+        }
+        return new CircuitBreakerClient(delegate, mapping(), rule(), factory());
     }
 
     // Methods that were overridden to change the return type.
 
     @Override
-    public CircuitBreakerClientBuilder mapping(
-            ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
-        return (CircuitBreakerClientBuilder) super.mapping(mapping);
+    public CircuitBreakerClientBuilder<CB> mapping(ClientCircuitBreakerGenerator<CB> mapping) {
+        return (CircuitBreakerClientBuilder<CB>) super.mapping(mapping);
     }
 
     @Override
-    public CircuitBreakerClient build(HttpClient delegate) {
-        return build(delegate, DefaultHttpCircuitBreakerHandlerFactory.INSTANCE);
+    public CircuitBreakerClientBuilder<CB> factory(
+            CircuitBreakerClientHandlerFactory<CB, HttpRequest> factory) {
+        return (CircuitBreakerClientBuilder<CB>) super.factory(factory);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("needsContentInRule", needsContentInRule)
+                          .add("maxContentLength", maxContentLength)
+                          .toString();
     }
 }

@@ -17,17 +17,17 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.internal.common.circuitbreaker.DefaultHttpCircuitBreakerClientHandler;
+import com.linecorp.armeria.internal.common.circuitbreaker.DefaultCircuitBreakerClientHandler;
 
-final class DefaultHttpCircuitBreakerHandlerFactory
-        implements CircuitBreakerHandlerFactory<CircuitBreaker, HttpRequest> {
+final class DefaultCircuitBreakerClientHandlerFactory
+        implements CircuitBreakerClientHandlerFactory<CircuitBreaker, HttpRequest> {
 
-    static final DefaultHttpCircuitBreakerHandlerFactory INSTANCE =
-            new DefaultHttpCircuitBreakerHandlerFactory();
+    static final DefaultCircuitBreakerClientHandlerFactory INSTANCE =
+            new DefaultCircuitBreakerClientHandlerFactory();
 
     @Override
-    public CircuitBreakerClientHandler<CircuitBreaker, HttpRequest> generateHandler(
+    public CircuitBreakerClientHandler<HttpRequest> generateHandler(
             ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
-        return new DefaultHttpCircuitBreakerClientHandler(mapping);
+        return new DefaultCircuitBreakerClientHandler(mapping);
     }
 }

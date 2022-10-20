@@ -31,9 +31,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
-final class HttpCircuitBreakerClientHandlerWrapper<CB, I extends Request> {
+final class CircuitBreakerClientHandlerReporter<I extends Request> {
 
-    private final CircuitBreakerClientHandler<CB, I> handler;
     @Nullable
     private final CircuitBreakerRule rule;
     @Nullable
@@ -43,13 +42,10 @@ final class HttpCircuitBreakerClientHandlerWrapper<CB, I extends Request> {
     private final boolean needsContentInRule;
     private final int maxContentLength;
 
-    HttpCircuitBreakerClientHandlerWrapper(
-            CircuitBreakerClientHandler<CB, I> handler,
-            @Nullable CircuitBreakerRule rule,
-            @Nullable CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
-            boolean needsContentInRule,
-            int maxContentLength) {
-        this.handler = handler;
+    CircuitBreakerClientHandlerReporter(@Nullable CircuitBreakerRule rule,
+                                        @Nullable CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
+                                        boolean needsContentInRule,
+                                        int maxContentLength) {
         this.rule = rule;
         this.ruleWithContent = ruleWithContent;
         this.maxContentLength = maxContentLength;
@@ -61,21 +57,23 @@ final class HttpCircuitBreakerClientHandlerWrapper<CB, I extends Request> {
         }
     }
 
-    HttpResponse report(ClientRequestContext ctx, HttpResponse response) {
+    HttpResponse report(ClientRequestContext ctx, HttpResponse response,
+                        CircuitBreakerClientHandler<I> handler) {
         final CircuitBreakerRule rule = needsContentInRule ? fromRuleWithContent() : rule();
         final RequestLogProperty property =
                 rule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_TRAILERS
                                                 : RequestLogProperty.RESPONSE_HEADERS;
 
         if (!needsContentInRule) {
-            reportResult(ctx, property);
+            reportResult(ctx, property, handler);
             return response;
         } else {
-            return reportResultWithContent(ctx, response, property);
+            return reportResultWithContent(ctx, response, property, handler);
         }
     }
 
-    private void reportResult(ClientRequestContext ctx, RequestLogProperty logProperty) {
+    private void reportResult(ClientRequestContext ctx, RequestLogProperty logProperty,
+                              CircuitBreakerClientHandler<I> handler) {
         ctx.log().whenAvailable(logProperty).thenAccept(log -> {
             final Throwable resCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
@@ -84,7 +82,8 @@ final class HttpCircuitBreakerClientHandlerWrapper<CB, I extends Request> {
     }
 
     private HttpResponse reportResultWithContent(ClientRequestContext ctx, HttpResponse response,
-                                                 RequestLogProperty logProperty) {
+                                                 RequestLogProperty logProperty,
+                                                 CircuitBreakerClientHandler<I> handler) {
         final HttpResponseDuplicator duplicator = response.toDuplicator(ctx.eventLoop().withoutContext(),
                                                                         ctx.maxResponseLength());
         final TruncatingHttpResponse truncatingHttpResponse =
@@ -109,13 +108,10 @@ final class HttpCircuitBreakerClientHandlerWrapper<CB, I extends Request> {
         return duplicate;
     }
 
-    void reportSuccessOrFailure(ClientRequestContext ctx, Throwable cause) {
+    void reportSuccessOrFailure(ClientRequestContext ctx, Throwable cause,
+                                CircuitBreakerClientHandler<I> handler) {
         final CircuitBreakerRule rule = needsContentInRule ? fromRuleWithContent() : rule();
         handler.reportSuccessOrFailure(ctx, rule.shouldReportAsSuccess(ctx, cause), cause);
-    }
-
-    private CircuitBreakerClientHandler<CB, I> handler() {
-        return handler;
     }
 
     private CircuitBreakerRule rule() {
@@ -136,7 +132,6 @@ final class HttpCircuitBreakerClientHandlerWrapper<CB, I extends Request> {
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("handler", handler)
                           .add("rule", rule)
                           .add("ruleWithContent", ruleWithContent)
                           .add("fromRuleWithContent", fromRuleWithContent)

@@ -28,17 +28,20 @@ import com.linecorp.armeria.common.RpcResponse;
  * Builds a new {@link CircuitBreakerRpcClient} or its decorator function.
  */
 public final class CircuitBreakerRpcClientBuilder
-        extends AbstractCircuitBreakerClientBuilder<CircuitBreaker, RpcResponse> {
+        extends AbstractCircuitBreakerClientBuilder<CircuitBreaker, RpcRequest, RpcResponse> {
 
-    CircuitBreakerRpcClientBuilder(CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
-        super(CircuitBreakerMapping.ofDefault(), requireNonNull(ruleWithContent, "ruleWithContent"));
+    CircuitBreakerRpcClientBuilder(
+            CircuitBreakerClientHandlerFactory<CircuitBreaker, RpcRequest> defaultFactory,
+            CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        super(defaultFactory, CircuitBreakerMapping.ofDefault(),
+              requireNonNull(ruleWithContent, "ruleWithContent"));
     }
 
     /**
      * Returns a newly-created {@link CircuitBreakerRpcClient} based on the properties of this builder.
      */
     public CircuitBreakerRpcClient build(RpcClient delegate) {
-        return build(delegate, DefaultRpcCircuitBreakerHandlerFactory.INSTANCE);
+        return build(delegate, DefaultRpcCircuitBreakerClientHandlerFactory.INSTANCE);
     }
 
     /**
@@ -46,7 +49,7 @@ public final class CircuitBreakerRpcClientBuilder
      */
     public CircuitBreakerRpcClient build(
             RpcClient delegate,
-            CircuitBreakerHandlerFactory<CircuitBreaker, RpcRequest> factory) {
+            CircuitBreakerClientHandlerFactory<CircuitBreaker, RpcRequest> factory) {
         return new CircuitBreakerRpcClient(delegate, mapping(), ruleWithContent(), factory);
     }
 
@@ -63,5 +66,11 @@ public final class CircuitBreakerRpcClientBuilder
     @Override
     public CircuitBreakerRpcClientBuilder mapping(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
         return (CircuitBreakerRpcClientBuilder) super.mapping(mapping);
+    }
+
+    @Override
+    public CircuitBreakerRpcClientBuilder factory(
+            CircuitBreakerClientHandlerFactory<CircuitBreaker, RpcRequest> factory) {
+        return (CircuitBreakerRpcClientBuilder) super.factory(factory);
     }
 }
