@@ -15,14 +15,15 @@
  */
 package com.linecorp.armeria.internal.server;
 
+import com.linecorp.armeria.common.CancellationException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 
 /**
- * A special {@link RuntimeException} that aborts an {@link HttpRequest} after the corresponding
+ * A special {@link CancellationException} that aborts an {@link HttpRequest} after the corresponding
  * {@link HttpResponse} is completed.
  */
-public final class ResponseCompleteException extends RuntimeException {
+public final class ResponseCompleteException extends CancellationException {
 
     private static final long serialVersionUID = 6090278381004263949L;
 

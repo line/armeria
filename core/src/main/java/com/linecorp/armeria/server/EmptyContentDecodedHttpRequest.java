@@ -133,11 +133,17 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
                           SubscriptionOption... options) {
         requireNonNull(subscriber, "subscriber");
         requireNonNull(executor, "executor");
-        executor.execute(() -> {
-            subscriber.onSubscribe(NoopSubscription.get());
-            subscriber.onComplete();
-            completionFuture.complete(null);
-        });
+        if (executor.inEventLoop()) {
+            subscribe0(subscriber);
+        } else {
+            executor.execute(() -> subscribe0(subscriber));
+        }
+    }
+
+    private void subscribe0(Subscriber<? super HttpObject> subscriber) {
+        subscriber.onSubscribe(NoopSubscription.get());
+        subscriber.onComplete();
+        completionFuture.complete(null);
     }
 
     @Override
