@@ -151,7 +151,11 @@ public final class ContentPreviewingService extends SimpleDecoratingHttpService 
             final ContentPreviewer requestContentPreviewer =
                     contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
             req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer, requestPreviewSanitizer);
+        } else {
+            // Set empty String.
+            ctx.logBuilder().requestContentPreview("");
         }
+
         ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
         final HttpResponse res = unwrap().serve(ctx, req);
         return setUpResponseContentPreviewer(contentPreviewerFactory, ctx, res, responsePreviewSanitizer);
