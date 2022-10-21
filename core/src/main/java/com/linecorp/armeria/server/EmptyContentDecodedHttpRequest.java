@@ -57,6 +57,9 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     private ServiceRequestContext ctx;
 
     @Nullable
+    private CompletableFuture<AggregatedHttpRequest> aggregateFuture;
+
+    @Nullable
     private HttpResponse response;
     private boolean isResponseAborted;
 
@@ -169,8 +172,12 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
 
     @Override
     public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
+        if (aggregateFuture != null) {
+            return aggregateFuture;
+        }
         completionFuture.complete(null);
-        return UnmodifiableFuture.completedFuture(AggregatedHttpRequest.of(headers));
+        aggregateFuture = UnmodifiableFuture.completedFuture(AggregatedHttpRequest.of(headers));
+        return aggregateFuture;
     }
 
     @Override
