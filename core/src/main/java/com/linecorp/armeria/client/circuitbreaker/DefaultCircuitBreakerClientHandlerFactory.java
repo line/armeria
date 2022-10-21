@@ -17,7 +17,6 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.internal.common.circuitbreaker.DefaultCircuitBreakerClientHandler;
 
 final class DefaultCircuitBreakerClientHandlerFactory
         implements CircuitBreakerClientHandlerFactory<CircuitBreaker, HttpRequest> {
@@ -28,6 +27,6 @@ final class DefaultCircuitBreakerClientHandlerFactory
     @Override
     public CircuitBreakerClientHandler<HttpRequest> generateHandler(
             ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
-        return new DefaultCircuitBreakerClientHandler(mapping);
+        return new DefaultCircuitBreakerClientHandler<>(mapping);
     }
 }

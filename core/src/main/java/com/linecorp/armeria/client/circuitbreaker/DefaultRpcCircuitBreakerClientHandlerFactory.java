@@ -21,12 +21,12 @@ import com.linecorp.armeria.common.RpcRequest;
 final class DefaultRpcCircuitBreakerClientHandlerFactory
         implements CircuitBreakerClientHandlerFactory<CircuitBreaker, RpcRequest> {
 
-    public static final DefaultRpcCircuitBreakerClientHandlerFactory INSTANCE =
+    static final DefaultRpcCircuitBreakerClientHandlerFactory INSTANCE =
             new DefaultRpcCircuitBreakerClientHandlerFactory();
 
     @Override
     public CircuitBreakerClientHandler<RpcRequest> generateHandler(
             ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
-        return new DefaultRpcCircuitBreakerClientHandler(mapping);
+        return new DefaultCircuitBreakerClientHandler<>(mapping);
     }
 }

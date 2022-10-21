@@ -18,31 +18,15 @@ package com.linecorp.armeria.internal.common.circuitbreaker;
 
 import java.util.concurrent.CompletionStage;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.google.common.base.MoreObjects;
-
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerAbortException;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClientHandler;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerDecision;
-import com.linecorp.armeria.client.circuitbreaker.ClientCircuitBreakerGenerator;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.CompletionActions;
 
-public abstract class AbstractCircuitBreakerClientHandler<CB, I extends Request>
+public abstract class AbstractCircuitBreakerClientHandler<I extends Request>
         implements CircuitBreakerClientHandler<I> {
-
-    private static final Logger logger = LoggerFactory.getLogger(AbstractCircuitBreakerClientHandler.class);
-    private final ClientCircuitBreakerGenerator<CB> mapping;
-    @Nullable
-    private CB circuitBreaker;
-
-    protected AbstractCircuitBreakerClientHandler(ClientCircuitBreakerGenerator<CB> mapping) {
-        this.mapping = mapping;
-    }
 
     @Override
     public void reportSuccessOrFailure(ClientRequestContext ctx,
@@ -63,34 +47,7 @@ public abstract class AbstractCircuitBreakerClientHandler<CB, I extends Request>
         }).exceptionally(CompletionActions::log);
     }
 
-    protected final CB circuitBreaker() {
-        if (circuitBreaker == null) {
-            throw new IllegalStateException("Attempting to report to a null CircuitBreaker");
-        }
-        return circuitBreaker;
-    }
-
-    protected abstract void tryRequest(ClientRequestContext ctx, CB circuitBreaker);
-
-    @Override
-    public void tryAcquireAndRequest(ClientRequestContext ctx, I req) {
-        try {
-            circuitBreaker = mapping.get(ctx, req);
-        } catch (Throwable t) {
-            logger.warn("Failed to get a circuit breaker from mapping", t);
-            throw new CircuitBreakerAbortException(t);
-        }
-        tryRequest(ctx, circuitBreaker);
-    }
-
     protected abstract void onSuccess(ClientRequestContext ctx);
 
     protected abstract void onFailure(ClientRequestContext ctx, @Nullable Throwable throwable);
-
-    @Override
-    public String toString() {
-        return MoreObjects.toStringHelper(this)
-                          .add("mapping", mapping)
-                          .toString();
-    }
 }

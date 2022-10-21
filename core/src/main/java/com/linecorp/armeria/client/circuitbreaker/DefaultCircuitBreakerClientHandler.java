@@ -16,23 +16,45 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.common.RpcRequest;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.circuitbreaker.AbstractCircuitBreakerClientHandler;
 
-class DefaultRpcCircuitBreakerClientHandler
-        extends AbstractCircuitBreakerClientHandler<CircuitBreaker, RpcRequest> {
+final class DefaultCircuitBreakerClientHandler<I extends Request>
+        extends AbstractCircuitBreakerClientHandler<I> {
 
-    DefaultRpcCircuitBreakerClientHandler(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
-        super(mapping);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultCircuitBreakerClientHandler.class);
+
+    private final ClientCircuitBreakerGenerator<CircuitBreaker> mapping;
+    @Nullable
+    CircuitBreaker circuitBreaker;
+
+    DefaultCircuitBreakerClientHandler(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
+        this.mapping = mapping;
     }
 
     @Override
-    protected void tryRequest(ClientRequestContext ctx, CircuitBreaker circuitBreaker) {
+    public void tryAcquireAndRequest(ClientRequestContext ctx, I req) {
+        try {
+            circuitBreaker = mapping.get(ctx, req);
+        } catch (Throwable t) {
+            logger.warn("Failed to get a circuit breaker from mapping", t);
+            throw new CircuitBreakerAbortException(t);
+        }
         if (!circuitBreaker.tryRequest()) {
             throw new FailFastException(circuitBreaker);
         }
+    }
+
+    private CircuitBreaker circuitBreaker() {
+        if (circuitBreaker == null) {
+            throw new IllegalStateException("Attempting to report to a null CircuitBreaker");
+        }
+        return circuitBreaker;
     }
 
     @Override
@@ -41,7 +63,7 @@ class DefaultRpcCircuitBreakerClientHandler
     }
 
     @Override
-    public void onFailure(ClientRequestContext ctx, @Nullable Throwable cause) {
+    public void onFailure(ClientRequestContext ctx, @Nullable Throwable throwable) {
         circuitBreaker().onFailure();
     }
 }

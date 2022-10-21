@@ -31,7 +31,7 @@ public final class CircuitBreakerAbortException extends RuntimeException {
     private static final long serialVersionUID = -6250018990113862876L;
 
     private static final CircuitBreakerAbortException INSTANCE =
-            new CircuitBreakerAbortException(new Throwable());
+            new CircuitBreakerAbortException();
 
     /**
      * Returns a singleton instance of {@link CircuitBreakerAbortException}.
@@ -45,5 +45,8 @@ public final class CircuitBreakerAbortException extends RuntimeException {
      */
     public CircuitBreakerAbortException(Throwable t) {
         super(t);
+    }
+
+    private CircuitBreakerAbortException() {
     }
 }
