@@ -97,7 +97,7 @@ internal fun isMarkedNullable(element: AnnotatedElement): Boolean {
                         ?.type
                         ?.isMarkedNullable
                         ?: false
-                is Constructor<*> -> {
+                is Constructor<*> ->
                     executable
                         .kotlinFunction
                         ?.valueParameters
@@ -105,7 +105,6 @@ internal fun isMarkedNullable(element: AnnotatedElement): Boolean {
                         ?.type
                         ?.isMarkedNullable
                         ?: false
-                }
                 else -> false
             }
         }

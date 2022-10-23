@@ -74,7 +74,7 @@ class MarkdownDescriptionService {
         ## Structs description
         ### Structs description subtitle
         > Support blockquotes
-    """,
+        """,
         markup = Markup.MARKDOWN
     )
     data class MarkdownDescriptionResult(
