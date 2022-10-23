@@ -87,22 +87,24 @@ internal fun isMarkedNullable(element: AnnotatedElement): Boolean {
             val executable = element.declaringExecutable
             val i = executable.parameters.indexOf(element)
             when (executable) {
-                is Method -> executable
-                    .kotlinFunction
-                    // Should be `valueParameters` to exclude the `this` instance and
-                    // the extension receiver parameter.
-                    ?.valueParameters
-                    ?.get(i)
-                    ?.type
-                    ?.isMarkedNullable
-                    ?: false
-                is Constructor<*> -> { executable
-                    .kotlinFunction
-                    ?.valueParameters
-                    ?.get(i)
-                    ?.type
-                    ?.isMarkedNullable
-                    ?: false
+                is Method ->
+                    executable
+                        .kotlinFunction
+                        // Should be `valueParameters` to exclude the `this` instance and
+                        // the extension receiver parameter.
+                        ?.valueParameters
+                        ?.get(i)
+                        ?.type
+                        ?.isMarkedNullable
+                        ?: false
+                is Constructor<*> -> {
+                    executable
+                        .kotlinFunction
+                        ?.valueParameters
+                        ?.get(i)
+                        ?.type
+                        ?.isMarkedNullable
+                        ?: false
                 }
                 else -> false
             }

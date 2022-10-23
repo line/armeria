@@ -17,8 +17,6 @@ configure(projectsWithFlags('kotlin')) {
         apply plugin: "org.jlleitschuh.gradle.ktlint"
 
         ktlint {
-            // https://github.com/pinterest/ktlint/issues/764
-            version.set("0.36.0")
             verbose.set(true)
             reporters {
                 reporter "html"

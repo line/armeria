@@ -23,7 +23,8 @@ import com.linecorp.armeria.server.docs.Markup
 
 @CoroutineNameDecorator(name = "default")
 class MermaidDescriptionService {
-    @Description(value = """
+    @Description(
+        value = """
         gantt
             title A Gantt Diagram
             dateFormat  YYYY-MM-DD
@@ -33,7 +34,9 @@ class MermaidDescriptionService {
             section Another
             Task in sec      :2014-01-12  , 12d
             another task      : 24d
-    """, markup = Markup.MERMAID)
+    """,
+        markup = Markup.MERMAID
+    )
     @Get("/mermaid")
     fun mermaid(
         @Param param1: String

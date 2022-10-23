@@ -51,7 +51,8 @@ class MarkdownDescriptionService {
           .build()
           .start();
         ```
-        """, markup = Markup.MARKDOWN
+        """,
+        markup = Markup.MARKDOWN
     )
     @Get("/markdown")
     fun markdown(
@@ -68,11 +69,14 @@ class MarkdownDescriptionService {
         )
     }
 
-    @Description(value = """
+    @Description(
+        value = """
         ## Structs description
         ### Structs description subtitle
         > Support blockquotes
-    """, markup = Markup.MARKDOWN)
+    """,
+        markup = Markup.MARKDOWN
+    )
     data class MarkdownDescriptionResult(
         @Description(value = "result1 description (default)", markup = Markup.MARKDOWN)
         val result1: String,

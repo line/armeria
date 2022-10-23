@@ -60,7 +60,7 @@ class ClientCoroutineTest {
                 assertThat(ex.cause).isInstanceOf(UnsupportedMediaTypeException::class.java)
                     .hasMessageContaining(
                         "Content type 'text/plain;charset=utf-8' not supported for " +
-                        "bodyType=com.linecorp.armeria.spring.kotlin.Abnormal"
+                            "bodyType=com.linecorp.armeria.spring.kotlin.Abnormal"
                     )
             }
         }
