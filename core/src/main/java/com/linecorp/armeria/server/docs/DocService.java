@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -31,6 +32,8 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
@@ -56,6 +59,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ServerCacheControl;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
@@ -107,6 +111,9 @@ public final class DocService extends SimpleDecoratingHttpService {
         logger.debug("Available {}s: {}", NamedTypeInfoProvider.class.getSimpleName(),
                      spiNamedTypeInfoProviders);
     }
+
+    private static final ExecutorService DEFAULT_EXECUTOR = Executors.newSingleThreadScheduledExecutor(
+            ThreadFactories.newThreadFactory("docservice-loader", false));
     /**
      * Returns a new {@link DocServiceBuilder}.
      */
@@ -194,9 +201,10 @@ public final class DocService extends SimpleDecoratingHttpService {
                               .filter(se -> virtualHosts.contains(se.virtualHost()))
                               .collect(toImmutableList());
                 vfs().specificationLoader.updateServices(services);
-                vfs().specificationLoader.triggerPreload(config.blockingTaskExecutor());
+                vfs().specificationLoader.triggerPreload(DEFAULT_EXECUTOR);
             }
         });
+        server.closeOnJvmShutdown(DEFAULT_EXECUTOR::shutdown);
     }
 
     private DocServiceVfs vfs() {
@@ -248,7 +256,7 @@ public final class DocService extends SimpleDecoratingHttpService {
             this.namedTypeInfoProvider = composeNamedTypeInfoProvider(namedTypeInfoProvider);
         }
 
-        boolean supports(String path) {
+        boolean contains(String path) {
             return targetPaths.contains(path);
         }
 
@@ -257,12 +265,13 @@ public final class DocService extends SimpleDecoratingHttpService {
         }
 
         CompletableFuture<AggregatedHttpFile> load(String path, Executor executor) {
+            checkState(!servicesRef.get().isEmpty(), "There are no services to load for DocService.");
             if (versionsPath.equals(path)) {
                 return loadVersions(executor);
             } else if (specificationPath.equals(path)) {
                 return loadSpecifications(executor);
             } else {
-                throw new IllegalStateException("Unexpected path: " + path);
+                throw new Error(); // Should never reach here.
             }
         }
 
@@ -365,7 +374,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                 Executor fileReadExecutor, String path, Clock clock,
                 @Nullable String contentEncoding, HttpHeaders additionalHeaders,
                 MediaTypeResolver mediaTypeResolver) {
-            if (specificationLoader.supports(path)) {
+            if (specificationLoader.contains(path)) {
                 return HttpFile.from(specificationLoader.load(path, fileReadExecutor).thenApply(file -> {
                     assert file != AggregatedHttpFile.nonExistent();
                     final HttpFileBuilder builder = HttpFile.builder(file.content(),

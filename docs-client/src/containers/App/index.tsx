@@ -372,14 +372,21 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
 };
 
 interface RouterServicesProps {
+  versions: Versions | undefined;
   specification: Specification;
 }
 
 const RouterServices: React.FunctionComponent<RouterServicesProps> = ({
+  versions,
   specification,
 }) => {
   return (
     <div>
+      <Route
+        exact
+        path="/"
+        render={(p) => <HomePage {...p} versions={versions} />}
+      />
       <Route
         path="/enums/:name"
         render={(p) => <EnumPage {...p} specification={specification} />}
@@ -605,16 +612,11 @@ const App: React.FunctionComponent<Props> = (props) => {
       </Hidden>
       <main className={classes.content}>
         <div className={classes.toolbar} />
-        <Route
-          exact
-          path="/"
-          render={(p) => <HomePage {...p} versions={versions} />}
-        />
         <LoadingContainer
           status={specLoadingStatus}
           failureMessage="Failed to load specifications. Try refreshing!"
         >
-          <RouterServices specification={specification} />
+          <RouterServices versions={versions} specification={specification} />
         </LoadingContainer>
       </main>
     </div>
