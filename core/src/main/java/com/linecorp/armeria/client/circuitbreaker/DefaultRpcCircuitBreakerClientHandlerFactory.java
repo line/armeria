@@ -25,8 +25,8 @@ final class DefaultRpcCircuitBreakerClientHandlerFactory
             new DefaultRpcCircuitBreakerClientHandlerFactory();
 
     @Override
-    public CircuitBreakerClientHandler<RpcRequest> generateHandler(
+    public ClientCircuitBreakerHandler<RpcRequest> generateHandler(
             ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
-        return new DefaultCircuitBreakerClientHandler<>(mapping);
+        return new DefaultClientCircuitBreakerHandler<>(mapping);
     }
 }

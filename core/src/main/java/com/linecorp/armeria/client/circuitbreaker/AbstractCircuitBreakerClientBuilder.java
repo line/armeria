@@ -91,7 +91,7 @@ public abstract class AbstractCircuitBreakerClientBuilder<CB, I extends Request,
 
     /**
      * Sets the {@link CircuitBreakerClientHandlerFactory} which generates the
-     * {@link CircuitBreakerClientHandler} for this client.
+     * {@link ClientCircuitBreakerHandler} for this client.
      */
     public AbstractCircuitBreakerClientBuilder<CB, I, O> factory(
             CircuitBreakerClientHandlerFactory<CB, I> factory) {
@@ -101,7 +101,7 @@ public abstract class AbstractCircuitBreakerClientBuilder<CB, I extends Request,
 
     /**
      * Returns the {@link CircuitBreakerClientHandlerFactory} which generates the
-     * {@link CircuitBreakerClientHandler} for this client.
+     * {@link ClientCircuitBreakerHandler} for this client.
      */
     protected CircuitBreakerClientHandlerFactory<CB, I> factory() {
         return factory;

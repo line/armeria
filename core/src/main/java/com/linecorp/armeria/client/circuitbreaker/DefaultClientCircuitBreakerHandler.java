@@ -22,18 +22,16 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.circuitbreaker.AbstractCircuitBreakerClientHandler;
 
-final class DefaultCircuitBreakerClientHandler<I extends Request>
-        extends AbstractCircuitBreakerClientHandler<I> {
+final class DefaultClientCircuitBreakerHandler<I extends Request> implements ClientCircuitBreakerHandler<I> {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultCircuitBreakerClientHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultClientCircuitBreakerHandler.class);
 
     private final ClientCircuitBreakerGenerator<CircuitBreaker> mapping;
     @Nullable
     CircuitBreaker circuitBreaker;
 
-    DefaultCircuitBreakerClientHandler(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
+    DefaultClientCircuitBreakerHandler(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
         this.mapping = mapping;
     }
 

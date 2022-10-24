@@ -20,14 +20,14 @@ import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A factory for creating a {@link CircuitBreakerClientHandler}.
+ * A factory for creating a {@link ClientCircuitBreakerHandler}.
  */
 @UnstableApi
 public interface CircuitBreakerClientHandlerFactory<CB, I extends Request>  {
 
     /**
-     * Generates a {@link CircuitBreakerClientHandler}. One may override this method
-     * to use a custom {@link CircuitBreakerClientHandler} with {@link CircuitBreakerClient}.
+     * Generates a {@link ClientCircuitBreakerHandler}. One may override this method
+     * to use a custom {@link ClientCircuitBreakerHandler} with {@link CircuitBreakerClient}.
      */
-    CircuitBreakerClientHandler<I> generateHandler(ClientCircuitBreakerGenerator<CB> mapping);
+    ClientCircuitBreakerHandler<I> generateHandler(ClientCircuitBreakerGenerator<CB> mapping);
 }

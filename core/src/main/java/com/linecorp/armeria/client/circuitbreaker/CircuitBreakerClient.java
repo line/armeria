@@ -283,7 +283,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
 
     @Override
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req,
-                                     CircuitBreakerClientHandler<HttpRequest> handler)
+                                     ClientCircuitBreakerHandler<HttpRequest> handler)
             throws Exception {
 
         final HttpResponse response;

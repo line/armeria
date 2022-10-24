@@ -25,8 +25,8 @@ final class DefaultCircuitBreakerClientHandlerFactory
             new DefaultCircuitBreakerClientHandlerFactory();
 
     @Override
-    public CircuitBreakerClientHandler<HttpRequest> generateHandler(
+    public ClientCircuitBreakerHandler<HttpRequest> generateHandler(
             ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
-        return new DefaultCircuitBreakerClientHandler<>(mapping);
+        return new DefaultClientCircuitBreakerHandler<>(mapping);
     }
 }

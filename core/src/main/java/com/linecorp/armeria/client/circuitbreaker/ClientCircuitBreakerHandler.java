@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import java.util.concurrent.CompletionStage;
-
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -30,7 +28,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * if one wishes to use a custom CircuitBreaker with {@link CircuitBreakerClient}.
  */
 @UnstableApi
-public interface CircuitBreakerClientHandler<I extends Request> {
+public interface ClientCircuitBreakerHandler<I extends Request> {
 
     /**
      * Invoked by {@link CircuitBreakerClient} right before executing a request.
@@ -48,21 +46,17 @@ public interface CircuitBreakerClientHandler<I extends Request> {
     void tryAcquireAndRequest(ClientRequestContext ctx, I req);
 
     /**
-     * Invoked by {@link CircuitBreakerClient} after a request has been executed.
-     * The resulting {@link CircuitBreakerDecision} may be used to determine whether
-     * the result has been successful.
-     * A typical implementation would
-     * <ol>
-     *   <li>Extract the appropriate CircuitBreaker implementation.</li>
-     *   <li>Update the CircuitBreaker state according to the provided {@link CircuitBreakerDecision}</li>
-     * </ol>
+     * Invoked by {@link CircuitBreakerClient} if a request has succeeded.
+     */
+    void onSuccess(ClientRequestContext ctx);
+
+    /**
+     * Invoked by {@link CircuitBreakerClient} if a request has failed.
      *
-     * @param throwable a hint to determine why a request has failed. A CircuitBreaker may use this value to
+     * @param throwable a hint for why a request has failed. A CircuitBreaker may use this value to
      *                  make more informed decisions on how to record a failure event. Note that there are no
-     *                  guarantees on the nullability of this value. (e.g. this value can be {@code null}
+     *                  guarantees on the nullability of this value. (i.e. this value can be {@code null}
      *                  even if a request has failed)
      */
-    void reportSuccessOrFailure(ClientRequestContext ctx,
-                                CompletionStage<CircuitBreakerDecision> future,
-                                @Nullable Throwable throwable);
+    void onFailure(ClientRequestContext ctx, @Nullable Throwable throwable);
 }

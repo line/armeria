@@ -48,7 +48,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
             this.mapping = mapping;
         }
 
-        CircuitBreakerClientHandler<I> acquire() {
+        ClientCircuitBreakerHandler<I> acquire() {
             return factory.generateHandler(mapping);
         }
 
@@ -74,7 +74,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        final CircuitBreakerClientHandler<I> handler = handlerGenerator.acquire();
+        final ClientCircuitBreakerHandler<I> handler = handlerGenerator.acquire();
         try {
             handler.tryAcquireAndRequest(ctx, req);
         } catch (CircuitBreakerAbortException e) {
@@ -87,7 +87,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
      * Invoked when the {@link CircuitBreaker} is in closed state.
      */
     protected abstract O doExecute(ClientRequestContext ctx, I req,
-                                   CircuitBreakerClientHandler<I> handler) throws Exception;
+                                   ClientCircuitBreakerHandler<I> handler) throws Exception;
 
     /**
      * Reports a success or a failure to the specified {@link CircuitBreaker} according to the completed value

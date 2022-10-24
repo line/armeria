@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * An exception which should be thrown from
- * {@link CircuitBreakerClientHandler#tryAcquireAndRequest(ClientRequestContext, Request)}
+ * {@link ClientCircuitBreakerHandler#tryAcquireAndRequest(ClientRequestContext, Request)}
  * if a request shouldn't be handled by the respective {@link CircuitBreakerClient}.
  */
 @UnstableApi

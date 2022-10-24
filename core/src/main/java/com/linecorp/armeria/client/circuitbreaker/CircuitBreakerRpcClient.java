@@ -135,20 +135,20 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
 
     @Override
     protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req,
-                                    CircuitBreakerClientHandler<RpcRequest> handler)
+                                    ClientCircuitBreakerHandler<RpcRequest> handler)
             throws Exception {
         final RpcResponse response;
         try {
             response = unwrap().execute(ctx, req);
         } catch (Throwable cause) {
-            handler.reportSuccessOrFailure(
-                    ctx, ruleWithContent.shouldReportAsSuccess(ctx, null, cause), cause);
+            CircuitBreakerReporterUtil.reportSuccessOrFailure(
+                    handler, ctx, ruleWithContent.shouldReportAsSuccess(ctx, null, cause), cause);
             throw cause;
         }
 
         response.handle((unused1, cause) -> {
-            handler.reportSuccessOrFailure(
-                    ctx, ruleWithContent.shouldReportAsSuccess(ctx, null, cause), cause);
+            CircuitBreakerReporterUtil.reportSuccessOrFailure(
+                    handler, ctx, ruleWithContent.shouldReportAsSuccess(ctx, null, cause), cause);
             return null;
         });
         return response;
