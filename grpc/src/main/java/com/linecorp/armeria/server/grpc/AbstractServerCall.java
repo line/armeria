@@ -32,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Splitter;
 
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpObject;
@@ -487,6 +488,15 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                     builder.set(GrpcHeaderNames.GRPC_ENCODING, compressor.getMessageEncoding());
                 }
                 MetadataUtil.fillHeaders(metadata, builder);
+
+                // Delete the custom content-length of the streaming response which might be set by wrongly
+                // implemented stubs such as Monix-gRPC. https://github.com/monix/monix-grpc/issues/43
+                // If a wrong content-length is set, an RST_STREAM error occurs at the Netty level.
+                // We don't need to care about the content-length of a unary call because it is eventually
+                // adjusted when the response is aggregated.
+                if (!method.getType().serverSendsOneMessage() && builder.contentLength() > -1) {
+                    builder.remove(HttpHeaderNames.CONTENT_LENGTH);
+                }
             });
         }
 

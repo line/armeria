@@ -61,13 +61,17 @@ public final class ProtobufResponseConverterFunctionProvider implements Response
 
             if (Iterable.class.isAssignableFrom(rawType) || Stream.class.isAssignableFrom(rawType) ||
                 Publisher.class.isAssignableFrom(rawType)) {
-                final Class<?> typeArgument = (Class<?>) parameterizedType.getActualTypeArguments()[0];
-                return Message.class.isAssignableFrom(typeArgument);
-            }
-
-            if (Map.class.isAssignableFrom(rawType)) {
-                final Class<?> typeArgument = (Class<?>) parameterizedType.getActualTypeArguments()[1];
-                return Message.class.isAssignableFrom(typeArgument);
+                final Type actualTypeArgument = parameterizedType.getActualTypeArguments()[0];
+                if (!(actualTypeArgument instanceof Class)) {
+                    return false;
+                }
+                return Message.class.isAssignableFrom((Class<?>) actualTypeArgument);
+            } else if (Map.class.isAssignableFrom(rawType)) {
+                final Type actualTypeArgument = parameterizedType.getActualTypeArguments()[1];
+                if (!(actualTypeArgument instanceof Class)) {
+                    return false;
+                }
+                return Message.class.isAssignableFrom((Class<?>) actualTypeArgument);
             }
         }
 

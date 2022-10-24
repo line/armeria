@@ -88,7 +88,7 @@ class AbstractGraphqlServiceTest {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/graphql?" + query.toQueryString());
         final ServiceRequestContext ctx = ServiceRequestContext.of(request);
         testGraphqlService.serve(ctx, request);
-        assertThat(testGraphqlService.produceType).isEqualTo(MediaType.GRAPHQL_JSON);
+        assertThat(testGraphqlService.produceType).isEqualTo(MediaType.JSON);
     }
 
     @ArgumentsSource(MediaTypeProvider.class)

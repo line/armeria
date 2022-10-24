@@ -59,10 +59,17 @@ includeWithFlags ':spring:boot2-webflux-starter',        'java', 'publish', 'rel
 includeWithFlags ':dropwizard1',                         'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':dropwizard2',                         'java', 'publish', 'relocate'
 includeWithFlags ':thrift0.9',                           'java', 'publish', 'relocate', 'no_aggregation'
+project(':thrift0.9').projectDir = file('thrift/thrift0.9')
 includeWithFlags ':thrift0.13',                          'java', 'publish', 'relocate'
+project(':thrift0.13').projectDir = file('thrift/thrift0.13')
 includeWithFlags ':thrift0.14',                          'java', 'publish', 'relocate', 'no_aggregation'
+project(':thrift0.14').projectDir = file('thrift/thrift0.14')
 includeWithFlags ':thrift0.15',                          'java', 'publish', 'relocate', 'no_aggregation'
+project(':thrift0.15').projectDir = file('thrift/thrift0.15')
 includeWithFlags ':thrift0.16',                          'java', 'publish', 'relocate', 'no_aggregation'
+project(':thrift0.16').projectDir = file('thrift/thrift0.16')
+includeWithFlags ':thrift0.17',                          'java', 'publish', 'relocate', 'no_aggregation'
+project(':thrift0.17').projectDir = file('thrift/thrift0.17')
 includeWithFlags ':tomcat8',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate'
 includeWithFlags ':zookeeper3',                          'java', 'publish', 'relocate'
@@ -101,10 +108,12 @@ includeWithFlags ':it:spring:boot2-tomcat8',        'java', 'relocate'
 includeWithFlags ':it:spring:boot2-tomcat9',        'java', 'relocate'
 includeWithFlags ':it:spring:webflux-security',     'java', 'relocate'
 includeWithFlags ':it:thrift-fullcamel',            'java', 'relocate'
+includeWithFlags ':it:thrift0.9.1',                 'java', 'relocate'
 includeWithFlags ':it:trace-context-leak',          'java', 'relocate'
 includeWithFlags ':jetty9.3',                       'java', 'relocate'
 includeWithFlags ':testing-internal',               'java', 'relocate'
 includeWithFlags ':thrift0.12',                     'java', 'relocate'
+project(':thrift0.12').projectDir = file('thrift/thrift0.12')
 
 // Unpublished non-Java projects
 includeWithFlags ':docs-client'

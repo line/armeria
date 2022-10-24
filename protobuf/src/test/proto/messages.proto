@@ -150,6 +150,8 @@ message TestMessage {
   message Nested {
     string string = 1;
   }
+  message EmptyNested {
+  }
 
   bool bool = 1;
   int32 int32 = 2;
@@ -169,4 +171,5 @@ message TestMessage {
   repeated string strings = 16;
   map<string, int32> map = 17;
   TestMessage self = 18;
+  EmptyNested empty_nested = 19;
 }

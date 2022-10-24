@@ -65,6 +65,7 @@ import com.google.common.collect.Multimap;
 import com.google.common.collect.Multimaps;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Represents an <a href="https://en.wikipedia.org/wiki/Internet_media_type">Internet Media Type</a>
@@ -779,10 +780,21 @@ public final class MediaType {
     public static final MediaType GRAPHQL = createConstant(APPLICATION_TYPE, "graphql");
 
     /**
-     * <a href="https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#content-types">GraphQL over JSON</a>
-     * which is the official GraphQL content type.
+     * The GraphQL response content type is changed from {@link #GRAPHQL_JSON} to {@link #GRAPHQL_RESPONSE_JSON}
+     * in this PR. <a href="https://github.com/graphql/graphql-over-http/pull/215">Change media type</a>
+     *
+     * @deprecated Use {@link #GRAPHQL_RESPONSE_JSON} if the client can recognize the media type.
      */
+    @Deprecated
     public static final MediaType GRAPHQL_JSON = createConstant(APPLICATION_TYPE, "graphql+json");
+
+    /**
+     * <a href="https://github.com/graphql/graphql-over-http/blob/main/spec/GraphQLOverHTTP.md#content-types">GraphQL over JSON</a>
+     * which is the official GraphQL response content type.
+     */
+    @UnstableApi
+    public static final MediaType GRAPHQL_RESPONSE_JSON =
+            createConstant(APPLICATION_TYPE, "graphql-response+json");
 
     private static final Charset NO_CHARSET = new Charset("NO_CHARSET", null) {
         @Override

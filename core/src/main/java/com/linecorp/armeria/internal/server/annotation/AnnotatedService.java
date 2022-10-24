@@ -79,11 +79,6 @@ import com.linecorp.armeria.server.annotation.ServiceName;
 public final class AnnotatedService implements HttpService {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedService.class);
 
-    /**
-     * The CGLIB class separator: {@code "$$"}.
-     */
-    private static final String CGLIB_CLASS_SEPARATOR = "$$";
-
     private static final MethodHandles.Lookup lookup = MethodHandles.lookup();
 
     private static final CompletableFuture<AggregatedResult>
@@ -169,7 +164,7 @@ public final class AnnotatedService implements HttpService {
             this.serviceName = serviceName.value();
             serviceNameSetByAnnotation = true;
         } else {
-            this.serviceName = getUserClass(object.getClass()).getName();
+            this.serviceName = ClassUtil.getUserClass(object.getClass()).getName();
             serviceNameSetByAnnotation = false;
         }
 
@@ -535,21 +530,6 @@ public final class AnnotatedService implements HttpService {
                 return exceptionHandler.handleException(ctx, req, ex);
             }
         }
-    }
-
-    /**
-     * Returns the user-defined class for the given class: usually simply the given class,
-     * but the original class in case of a CGLIB-generated subclass.
-     */
-    private static Class<?> getUserClass(Class<?> clazz) {
-        // Forked from https://github.com/spring-projects/spring-framework/blob/1565f4b83e7c48eeec9dc74f7eb042dce4dbb49a/spring-core/src/main/java/org/springframework/util/ClassUtils.java#L896-L904
-        if (clazz.getName().contains(CGLIB_CLASS_SEPARATOR)) {
-            final Class<?> superclass = clazz.getSuperclass();
-            if (superclass != null && superclass != Object.class) {
-                return superclass;
-            }
-        }
-        return clazz;
     }
 
     /**

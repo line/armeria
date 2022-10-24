@@ -1,6 +1,6 @@
 dependencies {
     // To let a user choose between thrift and thrift0.9.
-    compileOnly project(':thrift0.16')
+    compileOnly project(':thrift0.17')
     implementation project(':logback')
 
     implementation libs.micrometer13.core
@@ -18,7 +18,7 @@ dependencies {
     annotationProcessor libs.spring.boot1.configuration.processor
 
     testImplementation project(':grpc')
-    testImplementation project(':thrift0.16')
+    testImplementation project(':thrift0.17')
     testImplementation libs.spring.boot1.starter
     testImplementation libs.spring.boot1.starter.test
     // Enables cglib for testing

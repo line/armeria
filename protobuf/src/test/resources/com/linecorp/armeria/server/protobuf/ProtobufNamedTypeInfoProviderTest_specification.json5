@@ -199,6 +199,16 @@
             "docString" : "",
             "markup" : "NONE"
           }
+        }, {
+          "name" : "empty_nested",
+          "location" : "UNSPECIFIED",
+          "requirement" : "OPTIONAL",
+          "typeSignature" : "armeria.protobuf.testing.TestMessage.EmptyNested",
+          "childFieldInfos" : [ ],
+          "descriptionInfo" : {
+            "docString" : "",
+            "markup" : "NONE"
+          }
         } ],
         "descriptionInfo" : {
           "docString" : "",
@@ -449,7 +459,24 @@
         "docString" : "",
         "markup" : "NONE"
       }
+    }, {
+      "name" : "empty_nested",
+      "location" : "UNSPECIFIED",
+      "requirement" : "OPTIONAL",
+      "typeSignature" : "armeria.protobuf.testing.TestMessage.EmptyNested",
+      "childFieldInfos" : [ ],
+      "descriptionInfo" : {
+        "docString" : "",
+        "markup" : "NONE"
+      }
     } ],
+    "descriptionInfo" : {
+      "docString" : "",
+      "markup" : "NONE"
+    }
+  }, {
+    "name" : "armeria.protobuf.testing.TestMessage.EmptyNested",
+    "fields" : [ ],
     "descriptionInfo" : {
       "docString" : "",
       "markup" : "NONE"
