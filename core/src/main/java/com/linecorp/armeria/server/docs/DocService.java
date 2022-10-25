@@ -114,6 +114,7 @@ public final class DocService extends SimpleDecoratingHttpService {
 
     private static final ExecutorService DEFAULT_EXECUTOR = Executors.newSingleThreadScheduledExecutor(
             ThreadFactories.newThreadFactory("docservice-loader", false));
+
     /**
      * Returns a new {@link DocServiceBuilder}.
      */
