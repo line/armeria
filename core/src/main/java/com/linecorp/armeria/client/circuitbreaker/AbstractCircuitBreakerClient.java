@@ -37,57 +37,30 @@ import com.linecorp.armeria.common.util.CompletionActions;
 public abstract class AbstractCircuitBreakerClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
-    private class HandlerGenerator<CB> {
-
-        CircuitBreakerClientHandlerFactory<CB, I> factory;
-        ClientCircuitBreakerGenerator<CB> mapping;
-
-        HandlerGenerator(CircuitBreakerClientHandlerFactory<CB, I> factory,
-                         ClientCircuitBreakerGenerator<CB> mapping) {
-            this.factory = factory;
-            this.mapping = mapping;
-        }
-
-        ClientCircuitBreakerHandler<I> acquire() {
-            return factory.generateHandler(mapping);
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this)
-                              .add("factory", factory)
-                              .add("mapping", mapping)
-                              .toString();
-        }
-    }
-
-    private final HandlerGenerator<?> handlerGenerator;
+    private final ClientCircuitBreakerHandler<I> handler;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    <CB> AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandlerFactory<CB, I> factory,
-                                      ClientCircuitBreakerGenerator<CB> mapping) {
+    <CB> AbstractCircuitBreakerClient(Client<I, O> delegate, ClientCircuitBreakerHandler<I> handler) {
         super(delegate);
-        handlerGenerator = new HandlerGenerator<>(factory, mapping);
+        this.handler = handler;
     }
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        final ClientCircuitBreakerHandler<I> handler = handlerGenerator.acquire();
-        try {
-            handler.tryAcquireAndRequest(ctx, req);
-        } catch (CircuitBreakerAbortException e) {
+        final CircuitBreakerClientCallbacks callbacks = handler.tryAcquireAndRequest(ctx, req);
+        if (callbacks == null) {
             return unwrap().execute(ctx, req);
         }
-        return doExecute(ctx, req, handler);
+        return doExecute(ctx, req, callbacks);
     }
 
     /**
      * Invoked when the {@link CircuitBreaker} is in closed state.
      */
     protected abstract O doExecute(ClientRequestContext ctx, I req,
-                                   ClientCircuitBreakerHandler<I> handler) throws Exception;
+                                   CircuitBreakerClientCallbacks callbacks) throws Exception;
 
     /**
      * Reports a success or a failure to the specified {@link CircuitBreaker} according to the completed value
@@ -116,7 +89,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("handlerGenerator", handlerGenerator)
+                          .add("handler", handler)
                           .toString();
     }
 }

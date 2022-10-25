@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 /**
  * A generic handler containing callback methods which are invoked by
  * {@link CircuitBreakerClient}. It may be useful to create a custom
- * implementation in conjunction with {@link CircuitBreakerClientHandlerFactory}
+ * implementation in conjunction with {@link CircuitBreakerClientCallbacks}
  * if one wishes to use a custom CircuitBreaker with {@link CircuitBreakerClient}.
  */
 @UnstableApi
@@ -39,24 +39,9 @@ public interface ClientCircuitBreakerHandler<I extends Request> {
      *   <li>If the CircuitBreaker is open, throw an appropriate exception.</li>
      *   <li>Otherwise, return the method normally.</li>
      * </ol>
-     * A {@link CircuitBreakerAbortException} may be thrown if a user wishes to abort
-     * reporting and proceed with the request normally as if the {@link CircuitBreakerClient}
+     * If {@code null} is returned, the request will proceed normally as if the {@link CircuitBreakerClient}
      * wasn't added.
      */
-    void tryAcquireAndRequest(ClientRequestContext ctx, I req);
-
-    /**
-     * Invoked by {@link CircuitBreakerClient} if a request has succeeded.
-     */
-    void onSuccess(ClientRequestContext ctx);
-
-    /**
-     * Invoked by {@link CircuitBreakerClient} if a request has failed.
-     *
-     * @param throwable a hint for why a request has failed. A CircuitBreaker may use this value to
-     *                  make more informed decisions on how to record a failure event. Note that there are no
-     *                  guarantees on the nullability of this value. (i.e. this value can be {@code null}
-     *                  even if a request has failed)
-     */
-    void onFailure(ClientRequestContext ctx, @Nullable Throwable throwable);
+    @Nullable
+    CircuitBreakerClientCallbacks tryAcquireAndRequest(ClientRequestContext ctx, I req) throws Exception;
 }

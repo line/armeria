@@ -28,8 +28,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 /**
  * Builds a new {@link CircuitBreakerClient} or its decorator function.
  */
-public final class CircuitBreakerClientBuilder<CB>
-        extends AbstractCircuitBreakerClientBuilder<CB, HttpRequest, HttpResponse> {
+public final class CircuitBreakerClientBuilder
+        extends AbstractCircuitBreakerClientBuilder<HttpRequest, HttpResponse> {
 
     static final int DEFAULT_MAX_CONTENT_LENGTH = Integer.MAX_VALUE;
     private final boolean needsContentInRule;
@@ -39,10 +39,8 @@ public final class CircuitBreakerClientBuilder<CB>
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
      */
     @UnstableApi
-    public CircuitBreakerClientBuilder(CircuitBreakerClientHandlerFactory<CB, HttpRequest> defaultFactory,
-                                       ClientCircuitBreakerGenerator<CB> defaultMapping,
-                                       CircuitBreakerRule rule) {
-        super(defaultFactory, defaultMapping, rule);
+    public CircuitBreakerClientBuilder(CircuitBreakerRule rule) {
+        super(rule);
         needsContentInRule = false;
         maxContentLength = 0;
     }
@@ -52,11 +50,9 @@ public final class CircuitBreakerClientBuilder<CB>
      * the specified {@code maxContentLength}.
      */
     @UnstableApi
-    public CircuitBreakerClientBuilder(CircuitBreakerClientHandlerFactory<CB, HttpRequest> defaultFactory,
-                                       ClientCircuitBreakerGenerator<CB> defaultMapping,
-                                       CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
+    public CircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
                                        int maxContentLength) {
-        super(defaultFactory, defaultMapping, ruleWithContent);
+        super(ruleWithContent);
         needsContentInRule = true;
         this.maxContentLength = maxContentLength;
     }
@@ -74,23 +70,22 @@ public final class CircuitBreakerClientBuilder<CB>
      */
     public CircuitBreakerClient build(HttpClient delegate) {
         if (needsContentInRule) {
-            return new CircuitBreakerClient(delegate, mapping(), ruleWithContent(),
-                                            maxContentLength, factory());
+            return new CircuitBreakerClient(delegate, ruleWithContent(),
+                                            maxContentLength, handler());
         }
-        return new CircuitBreakerClient(delegate, mapping(), rule(), factory());
+        return new CircuitBreakerClient(delegate, rule(), handler());
     }
 
     // Methods that were overridden to change the return type.
 
     @Override
-    public CircuitBreakerClientBuilder<CB> mapping(ClientCircuitBreakerGenerator<CB> mapping) {
-        return (CircuitBreakerClientBuilder<CB>) super.mapping(mapping);
+    public CircuitBreakerClientBuilder mapping(CircuitBreakerMapping mapping) {
+        return (CircuitBreakerClientBuilder) super.mapping(mapping);
     }
 
     @Override
-    public CircuitBreakerClientBuilder<CB> factory(
-            CircuitBreakerClientHandlerFactory<CB, HttpRequest> factory) {
-        return (CircuitBreakerClientBuilder<CB>) super.factory(factory);
+    public CircuitBreakerClientBuilder handler(ClientCircuitBreakerHandler<HttpRequest> factory) {
+        return (CircuitBreakerClientBuilder) super.handler(factory);
     }
 
     @Override

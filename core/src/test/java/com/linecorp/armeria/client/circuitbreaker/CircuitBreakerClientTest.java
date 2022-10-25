@@ -347,7 +347,7 @@ class CircuitBreakerClientTest {
                     .verify();
     }
 
-    private static void circuitBreakerIsOpenOnServerError(CircuitBreakerClientBuilder<CircuitBreaker> builder) {
+    private static void circuitBreakerIsOpenOnServerError(CircuitBreakerClientBuilder builder) {
         final AtomicLong ticker = new AtomicLong();
         final int minimumRequestThreshold = 2;
         final Duration circuitOpenWindow = Duration.ofSeconds(60);

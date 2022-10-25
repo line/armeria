@@ -31,80 +31,63 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A skeletal builder implementation that builds a new {@link AbstractCircuitBreakerClient} or
  * its decorator function.
  *
- * @param <CB> the type of CircuitBreaker implementation
+ * @param <I> the type of incoming {@link Request} of the {@link Client}
  * @param <O> the type of incoming {@link Response} of the {@link Client}
  */
 @UnstableApi
-public abstract class AbstractCircuitBreakerClientBuilder<CB, I extends Request, O extends Response> {
+public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O extends Response> {
 
     @Nullable
     private final CircuitBreakerRuleWithContent<O> ruleWithContent;
     @Nullable
     private final CircuitBreakerRule rule;
-    private ClientCircuitBreakerGenerator<CB> mapping;
-    private CircuitBreakerClientHandlerFactory<CB, I> factory;
+    private ClientCircuitBreakerHandler<I> handler =
+            DefaultClientCircuitBreakerHandler.of(CircuitBreakerMapping.ofDefault());
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
      */
-    AbstractCircuitBreakerClientBuilder(CircuitBreakerClientHandlerFactory<CB, I> defaultFactory,
-                                        ClientCircuitBreakerGenerator<CB> defaultMapping,
-                                        CircuitBreakerRule rule) {
-        this(defaultFactory, defaultMapping, requireNonNull(rule, "rule"), null);
+    AbstractCircuitBreakerClientBuilder(CircuitBreakerRule rule) {
+        this(requireNonNull(rule, "rule"), null);
     }
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRuleWithContent}.
      */
-    AbstractCircuitBreakerClientBuilder(CircuitBreakerClientHandlerFactory<CB, I> defaultFactory,
-                                        ClientCircuitBreakerGenerator<CB> defaultMapping,
-                                        CircuitBreakerRuleWithContent<O> ruleWithContent) {
-        this(defaultFactory, defaultMapping, null, requireNonNull(ruleWithContent, "ruleWithContent"));
+    AbstractCircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<O> ruleWithContent) {
+        this(null, requireNonNull(ruleWithContent, "ruleWithContent"));
     }
 
     private AbstractCircuitBreakerClientBuilder(
-            CircuitBreakerClientHandlerFactory<CB, I> defaultFactory,
-            ClientCircuitBreakerGenerator<CB> defaultMapping,
             @Nullable CircuitBreakerRule rule,
             @Nullable CircuitBreakerRuleWithContent<O> ruleWithContent) {
-        factory = requireNonNull(defaultFactory, "defaultFactory");
-        mapping = requireNonNull(defaultMapping, "defaultMapping");
         this.rule = rule;
         this.ruleWithContent = ruleWithContent;
     }
 
     /**
-     * Sets the {@link ClientCircuitBreakerGenerator} which generates a {@link CB} instance
+     * Sets the {@link CircuitBreakerMapping} which generates a {@link CircuitBreaker} instance
      * for each request.
      */
-    public AbstractCircuitBreakerClientBuilder<CB, I, O> mapping(ClientCircuitBreakerGenerator<CB> mapping) {
-        this.mapping = requireNonNull(mapping, "mapping");
+    public AbstractCircuitBreakerClientBuilder<I, O> mapping(CircuitBreakerMapping mapping) {
+        handler = DefaultClientCircuitBreakerHandler.of(requireNonNull(mapping, "mapping"));
         return this;
     }
 
     /**
-     * Returns the set {@link ClientCircuitBreakerGenerator}.
-     */
-    protected ClientCircuitBreakerGenerator<CB> mapping() {
-        return mapping;
-    }
-
-    /**
-     * Sets the {@link CircuitBreakerClientHandlerFactory} which generates the
+     * Sets the {@link ClientCircuitBreakerHandler} which generates the
      * {@link ClientCircuitBreakerHandler} for this client.
      */
-    public AbstractCircuitBreakerClientBuilder<CB, I, O> factory(
-            CircuitBreakerClientHandlerFactory<CB, I> factory) {
-        this.factory = requireNonNull(factory, "factory");
+    public AbstractCircuitBreakerClientBuilder<I, O> handler(ClientCircuitBreakerHandler<I> handler) {
+        this.handler = requireNonNull(handler, "handler");
         return this;
     }
 
     /**
-     * Returns the {@link CircuitBreakerClientHandlerFactory} which generates the
-     * {@link ClientCircuitBreakerHandler} for this client.
+     * Returns the {@link ClientCircuitBreakerHandler} for this client.
      */
-    protected CircuitBreakerClientHandlerFactory<CB, I> factory() {
-        return factory;
+    protected ClientCircuitBreakerHandler<I> handler() {
+        return handler;
     }
 
     /**
@@ -128,8 +111,7 @@ public abstract class AbstractCircuitBreakerClientBuilder<CB, I extends Request,
         return MoreObjects.toStringHelper(this)
                           .add("ruleWithContent", ruleWithContent)
                           .add("rule", rule)
-                          .add("mapping", mapping)
-                          .add("factory", factory)
+                          .add("factory", handler)
                           .toString();
     }
 }

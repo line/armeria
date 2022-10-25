@@ -21,47 +21,38 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.annotation.Nullable;
 
 final class DefaultClientCircuitBreakerHandler<I extends Request> implements ClientCircuitBreakerHandler<I> {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultClientCircuitBreakerHandler.class);
 
-    private final ClientCircuitBreakerGenerator<CircuitBreaker> mapping;
-    @Nullable
-    CircuitBreaker circuitBreaker;
+    static <I extends Request> ClientCircuitBreakerHandler<I> of(CircuitBreaker cb) {
+        return of((ctx, req) -> cb);
+    }
 
-    DefaultClientCircuitBreakerHandler(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
+    static <I extends Request> DefaultClientCircuitBreakerHandler<I> of(CircuitBreakerMapping cb) {
+        return new DefaultClientCircuitBreakerHandler<>(cb);
+    }
+
+    private final ClientCircuitBreakerGenerator<CircuitBreaker> mapping;
+
+    private DefaultClientCircuitBreakerHandler(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
         this.mapping = mapping;
     }
 
     @Override
-    public void tryAcquireAndRequest(ClientRequestContext ctx, I req) {
+    public CircuitBreakerClientCallbacks tryAcquireAndRequest(ClientRequestContext ctx,
+                                                              I req) throws Exception {
+        final CircuitBreaker circuitBreaker;
         try {
             circuitBreaker = mapping.get(ctx, req);
         } catch (Throwable t) {
             logger.warn("Failed to get a circuit breaker from mapping", t);
-            throw new CircuitBreakerAbortException(t);
+            return null;
         }
         if (!circuitBreaker.tryRequest()) {
             throw new FailFastException(circuitBreaker);
         }
-    }
-
-    private CircuitBreaker circuitBreaker() {
-        if (circuitBreaker == null) {
-            throw new IllegalStateException("Attempting to report to a null CircuitBreaker");
-        }
-        return circuitBreaker;
-    }
-
-    @Override
-    public void onSuccess(ClientRequestContext ctx) {
-        circuitBreaker().onSuccess();
-    }
-
-    @Override
-    public void onFailure(ClientRequestContext ctx, @Nullable Throwable throwable) {
-        circuitBreaker().onFailure();
+        return new DefaultCircuitBreakerClientCallbacks(circuitBreaker);
     }
 }

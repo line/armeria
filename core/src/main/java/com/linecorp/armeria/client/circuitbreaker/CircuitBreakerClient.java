@@ -47,7 +47,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     public static Function<? super HttpClient, CircuitBreakerClient>
     newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerRule rule) {
         requireNonNull(circuitBreaker, "circuitBreaker");
-        return newDecorator((ctx, req) -> circuitBreaker, rule);
+        return newDecorator(DefaultClientCircuitBreakerHandler.of(circuitBreaker), rule);
     }
 
     /**
@@ -60,7 +60,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     public static Function<? super HttpClient, CircuitBreakerClient>
     newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         requireNonNull(circuitBreaker, "circuitBreaker");
-        return newDecorator((ctx, req) -> circuitBreaker, ruleWithContent);
+        return newDecorator(DefaultClientCircuitBreakerHandler.of(circuitBreaker), ruleWithContent);
     }
 
     /**
@@ -74,8 +74,22 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRule rule) {
         requireNonNull(mapping, "mapping");
         requireNonNull(rule, "rule");
-        return delegate -> new CircuitBreakerClient(delegate, mapping, rule,
-                                                    DefaultCircuitBreakerClientHandlerFactory.INSTANCE);
+        return delegate -> new CircuitBreakerClient(delegate, rule,
+                                                    DefaultClientCircuitBreakerHandler.of(mapping));
+    }
+
+    /**
+     * Creates a new decorator with the specified {@link CircuitBreakerMapping} and
+     * {@link CircuitBreakerRule}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newDecorator(ClientCircuitBreakerHandler<HttpRequest> handler, CircuitBreakerRule rule) {
+        requireNonNull(rule, "rule");
+        requireNonNull(handler, "handler");
+        return delegate -> new CircuitBreakerClient(delegate, rule, handler);
     }
 
     /**
@@ -89,7 +103,23 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         requireNonNull(mapping, "mapping");
         requireNonNull(ruleWithContent, "ruleWithContent");
-        return delegate -> new CircuitBreakerClient(delegate, mapping, ruleWithContent);
+        return delegate -> new CircuitBreakerClient(delegate, ruleWithContent,
+                                                    DefaultClientCircuitBreakerHandler.of(mapping));
+    }
+
+    /**
+     * Creates a new decorator with the specified {@link CircuitBreakerMapping} and
+     * {@link CircuitBreakerRuleWithContent}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     */
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newDecorator(ClientCircuitBreakerHandler<HttpRequest> handler,
+                 CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        requireNonNull(handler, "handler");
+        requireNonNull(ruleWithContent, "ruleWithContent");
+        return delegate -> new CircuitBreakerClient(delegate, ruleWithContent, handler);
     }
 
     /**
@@ -220,16 +250,15 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     /**
      * Returns a new {@link CircuitBreakerClientBuilder} with the specified {@link CircuitBreakerRule}.
      */
-    public static CircuitBreakerClientBuilder<CircuitBreaker> builder(CircuitBreakerRule rule) {
-        return new CircuitBreakerClientBuilder<>(DefaultCircuitBreakerClientHandlerFactory.INSTANCE,
-                                                 CircuitBreakerMapping.ofDefault(), rule);
+    public static CircuitBreakerClientBuilder builder(CircuitBreakerRule rule) {
+        return new CircuitBreakerClientBuilder(rule);
     }
 
     /**
      * Returns a new {@link CircuitBreakerClientBuilder} with
      * the specified {@link CircuitBreakerRuleWithContent}.
      */
-    public static CircuitBreakerClientBuilder<CircuitBreaker> builder(
+    public static CircuitBreakerClientBuilder builder(
             CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         return builder(ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH);
     }
@@ -242,12 +271,10 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
      * @throws IllegalArgumentException if the specified {@code maxContentLength} is equal to or
      *                                  less than {@code 0}
      */
-    public static CircuitBreakerClientBuilder<CircuitBreaker> builder(
+    public static CircuitBreakerClientBuilder builder(
             CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent, int maxContentLength) {
         checkArgument(maxContentLength > 0, "maxContentLength: %s (expected: > 0)", maxContentLength);
-        return new CircuitBreakerClientBuilder<>(DefaultCircuitBreakerClientHandlerFactory.INSTANCE,
-                                                 CircuitBreakerMapping.ofDefault(), ruleWithContent,
-                                                 maxContentLength);
+        return new CircuitBreakerClientBuilder(ruleWithContent, maxContentLength);
     }
 
     private final CircuitBreakerClientHandlerReporter<HttpRequest> reporter;
@@ -255,45 +282,41 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    <CB> CircuitBreakerClient(HttpClient delegate, ClientCircuitBreakerGenerator<CB> mapping,
-                              CircuitBreakerRule rule,
-                              CircuitBreakerClientHandlerFactory<CB, HttpRequest> factory) {
-        super(delegate, factory, mapping);
+    CircuitBreakerClient(HttpClient delegate, CircuitBreakerRule rule,
+                         ClientCircuitBreakerHandler<HttpRequest> handler) {
+        super(delegate, handler);
         reporter = new CircuitBreakerClientHandlerReporter<>(rule, null, false, 0);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping,
-                         CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
-        this(delegate, mapping, ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH,
-             DefaultCircuitBreakerClientHandlerFactory.INSTANCE);
+    CircuitBreakerClient(HttpClient delegate, CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
+                         ClientCircuitBreakerHandler<HttpRequest> handler) {
+        this(delegate, ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH, handler);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    <CB> CircuitBreakerClient(HttpClient delegate, ClientCircuitBreakerGenerator<CB> mapping,
-                              CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent, int maxContentLength,
-                              CircuitBreakerClientHandlerFactory<CB, HttpRequest> factory) {
-        super(delegate, factory, mapping);
+    CircuitBreakerClient(HttpClient delegate, CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
+                         int maxContentLength, ClientCircuitBreakerHandler<HttpRequest> handler) {
+        super(delegate, handler);
         reporter = new CircuitBreakerClientHandlerReporter<>(null, ruleWithContent, true, maxContentLength);
     }
 
     @Override
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req,
-                                     ClientCircuitBreakerHandler<HttpRequest> handler)
+                                     CircuitBreakerClientCallbacks callbacks)
             throws Exception {
-
         final HttpResponse response;
         try {
             response = unwrap().execute(ctx, req);
         } catch (Throwable cause) {
-            reporter.reportSuccessOrFailure(ctx, cause, handler);
+            reporter.reportSuccessOrFailure(ctx, cause, callbacks);
             throw cause;
         }
-        return reporter.report(ctx, response, handler);
+        return reporter.report(ctx, response, callbacks);
     }
 
     @Override

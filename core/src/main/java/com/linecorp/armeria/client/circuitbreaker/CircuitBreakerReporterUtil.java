@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.util.CompletionActions;
 
 final class CircuitBreakerReporterUtil {
 
-    static void reportSuccessOrFailure(ClientCircuitBreakerHandler<?> handler,
+    static void reportSuccessOrFailure(CircuitBreakerClientCallbacks callbacks,
                                        ClientRequestContext ctx,
                                        CompletionStage<@Nullable CircuitBreakerDecision> future,
                                        @Nullable Throwable throwable) {
@@ -32,9 +32,9 @@ final class CircuitBreakerReporterUtil {
             if (decision != null) {
                 if (decision == CircuitBreakerDecision.success() ||
                     decision == CircuitBreakerDecision.next()) {
-                    handler.onSuccess(ctx);
+                    callbacks.onSuccess(ctx);
                 } else if (decision == CircuitBreakerDecision.failure()) {
-                    handler.onFailure(ctx, throwable);
+                    callbacks.onFailure(ctx, throwable);
                 } else {
                     // Ignore, does not count as a success nor failure.
                 }

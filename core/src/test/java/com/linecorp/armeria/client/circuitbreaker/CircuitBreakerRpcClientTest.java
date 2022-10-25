@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static com.linecorp.armeria.client.circuitbreaker.DefaultRpcCircuitBreakerClientHandlerFactory.INSTANCE;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
@@ -129,7 +128,8 @@ class CircuitBreakerRpcClientTest {
         when(delegate.execute(any(), any())).thenReturn(successRes);
 
         final CircuitBreakerRpcClient stub =
-                new CircuitBreakerRpcClient(delegate, (ctx, req) -> circuitBreaker, rule(), INSTANCE);
+                new CircuitBreakerRpcClient(delegate, rule(),
+                                            DefaultClientCircuitBreakerHandler.of(circuitBreaker));
 
         stub.execute(ctxA, reqA);
 
@@ -144,7 +144,8 @@ class CircuitBreakerRpcClientTest {
         final CircuitBreakerMapping mapping = (ctx, req) -> {
             throw Exceptions.clearTrace(new AnticipatedException("bug!"));
         };
-        final CircuitBreakerRpcClient stub = new CircuitBreakerRpcClient(delegate, mapping, rule(), INSTANCE);
+        final CircuitBreakerRpcClient stub = new CircuitBreakerRpcClient(
+                delegate, rule(), DefaultClientCircuitBreakerHandler.of(mapping));
 
         stub.execute(ctxA, reqA);
 
@@ -162,7 +163,8 @@ class CircuitBreakerRpcClientTest {
         when(delegate.execute(ctxA, reqA)).thenReturn(failureRes);
 
         final CircuitBreakerRpcClient stub =
-                new CircuitBreakerRpcClient(delegate, (ctx, req) -> circuitBreaker, rule(), INSTANCE);
+                new CircuitBreakerRpcClient(delegate, rule(),
+                                            DefaultClientCircuitBreakerHandler.of(circuitBreaker));
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
@@ -197,7 +199,8 @@ class CircuitBreakerRpcClientTest {
         when(delegate.execute(ctxA, reqA)).thenReturn(failureRes);
 
         final CircuitBreakerRpcClient stub =
-                new CircuitBreakerRpcClient(delegate, (ctx, req) -> circuitBreaker, rule(), INSTANCE);
+                new CircuitBreakerRpcClient(delegate, rule(),
+                                            DefaultClientCircuitBreakerHandler.of(circuitBreaker));
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {

@@ -16,17 +16,26 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import com.linecorp.armeria.common.HttpRequest;
+import static java.util.Objects.requireNonNull;
 
-final class DefaultCircuitBreakerClientHandlerFactory
-        implements CircuitBreakerClientHandlerFactory<CircuitBreaker, HttpRequest> {
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 
-    static final DefaultCircuitBreakerClientHandlerFactory INSTANCE =
-            new DefaultCircuitBreakerClientHandlerFactory();
+final class DefaultCircuitBreakerClientCallbacks implements CircuitBreakerClientCallbacks {
+
+    private final CircuitBreaker circuitBreaker;
+
+    DefaultCircuitBreakerClientCallbacks(CircuitBreaker circuitBreaker) {
+        this.circuitBreaker = requireNonNull(circuitBreaker, "circuitBreaker");
+    }
 
     @Override
-    public ClientCircuitBreakerHandler<HttpRequest> generateHandler(
-            ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
-        return new DefaultClientCircuitBreakerHandler<>(mapping);
+    public void onSuccess(ClientRequestContext ctx) {
+        circuitBreaker.onSuccess();
+    }
+
+    @Override
+    public void onFailure(ClientRequestContext ctx, @Nullable Throwable throwable) {
+        circuitBreaker.onFailure();
     }
 }

@@ -58,33 +58,33 @@ final class CircuitBreakerClientHandlerReporter<I extends Request> {
     }
 
     HttpResponse report(ClientRequestContext ctx, HttpResponse response,
-                        ClientCircuitBreakerHandler<I> handler) {
+                        CircuitBreakerClientCallbacks callbacks) {
         final CircuitBreakerRule rule = needsContentInRule ? fromRuleWithContent() : rule();
         final RequestLogProperty property =
                 rule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_TRAILERS
                                                 : RequestLogProperty.RESPONSE_HEADERS;
 
         if (!needsContentInRule) {
-            reportResult(ctx, property, handler);
+            reportResult(ctx, property, callbacks);
             return response;
         } else {
-            return reportResultWithContent(ctx, response, property, handler);
+            return reportResultWithContent(ctx, response, property, callbacks);
         }
     }
 
     private void reportResult(ClientRequestContext ctx, RequestLogProperty logProperty,
-                              ClientCircuitBreakerHandler<I> handler) {
+                              CircuitBreakerClientCallbacks callbacks) {
         ctx.log().whenAvailable(logProperty).thenAccept(log -> {
             final Throwable resCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
             CircuitBreakerReporterUtil.reportSuccessOrFailure(
-                    handler, ctx, rule().shouldReportAsSuccess(ctx, resCause), resCause);
+                    callbacks, ctx, rule().shouldReportAsSuccess(ctx, resCause), resCause);
         });
     }
 
     private HttpResponse reportResultWithContent(ClientRequestContext ctx, HttpResponse response,
                                                  RequestLogProperty logProperty,
-                                                 ClientCircuitBreakerHandler<I> handler) {
+                                                 CircuitBreakerClientCallbacks callbacks) {
         final HttpResponseDuplicator duplicator = response.toDuplicator(ctx.eventLoop().withoutContext(),
                                                                         ctx.maxResponseLength());
         final TruncatingHttpResponse truncatingHttpResponse =
@@ -100,7 +100,7 @@ final class CircuitBreakerClientHandlerReporter<I extends Request> {
                     truncatingHttpResponse.abort();
                     return null;
                 });
-                CircuitBreakerReporterUtil.reportSuccessOrFailure(handler, ctx, f, null);
+                CircuitBreakerReporterUtil.reportSuccessOrFailure(callbacks, ctx, f, null);
             } catch (Throwable cause) {
                 duplicator.abort(cause);
             }
@@ -110,10 +110,10 @@ final class CircuitBreakerClientHandlerReporter<I extends Request> {
     }
 
     void reportSuccessOrFailure(ClientRequestContext ctx, Throwable cause,
-                                ClientCircuitBreakerHandler<I> handler) {
+                                CircuitBreakerClientCallbacks callbacks) {
         final CircuitBreakerRule rule = needsContentInRule ? fromRuleWithContent() : rule();
         CircuitBreakerReporterUtil
-                .reportSuccessOrFailure(handler, ctx, rule.shouldReportAsSuccess(ctx, cause), cause);
+                .reportSuccessOrFailure(callbacks, ctx, rule.shouldReportAsSuccess(ctx, cause), cause);
     }
 
     private CircuitBreakerRule rule() {

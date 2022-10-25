@@ -28,20 +28,17 @@ import com.linecorp.armeria.common.RpcResponse;
  * Builds a new {@link CircuitBreakerRpcClient} or its decorator function.
  */
 public final class CircuitBreakerRpcClientBuilder
-        extends AbstractCircuitBreakerClientBuilder<CircuitBreaker, RpcRequest, RpcResponse> {
+        extends AbstractCircuitBreakerClientBuilder<RpcRequest, RpcResponse> {
 
-    CircuitBreakerRpcClientBuilder(
-            CircuitBreakerClientHandlerFactory<CircuitBreaker, RpcRequest> defaultFactory,
-            CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
-        super(defaultFactory, CircuitBreakerMapping.ofDefault(),
-              requireNonNull(ruleWithContent, "ruleWithContent"));
+    CircuitBreakerRpcClientBuilder(CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        super(requireNonNull(ruleWithContent, "ruleWithContent"));
     }
 
     /**
      * Returns a newly-created {@link CircuitBreakerRpcClient} based on the properties of this builder.
      */
     public CircuitBreakerRpcClient build(RpcClient delegate) {
-        return build(delegate, DefaultRpcCircuitBreakerClientHandlerFactory.INSTANCE);
+        return build(delegate, DefaultClientCircuitBreakerHandler.of(CircuitBreakerMapping.ofDefault()));
     }
 
     /**
@@ -49,8 +46,8 @@ public final class CircuitBreakerRpcClientBuilder
      */
     public CircuitBreakerRpcClient build(
             RpcClient delegate,
-            CircuitBreakerClientHandlerFactory<CircuitBreaker, RpcRequest> factory) {
-        return new CircuitBreakerRpcClient(delegate, mapping(), ruleWithContent(), factory);
+            ClientCircuitBreakerHandler<RpcRequest> handler) {
+        return new CircuitBreakerRpcClient(delegate, ruleWithContent(), handler);
     }
 
     /**
@@ -64,13 +61,13 @@ public final class CircuitBreakerRpcClientBuilder
     // Methods that were overridden to change the return type.
 
     @Override
-    public CircuitBreakerRpcClientBuilder mapping(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
+    public CircuitBreakerRpcClientBuilder mapping(CircuitBreakerMapping mapping) {
         return (CircuitBreakerRpcClientBuilder) super.mapping(mapping);
     }
 
     @Override
-    public CircuitBreakerRpcClientBuilder factory(
-            CircuitBreakerClientHandlerFactory<CircuitBreaker, RpcRequest> factory) {
-        return (CircuitBreakerRpcClientBuilder) super.factory(factory);
+    public CircuitBreakerRpcClientBuilder handler(
+            ClientCircuitBreakerHandler<RpcRequest> handler) {
+        return (CircuitBreakerRpcClientBuilder) super.handler(handler);
     }
 }
