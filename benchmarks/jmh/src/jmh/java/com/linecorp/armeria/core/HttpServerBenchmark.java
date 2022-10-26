@@ -30,9 +30,12 @@ import org.openjdk.jmh.infra.Blackhole;
 
 import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.NoopMeterRegistry;
 import com.linecorp.armeria.server.Server;
@@ -67,13 +70,30 @@ public class HttpServerBenchmark {
     @Param
     private Protocol protocol;
 
+    @Param({ "100", "1000"})
+    private int chunkCount;
+
     @Setup
     public void startServer() throws Exception {
-        final byte[] PLAINTEXT = "Hello, World!".getBytes(StandardCharsets.UTF_8);
+        final byte[] plaintext = "Hello, World!".getBytes(StandardCharsets.UTF_8);
+
         server = Server.builder()
                        .service("/empty", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                        .service("/plaintext", (ctx, req) -> HttpResponse
-                               .of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, PLAINTEXT))
+                               .of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, plaintext))
+                       .service("/streaming", (ctx, req) -> {
+                           final HttpResponseWriter writer = HttpResponse.streaming();
+                           writer.write(ResponseHeaders.of(200));
+                           for (int i = 0; i < chunkCount; i++) {
+                               if (i == chunkCount - 1) {
+                                   writer.write(HttpData.wrap(plaintext).withEndOfStream());
+                                   writer.close();
+                               } else {
+                                   writer.write(HttpData.wrap(plaintext));
+                               }
+                           }
+                           return writer;
+                       })
                        .requestTimeout(Duration.ZERO)
                        .meterRegistry(NoopMeterRegistry.get())
                        .build();
@@ -106,6 +126,11 @@ public class HttpServerBenchmark {
                              }
                              return null;
                          }));
+    }
+
+    @Benchmark
+    public void streaming(Blackhole bh) throws Exception {
+        bh.consume(webClient.get("/streaming").aggregate().join());
     }
 
     /**

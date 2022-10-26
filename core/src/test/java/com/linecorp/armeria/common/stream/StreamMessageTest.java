@@ -333,7 +333,7 @@ class StreamMessageTest {
         final StreamMessage<HttpData> source = StreamMessage.of(httpData);
         final List<HttpData> collected = new ArrayList<>();
         final StreamMessage<HttpData> aborted = source.peek(x -> {
-            if (x.equals(HttpData.wrap(Unpooled.wrappedBuffer("6".getBytes())))) {
+            if (x.equals(HttpData.wrap("6".getBytes()))) {
                 source.abort();
             } else {
                 collected.add(x);
@@ -363,7 +363,7 @@ class StreamMessageTest {
         final StreamMessage<HttpData> source = StreamMessage.of(httpData);
         final List<HttpData> collected = new ArrayList<>();
         final StreamMessage<HttpData> aborted = source.peek(x -> {
-            if (x.equals(HttpData.wrap(Unpooled.wrappedBuffer("6".getBytes())))) {
+            if (x.equals(HttpData.wrap("6".getBytes()))) {
                 throw new RuntimeException();
             } else {
                 collected.add(x);
