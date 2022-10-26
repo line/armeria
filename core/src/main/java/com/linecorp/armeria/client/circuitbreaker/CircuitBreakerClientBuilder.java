@@ -30,16 +30,15 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 public final class CircuitBreakerClientBuilder
         extends AbstractCircuitBreakerClientBuilder<HttpRequest, HttpResponse> {
-
     static final int DEFAULT_MAX_CONTENT_LENGTH = Integer.MAX_VALUE;
+
     private final boolean needsContentInRule;
     private final int maxContentLength;
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
      */
-    @UnstableApi
-    public CircuitBreakerClientBuilder(CircuitBreakerRule rule) {
+    CircuitBreakerClientBuilder(CircuitBreakerRule rule) {
         super(rule);
         needsContentInRule = false;
         maxContentLength = 0;
@@ -49,12 +48,21 @@ public final class CircuitBreakerClientBuilder
      * Creates a new builder with the specified {@link CircuitBreakerRuleWithContent} and
      * the specified {@code maxContentLength}.
      */
-    @UnstableApi
-    public CircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
-                                       int maxContentLength) {
+    CircuitBreakerClientBuilder(CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent,
+                                int maxContentLength) {
         super(ruleWithContent);
         needsContentInRule = true;
         this.maxContentLength = maxContentLength;
+    }
+
+    /**
+     * Returns a newly-created {@link CircuitBreakerClient} based on the properties of this builder.
+     */
+    public CircuitBreakerClient build(HttpClient delegate) {
+        if (needsContentInRule) {
+            return new CircuitBreakerClient(delegate, handler(), ruleWithContent(), maxContentLength);
+        }
+        return new CircuitBreakerClient(delegate, handler(), rule());
     }
 
     /**
@@ -65,17 +73,6 @@ public final class CircuitBreakerClientBuilder
         return this::build;
     }
 
-    /**
-     * Returns a newly-created {@link CircuitBreakerClient} based on the properties of this builder.
-     */
-    public CircuitBreakerClient build(HttpClient delegate) {
-        if (needsContentInRule) {
-            return new CircuitBreakerClient(delegate, ruleWithContent(),
-                                            maxContentLength, handler());
-        }
-        return new CircuitBreakerClient(delegate, rule(), handler());
-    }
-
     // Methods that were overridden to change the return type.
 
     @Override
@@ -84,8 +81,9 @@ public final class CircuitBreakerClientBuilder
     }
 
     @Override
-    public CircuitBreakerClientBuilder handler(ClientCircuitBreakerHandler<HttpRequest> factory) {
-        return (CircuitBreakerClientBuilder) super.handler(factory);
+    @UnstableApi
+    public CircuitBreakerClientBuilder handler(CircuitBreakerClientHandler<HttpRequest> handler) {
+        return (CircuitBreakerClientBuilder) super.handler(handler);
     }
 
     @Override

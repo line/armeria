@@ -22,27 +22,27 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
 
-final class DefaultClientCircuitBreakerHandler<I extends Request> implements ClientCircuitBreakerHandler<I> {
+final class DefaultCircuitBreakerClientHandler<I extends Request> implements CircuitBreakerClientHandler<I> {
 
-    private static final Logger logger = LoggerFactory.getLogger(DefaultClientCircuitBreakerHandler.class);
+    private static final Logger logger = LoggerFactory.getLogger(DefaultCircuitBreakerClientHandler.class);
 
-    static <I extends Request> ClientCircuitBreakerHandler<I> of(CircuitBreaker cb) {
+    static <I extends Request> CircuitBreakerClientHandler<I> of(CircuitBreaker cb) {
         return of((ctx, req) -> cb);
     }
 
-    static <I extends Request> DefaultClientCircuitBreakerHandler<I> of(CircuitBreakerMapping cb) {
-        return new DefaultClientCircuitBreakerHandler<>(cb);
+    static <I extends Request> DefaultCircuitBreakerClientHandler<I> of(CircuitBreakerMapping cb) {
+        return new DefaultCircuitBreakerClientHandler<>(cb);
     }
 
     private final ClientCircuitBreakerGenerator<CircuitBreaker> mapping;
 
-    private DefaultClientCircuitBreakerHandler(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
+    private DefaultCircuitBreakerClientHandler(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
         this.mapping = mapping;
     }
 
     @Override
-    public CircuitBreakerClientCallbacks tryAcquireAndRequest(ClientRequestContext ctx,
-                                                              I req) throws Exception {
+    public CircuitBreakerClientCallbacks request(ClientRequestContext ctx,
+                                                 I req) throws Exception {
         final CircuitBreaker circuitBreaker;
         try {
             circuitBreaker = mapping.get(ctx, req);

@@ -34,15 +34,14 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * @param <I> the type of incoming {@link Request} of the {@link Client}
  * @param <O> the type of incoming {@link Response} of the {@link Client}
  */
-@UnstableApi
 public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O extends Response> {
 
     @Nullable
-    private final CircuitBreakerRuleWithContent<O> ruleWithContent;
-    @Nullable
     private final CircuitBreakerRule rule;
-    private ClientCircuitBreakerHandler<I> handler =
-            DefaultClientCircuitBreakerHandler.of(CircuitBreakerMapping.ofDefault());
+    @Nullable
+    private final CircuitBreakerRuleWithContent<O> ruleWithContent;
+    private CircuitBreakerClientHandler<I> handler =
+            DefaultCircuitBreakerClientHandler.of(CircuitBreakerMapping.ofDefault());
 
     /**
      * Creates a new builder with the specified {@link CircuitBreakerRule}.
@@ -65,53 +64,50 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
         this.ruleWithContent = ruleWithContent;
     }
 
-    /**
-     * Sets the {@link CircuitBreakerMapping} which generates a {@link CircuitBreaker} instance
-     * for each request.
-     */
-    public AbstractCircuitBreakerClientBuilder<I, O> mapping(CircuitBreakerMapping mapping) {
-        handler = DefaultClientCircuitBreakerHandler.of(requireNonNull(mapping, "mapping"));
-        return this;
-    }
-
-    /**
-     * Sets the {@link ClientCircuitBreakerHandler} which generates the
-     * {@link ClientCircuitBreakerHandler} for this client.
-     */
-    public AbstractCircuitBreakerClientBuilder<I, O> handler(ClientCircuitBreakerHandler<I> handler) {
-        this.handler = requireNonNull(handler, "handler");
-        return this;
-    }
-
-    /**
-     * Returns the {@link ClientCircuitBreakerHandler} for this client.
-     */
-    protected ClientCircuitBreakerHandler<I> handler() {
-        return handler;
-    }
-
-    /**
-     * Returns the {@link CircuitBreakerRule} set for this builder.
-     */
-    protected final CircuitBreakerRule rule() {
+    final CircuitBreakerRule rule() {
         checkState(rule != null, "rule is not set.");
         return rule;
     }
 
-    /**
-     * Returns the {@link CircuitBreakerRuleWithContent} set for this builder.
-     */
-    protected final CircuitBreakerRuleWithContent<O> ruleWithContent() {
+    final CircuitBreakerRuleWithContent<O> ruleWithContent() {
         checkState(ruleWithContent != null, "ruleWithContent is not set.");
         return ruleWithContent;
+    }
+
+    /**
+     * Sets the {@link CircuitBreakerMapping}. If unspecified, {@link CircuitBreakerMapping#ofDefault()}
+     * will be used. Note that the {@link CircuitBreakerClientHandler} set by calling
+     * {@link #handler(CircuitBreakerClientHandler)} will be overwritten by calling this method.
+     *
+     * @return {@code this} to support method chaining.
+     */
+    public AbstractCircuitBreakerClientBuilder<I, O> mapping(CircuitBreakerMapping mapping) {
+        handler = DefaultCircuitBreakerClientHandler.of(requireNonNull(mapping, "mapping"));
+        return this;
+    }
+
+    /**
+     * Sets the {@link CircuitBreakerClientHandler}. Note that the {@link CircuitBreakerMapping}
+     * set by calling {@link #mapping(CircuitBreakerMapping)} will be overwritten by calling this method.
+     *
+     * @return {@code this} to support method chaining.
+     */
+    @UnstableApi
+    public AbstractCircuitBreakerClientBuilder<I, O> handler(CircuitBreakerClientHandler<I> handler) {
+        this.handler = requireNonNull(handler, "handler");
+        return this;
+    }
+
+    CircuitBreakerClientHandler<I> handler() {
+        return handler;
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
-                          .add("ruleWithContent", ruleWithContent)
                           .add("rule", rule)
-                          .add("factory", handler)
+                          .add("ruleWithContent", ruleWithContent)
+                          .add("handler", handler)
                           .toString();
     }
 }

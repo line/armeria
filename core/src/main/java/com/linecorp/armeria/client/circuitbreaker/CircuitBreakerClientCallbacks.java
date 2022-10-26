@@ -17,13 +17,16 @@
 package com.linecorp.armeria.client.circuitbreaker;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A collection of callbacks that are invoked for each request made by {@link CircuitBreakerClient}.
- * Users may implement this class in conjunction with {@link ClientCircuitBreakerHandler} to
+ * A collection of callbacks that are invoked for each request by {@link CircuitBreakerClient}.
+ * Users may implement this class in conjunction with {@link CircuitBreakerClientHandler} to
  * use arbitrary CircuitBreaker implementations with {@link CircuitBreakerClient}.
+ * See {@link CircuitBreakerClientHandler#request(ClientRequestContext, Request)}
+ * for more information.
  */
 @UnstableApi
 public interface CircuitBreakerClientCallbacks {
@@ -38,8 +41,7 @@ public interface CircuitBreakerClientCallbacks {
      *
      * @param throwable a hint for why a request has failed. A CircuitBreaker may use this value to
      *                  make more informed decisions on how to record a failure event. Note that there are no
-     *                  guarantees on the nullability of this value. (i.e. this value can be {@code null}
-     *                  even if a request has failed)
+     *                  guarantees on the nullability of this value.
      */
     void onFailure(ClientRequestContext ctx, @Nullable Throwable throwable);
 }

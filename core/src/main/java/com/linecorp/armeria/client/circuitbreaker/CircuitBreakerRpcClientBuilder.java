@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
-import static java.util.Objects.requireNonNull;
-
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.RpcClient;
@@ -31,14 +29,14 @@ public final class CircuitBreakerRpcClientBuilder
         extends AbstractCircuitBreakerClientBuilder<RpcRequest, RpcResponse> {
 
     CircuitBreakerRpcClientBuilder(CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
-        super(requireNonNull(ruleWithContent, "ruleWithContent"));
+        super(ruleWithContent);
     }
 
     /**
      * Returns a newly-created {@link CircuitBreakerRpcClient} based on the properties of this builder.
      */
     public CircuitBreakerRpcClient build(RpcClient delegate) {
-        return build(delegate, DefaultClientCircuitBreakerHandler.of(CircuitBreakerMapping.ofDefault()));
+        return build(delegate, DefaultCircuitBreakerClientHandler.of(CircuitBreakerMapping.ofDefault()));
     }
 
     /**
@@ -46,7 +44,7 @@ public final class CircuitBreakerRpcClientBuilder
      */
     public CircuitBreakerRpcClient build(
             RpcClient delegate,
-            ClientCircuitBreakerHandler<RpcRequest> handler) {
+            CircuitBreakerClientHandler<RpcRequest> handler) {
         return new CircuitBreakerRpcClient(delegate, ruleWithContent(), handler);
     }
 
@@ -67,7 +65,7 @@ public final class CircuitBreakerRpcClientBuilder
 
     @Override
     public CircuitBreakerRpcClientBuilder handler(
-            ClientCircuitBreakerHandler<RpcRequest> handler) {
+            CircuitBreakerClientHandler<RpcRequest> handler) {
         return (CircuitBreakerRpcClientBuilder) super.handler(handler);
     }
 }

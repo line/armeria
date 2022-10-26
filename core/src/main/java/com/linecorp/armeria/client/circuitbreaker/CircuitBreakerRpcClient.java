@@ -60,7 +60,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
         requireNonNull(mapping, "mapping");
         requireNonNull(ruleWithContent, "ruleWithContent");
         return delegate -> new CircuitBreakerRpcClient(
-                delegate, ruleWithContent, DefaultClientCircuitBreakerHandler.of(mapping));
+                delegate, ruleWithContent, DefaultCircuitBreakerClientHandler.of(mapping));
     }
 
     /**
@@ -121,15 +121,12 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
         return new CircuitBreakerRpcClientBuilder(ruleWithContent);
     }
 
-    private final CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent;
-
     /**
      * Creates a new instance that decorates the specified {@link RpcClient}.
      */
     CircuitBreakerRpcClient(RpcClient delegate, CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent,
-                            ClientCircuitBreakerHandler<RpcRequest> handler) {
-        super(delegate, handler);
-        this.ruleWithContent = requireNonNull(ruleWithContent, "ruleWithContent");
+                            CircuitBreakerClientHandler<RpcRequest> handler) {
+        super(delegate, handler, requireNonNull(ruleWithContent, "ruleWithContent"));
     }
 
     @Override
@@ -140,14 +137,14 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
         try {
             response = unwrap().execute(ctx, req);
         } catch (Throwable cause) {
-            CircuitBreakerReporterUtil.reportSuccessOrFailure(
-                    callbacks, ctx, ruleWithContent.shouldReportAsSuccess(ctx, null, cause), cause);
+            reportSuccessOrFailure(
+                    callbacks, ruleWithContent().shouldReportAsSuccess(ctx, null, cause), ctx, cause);
             throw cause;
         }
 
         response.handle((unused1, cause) -> {
-            CircuitBreakerReporterUtil.reportSuccessOrFailure(
-                    callbacks, ctx, ruleWithContent.shouldReportAsSuccess(ctx, null, cause), cause);
+            reportSuccessOrFailure(
+                    callbacks, ruleWithContent().shouldReportAsSuccess(ctx, null, cause), ctx, cause);
             return null;
         });
         return response;

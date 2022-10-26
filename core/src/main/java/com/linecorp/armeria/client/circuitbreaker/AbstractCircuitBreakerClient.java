@@ -16,6 +16,10 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static com.google.common.base.Preconditions.checkState;
+import static com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleUtil.fromCircuitBreakerRuleWithContent;
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.CompletionStage;
 
 import com.google.common.base.MoreObjects;
@@ -37,19 +41,82 @@ import com.linecorp.armeria.common.util.CompletionActions;
 public abstract class AbstractCircuitBreakerClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
-    private final ClientCircuitBreakerHandler<I> handler;
+    @Nullable
+    private final CircuitBreakerRule rule;
+
+    @Nullable
+    private final CircuitBreakerRule fromRuleWithContent;
+
+    @Nullable
+    private final CircuitBreakerRuleWithContent<O> ruleWithContent;
+    private final CircuitBreakerClientHandler<I> handler;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    <CB> AbstractCircuitBreakerClient(Client<I, O> delegate, ClientCircuitBreakerHandler<I> handler) {
+    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler<I> handler,
+                                 CircuitBreakerRule rule) {
+        this(delegate, handler, requireNonNull(rule, "rule"), null);
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@link Client}.
+     */
+    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler<I> handler,
+                                 CircuitBreakerRuleWithContent<O> ruleWithContent) {
+        this(delegate, handler, null, requireNonNull(ruleWithContent, "ruleWithContent"));
+    }
+
+    /**
+     * Creates a new instance that decorates the specified {@link Client}.
+     */
+    private AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler<I> handler,
+                                         @Nullable CircuitBreakerRule rule,
+                                         @Nullable CircuitBreakerRuleWithContent<O> ruleWithContent) {
         super(delegate);
-        this.handler = handler;
+        this.handler = requireNonNull(handler, "handler");
+        this.rule = rule;
+        this.ruleWithContent = ruleWithContent;
+        if (ruleWithContent != null) {
+            fromRuleWithContent = fromCircuitBreakerRuleWithContent(ruleWithContent);
+        } else {
+            fromRuleWithContent = null;
+        }
+    }
+
+    /**
+     * Returns the {@link CircuitBreakerRule}.
+     *
+     * @throws IllegalStateException if the {@link CircuitBreakerRule} is not set
+     */
+    final CircuitBreakerRule rule() {
+        checkState(rule != null, "rule is not set.");
+        return rule;
+    }
+
+    /**
+     * Returns the {@link CircuitBreakerRuleWithContent}.
+     *
+     * @throws IllegalStateException if the {@link CircuitBreakerRuleWithContent} is not set
+     */
+    final CircuitBreakerRuleWithContent<O> ruleWithContent() {
+        checkState(ruleWithContent != null, "ruleWithContent is not set.");
+        return ruleWithContent;
+    }
+
+    /**
+     * Returns the {@link CircuitBreakerRule} derived from {@link #ruleWithContent()}.
+     *
+     * @throws IllegalStateException if the {@link CircuitBreakerRuleWithContent} is not set
+     */
+    final CircuitBreakerRule fromRuleWithContent() {
+        checkState(fromRuleWithContent != null, "fromRuleWithContent is not set.");
+        return fromRuleWithContent;
     }
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        final CircuitBreakerClientCallbacks callbacks = handler.tryAcquireAndRequest(ctx, req);
+        final CircuitBreakerClientCallbacks callbacks = handler.request(ctx, req);
         if (callbacks == null) {
             return unwrap().execute(ctx, req);
         }
@@ -66,18 +133,16 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
      * Reports a success or a failure to the specified {@link CircuitBreaker} according to the completed value
      * of the specified {@code future}. If the completed value is {@link CircuitBreakerDecision#ignore()},
      * this doesn't do anything.
-     *
-     * @deprecated Do not use this method.
      */
-    @Deprecated
-    protected static void reportSuccessOrFailure(CircuitBreaker circuitBreaker,
-                                                 CompletionStage<@Nullable CircuitBreakerDecision> future) {
+    static void reportSuccessOrFailure(CircuitBreakerClientCallbacks callbacks,
+                                       CompletionStage<@Nullable CircuitBreakerDecision> future,
+                                       ClientRequestContext ctx, @Nullable Throwable throwable) {
         future.handle((decision, unused) -> {
             if (decision != null) {
                 if (decision == CircuitBreakerDecision.success() || decision == CircuitBreakerDecision.next()) {
-                    circuitBreaker.onSuccess();
+                    callbacks.onSuccess(ctx);
                 } else if (decision == CircuitBreakerDecision.failure()) {
-                    circuitBreaker.onFailure();
+                    callbacks.onFailure(ctx, throwable);
                 } else {
                     // Ignore, does not count as a success nor failure.
                 }
@@ -89,6 +154,9 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+                          .add("rule", rule)
+                          .add("fromRuleWithContent", fromRuleWithContent)
+                          .add("ruleWithContent", ruleWithContent)
                           .add("handler", handler)
                           .toString();
     }
