@@ -28,23 +28,18 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.BeanDescription;
 import com.fasterxml.jackson.databind.JavaType;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.introspect.BeanPropertyDefinition;
-import com.fasterxml.jackson.databind.ser.PropertyWriter;
 import com.google.common.base.CaseFormat;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -68,7 +63,6 @@ import com.linecorp.armeria.server.docs.TypeSignature;
 public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider {
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
-    private static final SerializerProvider serializerProvider = mapper.getSerializerProviderInstance();
 
     private static final StructInfo HTTP_RESPONSE_INFO =
             new StructInfo(HttpResponse.class.getName(), ImmutableList.of());
@@ -151,6 +145,7 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
         final List<FieldInfo> fieldInfos = properties.stream().map(property -> {
             return fieldInfos(javaType,
                               property.getName(),
+                              property.getInternalName(),
                               property.getPrimaryType(),
                               childType -> requestFieldInfos(childType, visiting, false));
         }).collect(toImmutableList());
@@ -177,27 +172,24 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
             return ImmutableList.of();
         }
 
-        try {
-            final JsonSerializer<Object> serializer = serializerProvider.findValueSerializer(javaType);
-            final Iterator<PropertyWriter> logicalProperties = serializer.properties();
-            if (root && !logicalProperties.hasNext()) {
-                return newReflectiveStructInfo(javaType.getRawClass()).fields();
-            }
-
-            return Streams.stream(logicalProperties).map(propertyWriter -> {
-                return fieldInfos(javaType,
-                                  propertyWriter.getName(),
-                                  propertyWriter.getType(),
-                                  childType -> responseFieldInfos(childType, visiting, false));
-            }).collect(toImmutableList());
-        } catch (JsonMappingException e) {
-            return ImmutableList.of();
-        } finally {
-            visiting.remove(javaType);
+        final BeanDescription description = mapper.getSerializationConfig().introspect(javaType);
+        final List<BeanPropertyDefinition> properties = description.findProperties();
+        if (root && properties.isEmpty()) {
+            return newReflectiveStructInfo(javaType.getRawClass()).fields();
         }
+
+        final List<FieldInfo> fieldInfos = properties.stream().map(property -> {
+            return fieldInfos(javaType,
+                              property.getName(),
+                              property.getInternalName(),
+                              property.getPrimaryType(),
+                              childType -> responseFieldInfos(childType, visiting, false));
+        }).collect(toImmutableList());
+        visiting.remove(javaType);
+        return fieldInfos;
     }
 
-    private FieldInfo fieldInfos(JavaType javaType, String name, JavaType fieldType,
+    private FieldInfo fieldInfos(JavaType javaType, String name, String internalName, JavaType fieldType,
                                  Function<JavaType, List<FieldInfo>> childFieldsResolver) {
         TypeSignature typeSignature = toTypeSignature(fieldType);
         final FieldRequirement fieldRequirement;
@@ -209,10 +201,10 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
             }
             fieldRequirement = FieldRequirement.OPTIONAL;
         } else {
-            fieldRequirement = fieldRequirement(javaType, fieldType, name);
+            fieldRequirement = fieldRequirement(javaType, fieldType, internalName);
         }
 
-        final DescriptionInfo descriptionInfo = fieldDescriptionInfo(javaType, fieldType, name);
+        final DescriptionInfo descriptionInfo = fieldDescriptionInfo(javaType, fieldType, internalName);
         if (typeSignature.isBase() || typeSignature.isContainer()) {
             return FieldInfo.builder(name, typeSignature)
                             .requirement(fieldRequirement)
@@ -380,6 +372,14 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
                 return extractor.apply(field);
             }
         } catch (NoSuchFieldException ignored) {
+            for (Field field : classType.getRawClass().getDeclaredFields()) {
+                final JsonProperty renameAnnotation = AnnotationUtil.findFirst(field, JsonProperty.class);
+                if (renameAnnotation != null &&
+                    renameAnnotation.value().equals(fieldName) &&
+                    field.getType() == fieldType.getRawClass()) {
+                    return extractor.apply(field);
+                }
+            }
         }
         return null;
     }
@@ -418,6 +418,12 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
                 parameter.getName().equals(fieldName) &&
                 parameter.getType() ==
                 fieldType.getRawClass()) {
+                return extractor.apply(parameter);
+            }
+            final JsonProperty renameAnnotation = AnnotationUtil.findFirst(parameter, JsonProperty.class);
+            if (renameAnnotation != null &&
+                renameAnnotation.value().equals(fieldName) &&
+                parameter.getType() == fieldType.getRawClass()) {
                 return extractor.apply(parameter);
             }
         }

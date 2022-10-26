@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.server.annotation
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.STRING
 import com.linecorp.armeria.server.annotation.Description
 import com.linecorp.armeria.server.docs.DescriptionInfo
@@ -55,6 +56,10 @@ class DataClassDefaultNameTypeInfoProviderTest {
             FieldInfo.builder("defaultValue2", STRING)
                 .requirement(FieldRequirement.REQUIRED)
                 .descriptionInfo(DescriptionInfo.of("default value 2 description"))
+                .build(),
+            FieldInfo.builder("overridden_json_field_name", STRING)
+                .requirement(FieldRequirement.OPTIONAL)
+                .descriptionInfo(DescriptionInfo.of("overridden json field name"))
                 .build()
         )
     }
@@ -82,7 +87,10 @@ class DataClassDefaultNameTypeInfoProviderTest {
         @Description(value = "default value description")
         val defaultValue: String = "Hello",
         @Description(value = "default value 2 description")
-        val defaultValue2: String = "Hello2"
+        val defaultValue2: String = "Hello2",
+        @JsonProperty("overridden_json_field_name")
+        @Description("overridden json field name")
+        val overriddenJsonFieldName: String?
     )
 
     @Description("Enum description")
