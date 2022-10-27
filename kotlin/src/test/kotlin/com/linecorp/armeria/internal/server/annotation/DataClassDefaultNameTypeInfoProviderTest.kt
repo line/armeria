@@ -57,9 +57,9 @@ class DataClassDefaultNameTypeInfoProviderTest {
                 .requirement(FieldRequirement.REQUIRED)
                 .descriptionInfo(DescriptionInfo.of("default value 2 description"))
                 .build(),
-            FieldInfo.builder("overridden_json_field_name", STRING)
+            FieldInfo.builder("renamed", STRING)
                 .requirement(FieldRequirement.OPTIONAL)
-                .descriptionInfo(DescriptionInfo.of("overridden json field name"))
+                .descriptionInfo(DescriptionInfo.of("renamed description"))
                 .build()
         )
     }
@@ -88,9 +88,9 @@ class DataClassDefaultNameTypeInfoProviderTest {
         val defaultValue: String = "Hello",
         @Description(value = "default value 2 description")
         val defaultValue2: String = "Hello2",
-        @JsonProperty("overridden_json_field_name")
-        @Description("overridden json field name")
-        val overriddenJsonFieldName: String?
+        @JsonProperty("renamed")
+        @Description("renamed description")
+        val name: String?
     )
 
     @Description("Enum description")
