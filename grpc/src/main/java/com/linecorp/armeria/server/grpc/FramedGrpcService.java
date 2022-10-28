@@ -298,8 +298,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
                                 .startCall(call, MetadataUtil.copyFromHeaders(req.headers()));
         } catch (Throwable t) {
             call.setListener((Listener<I>) EMPTY_LISTENER);
-            final Metadata metadata = new Metadata();
-            call.close(GrpcStatus.fromThrowable(statusFunction, ctx, t, metadata), metadata);
+            call.close(t);
             return;
         }
         if (listener == null) {
