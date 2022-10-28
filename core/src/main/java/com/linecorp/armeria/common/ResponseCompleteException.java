@@ -15,10 +15,13 @@
  */
 package com.linecorp.armeria.common;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A special {@link CancellationException} that aborts an {@link HttpRequest} after the corresponding
  * {@link HttpResponse} is completed.
  */
+@UnstableApi
 public final class ResponseCompleteException extends CancellationException {
 
     private static final long serialVersionUID = 6090278381004263949L;
