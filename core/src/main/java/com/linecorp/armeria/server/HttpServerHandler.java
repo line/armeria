@@ -26,6 +26,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.IdentityHashMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -201,6 +202,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        if (responseEncoder != null) {
+            // Immediately close responseEncoder so that a late response is completed with
+            // a ClosedSessionException.
+            responseEncoder.close();
+        }
+
         // Give the unfinished streaming responses a chance to close themselves before we abort them,
         // so that successful responses are not aborted due to a race condition like the following:
         //
@@ -226,10 +233,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private void cleanup() {
-        if (responseEncoder != null) {
-            responseEncoder.close();
-        }
-
         if (!unfinishedRequests.isEmpty()) {
             final ClosedSessionException cause = ClosedSessionException.get();
             unfinishedRequests.forEach((req, res) -> {
@@ -409,7 +412,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 return null;
             });
 
-            res.whenComplete().handleAsync((ret, cause) -> {
+            // A future which is completed when the all response objects are written to channel and
+            // the returned promises are done.
+            final CompletableFuture<Void> resWriteFuture = new CompletableFuture<>();
+            resWriteFuture.handle((ret, cause) -> {
+                assert eventLoop.inEventLoop();
                 try {
                     if (cause == null) {
                         req.abort();
@@ -428,7 +435,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     logger.warn("Unexpected exception:", t);
                 }
                 return null;
-            }, eventLoop);
+            });
 
             // Set the response to the request in order to be able to immediately abort the response
             // when the peer cancels the stream.
@@ -437,11 +444,11 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             assert responseEncoder != null;
             if (reqCtx.exchangeType().isResponseStreaming()) {
                 final HttpResponseSubscriber resSubscriber =
-                        new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
+                        new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
                 res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
             } else {
                 final AggregatedHttpResponseHandler resHandler =
-                        new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req);
+                        new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req, resWriteFuture);
                 res.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), eventLoop))
                    .handle(resHandler);
             }

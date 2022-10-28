@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.MoreObjects.firstNonNull;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 
 import org.slf4j.Logger;
@@ -44,12 +45,15 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         implements BiFunction<AggregatedHttpResponse, Throwable, Void> {
 
     private static final Logger logger = LoggerFactory.getLogger(AggregatedHttpResponseHandler.class);
+    private final CompletableFuture<Void> completionFuture;
 
     private boolean isComplete;
 
     AggregatedHttpResponseHandler(ChannelHandlerContext ctx, ServerHttpObjectEncoder responseEncoder,
-                                  DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
+                                  DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
+                                  CompletableFuture<Void> completionFuture) {
         super(ctx, responseEncoder, reqCtx, req);
+        this.completionFuture = completionFuture;
         scheduleTimeout();
     }
 
@@ -80,7 +84,6 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
         logBuilder().startResponse();
         write(response, null);
-        return;
     }
 
     private void write(AggregatedHttpResponse response, @Nullable Throwable cause) {
@@ -119,7 +122,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
     @Override
     void fail(Throwable cause) {
-        if (tryComplete()) {
+        if (tryComplete(cause)) {
             endLogRequestAndResponse(cause);
             maybeWriteAccessLog();
         }
@@ -134,11 +137,17 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         ctx.flush();
     }
 
-    private boolean tryComplete() {
+    @Override
+    boolean tryComplete(@Nullable Throwable cause) {
         if (isComplete) {
             return false;
         }
         isComplete = true;
+        if (cause == null) {
+            completionFuture.complete(null);
+        } else {
+            completionFuture.completeExceptionally(cause);
+        }
         return true;
     }
 
@@ -185,7 +194,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         // - any write operation is failed with a cause.
         if (isSuccess) {
             logBuilder().responseFirstBytesTransferred();
-            if (tryComplete()) {
+            if (tryComplete(cause)) {
                 if (cause == null) {
                     cause = CapturedServiceException.get(reqCtx);
                 }

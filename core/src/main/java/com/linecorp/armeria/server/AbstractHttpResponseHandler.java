@@ -28,6 +28,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
@@ -60,6 +61,8 @@ abstract class AbstractHttpResponseHandler {
      * Returns whether a response has been finished.
      */
     abstract boolean isDone();
+
+    abstract boolean tryComplete(@Nullable Throwable cause);
 
     /**
      * Fails a request and a response with the specified {@link Throwable}.
