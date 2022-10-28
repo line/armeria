@@ -13,11 +13,7 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.internal.server;
-
-import com.linecorp.armeria.common.CancellationException;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
+package com.linecorp.armeria.common;
 
 /**
  * A special {@link CancellationException} that aborts an {@link HttpRequest} after the corresponding
@@ -40,4 +36,3 @@ public final class ResponseCompleteException extends CancellationException {
         super(null, null, false, false);
     }
 }
-
