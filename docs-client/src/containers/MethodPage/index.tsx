@@ -157,7 +157,9 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
     const childFieldInfos = props.specification.getStructByName(
       param.typeSignature,
     )?.fields;
-    if (childFieldInfos) return { ...param, childFieldInfos };
+    if (childFieldInfos) {
+       return { ...param, childFieldInfos };
+    }
     return param;
   });
 
