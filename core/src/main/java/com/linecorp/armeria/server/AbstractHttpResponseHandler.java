@@ -173,7 +173,6 @@ abstract class AbstractHttpResponseHandler {
         return response;
     }
 
-
     final void endLogRequestAndResponse(Throwable cause) {
         logBuilder().endRequest(cause);
         logBuilder().endResponse(cause);
