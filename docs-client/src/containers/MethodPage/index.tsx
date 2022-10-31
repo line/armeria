@@ -158,7 +158,7 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
       param.typeSignature,
     )?.fields;
     if (childFieldInfos) {
-       return { ...param, childFieldInfos };
+      return { ...param, childFieldInfos };
     }
     return param;
   });
