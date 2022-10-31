@@ -26,6 +26,7 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -103,7 +104,19 @@ abstract class AbstractHttpResponseHandler {
 
         ResponseHeaders headers = mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders());
         final HttpData content = res.content();
-        final boolean contentEmpty = content.isEmpty();
+        // An aggregated response always has empty content if its status.isContentAlwaysEmpty() is true.
+        assert !res.status().isContentAlwaysEmpty() || content.isEmpty();
+        final boolean contentEmpty;
+        if (content.isEmpty()) {
+            contentEmpty = true;
+        } else if (req.method() == HttpMethod.HEAD) {
+            contentEmpty = true;
+            // Need to release the body because we're not passing it over to the encoder.
+            content.close();
+        } else {
+            contentEmpty = false;
+        }
+
         final HttpHeaders trailers = mergeTrailers(res.trailers(), reqCtx.additionalResponseTrailers());
         final boolean trailersEmpty = trailers.isEmpty();
 
