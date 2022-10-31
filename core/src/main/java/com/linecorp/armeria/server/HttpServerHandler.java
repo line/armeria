@@ -409,7 +409,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     }
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception:", t);
-                } return null;
+                }
+                return null;
             });
 
             // A future which is completed when the all response objects are written to channel and
