@@ -45,15 +45,11 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         implements BiFunction<AggregatedHttpResponse, Throwable, Void> {
 
     private static final Logger logger = LoggerFactory.getLogger(AggregatedHttpResponseHandler.class);
-    private final CompletableFuture<Void> completionFuture;
-
-    private boolean isComplete;
 
     AggregatedHttpResponseHandler(ChannelHandlerContext ctx, ServerHttpObjectEncoder responseEncoder,
                                   DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
                                   CompletableFuture<Void> completionFuture) {
-        super(ctx, responseEncoder, reqCtx, req);
-        this.completionFuture = completionFuture;
+        super(ctx, responseEncoder, reqCtx, req, completionFuture);
         scheduleTimeout();
     }
 
@@ -135,25 +131,6 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
             }
         });
         ctx.flush();
-    }
-
-    @Override
-    boolean tryComplete(@Nullable Throwable cause) {
-        if (isComplete) {
-            return false;
-        }
-        isComplete = true;
-        if (cause == null) {
-            completionFuture.complete(null);
-        } else {
-            completionFuture.completeExceptionally(cause);
-        }
-        return true;
-    }
-
-    @Override
-    boolean isDone() {
-        return isComplete;
     }
 
     private final class WriteFutureListener implements ChannelFutureListener {

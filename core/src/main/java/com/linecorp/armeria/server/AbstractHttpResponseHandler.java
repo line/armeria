@@ -48,21 +48,40 @@ abstract class AbstractHttpResponseHandler {
     final DefaultServiceRequestContext reqCtx;
     final DecodedHttpRequest req;
 
+    private final CompletableFuture<Void> completionFuture;
+    private boolean isComplete;
+
     AbstractHttpResponseHandler(ChannelHandlerContext ctx,
                                 ServerHttpObjectEncoder responseEncoder,
-                                DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
+                                DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
+                                CompletableFuture<Void> completionFuture) {
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.reqCtx = reqCtx;
         this.req = req;
+        this.completionFuture = completionFuture;
     }
 
     /**
      * Returns whether a response has been finished.
      */
-    abstract boolean isDone();
+    boolean isDone() {
+        return isComplete;
+    }
 
-    abstract boolean tryComplete(@Nullable Throwable cause);
+    final boolean tryComplete(@Nullable Throwable cause) {
+        if (isComplete) {
+            return false;
+        }
+        isComplete = true;
+        if (cause == null) {
+            completionFuture.complete(null);
+        } else {
+            completionFuture.completeExceptionally(cause);
+        }
+        return true;
+    }
+
 
     /**
      * Fails a request and a response with the specified {@link Throwable}.
@@ -153,6 +172,7 @@ abstract class AbstractHttpResponseHandler {
         assert response != null;
         return response;
     }
+
 
     final void endLogRequestAndResponse(Throwable cause) {
         logBuilder().endRequest(cause);

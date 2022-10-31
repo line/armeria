@@ -409,41 +409,37 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     }
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception:", t);
-                }
-                return null;
+                } return null;
             });
 
             // A future which is completed when the all response objects are written to channel and
             // the returned promises are done.
             final CompletableFuture<Void> resWriteFuture = new CompletableFuture<>();
-            resWriteFuture.handle((ret, cause) -> {
-                assert eventLoop.inEventLoop();
+            resWriteFuture.handleAsync((ret, cause) -> {
                 try {
                     if (cause == null) {
                         req.abort(ResponseCompleteException.get());
                     } else {
                         req.abort(cause);
                     }
-                    // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
+                    // NB: logBuilder.endResponse() is called by
+                    // HttpResponseSubscriber below.
                     if (!isTransientService) {
                         gracefulShutdownSupport.dec();
-                    }
-                    unfinishedRequests.remove(req);
-                    if (unfinishedRequests.isEmpty() && handledLastRequest) {
+                    } unfinishedRequests.remove(req); if (unfinishedRequests.isEmpty() && handledLastRequest) {
                         ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
                     }
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception:", t);
-                }
-                return null;
-            });
+                } return null;
+                // Reschedule to abort the request after all post-processes such logging have been handled.
+            }, eventLoop);
 
             // Set the response to the request in order to be able to immediately abort the response
             // when the peer cancels the stream.
             req.setResponse(res);
 
-            assert responseEncoder != null;
-            if (reqCtx.exchangeType().isResponseStreaming()) {
+            assert responseEncoder != null; if (reqCtx.exchangeType().isResponseStreaming()) {
                 final HttpResponseSubscriber resSubscriber =
                         new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
                 res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);

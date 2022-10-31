@@ -62,12 +62,9 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
         DONE,
     }
 
-    private final CompletableFuture<Void> completionFuture;
-
     @Nullable
     private Subscription subscription;
     private State state = State.NEEDS_HEADERS;
-    private boolean isComplete;
 
     private boolean isSubscriptionCompleted;
 
@@ -82,8 +79,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
     HttpResponseSubscriber(ChannelHandlerContext ctx, ServerHttpObjectEncoder responseEncoder,
                            DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
                            CompletableFuture<Void> completionFuture) {
-        super(ctx, responseEncoder, reqCtx, req);
-        this.completionFuture = completionFuture;
+        super(ctx, responseEncoder, reqCtx, req, completionFuture);
     }
 
     @Override
@@ -144,8 +140,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                 } else {
                     if (responseEncoder.isResponseHeadersSent(req.id(), req.streamId())) {
                         // The response is sent by the HttpRequestDecoder so we just cancel the stream message.
-                        isComplete = true;
-                        completionFuture.completeExceptionally(CancelledSubscriptionException.get());
+                        tryComplete(CancelledSubscriptionException.get());
                         setDone(true);
                         return;
                     }
@@ -324,20 +319,6 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
             endLogRequestAndResponse(cause);
             maybeWriteAccessLog();
         }
-    }
-
-    @Override
-    boolean tryComplete(@Nullable Throwable cause) {
-        if (isComplete) {
-            return false;
-        }
-        isComplete = true;
-        if (cause == null) {
-            completionFuture.complete(null);
-        } else {
-            completionFuture.completeExceptionally(cause);
-        }
-        return true;
     }
 
     private void failAndRespond(Throwable cause, AggregatedHttpResponse res, Http2Error error, boolean cancel) {
