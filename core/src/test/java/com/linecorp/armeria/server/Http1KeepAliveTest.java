@@ -66,7 +66,6 @@ class Http1KeepAliveTest {
     void noKeepAlive(ExchangeType exchangeType) throws Exception {
         try (Socket socket = new Socket("127.0.0.1", server.httpPort())) {
             socket.setSoTimeout(10000);
-            socket.setReceiveBufferSize(2);
             final PrintWriter writer = new PrintWriter(socket.getOutputStream());
             writer.print("GET /?exchangeType=" + exchangeType.name() + " HTTP/1.1\r\n");
             writer.print("Connection: close\r\n\r\n");
