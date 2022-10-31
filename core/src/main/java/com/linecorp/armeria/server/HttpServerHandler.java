@@ -422,8 +422,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     } else {
                         req.abort(cause);
                     }
-                    // NB: logBuilder.endResponse() is called by
-                    // HttpResponseSubscriber below.
+                    // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
                     if (!isTransientService) {
                         gracefulShutdownSupport.dec();
                     } unfinishedRequests.remove(req); if (unfinishedRequests.isEmpty() && handledLastRequest) {
@@ -431,7 +430,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     }
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception:", t);
-                } return null;
+                }
+                return null;
                 // Reschedule to abort the request after all post-processes such logging have been handled.
             }, eventLoop);
 
