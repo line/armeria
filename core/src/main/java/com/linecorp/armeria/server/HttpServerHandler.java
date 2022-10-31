@@ -425,7 +425,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     // NB: logBuilder.endResponse() is called by HttpResponseSubscriber below.
                     if (!isTransientService) {
                         gracefulShutdownSupport.dec();
-                    } unfinishedRequests.remove(req); if (unfinishedRequests.isEmpty() && handledLastRequest) {
+                    }
+                    unfinishedRequests.remove(req);
+                    if (unfinishedRequests.isEmpty() && handledLastRequest) {
                         ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
                     }
                 } catch (Throwable t) {
@@ -439,7 +441,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             // when the peer cancels the stream.
             req.setResponse(res);
 
-            assert responseEncoder != null; if (reqCtx.exchangeType().isResponseStreaming()) {
+            assert responseEncoder != null;
+            if (reqCtx.exchangeType().isResponseStreaming()) {
                 final HttpResponseSubscriber resSubscriber =
                         new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
                 res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
