@@ -40,9 +40,9 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -114,9 +114,10 @@ class HttpResponseDecoderTest {
         final HttpRequestWriter request = HttpRequest.streaming(RequestHeaders.of(HttpMethod.POST, "/"));
         final AggregatedHttpResponse res = client.execute(request).aggregate().join();
         assertThat(res.contentUtf8()).isEqualTo("Hello, Armeria!");
-        // The stream is aborted in HttpResponseDecoder.close(...) after the client receives the response.
+        // The stream is aborted with ResponseCompleteException
+        // in HttpResponseDecoder.close(...) after the client receives the response.
         request.whenComplete().handle((unused, cause) -> {
-            assertThat(cause).isExactlyInstanceOf(AbortedStreamException.class);
+            assertThat(cause).isExactlyInstanceOf(ResponseCompleteException.class);
             return null;
         }).join();
     }

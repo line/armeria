@@ -47,6 +47,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -412,7 +413,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             res.whenComplete().handleAsync((ret, cause) -> {
                 try {
                     if (cause == null) {
-                        req.abort();
+                        req.abort(ResponseCompleteException.get());
                     } else {
                         req.abort(cause);
                     }
