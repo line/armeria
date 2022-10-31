@@ -148,11 +148,6 @@ public final class RequestMetricSupport {
     private static void updateMetrics(
             RequestContext ctx, RequestLog log, RequestMetrics metrics,
             SuccessFunction successFunction) {
-        if (log.requestCause() != null) {
-            metrics.failure().increment();
-            return;
-        }
-
         metrics.requestDuration().record(log.requestDurationNanos(), TimeUnit.NANOSECONDS);
         metrics.requestLength().record(log.requestLength());
         metrics.responseDuration().record(log.responseDurationNanos(), TimeUnit.NANOSECONDS);
