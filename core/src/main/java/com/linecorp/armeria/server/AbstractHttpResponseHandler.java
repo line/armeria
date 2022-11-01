@@ -82,7 +82,6 @@ abstract class AbstractHttpResponseHandler {
         return true;
     }
 
-
     /**
      * Fails a request and a response with the specified {@link Throwable}.
      * This method won't send any response to the remote peer but log the failed request.
