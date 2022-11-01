@@ -34,7 +34,6 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 
@@ -201,8 +200,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                         config.serviceConfigs().stream()
                               .filter(se -> virtualHosts.contains(se.virtualHost()))
                               .collect(toImmutableList());
-                vfs().specificationLoader.updateServices(services);
-                vfs().specificationLoader.triggerPreload(DEFAULT_EXECUTOR);
+                vfs().specificationLoader.updateServices(services, DEFAULT_EXECUTOR);
             }
         });
         server.closeOnJvmShutdown(DEFAULT_EXECUTOR::shutdown);
@@ -238,15 +236,15 @@ public final class DocService extends SimpleDecoratingHttpService {
     }
 
     static final class SpecificationLoader {
-        private final ExampleSupport exampleSupport;
-        private final DocServiceFilter filter;
-        private final NamedTypeInfoProvider namedTypeInfoProvider;
-        private final AtomicReference<List<ServiceConfig>> servicesRef =
-                new AtomicReference<>(Collections.emptyList());
-        private final Map<String, CompletableFuture<AggregatedHttpFile>> files = new ConcurrentHashMap<>();
+
         private static final String versionsPath = "/versions.json";
         private static final String specificationPath = "/specification.json";
         private static final Set<String> targetPaths = ImmutableSet.of(versionsPath, specificationPath);
+        private final ExampleSupport exampleSupport;
+        private final DocServiceFilter filter;
+        private final NamedTypeInfoProvider namedTypeInfoProvider;
+        private final Map<String, CompletableFuture<AggregatedHttpFile>> files = new ConcurrentHashMap<>();
+        private List<ServiceConfig> services = Collections.emptyList();
 
         SpecificationLoader(
                 ExampleSupport exampleSupport,
@@ -261,12 +259,12 @@ public final class DocService extends SimpleDecoratingHttpService {
             return targetPaths.contains(path);
         }
 
-        void triggerPreload(Executor executor) {
+        void updateServices(List<ServiceConfig> services, Executor executor) {
+            this.services = services;
             targetPaths.forEach(path -> load(path, executor));
         }
 
         CompletableFuture<AggregatedHttpFile> load(String path, Executor executor) {
-            checkState(!servicesRef.get().isEmpty(), "There are no services to load for DocService.");
             if (versionsPath.equals(path)) {
                 return loadVersions(executor);
             } else if (specificationPath.equals(path)) {
@@ -292,7 +290,7 @@ public final class DocService extends SimpleDecoratingHttpService {
 
         private CompletableFuture<AggregatedHttpFile> loadSpecifications(Executor executor) {
             return files.computeIfAbsent(specificationPath, key -> {
-                final List<ServiceConfig> services = servicesRef.get();
+                checkState(!services.isEmpty(), "There are no services to load for DocService.");
                 return CompletableFuture.supplyAsync(() -> {
                     final DocStringSupport docStringSupport = new DocStringSupport(services);
                     ServiceSpecification spec = generate(services);
@@ -307,10 +305,6 @@ public final class DocService extends SimpleDecoratingHttpService {
                     }
                 }, executor);
             });
-        }
-
-        void updateServices(List<ServiceConfig> services) {
-            servicesRef.set(services);
         }
 
         private static AggregatedHttpFile toFile(byte[] content, MediaType mediaType) {
@@ -353,13 +347,12 @@ public final class DocService extends SimpleDecoratingHttpService {
 
     static final class DocServiceVfs extends AbstractHttpVfs {
         private final SpecificationLoader specificationLoader;
+        private final HttpVfs staticFiles = HttpVfs.of(DocService.class.getClassLoader(),
+                                                       "com/linecorp/armeria/server/docs");
 
         DocServiceVfs(SpecificationLoader specificationLoader) {
             this.specificationLoader = specificationLoader;
         }
-
-        private final HttpVfs staticFiles = HttpVfs.of(DocService.class.getClassLoader(),
-                                                       "com/linecorp/armeria/server/docs");
 
         @Deprecated
         @Override
