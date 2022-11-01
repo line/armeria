@@ -292,7 +292,8 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
         final State oldState = setDone(false);
         if (oldState == State.NEEDS_HEADERS) {
             logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(), service());
-            responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR);
+            responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR)
+                           .addListener(future -> tryComplete(null));
             ctx.flush();
             return;
         }
