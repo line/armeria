@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.server.docs;
 
-import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
@@ -240,6 +239,12 @@ public final class DocService extends SimpleDecoratingHttpService {
         private static final String versionsPath = "/versions.json";
         private static final String specificationPath = "/specification.json";
         private static final Set<String> targetPaths = ImmutableSet.of(versionsPath, specificationPath);
+        private static final CompletableFuture<AggregatedHttpFile> loadFailedFuture;
+        static {
+            loadFailedFuture = new CompletableFuture<>();
+            loadFailedFuture.completeExceptionally(new IllegalStateException("File load not triggered"));
+        }
+
         private final ExampleSupport exampleSupport;
         private final DocServiceFilter filter;
         private final NamedTypeInfoProvider namedTypeInfoProvider;
@@ -262,6 +267,11 @@ public final class DocService extends SimpleDecoratingHttpService {
         void updateServices(List<ServiceConfig> services, Executor executor) {
             this.services = services;
             targetPaths.forEach(path -> load(path, executor));
+        }
+
+        CompletableFuture<AggregatedHttpFile> get(String path) {
+            assert targetPaths.contains(path);
+            return files.getOrDefault(path, loadFailedFuture);
         }
 
         CompletableFuture<AggregatedHttpFile> load(String path, Executor executor) {
@@ -290,7 +300,6 @@ public final class DocService extends SimpleDecoratingHttpService {
 
         private CompletableFuture<AggregatedHttpFile> loadSpecifications(Executor executor) {
             return files.computeIfAbsent(specificationPath, key -> {
-                checkState(!services.isEmpty(), "There are no services to load for DocService.");
                 return CompletableFuture.supplyAsync(() -> {
                     final DocStringSupport docStringSupport = new DocStringSupport(services);
                     ServiceSpecification spec = generate(services);
@@ -369,7 +378,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                 @Nullable String contentEncoding, HttpHeaders additionalHeaders,
                 MediaTypeResolver mediaTypeResolver) {
             if (specificationLoader.contains(path)) {
-                return HttpFile.from(specificationLoader.load(path, fileReadExecutor).thenApply(file -> {
+                return HttpFile.from(specificationLoader.get(path).thenApply(file -> {
                     assert file != AggregatedHttpFile.nonExistent();
                     final HttpFileBuilder builder = HttpFile.builder(file.content(),
                                                                      file.attributes().lastModifiedMillis());
