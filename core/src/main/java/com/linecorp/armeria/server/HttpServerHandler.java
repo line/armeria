@@ -363,9 +363,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             } catch (Throwable cause) {
                 // No need to consume further since the response is ready.
                 if (cause instanceof HttpResponseException || cause instanceof HttpStatusException) {
-                    req.close();
+                    req.abort(ResponseCompleteException.get());
                 } else {
-                    req.close(cause);
+                    req.abort(cause);
                 }
                 serviceResponse = HttpResponse.ofFailure(cause);
             }
@@ -416,9 +416,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             // A future which is completed when the all response objects are written to channel and
             // the returned promises are done.
             final CompletableFuture<Void> resWriteFuture = new CompletableFuture<>();
-            resWriteFuture.handleAsync((ret, cause) -> {
+            resWriteFuture.handle((ret, cause) -> {
                 try {
-                    if (cause == null) {
+                    if (cause == null || !req.isOpen()) {
                         req.abort(ResponseCompleteException.get());
                     } else {
                         req.abort(cause);
@@ -435,8 +435,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     logger.warn("Unexpected exception:", t);
                 }
                 return null;
-                // Reschedule to abort the request after all post-processes such logging have been handled.
-            }, eventLoop);
+            });
 
             // Set the response to the request in order to be able to immediately abort the response
             // when the peer cancels the stream.
