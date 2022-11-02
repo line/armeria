@@ -240,6 +240,7 @@ public final class DocService extends SimpleDecoratingHttpService {
         private static final String specificationPath = "/specification.json";
         private static final Set<String> targetPaths = ImmutableSet.of(versionsPath, specificationPath);
         private static final CompletableFuture<AggregatedHttpFile> loadFailedFuture;
+
         static {
             loadFailedFuture = new CompletableFuture<>();
             loadFailedFuture.completeExceptionally(new IllegalStateException("File load not triggered"));
