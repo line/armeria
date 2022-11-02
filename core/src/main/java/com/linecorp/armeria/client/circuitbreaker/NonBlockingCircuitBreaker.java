@@ -28,13 +28,14 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Ticker;
 
 /**
  * A non-blocking implementation of circuit breaker pattern.
  */
-final class NonBlockingCircuitBreaker implements CircuitBreaker {
+final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerClientCallbacks {
 
     private static final Logger logger = LoggerFactory.getLogger(NonBlockingCircuitBreaker.class);
 
@@ -87,6 +88,11 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
     }
 
     @Override
+    public void onSuccess(ClientRequestContext ctx) {
+        onSuccess();
+    }
+
+    @Override
     public void onFailure() {
         final State currentState = state.get();
         if (currentState.isClosed()) {
@@ -110,6 +116,11 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker {
                 notifyStateChanged(CircuitState.OPEN);
             }
         }
+    }
+
+    @Override
+    public void onFailure(ClientRequestContext ctx, @Nullable Throwable throwable) {
+        onFailure();
     }
 
     private boolean checkIfExceedingFailureThreshold(EventCount count) {

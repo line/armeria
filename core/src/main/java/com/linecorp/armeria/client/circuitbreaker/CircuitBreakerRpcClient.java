@@ -60,7 +60,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
         requireNonNull(mapping, "mapping");
         requireNonNull(ruleWithContent, "ruleWithContent");
         return delegate -> new CircuitBreakerRpcClient(
-                delegate, ruleWithContent, DefaultCircuitBreakerClientHandler.of(mapping));
+                delegate, ruleWithContent, CircuitBreakerClientHandler.of(mapping));
     }
 
     /**

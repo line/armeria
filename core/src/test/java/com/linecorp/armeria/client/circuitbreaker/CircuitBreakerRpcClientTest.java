@@ -129,7 +129,7 @@ class CircuitBreakerRpcClientTest {
 
         final CircuitBreakerRpcClient stub =
                 new CircuitBreakerRpcClient(delegate, rule(),
-                                            DefaultCircuitBreakerClientHandler.of(circuitBreaker));
+                                            CircuitBreakerClientHandler.of(circuitBreaker));
 
         stub.execute(ctxA, reqA);
 
@@ -145,7 +145,7 @@ class CircuitBreakerRpcClientTest {
             throw Exceptions.clearTrace(new AnticipatedException("bug!"));
         };
         final CircuitBreakerRpcClient stub = new CircuitBreakerRpcClient(
-                delegate, rule(), DefaultCircuitBreakerClientHandler.of(mapping));
+                delegate, rule(), CircuitBreakerClientHandler.of(mapping));
 
         stub.execute(ctxA, reqA);
 
@@ -164,7 +164,7 @@ class CircuitBreakerRpcClientTest {
 
         final CircuitBreakerRpcClient stub =
                 new CircuitBreakerRpcClient(delegate, rule(),
-                                            DefaultCircuitBreakerClientHandler.of(circuitBreaker));
+                                            CircuitBreakerClientHandler.of(circuitBreaker));
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {
@@ -200,7 +200,7 @@ class CircuitBreakerRpcClientTest {
 
         final CircuitBreakerRpcClient stub =
                 new CircuitBreakerRpcClient(delegate, rule(),
-                                            DefaultCircuitBreakerClientHandler.of(circuitBreaker));
+                                            CircuitBreakerClientHandler.of(circuitBreaker));
 
         // CLOSED
         for (int i = 0; i < minimumRequestThreshold + 1; i++) {

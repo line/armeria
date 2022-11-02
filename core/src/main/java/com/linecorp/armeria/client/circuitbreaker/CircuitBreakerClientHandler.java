@@ -29,6 +29,22 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public interface CircuitBreakerClientHandler<I extends Request> {
 
     /**
+     * Creates a default {@link CircuitBreakerClientHandler} which uses the provided
+     * {@link CircuitBreaker} to handle requests.
+     */
+    static <I extends Request> CircuitBreakerClientHandler<I> of(CircuitBreaker cb) {
+        return of((ctx, req) -> cb);
+    }
+
+    /**
+     * Creates a default {@link CircuitBreakerClientHandler} which uses the provided
+     * {@link CircuitBreakerMapping} to handle requests.
+     */
+    static <I extends Request> DefaultCircuitBreakerClientHandler<I> of(CircuitBreakerMapping mapping) {
+        return new DefaultCircuitBreakerClientHandler<>(mapping);
+    }
+
+    /**
      * Invoked by {@link CircuitBreakerClient} right before executing a request.
      * In a typical implementation, users may extract the appropriate CircuitBreaker
      * implementation using the provided {@link ClientRequestContext} and {@link I} request.

@@ -50,7 +50,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     public static Function<? super HttpClient, CircuitBreakerClient>
     newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerRule rule) {
         requireNonNull(circuitBreaker, "circuitBreaker");
-        return newDecorator(DefaultCircuitBreakerClientHandler.of(circuitBreaker), rule);
+        return newDecorator(CircuitBreakerClientHandler.of(circuitBreaker), rule);
     }
 
     /**
@@ -63,7 +63,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     public static Function<? super HttpClient, CircuitBreakerClient>
     newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         requireNonNull(circuitBreaker, "circuitBreaker");
-        return newDecorator(DefaultCircuitBreakerClientHandler.of(circuitBreaker), ruleWithContent);
+        return newDecorator(CircuitBreakerClientHandler.of(circuitBreaker), ruleWithContent);
     }
 
     /**
@@ -77,7 +77,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRule rule) {
         requireNonNull(mapping, "mapping");
         requireNonNull(rule, "rule");
-        return newDecorator(DefaultCircuitBreakerClientHandler.of(mapping), rule);
+        return newDecorator(CircuitBreakerClientHandler.of(mapping), rule);
     }
 
     /**
@@ -103,7 +103,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         requireNonNull(mapping, "mapping");
         requireNonNull(ruleWithContent, "ruleWithContent");
-        return newDecorator(DefaultCircuitBreakerClientHandler.of(mapping), ruleWithContent);
+        return newDecorator(CircuitBreakerClientHandler.of(mapping), ruleWithContent);
     }
 
     /**

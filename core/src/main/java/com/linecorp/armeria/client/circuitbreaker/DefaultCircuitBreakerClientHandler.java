@@ -26,17 +26,9 @@ final class DefaultCircuitBreakerClientHandler<I extends Request> implements Cir
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultCircuitBreakerClientHandler.class);
 
-    static <I extends Request> CircuitBreakerClientHandler<I> of(CircuitBreaker cb) {
-        return of((ctx, req) -> cb);
-    }
-
-    static <I extends Request> DefaultCircuitBreakerClientHandler<I> of(CircuitBreakerMapping cb) {
-        return new DefaultCircuitBreakerClientHandler<>(cb);
-    }
-
     private final ClientCircuitBreakerGenerator<CircuitBreaker> mapping;
 
-    private DefaultCircuitBreakerClientHandler(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
+    DefaultCircuitBreakerClientHandler(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
         this.mapping = mapping;
     }
 
@@ -52,6 +44,9 @@ final class DefaultCircuitBreakerClientHandler<I extends Request> implements Cir
         }
         if (!circuitBreaker.tryRequest()) {
             throw new FailFastException(circuitBreaker);
+        }
+        if (circuitBreaker instanceof NonBlockingCircuitBreaker) {
+            return (CircuitBreakerClientCallbacks) circuitBreaker;
         }
         return new DefaultCircuitBreakerClientCallbacks(circuitBreaker);
     }
