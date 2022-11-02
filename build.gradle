@@ -162,6 +162,9 @@ configure(projectsWithFlags('java')) {
         // Reflections
         implementation libs.reflections
 
+        // Blockhound
+        implementation libs.blockhound
+
         // Test-time dependencies
         testImplementation libs.guava.testlib
         testImplementation libs.junit4
