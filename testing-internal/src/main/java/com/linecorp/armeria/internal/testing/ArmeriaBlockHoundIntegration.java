@@ -16,10 +16,17 @@
 
 package com.linecorp.armeria.internal.testing;
 
+import com.linecorp.armeria.internal.common.JacksonUtil;
+
 import reactor.blockhound.BlockHound.Builder;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
 public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration {
+
+    // preload some utilities that might block
+    static {
+        JacksonUtil.newDefaultObjectMapper();
+    }
 
     @Override
     public void applyTo(Builder builder) {
