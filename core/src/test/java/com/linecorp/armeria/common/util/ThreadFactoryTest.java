@@ -23,8 +23,6 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.internal.common.util.EventLoopThread;
 
-import io.netty.util.concurrent.FastThreadLocalThread;
-
 public class ThreadFactoryTest {
 
     @Test

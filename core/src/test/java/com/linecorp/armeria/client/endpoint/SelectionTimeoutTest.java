@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 
 class SelectionTimeoutTest {
 
@@ -308,7 +309,7 @@ class SelectionTimeoutTest {
             try (MockEndpointGroup endpointGroup = new MockEndpointGroup(5000)) {
                 final CompletableFuture<Endpoint> result =
                         endpointGroup.select(ctx, CommonPools.blockingTaskExecutor());
-                assertThat(result.join()).isNull();
+                assertThat(BlockingUtils.join(result)).isNull();
                 assertThat(stopwatch.elapsed())
                         .isGreaterThanOrEqualTo(Duration.ofSeconds(2));
             }

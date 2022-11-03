@@ -16,10 +16,16 @@
 
 package com.linecorp.armeria.internal.testing;
 
+import java.util.concurrent.CompletableFuture;
+
 public final class BlockingUtils {
 
     public static void sleep(long millis) throws InterruptedException {
         Thread.sleep(millis);
+    }
+
+    public static <T> T join(CompletableFuture<T> cf) {
+        return cf.join();
     }
 
     private BlockingUtils() {}

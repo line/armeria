@@ -29,9 +29,16 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.client.PublicSuffix",
                                          "get");
 
+        // graphql
+        builder.allowBlockingCallsInside("graphql.i18n.I18n", "i18n");
+        builder.allowBlockingCallsInside("graphql.execution.ExecutionId", "generate");
+        builder.allowBlockingCallsInside("sangria.parser.QueryParser$", "parse");
+
         // custom implementations for test class usage.
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
                                          "sleep");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
+                                         "join");
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockableSemaphore",
                                          "acquireUninterruptibly");
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockableCountdownLatch",
