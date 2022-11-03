@@ -36,6 +36,7 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.internal.testing.BlockableSemaphore;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class HttpServerTlsCorruptionTest {
@@ -85,7 +86,7 @@ class HttpServerTlsCorruptionTest {
         final WebClient client = WebClient.builder(server.uri(SessionProtocol.H1))
                                           .factory(clientFactory)
                                           .build();
-        final Semaphore semaphore = new Semaphore(numEventLoops);
+        final Semaphore semaphore = new BlockableSemaphore(numEventLoops);
         final BlockingQueue<Throwable> caughtExceptions = new LinkedBlockingDeque<>();
         int i = 0;
         try {

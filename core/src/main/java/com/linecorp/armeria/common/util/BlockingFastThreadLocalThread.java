@@ -28,7 +28,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 class BlockingFastThreadLocalThread extends Thread {
 
     private static final InternalLogger logger = InternalLoggerFactory.getInstance(
-            io.netty.util.concurrent.FastThreadLocalThread.class);
+            BlockingFastThreadLocalThread.class);
 
     // This will be set to true if we have a chance to wrap the Runnable.
     private final boolean cleanupFastThreadLocals;
@@ -99,7 +99,8 @@ class BlockingFastThreadLocalThread extends Thread {
     }
 
     /**
-     * Returns {@code true} if {@link FastThreadLocal#removeAll()} will be called once {@link #run()} completes.
+     * Returns {@code true} if {@link FastThreadLocal#removeAll()} will be called once
+     * {@link #run()} completes.
      */
     @UnstableApi
     public boolean willCleanupFastThreadLocals() {
@@ -107,7 +108,8 @@ class BlockingFastThreadLocalThread extends Thread {
     }
 
     /**
-     * Returns {@code true} if {@link FastThreadLocal#removeAll()} will be called once {@link Thread#run()} completes.
+     * Returns {@code true} if {@link FastThreadLocal#removeAll()} will be called once
+     * {@link Thread#run()} completes.
      */
     @UnstableApi
     public static boolean willCleanupFastThreadLocals(Thread thread) {

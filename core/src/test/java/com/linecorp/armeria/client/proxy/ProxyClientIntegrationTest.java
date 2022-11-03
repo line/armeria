@@ -40,6 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -60,6 +61,8 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.internal.testing.NettyServerExtension;
 import com.linecorp.armeria.internal.testing.SimpleChannelHandlerFactory;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -104,6 +107,9 @@ class ProxyClientIntegrationTest {
     @Order(0)
     static final SelfSignedCertificateExtension ssc = new SelfSignedCertificateExtension();
 
+    @Nullable
+    private static SslContext sslContext;
+
     @RegisterExtension
     @Order(1)
     static ServerExtension backendServer = new ServerExtension() {
@@ -146,8 +152,7 @@ class ProxyClientIntegrationTest {
     static NettyServerExtension httpsProxyServer = new NettyServerExtension() {
         @Override
         protected void configure(Channel ch) throws Exception {
-            final SslContext sslContext = SslContextBuilder
-                    .forServer(ssc.privateKey(), ssc.certificate()).build();
+            assert sslContext != null;
             ch.pipeline().addLast(sslContext.newHandler(ch.alloc()));
             ch.pipeline().addLast(new HttpServerCodec());
             ch.pipeline().addLast(new HttpObjectAggregator(1024));
@@ -176,6 +181,12 @@ class ProxyClientIntegrationTest {
             numSuccessfulProxyRequests++;
         }
     };
+
+    @BeforeAll
+    static void beforeAll() throws Exception {
+        sslContext = SslContextBuilder
+                .forServer(ssc.privateKey(), ssc.certificate()).build();
+    }
 
     @BeforeEach
     void beforeEach() {
@@ -738,7 +749,7 @@ class ProxyClientIntegrationTest {
                 // first writing to the channel occurs after ProxySuccessEvent is triggered.
                 // If the first writing happens before ProxySuccessEvent is triggered,
                 // the client would get WriteTimeoutException that makes the test fail.
-                Thread.sleep(Flags.defaultWriteTimeoutMillis());
+                BlockingUtils.sleep(Flags.defaultWriteTimeoutMillis());
             }
             super.userEventTriggered(ctx, evt);
         }

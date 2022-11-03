@@ -34,6 +34,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.util.EventLoopGroups;
+import com.linecorp.armeria.internal.testing.BlockableSemaphore;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -45,7 +46,7 @@ import io.netty.channel.EventLoopGroup;
 public class HttpClientPipeliningTest {
 
     // Server-side configuration
-    private static final Semaphore semaphore = new Semaphore(0);
+    private static final Semaphore semaphore = new BlockableSemaphore(0);
     private static final Lock lock = new ReentrantLock();
     private static final Condition condition = lock.newCondition();
     private static volatile boolean connectionReturnedToPool;

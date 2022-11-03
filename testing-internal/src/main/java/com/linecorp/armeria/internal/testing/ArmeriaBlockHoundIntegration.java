@@ -16,19 +16,30 @@
 
 package com.linecorp.armeria.internal.testing;
 
-import com.linecorp.armeria.internal.common.JacksonUtil;
-
 import reactor.blockhound.BlockHound.Builder;
 import reactor.blockhound.integration.BlockHoundIntegration;
 
 public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration {
 
-    // preload some utilities that might block
-    static {
-        JacksonUtil.newDefaultObjectMapper();
-    }
-
     @Override
     public void applyTo(Builder builder) {
+
+        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.common.JacksonUtil",
+                                         "newDefaultObjectMapper");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.client.PublicSuffix",
+                                         "get");
+
+        // custom implementations for test class usage.
+        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
+                                         "sleep");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockableSemaphore",
+                                         "acquireUninterruptibly");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockableCountdownLatch",
+                                         "await");
+
+        // sometimes we make assertions in tests which should never reach production code and is thus safe.
+        builder.allowBlockingCallsInside("org.assertj.core.api.Assertions", "assertThat");
+        builder.allowBlockingCallsInside("net.javacrumbs.jsonunit.fluent.JsonFluentAssert",
+                                         "assertThatJson");
     }
 }

@@ -75,6 +75,7 @@ import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit4.server.ServerRule;
@@ -112,7 +113,7 @@ class ServerTest {
                 @Override
                 protected HttpResponse echo(AggregatedHttpRequest aReq) {
                     try {
-                        Thread.sleep(processDelayMillis);
+                        BlockingUtils.sleep(processDelayMillis);
                         return super.echo(aReq);
                     } catch (InterruptedException e) {
                         return HttpResponse.ofFailure(e);

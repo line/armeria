@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.ClientConnectionTimings;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.internal.testing.BlockingUtils;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -318,7 +319,7 @@ public class HttpClientMaxConcurrentStreamTest {
         final int sleepMillis = 300;
         connectionPoolListener = newConnectionPoolListener(() -> {
             try {
-                Thread.sleep(sleepMillis);
+                BlockingUtils.sleep(sleepMillis);
             } catch (InterruptedException e) {
                 throw new IllegalStateException(e);
             }
