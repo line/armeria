@@ -112,9 +112,7 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
 
         handlingConnectionError = true;
         if (Exceptions.isExpected(cause) || isGoAwaySentException(cause, connection())) {
-            if (logger.isDebugEnabled()) {
-                logger.debug("{} HTTP/2 connection error:", ctx.channel(), cause);
-            }
+            logger.debug("{} HTTP/2 connection error:", ctx.channel(), cause);
         } else {
             logger.warn("{} HTTP/2 connection error:", ctx.channel(), cause);
         }
@@ -124,9 +122,7 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
     @Override
     protected void onStreamError(ChannelHandlerContext ctx, boolean outbound, Throwable cause,
                                  StreamException http2Ex) {
-        if (logger.isDebugEnabled()) {
-            logger.debug("{} HTTP/2 stream error:", ctx.channel(), cause);
-        }
+        logger.debug("{} HTTP/2 stream error:", ctx.channel(), cause);
         super.onStreamError(ctx, outbound, cause, http2Ex);
     }
 
