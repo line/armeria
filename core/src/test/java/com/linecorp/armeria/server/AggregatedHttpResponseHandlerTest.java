@@ -177,7 +177,7 @@ class AggregatedHttpResponseHandlerTest {
 
     @Test
     void shouldReturnEmptyBodyOnHead() throws Exception {
-        final BlockingWebClient client = WebClient.of(server.httpUri()).blocking();
+        final BlockingWebClient client = server.blockingWebClient();
         final AggregatedHttpResponse res = client.head("/hello");
         assertThat(res.headers().contentLength()).isEqualTo(5);
         assertThat(res.contentUtf8()).isEmpty();
