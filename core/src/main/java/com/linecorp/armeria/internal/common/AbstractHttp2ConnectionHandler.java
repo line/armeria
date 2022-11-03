@@ -112,7 +112,7 @@ public abstract class AbstractHttp2ConnectionHandler extends Http2ConnectionHand
 
         handlingConnectionError = true;
         if (Exceptions.isExpected(cause) || isGoAwaySentException(cause, connection())) {
-            logger.debug("{} HTTP/2 connection error:", ctx.channel(), cause);
+            logger.trace("{} HTTP/2 connection error:", ctx.channel(), cause);
         } else {
             logger.warn("{} HTTP/2 connection error:", ctx.channel(), cause);
         }
