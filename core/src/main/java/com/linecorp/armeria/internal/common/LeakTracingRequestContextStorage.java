@@ -54,7 +54,7 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
     public <T extends RequestContext> T push(RequestContext toPush) {
         requireNonNull(toPush, "toPush");
         if (sampler.isSampled(toPush)) {
-            return delegate.push(wrapRequestContext(toPush));
+            return delegate.push(wrapRequestContext(toPush.unwrapAll()));
         }
         return delegate.push(toPush);
     }
@@ -85,9 +85,7 @@ final class LeakTracingRequestContextStorage implements RequestContextStorage {
     private static String stacktraceToString(StackTraceElement[] stackTrace,
                                              RequestContext unwrap) {
         final StringBuilder builder = new StringBuilder(512);
-        builder.append(unwrap).append(System.lineSeparator())
-               .append("The previous RequestContext is pushed at the following stacktrace")
-               .append(System.lineSeparator());
+        builder.append(unwrap).append(System.lineSeparator());
         for (int i = 1; i < stackTrace.length; i++) {
             builder.append("\tat ").append(stackTrace[i]).append(System.lineSeparator());
         }
