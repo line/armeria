@@ -74,7 +74,7 @@ class TraceRequestContextLeakTest {
             try (SafeCloseable ignore = anotherCtx.push()) {
                 final ClientRequestContext clientCtx = newClientCtx("/3");
                 try (SafeCloseable ignore2 = clientCtx.push()) {
-                    assertThat(ClientRequestContext.current()).isSameAs(clientCtx);
+                    assertThat(ClientRequestContext.current().unwrapAll()).isSameAs(clientCtx);
                 }
             } catch (Exception ex) {
                 isThrown.set(true);
