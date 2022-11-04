@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
@@ -213,6 +215,20 @@ public final class DocService extends SimpleDecoratingHttpService {
 
                 final List<Version> versions = ImmutableList.copyOf(
                         Version.getAll(DocService.class.getClassLoader()).values());
+
+                final StringBuilder allSchemas = new StringBuilder();
+
+                for (StructInfo struct : spec.structs()) {
+                    final ObjectNode jsonSpec = JSONSchemaGenerator.generate(struct);
+
+                    allSchemas.append(jsonSpec.toPrettyString());
+                    allSchemas.append("\n");
+
+                    vfs().put("/schema/" + struct.name() + ".json",
+                              jsonSpec.toPrettyString().getBytes(StandardCharsets.UTF_8));
+                }
+
+                vfs().put("/schema/all.json", allSchemas.toString().getBytes(StandardCharsets.UTF_8));
 
                 vfs().put("/specification.json",
                           jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(spec));

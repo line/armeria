@@ -27,6 +27,7 @@ import java.util.Map;
 
 import org.hamcrest.CustomTypeSafeMatcher;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -92,6 +93,7 @@ class GraphqlDocServiceTest {
     }
 
     @Test
+    @Timeout(10000000)
     void jsonSpecification() throws InterruptedException {
         if (TestUtil.isDocServiceDemoMode()) {
             Thread.sleep(Long.MAX_VALUE);
