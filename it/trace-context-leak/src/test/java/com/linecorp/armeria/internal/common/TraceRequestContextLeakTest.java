@@ -25,6 +25,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -36,6 +37,7 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import com.linecorp.armeria.testing.junit5.common.EventLoopGroupExtension;
@@ -46,10 +48,12 @@ import io.netty.channel.EventLoopGroup;
 class TraceRequestContextLeakTest {
 
     @RegisterExtension
-    static final EventLoopExtension eventLoopExtension = new EventLoopExtension();
+    static final EventLoopExtension eventLoopExtension =
+            new EventLoopExtension(ThreadFactories.newThreadFactory("trace-test", false));
 
     @RegisterExtension
-    static final EventLoopGroupExtension eventLoopGroupExtension = new EventLoopGroupExtension(2);
+    static final EventLoopGroupExtension eventLoopGroupExtension =
+            new EventLoopGroupExtension(2, ThreadFactories.newThreadFactory("trace-test-group", false));
 
     @Test
     void singleThreadContextNotLeak() throws InterruptedException {
@@ -83,7 +87,7 @@ class TraceRequestContextLeakTest {
             }
         });
 
-        latch.await();
+        assertThat(latch.await(1, TimeUnit.MINUTES)).isTrue();
         assertThat(isThrown).isFalse();
     }
 
@@ -114,7 +118,7 @@ class TraceRequestContextLeakTest {
 
             await().untilTrue(isThrown);
             assertThat(exception.get())
-                    .hasMessageContaining("singleThreadContextLeak$2(TraceRequestContextLeakTest.java:101)");
+                    .hasMessageContaining("the callback was called from unexpected thread");
         }
     }
 
@@ -154,7 +158,7 @@ class TraceRequestContextLeakTest {
                 }
             });
 
-            latch.await();
+            assertThat(latch.await(1, TimeUnit.MINUTES)).isTrue();
             assertThat(isThrown).isFalse();
         }
     }
@@ -206,7 +210,7 @@ class TraceRequestContextLeakTest {
 
             await().untilTrue(isThrown);
             assertThat(exception.get())
-                    .hasMessageContaining("multiThreadContextLeak$7(TraceRequestContextLeakTest.java:180)");
+                    .hasMessageContaining("Trying to call object wrapped with context");
         }
     }
 
@@ -235,7 +239,7 @@ class TraceRequestContextLeakTest {
 
     @Test
     @SuppressWarnings("MustBeClosedChecker")
-    void connerCase() {
+    void cornerCase() {
         final AtomicReference<Exception> exception = new AtomicReference<>();
 
         try (DeferredClose deferredClose = new DeferredClose()) {
@@ -253,7 +257,7 @@ class TraceRequestContextLeakTest {
             }
         }
         assertThat(exception.get())
-                .hasMessageContaining("connerCase(TraceRequestContextLeakTest.java:245)");
+                .hasMessageContaining("is not the same as the context in the storage");
     }
 
     private static ServiceRequestContext newCtx(String path) {

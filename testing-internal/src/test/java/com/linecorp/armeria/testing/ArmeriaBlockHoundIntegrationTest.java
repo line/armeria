@@ -27,7 +27,7 @@ import com.linecorp.armeria.testing.junit5.common.EventLoopExtension;
 import io.netty.util.concurrent.Future;
 import reactor.blockhound.BlockingOperationError;
 
-class Junit5BlockHoundIntegrationTest {
+class ArmeriaBlockHoundIntegrationTest {
 
     @RegisterExtension
     static final EventLoopExtension eventLoop = new EventLoopExtension();
