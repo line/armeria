@@ -418,7 +418,7 @@ class ServerTest {
         threads.add(server.stop().thenApply(unused -> Thread.currentThread()).join());
         threads.add(server.start().thenApply(unused -> Thread.currentThread()).join());
 
-        threads.forEach(t -> assertThat(t.getName()).startsWith("globalEventExecutor"));
+        threads.forEach(t -> assertThat(t.getName()).startsWith("startstop-support"));
     }
 
     @Test

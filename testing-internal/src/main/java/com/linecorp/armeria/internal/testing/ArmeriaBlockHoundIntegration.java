@@ -32,9 +32,6 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
                                          "pool");
         builder.allowBlockingCallsInside("com.linecorp.armeria.testing.server.ServiceRequestContextCaptor$2",
                                          "serve");
-        // jetty server is started up from GlobalEventExecutor
-        builder.allowBlockingCallsInside("com.linecorp.armeria.server.jetty.JettyService",
-                                         "start");
 
         // graphql
         builder.allowBlockingCallsInside("graphql.i18n.I18n", "i18n");
