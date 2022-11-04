@@ -62,6 +62,7 @@ import com.linecorp.armeria.client.ConnectionPoolListener;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.InvalidResponseHeadersException;
 import com.linecorp.armeria.client.logging.LoggingRpcClient;
+import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpResponse;
@@ -257,7 +258,7 @@ public class ThriftOverHttpClientTest {
         final ClientDecorationBuilder decoBuilder = ClientDecoration.builder();
         decoBuilder.addRpc((delegate, ctx, req) -> {
             if (recordMessageLogs) {
-                ctx.log().whenComplete().thenAccept(requestLogs::add);
+                ctx.log().whenComplete().thenAcceptAsync(requestLogs::add, CommonPools.blockingTaskExecutor());
             }
             return delegate.execute(ctx, req);
         });
