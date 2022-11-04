@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Consumer;
@@ -79,6 +80,7 @@ import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
 import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
@@ -175,7 +177,8 @@ public final class ServerBuilder implements TlsSetters {
 
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
-    private Executor startStopExecutor = GlobalEventExecutor.INSTANCE;
+    private Executor startStopExecutor = Executors.newSingleThreadExecutor(
+            ThreadFactories.newThreadFactory("startstop-support", true));
     private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
     private int maxNumConnections = Flags.maxNumConnections();
@@ -494,8 +497,7 @@ public final class ServerBuilder implements TlsSetters {
 
     /**
      * Sets the {@link Executor} which will invoke the callbacks of {@link Server#start()},
-     * {@link Server#stop()} and {@link ServerListener}. If not set, {@link GlobalEventExecutor} will be used
-     * by default.
+     * {@link Server#stop()} and {@link ServerListener}.
      */
     public ServerBuilder startStopExecutor(Executor startStopExecutor) {
         this.startStopExecutor = requireNonNull(startStopExecutor, "startStopExecutor");
