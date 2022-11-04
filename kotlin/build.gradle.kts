@@ -8,6 +8,7 @@ dependencies {
     implementation(libs.kotlin.reflect)
 
     testImplementation(libs.reactivestreams.tck)
+    testRuntimeOnly(libs.kotlin.coroutines.debug)
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {

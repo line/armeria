@@ -24,14 +24,17 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
     @Override
     public void applyTo(Builder builder) {
 
+        builder.allowBlockingCallsInside("com.linecorp.armeria.client.HttpClientFactory",
+                                         "pool");
+
+        // a single blocking call is incurred for the first invocation, but the result is cached.
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.common.JacksonUtil",
                                          "newDefaultObjectMapper");
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.client.PublicSuffix",
                                          "get");
-        builder.allowBlockingCallsInside("com.linecorp.armeria.client.HttpClientFactory",
-                                         "pool");
-        builder.allowBlockingCallsInside("com.linecorp.armeria.testing.server.ServiceRequestContextCaptor$2",
-                                         "serve");
+        builder.allowBlockingCallsInside("org.joda.time.DateTime", "now");
+        builder.allowBlockingCallsInside("org.opensaml.xmlsec.signature.support.Signer",
+                                         "getSignerProvider");
 
         // graphql
         builder.allowBlockingCallsInside("graphql.i18n.I18n", "i18n");
@@ -50,5 +53,7 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
         builder.allowBlockingCallsInside("org.assertj.core.api.Assertions", "assertThat");
         builder.allowBlockingCallsInside("net.javacrumbs.jsonunit.fluent.JsonFluentAssert",
                                          "assertThatJson");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.testing.server.ServiceRequestContextCaptor$2",
+                                         "serve");
     }
 }
