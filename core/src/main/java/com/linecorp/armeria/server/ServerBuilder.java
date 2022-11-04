@@ -46,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -162,6 +163,8 @@ public final class ServerBuilder implements TlsSetters {
     @VisibleForTesting
     static final long MIN_PING_INTERVAL_MILLIS = 1000L;
     private static final long MIN_MAX_CONNECTION_AGE_MILLIS = 1_000L;
+    private static final ExecutorService START_STOP_EXECUTOR = Executors.newSingleThreadExecutor(
+            ThreadFactories.newThreadFactory("startstop-support", true));
 
     static {
         RequestContextUtil.init();
@@ -176,8 +179,7 @@ public final class ServerBuilder implements TlsSetters {
 
     private EventLoopGroup workerGroup = CommonPools.workerGroup();
     private boolean shutdownWorkerGroupOnStop;
-    private Executor startStopExecutor = Executors.newSingleThreadExecutor(
-            ThreadFactories.newThreadFactory("startstop-support", true));
+    private Executor startStopExecutor = START_STOP_EXECUTOR;
     private final Map<ChannelOption<?>, Object> channelOptions = new Object2ObjectArrayMap<>();
     private final Map<ChannelOption<?>, Object> childChannelOptions = new Object2ObjectArrayMap<>();
     private int maxNumConnections = Flags.maxNumConnections();

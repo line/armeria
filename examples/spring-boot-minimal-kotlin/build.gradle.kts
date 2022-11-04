@@ -19,6 +19,7 @@ dependencies {
     testImplementation(libs.json.unit.fluent)
     testImplementation(libs.junit5.jupiter.api)
     testImplementation(libs.spring.boot2.starter.test)
+    testRuntimeOnly(libs.kotlin.coroutines.debug)
 
     // Preprocessor that enables you to use KDoc to add description to REST API parameters.
     // If you don't want to use it, you can use the annotation
