@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.testing;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Semaphore;
 
 public final class BlockingUtils {
 
@@ -26,6 +27,10 @@ public final class BlockingUtils {
 
     public static <T> T join(CompletableFuture<T> cf) {
         return cf.join();
+    }
+
+    public static void acquireUninterruptibly(Semaphore semaphore) {
+        semaphore.acquireUninterruptibly();
     }
 
     private BlockingUtils() {}

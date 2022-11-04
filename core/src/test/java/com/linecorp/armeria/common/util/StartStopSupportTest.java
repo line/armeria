@@ -54,7 +54,6 @@ import com.google.common.base.Stopwatch;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
-import com.linecorp.armeria.internal.testing.BlockableCountdownLatch;
 import com.linecorp.armeria.testing.junit4.common.EventLoopRule;
 
 import io.netty.util.concurrent.FutureListener;
@@ -64,7 +63,8 @@ public class StartStopSupportTest {
     private static final String THREAD_NAME_PREFIX = StartStopSupportTest.class.getSimpleName();
 
     @ClassRule
-    public static final EventLoopRule rule = new EventLoopRule(THREAD_NAME_PREFIX);
+    public static final EventLoopRule rule = new EventLoopRule(
+            ThreadFactories.newThreadFactory(THREAD_NAME_PREFIX, false));
 
     @Rule
     public TestRule globalTimeout = new DisableOnDebug(new Timeout(10, TimeUnit.SECONDS));
@@ -89,7 +89,7 @@ public class StartStopSupportTest {
 
     @Test
     public void startingWhileStarting() {
-        final CountDownLatch startLatch = new BlockableCountdownLatch(2);
+        final CountDownLatch startLatch = new CountDownLatch(2);
         final StartStop startStop = new StartStop(arg -> {
             // Signal the main thread that it entered the STARTING state.
             startLatch.countDown();
@@ -135,7 +135,7 @@ public class StartStopSupportTest {
     @Test
     public void startingWhileStopping() throws Throwable {
         final StartTask startTask = SpiedStartTask.of("bar");
-        final CountDownLatch stopLatch = new BlockableCountdownLatch(2);
+        final CountDownLatch stopLatch = new CountDownLatch(2);
         final StartStop startStop = new StartStop(startTask, arg -> {
             // Signal the main thread that it entered the STOPPING state.
             stopLatch.countDown();
@@ -169,7 +169,7 @@ public class StartStopSupportTest {
     @Test
     public void stoppingWhileStarting() throws Throwable {
         final StopTask stopTask = mock(StopTask.class);
-        final CountDownLatch startLatch = new BlockableCountdownLatch(2);
+        final CountDownLatch startLatch = new CountDownLatch(2);
         final StartStop startStop = new StartStop(arg -> {
             // Signal the main thread that it entered the STARTING state.
             startLatch.countDown();
@@ -200,7 +200,7 @@ public class StartStopSupportTest {
     @Test
     public void stoppingWhileStopping() {
         final AtomicLong stopArg = new AtomicLong();
-        final CountDownLatch stopLatch = new BlockableCountdownLatch(2);
+        final CountDownLatch stopLatch = new CountDownLatch(2);
         final StartStop startStop = new StartStop(arg -> "bar", arg -> {
             assertThat(arg).isNotNull();
             stopArg.set(arg);
@@ -279,8 +279,8 @@ public class StartStopSupportTest {
 
     @Test
     public void listenerNotifications() {
-        final CountDownLatch startLatch = new BlockableCountdownLatch(1);
-        final CountDownLatch stopLatch = new BlockableCountdownLatch(1);
+        final CountDownLatch startLatch = new CountDownLatch(1);
+        final CountDownLatch stopLatch = new CountDownLatch(1);
         final EventListener listener = new EventListener() {
             @Override
             public String toString() {
@@ -490,7 +490,7 @@ public class StartStopSupportTest {
     @Test
     public void interruptedWhileClosing() throws Throwable {
         final AtomicBoolean interrupted = new AtomicBoolean();
-        final CountDownLatch stopLatch = new BlockableCountdownLatch(2);
+        final CountDownLatch stopLatch = new CountDownLatch(2);
         final StartStop startStop = new StartStop(arg -> "foo", arg -> {
             // Signal the main thread that it entered the STOPPING state.
             stopLatch.countDown();

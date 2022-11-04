@@ -28,6 +28,13 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
                                          "newDefaultObjectMapper");
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.client.PublicSuffix",
                                          "get");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.client.HttpClientFactory",
+                                         "pool");
+        builder.allowBlockingCallsInside("com.linecorp.armeria.testing.server.ServiceRequestContextCaptor$2",
+                                         "serve");
+        // jetty server is started up from GlobalEventExecutor
+        builder.allowBlockingCallsInside("com.linecorp.armeria.server.jetty.JettyService",
+                                         "start");
 
         // graphql
         builder.allowBlockingCallsInside("graphql.i18n.I18n", "i18n");
@@ -39,10 +46,8 @@ public final class ArmeriaBlockHoundIntegration implements BlockHoundIntegration
                                          "sleep");
         builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
                                          "join");
-        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockableSemaphore",
+        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockingUtils",
                                          "acquireUninterruptibly");
-        builder.allowBlockingCallsInside("com.linecorp.armeria.internal.testing.BlockableCountdownLatch",
-                                         "await");
 
         // sometimes we make assertions in tests which should never reach production code and is thus safe.
         builder.allowBlockingCallsInside("org.assertj.core.api.Assertions", "assertThat");
