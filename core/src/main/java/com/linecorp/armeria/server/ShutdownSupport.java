@@ -47,22 +47,23 @@ interface ShutdownSupport {
 
             e.shutdown();
 
-            boolean interrupted = false;
-            try {
-                while (!e.isTerminated()) {
-                    try {
-                        e.awaitTermination(1, TimeUnit.HOURS);
-                    } catch (InterruptedException ignore) {
-                        interrupted = true;
+            return CompletableFuture.runAsync(() -> {
+                boolean interrupted = false;
+                try {
+                    while (!e.isTerminated()) {
+                        try {
+                            e.awaitTermination(1, TimeUnit.HOURS);
+                        } catch (InterruptedException ignore) {
+                            interrupted = true;
+                        }
                     }
+                } catch (Exception cause) {
+                    logger.warn("Failed to shutdown the {}:", e, cause);
                 }
-            } catch (Exception cause) {
-                logger.warn("Failed to shutdown the {}:", e, cause);
-            }
-            if (interrupted) {
-                Thread.currentThread().interrupt();
-            }
-            return UnmodifiableFuture.completedFuture(null);
+                if (interrupted) {
+                    Thread.currentThread().interrupt();
+                }
+            });
         };
     }
 
