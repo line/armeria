@@ -6,9 +6,9 @@ date: 2022-11-07
 
 - You no longer see `StacklessClosedChannelException` when when an incoming HTTP/1.0 or HTTP/1.1 request has
   a 'Connection: close` header. #4508
-- An <type://HttpRequest> is not failed with the <type://AbortedStreamException> anymore
+- An <type://HttpRequest> is not failed with <type://AbortedStreamException> anymore
   when an <type://HttpResponse> is correctly sent. #4494
-- <type://DocService> is correctly generated for a <type://GrpcService> when
+- <type://DocService> is correctly generated for a decorated <type://GrpcService> when
   [HTTP/JSON to GRPC transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding) is enabled. #4490
 
 ## 🙇 Thank you
