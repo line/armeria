@@ -57,9 +57,13 @@ class DataClassDefaultNameTypeInfoProviderTest {
                 .requirement(FieldRequirement.REQUIRED)
                 .descriptionInfo(DescriptionInfo.of("default value 2 description"))
                 .build(),
-            FieldInfo.builder("renamed", STRING)
+            FieldInfo.builder("renamedNonnull", STRING)
+                .requirement(FieldRequirement.REQUIRED)
+                .descriptionInfo(DescriptionInfo.of("renamed nonnull description"))
+                .build(),
+            FieldInfo.builder("renamedNullable", STRING)
                 .requirement(FieldRequirement.OPTIONAL)
-                .descriptionInfo(DescriptionInfo.of("renamed description"))
+                .descriptionInfo(DescriptionInfo.of("renamed nullable description"))
                 .build()
         )
     }
@@ -88,9 +92,12 @@ class DataClassDefaultNameTypeInfoProviderTest {
         val defaultValue: String = "Hello",
         @Description(value = "default value 2 description")
         val defaultValue2: String = "Hello2",
-        @JsonProperty("renamed")
-        @Description("renamed description")
-        val name: String?
+        @JsonProperty("renamedNonnull")
+        @Description("renamed nonnull description")
+        val nonnullName: String,
+        @JsonProperty("renamedNullable")
+        @Description("renamed nullable description")
+        val nullableName: String?
     )
 
     @Description("Enum description")
