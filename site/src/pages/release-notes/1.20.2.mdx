@@ -4,8 +4,8 @@ date: 2022-11-07
 
 ## 🛠️ Bug fixes
 
-- You no longer see `StacklessClosedChannelException` when when an incoming HTTP/1.0 or HTTP/1.1 request has
-  a 'Connection: close` header. #4508
+- You no longer see `StacklessClosedChannelException` when an incoming HTTP/1.0 or HTTP/1.1 request has
+  a `Connection: close` header. #4508
 - Armeria doesn't send a bad response with non-empty body anymore when a service's <type://ExchangeType> is
   <type://ExchangeType#UNARY> and the service generates non-empty body for a HEAD request. #4512
 - An <type://HttpRequest> is not failed with <type://AbortedStreamException> anymore
