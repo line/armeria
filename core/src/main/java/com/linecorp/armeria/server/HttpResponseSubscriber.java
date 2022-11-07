@@ -21,6 +21,7 @@ import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponse
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
@@ -63,7 +65,6 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
     @Nullable
     private Subscription subscription;
     private State state = State.NEEDS_HEADERS;
-    private boolean isComplete;
 
     private boolean isSubscriptionCompleted;
 
@@ -76,8 +77,9 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
     private WriteDataFutureListener cachedWriteDataListener;
 
     HttpResponseSubscriber(ChannelHandlerContext ctx, ServerHttpObjectEncoder responseEncoder,
-                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
-        super(ctx, responseEncoder, reqCtx, req);
+                           DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
+                           CompletableFuture<Void> completionFuture) {
+        super(ctx, responseEncoder, reqCtx, req, completionFuture);
     }
 
     @Override
@@ -138,7 +140,8 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                 } else {
                     if (responseEncoder.isResponseHeadersSent(req.id(), req.streamId())) {
                         // The response is sent by the HttpRequestDecoder so we just cancel the stream message.
-                        isComplete = true;
+                        tryComplete(new CancelledSubscriptionException(
+                                "An HTTP response was sent already. ctx: " + reqCtx));
                         setDone(true);
                         return;
                     }
@@ -290,7 +293,8 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
         final State oldState = setDone(false);
         if (oldState == State.NEEDS_HEADERS) {
             logger.warn("{} Published nothing (or only informational responses): {}", ctx.channel(), service());
-            responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR);
+            responseEncoder.writeReset(req.id(), req.streamId(), Http2Error.INTERNAL_ERROR)
+                           .addListener(future -> tryComplete(null));
             ctx.flush();
             return;
         }
@@ -312,19 +316,11 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
 
     @Override
     void fail(Throwable cause) {
-        if (tryComplete()) {
+        if (tryComplete(cause)) {
             setDone(true);
             endLogRequestAndResponse(cause);
             maybeWriteAccessLog();
         }
-    }
-
-    private boolean tryComplete() {
-        if (isComplete) {
-            return false;
-        }
-        isComplete = true;
-        return true;
     }
 
     private void failAndRespond(Throwable cause, AggregatedHttpResponse res, Http2Error error, boolean cancel) {
@@ -362,7 +358,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                         maybeLogFirstResponseBytesTransferred();
                     }
                     // Write an access log always with a cause. Respect the first specified cause.
-                    if (tryComplete()) {
+                    if (tryComplete(cause)) {
                         endLogRequestAndResponse(cause);
                         maybeWriteAccessLog();
                     }
@@ -447,7 +443,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
             maybeLogFirstResponseBytesTransferred();
 
             if (endOfStream) {
-                if (tryComplete()) {
+                if (tryComplete(null)) {
                     final Throwable capturedException = CapturedServiceException.get(reqCtx);
                     if (capturedException != null) {
                         endLogRequestAndResponse(capturedException);
