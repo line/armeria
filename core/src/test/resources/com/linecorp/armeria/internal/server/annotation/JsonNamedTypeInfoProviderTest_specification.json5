@@ -58,7 +58,7 @@
                 }, {
                   "name": "rename",
                   "location": "UNSPECIFIED",
-                  "requirement": "UNSPECIFIED", // requirement is unspecified if no field information is given.
+                  "requirement": "REQUIRED",
                   "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner",
                   "childFieldInfos": [
                     {
@@ -223,7 +223,7 @@
         }, {
           "name": "rename",
           "location": "UNSPECIFIED",
-          "requirement": "UNSPECIFIED",
+          "requirement": "REQUIRED",
           "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner",
           "childFieldInfos": [
             {
