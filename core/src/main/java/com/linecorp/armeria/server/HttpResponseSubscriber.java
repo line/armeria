@@ -140,7 +140,8 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                 } else {
                     if (responseEncoder.isResponseHeadersSent(req.id(), req.streamId())) {
                         // The response is sent by the HttpRequestDecoder so we just cancel the stream message.
-                        tryComplete(CancelledSubscriptionException.get());
+                        tryComplete(new CancelledSubscriptionException(
+                                "An HTTP response was sent already. ctx: " + reqCtx));
                         setDone(true);
                         return;
                     }

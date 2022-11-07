@@ -40,6 +40,10 @@ public final class CancelledSubscriptionException extends RuntimeException {
                new CancelledSubscriptionException() : INSTANCE;
     }
 
+    public CancelledSubscriptionException(String message) {
+        super(message);
+    }
+
     private CancelledSubscriptionException() {}
 
     private CancelledSubscriptionException(@SuppressWarnings("unused") boolean dummy) {
