@@ -14,12 +14,7 @@
  * under the License.
  */
 
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
-import TableContainer from '@material-ui/core/TableContainer';
 import React from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
@@ -40,6 +35,7 @@ import DebugPage from './DebugPage';
 import Endpoints from './Endpoints';
 import Exceptions from './Exceptions';
 import Description from '../../components/Description';
+import ReturnType from './ReturnType';
 
 interface OwnProps {
   specification: Specification;
@@ -157,6 +153,16 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
     debugTransport !== undefined &&
     debugTransport.supportsMimeType(GRAPHQL_HTTP_MIME_TYPE);
 
+  const parameterVariables = method.parameters.map((param) => {
+    const childFieldInfos = props.specification.getStructByName(
+      param.typeSignature,
+    )?.fields;
+    if (childFieldInfos) {
+      return { ...param, childFieldInfos };
+    }
+    return param;
+  });
+
   return (
     <>
       <Typography variant="h5" paragraph>
@@ -171,28 +177,11 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
         <VariableList
           key={method.name}
           title="Parameters"
-          variables={method.parameters}
+          variables={parameterVariables}
           specification={props.specification}
         />
       </Section>
-      <Section>
-        <Typography variant="h6">Return Type</Typography>
-        <TableContainer>
-          <Table>
-            <TableBody>
-              <TableRow>
-                <TableCell>
-                  <code>
-                    {props.specification.getTypeSignatureHtml(
-                      method.returnTypeSignature,
-                    )}
-                  </code>
-                </TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </TableContainer>
-      </Section>
+      <ReturnType method={method} specification={props.specification} />
       {!isAnnotatedService && (
         <Exceptions method={method} specification={props.specification} />
       )}
