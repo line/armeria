@@ -3241,7 +3241,6 @@ gv.at
 gv.vc
 gw
 gwangju.kr
-gwiddle.co.uk
 gx.cn
 gy
 gyeongbuk.kr
@@ -5416,6 +5415,7 @@ my-wan.de
 my.eu.org
 my.id
 myactivedirectory.com
+myamaze.net
 myasustor.com
 mycd.eu
 mycloud.by
