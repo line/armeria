@@ -47,6 +47,7 @@ import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ListMultimap;
+import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -58,6 +59,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ServerCacheControl;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.ThreadFactories;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
@@ -109,9 +111,6 @@ public final class DocService extends SimpleDecoratingHttpService {
         logger.debug("Available {}s: {}", NamedTypeInfoProvider.class.getSimpleName(),
                      spiNamedTypeInfoProviders);
     }
-
-    private static final ExecutorService DEFAULT_EXECUTOR = Executors.newSingleThreadScheduledExecutor(
-            ThreadFactories.newThreadFactory("docservice-loader", false));
 
     /**
      * Returns a new {@link DocServiceBuilder}.
@@ -199,10 +198,14 @@ public final class DocService extends SimpleDecoratingHttpService {
                         config.serviceConfigs().stream()
                               .filter(se -> virtualHosts.contains(se.virtualHost()))
                               .collect(toImmutableList());
-                vfs().specificationLoader.updateServices(services, DEFAULT_EXECUTOR);
+                final ExecutorService executorService = Executors.newSingleThreadExecutor(
+                        ThreadFactories.newThreadFactory("docservice-loader", true));
+                vfs().specificationLoader.updateServices(services, executorService).handle((res, e) -> {
+                    executorService.shutdown();
+                    return null;
+                });
             }
         });
-        server.closeOnJvmShutdown(DEFAULT_EXECUTOR::shutdown);
     }
 
     private DocServiceVfs vfs() {
@@ -239,12 +242,9 @@ public final class DocService extends SimpleDecoratingHttpService {
         private static final String versionsPath = "/versions.json";
         private static final String specificationPath = "/specification.json";
         private static final Set<String> targetPaths = ImmutableSet.of(versionsPath, specificationPath);
-        private static final CompletableFuture<AggregatedHttpFile> loadFailedFuture;
-
-        static {
-            loadFailedFuture = new CompletableFuture<>();
-            loadFailedFuture.completeExceptionally(new IllegalStateException("File load not triggered"));
-        }
+        private static final CompletableFuture<AggregatedHttpFile> loadFailedFuture =
+                UnmodifiableFuture.exceptionallyCompletedFuture(
+                        new IllegalStateException("File load not triggered"));
 
         private final ExampleSupport exampleSupport;
         private final DocServiceFilter filter;
@@ -265,9 +265,12 @@ public final class DocService extends SimpleDecoratingHttpService {
             return targetPaths.contains(path);
         }
 
-        void updateServices(List<ServiceConfig> services, Executor executor) {
+        CompletableFuture<List<AggregatedHttpFile>> updateServices(List<ServiceConfig> services,
+                                                                   Executor executor) {
             this.services = services;
-            targetPaths.forEach(path -> load(path, executor));
+            final List<CompletableFuture<AggregatedHttpFile>> files = targetPaths.stream().map(
+                    path -> load(path, executor)).collect(Collectors.toList());
+            return CompletableFutures.allAsList(files);
         }
 
         CompletableFuture<AggregatedHttpFile> get(String path) {
@@ -275,7 +278,7 @@ public final class DocService extends SimpleDecoratingHttpService {
             return files.getOrDefault(path, loadFailedFuture);
         }
 
-        CompletableFuture<AggregatedHttpFile> load(String path, Executor executor) {
+        private CompletableFuture<AggregatedHttpFile> load(String path, Executor executor) {
             if (versionsPath.equals(path)) {
                 return loadVersions(executor);
             } else if (specificationPath.equals(path)) {
