@@ -21,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
 final class DefaultCircuitBreakerClientHandler<I extends Request> implements CircuitBreakerClientHandler<I> {
 
@@ -33,8 +34,7 @@ final class DefaultCircuitBreakerClientHandler<I extends Request> implements Cir
     }
 
     @Override
-    public CircuitBreakerClientCallbacks request(ClientRequestContext ctx,
-                                                 I req) throws Exception {
+    public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, I req) throws Exception {
         final CircuitBreaker circuitBreaker;
         try {
             circuitBreaker = mapping.get(ctx, req);
@@ -45,9 +45,9 @@ final class DefaultCircuitBreakerClientHandler<I extends Request> implements Cir
         if (!circuitBreaker.tryRequest()) {
             throw new FailFastException(circuitBreaker);
         }
-        if (circuitBreaker instanceof NonBlockingCircuitBreaker) {
-            return (CircuitBreakerClientCallbacks) circuitBreaker;
+        if (circuitBreaker instanceof CircuitBreakerCallback) {
+            return (CircuitBreakerCallback) circuitBreaker;
         }
-        return new DefaultCircuitBreakerClientCallbacks(circuitBreaker);
+        return new DefaultCircuitBreakerCallback(circuitBreaker);
     }
 }

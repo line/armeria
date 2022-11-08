@@ -19,7 +19,7 @@ package com.linecorp.armeria.client.circuitbreaker;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * An abstract builder class for building a CircuitBreaker mapping
+ * An abstract builder class for building a {@link CircuitBreakerMapping}
  * based on a combination of host, method and path.
  */
 @UnstableApi

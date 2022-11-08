@@ -30,6 +30,7 @@ import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 import com.linecorp.armeria.common.util.CompletionActions;
 
 /**
@@ -116,33 +117,33 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        final CircuitBreakerClientCallbacks callbacks = handler.request(ctx, req);
-        if (callbacks == null) {
+        final CircuitBreakerCallback callback = handler.tryRequest(ctx, req);
+        if (callback == null) {
             return unwrap().execute(ctx, req);
         }
-        return doExecute(ctx, req, callbacks);
+        return doExecute(ctx, req, callback);
     }
 
     /**
      * Invoked when the {@link CircuitBreaker} is in closed state.
      */
     protected abstract O doExecute(ClientRequestContext ctx, I req,
-                                   CircuitBreakerClientCallbacks callbacks) throws Exception;
+                                   CircuitBreakerCallback callback) throws Exception;
 
     /**
      * Reports a success or a failure to the specified {@link CircuitBreaker} according to the completed value
      * of the specified {@code future}. If the completed value is {@link CircuitBreakerDecision#ignore()},
      * this doesn't do anything.
      */
-    static void reportSuccessOrFailure(CircuitBreakerClientCallbacks callbacks,
+    static void reportSuccessOrFailure(CircuitBreakerCallback callback,
                                        CompletionStage<@Nullable CircuitBreakerDecision> future,
                                        ClientRequestContext ctx, @Nullable Throwable throwable) {
         future.handle((decision, unused) -> {
             if (decision != null) {
                 if (decision == CircuitBreakerDecision.success() || decision == CircuitBreakerDecision.next()) {
-                    callbacks.onSuccess(ctx);
+                    callback.onSuccess(ctx);
                 } else if (decision == CircuitBreakerDecision.failure()) {
-                    callbacks.onFailure(ctx, throwable);
+                    callback.onFailure(ctx, throwable);
                 } else {
                     // Ignore, does not count as a success nor failure.
                 }
@@ -154,6 +155,7 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
                           .add("rule", rule)
                           .add("fromRuleWithContent", fromRuleWithContent)
                           .add("ruleWithContent", ruleWithContent)

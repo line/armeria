@@ -28,14 +28,15 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 
-import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 import com.linecorp.armeria.common.util.Ticker;
 
 /**
  * A non-blocking implementation of circuit breaker pattern.
  */
-final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerClientCallbacks {
+final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerCallback {
 
     private static final Logger logger = LoggerFactory.getLogger(NonBlockingCircuitBreaker.class);
 
@@ -88,7 +89,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
     }
 
     @Override
-    public void onSuccess(ClientRequestContext ctx) {
+    public void onSuccess(RequestContext ctx) {
         onSuccess();
     }
 
@@ -119,7 +120,7 @@ final class NonBlockingCircuitBreaker implements CircuitBreaker, CircuitBreakerC
     }
 
     @Override
-    public void onFailure(ClientRequestContext ctx, @Nullable Throwable throwable) {
+    public void onFailure(RequestContext ctx, @Nullable Throwable throwable) {
         onFailure();
     }
 

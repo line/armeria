@@ -25,6 +25,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
 /**
  * An {@link RpcClient} decorator that handles failures of RPC remote invocation based on
@@ -131,20 +132,20 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
 
     @Override
     protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req,
-                                    CircuitBreakerClientCallbacks callbacks)
+                                    CircuitBreakerCallback callback)
             throws Exception {
         final RpcResponse response;
         try {
             response = unwrap().execute(ctx, req);
         } catch (Throwable cause) {
             reportSuccessOrFailure(
-                    callbacks, ruleWithContent().shouldReportAsSuccess(ctx, null, cause), ctx, cause);
+                    callback, ruleWithContent().shouldReportAsSuccess(ctx, null, cause), ctx, cause);
             throw cause;
         }
 
         response.handle((unused1, cause) -> {
             reportSuccessOrFailure(
-                    callbacks, ruleWithContent().shouldReportAsSuccess(ctx, null, cause), ctx, cause);
+                    callback, ruleWithContent().shouldReportAsSuccess(ctx, null, cause), ctx, cause);
             return null;
         });
         return response;

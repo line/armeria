@@ -18,24 +18,25 @@ package com.linecorp.armeria.client.circuitbreaker;
 
 import static java.util.Objects.requireNonNull;
 
-import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
-final class DefaultCircuitBreakerClientCallbacks implements CircuitBreakerClientCallbacks {
+final class DefaultCircuitBreakerCallback implements CircuitBreakerCallback {
 
     private final CircuitBreaker circuitBreaker;
 
-    DefaultCircuitBreakerClientCallbacks(CircuitBreaker circuitBreaker) {
+    DefaultCircuitBreakerCallback(CircuitBreaker circuitBreaker) {
         this.circuitBreaker = requireNonNull(circuitBreaker, "circuitBreaker");
     }
 
     @Override
-    public void onSuccess(ClientRequestContext ctx) {
+    public void onSuccess(RequestContext ctx) {
         circuitBreaker.onSuccess();
     }
 
     @Override
-    public void onFailure(ClientRequestContext ctx, @Nullable Throwable throwable) {
+    public void onFailure(RequestContext ctx, @Nullable Throwable throwable) {
         circuitBreaker.onFailure();
     }
 }

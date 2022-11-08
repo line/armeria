@@ -36,16 +36,7 @@ public final class CircuitBreakerRpcClientBuilder
      * Returns a newly-created {@link CircuitBreakerRpcClient} based on the properties of this builder.
      */
     public CircuitBreakerRpcClient build(RpcClient delegate) {
-        return build(delegate, CircuitBreakerClientHandler.of(CircuitBreakerMapping.ofDefault()));
-    }
-
-    /**
-     * Returns a newly-created {@link CircuitBreakerRpcClient} based on the properties of this builder.
-     */
-    public CircuitBreakerRpcClient build(
-            RpcClient delegate,
-            CircuitBreakerClientHandler<RpcRequest> handler) {
-        return new CircuitBreakerRpcClient(delegate, ruleWithContent(), handler);
+        return new CircuitBreakerRpcClient(delegate, ruleWithContent(), handler());
     }
 
     /**

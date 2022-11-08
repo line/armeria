@@ -16,32 +16,37 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static java.util.Objects.requireNonNull;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
 /**
  * A handler used by a {@link CircuitBreakerClient} to integrate with a CircuitBreaker.
  * One may extend this interface to use a custom CircuitBreaker with {@link CircuitBreakerClient}.
  */
 @UnstableApi
+@FunctionalInterface
 public interface CircuitBreakerClientHandler<I extends Request> {
 
     /**
      * Creates a default {@link CircuitBreakerClientHandler} which uses the provided
      * {@link CircuitBreaker} to handle requests.
      */
-    static <I extends Request> CircuitBreakerClientHandler<I> of(CircuitBreaker cb) {
-        return of((ctx, req) -> cb);
+    static <I extends Request> CircuitBreakerClientHandler<I> of(CircuitBreaker circuitBreaker) {
+        requireNonNull(circuitBreaker, "circuitBreaker");
+        return of((ctx, req) -> circuitBreaker);
     }
 
     /**
      * Creates a default {@link CircuitBreakerClientHandler} which uses the provided
      * {@link CircuitBreakerMapping} to handle requests.
      */
-    static <I extends Request> DefaultCircuitBreakerClientHandler<I> of(CircuitBreakerMapping mapping) {
-        return new DefaultCircuitBreakerClientHandler<>(mapping);
+    static <I extends Request> CircuitBreakerClientHandler<I> of(CircuitBreakerMapping mapping) {
+        return new DefaultCircuitBreakerClientHandler<>(requireNonNull(mapping, "mapping"));
     }
 
     /**
@@ -54,12 +59,12 @@ public interface CircuitBreakerClientHandler<I extends Request> {
      *   <li>If the CircuitBreaker rejects the request, an exception such as {@link FailFastException}
      *   may be thrown.</li>
      *   <li>If the CircuitBreaker doesn't reject the request, users may choose to return a
-     *   {@link CircuitBreakerClientCallbacks}. A callback method will be invoked depending on the
+     *   {@link CircuitBreakerCallback}. A callback method will be invoked depending on the
      *   configured {@link CircuitBreakerRule}.</li>
      *   <li>One may return {@code null} to proceed normally as if the {@link CircuitBreakerClient}
      *   doesn't exist.</li>
      * </ul>
      */
     @Nullable
-    CircuitBreakerClientCallbacks request(ClientRequestContext ctx, I req) throws Exception;
+    CircuitBreakerCallback tryRequest(ClientRequestContext ctx, I req) throws Exception;
 }

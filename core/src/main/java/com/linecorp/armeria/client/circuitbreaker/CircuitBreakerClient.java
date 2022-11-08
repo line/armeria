@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
@@ -307,14 +308,14 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
 
     @Override
     protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req,
-                                     CircuitBreakerClientCallbacks callbacks)
+                                     CircuitBreakerCallback callback)
             throws Exception {
         final CircuitBreakerRule rule = needsContentInRule ? fromRuleWithContent() : rule();
         final HttpResponse response;
         try {
             response = unwrap().execute(ctx, req);
         } catch (Throwable cause) {
-            reportSuccessOrFailure(callbacks, rule.shouldReportAsSuccess(ctx, cause), ctx, cause);
+            reportSuccessOrFailure(callback, rule.shouldReportAsSuccess(ctx, cause), ctx, cause);
             throw cause;
         }
         final RequestLogProperty property =
@@ -322,14 +323,14 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
                                                 : RequestLogProperty.RESPONSE_HEADERS;
 
         if (!needsContentInRule) {
-            reportResult(ctx, callbacks, property);
+            reportResult(ctx, callback, property);
             return response;
         } else {
-            return reportResultWithContent(ctx, response, callbacks, property);
+            return reportResultWithContent(ctx, response, callback, property);
         }
     }
 
-    private void reportResult(ClientRequestContext ctx, CircuitBreakerClientCallbacks callbacks,
+    private void reportResult(ClientRequestContext ctx, CircuitBreakerCallback callbacks,
                               RequestLogProperty logProperty) {
         ctx.log().whenAvailable(logProperty).thenAccept(log -> {
             final Throwable resCause =
@@ -339,7 +340,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     }
 
     private HttpResponse reportResultWithContent(ClientRequestContext ctx, HttpResponse response,
-                                                 CircuitBreakerClientCallbacks callbacks,
+                                                 CircuitBreakerCallback callback,
                                                  RequestLogProperty logProperty) {
 
         final HttpResponseDuplicator duplicator = response.toDuplicator(ctx.eventLoop().withoutContext(),
@@ -357,7 +358,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
                     truncatingHttpResponse.abort();
                     return null;
                 });
-                reportSuccessOrFailure(callbacks, f, ctx, null);
+                reportSuccessOrFailure(callback, f, ctx, null);
             } catch (Throwable cause) {
                 duplicator.abort(cause);
             }

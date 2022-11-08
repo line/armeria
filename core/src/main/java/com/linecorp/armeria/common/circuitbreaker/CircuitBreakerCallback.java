@@ -14,10 +14,14 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client.circuitbreaker;
+package com.linecorp.armeria.common.circuitbreaker;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClientHandler;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -25,23 +29,22 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A collection of callbacks that are invoked for each request by {@link CircuitBreakerClient}.
  * Users may implement this class in conjunction with {@link CircuitBreakerClientHandler} to
  * use arbitrary CircuitBreaker implementations with {@link CircuitBreakerClient}.
- * See {@link CircuitBreakerClientHandler#request(ClientRequestContext, Request)}
+ * See {@link CircuitBreakerClientHandler#tryRequest(ClientRequestContext, Request)}
  * for more information.
  */
 @UnstableApi
-public interface CircuitBreakerClientCallbacks {
+public interface CircuitBreakerCallback {
 
     /**
      * Invoked by {@link CircuitBreakerClient} if a request has succeeded.
      */
-    void onSuccess(ClientRequestContext ctx);
+    void onSuccess(RequestContext ctx);
 
     /**
      * Invoked by {@link CircuitBreakerClient} if a request has failed.
      *
-     * @param throwable a hint for why a request has failed. A CircuitBreaker may use this value to
-     *                  make more informed decisions on how to record a failure event. Note that there are no
-     *                  guarantees on the nullability of this value.
+     * @param throwable a hint for why a request has failed. A {@link CircuitBreaker} may use this value to
+     *                  make more informed decisions on how to record a failure event.
      */
-    void onFailure(ClientRequestContext ctx, @Nullable Throwable throwable);
+    void onFailure(RequestContext ctx, @Nullable Throwable throwable);
 }
