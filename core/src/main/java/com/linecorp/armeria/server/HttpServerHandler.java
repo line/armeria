@@ -244,6 +244,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // Mark the request stream as closed due to disconnection.
                 req.abortResponse(cause, cancel);
             });
+            unfinishedRequests.clear();
         }
     }
 
