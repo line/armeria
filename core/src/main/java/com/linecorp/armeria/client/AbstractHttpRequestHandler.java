@@ -28,6 +28,7 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.client.HttpResponseDecoder.HttpResponseWrapper;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -44,6 +45,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.proxy.ProxyConnectException;
 
@@ -200,6 +202,17 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
 
         final RequestHeaders merged = mergeRequestHeaders(headers, ctx.additionalRequestHeaders());
         logBuilder.requestHeaders(merged);
+
+        if (headers.contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE.toString())) {
+            // Make the session unhealthy so that subsequent requests do not use it.
+            // In HTTP/2 request, the "Connection: close" is just interpreted as a signal to close the
+            // connection by sending a GOAWAY frame that will be sent after receiving the corresponding
+            // response from the remote peer. The "Connection: close" header is stripped when it is converted to
+            // a Netty HTTP/2 header.
+            session.deactivate();
+            responseDecoder.disconnectWhenFinished();
+        }
+
         final ChannelPromise promise = ch.newPromise();
         // Attach a listener first to make the listener early handle a cause raised while writing headers
         // before any other callbacks like `onStreamClosed()` are invoked.

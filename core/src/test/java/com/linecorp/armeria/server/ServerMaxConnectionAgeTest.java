@@ -221,8 +221,12 @@ class ServerMaxConnectionAgeTest {
                 // Schedule another request to avoid idling the connection.
                 assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
                 // Eventually connection should be closed due to max-age, a new connection will be opened.
-                assertThat(opened).hasValue(2);
-                assertThat(closed).hasValue(1);
+                assertThat(opened)
+                        .as("should have opened 2 connections. opened: %d", opened.get())
+                        .hasValue(2);
+                assertThat(closed)
+                        .as("should have closed 1 connection. closed: %d", closed.get())
+                        .hasValue(1);
             });
         }
     }

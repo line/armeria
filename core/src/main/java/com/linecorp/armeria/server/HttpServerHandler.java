@@ -75,6 +75,7 @@ import io.netty.channel.ChannelInboundHandlerAdapter;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.socket.ChannelInputShutdownReadComplete;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.Http2Connection;
 import io.netty.handler.codec.http2.Http2Exception;
 import io.netty.handler.codec.http2.Http2Settings;
@@ -299,6 +300,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private void handleRequest(ChannelHandlerContext ctx, DecodedHttpRequest req) throws Exception {
+        final ServerHttpObjectEncoder responseEncoder = this.responseEncoder;
+        assert responseEncoder != null;
+
         // Ignore the request received after the last request,
         // because we are going to close the connection after sending the last response.
         if (handledLastRequest) {
@@ -309,6 +313,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         // we should not accept a request anymore.
         if (!req.isKeepAlive()) {
             handledLastRequest = true;
+            responseEncoder.keepAliveHandler().disconnectWhenFinished();
         }
 
         final Channel channel = ctx.channel();
@@ -438,8 +443,16 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                         unfinishedRequests.remove(req);
                     }
 
-                    if (unfinishedRequests.isEmpty() && handledLastRequest) {
-                        ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                    final boolean needsDisconnection =
+                            ctx.channel().isActive() &&
+                            (handledLastRequest || responseEncoder.keepAliveHandler().needsDisconnection());
+                    if (needsDisconnection) {
+                        if (protocol.isMultiplex()) {
+                            // Initiates channel close, connection will be closed after all streams are closed.
+                            ctx.channel().close();
+                        } else if (unfinishedRequests.isEmpty()) {
+                            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                        }
                     }
                 } catch (Throwable t) {
                     logger.warn("Unexpected exception:", t);
@@ -451,7 +464,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             // when the peer cancels the stream.
             req.setResponse(res);
 
-            assert responseEncoder != null;
             if (reqCtx.exchangeType().isResponseStreaming()) {
                 final HttpResponseSubscriber resSubscriber =
                         new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
@@ -512,9 +524,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                          ResponseHeadersBuilder resHeaders, HttpData resContent,
                          @Nullable Throwable cause) {
         if (!handledLastRequest) {
-            respond(reqCtx, true, resHeaders, resContent, cause).addListener(CLOSE_ON_FAILURE);
+            respond(reqCtx, resHeaders, resContent, cause).addListener(CLOSE_ON_FAILURE);
         } else {
-            respond(reqCtx, false, resHeaders, resContent, cause).addListener(CLOSE);
+            respond(reqCtx, resHeaders, resContent, cause).addListener(CLOSE);
         }
 
         if (!isReading) {
@@ -522,9 +534,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         }
     }
 
-    private ChannelFuture respond(ServiceRequestContext reqCtx, boolean addKeepAlive,
-                                  ResponseHeadersBuilder resHeaders, HttpData resContent,
-                                  @Nullable Throwable cause) {
+    private ChannelFuture respond(ServiceRequestContext reqCtx, ResponseHeadersBuilder resHeaders,
+                                  HttpData resContent, @Nullable Throwable cause) {
         // No need to consume further since the response is ready.
         final DecodedHttpRequest req = (DecodedHttpRequest) reqCtx.request();
         if (req instanceof HttpRequestWriter) {
@@ -541,9 +552,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         logBuilder.startResponse();
         assert responseEncoder != null;
-        if (addKeepAlive) {
-            addKeepAliveHeaders(resHeaders);
+        if (handledLastRequest) {
+            addConnectionCloseHeaders(resHeaders);
         }
+
         // Note that it is perfectly fine not to set the 'content-length' header to the last response
         // of an HTTP/1 connection. We set it anyway to work around overly strict HTTP clients that always
         // require a 'content-length' header for non-chunked responses.
@@ -576,9 +588,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
      * Sets the keep alive header as per:
      * - https://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
      */
-    private void addKeepAliveHeaders(ResponseHeadersBuilder headers) {
+    private void addConnectionCloseHeaders(ResponseHeadersBuilder headers) {
         if (protocol == H1 || protocol == H1C) {
-            headers.set(HttpHeaderNames.CONNECTION, "keep-alive");
+            headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE.toString());
         } else {
             // Do not add the 'connection' header for HTTP/2 responses.
             // See https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.2

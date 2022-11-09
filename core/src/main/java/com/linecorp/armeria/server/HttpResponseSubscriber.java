@@ -49,6 +49,7 @@ import com.linecorp.armeria.unsafe.PooledObjects;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.Http2Error;
 
 final class HttpResponseSubscriber extends AbstractHttpResponseHandler implements Subscriber<HttpObject> {
@@ -157,6 +158,9 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                         setDone(false);
                     }
                     merged = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders());
+                    if (merged.contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE.toString())) {
+                        disconnectWhenFinished();
+                    }
                     logBuilder().responseHeaders(merged);
                 }
 

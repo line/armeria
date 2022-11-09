@@ -29,7 +29,9 @@ public interface KeepAliveHandler {
     void initialize(ChannelHandlerContext ctx);
 
     /**
-     * Destroys scheduled resources.
+     * Destroys scheduled resources. Unfinished requests may be closed immediately.
+     *
+     * @see AbstractHttp2ConnectionHandler#needsImmediateDisconnection()
      */
     void destroy();
 
@@ -49,8 +51,8 @@ public interface KeepAliveHandler {
     void onPing();
 
     /**
-     * Invoked when a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING ACK</a> is received.
-     * Note that this method is only valid for an HTTP/2 connection.
+     * Invoked when a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING ACK</a>
+     * is received. Note that this method is only valid for an HTTP/2 connection.
      */
     void onPingAck(long data);
 
@@ -60,9 +62,15 @@ public interface KeepAliveHandler {
     boolean isClosing();
 
     /**
+     * Gracefully disconnects the channel by sending a GOAWAY with {@link Integer#MAX_VALUE} for HTTP/2 or
+     * a "connection: close" header for HTTP/1.
+     */
+    void disconnectWhenFinished();
+
+    /**
      * Returns whether a connection managed by this {@link KeepAliveHandler} reaches its lifespan.
      */
-    boolean needToCloseConnection();
+    boolean needsDisconnection();
 
     /**
      * Increases the number of requests received or sent.

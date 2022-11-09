@@ -399,8 +399,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             // HTTP/1 doesn't support draining that signals clients about connection shutdown but still
             // accepts in flight requests. Simply destroy KeepAliveHandler which causes next response
             // to have a "Connection: close" header and connection to be closed after the next response.
-            destroyKeepAliveHandler();
-            ((ServerHttp1ObjectEncoder) encoder).initiateConnectionShutdown();
+            encoder.keepAliveHandler().disconnectWhenFinished();
             return;
         }
 
@@ -409,7 +408,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
     private void maybeInitializeKeepAliveHandler(ChannelHandlerContext ctx) {
         final KeepAliveHandler keepAliveHandler = encoder.keepAliveHandler();
-        if (keepAliveHandler != NoopKeepAliveHandler.INSTANCE &&
+        if (!(keepAliveHandler instanceof NoopKeepAliveHandler) &&
             ctx.channel().isActive() && ctx.channel().isRegistered()) {
             keepAliveHandler.initialize(ctx);
         }

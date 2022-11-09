@@ -856,9 +856,9 @@ public final class ArmeriaHttpUtil {
      */
     public static void toNettyHttp1ServerHeaders(
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
-            Http1HeaderNaming http1HeaderNaming) {
+            Http1HeaderNaming http1HeaderNaming, boolean keepAlive) {
         toNettyHttp1Server(inputHeaders, outputHeaders, http1HeaderNaming, false);
-        HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, true);
+        HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, keepAlive);
     }
 
     /**
@@ -900,7 +900,6 @@ public final class ArmeriaHttpUtil {
             HttpHeaders inputHeaders, io.netty.handler.codec.http.HttpHeaders outputHeaders,
             Http1HeaderNaming http1HeaderNaming) {
         toNettyHttp1Client(inputHeaders, outputHeaders, http1HeaderNaming, false);
-        HttpUtil.setKeepAlive(outputHeaders, HttpVersion.HTTP_1_1, true);
     }
 
     /**

@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.Http1KeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
@@ -32,23 +33,28 @@ final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
     private static final RequestHeaders HTTP1_PING_REQUEST = RequestHeaders.of(HttpMethod.OPTIONS, "*");
 
     private final HttpSession httpSession;
-    private final ClientHttp1ObjectEncoder encoder;
     private final Http1ResponseDecoder decoder;
+    @Nullable
+    private ClientHttp1ObjectEncoder encoder;
 
-    Http1ClientKeepAliveHandler(Channel channel, ClientHttp1ObjectEncoder encoder, Http1ResponseDecoder decoder,
+    Http1ClientKeepAliveHandler(Channel channel, Http1ResponseDecoder decoder,
                                 Timer keepAliveTimer, long idleTimeoutMillis, long pingIntervalMillis,
                                 long maxConnectionAgeMillis, int maxNumRequestsPerConnection) {
         super(channel, "client", keepAliveTimer, idleTimeoutMillis,
               pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
         httpSession = HttpSession.get(requireNonNull(channel, "channel"));
-        this.encoder = requireNonNull(encoder, "encoder");
         this.decoder = requireNonNull(decoder, "decoder");
+    }
+
+    void setEncoder(ClientHttp1ObjectEncoder encoder) {
+        this.encoder = requireNonNull(encoder, "encoder");
     }
 
     @Override
     protected ChannelFuture writePing(ChannelHandlerContext ctx) {
         final int id = httpSession.incrementAndGetNumRequestsSent();
 
+        assert encoder != null;
         decoder.setPingReqId(id);
         final ChannelFuture future = encoder.writeHeaders(id, 0, HTTP1_PING_REQUEST, true, ctx.newPromise());
         ctx.flush();

@@ -76,6 +76,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private boolean isMaxConnectionAgeExceeded;
 
     private boolean isInitialized;
+    private boolean disconnectWhenFinished;
     private PingState pingState = PingState.IDLE;
 
     @Nullable
@@ -123,6 +124,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
         final long connectionStartTimeNanos = System.nanoTime();
         ctx.channel().closeFuture().addListener(unused -> {
             keepAliveTimer.record(System.nanoTime() - connectionStartTimeNanos, TimeUnit.NANOSECONDS);
+            destroy();
         });
 
         lastConnectionIdleTime = lastPingIdleTime = connectionStartTimeNanos;
@@ -200,9 +202,14 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     }
 
     @Override
-    public final boolean needToCloseConnection() {
-        return isMaxConnectionAgeExceeded || (currentNumRequests > 0 && currentNumRequests >=
-                                                                        maxNumRequestsPerConnection);
+    public void disconnectWhenFinished() {
+        disconnectWhenFinished = true;
+    }
+
+    @Override
+    public final boolean needsDisconnection() {
+        return disconnectWhenFinished || pingState == PingState.SHUTDOWN || isMaxConnectionAgeExceeded ||
+               (currentNumRequests > 0 && currentNumRequests >= maxNumRequestsPerConnection);
     }
 
     @Override

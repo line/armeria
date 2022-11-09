@@ -25,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
@@ -38,6 +39,7 @@ import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.handler.codec.http.HttpHeaderValues;
 
 abstract class AbstractHttpResponseHandler {
 
@@ -51,6 +53,7 @@ abstract class AbstractHttpResponseHandler {
 
     private final CompletableFuture<Void> completionFuture;
     private boolean isComplete;
+    private boolean needsDisconnection;
 
     AbstractHttpResponseHandler(ChannelHandlerContext ctx,
                                 ServerHttpObjectEncoder responseEncoder,
@@ -70,6 +73,10 @@ abstract class AbstractHttpResponseHandler {
         return isComplete;
     }
 
+    void disconnectWhenFinished() {
+        needsDisconnection = true;
+    }
+
     final boolean tryComplete(@Nullable Throwable cause) {
         if (isComplete) {
             return false;
@@ -79,6 +86,10 @@ abstract class AbstractHttpResponseHandler {
             completionFuture.complete(null);
         } else {
             completionFuture.completeExceptionally(cause);
+        }
+
+        if (needsDisconnection) {
+            ctx.channel().close();
         }
         return true;
     }
@@ -124,6 +135,10 @@ abstract class AbstractHttpResponseHandler {
         final int streamId = req.streamId();
 
         ResponseHeaders headers = mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders());
+        if (headers.contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE.toString())) {
+            disconnectWhenFinished();
+        }
+
         final HttpData content = res.content();
         // An aggregated response always has empty content if its status.isContentAlwaysEmpty() is true.
         assert !res.status().isContentAlwaysEmpty() || content.isEmpty();

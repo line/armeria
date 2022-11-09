@@ -43,7 +43,10 @@ import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.Http2GoAwayHandler;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
+import com.linecorp.armeria.internal.common.KeepAliveHandler;
+import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
 import io.micrometer.core.instrument.Tag;
@@ -161,7 +164,16 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public boolean canSendRequest() {
         assert responseDecoder != null;
-        return active && !responseDecoder.needsToDisconnectWhenFinished();
+        if (!channel.isActive()) {
+            return false;
+        }
+
+        if (responseDecoder instanceof Http2ResponseDecoder) {
+            final Http2GoAwayHandler goAwayHandler = ((Http2ResponseDecoder) responseDecoder).goAwayHandler();
+            return !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway();
+        } else {
+            return active && !responseDecoder.needsToDisconnectWhenFinished();
+        }
     }
 
     @Override
@@ -318,8 +330,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final SessionProtocol protocol = (SessionProtocol) evt;
             this.protocol = protocol;
             if (protocol == H1 || protocol == H1C) {
-                final ClientHttp1ObjectEncoder requestEncoder =
-                        new ClientHttp1ObjectEncoder(channel, protocol, clientFactory.http1HeaderNaming());
                 final Http1ResponseDecoder responseDecoder = ctx.pipeline().get(Http1ResponseDecoder.class);
 
                 final long idleTimeoutMillis = clientFactory.idleTimeoutMillis();
@@ -330,19 +340,27 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                         needsKeepAliveHandler(idleTimeoutMillis, pingIntervalMillis,
                                               maxConnectionAgeMillis, maxNumRequestsPerConnection);
 
+                final KeepAliveHandler keepAliveHandler;
                 if (needsKeepAliveHandler) {
                     final Timer keepAliveTimer =
                             MoreMeters.newTimer(clientFactory.meterRegistry(),
                                                 "armeria.client.connections.lifespan",
                                                 ImmutableList.of(Tag.of("protocol", protocol.uriText())));
-                    final Http1ClientKeepAliveHandler keepAliveHandler =
-                            new Http1ClientKeepAliveHandler(
-                                    channel, requestEncoder, responseDecoder,
-                                    keepAliveTimer, idleTimeoutMillis, pingIntervalMillis,
-                                    maxConnectionAgeMillis, maxNumRequestsPerConnection);
-                    requestEncoder.setKeepAliveHandler(keepAliveHandler);
-                    responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
+                    keepAliveHandler = new Http1ClientKeepAliveHandler(
+                            channel, responseDecoder, keepAliveTimer, idleTimeoutMillis,
+                            pingIntervalMillis, maxConnectionAgeMillis, maxNumRequestsPerConnection);
+                } else {
+                    keepAliveHandler = new NoopKeepAliveHandler();
                 }
+
+                final ClientHttp1ObjectEncoder requestEncoder =
+                        new ClientHttp1ObjectEncoder(channel, protocol, clientFactory.http1HeaderNaming(),
+                                                     keepAliveHandler);
+                if (keepAliveHandler instanceof Http1ClientKeepAliveHandler) {
+                    ((Http1ClientKeepAliveHandler) keepAliveHandler).setEncoder(requestEncoder);
+                }
+
+                responseDecoder.setKeepAliveHandler(ctx, keepAliveHandler);
 
                 this.requestEncoder = requestEncoder;
                 this.responseDecoder = responseDecoder;
