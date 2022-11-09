@@ -51,7 +51,10 @@ class UnfinishedRequestTest {
         try (ClientFactory factory = ClientFactory.builder()
                                                   .idleTimeoutMillis(0)
                                                   .build()) {
-            final WebClient client = server.webClient(cb -> cb.factory(factory));
+            final WebClient client = WebClient.builder(server.httpUri())
+                                              .responseTimeoutMillis(0)
+                                              .factory(factory)
+                                              .build();
             client.get("/").aggregate();
             client.get("/").aggregate();
 
