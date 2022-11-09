@@ -22,7 +22,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -48,21 +47,16 @@ class UnfinishedRequestTest {
 
     @Test
     void shouldCompleteUnfinishedRequestWhenConnectionIsClosed() throws Exception {
-        try (ClientFactory factory = ClientFactory.builder()
-                                                  .idleTimeoutMillis(0)
-                                                  .build()) {
-            final WebClient client = WebClient.builder(server.httpUri())
-                                              .responseTimeoutMillis(0)
-                                              .factory(factory)
-                                              .build();
-            client.get("/").aggregate();
-            client.get("/").aggregate();
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .responseTimeoutMillis(0)
+                                          .build();
+        client.get("/").aggregate();
+        client.get("/").aggregate();
 
-            final ServiceRequestContext ctx1 = server.requestContextCaptor().take();
-            final ServiceRequestContext ctx2 = server.requestContextCaptor().take();
-            // Make sure that `HttpServerHandler.cleanup()` aborts all unfinished requests successfully.
-            ctx1.log().whenComplete().join();
-            ctx2.log().whenComplete().join();
-        }
+        final ServiceRequestContext ctx1 = server.requestContextCaptor().take();
+        final ServiceRequestContext ctx2 = server.requestContextCaptor().take();
+        // Make sure that `HttpServerHandler.cleanup()` aborts all unfinished requests successfully.
+        ctx1.log().whenComplete().join();
+        ctx2.log().whenComplete().join();
     }
 }
