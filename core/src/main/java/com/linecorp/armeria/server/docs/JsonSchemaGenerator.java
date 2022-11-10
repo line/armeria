@@ -15,44 +15,37 @@
  */
 package com.linecorp.armeria.server.docs;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.JacksonUtil;
-
-import scala.annotation.meta.field;
 
 /**
  * Generates a JSON Schema from the given service specification.
  */
 @UnstableApi
-public final class JSONSchemaGenerator {
-    private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
+public final class JsonSchemaGenerator {
 
-    private static final String SCHEMA = "https://json-schema.org/draft/2020-12/schema";
+    private JsonSchemaGenerator() {
+        throw new UnsupportedOperationException();
+    }
+
+    private static final ObjectMapper mapper
+            = JacksonUtil.newDefaultObjectMapper();
 
     private static final class FieldSchemaWithAdditionalProperties {
-        public final UUID uniqueId;
-        public final ObjectNode node;
-        public final Set<String> requiredFieldNames;
+        private final ObjectNode node;
+        private final Set<String> requiredFieldNames;
 
-        public FieldSchemaWithAdditionalProperties(ObjectNode node) {
-            this(node, new HashSet<>());
-        }
-
-        public FieldSchemaWithAdditionalProperties(ObjectNode node, Set<String> requiredFieldNames) {
-            this.uniqueId = UUID.randomUUID();
+        private FieldSchemaWithAdditionalProperties(ObjectNode node, Set<String> requiredFieldNames) {
             this.node = node;
             this.requiredFieldNames = requiredFieldNames;
         }
@@ -143,46 +136,43 @@ public final class JSONSchemaGenerator {
 
         for (FieldInfo field : fields) {
             final ObjectNode fieldNode = mapper.createObjectNode();
-            String fieldTypeName = field.typeSignature().name();
+            final String fieldTypeName = field.typeSignature().name();
 
-            System.out.println(field.typeSignature().namedTypeDescriptor());
             if (field.typeSignature().isNamed() && visited.containsKey(fieldTypeName)) {
-                // If field is already visited, add a reference to the field instead of iterating over its children.
-                String pathName = visited.get(fieldTypeName);
+                // If field is already visited, add a reference to the field instead of iterating its children.
+                final String pathName = visited.get(fieldTypeName);
                 fieldNode.put("$ref", pathName);
             } else {
                 // Field is not visited, create a new type definition for it.
-                String schemaType = getSchemaType(field.typeSignature());
+                final String schemaType = getSchemaType(field.typeSignature());
                 fieldNode.put("type", schemaType);
                 fieldNode.put("description", field.descriptionInfo().docString());
 
-                if (schemaType.equals("array")) {
-                    // TODO: Support for repeated fields with non-primitive types.
-                    // Use "items": { ... }
-                    // But unfortunately container types do not contain field infos.
-                    // Maybe consider using $ref ?
-                }
+                // TODO: Support for repeated fields with non-primitive types.
+                // Use "items": { ... }
+                // But unfortunately container types do not contain field infos.
+                // Maybe consider using $ref ?
 
                 // Iterate over each child field.
                 if (!field.childFieldInfos().isEmpty()) {
                     // Set the current path to be "PREVIOUS_PATH/field.name"
-                    String currentPath = path + "/" + field.name();
+                    final String currentPath = path + "/" + field.name();
 
                     // Mark current field as visited
                     visited.put(fieldTypeName, currentPath);
-                    FieldSchemaWithAdditionalProperties childProperties = generateFields(
+                    final FieldSchemaWithAdditionalProperties childProperties = generateFields(
                             field.childFieldInfos(), visited, currentPath);
 
                     fieldNode.set("properties", childProperties.node);
+                    fieldNode.put("additionalProperties", false);
 
                     // Find which child properties are required.
-                    ArrayNode required = mapper.createArrayNode();
+                    final ArrayNode required = mapper.createArrayNode();
                     for (String requiredField : childProperties.requiredFieldNames) {
                         required.add(requiredField);
                     }
 
                     fieldNode.set("required", required);
-
                 }
 
                 // Fill required fields for the current object.
@@ -198,22 +188,28 @@ public final class JSONSchemaGenerator {
         return new FieldSchemaWithAdditionalProperties(objectNode, requiredFields);
     }
 
+    /**
+     * Generate the JSON Schema for the given {@link StructInfo}.
+     * @param info struct info object.
+     * @return ObjectNode containing the JSON schema for the given struct.
+     */
     public static ObjectNode generate(StructInfo info) {
-        ObjectNode root = mapper.createObjectNode();
-        root.put("$schema", SCHEMA)
-            .put("title", info.name())
+        final ObjectNode root = mapper.createObjectNode();
+        root.put("title", info.name())
             .put("description", info.descriptionInfo().docString())
+            .put("additionalProperties", false)
             .put("type", "object");
 
         // Initialize an empty visit map, push current type to the visit map.
-        Map<String, String> visited = new HashMap<>();
-        String currentPath = "#";
+        final Map<String, String> visited = new HashMap<>();
+        final String currentPath = "#";
         visited.put(info.name(), currentPath);
 
-        FieldSchemaWithAdditionalProperties properties = generateFields(info.fields(), visited, currentPath);
+        final FieldSchemaWithAdditionalProperties properties = generateFields(info.fields(), visited,
+                                                                              currentPath);
         root.set("properties", properties.node);
 
-        ArrayNode required = mapper.createArrayNode();
+        final ArrayNode required = mapper.createArrayNode();
         for (String requiredField : properties.requiredFieldNames) {
             required.add(requiredField);
         }

@@ -26,7 +26,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 
-class JSONSchemaGeneratorTest {
+class JsonSchemaGeneratorTest {
 
     private static StructInfo newStructInfo(String name, List<FieldInfo> parameters) {
         return new StructInfo(name, parameters);
@@ -39,7 +39,7 @@ class JSONSchemaGeneratorTest {
         final DescriptionInfo description = DescriptionInfo.of("test method");
         final StructInfo methodInfo = newStructInfo(methodName, parameters).withDescriptionInfo(description);
 
-        final ObjectNode jsonSchema = JSONSchemaGenerator.generate(methodInfo);
+        final ObjectNode jsonSchema = JsonSchemaGenerator.generate(methodInfo);
 
         // Base properties
         assertThat(jsonSchema.get("$schema").asText()).isNotEmpty();
@@ -65,7 +65,7 @@ class JSONSchemaGeneratorTest {
         final DescriptionInfo description = DescriptionInfo.of("test method");
         final StructInfo methodInfo = newStructInfo(methodName, parameters).withDescriptionInfo(description);
 
-        final ObjectNode jsonSchema = JSONSchemaGenerator.generate(methodInfo);
+        final ObjectNode jsonSchema = JsonSchemaGenerator.generate(methodInfo);
 
         // Base properties
         assertThat(jsonSchema.get("$schema").asText()).isNotEmpty();
@@ -74,7 +74,7 @@ class JSONSchemaGeneratorTest {
         assertThat(jsonSchema.get("type").asText()).isEqualTo("object");
 
         // Method specific properties
-        List<JsonNode> properties = ImmutableList.copyOf(jsonSchema.get("properties").elements());
+        final List<JsonNode> properties = ImmutableList.copyOf(jsonSchema.get("properties").elements());
         assertThat(properties).hasSize(4);
     }
 
@@ -90,7 +90,7 @@ class JSONSchemaGeneratorTest {
         );
         final StructInfo methodInfo = newStructInfo(methodName, parameters);
 
-        final ObjectNode jsonSchema = JSONSchemaGenerator.generate(methodInfo);
+        final ObjectNode jsonSchema = JsonSchemaGenerator.generate(methodInfo);
 
         assertThat(jsonSchema.get("properties").isNull()).isFalse();
         assertThat(jsonSchema.get("properties").get("paramRecursive")).isNotNull();
@@ -101,5 +101,4 @@ class JSONSchemaGeneratorTest {
         assertThat(jsonSchema.get("properties").get("paramRecursive").get("properties")
                              .get("inner-recurse").get("$ref").asText()).isEqualTo("#/paramRecursive");
     }
-
 }

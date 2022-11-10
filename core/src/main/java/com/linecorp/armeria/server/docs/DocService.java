@@ -220,7 +220,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                     final StringBuilder allSchemas = new StringBuilder();
 
                     for (StructInfo struct : spec.structs()) {
-                        final ObjectNode jsonSpec = JSONSchemaGenerator.generate(struct);
+                        final ObjectNode jsonSpec = JsonSchemaGenerator.generate(struct);
 
                         allSchemas.append(jsonSpec.toPrettyString());
                         allSchemas.append("\n");
