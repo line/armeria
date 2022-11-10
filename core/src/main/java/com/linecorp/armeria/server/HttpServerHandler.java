@@ -172,6 +172,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private final IdentityHashMap<DecodedHttpRequest, HttpResponse> unfinishedRequests;
     private boolean isReading;
+    private boolean isCleaning;
     private boolean handledLastRequest;
 
     HttpServerHandler(ServerConfig config,
@@ -235,6 +236,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private void cleanup() {
         if (!unfinishedRequests.isEmpty()) {
+            isCleaning = true;
             final ClosedSessionException cause = ClosedSessionException.get();
             unfinishedRequests.forEach((req, res) -> {
                 // An HTTP2 request is cancelled by Http2RequestDecoder.onRstStreamRead()
@@ -242,6 +244,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // Mark the request stream as closed due to disconnection.
                 req.abortResponse(cause, cancel);
             });
+            unfinishedRequests.clear();
         }
     }
 
@@ -418,6 +421,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             final CompletableFuture<Void> resWriteFuture = new CompletableFuture<>();
             resWriteFuture.handle((ret, cause) -> {
                 try {
+                    assert eventLoop.inEventLoop();
                     if (cause == null || !req.isOpen()) {
                         req.abort(ResponseCompleteException.get());
                     } else {
@@ -427,7 +431,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     if (!isTransientService) {
                         gracefulShutdownSupport.dec();
                     }
-                    unfinishedRequests.remove(req);
+
+                    // This callback could be called by `req.abortResponse(cause, cancel)` in `cleanup()`.
+                    // As `unfinishedRequests` is being iterated, `unfinishedRequests` should not be removed.
+                    if (!isCleaning) {
+                        unfinishedRequests.remove(req);
+                    }
+
                     if (unfinishedRequests.isEmpty() && handledLastRequest) {
                         ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
                     }
