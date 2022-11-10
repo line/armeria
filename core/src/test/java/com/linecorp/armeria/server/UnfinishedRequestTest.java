@@ -47,9 +47,7 @@ class UnfinishedRequestTest {
 
     @Test
     void shouldCompleteUnfinishedRequestWhenConnectionIsClosed() throws Exception {
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .responseTimeoutMillis(0)
-                                          .build();
+        final WebClient client = server.webClient(cb -> cb.responseTimeoutMillis(0));
         client.get("/").aggregate();
         client.get("/").aggregate();
 

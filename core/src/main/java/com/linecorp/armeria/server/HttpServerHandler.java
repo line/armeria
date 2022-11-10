@@ -421,6 +421,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             final CompletableFuture<Void> resWriteFuture = new CompletableFuture<>();
             resWriteFuture.handle((ret, cause) -> {
                 try {
+                    assert eventLoop.inEventLoop();
                     if (cause == null || !req.isOpen()) {
                         req.abort(ResponseCompleteException.get());
                     } else {
