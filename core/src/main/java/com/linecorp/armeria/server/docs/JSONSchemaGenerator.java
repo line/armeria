@@ -15,8 +15,11 @@
  */
 package com.linecorp.armeria.server.docs;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -24,8 +27,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.JacksonUtil;
+
+import scala.annotation.meta.field;
 
 /**
  * Generates a JSON Schema from the given service specification.
@@ -53,7 +59,17 @@ public final class JSONSchemaGenerator {
     }
 
     private static String getSchemaType(TypeSignature type) {
-        // TODO: Test
+        if (type.isNamed()) {
+            // Hacky way because protobuf library is not in classpath.
+            // We can consider moving JSONSchemaGenerator for protos to grpc or protobuf lib.
+            if (type.namedTypeDescriptor() != null && type.namedTypeDescriptor().getClass().getName().contains(
+                    "Enum")) {
+                return "string";
+            } else {
+                return "object";
+            }
+        }
+
         if (type.isContainer()) {
             switch (type.name().toLowerCase()) {
                 case "repeated":
@@ -68,27 +84,41 @@ public final class JSONSchemaGenerator {
         if (type.isBase()) {
             switch (type.name().toLowerCase()) {
                 case "boolean":
+                    // Proto scalar types
                 case "bool":
                     return "boolean";
-                case "byte":
                 case "short":
+                case "number":
+                    // Proto scalar types
+                case "float":
+                case "double":
+                    return "number";
                 case "i":
                 case "i32":
                 case "i64":
-                case "int":
-                case "int32":
-                case "int64":
                 case "integer":
+                case "int":
                 case "l32":
                 case "l64":
                 case "long":
                 case "long32":
                 case "long64":
-                case "float":
-                case "double":
-                    return "number";
-                case "string":
+                    // Proto scalar types
+                case "int32":
+                case "int64":
+                case "uint32":
+                case "uint64":
+                case "sint32":
+                case "sint64":
+                case "fixed32":
+                case "fixed64":
+                case "sfixed32":
+                case "sfixed64":
+                    return "integer";
                 case "binary":
+                    // Proto scalar types
+                case "bytes":
+                case "string":
                     return "string";
                 default:
                     return "null";
@@ -98,34 +128,73 @@ public final class JSONSchemaGenerator {
         return "any";
     }
 
-    private static FieldSchemaWithAdditionalProperties generateFields(List<FieldInfo> fields) {
+    /**
+     * Generate a FieldSchemaWithAdditionalProperties for the given fields.
+     * @param fields list of fields that the child has.
+     * @param visited a map of visited fields, required for cycle detection.
+     * @param path current path as defined in JSON Schema spec, required for cyclic references.
+     * @return a FieldSchemaWithAdditionalProperties for the given fields.
+     */
+    private static FieldSchemaWithAdditionalProperties generateFields(List<FieldInfo> fields,
+                                                                      Map<String, String> visited,
+                                                                      String path) {
         final ObjectNode objectNode = mapper.createObjectNode();
         final Set<String> requiredFields = new HashSet<>();
 
         for (FieldInfo field : fields) {
             final ObjectNode fieldNode = mapper.createObjectNode();
-            fieldNode.put("type", getSchemaType(field.typeSignature()));
-            fieldNode.put("description", field.descriptionInfo().docString());
+            String fieldTypeName = field.typeSignature().name();
 
-            if (!field.childFieldInfos().isEmpty()) {
-                // TODO: Handle recursion
-                FieldSchemaWithAdditionalProperties childProperties = generateFields(field.childFieldInfos());
-                fieldNode.set("properties", childProperties.node);
+            System.out.println(field.typeSignature().namedTypeDescriptor());
+            if (field.typeSignature().isNamed() && visited.containsKey(fieldTypeName)) {
+                // If field is already visited, add a reference to the field instead of iterating over its children.
+                String pathName = visited.get(fieldTypeName);
+                fieldNode.put("$ref", pathName);
+            } else {
+                // Field is not visited, create a new type definition for it.
+                String schemaType = getSchemaType(field.typeSignature());
+                fieldNode.put("type", schemaType);
+                fieldNode.put("description", field.descriptionInfo().docString());
 
-                ArrayNode required = mapper.createArrayNode();
-                for (String requiredField : childProperties.requiredFieldNames) {
-                    required.add(requiredField);
+                if (schemaType.equals("array")) {
+                    // TODO: Support for repeated fields with non-primitive types.
+                    // Use "items": { ... }
+                    // But unfortunately container types do not contain field infos.
+                    // Maybe consider using $ref ?
                 }
 
-                fieldNode.set("required", required);
+                // Iterate over each child field.
+                if (!field.childFieldInfos().isEmpty()) {
+                    // Set the current path to be "PREVIOUS_PATH/field.name"
+                    String currentPath = path + "/" + field.name();
+
+                    // Mark current field as visited
+                    visited.put(fieldTypeName, currentPath);
+                    FieldSchemaWithAdditionalProperties childProperties = generateFields(
+                            field.childFieldInfos(), visited, currentPath);
+
+                    fieldNode.set("properties", childProperties.node);
+
+                    // Find which child properties are required.
+                    ArrayNode required = mapper.createArrayNode();
+                    for (String requiredField : childProperties.requiredFieldNames) {
+                        required.add(requiredField);
+                    }
+
+                    fieldNode.set("required", required);
+
+                }
+
+                // Fill required fields for the current object.
+                if (field.requirement() == FieldRequirement.REQUIRED) {
+                    requiredFields.add(field.name());
+                }
             }
 
-            if (field.requirement() == FieldRequirement.REQUIRED) {
-                requiredFields.add(field.name());
-            }
-
+            // Set current field inside the returned object.
             objectNode.set(field.name(), fieldNode);
         }
+
         return new FieldSchemaWithAdditionalProperties(objectNode, requiredFields);
     }
 
@@ -136,7 +205,12 @@ public final class JSONSchemaGenerator {
             .put("description", info.descriptionInfo().docString())
             .put("type", "object");
 
-        FieldSchemaWithAdditionalProperties properties = generateFields(info.fields());
+        // Initialize an empty visit map, push current type to the visit map.
+        Map<String, String> visited = new HashMap<>();
+        String currentPath = "#";
+        visited.put(info.name(), currentPath);
+
+        FieldSchemaWithAdditionalProperties properties = generateFields(info.fields(), visited, currentPath);
         root.set("properties", properties.node);
 
         ArrayNode required = mapper.createArrayNode();

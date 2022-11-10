@@ -216,19 +216,24 @@ public final class DocService extends SimpleDecoratingHttpService {
                 final List<Version> versions = ImmutableList.copyOf(
                         Version.getAll(DocService.class.getClassLoader()).values());
 
-                final StringBuilder allSchemas = new StringBuilder();
+                try {
+                    final StringBuilder allSchemas = new StringBuilder();
 
-                for (StructInfo struct : spec.structs()) {
-                    final ObjectNode jsonSpec = JSONSchemaGenerator.generate(struct);
+                    for (StructInfo struct : spec.structs()) {
+                        final ObjectNode jsonSpec = JSONSchemaGenerator.generate(struct);
 
-                    allSchemas.append(jsonSpec.toPrettyString());
-                    allSchemas.append("\n");
+                        allSchemas.append(jsonSpec.toPrettyString());
+                        allSchemas.append("\n");
 
-                    vfs().put("/schema/" + struct.name() + ".json",
-                              jsonSpec.toPrettyString().getBytes(StandardCharsets.UTF_8));
+                        vfs().put("/schema/" + struct.name() + ".json",
+                                  jsonSpec.toPrettyString().getBytes(StandardCharsets.UTF_8));
+
+                        vfs().put("/schema/all.json", allSchemas.toString().getBytes(StandardCharsets.UTF_8));
+                    }
+                } catch (Exception e) {
+                    // Just in case something goes wrong, fail softly.
+                    logger.error("Failed to generate JSON schemas:", e);
                 }
-
-                vfs().put("/schema/all.json", allSchemas.toString().getBytes(StandardCharsets.UTF_8));
 
                 vfs().put("/specification.json",
                           jsonMapper.writerWithDefaultPrettyPrinter().writeValueAsBytes(spec));

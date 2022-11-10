@@ -78,4 +78,28 @@ class JSONSchemaGeneratorTest {
         assertThat(properties).hasSize(4);
     }
 
+    @Test
+    void testMethodWithRecursivePath() {
+        final String methodName = "test-method";
+        final List<FieldInfo> parameters = ImmutableList.of(
+                FieldInfo.of("param1", TypeSignature.ofBase("int"), DescriptionInfo.of("param1 description")),
+                FieldInfo.builder("paramRecursive", TypeSignature.ofNamed("rec", new Object()),
+                                  FieldInfo.of("inner-param1", TypeSignature.ofBase("int32")),
+                                  FieldInfo.of("inner-recurse", TypeSignature.ofNamed("rec", new Object()))
+                ).build()
+        );
+        final StructInfo methodInfo = newStructInfo(methodName, parameters);
+
+        final ObjectNode jsonSchema = JSONSchemaGenerator.generate(methodInfo);
+
+        assertThat(jsonSchema.get("properties").isNull()).isFalse();
+        assertThat(jsonSchema.get("properties").get("paramRecursive")).isNotNull();
+        assertThat(jsonSchema.get("properties").get("paramRecursive").get("properties")
+                             .get("inner-param1")).isNotNull();
+        assertThat(jsonSchema.get("properties").get("paramRecursive").get("properties")
+                             .get("inner-recurse")).isNotNull();
+        assertThat(jsonSchema.get("properties").get("paramRecursive").get("properties")
+                             .get("inner-recurse").get("$ref").asText()).isEqualTo("#/paramRecursive");
+    }
+
 }
