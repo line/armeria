@@ -42,7 +42,6 @@ class JsonSchemaGeneratorTest {
         final ObjectNode jsonSchema = JsonSchemaGenerator.generate(methodInfo);
 
         // Base properties
-        assertThat(jsonSchema.get("$schema").asText()).isNotEmpty();
         assertThat(jsonSchema.get("title").asText()).isEqualTo(methodName);
         assertThat(jsonSchema.get("description").asText()).isEqualTo(description.docString());
         assertThat(jsonSchema.get("type").asText()).isEqualTo("object");
@@ -68,7 +67,6 @@ class JsonSchemaGeneratorTest {
         final ObjectNode jsonSchema = JsonSchemaGenerator.generate(methodInfo);
 
         // Base properties
-        assertThat(jsonSchema.get("$schema").asText()).isNotEmpty();
         assertThat(jsonSchema.get("title").asText()).isEqualTo(methodName);
         assertThat(jsonSchema.get("description").asText()).isEqualTo(description.docString());
         assertThat(jsonSchema.get("type").asText()).isEqualTo("object");
