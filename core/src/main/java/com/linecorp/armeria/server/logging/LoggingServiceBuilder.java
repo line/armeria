@@ -21,6 +21,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 
@@ -126,13 +127,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
                                   logger(),
                                   requestLogLevelMapper(),
                                   responseLogLevelMapper(),
-                                  requestHeadersSanitizer(),
-                                  requestContentSanitizer(),
-                                  requestTrailersSanitizer(),
-                                  responseHeadersSanitizer(),
-                                  responseContentSanitizer(),
-                                  responseTrailersSanitizer(),
-                                  responseCauseSanitizer(),
+                                  responseCauseFilter(),
                                   successSampler,
                                   failureSampler,
                                   buildLogFormatter());
@@ -276,6 +271,11 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer) {
         return (LoggingServiceBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
+    }
+
+    @Override
+    public LoggingServiceBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
+        return (LoggingServiceBuilder) super.responseCauseFilter(responseCauseFilter);
     }
 
     @Override

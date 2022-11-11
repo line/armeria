@@ -474,33 +474,6 @@ class DefaultRequestLogTest {
     }
 
     @Test
-    void toStringRequestOnlyCacheWithSanitizer() {
-        final ServiceRequestContext sctx =
-                ServiceRequestContext.of(HttpRequest.of(
-                        RequestHeaders.of(HttpMethod.GET, "/", "foo", "secret")));
-
-        log = new DefaultRequestLog(sctx);
-        log.requestContent("secret", "secret");
-        log.requestTrailers(HttpHeaders.of("bar", "secret"));
-        log.endRequest();
-
-        // Cache must be invalidated when sanitizers change.
-        final String a = log.toStringRequestOnly();
-        final String b = log.toStringRequestOnly(headersSanitizer, contentSanitizer, trailersSanitizer,
-                                                 LogFormatter.ofText());
-        assertThat(b).isNotEqualTo(a)
-                     .contains("sanitized_headers", "sanitized_content", "sanitized_trailers");
-
-        // Must be cached when sanitizers were not changed.
-        final String c = log.toStringRequestOnly(headersSanitizer, contentSanitizer, trailersSanitizer,
-                                                 LogFormatter.ofText());
-        assertThat(c).isSameAs(b);
-
-        // Must not contain the secret.
-        assertThat(c).doesNotContain("secret");
-    }
-
-    @Test
     void toStringResponseOnlyCache() {
         final ServiceRequestContext sctx =
                 ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
@@ -515,33 +488,6 @@ class DefaultRequestLogTest {
         final String b = log.toStringResponseOnly();
         assertThat(b).isNotEqualTo(a);
         assertThat(log.toStringResponseOnly()).isSameAs(b); // The second call must be cached.
-    }
-
-    @Test
-    void toStringResponseOnlyCacheInvalidationWithSanitizer() {
-        final ServiceRequestContext sctx =
-                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-
-        log = new DefaultRequestLog(sctx);
-        log.responseHeaders(ResponseHeaders.of(HttpStatus.OK, "foo", "secret"));
-        log.responseContent("secret", "secret");
-        log.responseTrailers(HttpHeaders.of("bar", "secret"));
-        log.endResponse();
-
-        // Cache must be invalidated when sanitizers change.
-        final String a = log.toStringResponseOnly();
-        final String b = log.toStringResponseOnly(headersSanitizer, contentSanitizer, trailersSanitizer,
-                                                  LogFormatter.ofText());
-        assertThat(b).isNotEqualTo(a)
-                     .contains("sanitized_headers", "sanitized_content", "sanitized_trailers");
-
-        // Must be cached when sanitizers were not changed.
-        final String c = log.toStringResponseOnly(headersSanitizer, contentSanitizer, trailersSanitizer,
-                                                  LogFormatter.ofText());
-        assertThat(c).isSameAs(b);
-
-        // Must not contain the secret.
-        assertThat(c).doesNotContain("secret");
     }
 
     @Test

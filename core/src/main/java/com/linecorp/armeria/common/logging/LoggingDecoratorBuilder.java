@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -76,7 +77,7 @@ public abstract class LoggingDecoratorBuilder {
             responseCauseSanitizer = DEFAULT_CAUSE_SANITIZER;
     private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends @Nullable Object>
             responseTrailersSanitizer = DEFAULT_HEADERS_SANITIZER;
-
+    private Predicate<Throwable> responseCauseFilter = throwable -> false;
     @Nullable
     private LogFormatter logFormatter;
 
@@ -424,14 +425,13 @@ public abstract class LoggingDecoratorBuilder {
      * sanitize the stack trace of the exception to remove sensitive information, or prevent from logging
      * the stack trace completely by returning {@code null} in the {@link BiFunction}. If unset, will not
      * sanitize a response cause.
-     * @deprecated Use {@link #logFormatter(LogFormatter)} instead
+     * @deprecated Use {@link #responseCauseFilter(Predicate)} instead
      */
     @Deprecated
     public LoggingDecoratorBuilder responseCauseSanitizer(
             BiFunction<? super RequestContext, ? super Throwable,
                     ? extends @Nullable Object> responseCauseSanitizer) {
         this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
-        useSanitizers = true;
         return this;
     }
 
@@ -441,6 +441,23 @@ public abstract class LoggingDecoratorBuilder {
     protected final BiFunction<? super RequestContext, ? super Throwable, ? extends @Nullable Object>
     responseCauseSanitizer() {
         return responseCauseSanitizer;
+    }
+
+    /**
+     * Sets the {@link Predicate} to evaluate if logging response cause or not.
+     * You can prevent from logging the response cause by returning {@code true}
+     * in the {@link Predicate}. If unset, will log a response cause.
+     */
+    public LoggingDecoratorBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
+        this.responseCauseFilter = responseCauseFilter;
+        return this;
+    }
+
+    /**
+     * Returns the {@link Predicate} to evaluate if logging response cause or not.
+     */
+    protected final Predicate<Throwable> responseCauseFilter() {
+        return responseCauseFilter;
     }
 
     /**

@@ -16,16 +16,14 @@
 
 package com.linecorp.armeria.client.logging;
 
-import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 import org.slf4j.Logger;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.Request;
-import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
@@ -68,27 +66,12 @@ public final class LoggingRpcClient extends AbstractLoggingClient<RpcRequest, Rp
             @Nullable Logger logger,
             RequestLogLevelMapper requestLogLevelMapper,
             ResponseLogLevelMapper responseLogLevelMapper,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> requestHeadersSanitizer,
-            BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> requestContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> requestTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> responseHeadersSanitizer,
-            BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> responseContentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> responseTrailersSanitizer,
-            BiFunction<? super RequestContext, ? super Throwable,
-                    ? extends @Nullable Object> responseCauseSanitizer,
+            Predicate<Throwable> responseCauseFilter,
             Sampler<? super ClientRequestContext> successSampler,
             Sampler<? super ClientRequestContext> failureSampler,
             LogFormatter logFormatter) {
 
         super(delegate, logger, requestLogLevelMapper, responseLogLevelMapper,
-              requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
-              responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
-              responseCauseSanitizer, successSampler, failureSampler, logFormatter);
+              responseCauseFilter, successSampler, failureSampler, logFormatter);
     }
 }

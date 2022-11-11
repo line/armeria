@@ -212,30 +212,29 @@ public interface RequestLog extends RequestOnlyLog {
      *                      LogFormatter.ofText();
      * }</pre>
      */
+    @Deprecated
     default String toStringResponseOnly() {
-        return toStringResponseOnly(Functions.second(), Functions.second(), Functions.second(),
-                                    LogFormatter.ofText());
+        return toStringResponseOnly(Functions.second(), Functions.second(), Functions.second());
     }
 
     /**
      * Returns the string representation of the {@link Response}. This method is a shortcut for:
      * <pre>{@code
-     * toStringResponseOnly(headersSanitizer, contentSanitizer, headersSanitizer, logFormat);
+     * toStringResponseOnly(headersSanitizer, contentSanitizer, headersSanitizer);
      * }</pre>
      *
      * @param headersSanitizer a {@link BiFunction} for sanitizing HTTP headers for logging. The result of
      *                         the {@link BiFunction} is what is actually logged as headers.
      * @param contentSanitizer a {@link BiFunction} for sanitizing response content for logging. The result of
      *                         the {@link BiFunction} is what is actually logged as content.
-     * @param logFormatter a {@link LogFormatter} for formatting messages.
      */
+    @Deprecated
     default String toStringResponseOnly(
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> headersSanitizer,
             BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> contentSanitizer,
-            LogFormatter logFormatter) {
-        return toStringResponseOnly(headersSanitizer, contentSanitizer, headersSanitizer, logFormatter);
+                    ? extends @Nullable Object> contentSanitizer) {
+        return toStringResponseOnly(headersSanitizer, contentSanitizer, headersSanitizer);
     }
 
     /**
@@ -247,14 +246,39 @@ public interface RequestLog extends RequestOnlyLog {
      *                         the {@link BiFunction} is what is actually logged as content.
      * @param trailersSanitizer a {@link BiFunction} for sanitizing HTTP trailers for logging. The result of
      *                          the {@link BiFunction} is what is actually logged as trailers.
-     * @param logFormatter a {@link LogFormatter} for formatting messages.
      */
-    String toStringResponseOnly(
+    @Deprecated
+    default String toStringResponseOnly(
             BiFunction<? super RequestContext, ? super ResponseHeaders,
                     ? extends @Nullable Object> headersSanitizer,
             BiFunction<? super RequestContext, Object,
                     ? extends @Nullable Object> contentSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> trailersSanitizer,
-            LogFormatter logFormatter);
+                    ? extends @Nullable Object> trailersSanitizer) {
+        return LogFormatter.ofTextBuilder()
+                           .responseHeadersSanitizer((ctx, headers) -> {
+                               final ResponseHeaders responseHeaders = (ResponseHeaders) headers;
+                               final Object sanitized = headersSanitizer.apply(ctx, responseHeaders);
+                               if (sanitized == null) {
+                                   return "<sanitized>";
+                               }
+                               return sanitized.toString();
+                           })
+                           .responseTrailersSanitizer((ctx, headers) -> {
+                               final Object sanitized = trailersSanitizer.apply(ctx, headers);
+                               if (sanitized == null) {
+                                   return "<sanitized>";
+                               }
+                               return sanitized.toString();
+                           })
+                           .responseContentSanitizer((ctx, content) -> {
+                               final Object sanitized = contentSanitizer.apply(ctx, content);
+                               if (sanitized == null) {
+                                   return "<sanitized>";
+                               }
+                               return sanitized.toString();
+                           })
+                           .build()
+                           .formatRequest(this);
+    }
 }

@@ -28,7 +28,6 @@ import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
-import java.util.function.BiFunction;
 
 import javax.net.ssl.SSLSession;
 
@@ -159,26 +158,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private Object responseContent;
     @Nullable
     private Object rawResponseContent;
-
-    // Fields for caching the string representation.
-    private volatile int requestStrFlags = -1;
-    @Nullable
-    private Object requestStrHeadersSanitizer;
-    @Nullable
-    private Object requestStrContentSanitizer;
-    @Nullable
-    private Object requestStrTrailersSanitizer;
-    private volatile int responseStrFlags = -1;
-    @Nullable
-    private Object responseStrHeadersSanitizer;
-    @Nullable
-    private Object responseStrContentSanitizer;
-    @Nullable
-    private Object responseStrTrailersSanitizer;
-    @Nullable
-    private String requestStr;
-    @Nullable
-    private String responseStr;
 
     DefaultRequestLog(RequestContext ctx) {
         this.ctx = requireNonNull(ctx, "ctx");
@@ -405,7 +384,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void updateFlags(int flags) {
-        for (;;) {
+        for (; ; ) {
             final int oldFlags = this.flags;
             final int newFlags = oldFlags | flags;
             if (oldFlags == newFlags) {
@@ -513,7 +492,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             flag |= RequestLogProperty.NAME.flag();
         }
 
-        for (;;) {
+        for (; ; ) {
             final int oldFlags = deferredFlags;
             final int newFlags = oldFlags | flag;
             if (oldFlags == newFlags) {
@@ -1425,79 +1404,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                   .append('}');
     }
 
-    @Override
-    public String toStringRequestOnly(
-            BiFunction<? super RequestContext, ? super RequestHeaders,
-                    ? extends @Nullable Object> headersSanitizer,
-            BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> contentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> trailersSanitizer,
-            LogFormatter logFormatter) {
-
-        requireNonNull(headersSanitizer, "headersSanitizer");
-        requireNonNull(contentSanitizer, "contentSanitizer");
-        requireNonNull(trailersSanitizer, "trailersSanitizer");
-
-        // Only interested in the bits related with request.
-        final int flags = this.flags & RequestLogProperty.FLAGS_REQUEST_COMPLETE;
-        if (requestStrFlags == flags &&
-            requestStrHeadersSanitizer == headersSanitizer &&
-            requestStrContentSanitizer == contentSanitizer &&
-            requestStrTrailersSanitizer == trailersSanitizer) {
-            assert requestStr != null;
-            return requestStr;
-        }
-
-        requestStr = logFormatter.formatRequest(this);
-        requestStrHeadersSanitizer = headersSanitizer;
-        requestStrContentSanitizer = contentSanitizer;
-        requestStrTrailersSanitizer = trailersSanitizer;
-        requestStrFlags = flags;
-
-        return requestStr;
-    }
-
-    @Override
-    public String toStringResponseOnly(
-            BiFunction<? super RequestContext, ? super ResponseHeaders,
-                    ? extends @Nullable Object> headersSanitizer,
-            BiFunction<? super RequestContext, Object,
-                    ? extends @Nullable Object> contentSanitizer,
-            BiFunction<? super RequestContext, ? super HttpHeaders,
-                    ? extends @Nullable Object> trailersSanitizer,
-            LogFormatter logFormatter) {
-
-        requireNonNull(headersSanitizer, "headersSanitizer");
-        requireNonNull(contentSanitizer, "contentSanitizer");
-        requireNonNull(trailersSanitizer, "trailersSanitizer");
-
-        // Only interested in the bits related with response.
-        final int flags = this.flags & RequestLogProperty.FLAGS_RESPONSE_COMPLETE;
-        if (responseStrFlags == flags &&
-            responseStrHeadersSanitizer == headersSanitizer &&
-            responseStrContentSanitizer == contentSanitizer &&
-            responseStrTrailersSanitizer == trailersSanitizer) {
-            assert responseStr != null;
-            return responseStr;
-        }
-
-        responseStr = logFormatter.formatResponse(this);
-        responseStrHeadersSanitizer = headersSanitizer;
-        responseStrContentSanitizer = contentSanitizer;
-        responseStrTrailersSanitizer = trailersSanitizer;
-        responseStrFlags = flags;
-
-        return responseStr;
-    }
-
-    private <T> String sanitize(
-            BiFunction<? super RequestContext, ? super T, ? extends @Nullable Object> headersSanitizer,
-            T requestHeaders) {
-        final Object sanitized = headersSanitizer.apply(ctx, requestHeaders);
-        return sanitized != null ? sanitized.toString() : "<sanitized>";
-    }
-
     private static final class RequestLogFuture extends EventLoopCheckingFuture<RequestLog> {
 
         final int interestedFlags;
@@ -1783,20 +1689,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         }
 
         @Override
-        public String toStringRequestOnly(
-                BiFunction<? super RequestContext, ? super RequestHeaders,
-                        ? extends @Nullable Object> headersSanitizer,
-                BiFunction<? super RequestContext, Object,
-                        ? extends @Nullable Object> contentSanitizer,
-                BiFunction<? super RequestContext, ? super HttpHeaders,
-                        ? extends @Nullable Object> trailersSanitizer,
-                LogFormatter logFormatter) {
-
-            return DefaultRequestLog.this.toStringRequestOnly(
-                    headersSanitizer, contentSanitizer, trailersSanitizer, logFormatter);
-        }
-
-        @Override
         public long responseStartTimeMicros() {
             return responseStartTimeMicros;
         }
@@ -1859,20 +1751,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         @Override
         public HttpHeaders responseTrailers() {
             return responseTrailers;
-        }
-
-        @Override
-        public String toStringResponseOnly(
-                BiFunction<? super RequestContext, ? super ResponseHeaders,
-                        ? extends @Nullable Object> headersSanitizer,
-                BiFunction<? super RequestContext, Object,
-                        ? extends @Nullable Object> contentSanitizer,
-                BiFunction<? super RequestContext, ? super HttpHeaders,
-                        ? extends @Nullable Object> trailersSanitizer,
-                LogFormatter logFormatter) {
-
-            return DefaultRequestLog.this.toStringResponseOnly(headersSanitizer, contentSanitizer,
-                                                               trailersSanitizer, logFormatter);
         }
 
         @Override
