@@ -499,7 +499,6 @@ public abstract class LoggingDecoratorBuilder {
                                .responseContentSanitizer(convertToStringSanitizer(responseContentSanitizer))
                                .responseCauseSanitizer(convertToStringSanitizer(responseCauseSanitizer))
                                .build();
-
         }
     }
 

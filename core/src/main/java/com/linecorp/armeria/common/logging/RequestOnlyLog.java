@@ -271,6 +271,7 @@ public interface RequestOnlyLog extends RequestLogAccess {
      *                     (ctx, content) -> content,
      *                     (ctx, trailers) -> trailers);
      * }</pre>
+     * @deprecated Use {@link LogFormatter#formatRequest(RequestLog)} instead.
      */
     @Deprecated
     default String toStringRequestOnly() {
@@ -287,6 +288,7 @@ public interface RequestOnlyLog extends RequestLogAccess {
      *                         the {@link BiFunction} is what is actually logged as headers.
      * @param contentSanitizer a {@link BiFunction} for sanitizing request content for logging. The result of
      *                         the {@link BiFunction} is what is actually logged as content.
+     * @deprecated Use {@link LogFormatter#formatRequest(RequestLog)} instead.
      */
     @Deprecated
     default String toStringRequestOnly(
@@ -306,6 +308,7 @@ public interface RequestOnlyLog extends RequestLogAccess {
      *                         the {@link BiFunction} is what is actually logged as content.
      * @param trailersSanitizer a {@link BiFunction} for sanitizing HTTP trailers for logging. The result of
      *                          the {@link BiFunction} is what is actually logged as trailers.
+     * @deprecated Use {@link LogFormatter#formatRequest(RequestLog)} instead.
      */
     @Deprecated
     default String toStringRequestOnly(
