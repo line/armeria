@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.sse.ServerSentEvent;
+import com.linecorp.armeria.internal.common.BuiltInDependency;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -40,6 +41,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * would be converted into Server-Sent Events if a {@link ProducesEventStream} annotation is specified
  * on an annotated service method.
  */
+@BuiltInDependency
 public final class ServerSentEventResponseConverterFunction implements ResponseConverterFunction {
 
     @Override

@@ -15,40 +15,26 @@
  */
 package com.linecorp.armeria.internal.common;
 
-import static com.linecorp.armeria.internal.common.ReflectiveDependencyInjector.create;
-
 import java.util.Map;
-import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import com.google.common.collect.ImmutableSet;
-
 import com.linecorp.armeria.common.DependencyInjector;
-import com.linecorp.armeria.server.annotation.ServerSentEventResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.decorator.LoggingDecoratorFactoryFunction;
-import com.linecorp.armeria.server.annotation.decorator.RateLimitingDecoratorFactoryFunction;
 
 public enum BuiltInDependencyInjector implements DependencyInjector {
 
     INSTANCE;
 
-    //TODO(minwoox): Consider organizing built in class in a package and use reflection.
-    private static final Set<Class<?>> builtInClasses =
-            ImmutableSet.of(LoggingDecoratorFactoryFunction.class,
-                            RateLimitingDecoratorFactoryFunction.class,
-                            ServerSentEventResponseConverterFunction.class);
-
     private static final Map<Class<?>, Object> instances = new ConcurrentHashMap<>();
 
     @Override
     public <T> T getInstance(Class<T> type) {
-        if (!builtInClasses.contains(type)) {
+        if (type.getDeclaredAnnotation(BuiltInDependency.class) == null) {
             return null;
         }
 
         //noinspection unchecked
         return (T) instances.computeIfAbsent(type, key -> {
-            final Object instance = create(key, null);
+            final Object instance = ReflectiveDependencyInjector.create(key, null);
             assert instance != null;
             return instance;
         });
