@@ -57,7 +57,7 @@ class LongUrlTest {
     }
 
     @Test
-    void shouldThrowHeaderListSizeExceptionForLongUrlForHTTP1() {
+    void shouldThrowHeaderListSizeExceptionForLongUrlForHTTP2() {
         final BlockingWebClient client = BlockingWebClient.of(server.uri(SessionProtocol.H2C));
         assertThatThrownBy(() -> {
             client.get("/?q" + Strings.repeat("a", 200));
