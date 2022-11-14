@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.BuiltInDependency;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
@@ -56,6 +57,7 @@ class DependencyInjectorTest {
     private static final AtomicInteger exceptionCounter = new AtomicInteger();
     private static final AtomicInteger decoratorCounter = new AtomicInteger();
     private static final AtomicInteger factoryCounter = new AtomicInteger();
+    private static final AtomicInteger builtInFactoryCounter = new AtomicInteger();
     private static final AtomicInteger closeCounter = new AtomicInteger();
 
     private static final List<FooRequestConverter> converters = new BlockingArrayQueue<>();
@@ -93,6 +95,15 @@ class DependencyInjectorTest {
         public FooResponse fooException(FooRequest req) {
             throw new AnticipatedException();
         }
+
+        @Get("/builtInDependencies")
+        @BuiltInDecoratorAnnotation
+        @Decorator(BuiltInDecorator.class)
+        @RequestConverter(BuiltInRequestConverter.class)
+        @ResponseConverter(BuiltInResponseConverter.class)
+        public FooResponse builtInDecorator(FooRequest req) {
+            return new FooResponse();
+        }
     }
 
     static class FooRequest {}
@@ -103,6 +114,11 @@ class DependencyInjectorTest {
     @Retention(RetentionPolicy.RUNTIME)
     @Target({ ElementType.TYPE, ElementType.METHOD })
     @interface FooDecoratorAnnotation {}
+
+    @DecoratorFactory(BuiltInDecoratorFactory.class)
+    @Retention(RetentionPolicy.RUNTIME)
+    @Target({ ElementType.TYPE, ElementType.METHOD })
+    @interface BuiltInDecoratorAnnotation {}
 
     @Test
     void dependencyInjector() {
@@ -119,12 +135,18 @@ class DependencyInjectorTest {
         assertThat(exceptionCounter.get()).isOne();
         assertThat(decoratorCounter.get()).isSameAs(2);
 
+        assertThat(server.blockingWebClient().get("/builtInDependencies").status()).isSameAs(HttpStatus.OK);
+        assertThat(requestCounter.get()).isSameAs(3);
+        assertThat(responseCounter.get()).isSameAs(2);
+        assertThat(decoratorCounter.get()).isSameAs(3);
+
         assertThat(converters.size()).isSameAs(2);
         // singletons
         assertThat(converters.get(0)).isSameAs(converters.get(1));
 
         // The factory counter is incremented only once when the instance is created.
         assertThat(factoryCounter.get()).isOne();
+        assertThat(builtInFactoryCounter.get()).isOne();
     }
 
     static class FooRequestConverter implements RequestConverterFunction {
@@ -209,6 +231,56 @@ class DependencyInjectorTest {
                 FooDecoratorAnnotation parameter) {
             counter.incrementAndGet();
             return service -> service;
+        }
+    }
+
+    @BuiltInDependency
+    private static class BuiltInDecorator implements DecoratingHttpServiceFunction {
+
+        @Override
+        public HttpResponse serve(HttpService delegate, ServiceRequestContext ctx, HttpRequest req)
+                throws Exception {
+            decoratorCounter.incrementAndGet();
+            return delegate.serve(ctx, req);
+        }
+    }
+
+    @BuiltInDependency
+    private static class BuiltInDecoratorFactory
+            implements DecoratorFactoryFunction<BuiltInDecoratorAnnotation> {
+
+        @Override
+        public Function<? super HttpService, ? extends HttpService> newDecorator(
+                BuiltInDecoratorAnnotation parameter) {
+            builtInFactoryCounter.incrementAndGet();
+            return service -> service;
+        }
+    }
+
+    @BuiltInDependency
+    private static class BuiltInRequestConverter implements RequestConverterFunction {
+
+        @Override
+        public @Nullable Object convertRequest(ServiceRequestContext ctx, AggregatedHttpRequest request,
+                                               Class<?> expectedResultType,
+                                               @Nullable ParameterizedType expectedParameterizedResultType)
+                throws Exception {
+            requestCounter.incrementAndGet();
+            if (expectedResultType == FooRequest.class) {
+                return new FooRequest();
+            }
+            return RequestConverterFunction.fallthrough();
+        }
+    }
+
+    @BuiltInDependency
+    private static class BuiltInResponseConverter implements ResponseConverterFunction {
+
+        @Override
+        public HttpResponse convertResponse(ServiceRequestContext ctx, ResponseHeaders headers,
+                                            @Nullable Object result, HttpHeaders trailers) throws Exception {
+            responseCounter.incrementAndGet();
+            return HttpResponse.of(200);
         }
     }
 
