@@ -188,10 +188,7 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
             {servicesSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
           <Collapse in={servicesSectionOpen} timeout="auto">
-            <ListItem
-              button
-              onClick={() => navigateTo("/overview")}
-            >
+            <ListItem button onClick={() => navigateTo('/overview')}>
               <ListItemText>
                 <Typography variant="subtitle2">
                   <code> Overview </code>
@@ -208,12 +205,19 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                   {specification.hasUniqueServiceNames() ? (
                     <ListItemText>
                       <Typography display="inline" variant="subtitle1">
-                        <Tooltip title={
-                          <React.Fragment>
-                            <Typography variant="subtitle1"><b>{service.name}</b></Typography>
-                            <Typography variant="subtitle2">{service.descriptionInfo?.docString}</Typography>
-                          </React.Fragment>
-                        } placement="top">
+                        <Tooltip
+                          title={
+                            <>
+                              <Typography variant="subtitle1">
+                                <b>{service.name}</b>
+                              </Typography>
+                              <Typography variant="subtitle2">
+                                {service.descriptionInfo?.docString}
+                              </Typography>
+                            </>
+                          }
+                          placement="top"
+                        >
                           <code>{simpleName(service.name)}</code>
                         </Tooltip>
                       </Typography>
@@ -526,8 +530,8 @@ const App: React.FunctionComponent<Props> = (props) => {
               Armeria documentation service
               {versions
                 ? ` ${extractSimpleArtifactVersion(
-                  versions.getArmeriaArtifactVersion(),
-                )}`
+                    versions.getArmeriaArtifactVersion(),
+                  )}`
                 : ''}
             </span>
           </Typography>

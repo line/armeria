@@ -1,5 +1,5 @@
 /*
- * Copyright 2018 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -24,23 +24,18 @@ import TableContainer from '@material-ui/core/TableContainer';
 import React from 'react';
 import { RouteComponentProps } from 'react-router-dom';
 
-import {
-  packageName,
-  simpleName,
-  Specification,
-} from '../../lib/specification';
+import { Specification } from '../../lib/specification';
 
 import Section from '../../components/Section';
-import Description from '../../components/Description';
 
 interface OwnProps {
   specification: Specification;
 }
 
-type Props = OwnProps & RouteComponentProps<{ name: string }>;
+type Props = OwnProps & RouteComponentProps;
 
-const OverviewPage: React.FunctionComponent<Props> = ({ match, specification }) => {
-  const data = specification.getServices()
+const OverviewPage: React.FunctionComponent<Props> = ({ specification }) => {
+  const data = specification.getServices();
   if (!data) {
     return <>Not found.</>;
   }
