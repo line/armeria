@@ -23,7 +23,6 @@ import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -77,13 +76,6 @@ class Http1PipelineTest {
               });
         }
     };
-
-    private static CompletableFuture<Void> whenResponseReceived;
-
-    @BeforeEach
-    void setUp() {
-        whenResponseReceived = new CompletableFuture<>();
-    }
 
     @Test
     void httpPipelining() throws InterruptedException {
