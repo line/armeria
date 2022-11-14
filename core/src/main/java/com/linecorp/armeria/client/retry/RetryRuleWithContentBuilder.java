@@ -90,10 +90,12 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
 
         final BiFunction<? super ClientRequestContext, ? super Throwable, Boolean> ruleFilter =
                 AbstractRuleBuilderUtil.buildFilter(requestHeadersFilter(), responseHeadersFilter(),
-                                                    responseTrailersFilter(), exceptionFilter(),
-                                                    hasResponseFilter);
+                                                    responseTrailersFilter(), grpcTrailersFilter(),
+                                                    exceptionFilter(), hasResponseFilter);
 
-        final RetryRule first = RetryRuleBuilder.build(ruleFilter, decision, responseTrailersFilter() != null);
+        final RetryRule first = RetryRuleBuilder.build(
+                ruleFilter, decision, requiresResponseTrailers());
+
         if (!hasResponseFilter) {
             return RetryRuleUtil.fromRetryRule(first);
         }
@@ -136,6 +138,18 @@ public final class RetryRuleWithContentBuilder<T extends Response> extends Abstr
     public RetryRuleWithContentBuilder<T> onResponseTrailers(
             BiPredicate<? super ClientRequestContext, ? super HttpHeaders> responseTrailersFilter) {
         return (RetryRuleWithContentBuilder<T>) super.onResponseTrailers(responseTrailersFilter);
+    }
+
+    /**
+     * Adds the specified {@code grpcTrailersFilter} for a {@link RetryRuleWithContent} which will retry
+     * if the {@code grpcTrailersFilter} returns {@code true}. Note that using this method makes the entire
+     * response buffered, which may lead to excessive memory usage.
+     */
+    @SuppressWarnings("unchecked")
+    @Override
+    public RetryRuleWithContentBuilder<T> onGrpcTrailers(
+            BiPredicate<? super ClientRequestContext, ? super HttpHeaders> grpcTrailersFilter) {
+        return (RetryRuleWithContentBuilder<T>) super.onGrpcTrailers(grpcTrailersFilter);
     }
 
     /**
