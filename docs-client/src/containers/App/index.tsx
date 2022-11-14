@@ -30,6 +30,7 @@ import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
+import InfoOutlined from '@material-ui/icons/InfoOutlined';
 import MenuIcon from '@material-ui/icons/Menu';
 import React, { useCallback, useEffect, useReducer, useState } from 'react';
 import { Helmet } from 'react-helmet';
@@ -40,6 +41,7 @@ import EnumPage from '../EnumPage';
 import HomePage from '../HomePage';
 import MethodPage from '../MethodPage';
 import StructPage from '../StructPage';
+import OverviewPage from '../OverviewPage';
 
 import {
   packageName,
@@ -181,11 +183,22 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
         <>
           <ListItem button onClick={toggleServicesOpen}>
             <ListItemText disableTypography>
-              <Typography variant="h5">Services</Typography>
+              <Typography variant="h5">Services </Typography>
             </ListItemText>
             {servicesSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
           <Collapse in={servicesSectionOpen} timeout="auto">
+            <ListItem
+              button
+              onClick={() => navigateTo("/overview")}
+            >
+              <ListItemText>
+                <Typography variant="subtitle2">
+                  <code> Overview </code>
+                </Typography>
+              </ListItemText>
+              <InfoOutlined />
+            </ListItem>
             {specification.getServices().map((service) => (
               <div key={service.name}>
                 <ListItem
@@ -195,7 +208,12 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                   {specification.hasUniqueServiceNames() ? (
                     <ListItemText>
                       <Typography display="inline" variant="subtitle1">
-                        <Tooltip title={service.name} placement="top">
+                        <Tooltip title={
+                          <React.Fragment>
+                            <Typography variant="subtitle1"><b>{service.name}</b></Typography>
+                            <Typography variant="subtitle2">{service.descriptionInfo?.docString}</Typography>
+                          </React.Fragment>
+                        } placement="top">
                           <code>{simpleName(service.name)}</code>
                         </Tooltip>
                       </Typography>
@@ -508,8 +526,8 @@ const App: React.FunctionComponent<Props> = (props) => {
               Armeria documentation service
               {versions
                 ? ` ${extractSimpleArtifactVersion(
-                    versions.getArmeriaArtifactVersion(),
-                  )}`
+                  versions.getArmeriaArtifactVersion(),
+                )}`
                 : ''}
             </span>
           </Typography>
@@ -570,6 +588,10 @@ const App: React.FunctionComponent<Props> = (props) => {
           exact
           path="/"
           render={(p) => <HomePage {...p} versions={versions} />}
+        />
+        <Route
+          path="/overview"
+          render={(p) => <OverviewPage {...p} specification={specification} />}
         />
         <Route
           path="/enums/:name"
