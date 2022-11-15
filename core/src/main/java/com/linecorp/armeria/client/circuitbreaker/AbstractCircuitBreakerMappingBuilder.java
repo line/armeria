@@ -61,21 +61,21 @@ public abstract class AbstractCircuitBreakerMappingBuilder {
     /**
      * Returns whether the host dimension is enabled for the mapping.
      */
-    protected boolean isPerHost() {
+    protected final boolean isPerHost() {
         return perHost;
     }
 
     /**
      * Returns whether the method dimension is enabled for the mapping.
      */
-    protected boolean isPerMethod() {
+    protected final boolean isPerMethod() {
         return perMethod;
     }
 
     /**
      * Returns whether the path dimension is enabled for the mapping.
      */
-    protected boolean isPerPath() {
+    protected final boolean isPerPath() {
         return perPath;
     }
 
@@ -83,7 +83,7 @@ public abstract class AbstractCircuitBreakerMappingBuilder {
      * Returns whether the set dimensions are valid.
      * At least one mapping key must be set.
      */
-    protected boolean validateMappingKeys() {
+    protected final boolean validateMappingKeys() {
         return perHost || perMethod || perPath;
     }
 }

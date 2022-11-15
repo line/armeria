@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.client.circuitbreaker;
 
+import static java.util.Objects.requireNonNull;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -34,10 +36,10 @@ final class DefaultCircuitBreakerClientHandler<I extends Request> implements Cir
     }
 
     @Override
-    public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, I req) throws Exception {
+    public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, I req) {
         final CircuitBreaker circuitBreaker;
         try {
-            circuitBreaker = mapping.get(ctx, req);
+            circuitBreaker = requireNonNull(mapping.get(ctx, req), "circuitBreaker");
         } catch (Throwable t) {
             logger.warn("Failed to get a circuit breaker from mapping", t);
             return null;

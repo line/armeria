@@ -61,7 +61,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
         requireNonNull(mapping, "mapping");
         requireNonNull(ruleWithContent, "ruleWithContent");
         return delegate -> new CircuitBreakerRpcClient(
-                delegate, ruleWithContent, CircuitBreakerClientHandler.of(mapping));
+                delegate, CircuitBreakerClientHandler.of(mapping), ruleWithContent);
     }
 
     /**
@@ -125,14 +125,13 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
     /**
      * Creates a new instance that decorates the specified {@link RpcClient}.
      */
-    CircuitBreakerRpcClient(RpcClient delegate, CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent,
-                            CircuitBreakerClientHandler<RpcRequest> handler) {
+    CircuitBreakerRpcClient(RpcClient delegate, CircuitBreakerClientHandler<RpcRequest> handler,
+                            CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         super(delegate, handler, requireNonNull(ruleWithContent, "ruleWithContent"));
     }
 
     @Override
-    protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req,
-                                    CircuitBreakerCallback callback)
+    protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req, CircuitBreakerCallback callback)
             throws Exception {
         final RpcResponse response;
         try {
@@ -145,7 +144,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
 
         response.handle((unused1, cause) -> {
             reportSuccessOrFailure(
-                    callback, ruleWithContent().shouldReportAsSuccess(ctx, null, cause), ctx, cause);
+                    callback, ruleWithContent().shouldReportAsSuccess(ctx, response, cause), ctx, cause);
             return null;
         });
         return response;

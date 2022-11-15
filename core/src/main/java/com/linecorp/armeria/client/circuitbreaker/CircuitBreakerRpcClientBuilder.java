@@ -36,7 +36,7 @@ public final class CircuitBreakerRpcClientBuilder
      * Returns a newly-created {@link CircuitBreakerRpcClient} based on the properties of this builder.
      */
     public CircuitBreakerRpcClient build(RpcClient delegate) {
-        return new CircuitBreakerRpcClient(delegate, ruleWithContent(), handler());
+        return new CircuitBreakerRpcClient(delegate, handler(), ruleWithContent());
     }
 
     /**
@@ -55,8 +55,7 @@ public final class CircuitBreakerRpcClientBuilder
     }
 
     @Override
-    public CircuitBreakerRpcClientBuilder handler(
-            CircuitBreakerClientHandler<RpcRequest> handler) {
+    public CircuitBreakerRpcClientBuilder handler(CircuitBreakerClientHandler<RpcRequest> handler) {
         return (CircuitBreakerRpcClientBuilder) super.handler(handler);
     }
 }

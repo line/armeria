@@ -25,8 +25,39 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
 /**
- * A handler used by a {@link CircuitBreakerClient} to integrate with a CircuitBreaker.
- * One may extend this interface to use a custom CircuitBreaker with {@link CircuitBreakerClient}.
+ * A handler used by a {@link CircuitBreakerClient} to integrate with a circuit breaker.
+ * One may extend this interface to use a custom circuit breaker with {@link CircuitBreakerClient}.
+ *
+ * <pre>{@code
+ * // using a pre-defined handler
+ * CircuitBreakerClient.newDecorator(
+ *         CircuitBreakerClientHandler.of(CircuitBreakerMapping.ofDefault()),
+ *         CircuitBreakerRule.onException());
+ *
+ *
+ * // defining a custom handler
+ * CircuitBreakerClient.newDecorator(
+ *         new CircuitBreakerClientHandler<HttpRequest>() {
+ *             ...
+ *             public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, HttpRequest req) {
+ *                 ...
+ *                 MyCustomCircuitBreaker cb = ...
+ *                 return new CircuitBreakerCallback() {
+ *                     @Override
+ *                     public void onSuccess(RequestContext ctx) {
+ *                         cb.onSuccess();
+ *                     }
+ *
+ *                     @Override
+ *                     public void onFailure(RequestContext ctx, @Nullable Throwable throwable) {
+ *                         cb.onFailure();
+ *                     }
+ *                 };
+ *             }
+ *             ...
+ *         },
+ *         CircuitBreakerRule.onException());
+ * }</pre>
  */
 @UnstableApi
 @FunctionalInterface
@@ -51,14 +82,14 @@ public interface CircuitBreakerClientHandler<I extends Request> {
 
     /**
      * Invoked by {@link CircuitBreakerClient} right before executing a request.
-     * In a typical implementation, users may extract the appropriate CircuitBreaker
-     * implementation using the provided {@link ClientRequestContext} and {@link I} request.
+     * In a typical implementation, users may extract the appropriate circuit breaker
+     * implementation using the provided {@link ClientRequestContext} and {@link Request}.
      * Afterwards, one of the following can occur:
      *
      * <ul>
-     *   <li>If the CircuitBreaker rejects the request, an exception such as {@link FailFastException}
+     *   <li>If the circuit breaker rejects the request, an exception such as {@link FailFastException}
      *   may be thrown.</li>
-     *   <li>If the CircuitBreaker doesn't reject the request, users may choose to return a
+     *   <li>If the circuit breaker doesn't reject the request, users may choose to return a
      *   {@link CircuitBreakerCallback}. A callback method will be invoked depending on the
      *   configured {@link CircuitBreakerRule}.</li>
      *   <li>One may return {@code null} to proceed normally as if the {@link CircuitBreakerClient}
@@ -66,5 +97,5 @@ public interface CircuitBreakerClientHandler<I extends Request> {
      * </ul>
      */
     @Nullable
-    CircuitBreakerCallback tryRequest(ClientRequestContext ctx, I req) throws Exception;
+    CircuitBreakerCallback tryRequest(ClientRequestContext ctx, I req);
 }

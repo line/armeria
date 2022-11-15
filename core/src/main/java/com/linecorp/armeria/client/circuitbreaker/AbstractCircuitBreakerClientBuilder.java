@@ -91,6 +91,8 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
      * set by calling {@link #mapping(CircuitBreakerMapping)} will be overwritten by calling this method.
      *
      * @return {@code this} to support method chaining.
+     *
+     * @see CircuitBreakerClientHandler
      */
     @UnstableApi
     public AbstractCircuitBreakerClientBuilder<I, O> handler(CircuitBreakerClientHandler<I> handler) {
@@ -104,7 +106,7 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this)
+        return MoreObjects.toStringHelper(this).omitNullValues()
                           .add("rule", rule)
                           .add("ruleWithContent", ruleWithContent)
                           .add("handler", handler)

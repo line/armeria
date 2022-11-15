@@ -16,11 +16,9 @@
 
 package com.linecorp.armeria.common.circuitbreaker;
 
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreaker;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClientHandler;
-import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -28,9 +26,9 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 /**
  * A collection of callbacks that are invoked for each request by {@link CircuitBreakerClient}.
  * Users may implement this class in conjunction with {@link CircuitBreakerClientHandler} to
- * use arbitrary CircuitBreaker implementations with {@link CircuitBreakerClient}.
- * See {@link CircuitBreakerClientHandler#tryRequest(ClientRequestContext, Request)}
- * for more information.
+ * use arbitrary circuit breaker implementations with {@link CircuitBreakerClient}.
+ *
+ * @see CircuitBreakerClientHandler
  */
 @UnstableApi
 public interface CircuitBreakerCallback {

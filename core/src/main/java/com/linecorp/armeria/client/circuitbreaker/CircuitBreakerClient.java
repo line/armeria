@@ -84,6 +84,8 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     /**
      * Creates a new decorator with the specified {@link CircuitBreakerClientHandler} and
      * {@link CircuitBreakerRule}.
+     *
+     * @see CircuitBreakerClientHandler
      */
     @UnstableApi
     public static Function<? super HttpClient, CircuitBreakerClient>
@@ -110,6 +112,8 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     /**
      * Creates a new decorator with the specified {@link CircuitBreakerClientHandler} and
      * {@link CircuitBreakerRuleWithContent}.
+     *
+     * @see CircuitBreakerClientHandler
      */
     @UnstableApi
     public static Function<? super HttpClient, CircuitBreakerClient>
@@ -330,12 +334,12 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
         }
     }
 
-    private void reportResult(ClientRequestContext ctx, CircuitBreakerCallback callbacks,
+    private void reportResult(ClientRequestContext ctx, CircuitBreakerCallback callback,
                               RequestLogProperty logProperty) {
         ctx.log().whenAvailable(logProperty).thenAccept(log -> {
             final Throwable resCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
-            reportSuccessOrFailure(callbacks, rule().shouldReportAsSuccess(ctx, resCause), ctx, resCause);
+            reportSuccessOrFailure(callback, rule().shouldReportAsSuccess(ctx, resCause), ctx, resCause);
         });
     }
 
