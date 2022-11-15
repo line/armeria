@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import io.netty.util.AttributeMap;
 
 /**
- * A {@link ConnectionPoolListener} to count the number of connections which has been open and closed.
+ * A {@link ConnectionPoolListener} to count the number of connections which have been open and closed.
  */
 public final class CountingConnectionPoolListener implements ConnectionPoolListener {
 
