@@ -156,7 +156,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                         " in one connection. ID: " + id);
             } else {
                 exception = new ClosedSessionException(
-                        "Can't send requests. ID: " + id + ", session active: " + session.isActive() +
+                        "Can't send requests. ID: " + id + ", session active: " + session.canAcquire() +
                         ", response needs to disconnect: " + responseDecoder.needsToDisconnectWhenFinished());
             }
             responseDecoder.disconnectWhenFinished();
@@ -209,7 +209,6 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             // connection by sending a GOAWAY frame that will be sent after receiving the corresponding
             // response from the remote peer. The "Connection: close" header is stripped when it is converted to
             // a Netty HTTP/2 header.
-            session.deactivate();
             responseDecoder.disconnectWhenFinished();
         }
 

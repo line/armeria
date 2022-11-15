@@ -149,6 +149,7 @@ abstract class HttpResponseDecoder {
     abstract KeepAliveHandler keepAliveHandler();
 
     final void disconnectWhenFinished() {
+        HttpSession.get(channel).deactivate();
         disconnectWhenFinished = true;
     }
 

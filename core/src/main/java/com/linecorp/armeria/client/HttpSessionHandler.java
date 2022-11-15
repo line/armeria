@@ -87,7 +87,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     private SocketAddress proxyDestinationAddress;
 
     /**
-     * Whether the current channel is active or not.
+     * Whether a new request can acquire this channel from {@link HttpChannelPool}.
      */
     private volatile boolean active;
 
@@ -169,10 +169,13 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         }
 
         if (responseDecoder instanceof Http2ResponseDecoder) {
+            // New requests that have already acquired this session can be sent over this session before a
+            // GOAWAY is sent or received.
             final Http2GoAwayHandler goAwayHandler = ((Http2ResponseDecoder) responseDecoder).goAwayHandler();
             return !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway();
         } else {
-            return active && !responseDecoder.needsToDisconnectWhenFinished();
+            // Don't allow to send a request if a connection is close or about to be closed.
+            return active;
         }
     }
 
@@ -271,13 +274,15 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public boolean isActive() {
+    public boolean canAcquire() {
         return active;
     }
 
     @Override
     public void deactivate() {
-        active = false;
+        if (active) {
+            active = false;
+        }
     }
 
     @Override
