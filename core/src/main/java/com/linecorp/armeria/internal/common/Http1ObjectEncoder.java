@@ -416,7 +416,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     @Override
     public final boolean isClosed() {
-        return closed;
+        return closed || !channel().isActive();
     }
 
     private static final class PendingWrites extends ArrayDeque<Entry<HttpObject, ChannelPromise>> {

@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.internal.server.annotation
 
+import com.fasterxml.jackson.annotation.JsonProperty
 import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.STRING
 import com.linecorp.armeria.server.annotation.Description
 import com.linecorp.armeria.server.docs.DescriptionInfo
@@ -55,6 +56,14 @@ class DataClassDefaultNameTypeInfoProviderTest {
             FieldInfo.builder("defaultValue2", STRING)
                 .requirement(FieldRequirement.REQUIRED)
                 .descriptionInfo(DescriptionInfo.of("default value 2 description"))
+                .build(),
+            FieldInfo.builder("renamedNonnull", STRING)
+                .requirement(FieldRequirement.REQUIRED)
+                .descriptionInfo(DescriptionInfo.of("renamed nonnull description"))
+                .build(),
+            FieldInfo.builder("renamedNullable", STRING)
+                .requirement(FieldRequirement.OPTIONAL)
+                .descriptionInfo(DescriptionInfo.of("renamed nullable description"))
                 .build()
         )
     }
@@ -82,7 +91,13 @@ class DataClassDefaultNameTypeInfoProviderTest {
         @Description(value = "default value description")
         val defaultValue: String = "Hello",
         @Description(value = "default value 2 description")
-        val defaultValue2: String = "Hello2"
+        val defaultValue2: String = "Hello2",
+        @JsonProperty("renamedNonnull")
+        @Description("renamed nonnull description")
+        val nonnullName: String,
+        @JsonProperty("renamedNullable")
+        @Description("renamed nullable description")
+        val nullableName: String?
     )
 
     @Description("Enum description")

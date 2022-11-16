@@ -188,6 +188,10 @@ public final class JsonSchemaGenerator {
         return new FieldSchemaWithAdditionalProperties(objectNode, requiredFields);
     }
 
+    public static ObjectNode generate(ServiceSpecification serviceSpecification) {
+        return mapper.createObjectNode();
+    }
+
     /**
      * Generate the JSON Schema for the given {@link StructInfo}.
      * @param info struct info object.

@@ -112,8 +112,7 @@ class DefaultNamedTypeInfoProviderTest {
                 newRequiredField("stringField", STRING),
                 newRequiredField("sameName", TypeSignature.ofNamed(Inner.class),
                                  newRequiredField("innerValue", BOOLEAN)),
-                // Can't get a full field information from a renamed JSON property.
-                newUnspecifiedField("rename", TypeSignature.ofNamed(Inner.class),
+                newRequiredField("rename", TypeSignature.ofNamed(Inner.class),
                                     newRequiredField("innerValue", BOOLEAN)),
                 newRequiredField("collection", TypeSignature.ofList(Inner.class)),
                 newOptionalField("nullableField", STRING),
@@ -133,8 +132,7 @@ class DefaultNamedTypeInfoProviderTest {
                 newOptionalField("getterNullableField", STRING),
                 newRequiredField("sameName", TypeSignature.ofNamed(Inner.class),
                                  newRequiredField("innerValue", BOOLEAN)),
-                // Can't get a full field information from a renamed JSON property.
-                newUnspecifiedField("rename", TypeSignature.ofNamed(Inner.class),
+                newRequiredField("rename", TypeSignature.ofNamed(Inner.class),
                                     newRequiredField("innerValue", BOOLEAN)),
                 newRequiredField("collection", TypeSignature.ofList(Inner.class)),
                 newOptionalField("nullableField", STRING),

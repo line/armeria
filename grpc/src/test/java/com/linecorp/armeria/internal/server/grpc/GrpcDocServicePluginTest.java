@@ -50,6 +50,7 @@ import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImpl
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.HttpEndpoint;
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.ServiceInfosBuilder;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
+import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
@@ -85,7 +86,10 @@ class GrpcDocServicePluginTest {
 
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME,
                                               UnitTestServiceGrpc.SERVICE_NAME,
-                                              ReconnectServiceGrpc.SERVICE_NAME);
+                                              ReconnectServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
+                                              GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         services.get(TestServiceGrpc.SERVICE_NAME).methods().forEach(m -> {
             m.endpoints().forEach(e -> {
@@ -101,6 +105,18 @@ class GrpcDocServicePluginTest {
             m.endpoints().forEach(e -> {
                 assertThat(e.pathMapping()).isEqualTo("/reconnect/armeria.grpc.testing.ReconnectService/" +
                                                       m.name());
+            });
+        });
+        services.get(HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME).methods().forEach(m -> {
+            m.endpoints().forEach(e -> {
+                assertThat(e.pathMapping()).isEqualTo("/armeria.grpc.testing.HttpJsonTranscodingTestService/" +
+                                                      m.name());
+            });
+        });
+        services.get(HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
+                     GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX).methods().forEach(m -> {
+            m.endpoints().forEach(e -> {
+                assertThat(e.pathMapping()).endsWith(m.examplePaths().get(0));
             });
         });
     }
@@ -119,14 +135,20 @@ class GrpcDocServicePluginTest {
         DocServiceFilter exclude = (plugin, service, method) -> false;
         Map<String, ServiceInfo> services = services(include, exclude);
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME, UnitTestServiceGrpc.SERVICE_NAME,
-                                              ReconnectServiceGrpc.SERVICE_NAME);
+                                              ReconnectServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
+                                              GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         // 2. Exclude specified.
         exclude = DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall").or(
                 DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "HalfDuplexCall"));
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME, UnitTestServiceGrpc.SERVICE_NAME,
-                                              ReconnectServiceGrpc.SERVICE_NAME);
+                                              ReconnectServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
+                                              GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         List<String> methods = methods(services);
         assertThat(methods).containsExactlyInAnyOrder("FullDuplexCall",
@@ -202,6 +224,17 @@ class GrpcDocServicePluginTest {
         serverBuilder.service(
                 Route.builder().pathPrefix("/reconnect").build(),
                 GrpcService.builder().addService(mock(ReconnectServiceImplBase.class)).build());
+
+        // The case where HTTP JSON transcoding is enabled and GrpcService is wrapped.
+        serverBuilder.service(
+                GrpcService.builder()
+                           .addService(mock(HttpJsonTranscodingTestServiceImplBase.class),
+                                       ImmutableList.of(
+                                               delegate -> delegate.decorate(
+                                                       mock(DecoratingHttpServiceFunction.class))
+                                       ))
+                           .enableHttpJsonTranscoding(true)
+                           .build());
 
         // Make sure all services and their endpoints exist in the specification.
         final ServiceSpecification specification = generator.generateSpecification(
@@ -300,8 +333,8 @@ class GrpcDocServicePluginTest {
         final GrpcService grpcService =
                 GrpcService.builder().addService(mock(HttpJsonTranscodingTestServiceImplBase.class))
                            .enableHttpJsonTranscoding(true).build();
-        assertThat(grpcService).isInstanceOf(HttpEndpointSupport.class);
-        final HttpEndpointSupport httpEndpointSupport = (HttpEndpointSupport) grpcService;
+        final HttpEndpointSupport httpEndpointSupport = grpcService.as(HttpEndpointSupport.class);
+        assertThat(httpEndpointSupport).isNotNull();
 
         // Expected generated routes. See 'transcoding.proto' file.
         final List<Route> routes = ImmutableList.of(
