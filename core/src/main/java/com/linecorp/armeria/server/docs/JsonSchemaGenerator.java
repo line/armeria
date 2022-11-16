@@ -112,13 +112,15 @@ final class JsonSchemaGenerator {
             .put("additionalProperties", false).put("type", "object");
 
         // Workaround for gRPC services because they do not have parameters in method info.
-        boolean isProto = methodInfo.endpoints().stream().flatMap(x -> x.availableMimeTypes().stream())
-                                    .anyMatch(MediaType::isProtobuf);
+        final boolean isProto = methodInfo.endpoints().stream().flatMap(x -> x.availableMimeTypes().stream())
+                                          .anyMatch(MediaType::isProtobuf);
 
         final List<FieldInfo> methodFields = (isProto) ? typeToStructMapping
                 .get(methodInfo.parameters().get(0)
                                .typeSignature()
                                .name()).fields() : methodInfo.parameters();
+
+        // TODO: Thrift is not working for child parameters, consider having a custom logic for Thrift too.
 
         final FieldSchemaWithAdditionalProperties properties = generateFields(methodFields);
         root.set("properties", properties.node);
@@ -149,6 +151,7 @@ final class JsonSchemaGenerator {
         final ObjectNode objectNode = mapper.createObjectNode();
         final Set<String> requiredFields = new HashSet<>();
 
+        // TODO: Consider filtering header & path params.
         for (FieldInfo field : fields) {
             final ObjectNode fieldNode = mapper.createObjectNode();
             final String fieldTypeName = field.typeSignature().name();
@@ -163,10 +166,14 @@ final class JsonSchemaGenerator {
                 fieldNode.put("type", schemaType);
 
                 final ArrayNode enumValues = getEnumType(field.typeSignature());
-                if (enumValues != null) {fieldNode.set("enum", enumValues);}
+                if (enumValues != null) {
+                    fieldNode.set("enum", enumValues);
+                }
 
                 final ObjectNode itemsType = getItemsType(field.typeSignature(), path);
-                if (itemsType != null) {fieldNode.set("items", itemsType);}
+                if (itemsType != null) {
+                    fieldNode.set("items", itemsType);
+                }
 
                 fieldNode.put("description", field.descriptionInfo().docString());
 
@@ -243,13 +250,14 @@ final class JsonSchemaGenerator {
         if (type.isNamed() &&
             type.namedTypeDescriptor() != null &&
             type.namedTypeDescriptor().getClass().getName().contains("Enum")) {
-            System.out.println(type.name());
 
-            EnumInfo enumInfo = typeToEnumMapping.get(type.name());
+            final EnumInfo enumInfo = typeToEnumMapping.get(type.name());
 
-            if (enumInfo == null) {return null;}
+            if (enumInfo == null) {
+                return null;
+            }
 
-            ArrayNode enumArray = mapper.createArrayNode();
+            final ArrayNode enumArray = mapper.createArrayNode();
             enumInfo.values().forEach(x -> enumArray.add(x.name()));
             return enumArray;
         }
@@ -265,8 +273,19 @@ final class JsonSchemaGenerator {
                 case "list":
                 case "array":
                 case "set":
-                    StructInfo structInfo = typeToStructMapping.get(type.typeParameters().get(0).name());
-                    return generateFromStructInfo(structInfo, path);
+                    final TypeSignature head = type.typeParameters().get(0);
+                    if (getSchemaType(type).equals("object")) {
+                        final StructInfo structInfo = typeToStructMapping.get(head.name());
+                        if (structInfo != null) {
+                            return generateFromStructInfo(structInfo, path);
+                        } else {
+                            return null;
+                        }
+                    } else {
+                        final ObjectNode primitiveNode = mapper.createObjectNode();
+                        primitiveNode.put("type", getSchemaType(head));
+                        return primitiveNode;
+                    }
                 default:
                     return null;
             }
@@ -276,15 +295,11 @@ final class JsonSchemaGenerator {
     }
 
     private String getSchemaType(TypeSignature type) {
-        if (type.isNamed()) {
-            // Hacky way because protobuf library is not in classpath.
-            // We can consider moving JSONSchemaGenerator for protos to grpc or protobuf lib.
-            if (type.namedTypeDescriptor() != null &&
-                type.namedTypeDescriptor().getClass().getName().contains("Enum")) {
-                return "string";
-            } else {
-                return "object";
-            }
+        // Hacky way because protobuf library is not in classpath.
+        // We can consider moving JSONSchemaGenerator for protos to grpc or protobuf lib.
+        if (type.namedTypeDescriptor() != null &&
+            type.namedTypeDescriptor().getClass().getName().toLowerCase().contains("enum")) {
+            return "string";
         }
 
         if (type.isContainer()) {
@@ -339,11 +354,10 @@ final class JsonSchemaGenerator {
                 case "string":
                     return "string";
                 default:
-                    return "null";
+                    return "object";
             }
         }
 
-        return "any";
+        return "object";
     }
-
 }
