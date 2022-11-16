@@ -321,13 +321,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         final ProxiedAddresses proxiedAddresses = determineProxiedAddresses(channel, headers);
         final InetAddress clientAddress = config.clientAddressMapper().apply(proxiedAddresses).getAddress();
 
-        // Handle max connection age for HTTP/1.
-        if (!protocol.isMultiplex() &&
-            ((ServerHttp1ObjectEncoder) responseEncoder).isSentConnectionCloseHeader()) {
-            channel.close();
-            return;
-        }
-
         final RoutingContext routingCtx = req.routingContext();
         final RoutingStatus routingStatus = routingCtx.status();
         if (!routingStatus.routeMustExist()) {
@@ -450,8 +443,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                         if (protocol.isMultiplex()) {
                             // Initiates channel close, connection will be closed after all streams are closed.
                             ctx.channel().close();
-                        } else if (unfinishedRequests.isEmpty()) {
-                            ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                        } else {
+                            // Stop receiving new requests.
+                            handledLastRequest = true;
+                            if (unfinishedRequests.isEmpty()) {
+                                ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
+                            }
                         }
                     }
                 } catch (Throwable t) {
