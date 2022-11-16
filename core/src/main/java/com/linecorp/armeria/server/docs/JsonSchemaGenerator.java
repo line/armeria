@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -20,26 +20,33 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
  * Generates a JSON Schema from the given service specification.
  */
-@UnstableApi
-public final class JsonSchemaGenerator {
+final class JsonSchemaGenerator {
 
-    private JsonSchemaGenerator() {
-        throw new UnsupportedOperationException();
+    private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
+
+    public static ArrayNode generate(ServiceSpecification serviceSpecification) {
+        final JsonSchemaGenerator generator = new JsonSchemaGenerator(serviceSpecification);
+        return generator.generate();
     }
 
-    private static final ObjectMapper mapper
-            = JacksonUtil.newDefaultObjectMapper();
+    public static ObjectNode generate(StructInfo structInfo) {
+        final JsonSchemaGenerator generator = new JsonSchemaGenerator();
+        return generator.generateFromStructInfo(structInfo, "#");
+    }
 
     private static final class FieldSchemaWithAdditionalProperties {
         private final ObjectNode node;
@@ -51,12 +58,229 @@ public final class JsonSchemaGenerator {
         }
     }
 
-    private static String getSchemaType(TypeSignature type) {
+    private final Set<EnumInfo> enumInfos;
+    private final Set<StructInfo> structInfos;
+    private final Set<ServiceInfo> serviceInfos;
+    private final Map<String, StructInfo> typeToStructMapping;
+    private final Map<String, EnumInfo> typeToEnumMapping;
+
+    private JsonSchemaGenerator(ServiceSpecification serviceSpecification) {
+        this.enumInfos = serviceSpecification.enums();
+        this.structInfos = serviceSpecification.structs();
+        this.serviceInfos = serviceSpecification.services();
+        this.typeToStructMapping = structInfos.stream().collect(
+                Collectors.toMap(StructInfo::name, Function.identity()));
+        this.typeToEnumMapping = enumInfos.stream().collect(
+                Collectors.toMap(EnumInfo::name, Function.identity()));
+    }
+
+    private JsonSchemaGenerator() {
+        this.enumInfos = new HashSet<>();
+        this.structInfos = new HashSet<>();
+        this.serviceInfos = new HashSet<>();
+        this.typeToStructMapping = new HashMap<>();
+        this.typeToEnumMapping = new HashMap<>();
+    }
+
+    private ArrayNode generate() {
+        final ArrayNode definitions = mapper.createArrayNode();
+
+        final Set<ObjectNode> methodDefinitions = serviceInfos.stream().flatMap(
+                serviceInfo -> serviceInfo.methods().stream()
+                                          .map(methodInfo -> generate(serviceInfo, methodInfo))).collect(
+                Collectors.toSet());
+
+        return definitions.addAll(methodDefinitions);
+    }
+
+    /**
+     * Generate the JSON Schema for the given {@link ServiceInfo} and {@link MethodInfo}.
+     * @param serviceInfo service info.
+     * @param methodInfo the method to generate the JSON Schema for.
+     * @return ObjectNode containing the JSON schema for the parameter type.
+     */
+
+    private ObjectNode generate(ServiceInfo serviceInfo, MethodInfo methodInfo) {
+        final ObjectNode root = mapper.createObjectNode();
+
+        final String fullQualifier =
+                serviceInfo.name() + '/' + methodInfo.name() + '/' + methodInfo.httpMethod().name();
+
+        root.put("$id", fullQualifier)
+            .put("title", methodInfo.name())
+            .put("description", methodInfo.descriptionInfo().docString())
+            .put("additionalProperties", false).put("type", "object");
+
+        // Workaround for gRPC services because they do not have parameters in method info.
+        boolean isProto = methodInfo.endpoints().stream().flatMap(x -> x.availableMimeTypes().stream())
+                                    .anyMatch(MediaType::isProtobuf);
+
+        final List<FieldInfo> methodFields = (isProto) ? typeToStructMapping
+                .get(methodInfo.parameters().get(0)
+                               .typeSignature()
+                               .name()).fields() : methodInfo.parameters();
+
+        final FieldSchemaWithAdditionalProperties properties = generateFields(methodFields);
+        root.set("properties", properties.node);
+
+        final ArrayNode required = mapper.createArrayNode();
+        for (String requiredField : properties.requiredFieldNames) {
+            required.add(requiredField);
+        }
+
+        root.set("required", required);
+        return root;
+    }
+
+    private FieldSchemaWithAdditionalProperties generateFields(List<FieldInfo> fields) {
+        return generateFields(fields, new HashMap<>(), "#");
+    }
+
+    /**
+     * Generate a FieldSchemaWithAdditionalProperties for the given fields.
+     * @param fields list of fields that the child has.
+     * @param visited a map of visited fields, required for cycle detection.
+     * @param path current path as defined in JSON Schema spec, required for cyclic references.
+     * @return a FieldSchemaWithAdditionalProperties for the given fields.
+     */
+
+    private FieldSchemaWithAdditionalProperties generateFields(List<FieldInfo> fields,
+                                                               Map<String, String> visited, String path) {
+        final ObjectNode objectNode = mapper.createObjectNode();
+        final Set<String> requiredFields = new HashSet<>();
+
+        for (FieldInfo field : fields) {
+            final ObjectNode fieldNode = mapper.createObjectNode();
+            final String fieldTypeName = field.typeSignature().name();
+
+            if (field.typeSignature().isNamed() && visited.containsKey(fieldTypeName)) {
+                // If field is already visited, add a reference to the field instead of iterating its children.
+                final String pathName = visited.get(fieldTypeName);
+                fieldNode.put("$ref", pathName);
+            } else {
+                // Field is not visited, create a new type definition for it.
+                final String schemaType = getSchemaType(field.typeSignature());
+                fieldNode.put("type", schemaType);
+
+                final ArrayNode enumValues = getEnumType(field.typeSignature());
+                if (enumValues != null) {fieldNode.set("enum", enumValues);}
+
+                final ObjectNode itemsType = getItemsType(field.typeSignature(), path);
+                if (itemsType != null) {fieldNode.set("items", itemsType);}
+
+                fieldNode.put("description", field.descriptionInfo().docString());
+
+                // Iterate over each child field.
+                if (!field.childFieldInfos().isEmpty()) {
+                    // Set the current path to be "PREVIOUS_PATH/field.name"
+                    final String currentPath = path + '/' + field.name();
+
+                    // Mark current field as visited
+                    visited.put(fieldTypeName, currentPath);
+                    final FieldSchemaWithAdditionalProperties childProperties = generateFields(
+                            field.childFieldInfos(), visited, currentPath);
+
+                    fieldNode.set("properties", childProperties.node);
+                    fieldNode.put("additionalProperties", false);
+
+                    // Find which child properties are required.
+                    final ArrayNode required = mapper.createArrayNode();
+                    for (String requiredField : childProperties.requiredFieldNames) {
+                        required.add(requiredField);
+                    }
+
+                    fieldNode.set("required", required);
+                }
+
+                // Fill required fields for the current object.
+                if (field.requirement() == FieldRequirement.REQUIRED) {
+                    requiredFields.add(field.name());
+                }
+            }
+
+            // Set current field inside the returned object.
+            objectNode.set(field.name(), fieldNode);
+        }
+
+        return new FieldSchemaWithAdditionalProperties(objectNode, requiredFields);
+    }
+
+    /**
+     * Generate the JSON Schema for the given {@link StructInfo}.
+     * @param info struct info object.
+     * @return ObjectNode containing the JSON schema for the given struct.
+     */
+    private ObjectNode generateFromStructInfo(StructInfo info, String path) {
+        final ObjectNode root = mapper.createObjectNode();
+        root
+                .put("title", info.name())
+                .put("description", info.descriptionInfo().docString())
+                .put("additionalProperties", false)
+                .put("type", "object");
+
+        // Initialize an empty visit map, push current type to the visit map.
+        final Map<String, String> visited = new HashMap<>();
+        final String currentPath = "#";
+        visited.put(info.name(), currentPath);
+
+        final FieldSchemaWithAdditionalProperties properties =
+                generateFields(info.fields(), visited, currentPath);
+        root.set("properties", properties.node);
+
+        final ArrayNode required = mapper.createArrayNode();
+        for (String requiredField : properties.requiredFieldNames) {
+            required.add(requiredField);
+        }
+
+        root.set("required", required);
+        return root;
+    }
+
+    @Nullable
+    private ArrayNode getEnumType(TypeSignature type) {
+        // Hacky way because protobuf library is not in classpath.
+        // We can consider moving JSONSchemaGenerator for protos to grpc or protobuf lib.
+        if (type.isNamed() &&
+            type.namedTypeDescriptor() != null &&
+            type.namedTypeDescriptor().getClass().getName().contains("Enum")) {
+            System.out.println(type.name());
+
+            EnumInfo enumInfo = typeToEnumMapping.get(type.name());
+
+            if (enumInfo == null) {return null;}
+
+            ArrayNode enumArray = mapper.createArrayNode();
+            enumInfo.values().forEach(x -> enumArray.add(x.name()));
+            return enumArray;
+        }
+
+        return null;
+    }
+
+    @Nullable
+    private ObjectNode getItemsType(TypeSignature type, String path) {
+        if (type.isContainer()) {
+            switch (type.name().toLowerCase()) {
+                case "repeated":
+                case "list":
+                case "array":
+                case "set":
+                    StructInfo structInfo = typeToStructMapping.get(type.typeParameters().get(0).name());
+                    return generateFromStructInfo(structInfo, path);
+                default:
+                    return null;
+            }
+        }
+
+        return null;
+    }
+
+    private String getSchemaType(TypeSignature type) {
         if (type.isNamed()) {
             // Hacky way because protobuf library is not in classpath.
             // We can consider moving JSONSchemaGenerator for protos to grpc or protobuf lib.
-            if (type.namedTypeDescriptor() != null && type.namedTypeDescriptor().getClass().getName().contains(
-                    "Enum")) {
+            if (type.namedTypeDescriptor() != null &&
+                type.namedTypeDescriptor().getClass().getName().contains("Enum")) {
                 return "string";
             } else {
                 return "object";
@@ -68,6 +292,7 @@ public final class JsonSchemaGenerator {
                 case "repeated":
                 case "list":
                 case "array":
+                case "set":
                     return "array";
                 default:
                     return "object";
@@ -121,104 +346,4 @@ public final class JsonSchemaGenerator {
         return "any";
     }
 
-    /**
-     * Generate a FieldSchemaWithAdditionalProperties for the given fields.
-     * @param fields list of fields that the child has.
-     * @param visited a map of visited fields, required for cycle detection.
-     * @param path current path as defined in JSON Schema spec, required for cyclic references.
-     * @return a FieldSchemaWithAdditionalProperties for the given fields.
-     */
-    private static FieldSchemaWithAdditionalProperties generateFields(List<FieldInfo> fields,
-                                                                      Map<String, String> visited,
-                                                                      String path) {
-        final ObjectNode objectNode = mapper.createObjectNode();
-        final Set<String> requiredFields = new HashSet<>();
-
-        for (FieldInfo field : fields) {
-            final ObjectNode fieldNode = mapper.createObjectNode();
-            final String fieldTypeName = field.typeSignature().name();
-
-            if (field.typeSignature().isNamed() && visited.containsKey(fieldTypeName)) {
-                // If field is already visited, add a reference to the field instead of iterating its children.
-                final String pathName = visited.get(fieldTypeName);
-                fieldNode.put("$ref", pathName);
-            } else {
-                // Field is not visited, create a new type definition for it.
-                final String schemaType = getSchemaType(field.typeSignature());
-                fieldNode.put("type", schemaType);
-                fieldNode.put("description", field.descriptionInfo().docString());
-
-                // TODO: Support for repeated fields with non-primitive types.
-                // Use "items": { ... }
-                // But unfortunately container types do not contain field infos.
-                // Maybe consider using $ref ?
-
-                // Iterate over each child field.
-                if (!field.childFieldInfos().isEmpty()) {
-                    // Set the current path to be "PREVIOUS_PATH/field.name"
-                    final String currentPath = path + "/" + field.name();
-
-                    // Mark current field as visited
-                    visited.put(fieldTypeName, currentPath);
-                    final FieldSchemaWithAdditionalProperties childProperties = generateFields(
-                            field.childFieldInfos(), visited, currentPath);
-
-                    fieldNode.set("properties", childProperties.node);
-                    fieldNode.put("additionalProperties", false);
-
-                    // Find which child properties are required.
-                    final ArrayNode required = mapper.createArrayNode();
-                    for (String requiredField : childProperties.requiredFieldNames) {
-                        required.add(requiredField);
-                    }
-
-                    fieldNode.set("required", required);
-                }
-
-                // Fill required fields for the current object.
-                if (field.requirement() == FieldRequirement.REQUIRED) {
-                    requiredFields.add(field.name());
-                }
-            }
-
-            // Set current field inside the returned object.
-            objectNode.set(field.name(), fieldNode);
-        }
-
-        return new FieldSchemaWithAdditionalProperties(objectNode, requiredFields);
-    }
-
-    public static ObjectNode generate(ServiceSpecification serviceSpecification) {
-        return mapper.createObjectNode();
-    }
-
-    /**
-     * Generate the JSON Schema for the given {@link StructInfo}.
-     * @param info struct info object.
-     * @return ObjectNode containing the JSON schema for the given struct.
-     */
-    public static ObjectNode generate(StructInfo info) {
-        final ObjectNode root = mapper.createObjectNode();
-        root.put("title", info.name())
-            .put("description", info.descriptionInfo().docString())
-            .put("additionalProperties", false)
-            .put("type", "object");
-
-        // Initialize an empty visit map, push current type to the visit map.
-        final Map<String, String> visited = new HashMap<>();
-        final String currentPath = "#";
-        visited.put(info.name(), currentPath);
-
-        final FieldSchemaWithAdditionalProperties properties = generateFields(info.fields(), visited,
-                                                                              currentPath);
-        root.set("properties", properties.node);
-
-        final ArrayNode required = mapper.createArrayNode();
-        for (String requiredField : properties.requiredFieldNames) {
-            required.add(requiredField);
-        }
-
-        root.set("required", required);
-        return root;
-    }
 }

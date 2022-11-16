@@ -21,7 +21,6 @@ import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static java.util.Objects.requireNonNull;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.util.Collections;
 import java.util.List;
@@ -43,7 +42,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
@@ -245,7 +244,8 @@ public final class DocService extends SimpleDecoratingHttpService {
         private static final String versionsPath = "/versions.json";
         private static final String specificationPath = "/specification.json";
         private static final String schemaPath = "/schema.json";
-        private static final Set<String> targetPaths = ImmutableSet.of(versionsPath, specificationPath, schemaPath);
+        private static final Set<String> targetPaths = ImmutableSet.of(versionsPath, specificationPath,
+                                                                       schemaPath);
         private static final CompletableFuture<AggregatedHttpFile> loadFailedFuture =
                 UnmodifiableFuture.exceptionallyCompletedFuture(
                         new IllegalStateException("File load not triggered"));
@@ -288,7 +288,7 @@ public final class DocService extends SimpleDecoratingHttpService {
             } else if (specificationPath.equals(path)) {
                 return loadSpecifications(executor);
             } else if (schemaPath.equals(path)) {
-
+                return loadSchemas(executor);
             } else {
                 throw new Error(); // Should never reach here.
             }
@@ -336,14 +336,14 @@ public final class DocService extends SimpleDecoratingHttpService {
                 return CompletableFuture.supplyAsync(() -> {
                     final ServiceSpecification spec = generateServiceSpecification();
                     try {
-                        final ObjectNode jsonSpec = JsonSchemaGenerator.generate(spec);
+                        final ArrayNode jsonSpec = JsonSchemaGenerator.generate(spec);
 
                         final byte[] content = jsonMapper.writerWithDefaultPrettyPrinter()
-                                                         .writeValueAsBytes(spec);
+                                                         .writeValueAsBytes(jsonSpec);
                         return toFile(content, MediaType.JSON_UTF_8);
                     } catch (Exception e) {
-                        logger.error("Failed to generate JSON schemas:", e);
-                        return toFile("{}".getBytes(), MediaType.JSON_UTF_8);
+                        logger.warn("Failed to generate JSON schemas:", e);
+                        return toFile("[]".getBytes(), MediaType.JSON_UTF_8);
                     }
                 });
             });

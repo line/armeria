@@ -37,9 +37,9 @@ class JsonSchemaGeneratorTest {
         final String methodName = "test-method";
         final List<FieldInfo> parameters = ImmutableList.of();
         final DescriptionInfo description = DescriptionInfo.of("test method");
-        final StructInfo methodInfo = newStructInfo(methodName, parameters).withDescriptionInfo(description);
+        final StructInfo structInfo = newStructInfo(methodName, parameters).withDescriptionInfo(description);
 
-        final ObjectNode jsonSchema = JsonSchemaGenerator.generate(methodInfo);
+        final ObjectNode jsonSchema = JsonSchemaGenerator.generate(structInfo);
 
         // Base properties
         assertThat(jsonSchema.get("title").asText()).isEqualTo(methodName);
@@ -62,9 +62,9 @@ class JsonSchemaGeneratorTest {
                 FieldInfo.of("param4", TypeSignature.ofBase("boolean"),
                              DescriptionInfo.of("param4 description")));
         final DescriptionInfo description = DescriptionInfo.of("test method");
-        final StructInfo methodInfo = newStructInfo(methodName, parameters).withDescriptionInfo(description);
+        final StructInfo structInfo = newStructInfo(methodName, parameters).withDescriptionInfo(description);
 
-        final ObjectNode jsonSchema = JsonSchemaGenerator.generate(methodInfo);
+        final ObjectNode jsonSchema = JsonSchemaGenerator.generate(structInfo);
 
         // Base properties
         assertThat(jsonSchema.get("title").asText()).isEqualTo(methodName);
@@ -86,9 +86,9 @@ class JsonSchemaGeneratorTest {
                                   FieldInfo.of("inner-recurse", TypeSignature.ofNamed("rec", new Object()))
                 ).build()
         );
-        final StructInfo methodInfo = newStructInfo(methodName, parameters);
+        final StructInfo structInfo = newStructInfo(methodName, parameters);
 
-        final ObjectNode jsonSchema = JsonSchemaGenerator.generate(methodInfo);
+        final ObjectNode jsonSchema = JsonSchemaGenerator.generate(structInfo);
 
         assertThat(jsonSchema.get("properties").isNull()).isFalse();
         assertThat(jsonSchema.get("properties").get("paramRecursive")).isNotNull();
