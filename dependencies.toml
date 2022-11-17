@@ -1118,6 +1118,19 @@ exclusions = [
 module = "org.dmonix.junit:zookeeper-junit"
 version.ref = "zookeeper-junit"
 
+[libraries.resilience4j-circuitbreaker]
+module = "io.github.resilience4j:resilience4j-circuitbreaker"
+version = "1.7.1"
+[libraries.resilience4j-springboot]
+module = "io.github.resilience4j:resilience4j-spring-boot2"
+version = "1.7.1"
+[libraries.resilience4j-micrometer]
+module = "io.github.resilience4j:resilience4j-micrometer"
+version = "1.7.1"
+[libraries.resilience4j-retrofit]
+module = "io.github.resilience4j:resilience4j-retrofit"
+version = "1.7.1"
+
 [plugins]
 jmh = { id = "me.champeau.jmh", version.ref = "jmh-gradle-plugin" }
 osdetector = { id = "com.google.osdetector", version.ref = "osdetector" }

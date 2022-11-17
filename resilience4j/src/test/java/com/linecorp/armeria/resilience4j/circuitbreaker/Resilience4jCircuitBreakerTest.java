@@ -1,0 +1,76 @@
+/*
+ * Copyright 2022 LINE Corporation
+ *
+ * LINE Corporation licenses this file to you under the Apache License,
+ * version 2.0 (the "License"); you may not use this file except in compliance
+ * with the License. You may obtain a copy of the License at:
+ *
+ *   https://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+ * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+ * License for the specific language governing permissions and limitations
+ * under the License.
+ */
+
+package com.linecorp.armeria.resilience4j.circuitbreaker;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import java.util.concurrent.CompletionException;
+import java.util.function.Function;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
+
+import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.Builder;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+
+class Resilience4jCircuitBreakerTest {
+
+    @RegisterExtension
+    static ServerExtension server = new ServerExtension() {
+        @Override
+        protected void configure(ServerBuilder sb) throws Exception {
+            sb.service("/500", (ctx, req) -> HttpResponse.of(500));
+        }
+    };
+
+    @Test
+    void testBasicClientIntegration() {
+        final int minimumNumberOfCalls = 3;
+        final CircuitBreakerConfig config = new Builder()
+                .minimumNumberOfCalls(minimumNumberOfCalls)
+                .build();
+        final CircuitBreakerRule rule = CircuitBreakerRule.onStatusClass(HttpStatusClass.SERVER_ERROR);
+        final CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(config);
+        final Resilience4jCircuitBreakerMapping mapping = Resilience4jCircuitBreakerMapping.builder()
+                                                                                           .registry(registry)
+                                                                                           .perHost()
+                                                                                           .build();
+        final Function<? super HttpClient, CircuitBreakerClient> circuitBreakerDecorator =
+                Resilience4JCircuitBreakerClientHandler.newDecorator(mapping, rule);
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .decorator(circuitBreakerDecorator)
+                                          .build();
+        for (int i = 0; i < minimumNumberOfCalls; i++) {
+            assertThat(client.get("/500").aggregate().join().status().code()).isEqualTo(500);
+        }
+        assertThatThrownBy(() -> client.get("/500").aggregate().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(CallNotPermittedException.class);
+    }
+}
