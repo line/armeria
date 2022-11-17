@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A collection of callbacks that are invoked for each request by {@link CircuitBreakerClient}.
+ * A callback that is invoked for each request by {@link CircuitBreakerClient}.
  * Users may implement this class in conjunction with {@link CircuitBreakerClientHandler} to
  * use arbitrary circuit breaker implementations with {@link CircuitBreakerClient}.
  *

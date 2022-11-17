@@ -81,7 +81,7 @@ public interface CircuitBreakerClientHandler<I extends Request> {
     }
 
     /**
-     * Invoked by {@link CircuitBreakerClient} right before executing a request.
+     * Invoked by {@link CircuitBreakerClient} right before sending a request.
      * In a typical implementation, users may extract the appropriate circuit breaker
      * implementation using the provided {@link ClientRequestContext} and {@link Request}.
      * Afterwards, one of the following can occur:

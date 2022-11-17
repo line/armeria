@@ -41,7 +41,7 @@ final class DefaultCircuitBreakerClientHandler<I extends Request> implements Cir
         try {
             circuitBreaker = requireNonNull(mapping.get(ctx, req), "circuitBreaker");
         } catch (Throwable t) {
-            logger.warn("Failed to get a circuit breaker from mapping", t);
+            logger.warn("Failed to get a circuit breaker from mapping: {}", mapping, t);
             return null;
         }
         if (!circuitBreaker.tryRequest()) {

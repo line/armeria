@@ -27,6 +27,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Stream;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
 
@@ -72,5 +74,16 @@ final class KeyedCircuitBreakerMapping implements CircuitBreakerMapping {
             return circuitBreaker;
         }
         return mapping.computeIfAbsent(key, mapKey -> factory.apply(host, method, path));
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("mapping", mapping)
+                          .add("isPerHost", isPerHost)
+                          .add("isPerMethod", isPerMethod)
+                          .add("isPerPath", isPerPath)
+                          .add("factory", factory)
+                          .toString();
     }
 }

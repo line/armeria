@@ -84,8 +84,6 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     /**
      * Creates a new decorator with the specified {@link CircuitBreakerClientHandler} and
      * {@link CircuitBreakerRule}.
-     *
-     * @see CircuitBreakerClientHandler
      */
     @UnstableApi
     public static Function<? super HttpClient, CircuitBreakerClient>
@@ -112,8 +110,6 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     /**
      * Creates a new decorator with the specified {@link CircuitBreakerClientHandler} and
      * {@link CircuitBreakerRuleWithContent}.
-     *
-     * @see CircuitBreakerClientHandler
      */
     @UnstableApi
     public static Function<? super HttpClient, CircuitBreakerClient>

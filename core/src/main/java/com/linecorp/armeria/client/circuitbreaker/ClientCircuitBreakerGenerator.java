@@ -22,6 +22,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Returns a circuit breaker implementation from remote invocation parameters.
+ *
+ * @param <T> the type of circuit breaker that will be generated
  */
 @FunctionalInterface
 @UnstableApi

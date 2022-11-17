@@ -81,6 +81,7 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
      *
      * @return {@code this} to support method chaining.
      */
+    @UnstableApi
     public AbstractCircuitBreakerClientBuilder<I, O> mapping(CircuitBreakerMapping mapping) {
         handler = CircuitBreakerClientHandler.of(requireNonNull(mapping, "mapping"));
         return this;
@@ -91,8 +92,6 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
      * set by calling {@link #mapping(CircuitBreakerMapping)} will be overwritten by calling this method.
      *
      * @return {@code this} to support method chaining.
-     *
-     * @see CircuitBreakerClientHandler
      */
     @UnstableApi
     public AbstractCircuitBreakerClientBuilder<I, O> handler(CircuitBreakerClientHandler<I> handler) {
