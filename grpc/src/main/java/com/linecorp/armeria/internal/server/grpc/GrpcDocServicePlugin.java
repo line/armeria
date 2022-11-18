@@ -71,6 +71,7 @@ import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
+import com.linecorp.armeria.server.docs.NamedTypeSignature;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
@@ -323,19 +324,19 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                     }).filter(queries -> !queries.isEmpty()).collect(toImmutableList());
 
             methodInfos.add(new MethodInfo(
+                    serviceName,
                     // Order 0 is primary.
                     firstSpec.order() == 0 ? firstSpec.methodName()
                                            : firstSpec.methodName() + '-' + firstSpec.order(),
                     namedMessageSignature(firstSpec.methodDescriptor().getOutputType()),
-                    fieldInfosBuilder.build(),
-                    /* exceptionTypeSignatures */ ImmutableList.of(),
-                    endpointInfos,
-                    /* exampleHeaders */ ImmutableList.of(),
+                    /* exceptionTypeSignatures */ fieldInfosBuilder.build(),
+                    ImmutableList.of(),
+                    /* exampleHeaders */ endpointInfos,
                     /* exampleRequests */ ImmutableList.of(),
+                    ImmutableList.of(),
                     examplePaths,
                     exampleQueries,
-                    firstEndpoint.httpMethod(),
-                    DescriptionInfo.empty()));
+                    firstEndpoint.httpMethod(), DescriptionInfo.empty()));
         });
         return new ServiceInfo(serviceName, methodInfos.build());
     }
@@ -387,7 +388,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 services, typeSignature -> newNamedTypeInfo(typeSignature, namedTypeInfoProvider));
     }
 
-    private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature,
+    private static NamedTypeInfo newNamedTypeInfo(NamedTypeSignature typeSignature,
                                                   NamedTypeInfoProvider namedTypeInfoProvider) {
         final Object descriptor = typeSignature.namedTypeDescriptor();
         assert descriptor instanceof Descriptor || descriptor instanceof EnumDescriptor;
@@ -396,21 +397,22 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    static MethodInfo newMethodInfo(MethodDescriptor method, Set<EndpointInfo> endpointInfos) {
+    static MethodInfo newMethodInfo(String serviceName, MethodDescriptor method,
+                                    Set<EndpointInfo> endpointInfos) {
         return new MethodInfo(
+                serviceName,
                 method.getName(),
-                namedMessageSignature(method.getOutputType()),
                 // gRPC methods always take a single request parameter of message type.
+                namedMessageSignature(method.getOutputType()),
                 ImmutableList.of(FieldInfo.builder("request", namedMessageSignature(method.getInputType()))
                                           .requirement(FieldRequirement.REQUIRED).build()),
-                /* exceptionTypeSignatures */ ImmutableList.of(),
+                ImmutableList.of(),
                 endpointInfos,
-                /* exampleHeaders */ ImmutableList.of(),
+                ImmutableList.of(),
                 defaultExamples(method),
-                /* examplePaths */ ImmutableList.of(),
-                /* exampleQueries */ ImmutableList.of(),
-                HttpMethod.POST,
-                DescriptionInfo.empty());
+                ImmutableList.of(),
+                ImmutableList.of(),
+                HttpMethod.POST, DescriptionInfo.empty());
     }
 
     private static List<String> defaultExamples(MethodDescriptor method) {
@@ -490,7 +492,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                         final List<MethodInfo> methodInfos =
                                 entry.getValue().stream()
                                      .filter(m -> filter.test(NAME, serviceName, m.getName()))
-                                     .map(method -> newMethodInfo(method,
+                                     .map(method -> newMethodInfo(serviceName, method,
                                                                   ImmutableSet.copyOf(endpoints.get(method))))
                                      .collect(toImmutableList());
                         if (methodInfos.isEmpty()) {

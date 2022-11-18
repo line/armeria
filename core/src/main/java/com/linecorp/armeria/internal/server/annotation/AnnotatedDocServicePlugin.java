@@ -75,6 +75,7 @@ import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
+import com.linecorp.armeria.server.docs.NamedTypeSignature;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.StructInfo;
@@ -169,13 +170,15 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Route route = service.route();
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
         final Method method = service.method();
-        final String name = method.getName();
+        final String methodName = method.getName();
+        final int overloadId = service.overloadId();
         final TypeSignature returnTypeSignature = getReturnTypeSignature(method);
         final List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers(), namedTypeInfoProvider);
         route.methods().forEach(
                 httpMethod -> {
                     final MethodInfo methodInfo = new MethodInfo(
-                            name, returnTypeSignature, fieldInfos, ImmutableList.of(), // Ignore exceptions.
+                            serviceClass.getName(), methodName, overloadId, returnTypeSignature, fieldInfos,
+                            ImmutableList.of(), // Ignore exceptions.
                             ImmutableList.of(endpoint), httpMethod,
                             AnnotatedServiceFactory.findDescription(method));
 
@@ -461,7 +464,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 })
                 .collect(toImmutableSet());
 
-        final Set<TypeSignature> requestNamedTypes =
+        final Set<NamedTypeSignature> requestNamedTypes =
                 serviceInfos.stream()
                             .flatMap(s -> s.findNamedTypes(true).stream())
                             .collect(toImmutableSet());
@@ -471,13 +474,10 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 typeSignature -> newNamedTypeInfo(typeSignature, namedTypeInfoProvider, requestNamedTypes));
     }
 
-    private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature, NamedTypeInfoProvider provider,
-                                                  Set<TypeSignature> requestNamedTypes) {
+    private static NamedTypeInfo newNamedTypeInfo(NamedTypeSignature typeSignature,
+                                                  NamedTypeInfoProvider provider,
+                                                  Set<NamedTypeSignature> requestNamedTypes) {
         final Object typeDescriptor = typeSignature.namedTypeDescriptor();
-        if (typeDescriptor == null) {
-            throw new IllegalArgumentException("cannot create a named type from: " + typeSignature);
-        }
-
         NamedTypeInfo namedTypeInfo = provider.newNamedTypeInfo(typeDescriptor);
         if (namedTypeInfo != null) {
             return namedTypeInfo;

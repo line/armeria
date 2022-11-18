@@ -149,8 +149,8 @@ public final class StructInfo implements NamedTypeInfo {
     }
 
     @Override
-    public Set<TypeSignature> findNamedTypes() {
-        final Set<TypeSignature> collectedNamedTypes = new HashSet<>();
+    public Set<NamedTypeSignature> findNamedTypes() {
+        final Set<NamedTypeSignature> collectedNamedTypes = new HashSet<>();
         fields().forEach(f -> ServiceInfo.findNamedTypes(collectedNamedTypes, f.typeSignature()));
         return ImmutableSortedSet.copyOf(comparing(TypeSignature::name), collectedNamedTypes);
     }

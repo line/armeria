@@ -218,13 +218,9 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                   {service.methods.map((method) => (
                     <ListItem
                       dense
-                      key={`${service.name}/${method.name}/${method.httpMethod}`}
+                      key={`${method.id}`}
                       button
-                      onClick={() =>
-                        navigateTo(
-                          `/methods/${service.name}/${method.name}/${method.httpMethod}`,
-                        )
-                      }
+                      onClick={() => navigateTo(`/methods/${method.id}`)}
                     >
                       <Grid container alignItems="center" spacing={1}>
                         <Grid item xs="auto">
@@ -244,7 +240,7 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                           </ListItemText>
                           {method.endpoints.map((endpoint) => (
                             <ListItemText
-                              key={`${service.name}/${method.name}/${endpoint.pathMapping}`}
+                              key={`${method.id}`}
                               primaryTypographyProps={{
                                 variant: 'caption',
                               }}

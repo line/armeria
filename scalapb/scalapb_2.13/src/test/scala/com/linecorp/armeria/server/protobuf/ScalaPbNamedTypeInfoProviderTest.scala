@@ -22,11 +22,12 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 import com.linecorp.armeria.scalapb.testing.messages.TestMessage
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.{ConsumesJson, Post, ProducesJson}
-import com.linecorp.armeria.server.docs.{DocService, FieldInfo, FieldRequirement, StructInfo}
+import com.linecorp.armeria.server.docs._
 import com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider._
 import com.linecorp.armeria.server.scalapb.{ScalaPbNamedTypeInfoProvider, ServerSuite}
 import munit.FunSuite
 import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
+
 import scala.concurrent.Future
 
 class ScalaPbNamedTypeInfoProviderTest extends FunSuite with ServerSuite {
@@ -84,12 +85,16 @@ class ScalaPbNamedTypeInfoProviderTest extends FunSuite with ServerSuite {
           .build()))
 
     assertEquals(structInfo.fields.get(15).name, "strings")
-    assertEquals(structInfo.fields.get(15).typeSignature.typeParameters.size(), 1)
-    assert(structInfo.fields.get(15).typeSignature.typeParameters.contains(STRING))
+    val repeatedTypeSignature = structInfo.fields.get(15).typeSignature
+    assertEquals(repeatedTypeSignature.`type`(), TypeSignatureType.ITERABLE)
+    val repeatedTypeParameters = repeatedTypeSignature.asInstanceOf[ContainerTypeSignature].typeParameters
+    assertEquals(repeatedTypeParameters.size(), 1)
+    assertEquals(repeatedTypeParameters.get(0), STRING)
     assertEquals(structInfo.fields.get(16).name, "map")
-    assertEquals(structInfo.fields.get(16).typeSignature.typeParameters.size(), 2)
-    assert(structInfo.fields.get(16).typeSignature.typeParameters.contains(STRING))
-    assert(structInfo.fields.get(16).typeSignature.typeParameters.contains(INT32))
+    val mapTypeSignature = structInfo.fields.get(16).typeSignature
+    assertEquals(mapTypeSignature.`type`(), TypeSignatureType.MAP)
+    assertEquals(mapTypeSignature.asInstanceOf[MapTypeSignature].keyTypeSignature(), STRING)
+    assertEquals(mapTypeSignature.asInstanceOf[MapTypeSignature].valueTypeSignature(), INT32)
     val self = structInfo.fields.get(17)
     assertEquals(self.name, "self")
     // Don't visit the field infos of a circular type
@@ -133,6 +138,9 @@ class ScalaPbNamedTypeInfoProviderTest extends FunSuite with ServerSuite {
     val expected = json5Mapper.readTree(resourceAsStream)
 
     assertEquals(response.get("services").get(0).get("name").textValue, classOf[ScalaPbService].getName)
+    println(json5Mapper.writerWithDefaultPrettyPrinter().writeValueAsString(response.get("services").get(0).get("methods")))
+
+
     assertThatJson(response.get("services").get(0).get("methods"))
       .isEqualTo(expected.get("services").get(0).get("methods"))
     assertThatJson(response.get("structs")).isEqualTo(expected.get("structs"))

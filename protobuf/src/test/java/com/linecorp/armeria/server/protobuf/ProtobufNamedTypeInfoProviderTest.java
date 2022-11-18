@@ -34,6 +34,7 @@ import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.InputStream;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.junit.jupiter.api.Test;
@@ -57,15 +58,18 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.annotation.ConsumesJson;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProducesJson;
+import com.linecorp.armeria.server.docs.ContainerTypeSignature;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldRequirement;
+import com.linecorp.armeria.server.docs.MapTypeSignature;
 import com.linecorp.armeria.server.docs.NamedTypeInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
+import com.linecorp.armeria.server.docs.TypeSignatureType;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 class ProtobufNamedTypeInfoProviderTest {
@@ -134,11 +138,17 @@ class ProtobufNamedTypeInfoProviderTest {
                                           .build());
 
         assertThat(structInfo.fields().get(15).name()).isEqualTo("strings");
-        assertThat(structInfo.fields().get(15).typeSignature().typeParameters())
-                .containsExactly(STRING);
+        final TypeSignature repeatedTpeSignature = structInfo.fields().get(15).typeSignature();
+        assertThat(repeatedTpeSignature.type()).isSameAs(TypeSignatureType.ITERABLE);
+        final List<TypeSignature> typeParameters =
+                ((ContainerTypeSignature) repeatedTpeSignature).typeParameters();
+        assertThat(typeParameters).hasSize(1);
+        assertThat(typeParameters.get(0)).isSameAs(STRING);
         assertThat(structInfo.fields().get(16).name()).isEqualTo("map");
-        assertThat(structInfo.fields().get(16).typeSignature().typeParameters())
-                .containsExactly(STRING, INT32);
+        final TypeSignature mapTypeSignature = structInfo.fields().get(16).typeSignature();
+        assertThat(mapTypeSignature.type()).isSameAs(TypeSignatureType.MAP);
+        assertThat(((MapTypeSignature) mapTypeSignature).keyTypeSignature()).isSameAs(STRING);
+        assertThat(((MapTypeSignature) mapTypeSignature).valueTypeSignature()).isSameAs(INT32);
         final FieldInfo self = structInfo.fields().get(17);
         assertThat(self.name()).isEqualTo("self");
         // Don't visit the field infos of a circular type
@@ -165,7 +175,7 @@ class ProtobufNamedTypeInfoProviderTest {
     void newListInfo() throws Exception {
         final TypeSignature list = newFieldTypeInfo(
                 ReconnectInfo.getDescriptor().findFieldByNumber(ReconnectInfo.BACKOFF_MS_FIELD_NUMBER));
-        assertThat(list).isEqualTo(TypeSignature.ofContainer("repeated", INT32));
+        assertThat(list).isEqualTo(TypeSignature.ofIterable("repeated", INT32));
     }
 
     @Test

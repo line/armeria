@@ -63,6 +63,7 @@ import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
+import com.linecorp.armeria.server.docs.NamedTypeSignature;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
@@ -256,7 +257,7 @@ class GrpcDocServicePluginTest {
     @Test
     void newMethodInfo() throws Exception {
         final MethodInfo methodInfo = GrpcDocServicePlugin.newMethodInfo(
-                TEST_SERVICE_DESCRIPTOR.findMethodByName("UnaryCall"),
+                TEST_SERVICE_DESCRIPTOR.getFullName(), TEST_SERVICE_DESCRIPTOR.findMethodByName("UnaryCall"),
                 ImmutableSet.of(
                         EndpointInfo.builder("*", "/foo")
                                     .availableFormats(GrpcSerializationFormats.PROTO)
@@ -266,13 +267,13 @@ class GrpcDocServicePluginTest {
                                     .build()));
         assertThat(methodInfo.name()).isEqualTo("UnaryCall");
         assertThat(methodInfo.returnTypeSignature().name()).isEqualTo("armeria.grpc.testing.SimpleResponse");
-        assertThat(methodInfo.returnTypeSignature().namedTypeDescriptor())
+        assertThat(((NamedTypeSignature) methodInfo.returnTypeSignature()).namedTypeDescriptor())
                 .isEqualTo(SimpleResponse.getDescriptor());
         assertThat(methodInfo.parameters()).hasSize(1);
         assertThat(methodInfo.parameters().get(0).name()).isEqualTo("request");
         assertThat(methodInfo.parameters().get(0).typeSignature().name())
                 .isEqualTo("armeria.grpc.testing.SimpleRequest");
-        assertThat(methodInfo.parameters().get(0).typeSignature().namedTypeDescriptor())
+        assertThat(((NamedTypeSignature) methodInfo.parameters().get(0).typeSignature()).namedTypeDescriptor())
                 .isEqualTo(SimpleRequest.getDescriptor());
         assertThat(methodInfo.exceptionTypeSignatures()).isEmpty();
         assertThat(methodInfo.descriptionInfo()).isSameAs(DescriptionInfo.empty());

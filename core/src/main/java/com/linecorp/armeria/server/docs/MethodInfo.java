@@ -45,6 +45,7 @@ public final class MethodInfo {
 
     // FIXME(trustin): Return types and exception types should also have docstrings like params have them.
 
+    private final String id;
     private final String name;
     private final TypeSignature returnTypeSignature;
     private final List<FieldInfo> parameters;
@@ -60,23 +61,33 @@ public final class MethodInfo {
     /**
      * Creates a new instance.
      */
-    public MethodInfo(String name,
-                      TypeSignature returnTypeSignature,
+    public MethodInfo(String serviceName, String name,
+                      int overloadId, TypeSignature returnTypeSignature,
                       Iterable<FieldInfo> parameters,
                       Iterable<TypeSignature> exceptionTypeSignatures,
                       Iterable<EndpointInfo> endpoints,
                       HttpMethod httpMethod,
                       DescriptionInfo descriptionInfo) {
-        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
-                /* exampleHeaders */ ImmutableList.of(), /* exampleRequests */ ImmutableList.of(),
-                /* examplePaths */ ImmutableList.of(), /* exampleQueries */ ImmutableList.of(),
-             httpMethod, descriptionInfo);
+        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints, ImmutableList.of(),
+             ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), httpMethod, descriptionInfo,
+             createId(serviceName, name, overloadId, httpMethod)
+        );
+    }
+
+    private static String createId(String serviceName, String name, int overloadId, HttpMethod httpMethod) {
+        final String methodName;
+        if (overloadId > 0) {
+            methodName = name + '-' + overloadId;
+        } else {
+            methodName = name;
+        }
+        return serviceName + '/' + methodName + '/' + httpMethod.name();
     }
 
     /**
      * Creates a new instance.
      */
-    public MethodInfo(String name,
+    public MethodInfo(String serviceName, String name,
                       TypeSignature returnTypeSignature,
                       Iterable<FieldInfo> parameters,
                       Iterable<TypeSignature> exceptionTypeSignatures,
@@ -87,6 +98,17 @@ public final class MethodInfo {
                       Iterable<String> exampleQueries,
                       HttpMethod httpMethod,
                       DescriptionInfo descriptionInfo) {
+        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints, exampleHeaders,
+             exampleRequests, examplePaths, exampleQueries, httpMethod, descriptionInfo,
+             createId(serviceName, name, 0, httpMethod));
+    }
+
+    MethodInfo(String name, TypeSignature returnTypeSignature, Iterable<FieldInfo> parameters,
+               Iterable<TypeSignature> exceptionTypeSignatures, Iterable<EndpointInfo> endpoints,
+               Iterable<HttpHeaders> exampleHeaders, Iterable<String> exampleRequests,
+               Iterable<String> examplePaths, Iterable<String> exampleQueries, HttpMethod httpMethod,
+               DescriptionInfo descriptionInfo, String id) {
+        this.id = requireNonNull(id, "id");
         this.name = requireNonNull(name, "name");
 
         this.returnTypeSignature = requireNonNull(returnTypeSignature, "returnTypeSignature");
@@ -123,6 +145,15 @@ public final class MethodInfo {
 
         this.httpMethod = requireNonNull(httpMethod, "httpMethod");
         this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
+    }
+
+    /**
+     * Returns the id of this function. It's a form of {@code serviceName/methodName/httpMethod}.
+     * The {@code methodName} might have {@code -x} suffix if the method is overloaded.
+     */
+    @JsonProperty
+    public String id() {
+        return id;
     }
 
     /**
@@ -169,7 +200,7 @@ public final class MethodInfo {
 
         return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
                               exampleHeaders, exampleRequests, examplePaths, exampleQueries, httpMethod,
-                              descriptionInfo);
+                              descriptionInfo, id);
     }
 
     /**
@@ -241,7 +272,7 @@ public final class MethodInfo {
 
         return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
                               exampleHeaders, exampleRequests, examplePaths, exampleQueries, httpMethod,
-                              descriptionInfo);
+                              descriptionInfo, id);
     }
 
     @Override
@@ -255,7 +286,8 @@ public final class MethodInfo {
         }
 
         final MethodInfo that = (MethodInfo) o;
-        return name().equals(that.name()) &&
+        return id().equals(that.id()) &&
+               name().equals(that.name()) &&
                returnTypeSignature().equals(that.returnTypeSignature()) &&
                parameters().equals(that.parameters()) &&
                exceptionTypeSignatures().equals(that.exceptionTypeSignatures()) &&
@@ -266,13 +298,14 @@ public final class MethodInfo {
 
     @Override
     public int hashCode() {
-        return Objects.hash(name(), returnTypeSignature(), parameters(), exceptionTypeSignatures(),
+        return Objects.hash(id(), name(), returnTypeSignature(), parameters(), exceptionTypeSignatures(),
                             endpoints(), httpMethod(), descriptionInfo());
     }
 
     @Override
     public String toString() {
         return MoreObjects.toStringHelper(this).omitNullValues()
+                          .add("id", id())
                           .add("name", name())
                           .add("returnTypeSignature", returnTypeSignature())
                           .add("parameters", parameters())

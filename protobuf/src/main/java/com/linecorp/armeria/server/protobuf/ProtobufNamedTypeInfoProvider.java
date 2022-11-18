@@ -40,8 +40,10 @@ import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.NamedTypeInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
+import com.linecorp.armeria.server.docs.NamedTypeSignature;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
+import com.linecorp.armeria.server.docs.TypeSignatureType;
 
 /**
  * A {@link NamedTypeInfoProvider} to create a {@link NamedTypeInfo} from a protobuf {@link Message}.
@@ -127,21 +129,23 @@ public final class ProtobufNamedTypeInfoProvider implements NamedTypeInfoProvide
 
     private static FieldInfo newFieldInfo(FieldDescriptor fieldDescriptor, Set<Descriptor> visiting) {
         final TypeSignature typeSignature = newFieldTypeInfo(fieldDescriptor);
-        final Object typeDescriptor = typeSignature.namedTypeDescriptor();
         final FieldInfoBuilder builder;
-        if (typeDescriptor instanceof Descriptor && visiting.add((Descriptor) typeDescriptor)) {
-            builder = FieldInfo.builder(fieldDescriptor.getName(), typeSignature,
-                                        newFieldInfos((Descriptor) typeDescriptor, visiting));
+        if (typeSignature.type() == TypeSignatureType.NAMED) {
+            final Object namedTypeDescriptor = ((NamedTypeSignature) typeSignature).namedTypeDescriptor();
+            if (visiting.add((Descriptor) namedTypeDescriptor)) {
+                builder = FieldInfo.builder(fieldDescriptor.getName(), typeSignature,
+                                            newFieldInfos((Descriptor) namedTypeDescriptor, visiting));
+                visiting.remove(namedTypeDescriptor);
+            } else {
+                builder = FieldInfo.builder(fieldDescriptor.getName(), typeSignature);
+            }
         } else {
             builder = FieldInfo.builder(fieldDescriptor.getName(), typeSignature);
         }
 
-        final FieldInfo fieldInfo =
-                builder.requirement(fieldDescriptor.isRequired() ? FieldRequirement.REQUIRED
-                                                                 : FieldRequirement.OPTIONAL)
-                       .build();
-        visiting.remove(typeDescriptor);
-        return fieldInfo;
+        return builder.requirement(fieldDescriptor.isRequired() ? FieldRequirement.REQUIRED
+                                                                : FieldRequirement.OPTIONAL)
+                      .build();
     }
 
     @VisibleForTesting
@@ -203,19 +207,19 @@ public final class ProtobufNamedTypeInfoProvider implements NamedTypeInfoProvide
                 break;
             case GROUP:
                 // This type has been deprecated since the launch of protocol buffers to open source.
-                // There is no real metadata for this in the descriptor so we just treat as UNKNOWN
-                // since it shouldn't happen in practice anyways.
+                // There is no real metadata for this in the descriptor, so we just treat as UNKNOWN
+                // since it shouldn't happen in practice anyway.
                 fieldType = UNKNOWN;
                 break;
             case ENUM:
-                fieldType = TypeSignature.ofNamed(
+                fieldType = TypeSignature.ofEnum(
                         fieldDescriptor.getEnumType().getFullName(), fieldDescriptor.getEnumType());
                 break;
             default:
                 fieldType = UNKNOWN;
                 break;
         }
-        return fieldDescriptor.isRepeated() ? TypeSignature.ofContainer("repeated", fieldType) : fieldType;
+        return fieldDescriptor.isRepeated() ? TypeSignature.ofIterable("repeated", fieldType) : fieldType;
     }
 
     private static TypeSignature namedMessageSignature(Descriptor descriptor) {

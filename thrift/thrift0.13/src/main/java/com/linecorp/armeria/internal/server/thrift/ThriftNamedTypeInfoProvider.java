@@ -170,7 +170,7 @@ public final class ThriftNamedTypeInfoProvider implements NamedTypeInfoProvider 
         }
 
         if (fieldValueMetaData instanceof EnumMetaData) {
-            return TypeSignature.ofNamed(((EnumMetaData) fieldValueMetaData).enumClass);
+            return TypeSignature.ofEnum(((EnumMetaData) fieldValueMetaData).enumClass);
         }
 
         if (fieldValueMetaData instanceof ListMetaData) {

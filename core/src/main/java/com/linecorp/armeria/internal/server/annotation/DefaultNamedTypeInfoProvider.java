@@ -45,6 +45,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.annotation.Description;
+import com.linecorp.armeria.server.docs.ContainerTypeSignature;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
@@ -52,8 +53,10 @@ import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.NamedTypeInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
+import com.linecorp.armeria.server.docs.NamedTypeSignature;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
+import com.linecorp.armeria.server.docs.TypeSignatureType;
 
 /**
  * A default {@link NamedTypeInfoProvider} to create a {@link StructInfo} from a {@code typeDescriptor}.
@@ -193,11 +196,13 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
                                  Function<JavaType, List<FieldInfo>> childFieldsResolver) {
         TypeSignature typeSignature = toTypeSignature(fieldType);
         final FieldRequirement fieldRequirement;
-        if (typeSignature.isOptional()) {
-            typeSignature = typeSignature.typeParameters().get(0);
-            if (typeSignature.namedTypeDescriptor() instanceof Class) {
-                //noinspection OverlyStrongTypeCast
-                fieldType = mapper.constructType((Class<?>) typeSignature.namedTypeDescriptor());
+        if (typeSignature.type() == TypeSignatureType.OPTIONAL) {
+            typeSignature = ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
+            if (typeSignature.type().hasTypeDescriptor()) {
+                final Object namedTypeDescriptor = ((NamedTypeSignature) typeSignature).namedTypeDescriptor();
+                if (namedTypeDescriptor instanceof Class) {
+                    fieldType = mapper.constructType((Class<?>) namedTypeDescriptor);
+                }
             }
             fieldRequirement = FieldRequirement.OPTIONAL;
         } else {
@@ -205,7 +210,8 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
         }
 
         final DescriptionInfo descriptionInfo = fieldDescriptionInfo(javaType, fieldType, internalName);
-        if (typeSignature.isBase() || typeSignature.isContainer()) {
+        final TypeSignatureType type = typeSignature.type();
+        if (type == TypeSignatureType.BASE || type.hasParameter()) {
             return FieldInfo.builder(name, typeSignature)
                             .requirement(fieldRequirement)
                             .descriptionInfo(descriptionInfo)

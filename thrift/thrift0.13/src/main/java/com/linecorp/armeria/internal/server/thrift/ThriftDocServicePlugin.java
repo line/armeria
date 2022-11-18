@@ -62,6 +62,7 @@ import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
+import com.linecorp.armeria.server.docs.NamedTypeSignature;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
@@ -219,7 +220,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
         @SuppressWarnings("unchecked")
         final MethodInfo methodInfo =
-                newMethodInfo(methodName, argsClass,
+                newMethodInfo(serviceName, methodName, argsClass,
                               (Class<? extends TBase<?, ?>>) resultClass,
                               (Class<? extends TException>[]) method.getExceptionTypes(),
                               endpoints);
@@ -227,11 +228,12 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     }
 
     private static <T extends TBase<T, F>, F extends TFieldIdEnum> MethodInfo newMethodInfo(
-            String name,
+            String serviceName, String name,
             Class<? extends TBase<?, ?>> argsClass,
             @Nullable Class<? extends TBase<?, ?>> resultClass,
             Class<? extends TException>[] exceptionClasses,
             Iterable<EndpointInfo> endpoints) {
+        requireNonNull(serviceName, "serviceName");
         requireNonNull(name, "name");
         requireNonNull(argsClass, "argsClass");
         requireNonNull(exceptionClasses, "exceptionClasses");
@@ -271,21 +273,17 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                       .map(TypeSignature::ofNamed)
                       .collect(toImmutableList());
 
-        return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
+        return new MethodInfo(serviceName, name, returnTypeSignature, parameters, exceptionTypeSignatures,
+                              endpoints,
                               ImmutableList.of(),
                               ImmutableList.of(),
                               ImmutableList.of(),
-                              ImmutableList.of(),
-                              HttpMethod.POST, DescriptionInfo.empty());
+                              ImmutableList.of(), HttpMethod.POST, DescriptionInfo.empty());
     }
 
-    private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature,
+    private static NamedTypeInfo newNamedTypeInfo(NamedTypeSignature typeSignature,
                                                   NamedTypeInfoProvider namedTypeInfoProvider) {
         final Class<?> type = (Class<?>) typeSignature.namedTypeDescriptor();
-        if (type == null) {
-            throw new IllegalArgumentException("cannot create a named type from: " + typeSignature);
-        }
-
         assert TBase.class.isAssignableFrom(type) ||
                TEnum.class.isAssignableFrom(type) ||
                TException.class.isAssignableFrom(type);

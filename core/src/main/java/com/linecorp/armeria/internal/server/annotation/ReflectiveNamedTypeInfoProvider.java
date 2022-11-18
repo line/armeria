@@ -30,6 +30,7 @@ import java.util.List;
 import javax.annotation.Nonnull;
 
 import com.linecorp.armeria.server.annotation.Description;
+import com.linecorp.armeria.server.docs.ContainerTypeSignature;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldRequirement;
@@ -37,6 +38,7 @@ import com.linecorp.armeria.server.docs.NamedTypeInfo;
 import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
+import com.linecorp.armeria.server.docs.TypeSignatureType;
 
 enum ReflectiveNamedTypeInfoProvider implements NamedTypeInfoProvider {
 
@@ -59,8 +61,8 @@ enum ReflectiveNamedTypeInfoProvider implements NamedTypeInfoProvider {
         TypeSignature typeSignature = toTypeSignature(type);
         final DescriptionInfo descriptionInfo = descriptionInfo(field);
         final FieldRequirement fieldRequirement;
-        if (typeSignature.isOptional()) {
-            typeSignature = typeSignature.typeParameters().get(0);
+        if (typeSignature.type() == TypeSignatureType.OPTIONAL) {
+            typeSignature = ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
             fieldRequirement = FieldRequirement.OPTIONAL;
         } else {
             if (isNullable(field)) {

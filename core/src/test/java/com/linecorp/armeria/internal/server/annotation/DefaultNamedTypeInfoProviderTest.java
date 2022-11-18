@@ -114,7 +114,7 @@ class DefaultNamedTypeInfoProviderTest {
                                  newRequiredField("innerValue", BOOLEAN)),
                 newRequiredField("rename", TypeSignature.ofNamed(Inner.class),
                                     newRequiredField("innerValue", BOOLEAN)),
-                newRequiredField("collection", TypeSignature.ofList(Inner.class)),
+                newRequiredField("collection", TypeSignature.ofList(TypeSignature.ofNamed(Inner.class))),
                 newOptionalField("nullableField", STRING),
                 newOptionalField("optionalField", TypeSignature.ofNamed(Inner.class),
                                  newRequiredField("innerValue", BOOLEAN)),
@@ -134,7 +134,7 @@ class DefaultNamedTypeInfoProviderTest {
                                  newRequiredField("innerValue", BOOLEAN)),
                 newRequiredField("rename", TypeSignature.ofNamed(Inner.class),
                                     newRequiredField("innerValue", BOOLEAN)),
-                newRequiredField("collection", TypeSignature.ofList(Inner.class)),
+                newRequiredField("collection", TypeSignature.ofList(TypeSignature.ofNamed(Inner.class))),
                 newOptionalField("nullableField", STRING),
                 newOptionalField("optionalField", STRING),
                 newRequiredField("circular", TypeSignature.ofNamed(BarResponse.class)));

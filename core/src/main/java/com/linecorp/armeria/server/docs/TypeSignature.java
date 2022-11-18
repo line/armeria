@@ -15,18 +15,12 @@
  */
 package com.linecorp.armeria.server.docs;
 
-import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.server.docs.DefaultTypeSignature.checkBaseTypeName;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
-import java.util.Objects;
-import java.util.regex.Pattern;
-
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -55,19 +49,16 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 @JsonSerialize(using = TypeSignatureJsonSerializer.class)
-public final class TypeSignature {
-
-    private static final Pattern BASE_PATTERN = Pattern.compile("^([^.<>]+)$");
-    private static final Pattern NAMED_PATTERN = Pattern.compile("^([^.<>]+(?:\\.[^.<>]+)+)$");
+public interface TypeSignature {
 
     /**
      * Creates a new type signature for a base type.
      *
      * @throws IllegalArgumentException if the specified type name is not valid
      */
-    public static TypeSignature ofBase(String baseTypeName) {
+    static TypeSignature ofBase(String baseTypeName) {
         checkBaseTypeName(baseTypeName, "baseTypeName");
-        return new TypeSignature(baseTypeName, ImmutableList.of());
+        return new DefaultTypeSignature(TypeSignatureType.BASE, baseTypeName);
     }
 
     /**
@@ -77,7 +68,7 @@ public final class TypeSignature {
      * @throws IllegalArgumentException if the specified type name is not valid or
      *                                  {@code elementTypeSignatures} is empty.
      */
-    public static TypeSignature ofContainer(String containerTypeName, TypeSignature... elementTypeSignatures) {
+    static TypeSignature ofContainer(String containerTypeName, TypeSignature... elementTypeSignatures) {
         requireNonNull(elementTypeSignatures, "elementTypeSignatures");
         return ofContainer(containerTypeName, ImmutableList.copyOf(elementTypeSignatures));
     }
@@ -89,18 +80,12 @@ public final class TypeSignature {
      * @throws IllegalArgumentException if the specified type name is not valid or
      *                                  {@code elementTypeSignatures} is empty.
      */
-    public static TypeSignature ofContainer(String containerTypeName,
-                                            Iterable<TypeSignature> elementTypeSignatures) {
+    static TypeSignature ofContainer(String containerTypeName,
+                                     Iterable<TypeSignature> elementTypeSignatures) {
         checkBaseTypeName(containerTypeName, "containerTypeName");
         requireNonNull(elementTypeSignatures, "elementTypeSignatures");
-        final List<TypeSignature> elementTypeSignaturesCopy = ImmutableList.copyOf(elementTypeSignatures);
-        checkArgument(!elementTypeSignaturesCopy.isEmpty(), "elementTypeSignatures is empty.");
-        return new TypeSignature(containerTypeName, elementTypeSignaturesCopy);
-    }
-
-    private static void checkBaseTypeName(String baseTypeName, String parameterName) {
-        requireNonNull(baseTypeName, parameterName);
-        checkArgument(BASE_PATTERN.matcher(baseTypeName).matches(), "%s: %s", parameterName, baseTypeName);
+        return new ContainerTypeSignature(TypeSignatureType.CONTAINER, containerTypeName,
+                                          ImmutableList.copyOf(elementTypeSignatures));
     }
 
     /**
@@ -110,20 +95,9 @@ public final class TypeSignature {
      * ofContainer("list", elementTypeSignature);
      * }</pre>
      */
-    public static TypeSignature ofList(TypeSignature elementTypeSignature) {
+    static TypeSignature ofList(TypeSignature elementTypeSignature) {
         requireNonNull(elementTypeSignature, "elementTypeSignature");
-        return ofContainer("list", elementTypeSignature);
-    }
-
-    /**
-     * Creates a new type signature for the list with the specified named element type.
-     * This method is a shortcut for:
-     * <pre>{@code
-     * ofList(ofNamed(namedElementType));
-     * }</pre>
-     */
-    public static TypeSignature ofList(Class<?> namedElementType) {
-        return ofList(ofNamed(namedElementType, "namedElementType"));
+        return ofIterable("list", elementTypeSignature);
     }
 
     /**
@@ -133,20 +107,23 @@ public final class TypeSignature {
      * ofContainer("set", elementTypeSignature);
      * }</pre>
      */
-    public static TypeSignature ofSet(TypeSignature elementTypeSignature) {
+    static TypeSignature ofSet(TypeSignature elementTypeSignature) {
         requireNonNull(elementTypeSignature, "elementTypeSignature");
-        return ofContainer("set", elementTypeSignature);
+        return ofIterable("set", elementTypeSignature);
     }
 
     /**
-     * Creates a new type signature for the set with the specified named element type.
-     * This method is a shortcut for:
-     * <pre>{@code
-     * ofSet(ofNamed(namedElementType));
-     * }</pre>
+     * Creates a new container type with the specified container type name and the type signatures of the
+     * elements it contains.
+     *
+     * @throws IllegalArgumentException if the specified type name is not valid or
+     *                                  {@code elementTypeSignatures} is empty.
      */
-    public static TypeSignature ofSet(Class<?> namedElementType) {
-        return ofSet(ofNamed(namedElementType, "namedElementType"));
+    static TypeSignature ofIterable(String iterableTypeName, TypeSignature elementTypeSignature) {
+        requireNonNull(iterableTypeName, "iterableTypeName");
+        requireNonNull(elementTypeSignature, "elementTypeSignature");
+        return new ContainerTypeSignature(TypeSignatureType.ITERABLE, iterableTypeName,
+                                          ImmutableList.of(elementTypeSignature));
     }
 
     /**
@@ -156,21 +133,10 @@ public final class TypeSignature {
      * ofMap("map", keyTypeSignature, valueTypeSignature);
      * }</pre>
      */
-    public static TypeSignature ofMap(TypeSignature keyTypeSignature, TypeSignature valueTypeSignature) {
+    static TypeSignature ofMap(TypeSignature keyTypeSignature, TypeSignature valueTypeSignature) {
         requireNonNull(keyTypeSignature, "keyTypeSignature");
         requireNonNull(valueTypeSignature, "valueTypeSignature");
-        return ofContainer("map", keyTypeSignature, valueTypeSignature);
-    }
-
-    /**
-     * Creates a new type signature for the map with the specified named key and value types.
-     * This method is a shortcut for:
-     * <pre>{@code
-     * ofMap(ofNamed(namedKeyType), ofNamed(namedValueType));
-     * }</pre>
-     */
-    public static TypeSignature ofMap(Class<?> namedKeyType, Class<?> namedValueType) {
-        return ofMap(ofNamed(namedKeyType, "namedKeyType"), ofNamed(namedValueType, "namedValueType"));
+        return new MapTypeSignature(keyTypeSignature, valueTypeSignature);
     }
 
     /**
@@ -180,170 +146,69 @@ public final class TypeSignature {
      * ofContainer("optional", elementTypeSignature);
      * }</pre>
      */
-    public static TypeSignature ofOptional(TypeSignature elementTypeSignature) {
+    static TypeSignature ofOptional(TypeSignature elementTypeSignature) {
         requireNonNull(elementTypeSignature, "elementTypeSignature");
-        return ofContainer("optional", elementTypeSignature);
+        return new ContainerTypeSignature(TypeSignatureType.OPTIONAL, "optional",
+                                          ImmutableList.of(elementTypeSignature));
     }
 
     /**
      * Creates a new named type signature for the specified type.
      */
-    public static TypeSignature ofNamed(Class<?> namedType) {
-        return ofNamed(namedType, "namedType");
+    static TypeSignature ofNamed(Class<?> namedType) {
+        requireNonNull(namedType, "namedType");
+        return new NamedTypeSignature(TypeSignatureType.NAMED, namedType);
     }
 
     /**
      * Creates a new named type signature for the provided name and arbitrary descriptor.
      */
-    public static TypeSignature ofNamed(String name, Object namedTypeDescriptor) {
-        return new TypeSignature(requireNonNull(name, "name"),
-                                 requireNonNull(namedTypeDescriptor, "namedTypeDescriptor"));
+    static TypeSignature ofNamed(String name, Object namedTypeDescriptor) {
+        requireNonNull(name, "name");
+        requireNonNull(namedTypeDescriptor, "namedTypeDescriptor");
+        return new NamedTypeSignature(TypeSignatureType.NAMED, name, namedTypeDescriptor);
     }
 
-    private static TypeSignature ofNamed(Class<?> namedType, String parameterName) {
-        requireNonNull(namedType, parameterName);
+    /**
+     * Creates a new named type signature for the specified type.
+     */
+    static TypeSignature ofEnum(Class<?> enumType) {
+        requireNonNull(enumType, "enumType");
+        return new NamedTypeSignature(TypeSignatureType.ENUM, enumType);
+    }
 
-        final String typeName = namedType.getName();
-        checkArgument(NAMED_PATTERN.matcher(typeName).matches(), "%s: %s", parameterName, typeName);
-        checkArgument(!namedType.isArray(), "%s is an array: %s", parameterName, typeName);
-        checkArgument(!namedType.isPrimitive(), "%s is a primitive type: %s", parameterName, typeName);
-
-        return new TypeSignature(namedType);
+    /**
+     * Creates a new named type signature for the provided name and arbitrary descriptor.
+     */
+    static TypeSignature ofEnum(String name, Object enumTypeDescriptor) {
+        requireNonNull(name, "name");
+        requireNonNull(enumTypeDescriptor, "enumTypeDescriptor");
+        return new NamedTypeSignature(TypeSignatureType.ENUM, name, enumTypeDescriptor);
     }
 
     /**
      * Creates a new unresolved type signature with the specified type name.
      */
-    public static TypeSignature ofUnresolved(String unresolvedTypeName) {
+    static TypeSignature ofUnresolved(String unresolvedTypeName) {
         requireNonNull(unresolvedTypeName, "unresolvedTypeName");
-        return new TypeSignature('?' + unresolvedTypeName, ImmutableList.of());
-    }
-
-    private final String name;
-    @Nullable
-    private final Object namedTypeDescriptor;
-    private final List<TypeSignature> typeParameters;
-
-    /**
-     * Creates a new non-named type signature.
-     */
-    private TypeSignature(String name, List<TypeSignature> typeParameters) {
-        this.name = name;
-        this.typeParameters = typeParameters;
-        namedTypeDescriptor = null;
+        return new DefaultTypeSignature(TypeSignatureType.UNRESOLVED, '?' + unresolvedTypeName);
     }
 
     /**
-     * Creates a new type signature for a named type.
+     * Returns the {@link TypeSignatureType}.
      */
-    private TypeSignature(Class<?> namedTypeDescriptor) {
-        name = namedTypeDescriptor.getName();
-        this.namedTypeDescriptor = namedTypeDescriptor;
-        typeParameters = ImmutableList.of();
-    }
-
-    private TypeSignature(String name, Object namedTypeDescriptor) {
-        this.name = name;
-        this.namedTypeDescriptor = namedTypeDescriptor;
-        typeParameters = ImmutableList.of();
-    }
+    TypeSignatureType type();
 
     /**
      * Returns the name of the type.
      */
-    public String name() {
-        return name;
-    }
-
-    /**
-     * Returns the descriptor of the type if and only if this type signature represents a named type.
-     * For reflection-based {@link DocServicePlugin}s, this will probably be a {@link Class}, but
-     * other plugins may use an actual instance with descriptor information.
-     */
-    @Nullable
-    public Object namedTypeDescriptor() {
-        return namedTypeDescriptor;
-    }
-
-    /**
-     * Returns the list of the type parameters of this type signature.
-     */
-    public List<TypeSignature> typeParameters() {
-        return typeParameters;
-    }
+    String name();
 
     /**
      * Returns the {@link String} representation of this type signature, as described in the class
      * documentation.
      */
-    public String signature() {
-        if (typeParameters.isEmpty()) {
-            return name;
-        } else {
-            return name + '<' + Joiner.on(", ").join(typeParameters) + '>';
-        }
-    }
-
-    /**
-     * Returns {@code true} if this type signature represents a base type.
-     */
-    public boolean isBase() {
-        return !isUnresolved() && !isNamed() && !isContainer();
-    }
-
-    /**
-     * Returns {@code true} if this type signature represents a container type.
-     */
-    public boolean isContainer() {
-        return !typeParameters.isEmpty();
-    }
-
-    /**
-     * Returns {@code true} if this type signature represents an optional type.
-     */
-    public boolean isOptional() {
-        return isContainer() && "optional".equals(name);
-    }
-
-    /**
-     * Returns {@code true} if this type signature represents a named type.
-     */
-    public boolean isNamed() {
-        return namedTypeDescriptor != null;
-    }
-
-    /**
-     * Returns {@code true} if this type signature represents an unresolved type.
-     */
-    public boolean isUnresolved() {
-        return name.startsWith("?");
-    }
-
-    @Override
-    public boolean equals(@Nullable Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (!(o instanceof TypeSignature)) {
-            return false;
-        }
-
-        final TypeSignature that = (TypeSignature) o;
-        if (!name.equals(that.name)) {
-            return false;
-        }
-
-        return Objects.equals(namedTypeDescriptor, that.namedTypeDescriptor) &&
-               Objects.equals(typeParameters, that.typeParameters);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(name, namedTypeDescriptor, typeParameters);
-    }
-
-    @Override
-    public String toString() {
-        return signature();
+    default String signature() {
+        return name();
     }
 }

@@ -3,6 +3,7 @@
     "name" : "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$ParamService",
     "methods" : [ {
       "name" : "param",
+      "id" : "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$ParamService/param/GET",
       "returnTypeSignature" : "CompletableFuture<string>",
       "parameters" : [ {
         "name" : "id",

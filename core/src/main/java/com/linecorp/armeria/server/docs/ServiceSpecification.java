@@ -64,13 +64,13 @@ public final class ServiceSpecification {
      */
     public static ServiceSpecification generate(
             Iterable<ServiceInfo> services,
-            Function<TypeSignature, ? extends NamedTypeInfo> namedTypeInfoFactory) {
+            Function<NamedTypeSignature, ? extends NamedTypeInfo> namedTypeInfoFactory) {
         if (Iterables.isEmpty(services)) {
             return emptyServiceSpecification;
         }
 
         // Collect all named types referred by the services.
-        final Set<TypeSignature> namedTypes =
+        final Set<NamedTypeSignature> namedTypes =
                 Streams.stream(services)
                        .flatMap(s -> s.findNamedTypes().stream())
                        .collect(toImmutableSortedSet(comparing(TypeSignature::name)));
@@ -85,9 +85,9 @@ public final class ServiceSpecification {
     }
 
     private static void generateNamedTypeInfos(
-            Function<TypeSignature, ? extends NamedTypeInfo> namedTypeInfoFactory,
+            Function<NamedTypeSignature, ? extends NamedTypeInfo> namedTypeInfoFactory,
             Map<String, EnumInfo> enums, Map<String, StructInfo> structs,
-            Map<String, ExceptionInfo> exceptions, Set<TypeSignature> namedTypes) {
+            Map<String, ExceptionInfo> exceptions, Set<NamedTypeSignature> namedTypes) {
 
         namedTypes.forEach(type -> {
             final String typeName = type.name();
@@ -100,7 +100,9 @@ public final class ServiceSpecification {
             final NamedTypeInfo newInfo = namedTypeInfoFactory.apply(type);
             if (newInfo instanceof EnumInfo) {
                 enums.put(newInfo.name(), (EnumInfo) newInfo);
-            } else if (newInfo instanceof StructInfo) {
+                return;
+            }
+            if (newInfo instanceof StructInfo) {
                 structs.put(newInfo.name(), (StructInfo) newInfo);
             } else if (newInfo instanceof ExceptionInfo) {
                 exceptions.put(newInfo.name(), (ExceptionInfo) newInfo);

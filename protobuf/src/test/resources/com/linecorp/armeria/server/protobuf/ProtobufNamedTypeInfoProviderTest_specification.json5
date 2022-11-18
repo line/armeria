@@ -3,6 +3,7 @@
     "name" : "com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProviderTest$ProtobufService",
     "methods" : [ {
       "name" : "json",
+      "id" : "com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProviderTest$ProtobufService/json/POST",
       "returnTypeSignature" : "CompletableFuture<com.linecorp.armeria.protobuf.testing.Messages$TestMessage>",
       "parameters" : [ {
         "name" : "armeria.protobuf.testing.TestMessage",

@@ -5,6 +5,7 @@
       "methods": [
         {
           "name": "json",
+          "id" : "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$JsonService/json/POST",
           "returnTypeSignature": "CompletableFuture<com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$BarResponse>",
           "parameters": [
             {

@@ -83,11 +83,11 @@ class ThriftNamedTypeInfoProviderTest {
         fields.add(FieldInfo.of("doubleVal", TypeSignature.ofBase("double")));
         fields.add(FieldInfo.of("stringVal", string));
         fields.add(FieldInfo.of("binaryVal", TypeSignature.ofBase("binary")));
-        fields.add(FieldInfo.of("enumVal", TypeSignature.ofNamed(FooEnum.class)));
+        fields.add(FieldInfo.of("enumVal", TypeSignature.ofEnum(FooEnum.class)));
         fields.add(FieldInfo.of("unionVal", TypeSignature.ofNamed(FooUnion.class)));
         fields.add(FieldInfo.of("mapVal", TypeSignature.ofMap(
-                string, TypeSignature.ofNamed(FooEnum.class))));
-        fields.add(FieldInfo.of("setVal", TypeSignature.ofSet(FooUnion.class)));
+                string, TypeSignature.ofEnum(FooEnum.class))));
+        fields.add(FieldInfo.of("setVal", TypeSignature.ofSet(TypeSignature.ofNamed(FooUnion.class))));
         fields.add(FieldInfo.of("listVal", TypeSignature.ofList(string)));
         fields.add(FieldInfo.builder("selfRef", TypeSignature.ofNamed(FooStruct.class))
                             .requirement(FieldRequirement.OPTIONAL).build());
