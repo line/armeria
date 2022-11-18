@@ -188,23 +188,18 @@ public final class DocService extends SimpleDecoratingHttpService {
         server = cfg.server();
 
         // Build the Specification after all the services are added to the server.
-        server.addListener(new ServerListenerAdapter() {
-            @Override
-            public void serverStarting(Server server) throws Exception {
-                final ServerConfig config = server.config();
-                final List<VirtualHost> virtualHosts = config.findVirtualHosts(DocService.this);
+        final ServerConfig config = server.config();
+        final List<VirtualHost> virtualHosts = config.findVirtualHosts(DocService.this);
 
-                final List<ServiceConfig> services =
-                        config.serviceConfigs().stream()
-                              .filter(se -> virtualHosts.contains(se.virtualHost()))
-                              .collect(toImmutableList());
-                final ExecutorService executorService = Executors.newSingleThreadExecutor(
-                        ThreadFactories.newThreadFactory("docservice-loader", true));
-                vfs().specificationLoader.updateServices(services, executorService).handle((res, e) -> {
-                    executorService.shutdown();
-                    return null;
-                });
-            }
+        final List<ServiceConfig> services =
+                config.serviceConfigs().stream()
+                      .filter(se -> virtualHosts.contains(se.virtualHost()))
+                      .collect(toImmutableList());
+        final ExecutorService executorService = Executors.newSingleThreadExecutor(
+                ThreadFactories.newThreadFactory("docservice-loader", true));
+        vfs().specificationLoader.updateServices(services, executorService).handle((res, e) -> {
+            executorService.shutdown();
+            return null;
         });
     }
 
