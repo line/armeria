@@ -235,12 +235,12 @@ If you use <type://CircuitBreakerBuilder>, you can configure the parameters whic
     <type://CircuitBreakerListener#metricCollecting()> to export metrics:
 
   ```java
-  import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerListener
+  import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerListener;
 
-  import io.micrometer.core.instrument.Metrics;
+  import com.linecorp.armeria.common.Flags;
 
   final CircuitBreakerListener listener =
-          CircuitBreakerListener.metricCollecting(Metrics.globalRegistry);
+          CircuitBreakerListener.metricCollecting(Flags.meterRegistry());
   final CircuitBreakerBuilder builder = CircuitBreaker.builder()
                                                       .listener(listener);
   ```

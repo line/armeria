@@ -54,6 +54,7 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.DependencyInjector;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -74,7 +75,6 @@ import com.linecorp.armeria.spring.InternalServices;
 import com.linecorp.armeria.spring.MetricCollectingServiceConfigurator;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import io.netty.handler.ssl.ClientAuth;
 import reactor.core.Disposable;
 
@@ -159,7 +159,7 @@ public class ArmeriaReactiveWebServerFactory extends AbstractReactiveWebServerFa
 
         if (armeriaSettings != null) {
             final MeterRegistry meterRegistry = firstNonNull(findBean(MeterRegistry.class),
-                                                             Metrics.globalRegistry);
+                                                             Flags.meterRegistry());
             configureServerWithArmeriaSettings(sb, armeriaSettings,
                                                newInternalServices(armeriaSettings, meterRegistry),
                                                findBeans(ArmeriaServerConfigurator.class),
