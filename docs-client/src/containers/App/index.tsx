@@ -30,7 +30,6 @@ import Tooltip from '@material-ui/core/Tooltip';
 import Typography from '@material-ui/core/Typography';
 import ExpandLess from '@material-ui/icons/ExpandLess';
 import ExpandMore from '@material-ui/icons/ExpandMore';
-import InfoOutlined from '@material-ui/icons/InfoOutlined';
 import MenuIcon from '@material-ui/icons/Menu';
 import React, { useCallback, useEffect, useReducer, useState } from 'react';
 import { Helmet } from 'react-helmet';
@@ -192,11 +191,10 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
           <Collapse in={servicesSectionOpen} timeout="auto">
             <ListItem button onClick={() => navigateTo('/overview')}>
               <ListItemText>
-                <Typography variant="subtitle2">
+                <Typography variant="subtitle1">
                   <code> Overview </code>
                 </Typography>
               </ListItemText>
-              <InfoOutlined />
             </ListItem>
             {specification.getServices().map((service) => (
               <div key={service.name}>
@@ -210,12 +208,8 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                         <Tooltip
                           title={
                             <>
-                              <Typography variant="subtitle1">
-                                <b>{service.name}</b>
-                              </Typography>
-                              <Typography variant="subtitle2">
-                                {service.descriptionInfo?.docString}
-                              </Typography>
+                              <code>{service.name}</code> <br />
+                              <code>{service.descriptionInfo?.docString}</code>
                             </>
                           }
                           placement="top"
