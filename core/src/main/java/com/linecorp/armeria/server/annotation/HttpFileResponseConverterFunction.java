@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.CreateIfMissing;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.file.HttpFile;
 
@@ -37,6 +38,7 @@ import com.linecorp.armeria.server.file.HttpFile;
  * A response converter implementation which creates an {@link HttpResponse} when the {@code result} is
  * an instance of {@link HttpFile}.
  */
+@CreateIfMissing
 public final class HttpFileResponseConverterFunction implements ResponseConverterFunction {
 
     @Override

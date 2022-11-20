@@ -1,0 +1,5 @@
+dependencies {
+    projectsWithFlags('java', 'publish')
+            .findAll { !it.ext.hasFlag('no_aggregation') }
+            .forEach { testImplementation(it) }
+}

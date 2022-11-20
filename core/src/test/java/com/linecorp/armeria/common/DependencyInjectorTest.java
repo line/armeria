@@ -31,7 +31,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.common.BuiltInDependency;
+import com.linecorp.armeria.internal.common.CreateIfMissing;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
@@ -234,7 +234,7 @@ class DependencyInjectorTest {
         }
     }
 
-    @BuiltInDependency
+    @CreateIfMissing
     private static class BuiltInDecorator implements DecoratingHttpServiceFunction {
 
         @Override
@@ -245,7 +245,7 @@ class DependencyInjectorTest {
         }
     }
 
-    @BuiltInDependency
+    @CreateIfMissing
     private static class BuiltInDecoratorFactory
             implements DecoratorFactoryFunction<BuiltInDecoratorAnnotation> {
 
@@ -257,7 +257,7 @@ class DependencyInjectorTest {
         }
     }
 
-    @BuiltInDependency
+    @CreateIfMissing
     private static class BuiltInRequestConverter implements RequestConverterFunction {
 
         @Override
@@ -273,7 +273,7 @@ class DependencyInjectorTest {
         }
     }
 
-    @BuiltInDependency
+    @CreateIfMissing
     private static class BuiltInResponseConverter implements ResponseConverterFunction {
 
         @Override

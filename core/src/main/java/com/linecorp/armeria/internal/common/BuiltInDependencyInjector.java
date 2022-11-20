@@ -29,7 +29,7 @@ public enum BuiltInDependencyInjector implements DependencyInjector {
     @Override
     public <T> T getInstance(Class<T> type) {
         //noinspection ConstantConditions
-        if (type.getDeclaredAnnotation(BuiltInDependency.class) == null) {
+        if (type.getDeclaredAnnotation(CreateIfMissing.class) == null) {
             return null;
         }
 

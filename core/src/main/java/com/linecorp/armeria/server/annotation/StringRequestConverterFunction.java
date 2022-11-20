@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.AggregatedHttpRequest;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
+import com.linecorp.armeria.internal.common.CreateIfMissing;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -31,6 +32,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * Note that this {@link RequestConverterFunction} is applied to an annotated service by default,
  * so you don't have to specify this converter explicitly.
  */
+@CreateIfMissing
 public final class StringRequestConverterFunction implements RequestConverterFunction {
     /**
      * Converts the specified {@link AggregatedHttpRequest} to a {@link String}.

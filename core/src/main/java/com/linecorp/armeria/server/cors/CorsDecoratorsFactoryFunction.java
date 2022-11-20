@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.util.Arrays;
 import java.util.function.Function;
 
-import com.linecorp.armeria.internal.common.BuiltInDependency;
+import com.linecorp.armeria.internal.common.CreateIfMissing;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
@@ -30,7 +30,7 @@ import com.linecorp.armeria.server.annotation.decorator.CorsDecorators;
 /**
  * A factory which creates a {@link CorsService} decorator when two or more {@link CorsDecorator}s are added.
  */
-@BuiltInDependency
+@CreateIfMissing
 public final class CorsDecoratorsFactoryFunction implements DecoratorFactoryFunction<CorsDecorators> {
 
     @Override

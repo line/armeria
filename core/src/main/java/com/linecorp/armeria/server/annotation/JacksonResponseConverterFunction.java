@@ -37,6 +37,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.CreateIfMissing;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.streaming.JsonTextSequences;
@@ -51,6 +52,7 @@ import com.linecorp.armeria.server.streaming.JsonTextSequences;
  *
  * @see <a href="https://datatracker.ietf.org/doc/rfc7464/">JavaScript Object Notation (JSON) Text Sequences</a>
  */
+@CreateIfMissing
 public final class JacksonResponseConverterFunction implements ResponseConverterFunction {
 
     private static final ObjectMapper defaultObjectMapper = JacksonUtil.newDefaultObjectMapper();

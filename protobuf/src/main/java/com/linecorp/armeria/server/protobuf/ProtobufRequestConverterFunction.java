@@ -50,6 +50,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.common.CreateIfMissing;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 
@@ -76,6 +77,7 @@ import com.linecorp.armeria.server.annotation.RequestConverterFunction;
  * {@link ExtensionRegistry}.
  */
 @UnstableApi
+@CreateIfMissing
 public final class ProtobufRequestConverterFunction implements RequestConverterFunction {
 
     private static final ClassValue<MethodHandle> methodCache = new ClassValue<MethodHandle>() {

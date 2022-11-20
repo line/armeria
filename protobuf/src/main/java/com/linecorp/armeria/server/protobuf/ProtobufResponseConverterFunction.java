@@ -52,6 +52,7 @@ import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.common.CreateIfMissing;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.streaming.JsonTextSequences;
@@ -79,6 +80,7 @@ import com.linecorp.armeria.server.streaming.JsonTextSequences;
  * The {@link JsonFormat#printer()} is used by default to format the response content.
  */
 @UnstableApi
+@CreateIfMissing
 public final class ProtobufResponseConverterFunction implements ResponseConverterFunction {
 
     private static final MethodHandle fromPublisherMH;

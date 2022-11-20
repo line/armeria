@@ -23,12 +23,14 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.CreateIfMissing;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
  * A response converter implementation which creates an {@link HttpResponse} of {@link HttpStatus#NO_CONTENT}
  * when the specified {@code result} is {@code null}.
  */
+@CreateIfMissing
 public final class NullToNoContentResponseConverterFunction implements ResponseConverterFunction {
 
     @Override

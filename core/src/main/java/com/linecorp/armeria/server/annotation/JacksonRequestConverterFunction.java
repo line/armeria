@@ -39,6 +39,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.CreateIfMissing;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -52,6 +53,7 @@ import io.netty.util.AsciiString;
  * Note that this {@link RequestConverterFunction} is applied to an annotated service by default,
  * so you don't have to specify this converter explicitly unless you want to use your own {@link ObjectMapper}.
  */
+@CreateIfMissing
 public final class JacksonRequestConverterFunction implements RequestConverterFunction {
 
     private static final ObjectMapper defaultObjectMapper = JacksonUtil.newDefaultObjectMapper();

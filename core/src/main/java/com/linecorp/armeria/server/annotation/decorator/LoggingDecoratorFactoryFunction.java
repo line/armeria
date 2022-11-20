@@ -17,7 +17,7 @@ package com.linecorp.armeria.server.annotation.decorator;
 
 import java.util.function.Function;
 
-import com.linecorp.armeria.internal.common.BuiltInDependency;
+import com.linecorp.armeria.internal.common.CreateIfMissing;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.logging.LoggingService;
@@ -25,7 +25,7 @@ import com.linecorp.armeria.server.logging.LoggingService;
 /**
  * A factory which creates a {@link LoggingService} decorator.
  */
-@BuiltInDependency
+@CreateIfMissing
 public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFunction<LoggingDecorator> {
 
     /**
