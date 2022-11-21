@@ -22,11 +22,10 @@ import com.google.common.base.Preconditions.checkArgument
 import com.google.common.collect.Iterables
 import com.linecorp.armeria.common._
 import com.linecorp.armeria.common.annotation.{Nullable, UnstableApi}
-import com.linecorp.armeria.internal.common.CreateIfMissing
 import com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom
 import com.linecorp.armeria.internal.server.annotation.ClassUtil.{typeToClass, unwrapUnaryAsyncType}
 import com.linecorp.armeria.server.ServiceRequestContext
-import com.linecorp.armeria.server.annotation.ResponseConverterFunction
+import com.linecorp.armeria.server.annotation.{CreateIfMissing, ResponseConverterFunction}
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.{defaultJsonPrinter, isProtobuf}
 import com.linecorp.armeria.server.scalapb.ScalaPbResponseConverterFunction.{fromObjectMH, fromPublisherMH, fromStreamMH}
 import com.linecorp.armeria.server.streaming.JsonTextSequences

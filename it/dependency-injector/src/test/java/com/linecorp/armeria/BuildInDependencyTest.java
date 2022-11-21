@@ -28,7 +28,7 @@ import org.junit.platform.commons.util.ReflectionUtils;
 import org.reflections.Reflections;
 import org.reflections.scanners.SubTypesScanner;
 
-import com.linecorp.armeria.internal.common.CreateIfMissing;
+import com.linecorp.armeria.server.annotation.CreateIfMissing;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;

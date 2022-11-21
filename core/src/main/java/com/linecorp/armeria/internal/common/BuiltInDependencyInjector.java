@@ -19,6 +19,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 import com.linecorp.armeria.common.DependencyInjector;
+import com.linecorp.armeria.server.annotation.CreateIfMissing;
 
 public enum BuiltInDependencyInjector implements DependencyInjector {
 
