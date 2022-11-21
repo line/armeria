@@ -18,9 +18,9 @@ package com.linecorp.armeria.server.annotation.decorator;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.server.annotation.CreateIfMissing;
 import com.linecorp.armeria.internal.server.annotation.DefaultValues;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.annotation.CreateIfMissing;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.throttling.ThrottlingService;
 import com.linecorp.armeria.server.throttling.ThrottlingStrategy;

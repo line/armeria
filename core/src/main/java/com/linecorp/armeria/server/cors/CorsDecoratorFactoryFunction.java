@@ -19,8 +19,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.function.Function;
 
-import com.linecorp.armeria.server.annotation.CreateIfMissing;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.annotation.CreateIfMissing;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
 

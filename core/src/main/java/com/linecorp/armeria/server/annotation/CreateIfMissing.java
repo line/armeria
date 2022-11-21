@@ -35,11 +35,11 @@ import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
  *     <li>{@link DecoratorFactory#value()}</li>
  *     <li>{@link ExceptionHandler#value()}</li>
  * </ul>
- *
  * The required dependencies are created as singleton object and must have a default
  * no-argument public constructor.
  *
- * <p>For example:<pre>{@code
+ * <p>For example:
+ * <pre>{@code
  * @CreateIfMissing
  * public class FooDecoratorFactoryFunction implements DecoratorFactoryFunction<FooDecorator> {
  *     // The class has a default no-argument constructor.
