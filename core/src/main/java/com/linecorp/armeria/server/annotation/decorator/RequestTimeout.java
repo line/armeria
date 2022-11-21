@@ -21,10 +21,11 @@ import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 import java.util.concurrent.TimeUnit;
 
+import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.server.annotation.DecoratorFactory;
 
 /**
- * Annotation for request timeout
+ * Annotation for request timeout.
  */
 @DecoratorFactory(RequestTimeoutDecoratorFunction.class)
 @Retention(RetentionPolicy.RUNTIME)
@@ -32,12 +33,17 @@ import com.linecorp.armeria.server.annotation.DecoratorFactory;
 public @interface RequestTimeout {
 
     /**
-     * Value of request timeout to set
+     * Value of request timeout to set.
      */
     long value();
 
     /**
-     * Time unit of request timeout to set
+     * Time unit of request timeout to set.
      */
-    TimeUnit unit();
+    TimeUnit unit() default TimeUnit.MILLISECONDS;
+
+    /**
+     * Timeout mode of request timeout to set.
+     */
+    TimeoutMode timeoutMode() default TimeoutMode.SET_FROM_START;
 }

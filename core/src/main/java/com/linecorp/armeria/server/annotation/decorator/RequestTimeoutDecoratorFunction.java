@@ -15,7 +15,6 @@
  */
 package com.linecorp.armeria.server.annotation.decorator;
 
-import java.time.Duration;
 import java.util.function.Function;
 
 import com.linecorp.armeria.common.HttpRequest;
@@ -27,21 +26,21 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 
 /**
- * A factory which creates a decorator that sets request timeout to current {@link ServiceRequestContext}
+ * A factory which creates a decorator that sets request timeout to current {@link ServiceRequestContext}.
  */
-public class RequestTimeoutDecoratorFunction implements DecoratorFactoryFunction<RequestTimeout> {
+public final class RequestTimeoutDecoratorFunction implements DecoratorFactoryFunction<RequestTimeout> {
 
     /**
      * Creates a new decorator with the specified {@code parameter}.
      */
     @Override
     public Function<? super HttpService, ? extends HttpService> newDecorator(RequestTimeout parameter) {
-        final Duration duration = Duration.of(parameter.value(), parameter.unit().toChronoUnit());
-
+        final long timeoutMillis = parameter.unit().toMillis(parameter.value());
         return delegate -> new SimpleDecoratingHttpService(delegate) {
             @Override
             public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                ServiceRequestContext.current().setRequestTimeout(TimeoutMode.SET_FROM_START, duration);
+                ServiceRequestContext.current()
+                                     .setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, timeoutMillis);
                 return delegate.serve(ctx, req);
             }
         };
