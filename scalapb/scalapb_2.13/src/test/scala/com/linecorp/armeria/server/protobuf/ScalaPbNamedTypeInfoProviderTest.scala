@@ -22,11 +22,12 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 import com.linecorp.armeria.scalapb.testing.messages.TestMessage
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.{ConsumesJson, Post, ProducesJson}
-import com.linecorp.armeria.server.docs.{DocService, FieldInfo, FieldRequirement, StructInfo}
+import com.linecorp.armeria.server.docs.{ContainerTypeSignature, DocService, FieldInfo, FieldRequirement, MapTypeSignature, StructInfo, TypeSignatureType}
 import com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider._
 import com.linecorp.armeria.server.scalapb.{ScalaPbNamedTypeInfoProvider, ServerSuite}
 import munit.FunSuite
 import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
+
 import scala.concurrent.Future
 
 class ScalaPbNamedTypeInfoProviderTest extends FunSuite with ServerSuite {
