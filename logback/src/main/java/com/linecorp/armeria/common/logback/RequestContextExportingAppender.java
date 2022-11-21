@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Function;
@@ -40,6 +41,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.IThrowableProxy;
 import ch.qos.logback.classic.spi.LoggerContextVO;
+import ch.qos.logback.classic.spi.LoggingEvent;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.UnsynchronizedAppenderBase;
 import ch.qos.logback.core.spi.AppenderAttachable;
@@ -201,9 +203,10 @@ public final class RequestContextExportingAppender
             final Map<String, String> mdcMap;
 
             if (!originalMdcMap.isEmpty()) {
-                mdcMap = new UnionMap<>(contextMap, originalMdcMap);
+                mdcMap = new HashMap<>(originalMdcMap);
+                mdcMap.putAll(contextMap);
             } else {
-                mdcMap = contextMap;
+                mdcMap = new HashMap<>(contextMap);
             }
             eventObject = new LoggingEventWrapper(eventObject, mdcMap);
         }
@@ -262,7 +265,7 @@ public final class RequestContextExportingAppender
         return aai.detachAppender(name);
     }
 
-    private static final class LoggingEventWrapper implements ILoggingEvent {
+    private static final class LoggingEventWrapper extends LoggingEvent {
         private final ILoggingEvent event;
         private final Map<String, String> mdcPropertyMap;
         @Nullable
