@@ -41,9 +41,4 @@ public @interface RequestTimeout {
      * Time unit of request timeout to set.
      */
     TimeUnit unit() default TimeUnit.MILLISECONDS;
-
-    /**
-     * Timeout mode of request timeout to set.
-     */
-    TimeoutMode timeoutMode() default TimeoutMode.SET_FROM_START;
 }

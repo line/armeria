@@ -39,7 +39,6 @@ public class RequestTimeoutAnnotationTest {
         @RequestTimeout(timeoutMillis)
         public String timeoutMillis(ServiceRequestContext ctx, HttpRequest req) {
             AnnotatedServiceTest.validateContextAndRequest(ctx, req);
-            ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, timeoutMillis);
             return Long.toString(ctx.requestTimeoutMillis());
         }
 
