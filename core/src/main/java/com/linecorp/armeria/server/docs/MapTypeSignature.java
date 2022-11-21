@@ -18,9 +18,12 @@ package com.linecorp.armeria.server.docs;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A map {@link TypeSignature}.
  */
+@UnstableApi
 public final class MapTypeSignature extends ContainerTypeSignature {
 
     private final TypeSignature keyTypeSignature;
@@ -45,4 +48,6 @@ public final class MapTypeSignature extends ContainerTypeSignature {
     public TypeSignature valueTypeSignature() {
         return valueTypeSignature;
     }
+
+    // Use equals() hashCode() in ContainerTypeSignature.
 }

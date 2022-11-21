@@ -25,10 +25,12 @@ import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A container {@link TypeSignature}.
  */
+@UnstableApi
 public class ContainerTypeSignature extends DefaultTypeSignature {
 
     private final List<TypeSignature> typeParameters;

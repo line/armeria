@@ -22,10 +22,12 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * A named {@link TypeSignature}.
  */
+@UnstableApi
 public final class NamedTypeSignature extends DefaultTypeSignature {
 
     static final Pattern NAMED_PATTERN = Pattern.compile("^([^.<>]+(?:\\.[^.<>]+)+)$");

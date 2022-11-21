@@ -23,10 +23,12 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * The default {@link TypeSignature}.
  */
+@UnstableApi
 public class DefaultTypeSignature implements TypeSignature {
 
     private static final Pattern BASE_PATTERN = Pattern.compile("^([^.<>]+)$");
