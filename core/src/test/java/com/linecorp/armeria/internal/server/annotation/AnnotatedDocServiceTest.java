@@ -73,6 +73,7 @@ import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Head;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Options;
+import com.linecorp.armeria.server.annotation.Order;
 import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Patch;
 import com.linecorp.armeria.server.annotation.Path;
@@ -342,7 +343,7 @@ class AnnotatedDocServiceTest {
                 FieldInfo.builder("period", TypeSignature.ofNamed(Period.class))
                          .requirement(REQUIRED).location(QUERY).build());
         final MethodInfo methodInfo = new MethodInfo(
-                MyService.class.getName(), "overload", 1, TypeSignature.ofNamed(HttpResponse.class), fieldInfos,
+                MyService.class.getName(), "overload", 0, TypeSignature.ofNamed(HttpResponse.class), fieldInfos,
                 ImmutableList.of(), ImmutableList.of(endpoint), HttpMethod.GET, DescriptionInfo.empty());
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
@@ -357,7 +358,7 @@ class AnnotatedDocServiceTest {
                 FieldInfo.builder("myEnum", toTypeSignature(MyEnum.class))
                          .requirement(REQUIRED).location(QUERY).build());
         final MethodInfo methodInfo = new MethodInfo(
-                MyService.class.getName(), "overload", 0, TypeSignature.ofNamed(HttpResponse.class), fieldInfos,
+                MyService.class.getName(), "overload", 1, TypeSignature.ofNamed(HttpResponse.class), fieldInfos,
                 ImmutableList.of(), ImmutableList.of(endpoint), HttpMethod.GET, DescriptionInfo.empty());
         methodInfos.computeIfAbsent(MyService.class, unused -> new HashSet<>()).add(methodInfo);
     }
@@ -558,11 +559,13 @@ class AnnotatedDocServiceTest {
             return request.bar;
         }
 
+        @Order(1) // Use Order to create the MethodInfo in order.
         @Get("/overload")
         public HttpResponse overload(@Param Period period) {
             return HttpResponse.of(200);
         }
 
+        @Order(2) // Use Order to create the MethodInfo in order.
         @Get("/overload1")
         public HttpResponse overload(@Param Period period, @Param MyEnum myEnum) {
             return HttpResponse.of(200);
