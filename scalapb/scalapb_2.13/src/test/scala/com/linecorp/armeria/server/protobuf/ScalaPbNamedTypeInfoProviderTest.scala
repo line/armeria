@@ -22,12 +22,11 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 import com.linecorp.armeria.scalapb.testing.messages.TestMessage
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.{ConsumesJson, Post, ProducesJson}
-import com.linecorp.armeria.server.docs._
+import com.linecorp.armeria.server.docs.{DocService, FieldInfo, FieldRequirement, StructInfo}
 import com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider._
 import com.linecorp.armeria.server.scalapb.{ScalaPbNamedTypeInfoProvider, ServerSuite}
 import munit.FunSuite
 import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
-
 import scala.concurrent.Future
 
 class ScalaPbNamedTypeInfoProviderTest extends FunSuite with ServerSuite {
@@ -138,9 +137,6 @@ class ScalaPbNamedTypeInfoProviderTest extends FunSuite with ServerSuite {
     val expected = json5Mapper.readTree(resourceAsStream)
 
     assertEquals(response.get("services").get(0).get("name").textValue, classOf[ScalaPbService].getName)
-    println(json5Mapper.writerWithDefaultPrettyPrinter().writeValueAsString(response.get("services").get(0).get("methods")))
-
-
     assertThatJson(response.get("services").get(0).get("methods"))
       .isEqualTo(expected.get("services").get(0).get("methods"))
     assertThatJson(response.get("structs")).isEqualTo(expected.get("structs"))
