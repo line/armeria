@@ -411,7 +411,8 @@ public final class CancellationScheduler {
         }
     }
 
-    private boolean isInitialized() {
+    @VisibleForTesting
+    public boolean isInitialized() {
         return pendingTask == noopPendingTask && eventLoop != null;
     }
 

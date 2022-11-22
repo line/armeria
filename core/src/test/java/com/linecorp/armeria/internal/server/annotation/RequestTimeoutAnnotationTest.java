@@ -14,6 +14,7 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.util.TimeoutMode;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Get;
@@ -48,6 +49,12 @@ public class RequestTimeoutAnnotationTest {
             AnnotatedServiceTest.validateContextAndRequest(ctx, req);
             return Long.toString(ctx.requestTimeoutMillis());
         }
+
+        @Get("/subscriberIsInitialized")
+        public boolean subscriberIsInitialized(ServiceRequestContext ctx, HttpRequest req) {
+            AnnotatedServiceTest.validateContextAndRequest(ctx, req);
+            return ((DefaultServiceRequestContext) ctx).requestCancellationScheduler().isInitialized();
+        }
     }
 
     @Test
@@ -64,6 +71,15 @@ public class RequestTimeoutAnnotationTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(Long.parseLong(response.contentUtf8()))
                 .isEqualTo(TimeUnit.SECONDS.toMillis(timeoutSeconds));
+    }
+
+    @Test
+    public void testCancellationSchedulerInit() {
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+
+        final AggregatedHttpResponse response = client.execute(RequestHeaders.of(HttpMethod.GET, "/myService/timeoutMillis"));
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(Boolean.parseBoolean(response.contentUtf8())).isEqualTo(true);
     }
 
 }
