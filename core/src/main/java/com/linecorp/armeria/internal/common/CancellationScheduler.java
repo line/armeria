@@ -201,7 +201,7 @@ public final class CancellationScheduler {
                 eventLoop.execute(() -> setTimeoutNanosFromStart0(timeoutNanos));
             }
         } else {
-            addPendingTimeoutNanos(timeoutNanos);
+            setPendingTimeoutNanos(timeoutNanos);
             addPendingTask(() -> setTimeoutNanosFromStart0(timeoutNanos));
         }
     }
