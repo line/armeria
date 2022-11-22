@@ -260,18 +260,18 @@ public final class CancellationScheduler {
             if (eventLoop.inEventLoop()) {
                 setTimeoutNanosFromNow0(timeoutNanos);
             } else {
-                final long startTimeNanos = System.nanoTime();
+                final long eventLoopStartTimeNanos = System.nanoTime();
                 eventLoop.execute(() -> {
-                    final long passedTimeNanos0 = System.nanoTime() - startTimeNanos;
+                    final long passedTimeNanos0 = System.nanoTime() - eventLoopStartTimeNanos;
                     final long timeoutNanos0 = Math.max(1, timeoutNanos - passedTimeNanos0);
                     setTimeoutNanosFromNow0(timeoutNanos0);
                 });
             }
         } else {
-            final long startTimeNanos = System.nanoTime();
+            final long pendingTaskRegisterTimeNanos = System.nanoTime();
             setPendingTimeoutNanos(timeoutNanos);
             addPendingTask(() -> {
-                final long passedTimeNanos0 = System.nanoTime() - startTimeNanos;
+                final long passedTimeNanos0 = System.nanoTime() - pendingTaskRegisterTimeNanos;
                 final long timeoutNanos0 = Math.max(1, timeoutNanos - passedTimeNanos0);
                 setTimeoutNanosFromNow0(timeoutNanos0);
             });
