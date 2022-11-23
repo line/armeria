@@ -26,6 +26,7 @@ import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 
 import com.google.common.base.MoreObjects;
@@ -47,6 +48,11 @@ import io.netty.util.concurrent.Future;
 
 final class DefaultHealthCheckerContext
         extends AbstractExecutorService implements HealthCheckerContext, ScheduledExecutorService {
+
+    /**
+     * Lock for {@link scheduledFutures}.
+     */
+    private final ReentrantLock lock = new ReentrantLock();
 
     private final Endpoint originalEndpoint;
     private final Endpoint endpoint;
@@ -101,7 +107,8 @@ final class DefaultHealthCheckerContext
     private CompletableFuture<Void> destroy() {
         assert handle != null : handle;
         return handle.closeAsync().handle((unused1, unused2) -> {
-            synchronized (scheduledFutures) {
+            lock();
+            try {
                 if (destroyed) {
                     return null;
                 }
@@ -115,6 +122,8 @@ final class DefaultHealthCheckerContext
                     final ImmutableList<Future<?>> copy = ImmutableList.copyOf(scheduledFutures.keySet());
                     copy.forEach(f -> f.cancel(false));
                 }
+            } finally {
+                unlock();
             }
 
             onUpdateHealth.accept(originalEndpoint, false);
@@ -184,43 +193,58 @@ final class DefaultHealthCheckerContext
 
     @Override
     public void execute(Runnable command) {
-        synchronized (scheduledFutures) {
+        lock();
+        try {
             rejectIfDestroyed(command);
             add(eventLoopGroup().submit(command));
+        } finally {
+            unlock();
         }
     }
 
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        synchronized (scheduledFutures) {
+        lock();
+        try {
             rejectIfDestroyed(command);
             return add(eventLoopGroup().schedule(command, delay, unit));
+        } finally {
+            unlock();
         }
     }
 
     @Override
     public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        synchronized (scheduledFutures) {
+        lock();
+        try {
             rejectIfDestroyed(callable);
             return add(eventLoopGroup().schedule(callable, delay, unit));
+        } finally {
+            unlock();
         }
     }
 
     @Override
     public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
                                                   TimeUnit unit) {
-        synchronized (scheduledFutures) {
+        lock();
+        try {
             rejectIfDestroyed(command);
             return add(eventLoopGroup().scheduleAtFixedRate(command, initialDelay, period, unit));
+        } finally {
+            unlock();
         }
     }
 
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
                                                      TimeUnit unit) {
-        synchronized (scheduledFutures) {
+        lock();
+        try {
             rejectIfDestroyed(command);
             return add(eventLoopGroup().scheduleWithFixedDelay(command, initialDelay, delay, unit));
+        } finally {
+            unlock();
         }
     }
 
@@ -264,8 +288,11 @@ final class DefaultHealthCheckerContext
     private <T extends Future<U>, U> T add(T future) {
         scheduledFutures.put(future, Boolean.TRUE);
         future.addListener(f -> {
-            synchronized (scheduledFutures) {
+            lock();
+            try {
                 scheduledFutures.remove(f);
+            } finally {
+                unlock();
             }
         });
         return future;
@@ -303,5 +330,13 @@ final class DefaultHealthCheckerContext
                           .add("destroyed", destroyed)
                           .add("refCnt", refCnt)
                           .toString();
+    }
+
+    private void lock() {
+        lock.lock();
+    }
+
+    private void unlock() {
+        lock.unlock();
     }
 }

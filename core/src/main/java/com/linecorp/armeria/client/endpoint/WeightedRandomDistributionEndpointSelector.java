@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
@@ -34,6 +35,11 @@ import com.linecorp.armeria.common.annotation.Nullable;
  * are 4/10 and 6/10.
  */
 final class WeightedRandomDistributionEndpointSelector {
+
+    /**
+     * Lock for {@link currentEntries}.
+     */
+    private final ReentrantLock lock = new ReentrantLock();
 
     private final List<Entry> allEntries;
     private final List<Entry> currentEntries;
@@ -69,7 +75,8 @@ final class WeightedRandomDistributionEndpointSelector {
         }
 
         final ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
-        synchronized (currentEntries) {
+        lock();
+        try {
             long target = threadLocalRandom.nextLong(remaining);
             final Iterator<Entry> it = currentEntries.iterator();
             while (it.hasNext()) {
@@ -93,6 +100,8 @@ final class WeightedRandomDistributionEndpointSelector {
                     return entry.endpoint();
                 }
             }
+        } finally {
+            unlock();
         }
 
         // Since `allEntries` is not empty, should select one Endpoint from `allEntries`.
@@ -134,5 +143,13 @@ final class WeightedRandomDistributionEndpointSelector {
         boolean isFull() {
             return counter >= endpoint.weight();
         }
+    }
+
+    private void lock() {
+        lock.lock();
+    }
+
+    private void unlock() {
+        lock.unlock();
     }
 }

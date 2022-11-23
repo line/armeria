@@ -27,6 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
 import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.ToIntFunction;
 
 import org.slf4j.Logger;
@@ -247,11 +248,14 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
 
         for (final Iterator<AbstractEventLoopState> i = states.values().iterator(); i.hasNext();) {
             final AbstractEventLoopState state = i.next();
+            final ReentrantLock lock = new ReentrantLock();
             final boolean remove;
-
-            synchronized (state) {
+            lock.lock();
+            try {
                 remove = state.allActiveRequests() == 0 &&
                          currentTimeNanos - state.lastActivityTimeNanos() >= CLEANUP_INTERVAL_NANOS;
+            } finally {
+                lock.unlock();
             }
 
             if (remove) {

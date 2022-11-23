@@ -28,6 +28,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -74,6 +75,11 @@ import io.micrometer.core.instrument.binder.MeterBinder;
 public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckedEndpointGroup.class);
+
+    /**
+     * Lock for {@link contextGroupChain}.
+     */
+    private final ReentrantLock lock = new ReentrantLock();
 
     /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} that sends HTTP {@code HEAD} health check
@@ -191,7 +197,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     @VisibleForTesting
     List<Endpoint> allHealthyEndpoints() {
-        synchronized (contextGroupChain) {
+        lock();
+        try {
             final HealthCheckContextGroup newGroup = contextGroupChain.peekLast();
             if (newGroup == null) {
                 return ImmutableList.of();
@@ -217,18 +224,23 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
             }
             return allHealthyEndpoints;
+        } finally {
+            unlock();
         }
     }
 
     @Nullable
     private DefaultHealthCheckerContext findContext(Endpoint endpoint) {
-        synchronized (contextGroupChain) {
+        lock();
+        try {
             for (HealthCheckContextGroup contextGroup : contextGroupChain) {
                 final DefaultHealthCheckerContext context = contextGroup.contexts().get(endpoint);
                 if (context != null) {
                     return context;
                 }
             }
+        } finally {
+            unlock();
         }
         return null;
     }
@@ -239,7 +251,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void destroyOldContexts(HealthCheckContextGroup contextGroup) {
-        synchronized (contextGroupChain) {
+        lock();
+        try {
             final Iterator<HealthCheckContextGroup> it = contextGroupChain.iterator();
             while (it.hasNext()) {
                 final HealthCheckContextGroup maybeOldGroup = it.next();
@@ -251,6 +264,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
                 it.remove();
             }
+        } finally {
+            unlock();
         }
     }
 
@@ -278,7 +293,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     protected void doCloseAsync(CompletableFuture<?> future) {
         // Stop the health checkers in parallel.
         final CompletableFuture<?> stopFutures;
-        synchronized (contextGroupChain) {
+        lock();
+        try {
             final ImmutableList.Builder<CompletableFuture<?>> completionFutures = ImmutableList.builder();
             for (HealthCheckContextGroup group : contextGroupChain) {
                 for (DefaultHealthCheckerContext context : group.contexts().values()) {
@@ -298,11 +314,16 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
             }
             stopFutures = CompletableFutures.allAsList(completionFutures.build());
+        } finally {
+            unlock();
         }
 
         stopFutures.handle((unused1, unused2) -> {
-            synchronized (contextGroupChain) {
+            lock();
+            try {
                 contextGroupChain.clear();
+            } finally {
+                unlock();
             }
             return delegate.closeAsync();
         }).handle((unused1, unused2) -> future.complete(null));
@@ -339,5 +360,13 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                           .add("selectionTimeoutMillis", selectionTimeoutMillis)
                           .add("contextGroupChain", contextGroupChain)
                           .toString();
+    }
+
+    private void lock() {
+        lock.lock();
+    }
+
+    private void unlock() {
+        lock.unlock();
     }
 }
