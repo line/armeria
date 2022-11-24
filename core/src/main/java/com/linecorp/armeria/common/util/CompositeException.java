@@ -321,7 +321,8 @@ public final class CompositeException extends RuntimeException {
     static final class ExceptionOverview extends RuntimeException {
 
         private static final long serialVersionUID = 3875212506787802066L;
-        private final ReentrantLock reentrantLock = new ReentrantLock();
+
+        private static final ReentrantLock reentrantLock = new ReentrantLock();
 
         ExceptionOverview(String message) {
             super(message);
@@ -347,11 +348,11 @@ public final class CompositeException extends RuntimeException {
         return exceptions.size();
     }
 
-    private void lock() {
+    void lock() {
         reentrantLock.lock();
     }
 
-    private void unlock() {
+    void unlock() {
         reentrantLock.unlock();
     }
 }

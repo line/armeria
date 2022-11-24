@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.util;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -36,14 +37,19 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
     private final Set<Consumer<? super T>> updateListeners =
             new ObjectLinkedOpenCustomHashSet<>(IdentityHashStrategy.of());
 
+    private final ReentrantLock reentrantLock = new ReentrantLock();
+
     /**
      * Notify the new value changes to the listeners added via {@link #addListener(Consumer)}.
      */
     protected final void notifyListeners(T latestValue) {
         final Consumer<? super T>[] updateListeners;
-        synchronized (this.updateListeners) {
+        lock();
+        try {
             //noinspection unchecked
             updateListeners = this.updateListeners.toArray((Consumer<? super T>[]) EMPTY_LISTENERS);
+        } finally {
+            unlock();
         }
 
         for (Consumer<? super T> listener : updateListeners) {
@@ -75,7 +81,8 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
      */
     public final void addListener(Consumer<? super T> listener, boolean notifyLatestValue) {
         requireNonNull(listener, "listener");
-        synchronized (updateListeners) {
+        lock();
+        try {
             if (notifyLatestValue) {
                 final T latest = latestValue();
                 if (latest != null) {
@@ -83,14 +90,27 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
                 }
             }
             updateListeners.add(listener);
+        } finally {
+            unlock();
         }
     }
 
     @Override
     public final void removeListener(Consumer<?> listener) {
         requireNonNull(listener, "listener");
-        synchronized (updateListeners) {
+        lock();
+        try {
             updateListeners.remove(listener);
+        } finally {
+            unlock();
         }
+    }
+
+    void lock() {
+        reentrantLock.lock();
+    }
+
+    void unlock() {
+        reentrantLock.unlock();
     }
 }

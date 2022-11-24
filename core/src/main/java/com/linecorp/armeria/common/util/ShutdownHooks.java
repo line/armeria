@@ -25,6 +25,7 @@ import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadFactory;
 
+import java.util.concurrent.locks.ReentrantLock;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +42,8 @@ public final class ShutdownHooks {
 
     private static final Map<AutoCloseable, Queue<Runnable>> autoCloseableOnShutdownTasks =
             new LinkedHashMap<>();
+
+    private static final ReentrantLock reentrantLock = new ReentrantLock();
 
     private static final ThreadFactory THREAD_FACTORY = ThreadFactories
             .builder("armeria-shutdown-hook")
@@ -87,10 +90,11 @@ public final class ShutdownHooks {
                 closeFuture.completeExceptionally(cause);
             }
         };
-        // todo(BueVonHun): in this case, it has some design options...
-        synchronized (autoCloseableOnShutdownTasks) {
+
+        reentrantLock.lock();
+        try {
             final Queue<Runnable> onShutdownTasks =
-                    autoCloseableOnShutdownTasks.computeIfAbsent(autoCloseable, key -> new ArrayDeque<>());
+                autoCloseableOnShutdownTasks.computeIfAbsent(autoCloseable, key -> new ArrayDeque<>());
             onShutdownTasks.add(task);
             if (!addedShutdownHook) {
                 Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(() -> {
@@ -107,6 +111,8 @@ public final class ShutdownHooks {
                 }));
                 addedShutdownHook = true;
             }
+        } finally {
+            reentrantLock.unlock();
         }
         return closeFuture;
     }
