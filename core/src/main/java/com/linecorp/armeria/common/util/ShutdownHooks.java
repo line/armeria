@@ -87,6 +87,7 @@ public final class ShutdownHooks {
                 closeFuture.completeExceptionally(cause);
             }
         };
+        // todo(BueVonHun): in this case, it has some design options...
         synchronized (autoCloseableOnShutdownTasks) {
             final Queue<Runnable> onShutdownTasks =
                     autoCloseableOnShutdownTasks.computeIfAbsent(autoCloseable, key -> new ArrayDeque<>());

@@ -46,6 +46,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Represents an exception that is a composite of one or more other exceptions. A {@code CompositeException}
@@ -79,6 +80,8 @@ public final class CompositeException extends RuntimeException {
 
     @Nullable
     private Throwable cause;
+
+    private final ReentrantLock reentrantLock = new ReentrantLock();
 
     /**
      * Constructs a CompositeException with the given array of Throwables as the
@@ -142,74 +145,79 @@ public final class CompositeException extends RuntimeException {
     }
 
     @Override
-    public synchronized Throwable getCause() { // NOPMD
-        if (cause == null) {
-            final String separator = System.getProperty("line.separator");
-            if (exceptions.size() > 1) {
-                final Map<Throwable, Boolean> seenCauses = new IdentityHashMap<>();
+    public Throwable getCause() { // NOPMD
+        lock();
+        try {
+            if (cause == null) {
+                final String separator = System.getProperty("line.separator");
+                if (exceptions.size() > 1) {
+                    final Map<Throwable, Boolean> seenCauses = new IdentityHashMap<>();
 
-                final StringBuilder aggregateMessage = new StringBuilder();
-                aggregateMessage.append("Multiple exceptions (").append(exceptions.size())
-                                .append(')').append(separator);
+                    final StringBuilder aggregateMessage = new StringBuilder();
+                    aggregateMessage.append("Multiple exceptions (").append(exceptions.size())
+                        .append(')').append(separator);
 
-                for (Throwable inner : exceptions) {
-                    int depth = 0;
-                    while (inner != null) {
-                        final Class<? extends Throwable> innerClass = inner.getClass();
-                        for (int i = 0; i < depth; i++) {
-                            aggregateMessage.append("  ");
-                        }
-                        aggregateMessage.append("|-- ");
-                        aggregateMessage.append(innerClass.getCanonicalName()).append(": ");
-                        final String innerMessage = inner.getMessage();
-                        final String messagePadding = Strings.repeat("  ", depth + 2);
-                        if (innerMessage != null && innerMessage.contains(separator)) {
-                            aggregateMessage.append(separator);
-                            for (String line : innerMessage.split(separator)) {
-                                aggregateMessage.append(messagePadding).append(line).append(separator);
+                    for (Throwable inner : exceptions) {
+                        int depth = 0;
+                        while (inner != null) {
+                            final Class<? extends Throwable> innerClass = inner.getClass();
+                            for (int i = 0; i < depth; i++) {
+                                aggregateMessage.append("  ");
                             }
-                        } else {
-                            aggregateMessage.append(innerMessage);
-                            aggregateMessage.append(separator);
-                        }
-
-                        final StackTraceElement[] st = inner.getStackTrace();
-                        if (st.length > 0) {
-                            final int maxStackTraceSize =
-                                    isVerboseException ? st.length
-                                                       : Math.min(DEFAULT_MAX_NUM_STACK_TRACES, st.length);
-                            for (int i = 0; i < maxStackTraceSize; i++) {
-                                aggregateMessage.append(messagePadding).append("at ")
-                                                .append(st[i]).append(separator);
-                            }
-                        }
-
-                        if (!seenCauses.containsKey(inner)) {
-                            seenCauses.put(inner, true);
-
-                            inner = inner.getCause();
-                            depth++;
-                        } else {
-                            inner = inner.getCause();
-                            if (inner != null) {
-                                aggregateMessage.append(messagePadding);
-                                aggregateMessage.append("|-- ");
-                                aggregateMessage.append("(cause not expanded again) ");
-                                aggregateMessage.append(inner.getClass().getCanonicalName()).append(": ");
-                                aggregateMessage.append(inner.getMessage());
+                            aggregateMessage.append("|-- ");
+                            aggregateMessage.append(innerClass.getCanonicalName()).append(": ");
+                            final String innerMessage = inner.getMessage();
+                            final String messagePadding = Strings.repeat("  ", depth + 2);
+                            if (innerMessage != null && innerMessage.contains(separator)) {
+                                aggregateMessage.append(separator);
+                                for (String line : innerMessage.split(separator)) {
+                                    aggregateMessage.append(messagePadding).append(line).append(separator);
+                                }
+                            } else {
+                                aggregateMessage.append(innerMessage);
                                 aggregateMessage.append(separator);
                             }
-                            break;
+
+                            final StackTraceElement[] st = inner.getStackTrace();
+                            if (st.length > 0) {
+                                final int maxStackTraceSize =
+                                    isVerboseException ? st.length
+                                        : Math.min(DEFAULT_MAX_NUM_STACK_TRACES, st.length);
+                                for (int i = 0; i < maxStackTraceSize; i++) {
+                                    aggregateMessage.append(messagePadding).append("at ")
+                                        .append(st[i]).append(separator);
+                                }
+                            }
+
+                            if (!seenCauses.containsKey(inner)) {
+                                seenCauses.put(inner, true);
+
+                                inner = inner.getCause();
+                                depth++;
+                            } else {
+                                inner = inner.getCause();
+                                if (inner != null) {
+                                    aggregateMessage.append(messagePadding);
+                                    aggregateMessage.append("|-- ");
+                                    aggregateMessage.append("(cause not expanded again) ");
+                                    aggregateMessage.append(inner.getClass().getCanonicalName()).append(": ");
+                                    aggregateMessage.append(inner.getMessage());
+                                    aggregateMessage.append(separator);
+                                }
+                                break;
+                            }
                         }
                     }
-                }
 
-                cause = new ExceptionOverview(aggregateMessage.toString().trim());
-            } else {
-                cause = exceptions.get(0);
+                    cause = new ExceptionOverview(aggregateMessage.toString().trim());
+                } else {
+                    cause = exceptions.get(0);
+                }
             }
+            return cause;
+        } finally {
+            unlock();
         }
-        return cause;
     }
 
     /**
@@ -313,14 +321,20 @@ public final class CompositeException extends RuntimeException {
     static final class ExceptionOverview extends RuntimeException {
 
         private static final long serialVersionUID = 3875212506787802066L;
+        private final ReentrantLock reentrantLock = new ReentrantLock();
 
         ExceptionOverview(String message) {
             super(message);
         }
 
         @Override
-        public synchronized Throwable fillInStackTrace() {
-            return this;
+        public Throwable fillInStackTrace() {
+            reentrantLock.lock();
+            try {
+                return this;
+            } finally {
+                reentrantLock.unlock();
+            }
         }
     }
 
@@ -331,5 +345,13 @@ public final class CompositeException extends RuntimeException {
      */
     public int size() {
         return exceptions.size();
+    }
+
+    private void lock() {
+        reentrantLock.lock();
+    }
+
+    private void unlock() {
+        reentrantLock.unlock();
     }
 }
