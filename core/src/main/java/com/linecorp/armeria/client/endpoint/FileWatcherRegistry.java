@@ -44,8 +44,6 @@ import com.linecorp.armeria.client.endpoint.FileWatcherRunnable.FileWatchEvent;
  */
 final class FileWatcherRegistry implements AutoCloseable {
 
-    private final ReentrantLock lock = new ReentrantLock();
-
     /**
      * A context responsible for watching a {@link FileSystem}. It contains references to
      * a {@link WatchService} and a {@link Thread} which continuously watches for changes
@@ -135,6 +133,7 @@ final class FileWatcherRegistry implements AutoCloseable {
 
     private final Map<FileSystem, FileSystemWatchContext> fileSystemWatchServiceMap =
             new HashMap<>();
+    private final ReentrantLock lock = new ReentrantLock();
 
     /**
      * Registers a {@code filePath} and {@code callback} to the {@link WatchService}. When the

@@ -58,10 +58,9 @@ final class HttpHealthChecker implements AsyncCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(HttpHealthChecker.class);
 
-    private final ReentrantLock lock = new ReentrantLock();
-
     private static final AsciiString ARMERIA_LPHC = HttpHeaderNames.of("armeria-lphc");
 
+    private final ReentrantLock lock = new ReentrantLock();
     private final HealthCheckerContext ctx;
     private final WebClient webClient;
     private final String authority;

@@ -77,11 +77,6 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     private static final Logger logger = LoggerFactory.getLogger(HealthCheckedEndpointGroup.class);
 
     /**
-     * Lock for {@link contextGroupChain}.
-     */
-    private final ReentrantLock lock = new ReentrantLock();
-
-    /**
      * Returns a newly created {@link HealthCheckedEndpointGroup} that sends HTTP {@code HEAD} health check
      * requests with default options.
      *
@@ -103,6 +98,10 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         return new HealthCheckedEndpointGroupBuilder(delegate, path);
     }
 
+    /**
+     * Lock for {@link contextGroupChain}.
+     */
+    private final ReentrantLock lock = new ReentrantLock();
     final EndpointGroup delegate;
     private final long initialSelectionTimeoutMillis;
     private final long selectionTimeoutMillis;
