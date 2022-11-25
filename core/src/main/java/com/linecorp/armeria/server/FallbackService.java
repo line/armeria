@@ -35,9 +35,9 @@ final class FallbackService implements HttpService {
         final RoutingContext routingCtx = ctx.routingContext();
         final HttpStatusException cause = getStatusException(routingCtx);
         if (cause.httpStatus() == HttpStatus.NOT_FOUND) {
-            return handleNotFound(ctx, routingCtx, cause);
+            return handleNotFound(ctx, routingCtx);
         } else {
-            throw cause;
+            return HttpResponse.of(cause.httpStatus());
         }
     }
 
@@ -55,14 +55,12 @@ final class FallbackService implements HttpService {
         return cause;
     }
 
-    private static HttpResponse handleNotFound(ServiceRequestContext ctx,
-                                               RoutingContext routingCtx,
-                                               HttpStatusException cause) {
+    private static HttpResponse handleNotFound(ServiceRequestContext ctx, RoutingContext routingCtx) {
         // Handle 404 Not Found.
         final String oldPath = routingCtx.path();
         if (oldPath.charAt(oldPath.length() - 1) == '/') {
             // No need to send a redirect response because the request path already ends with '/'.
-            throw cause;
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
         }
 
         // Handle the case where '/path' (or '/path?query') doesn't exist
@@ -70,7 +68,7 @@ final class FallbackService implements HttpService {
         final String newPath = oldPath + '/';
         if (!ctx.config().virtualHost().findServiceConfig(routingCtx.overridePath(newPath)).isPresent()) {
             // No need to send a redirect response because '/path/' (or '/path/?query') does not exist.
-            throw cause;
+            return HttpResponse.of(HttpStatus.NOT_FOUND);
         }
 
         // '/path/' (or '/path/?query') exists. Send a redirect response.

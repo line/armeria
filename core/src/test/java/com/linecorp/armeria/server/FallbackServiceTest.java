@@ -44,7 +44,9 @@ class FallbackServiceTest {
             sb.service("/", (ctx, req) -> HttpResponse.of("Hello, world!"));
             sb.decorator((delegate, ctx, req) -> {
                 lastRouteWasFallback = ctx.config().route().isFallback();
-                return delegate.serve(ctx, req);
+                return delegate.serve(ctx, req)
+                               // Make sure that FallbackService does not throw an exception
+                               .mapHeaders(headers -> headers.toBuilder().set("x-trace-id", "foo").build());
             });
         }
     };
@@ -66,6 +68,7 @@ class FallbackServiceTest {
         final AggregatedHttpResponse res = webClient.get("/");
         assertThat(res.headers().status()).isSameAs(HttpStatus.OK);
         assertThat(lastRouteWasFallback).isFalse();
+        assertThat(res.headers().get("x-trace-id")).isEqualTo("foo");
     }
 
     @Test
@@ -73,6 +76,7 @@ class FallbackServiceTest {
         final AggregatedHttpResponse res = webClient.get("/404");
         assertThat(res.headers().status()).isSameAs(HttpStatus.NOT_FOUND);
         assertThat(lastRouteWasFallback).isTrue();
+        assertThat(res.headers().get("x-trace-id")).isEqualTo("foo");
     }
 
     @Test
@@ -80,6 +84,7 @@ class FallbackServiceTest {
         final AggregatedHttpResponse res = webClient.execute(preflightHeaders("/"));
         assertThat(res.headers().status()).isSameAs(HttpStatus.OK);
         assertThat(lastRouteWasFallback).isFalse();
+        assertThat(res.headers().get("x-trace-id")).isEqualTo("foo");
     }
 
     @Test
@@ -87,6 +92,7 @@ class FallbackServiceTest {
         final AggregatedHttpResponse res = webClient.execute(preflightHeaders("/404"));
         assertThat(res.headers().status()).isSameAs(HttpStatus.FORBIDDEN);
         assertThat(lastRouteWasFallback).isTrue();
+        assertThat(res.headers().get("x-trace-id")).isEqualTo("foo");
     }
 
     private static RequestHeaders preflightHeaders(String path) {
