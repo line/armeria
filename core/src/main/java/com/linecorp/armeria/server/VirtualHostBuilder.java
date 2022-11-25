@@ -882,7 +882,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the default HTTP headers for {@link HttpResponse}.
+     * Sets the default HTTP headers for an {@link HttpResponse} served by this {@link VirtualHost}.
      *
      * <p>Note that the default headers could be overridden if the same {@link HttpHeaderNames} are defined in
      * one of the followings:

@@ -1653,9 +1653,9 @@ public final class ServerBuilder implements TlsSetters {
      * <ul>
      *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
      *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
-     *   <li>{@link VirtualHostBuilder#addHeader(CharSequence, Object)}</li>
-     *   <li>{@link VirtualHostServiceBindingBuilder#addHeader(CharSequence, Object)} or
-     *       {@link VirtualHostAnnotatedServiceBindingBuilder#addHeader(CharSequence, Object)}</li>
+     *   <li>{@link VirtualHostBuilder#addHeaders(Iterable)}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#addHeaders(Iterable)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#addHeaders(Iterable)}</li>
      * </ul>
      */
     public ServerBuilder addHeaders(
