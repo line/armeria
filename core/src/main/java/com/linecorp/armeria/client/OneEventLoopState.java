@@ -24,7 +24,7 @@ import io.netty.channel.EventLoop;
 
 final class OneEventLoopState extends AbstractEventLoopState {
 
-        private final ReentrantLock lock = new ReentrantLock();
+    private final ReentrantLock lock = new ReentrantLock();
 
     private final List<AbstractEventLoopEntry> entry = new ArrayList<>();
 
