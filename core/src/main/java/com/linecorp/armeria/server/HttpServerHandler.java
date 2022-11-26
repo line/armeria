@@ -581,10 +581,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         return future;
     }
 
-    /**
-     * Sets the keep alive header as per:
-     * - https://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.html#Connection
-     */
     private void addConnectionCloseHeaders(ResponseHeadersBuilder headers) {
         if (protocol == H1 || protocol == H1C) {
             headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE.toString());

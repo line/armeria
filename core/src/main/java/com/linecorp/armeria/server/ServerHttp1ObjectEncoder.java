@@ -177,10 +177,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         return false;
     }
 
-    boolean isSentConnectionCloseHeader() {
-        return sentConnectionCloseHeader;
-    }
-
     @Override
     public boolean isResponseHeadersSent(int id, int streamId) {
         return id <= lastResponseHeadersId;
@@ -194,7 +190,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
                                             @Nullable String message,
                                             @Nullable Throwable cause) {
 
-        // Destroy keepAlive handler before writing headers so that ServerHttp1ObjectEncoder sets
+        // Mark keepAlive handler as disconnected before writing headers so that ServerHttp1ObjectEncoder sets
         // "Connection: close" to the response headers
         keepAliveHandler().disconnectWhenFinished();
 

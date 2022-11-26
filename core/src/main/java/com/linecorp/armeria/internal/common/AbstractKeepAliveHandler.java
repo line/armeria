@@ -76,6 +76,7 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
     private boolean isMaxConnectionAgeExceeded;
 
     private boolean isInitialized;
+    private boolean closed;
     private boolean disconnectWhenFinished;
     private PingState pingState = PingState.IDLE;
 
@@ -144,6 +145,11 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
 
     @Override
     public final void destroy() {
+        if (closed) {
+            return;
+        }
+
+        closed = true;
         isInitialized = true;
         if (connectionIdleTimeout != null) {
             connectionIdleTimeout.cancel(false);
