@@ -17,6 +17,7 @@ package com.linecorp.armeria.common.logback;
 
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.Appender;
@@ -41,9 +42,13 @@ final class SocketAppenderWrapper implements Appender<ILoggingEvent> {
 
     @Override
     public void doAppend(ILoggingEvent event) throws LogbackException {
-        final HashMap<String, String> propsMap = new HashMap<>(event.getMDCPropertyMap());
-        final ILoggingEvent wrappedEvent = new LoggingEventWrapper(event, propsMap);
-        appender.doAppend(wrappedEvent);
+        final Map<String, String> propsMap = event.getMDCPropertyMap();
+        if (propsMap == null || propsMap.isEmpty()) {
+            appender.doAppend(event);
+        } else {
+            final ILoggingEvent wrappedEvent = new LoggingEventWrapper(event, new HashMap<>(propsMap));
+            appender.doAppend(wrappedEvent);
+        }
     }
 
     @Override

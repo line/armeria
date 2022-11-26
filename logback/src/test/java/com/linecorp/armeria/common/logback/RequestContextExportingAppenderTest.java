@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
@@ -39,6 +40,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
@@ -68,6 +70,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.classic.net.SocketAppender;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import ch.qos.logback.core.status.Status;
@@ -592,6 +595,54 @@ class RequestContextExportingAppenderTest {
         }
     }
 
+    @Test
+    void testMdcPropsType() throws Exception {
+        final List<ILoggingEvent> events = prepare(a -> a.addBuiltIn(BuiltInProperty.REQ_DIRECTION));
+
+        final ServiceRequestContext ctx = newServiceContext("/foo", null);
+        try (SafeCloseable ignored = ctx.push()) {
+            final ILoggingEvent e = log(events);
+            final Map<String, String> mdc = e.getMDCPropertyMap();
+            assertThat(mdc.getClass().getName())
+                    .isEqualTo("com.linecorp.armeria.common.logging.RequestContextExporter$State");
+        }
+    }
+
+    @Test
+    void testMdcPropsTypeForSocketAppenderWithoutProps() throws Exception {
+        final SocketAppender sa = prepareSocketAppender();
+        final ClientRequestContext ctx = newClientContext("/bar", null);
+        try (SafeCloseable ignored = ctx.push()) {
+            final Integer value = ThreadLocalRandom.current().nextInt();
+            testLogger.trace("{}", value);
+
+            final ArgumentCaptor<ILoggingEvent> eventCaptor = ArgumentCaptor.forClass(ILoggingEvent.class);
+            verify(sa).doAppend(eventCaptor.capture());
+
+            final Map<String, String> mdc = eventCaptor.getValue().getMDCPropertyMap();
+            assertThat(mdc.getClass().getName()).startsWith("java.util");
+            assertThat(mdc).isEmpty();
+        }
+    }
+
+    @Test
+    void testMdcPropsTypeForSocketAppenderWithProps() throws Exception {
+        final SocketAppender sa = prepareSocketAppender(a -> a.setExport("test-prop=req.headers.user-agent"));
+        final ClientRequestContext ctx = newClientContext("/bar", null);
+        try (SafeCloseable ignored = ctx.push()) {
+            final Integer value = ThreadLocalRandom.current().nextInt();
+            testLogger.trace("{}", value);
+
+            final ArgumentCaptor<ILoggingEvent> eventCaptor = ArgumentCaptor.forClass(ILoggingEvent.class);
+            verify(sa).doAppend(eventCaptor.capture());
+
+            final Map<String, String> mdc = eventCaptor.getValue().getMDCPropertyMap();
+            assertThat(mdc.getClass().getName()).startsWith("java.util");
+            assertThat(mdc).containsOnlyKeys("test-prop");
+            assertThat(mdc).extracting(key -> mdc.get("test-prop"), STRING).isEqualTo("some-client");
+        }
+    }
+
     private static ClientRequestContext newClientContext(
             String path, @Nullable String query) throws Exception {
 
@@ -638,5 +689,21 @@ class RequestContextExportingAppenderTest {
         la.start();
         testLogger.addAppender(a);
         return la.list;
+    }
+
+    @SafeVarargs
+    private final SocketAppender prepareSocketAppender(
+            Consumer<RequestContextExportingAppender>... configurators) {
+        final RequestContextExportingAppender a = new RequestContextExportingAppender();
+        for (Consumer<RequestContextExportingAppender> c : configurators) {
+            c.accept(a);
+        }
+
+        final SocketAppender sa = mock(SocketAppender.class);
+        a.addAppender(sa);
+        sa.start();
+        a.start();
+        testLogger.addAppender(a);
+        return sa;
     }
 }
