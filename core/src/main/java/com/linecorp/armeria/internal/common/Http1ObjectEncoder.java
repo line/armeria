@@ -39,6 +39,8 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.ReferenceCountUtil;
@@ -314,6 +316,8 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     private ChannelFuture write(HttpObject obj, ChannelPromise promise) {
         // Use FQCN for Netty HttpResponse to avoid confusion with Armeria HttpResponse
+        // We check if obj is an HttpResponse here because server-side writes both headers
+        // and errors as an HttpResponse.
         //noinspection UnnecessaryFullyQualifiedName
         if (obj instanceof io.netty.handler.codec.http.HttpResponse) {
             if (lastResponseHeadersId >= currentId) {
@@ -321,7 +325,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 // response while HttpResponseSubscriber writes a response headers and then waits for bodies.
                 ReferenceCountUtil.release(obj);
                 return writeReset(currentId, 1, Http2Error.PROTOCOL_ERROR);
-            } else {
+            } else if (((HttpResponse) obj).status().codeClass() != HttpStatusClass.INFORMATIONAL) {
                 lastResponseHeadersId = currentId;
             }
         }
@@ -443,6 +447,10 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     protected final int currentId() {
         return currentId;
+    }
+
+    protected final int lastResponseHeadersId() {
+        return lastResponseHeadersId;
     }
 
     private static final class PendingWrites extends ArrayDeque<Entry<HttpObject, ChannelPromise>> {

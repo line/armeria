@@ -185,7 +185,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     @Override
     public boolean isResponseHeadersSent(int id, int streamId) {
-        return id < currentId();
+        return id <= lastResponseHeadersId();
     }
 
     @Override
