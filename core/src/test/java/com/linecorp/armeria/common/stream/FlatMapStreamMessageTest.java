@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -29,16 +31,16 @@ import reactor.test.StepVerifier;
 class FlatMapStreamMessageTest {
     @Test
     void flatMap() {
-        final StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2);
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(1, 3);
         final Function<Integer, StreamMessage<Integer>> function = i -> StreamMessage.of(i, i + 1);
 
-        final Set<Integer> pendingItems = new HashSet<>(Arrays.asList(1, 2, 2, 3));
+        final Set<Integer> pendingItems = new HashSet<>(Arrays.asList(1, 2, 3, 4));
         final StreamMessage<Integer> mappedStream = streamMessage.flatMap(function);
 
         StepVerifier.create(mappedStream)
                     .recordWith(HashSet::new)
                     .expectNextCount(4)
-                    .expectRecordedMatches(c -> c.containsAll(pendingItems) && pendingItems.containsAll(c))
+                    .expectRecordedMatches(c -> c.equals(pendingItems))
                     .verifyComplete();
     }
 
@@ -70,5 +72,19 @@ class FlatMapStreamMessageTest {
         StepVerifier.create(mappedStream)
                     .thenRequest(1)
                     .verifyError(RuntimeException.class);
+    }
+
+    @Test
+    void flatMapIsAssociative() throws Exception {
+        final Function<Integer, StreamMessage<Integer>> h = x -> StreamMessage.of(x + 1);
+        final Function<Integer, StreamMessage<Integer>> g = x -> StreamMessage.of(x * 2);
+
+        final StreamMessage<Integer> leftSide = StreamMessage.of(1,2,3).flatMap(g).flatMap(h);
+        final StreamMessage<Integer> rightSide = StreamMessage.of(1,2,3).flatMap(x -> g.apply(x).flatMap(h));
+
+        final Set<Integer> leftSideValues = new HashSet<>(leftSide.collect().get());
+        final Set<Integer> rightSideValues = new HashSet<>(rightSide.collect().get());
+
+        assertEquals(leftSideValues, rightSideValues);
     }
 }
