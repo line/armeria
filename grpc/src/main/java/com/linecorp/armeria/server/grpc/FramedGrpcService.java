@@ -229,11 +229,12 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             final String timeoutHeader = req.headers().get(GrpcHeaderNames.GRPC_TIMEOUT);
             if (timeoutHeader != null) {
                 try {
-                    final long timeout = TimeoutHeaderUtil.fromHeaderValue(timeoutHeader);
-                    if (timeout == 0) {
+                    final Duration timeout = Duration.ofNanos(TimeoutHeaderUtil.fromHeaderValue(timeoutHeader));
+                    final long existingTimeoutMillis = ctx.requestTimeoutMillis();
+                    if (timeout.isZero()) {
                         ctx.clearRequestTimeout();
-                    } else {
-                        ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, Duration.ofNanos(timeout));
+                    } else if (existingTimeoutMillis == 0 || existingTimeoutMillis > timeout.toMillis()) {
+                        ctx.setRequestTimeout(TimeoutMode.SET_FROM_NOW, timeout);
                     }
                 } catch (IllegalArgumentException e) {
                     final Metadata metadata = new Metadata();
