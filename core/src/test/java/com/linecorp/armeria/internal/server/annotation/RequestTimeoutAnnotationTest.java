@@ -64,9 +64,11 @@ public class RequestTimeoutAnnotationTest {
         }
 
         @Get("/subscriberIsInitialized")
-        public boolean subscriberIsInitialized(ServiceRequestContext ctx, HttpRequest req) {
+        public String subscriberIsInitialized(ServiceRequestContext ctx, HttpRequest req) {
             AnnotatedServiceTest.validateContextAndRequest(ctx, req);
-            return ((DefaultServiceRequestContext) ctx).requestCancellationScheduler().isInitialized();
+            boolean isInitialized = ((DefaultServiceRequestContext) ctx)
+                    .requestCancellationScheduler().isInitialized();
+            return Boolean.toString(isInitialized);
         }
     }
 
@@ -91,7 +93,7 @@ public class RequestTimeoutAnnotationTest {
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
 
         final AggregatedHttpResponse response = client.execute(
-                RequestHeaders.of(HttpMethod.GET, "/myService/timeoutMillis"));
+                RequestHeaders.of(HttpMethod.GET, "/myService/subscriberIsInitialized"));
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(Boolean.parseBoolean(response.contentUtf8())).isEqualTo(true);
     }
