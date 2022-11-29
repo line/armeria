@@ -149,9 +149,7 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
         return start0(arg, rollbackArg, failIfStarted);
     }
 
-    private UnmodifiableFuture<V> start0(@Nullable T arg,
-                                                      @Nullable U rollbackArg,
-                                                      boolean failIfStarted) {
+    private UnmodifiableFuture<V> start0(@Nullable T arg, @Nullable U rollbackArg, boolean failIfStarted) {
         lock();
         try {
             if (closeable.isClosing()) {
