@@ -155,6 +155,14 @@ public final class ClientOptions
                         throw new IllegalArgumentException("prohibited header name: " + name);
                     }
                 }
+                for (String connectionOption : newHeaders.getAll(HttpHeaderNames.CONNECTION)) {
+                    // - Disallow connection headers apart from "Connection: close".
+                    // - Connection options are case-insensitive.
+                    if (!"close".equalsIgnoreCase(connectionOption)) {
+                        throw new IllegalArgumentException(
+                                "prohibited Connection header value: " + connectionOption);
+                    }
+                }
                 return newHeaders;
             }, (oldValue, newValue) -> {
                 final HttpHeaders newHeaders = newValue.value();
