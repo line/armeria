@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Function;
@@ -69,6 +70,7 @@ public final class RequestContextExportingAppender
     private final RequestContextExporterBuilder builder = RequestContextExporter.builder();
     @Nullable
     private RequestContextExporter exporter;
+    private boolean needsHashMap;
 
     @VisibleForTesting
     RequestContextExporter exporter() {
@@ -195,16 +197,26 @@ public final class RequestContextExportingAppender
         final Map<String, String> contextMap = exporter.export();
         if (!contextMap.isEmpty()) {
             final Map<String, String> originalMdcMap = eventObject.getMDCPropertyMap();
-            final Map<String, String> mdcMap;
+            final Map<String, String> mdcMap = prepareMdcMap(contextMap, originalMdcMap);
+            eventObject = new LoggingEventWrapper(eventObject, mdcMap);
+        }
+        aai.appendLoopOnAppenders(eventObject);
+    }
 
+    private Map<String, String> prepareMdcMap(Map<String, String> contextMap,
+                                              Map<String, String> originalMdcMap) {
+        final Map<String, String> mdcMap;
+        if (needsHashMap) {
+            mdcMap = new HashMap<>(contextMap);
+            mdcMap.putAll(originalMdcMap);
+        } else {
             if (!originalMdcMap.isEmpty()) {
                 mdcMap = new UnionMap<>(contextMap, originalMdcMap);
             } else {
                 mdcMap = contextMap;
             }
-            eventObject = new LoggingEventWrapper(eventObject, mdcMap);
         }
-        aai.appendLoopOnAppenders(eventObject);
+        return mdcMap;
     }
 
     @Override
@@ -227,10 +239,9 @@ public final class RequestContextExportingAppender
     @Override
     public void addAppender(Appender<ILoggingEvent> newAppender) {
         if (newAppender instanceof AbstractSocketAppender) {
-            aai.addAppender(new SocketAppenderWrapper(newAppender));
-        } else {
-            aai.addAppender(newAppender);
+            needsHashMap = true;
         }
+        aai.addAppender(newAppender);
     }
 
     @Override

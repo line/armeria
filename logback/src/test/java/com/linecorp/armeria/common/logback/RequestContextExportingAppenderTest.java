@@ -643,6 +643,27 @@ class RequestContextExportingAppenderTest {
         }
     }
 
+    @Test
+    void testMdcPropsTypeForSocketAppenderWithPropsAndContext() throws Exception {
+        final SocketAppender sa = prepareSocketAppender(a -> a.setExport("test-prop=req.headers.user-agent"));
+        final ClientRequestContext ctx = newClientContext("/bar", null);
+        try (SafeCloseable ignored = ctx.push()) {
+            final Integer value = ThreadLocalRandom.current().nextInt();
+            MDC.put("test-prop", "override-test");
+            MDC.put("another-prop", "another-value");
+            testLogger.trace("{}", value);
+
+            final ArgumentCaptor<ILoggingEvent> eventCaptor = ArgumentCaptor.forClass(ILoggingEvent.class);
+            verify(sa).doAppend(eventCaptor.capture());
+
+            final Map<String, String> mdc = eventCaptor.getValue().getMDCPropertyMap();
+            assertThat(mdc.getClass().getName()).startsWith("java.util");
+            assertThat(mdc).containsOnlyKeys("test-prop", "another-prop");
+            assertThat(mdc).extracting(key -> mdc.get("test-prop"), STRING).isEqualTo("override-test");
+            assertThat(mdc).extracting(key -> mdc.get("another-prop"), STRING).isEqualTo("another-value");
+        }
+    }
+
     private static ClientRequestContext newClientContext(
             String path, @Nullable String query) throws Exception {
 
