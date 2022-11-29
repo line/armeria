@@ -33,26 +33,18 @@ final class FallbackService implements HttpService {
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
         final RoutingContext routingCtx = ctx.routingContext();
-        final HttpStatusException cause = getStatusException(routingCtx);
-        if (cause.httpStatus() == HttpStatus.NOT_FOUND) {
+
+        if (routingCtx.status() == RoutingStatus.CORS_PREFLIGHT) {
+            // '403 Forbidden' is better for a CORS preflight request than other statuses.
+            return HttpResponse.of(HttpStatus.FORBIDDEN);
+        }
+
+        final HttpStatusException cause = routingCtx.deferredStatusException();
+        if (cause == null || cause.httpStatus() == HttpStatus.NOT_FOUND) {
             return handleNotFound(ctx, routingCtx);
         } else {
             return HttpResponse.of(cause.httpStatus());
         }
-    }
-
-    private static HttpStatusException getStatusException(RoutingContext routingCtx) {
-        if (routingCtx.status() == RoutingStatus.CORS_PREFLIGHT) {
-            // '403 Forbidden' is better for a CORS preflight request than other statuses.
-            return HttpStatusException.of(HttpStatus.FORBIDDEN);
-        }
-
-        final HttpStatusException cause = routingCtx.deferredStatusException();
-        if (cause == null) {
-            return HttpStatusException.of(HttpStatus.NOT_FOUND);
-        }
-
-        return cause;
     }
 
     private static HttpResponse handleNotFound(ServiceRequestContext ctx, RoutingContext routingCtx) {
