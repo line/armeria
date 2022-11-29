@@ -174,8 +174,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             final Http2GoAwayHandler goAwayHandler = ((Http2ResponseDecoder) responseDecoder).goAwayHandler();
             return !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway();
         } else {
-            // Don't allow to send a request if a connection is close or about to be closed.
-            return active;
+            // Don't allow to send a request if a connection is closed or about to be closed for HTTP/1.
+            return canAcquire();
         }
     }
 
@@ -275,7 +275,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public boolean canAcquire() {
-        return active;
+        return active && responseDecoder != null && !responseDecoder.needsToDisconnectWhenFinished();
     }
 
     @Override
