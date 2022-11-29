@@ -25,8 +25,10 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.classic.spi.IThrowableProxy;
 import ch.qos.logback.classic.spi.LoggerContextVO;
+import ch.qos.logback.classic.spi.LoggingEvent;
 
-final class LoggingEventWrapper implements ILoggingEvent {
+// TODO(ikhoon): Use `ILoggingEvent` instead of `LoggingEvent` once https://github.com/qos-ch/logback/pull/614 is merged.
+final class LoggingEventWrapper extends LoggingEvent {
     private final ILoggingEvent event;
     private final Map<String, String> mdcPropertyMap;
     @Nullable
