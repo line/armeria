@@ -66,7 +66,7 @@ public class RequestTimeoutAnnotationTest {
         @Get("/subscriberIsInitialized")
         public String subscriberIsInitialized(ServiceRequestContext ctx, HttpRequest req) {
             AnnotatedServiceTest.validateContextAndRequest(ctx, req);
-            boolean isInitialized = ((DefaultServiceRequestContext) ctx)
+            final boolean isInitialized = ((DefaultServiceRequestContext) ctx)
                     .requestCancellationScheduler().isInitialized();
             return Boolean.toString(isInitialized);
         }
