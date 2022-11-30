@@ -257,7 +257,6 @@ activetrail.biz
 actor
 ad
 ad.jp
-adac
 adachi.tokyo.jp
 adimo.co.uk
 adm.br
