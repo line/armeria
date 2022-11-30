@@ -25,6 +25,8 @@ import com.linecorp.armeria.server.annotation.DecoratorFactory;
 
 /**
  * Annotation for request timeout.
+ * When applied to gRPC services, the timeout value set using {@link RequestTimeout} is only respected if
+ * {@code GrpcServiceBuilder#useClientTimeoutHeader()} is disabled.
  */
 @DecoratorFactory(RequestTimeoutDecoratorFunction.class)
 @Retention(RetentionPolicy.RUNTIME)
