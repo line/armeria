@@ -39,7 +39,11 @@ public final class RequestTimeoutDecoratorFunction implements DecoratorFactoryFu
         return delegate -> new SimpleDecoratingHttpService(delegate) {
             @Override
             public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-                ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, timeoutMillis);
+                if (timeoutMillis <= 0) {
+                    ctx.clearRequestTimeout();
+                } else {
+                    ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, timeoutMillis);
+                }
                 return delegate.serve(ctx, req);
             }
         };
