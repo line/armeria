@@ -35,7 +35,7 @@ import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.decorator.RequestTimeout;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class RequestTimeoutAnnotationTest {
+class RequestTimeoutAnnotationTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -48,7 +48,7 @@ public class RequestTimeoutAnnotationTest {
     static final long timeoutMillis = 1230;
     static final long timeoutSeconds = 4560;
 
-    public static class MyAnnotationService {
+    static class MyAnnotationService {
         @Get("/timeoutMillis")
         @RequestTimeout(timeoutMillis)
         public String timeoutMillis(ServiceRequestContext ctx, HttpRequest req) {
@@ -73,7 +73,7 @@ public class RequestTimeoutAnnotationTest {
     }
 
     @Test
-    public void testRequestTimeoutSet() {
+    void testRequestTimeoutSet() {
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
 
         AggregatedHttpResponse response;
@@ -86,15 +86,5 @@ public class RequestTimeoutAnnotationTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(Long.parseLong(response.contentUtf8()))
                 .isEqualTo(TimeUnit.SECONDS.toMillis(timeoutSeconds));
-    }
-
-    @Test
-    public void testCancellationSchedulerInit() {
-        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
-
-        final AggregatedHttpResponse response = client.execute(
-                RequestHeaders.of(HttpMethod.GET, "/myService/subscriberIsInitialized"));
-        assertThat(response.status()).isEqualTo(HttpStatus.OK);
-        assertThat(Boolean.parseBoolean(response.contentUtf8())).isEqualTo(true);
     }
 }
