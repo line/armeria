@@ -55,12 +55,7 @@ class JacksonModuleAnnotatedServiceTest {
         if (path == "/echo") {
             assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST)
         } else {
-            assertThatJson(response.contentUtf8()).isEqualTo("""
-              {
-                "x" : 10,
-                "y" : null
-              }
-              """)
+            assertThatJson(response.contentUtf8()).isEqualTo("""{"x": 10, "y": null}""")
         }
     }
 
