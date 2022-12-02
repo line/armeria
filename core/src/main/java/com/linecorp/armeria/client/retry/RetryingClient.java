@@ -329,7 +329,13 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         if (!ctx.exchangeType().isResponseStreaming() || config.requiresResponseTrailers()) {
             // XXX(ikhoon): Should we use `response.aggregateWithPooledObjects()`?
             response.aggregate().handle((aggregated, cause) -> {
-                final HttpResponse response0 = cause != null ? HttpResponse.ofFailure(cause) : null;
+                final HttpResponse response0;
+                if (cause != null) {
+                    derivedCtx.logBuilder().endResponse(cause);
+                    response0 = HttpResponse.ofFailure(cause);
+                } else {
+                    response0 = null;
+                }
                 handleResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx,
                                response0, aggregated);
                 return null;
