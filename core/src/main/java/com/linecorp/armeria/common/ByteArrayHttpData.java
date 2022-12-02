@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common;
 
+import java.util.Arrays;
+
 import com.linecorp.armeria.internal.common.ByteArrayBytes;
 
 final class ByteArrayHttpData extends ByteArrayBytes implements HttpData {
@@ -55,5 +57,38 @@ final class ByteArrayHttpData extends ByteArrayBytes implements HttpData {
     @Override
     public boolean isEndOfStream() {
         return endOfStream;
+    }
+
+    @SuppressWarnings("RedundantMethodOverride")
+    @Override
+    public int hashCode() {
+        // Use hashcode in ByteBufBytes because we don't use endOfStream in equals.
+        return super.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) {
+            return true;
+        }
+        if (!(o instanceof HttpData)) {
+            return false;
+        }
+
+        final HttpData that = (HttpData) o;
+        if (length() != that.length()) {
+            return false;
+        }
+
+        return Arrays.equals(array(), that.array());
+    }
+
+    @Override
+    public String toString() {
+        final String toString = super.toString();
+        if (!isEndOfStream()) {
+            return toString;
+        }
+        return "{EOS}, " + toString;
     }
 }

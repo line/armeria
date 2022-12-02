@@ -112,7 +112,6 @@ class ByteArrayBytesTest {
 
     @Test
     void testToString() {
-        assertThat(ByteArrayBytes.empty()).hasToString("{0B}");
         assertThat(new ByteArrayBytes(new byte[] { 'f', 'o', 'o' })).hasToString("{3B, text=foo}");
         assertThat(new ByteArrayBytes(new byte[] { 1, 2, 3 })).hasToString("{3B, hex=010203}");
 

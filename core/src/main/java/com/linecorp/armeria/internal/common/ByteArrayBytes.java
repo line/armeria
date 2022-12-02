@@ -29,19 +29,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.EmptyArrays;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
 /**
  * A {@code byte[]}-based {@link Bytes}.
  */
 public class ByteArrayBytes implements Bytes {
-
-    private static final Bytes EMPTY = new ByteArrayBytes(EmptyArrays.EMPTY_BYTES);
-
-    public static Bytes empty() {
-        return EMPTY;
-    }
 
     private static final byte[] SAFE_OCTETS = new byte[256];
 
@@ -172,7 +165,7 @@ public class ByteArrayBytes implements Bytes {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof ByteArrayBytes)) {
+        if (!(obj instanceof Bytes)) {
             return false;
         }
 
@@ -180,7 +173,7 @@ public class ByteArrayBytes implements Bytes {
             return true;
         }
 
-        final ByteArrayBytes that = (ByteArrayBytes) obj;
+        final Bytes that = (Bytes) obj;
         if (length() != that.length()) {
             return false;
         }

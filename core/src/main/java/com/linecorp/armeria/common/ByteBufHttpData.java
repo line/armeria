@@ -25,6 +25,7 @@ import java.nio.charset.Charset;
 import com.linecorp.armeria.internal.common.ByteBufBytes;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufUtil;
 import io.netty.util.ResourceLeakHint;
 
 final class ByteBufHttpData extends ByteBufBytes implements HttpData {
@@ -51,6 +52,31 @@ final class ByteBufHttpData extends ByteBufBytes implements HttpData {
         return false;
     }
 
+    @SuppressWarnings("RedundantMethodOverride")
+    @Override
+    public int hashCode() {
+        // Use hashcode in ByteBufBytes because we don't use endOfStream in equals.
+        return super.hashCode();
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (!(obj instanceof HttpData)) {
+            return false;
+        }
+
+        if (obj == this) {
+            return true;
+        }
+
+        final HttpData that = (HttpData) obj;
+        if (length() != that.length()) {
+            return false;
+        }
+
+        return ByteBufUtil.equals(buf(), that.byteBuf());
+    }
+
     private static class EndOfStreamByteBufHttpData implements ResourceLeakHint, HttpData {
 
         private final ByteBufHttpData delegate;
@@ -72,6 +98,11 @@ final class ByteBufHttpData extends ByteBufBytes implements HttpData {
         @Override
         public String toString(Charset charset) {
             return delegate.toString(charset);
+        }
+
+        @Override
+        public String toString() {
+            return "{EOS}, " + delegate;
         }
 
         @Override
@@ -118,6 +149,17 @@ final class ByteBufHttpData extends ByteBufBytes implements HttpData {
         @Override
         public String toHintString() {
             return delegate.toHintString();
+        }
+
+        @Override
+        public int hashCode() {
+            return delegate.hashCode();
+        }
+
+        @SuppressWarnings("EqualsWhichDoesntCheckParameterClass")
+        @Override
+        public boolean equals(Object obj) {
+            return delegate.equals(obj);
         }
     }
 }

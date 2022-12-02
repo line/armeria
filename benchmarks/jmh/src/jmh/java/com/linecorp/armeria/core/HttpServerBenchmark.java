@@ -70,7 +70,7 @@ public class HttpServerBenchmark {
     @Param
     private Protocol protocol;
 
-    @Param({ "100", "1000"})
+    @Param("100")
     private int chunkCount;
 
     @Setup

@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -51,6 +51,10 @@ public class ByteBufBytes implements Bytes, ResourceLeakHint {
     protected ByteBufBytes(ByteBuf buf, boolean pooled) {
         this.buf = requireNonNull(buf, "buf");
         this.pooled = pooled;
+    }
+
+    protected ByteBuf buf() {
+        return buf;
     }
 
     @Override
@@ -246,7 +250,7 @@ public class ByteBufBytes implements Bytes, ResourceLeakHint {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof ByteBufBytes)) {
+        if (!(obj instanceof Bytes)) {
             return false;
         }
 
@@ -254,7 +258,7 @@ public class ByteBufBytes implements Bytes, ResourceLeakHint {
             return true;
         }
 
-        final ByteBufBytes that = (ByteBufBytes) obj;
+        final Bytes that = (Bytes) obj;
         if (buf.readableBytes() != that.length()) {
             return false;
         }
