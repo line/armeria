@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.IdentityHashStrategy;
 
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenCustomHashSet;
+import javax.annotation.concurrent.GuardedBy;
 
 /**
  * A skeletal {@link Listenable} implementation.
@@ -34,6 +35,7 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
     @SuppressWarnings("rawtypes")
     private static final Consumer[] EMPTY_LISTENERS = new Consumer[0];
 
+    @GuardedBy("reentrantLock")
     private final Set<Consumer<? super T>> updateListeners =
             new ObjectLinkedOpenCustomHashSet<>(IdentityHashStrategy.of());
 
