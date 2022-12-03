@@ -260,17 +260,24 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     final long maxContentLength = decodedReq.maxRequestLength();
                     final long transferredLength = decodedReq.transferredBytes();
                     if (maxContentLength > 0 && transferredLength > maxContentLength) {
-                        final ContentTooLargeException cause =
-                                ContentTooLargeException.builder()
-                                                        .maxContentLength(maxContentLength)
-                                                        .contentLength(req.headers())
-                                                        .transferred(transferredLength)
-                                                        .build();
-                        fail(id, decodedReq.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE,
-                             Http2Error.CANCEL, null, cause);
-                        // Wrap the cause with the returned status to let LoggingService correctly log the
-                        // status.
-                        decodedReq.close(HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause));
+                        final Routed<ServiceConfig> routed = req.route();
+                        if (routed != null && routed.route().isFallback()) {
+                            // Don't need to return an error response. `FallbackService` will respond to the
+                            // request without consuming the response.
+                        } else {
+                            final ContentTooLargeException cause =
+                                    ContentTooLargeException.builder()
+                                                            .maxContentLength(maxContentLength)
+                                                            .contentLength(req.headers())
+                                                            .transferred(transferredLength)
+                                                            .build();
+                            fail(id, decodedReq.headers(), HttpStatus.REQUEST_ENTITY_TOO_LARGE,
+                                 Http2Error.CANCEL, null, cause);
+                            // Wrap the cause with the returned status to let LoggingService correctly log the
+                            // status.
+                            decodedReq.close(
+                                    HttpStatusException.of(HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause));
+                        }
                         return;
                     }
 
