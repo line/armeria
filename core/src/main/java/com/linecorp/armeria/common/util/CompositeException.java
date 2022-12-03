@@ -322,20 +322,13 @@ public final class CompositeException extends RuntimeException {
 
         private static final long serialVersionUID = 3875212506787802066L;
 
-        private static final ReentrantLock reentrantLock = new ReentrantLock();
-
         ExceptionOverview(String message) {
             super(message);
         }
 
         @Override
         public Throwable fillInStackTrace() {
-            reentrantLock.lock();
-            try {
-                return this;
-            } finally {
-                reentrantLock.unlock();
-            }
+            return this;
         }
     }
 
