@@ -40,6 +40,7 @@ class DerivedClientTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            // The two different ports are used to create 2 endpoints.
             sb.http(0);
             sb.http(0);
             sb.service("/", (ctx, req) -> {
@@ -52,9 +53,7 @@ class DerivedClientTest {
     void shouldDeriveWebClients() {
         final ClientOptionValue<SuccessFunction> successFunction =
                 ClientOptions.SUCCESS_FUNCTION.doNewValue((ctx, log) -> true);
-        final WebClient webClient = WebClient.builder(server.httpUri())
-                                             .options(successFunction)
-                                             .build();
+        final WebClient webClient = server.webClient(cb -> cb.options(successFunction));
 
         final ClientOptionValue<HttpHeaders> blockingClientOption =
                 ClientOptions.HEADERS.newValue(HttpHeaders.of("foo", "bar"));
@@ -91,33 +90,34 @@ class DerivedClientTest {
                                                   .build()
                                                   .blocking();
         assertThat(client.get("/").status()).isEqualTo(HttpStatus.OK);
-        server.requestContextCaptor().take();
+        assertThat(server.requestContextCaptor().take().request().headers().contains("foo")).isFalse();
 
         BlockingWebClient derivedWithAdditionalOptions =
-                Clients.newDerivedClient(client, ClientOptions.HEADERS.newValue(HttpHeaders.of("foo", "bar")));
+                Clients.newDerivedClient(client, ClientOptions.HEADERS.newValue(HttpHeaders.of("foo", "1")));
         assertThat(derivedWithAdditionalOptions.endpointGroup())
-                .isEqualTo(endpointGroup);
+                .isSameAs(endpointGroup);
         assertThat(derivedWithAdditionalOptions.get("/").status()).isEqualTo(HttpStatus.OK);
-        server.requestContextCaptor().take().request().headers().contains("foo", "bar");
+        assertThat(server.requestContextCaptor().take().request().headers().contains("foo", "1"))
+                .isTrue();
 
         derivedWithAdditionalOptions =
                 Clients.newDerivedClient(client, ImmutableList.of(
-                        ClientOptions.HEADERS.newValue(HttpHeaders.of("foo", "bar"))));
+                        ClientOptions.HEADERS.newValue(HttpHeaders.of("foo", "2"))));
         assertThat(derivedWithAdditionalOptions.endpointGroup())
-                .isEqualTo(endpointGroup);
+                .isSameAs(endpointGroup);
         assertThat(derivedWithAdditionalOptions.get("/").status()).isEqualTo(HttpStatus.OK);
-        server.requestContextCaptor().take().request().headers().contains("foo", "bar");
+        assertThat(server.requestContextCaptor().take().request().headers().contains("foo", "2")).isTrue();
 
         derivedWithAdditionalOptions =
                 Clients.newDerivedClient(client, options -> {
                     return options.toBuilder()
                                   .options(options)
-                                  .setHeader("foo", "bar")
+                                  .setHeader("foo", "3")
                                   .build();
                 });
         assertThat(derivedWithAdditionalOptions.endpointGroup())
-                .isEqualTo(endpointGroup);
+                .isSameAs(endpointGroup);
         assertThat(derivedWithAdditionalOptions.get("/").status()).isEqualTo(HttpStatus.OK);
-        server.requestContextCaptor().take().request().headers().contains("foo", "bar");
+        assertThat(server.requestContextCaptor().take().request().headers().contains("foo", "3")).isTrue();
     }
 }
