@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -43,6 +44,7 @@ public final class ShutdownHooks {
     private static final Map<AutoCloseable, Queue<Runnable>> autoCloseableOnShutdownTasks =
             new LinkedHashMap<>();
 
+    @GuardedBy("autoCloseableOnShutdownTasks")
     private static final ReentrantLock reentrantLock = new ReentrantLock();
 
     private static final ThreadFactory THREAD_FACTORY = ThreadFactories

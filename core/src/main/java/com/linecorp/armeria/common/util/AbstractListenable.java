@@ -17,6 +17,7 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
@@ -25,7 +26,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.IdentityHashStrategy;
 
 import it.unimi.dsi.fastutil.objects.ObjectLinkedOpenCustomHashSet;
-import javax.annotation.concurrent.GuardedBy;
 
 /**
  * A skeletal {@link Listenable} implementation.
