@@ -62,19 +62,11 @@ class RequestTimeoutAnnotationTest {
             AnnotatedServiceTest.validateContextAndRequest(ctx, req);
             return Long.toString(ctx.requestTimeoutMillis());
         }
-
-        @Get("/subscriberIsInitialized")
-        public String subscriberIsInitialized(ServiceRequestContext ctx, HttpRequest req) {
-            AnnotatedServiceTest.validateContextAndRequest(ctx, req);
-            final boolean isInitialized = ((DefaultServiceRequestContext) ctx)
-                    .requestCancellationScheduler().isInitialized();
-            return Boolean.toString(isInitialized);
-        }
     }
 
     @Test
     void testRequestTimeoutSet() {
-        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+        final BlockingWebClient client = server.blockingWebClient();
 
         AggregatedHttpResponse response;
 

@@ -31,7 +31,7 @@ import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
 public final class RequestTimeoutDecoratorFunction implements DecoratorFactoryFunction<RequestTimeout> {
 
     /**
-     * Creates a new decorator with the specified {@code parameter}.
+     * Creates a new decorator with the specified {@link RequestTimeout}.
      */
     @Override
     public Function<? super HttpService, ? extends HttpService> newDecorator(RequestTimeout parameter) {
