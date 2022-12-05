@@ -283,6 +283,7 @@ final class DefaultHealthCheckerContext
         }
     }
 
+    // The caller who calls this method must have the lock.
     @SuppressWarnings("GuardedBy")
     private <T extends Future<U>, U> T add(T future) {
         scheduledFutures.put(future, Boolean.TRUE);
