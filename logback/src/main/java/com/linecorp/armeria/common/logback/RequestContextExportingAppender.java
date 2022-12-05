@@ -205,18 +205,15 @@ public final class RequestContextExportingAppender
 
     private Map<String, String> prepareMdcMap(Map<String, String> contextMap,
                                               Map<String, String> originalMdcMap) {
-        final Map<String, String> mdcMap;
         if (needsHashMap) {
-            mdcMap = new HashMap<>(contextMap);
+            final Map<String, String> mdcMap = new HashMap<>(contextMap);
             mdcMap.putAll(originalMdcMap);
-        } else {
-            if (!originalMdcMap.isEmpty()) {
-                mdcMap = new UnionMap<>(contextMap, originalMdcMap);
-            } else {
-                mdcMap = contextMap;
-            }
+            return mdcMap;
         }
-        return mdcMap;
+        if (!originalMdcMap.isEmpty()) {
+            return new UnionMap<>(contextMap, originalMdcMap);
+        }
+        return contextMap;
     }
 
     @Override
@@ -238,6 +235,9 @@ public final class RequestContextExportingAppender
 
     @Override
     public void addAppender(Appender<ILoggingEvent> newAppender) {
+        // When SocketAppender is used and event object contains classes
+        // that are not on whitelist, HardenedObjectInputStream raises
+        // InvalidClassException: Unauthorized deserialization attempt.
         if (newAppender instanceof AbstractSocketAppender) {
             needsHashMap = true;
         }

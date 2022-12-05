@@ -26,6 +26,8 @@ import static org.mockito.Mockito.withSettings;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -620,8 +622,7 @@ class RequestContextExportingAppenderTest {
             verify(sa).doAppend(eventCaptor.capture());
 
             final Map<String, String> mdc = eventCaptor.getValue().getMDCPropertyMap();
-            assertThat(mdc.getClass().getName()).startsWith("java.util");
-            assertThat(mdc).isEmpty();
+            assertThat(mdc).isInstanceOf(Collections.EMPTY_MAP.getClass());
         }
     }
 
@@ -637,7 +638,7 @@ class RequestContextExportingAppenderTest {
             verify(sa).doAppend(eventCaptor.capture());
 
             final Map<String, String> mdc = eventCaptor.getValue().getMDCPropertyMap();
-            assertThat(mdc.getClass().getName()).startsWith("java.util");
+            assertThat(mdc).isInstanceOf(HashMap.class);
             assertThat(mdc).containsOnlyKeys("test-prop");
             assertThat(mdc).extracting(key -> mdc.get("test-prop"), STRING).isEqualTo("some-client");
         }
@@ -657,7 +658,7 @@ class RequestContextExportingAppenderTest {
             verify(sa).doAppend(eventCaptor.capture());
 
             final Map<String, String> mdc = eventCaptor.getValue().getMDCPropertyMap();
-            assertThat(mdc.getClass().getName()).startsWith("java.util");
+            assertThat(mdc).isInstanceOf(HashMap.class);
             assertThat(mdc).containsOnlyKeys("test-prop", "another-prop");
             assertThat(mdc).extracting(key -> mdc.get("test-prop"), STRING).isEqualTo("override-test");
             assertThat(mdc).extracting(key -> mdc.get("another-prop"), STRING).isEqualTo("another-value");
