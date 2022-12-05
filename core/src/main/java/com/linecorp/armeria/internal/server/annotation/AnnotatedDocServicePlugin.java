@@ -178,8 +178,8 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         route.methods().forEach(
                 httpMethod -> {
                     final MethodInfo methodInfo = new MethodInfo(
-                            serviceClass.getName(), method.getName(), overloadId, returnTypeSignature, fieldInfos,
-                            ImmutableList.of(),
+                            serviceClass.getName(), method.getName(), overloadId, returnTypeSignature,
+                            fieldInfos, ImmutableList.of(),
                             ImmutableList.of(endpoint), httpMethod,
                             AnnotatedServiceFactory.findDescription(method));
 
