@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.locks.ReentrantLock;
 
+import javax.annotation.concurrent.GuardedBy;
+
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 
@@ -36,12 +38,9 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 final class WeightedRandomDistributionEndpointSelector {
 
-    /**
-     * Lock for {@link currentEntries}.
-     */
     private final ReentrantLock lock = new ReentrantLock();
-
     private final List<Entry> allEntries;
+    @GuardedBy("lock")
     private final List<Entry> currentEntries;
     private final long total;
     private long remaining;

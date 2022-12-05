@@ -31,6 +31,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
+import javax.annotation.concurrent.GuardedBy;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,10 +100,6 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         return new HealthCheckedEndpointGroupBuilder(delegate, path);
     }
 
-    /**
-     * Lock for {@link contextGroupChain}.
-     */
-    private final ReentrantLock lock = new ReentrantLock();
     final EndpointGroup delegate;
     private final long initialSelectionTimeoutMillis;
     private final long selectionTimeoutMillis;
@@ -113,6 +111,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     @VisibleForTesting
     final HealthCheckStrategy healthCheckStrategy;
 
+    private final ReentrantLock lock = new ReentrantLock();
+    @GuardedBy("lock")
     private final Deque<HealthCheckContextGroup> contextGroupChain = new ArrayDeque<>(4);
 
     // Should not use NonBlockingHashSet whose remove operation does not clear the reference of the value

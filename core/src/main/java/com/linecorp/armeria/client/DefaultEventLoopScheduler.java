@@ -251,12 +251,12 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
         for (final Iterator<AbstractEventLoopState> i = states.values().iterator(); i.hasNext();) {
             final AbstractEventLoopState state = i.next();
             final boolean remove;
-            lock();
+            lock.lock();
             try {
                 remove = state.allActiveRequests() == 0 &&
                          currentTimeNanos - state.lastActivityTimeNanos() >= CLEANUP_INTERVAL_NANOS;
             } finally {
-                unlock();
+                lock.unlock();
             }
 
             if (remove) {
@@ -294,13 +294,5 @@ final class DefaultEventLoopScheduler implements EventLoopScheduler {
             final StateKey that = (StateKey) obj;
             return ipOrHost.equals(that.ipOrHost) && port == that.port && isHttp1 == that.isHttp1;
         }
-    }
-
-    private void lock() {
-        lock.lock();
-    }
-
-    private void unlock() {
-        lock.unlock();
     }
 }

@@ -29,6 +29,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 
+import javax.annotation.concurrent.GuardedBy;
+
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
@@ -49,20 +51,17 @@ import io.netty.util.concurrent.Future;
 final class DefaultHealthCheckerContext
         extends AbstractExecutorService implements HealthCheckerContext, ScheduledExecutorService {
 
-    /**
-     * Lock for {@link scheduledFutures}.
-     */
-    private final ReentrantLock lock = new ReentrantLock();
-
     private final Endpoint originalEndpoint;
     private final Endpoint endpoint;
     private final SessionProtocol protocol;
     private final ClientOptions clientOptions;
+    private final ReentrantLock lock = new ReentrantLock();
 
     /**
      * Keeps the {@link Future}s which were scheduled via this {@link ScheduledExecutorService}.
      * Note that this field is also used as a lock.
      */
+    @GuardedBy("lock")
     private final Map<Future<?>, Boolean> scheduledFutures = new IdentityHashMap<>();
     private final CompletableFuture<Void> initialCheckFuture = new EventLoopCheckingFuture<>();
     private final Backoff retryBackoff;
