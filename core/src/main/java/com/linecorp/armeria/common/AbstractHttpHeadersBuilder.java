@@ -51,6 +51,11 @@ abstract class AbstractHttpHeadersBuilder<SELF extends HttpHeadersBuilder> exten
         return getters != null ? getters.contentLength() : -1;
     }
 
+    public final boolean isContentLengthSet() {
+        final HttpHeadersBase getters = getters();
+        return getters != null ? getters.isContentLengthSet() : false;
+    }
+
     @Nullable
     public final MediaType contentType() {
         final HttpHeadersBase getters = getters();

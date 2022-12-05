@@ -17,7 +17,7 @@
 package com.linecorp.armeria.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.setOrRemoveContentLength;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.maybeUpdateContentLengthAndEndOfStream;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
@@ -233,7 +233,9 @@ public interface HttpResponse extends Response, HttpMessage {
         checkArgument(!status.isInformational(), "status: %s (expected: a non-1xx status)", status);
 
         if (status.isContentAlwaysEmpty()) {
-            return new OneElementFixedHttpResponse(ResponseHeaders.of(status));
+            return new OneElementFixedHttpResponse(ResponseHeaders.builder(status)
+                                                                  .endOfStream(true)
+                                                                  .build());
         } else {
             return of(status, MediaType.PLAIN_TEXT_UTF_8, status.toHttpData());
         }
@@ -421,7 +423,8 @@ public interface HttpResponse extends Response, HttpMessage {
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");
 
-        final ResponseHeaders newHeaders = setOrRemoveContentLength(headers, content, trailers);
+        final ResponseHeaders newHeaders =
+                maybeUpdateContentLengthAndEndOfStream(headers, content, trailers, false);
         final boolean contentIsEmpty = content.isEmpty();
         if (contentIsEmpty) {
             content.close();

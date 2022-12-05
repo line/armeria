@@ -91,6 +91,7 @@ class HttpHeadersBase
 
     private final Map<AsciiString, Object> cache;
 
+    private boolean isContentLengthSet;
     private boolean endOfStream;
 
     HttpHeadersBase(int sizeHint) {
@@ -103,6 +104,7 @@ class HttpHeadersBase
      */
     HttpHeadersBase(HttpHeadersBase parent, boolean shallowCopy) {
         super(parent, shallowCopy);
+        isContentLengthSet = parent.isContentLengthSet;
         endOfStream = parent.endOfStream;
         cache = new HashMap<>(parent.cache);
     }
@@ -113,22 +115,30 @@ class HttpHeadersBase
     HttpHeadersBase(HttpHeaderGetters parent) {
         super(parent);
         assert !(parent instanceof HttpHeadersBase);
+        isContentLengthSet = parent.isContentLengthSet();
         endOfStream = parent.isEndOfStream();
         cache = new HashMap<>(4);
     }
 
     @Override
-    void onChange(@Nullable AsciiString name) {
+    void onChange(@Nullable AsciiString name, boolean add) {
+        if (HttpHeaderNames.CONTENT_LENGTH.equals(name)) {
+            isContentLengthSet = add;
+        }
+
         // This method could be called before the 'cache' field is initialized.
         if (cache == null || cache.isEmpty()) {
             return;
         }
 
-        cache.remove(name);
+        if (!add) {
+            cache.remove(name);
+        }
     }
 
     @Override
     void onClear() {
+        isContentLengthSet = false;
         if (cache == null || cache.isEmpty()) {
             return;
         }
@@ -449,10 +459,14 @@ class HttpHeadersBase
     }
 
     final void contentLength(long contentLength) {
-        checkArgument(contentLength >= 0, "contentLength: %s (expected: >= 0)", contentLength);
-        cache.put(HttpHeaderNames.CONTENT_LENGTH, contentLength);
-        final String contentLengthString = StringUtil.toString(contentLength);
-        setWithoutNotifying(HttpHeaderNames.CONTENT_LENGTH, contentLengthString);
+        checkArgument(contentLength >= -1, "contentLength: %s (expected: >= -1)", contentLength);
+        isContentLengthSet = true;
+        // -1 just means the content size is unknown.
+        if (contentLength >= 0) {
+            cache.put(HttpHeaderNames.CONTENT_LENGTH, contentLength);
+            final String contentLengthString = StringUtil.toString(contentLength);
+            setWithoutNotifying(HttpHeaderNames.CONTENT_LENGTH, contentLengthString);
+        }
     }
 
     @Override
@@ -471,6 +485,11 @@ class HttpHeadersBase
             cache.put(HttpHeaderNames.CONTENT_LENGTH, -1L);
             return -1L;
         }
+    }
+
+    @Override
+    public boolean isContentLengthSet() {
+        return isContentLengthSet;
     }
 
     List<MediaType> accept() {
@@ -630,7 +649,8 @@ class HttpHeadersBase
 
     @Override
     public final int hashCode() {
-        final int hashCode = super.hashCode();
+        int hashCode = super.hashCode();
+        hashCode = hashCode * 31 + Boolean.hashCode(isContentLengthSet);
         return endOfStream ? ~hashCode : hashCode;
     }
 
@@ -644,7 +664,10 @@ class HttpHeadersBase
             return false;
         }
 
-        return endOfStream == ((HttpHeaderGetters) o).isEndOfStream() && super.equals(o);
+        final HttpHeaderGetters getters = (HttpHeaderGetters) o;
+        return endOfStream == getters.isEndOfStream() &&
+               isContentLengthSet == getters.isContentLengthSet() &&
+               super.equals(o);
     }
 
     @Override

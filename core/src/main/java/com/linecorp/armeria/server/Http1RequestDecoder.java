@@ -338,7 +338,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         }
 
         // Send a '100 Continue' response.
-        encoder.writeHeaders(id, 1, CONTINUE_RESPONSE, false);
+        encoder.writeHeaders(id, 1, CONTINUE_RESPONSE, false, HttpMethod.valueOf(nettyReq.method().name()));
 
         // Remove the 'expect' header so that it's handled in a way invisible to a Service.
         nettyHeaders.remove(HttpHeaderNames.EXPECT);

@@ -49,6 +49,14 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
     long contentLength();
 
     /**
+     * Returns {@code true} if a content length is set via {@link HttpHeadersBuilder#contentLength(long)}}.
+     *
+     * <p>Note that {@code get(HttpHeaderNames.CONTENT_LENGTH)} can return {@code null}, although this method
+     * returns {@code true} if {@link HttpHeadersBuilder#contentLength(long)}} is set to {@code -1}.
+     */
+    boolean isContentLengthSet();
+
+    /**
      * Returns the parsed {@code "content-type"} header.
      *
      * @return the parsed {@link MediaType} if present and valid, or {@code null} otherwise.

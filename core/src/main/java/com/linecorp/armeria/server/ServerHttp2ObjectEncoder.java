@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -54,7 +55,7 @@ final class ServerHttp2ObjectEncoder extends Http2ObjectEncoder implements Serve
 
     @Override
     public ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
-                                        boolean isTrailersEmpty) {
+                                        boolean isTrailersEmpty, HttpMethod method) {
         if (!isStreamPresentAndWritable(streamId)) {
             // One of the following cases:
             // - Stream has been closed already.

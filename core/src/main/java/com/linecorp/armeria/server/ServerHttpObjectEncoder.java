@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
@@ -37,28 +38,29 @@ interface ServerHttpObjectEncoder extends HttpObjectEncoder {
     /**
      * Writes a {@link ResponseHeaders}.
      */
-    default ChannelFuture writeHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream) {
-        return writeHeaders(id, streamId, headers, endStream, true);
+    default ChannelFuture writeHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
+                                       HttpMethod method) {
+        return writeHeaders(id, streamId, headers, endStream, true, method);
     }
 
     /**
      * Writes a {@link ResponseHeaders}.
      */
     default ChannelFuture writeHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
-                                       boolean isTrailersEmpty) {
+                                       boolean isTrailersEmpty, HttpMethod method) {
         assert eventLoop().inEventLoop();
         if (isClosed()) {
             return newClosedSessionFuture();
         }
 
-        return doWriteHeaders(id, streamId, headers, endStream, isTrailersEmpty);
+        return doWriteHeaders(id, streamId, headers, endStream, isTrailersEmpty, method);
     }
 
     /**
      * Writes a {@link ResponseHeaders}.
      */
     ChannelFuture doWriteHeaders(int id, int streamId, ResponseHeaders headers, boolean endStream,
-                                 boolean isTrailersEmpty);
+                                 boolean isTrailersEmpty, HttpMethod method);
 
     /**
      * Tells whether the {@link ResponseHeaders} is sent.
@@ -83,20 +85,21 @@ interface ServerHttpObjectEncoder extends HttpObjectEncoder {
 
         final HttpData content = res.content();
         boolean transferredContent = false;
+        final HttpMethod method = headers != null ? headers.method() : HttpMethod.UNKNOWN;
         try {
             final ResponseHeaders resHeaders = res.headers();
             final HttpHeaders resTrailers = res.trailers();
             if (resTrailers.isEmpty()) {
                 if (content.isEmpty()) {
-                    return writeHeaders(id, streamId, resHeaders, true);
+                    return writeHeaders(id, streamId, resHeaders, true, method);
                 }
 
-                writeHeaders(id, streamId, resHeaders, false);
+                writeHeaders(id, streamId, resHeaders, false, method);
                 transferredContent = true;
                 return writeData(id, streamId, content, true);
             }
 
-            writeHeaders(id, streamId, resHeaders, false);
+            writeHeaders(id, streamId, resHeaders, false, method);
             if (!content.isEmpty()) {
                 transferredContent = true;
                 writeData(id, streamId, content, false);

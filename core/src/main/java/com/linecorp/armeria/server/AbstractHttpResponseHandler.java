@@ -154,15 +154,17 @@ abstract class AbstractHttpResponseHandler {
                              .build();
         }
 
+        final HttpMethod method = reqCtx.method();
         if (!res.informationals().isEmpty()) {
             for (ResponseHeaders informational : res.informationals()) {
                 responseEncoder.writeHeaders(id, streamId, informational,
-                                             false, trailersEmpty);
+                                             false, trailersEmpty, method);
             }
         }
         logBuilder().responseHeaders(headers);
-        ChannelFuture future = responseEncoder.writeHeaders(id, streamId, headers,
-                                                            contentEmpty && trailersEmpty, trailersEmpty);
+        ChannelFuture future =
+                responseEncoder.writeHeaders(id, streamId, headers, contentEmpty && trailersEmpty,
+                                             trailersEmpty, method);
         if (!contentEmpty) {
             logBuilder().increaseResponseLength(content);
             future = responseEncoder.writeData(id, streamId, content, trailersEmpty);

@@ -105,12 +105,6 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         if (req == null) {
             assert encoder != null;
 
-            // Handle `expect: 100-continue` first to give `handle100Continue()` a chance to remove
-            // the `expect` header before converting the Netty HttpHeaders into Armeria RequestHeaders.
-            // This is because removing a header from RequestHeaders is more expensive due to its
-            // immutability.
-            final boolean hasInvalidExpectHeader = !handle100Continue(streamId, nettyHeaders);
-
             // Validate the method.
             final CharSequence methodText = nettyHeaders.method();
             if (methodText == null) {
@@ -124,6 +118,12 @@ final class Http2RequestDecoder extends Http2EventAdapter {
                 writeErrorResponse(streamId, null, HttpStatus.METHOD_NOT_ALLOWED, "Unsupported method", null);
                 return;
             }
+
+            // Handle `expect: 100-continue` first to give `handle100Continue()` a chance to remove
+            // the `expect` header before converting the Netty HttpHeaders into Armeria RequestHeaders.
+            // This is because removing a header from RequestHeaders is more expensive due to its
+            // immutability.
+            final boolean hasInvalidExpectHeader = !handle100Continue(streamId, nettyHeaders, method);
 
             // Convert the Netty Http2Headers into Armeria RequestHeaders.
             final RequestHeaders headers =
@@ -213,7 +213,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         onHeadersRead(ctx, streamId, headers, padding, endOfStream);
     }
 
-    private boolean handle100Continue(int streamId, Http2Headers headers) {
+    private boolean handle100Continue(int streamId, Http2Headers headers, HttpMethod method) {
         final CharSequence expectValue = headers.get(HttpHeaderNames.EXPECT);
         if (expectValue == null) {
             // No 'expect' header.
@@ -227,7 +227,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
 
         // Send a '100 Continue' response.
         assert encoder != null;
-        encoder.writeHeaders(0 /* unused */, streamId, CONTINUE_RESPONSE, false);
+        encoder.writeHeaders(0 /* unused */, streamId, CONTINUE_RESPONSE, false, method);
 
         // Remove the 'expect' header so that it's handled in a way invisible to a Service.
         headers.remove(HttpHeaderNames.EXPECT);

@@ -555,6 +555,10 @@ public final class ArmeriaHttpUtil {
         assert headers instanceof ArmeriaHttp2Headers;
         final HttpHeadersBuilder builder = ((ArmeriaHttp2Headers) headers).delegate();
         builder.endOfStream(endOfStream);
+        if (!builder.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+            // Set -1 not to override the content-length when the HTTP objects are aggregated.
+            builder.contentLength(-1);
+        }
         // A CONNECT request might not have ":scheme". See https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.3
         if (!builder.contains(HttpHeaderNames.SCHEME)) {
             builder.add(HttpHeaderNames.SCHEME, scheme);
@@ -581,6 +585,10 @@ public final class ArmeriaHttpUtil {
         assert http2Headers instanceof ArmeriaHttp2Headers;
         final HttpHeadersBuilder delegate = ((ArmeriaHttp2Headers) http2Headers).delegate();
         delegate.endOfStream(endOfStream);
+        if (!delegate.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+            // Set -1 not to override the content-length when the HTTP objects are aggregated.
+            delegate.contentLength(-1);
+        }
         HttpHeaders headers = delegate.build();
 
         if (request) {
@@ -700,6 +708,11 @@ public final class ArmeriaHttpUtil {
 
         if (cookieJoiner != null && cookieJoiner.length() != 0) {
             out.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
+        }
+
+        if (!inHeaders.contains(HttpHeaderNames.CONTENT_LENGTH)) {
+            // Set -1 not to override the content-length when the HTTP objects are aggregated.
+            out.contentLength(-1);
         }
     }
 
@@ -967,12 +980,17 @@ public final class ArmeriaHttpUtil {
      * does not meet the conditions above and {@link HttpHeaderNames#CONTENT_LENGTH} is not present
      * regardless of the fact that the content is empty or not.
      *
+     * <p>{@link ResponseHeaders#isEndOfStream()} is set to {@code true} if both {@link HttpData} and trailers
+     * are empty.
+     *
      * @throws IllegalArgumentException if the specified {@code content} is not empty when the specified
      *                                  {@link HttpStatus} is one of {@link HttpStatus#NO_CONTENT},
      *                                  {@link HttpStatus#RESET_CONTENT} and {@link HttpStatus#NOT_MODIFIED}.
      */
-    public static ResponseHeaders setOrRemoveContentLength(ResponseHeaders headers, HttpData content,
-                                                           HttpHeaders trailers) {
+    public static ResponseHeaders maybeUpdateContentLengthAndEndOfStream(ResponseHeaders headers,
+                                                                         HttpData content,
+                                                                         HttpHeaders trailers,
+                                                                         boolean isAggregatedResponse) {
         requireNonNull(headers, "headers");
         requireNonNull(content, "content");
         requireNonNull(trailers, "trailers");
@@ -982,16 +1000,17 @@ public final class ArmeriaHttpUtil {
         if (isContentAlwaysEmptyWithValidation(status, content)) {
             if (status != HttpStatus.NOT_MODIFIED) {
                 if (headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
-                    final ResponseHeadersBuilder builder = headers.toBuilder();
-                    builder.remove(HttpHeaderNames.CONTENT_LENGTH);
-                    return builder.build();
+                    return headers.toBuilder()
+                                  .removeAndThen(HttpHeaderNames.CONTENT_LENGTH)
+                                  .endOfStream(true)
+                                  .build();
                 }
             } else {
                 // 304 response can have the "content-length" header when it is a response to a conditional
                 // GET request. See https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
             }
 
-            return headers;
+            return maybeSetEndOfStream(headers, 0, isAggregatedResponse);
         }
 
         if (!trailers.isEmpty()) {
@@ -1009,17 +1028,54 @@ public final class ArmeriaHttpUtil {
             return headers;
         }
 
-        if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH) || !content.isEmpty()) {
+        final long contentLength;
+        final boolean streamingContent = headers.isContentLengthSet() && headers.contentLength() == -1;
+        if (streamingContent) {
+            // Do not set a content-length for a streaming response.
+            contentLength = -1;
+        } else {
+            if (content.isEmpty()) {
+                if (headers.isContentLengthSet()) {
+                    // If HEAD method is used, a content-length can exist with an empty content.
+                    contentLength = -1;
+                } else {
+                    contentLength = 0;
+                }
+            } else {
+                contentLength = content.length();
+            }
+        }
+
+        if (contentLength >= 0) {
             return headers.toBuilder()
                           .contentLength(content.length())
                           .removeAndThen(HttpHeaderNames.TRANSFER_ENCODING)
                           .build();
         }
 
-        // The header contains "content-length" header and the content is empty.
+        // A content length is set and the content is empty.
         // Do not overwrite the header because a response to a HEAD request
-        // will have no content even if it has non-zero content-length header.
-        return headers;
+        // will have no content even if it has non-zero content-length header
+        // or a null content-length header for chunked-transfer encoding.
+        return maybeSetEndOfStream(headers, content.length(), isAggregatedResponse);
+    }
+
+    private static ResponseHeaders maybeSetEndOfStream(ResponseHeaders headers, int contentLength,
+                                                       boolean isAggregatedResponse) {
+        if (contentLength > 0) {
+            return headers;
+        }
+        if (isAggregatedResponse) {
+            // It is unnecessary to store endOfStream to headers for AggregatedHttpResponse since the length
+            // can be computed when the headers and data are aggregated.
+        }
+        if (headers.isEndOfStream()) {
+            return headers;
+        }
+
+        return headers.toBuilder()
+                      .endOfStream(true)
+                      .build();
     }
 
     public static String convertHeaderValue(AsciiString name, CharSequence value) {

@@ -551,7 +551,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         final ResponseHeaders immutableResHeaders = resHeaders.build();
         ChannelFuture future = responseEncoder.writeHeaders(
-                req.id(), req.streamId(), immutableResHeaders, !hasContent);
+                req.id(), req.streamId(), immutableResHeaders, !hasContent, reqCtx.method());
         logBuilder.responseHeaders(immutableResHeaders);
         if (hasContent) {
             logBuilder.increaseResponseLength(resContent);

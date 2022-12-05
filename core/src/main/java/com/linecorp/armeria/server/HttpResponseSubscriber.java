@@ -148,10 +148,15 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
 
                     if (req.method() == HttpMethod.HEAD) {
                         endOfStream = true;
-                    } else if (status.isContentAlwaysEmpty()) {
-                        state = State.NEEDS_TRAILERS;
                     } else {
-                        state = State.NEEDS_DATA_OR_TRAILERS;
+                        if (!reqCtx.additionalResponseTrailers().isEmpty()) {
+                           endOfStream = false;
+                        }
+                        if (status.isContentAlwaysEmpty()) {
+                            state = State.NEEDS_TRAILERS;
+                        } else {
+                            state = State.NEEDS_DATA_OR_TRAILERS;
+                        }
                     }
                     if (endOfStream) {
                         setDone(false);
@@ -165,7 +170,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                 }
 
                 responseEncoder.writeHeaders(req.id(), req.streamId(), merged, endOfStream,
-                                             reqCtx.additionalResponseTrailers().isEmpty())
+                                             reqCtx.additionalResponseTrailers().isEmpty(), req.method())
                                .addListener(writeHeadersFutureListener(endOfStream));
                 break;
             }
