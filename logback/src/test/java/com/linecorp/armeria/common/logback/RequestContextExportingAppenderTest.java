@@ -36,7 +36,6 @@ import java.util.function.Consumer;
 
 import javax.net.ssl.SSLSession;
 
-import ch.qos.logback.classic.AsyncAppender;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.junit.jupiter.api.AfterEach;
@@ -70,6 +69,7 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import ch.qos.logback.classic.AsyncAppender;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
