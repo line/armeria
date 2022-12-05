@@ -102,7 +102,7 @@ final class ByteBufHttpData extends ByteBufBytes implements HttpData {
 
         @Override
         public String toString() {
-            return "{EOS}, " + delegate;
+            return delegate + ", {EOS}";
         }
 
         @Override

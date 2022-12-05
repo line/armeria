@@ -89,6 +89,6 @@ final class ByteArrayHttpData extends ByteArrayBytes implements HttpData {
         if (!isEndOfStream()) {
             return toString;
         }
-        return "{EOS}, " + toString;
+        return toString + ", {EOS}";
     }
 }
