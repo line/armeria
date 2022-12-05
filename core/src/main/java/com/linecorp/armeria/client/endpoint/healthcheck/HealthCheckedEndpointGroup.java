@@ -31,14 +31,13 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
-import javax.annotation.concurrent.GuardedBy;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientOptions;
@@ -153,7 +152,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         final List<Endpoint> endpoints = healthCheckStrategy.select(candidates);
         final HashMap<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>(endpoints.size());
 
-        synchronized (contextGroupChain) {
+        lock();
+        try {
             for (Endpoint endpoint : endpoints) {
                 final DefaultHealthCheckerContext context = findContext(endpoint);
                 if (context != null) {
@@ -186,6 +186,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 setEndpoints(allHealthyEndpoints());
                 return null;
             });
+        } finally {
+            unlock();
         }
     }
 
