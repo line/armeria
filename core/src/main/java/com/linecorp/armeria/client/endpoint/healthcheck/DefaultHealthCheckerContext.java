@@ -105,7 +105,7 @@ final class DefaultHealthCheckerContext
     private CompletableFuture<Void> destroy() {
         assert handle != null : handle;
         return handle.closeAsync().handle((unused1, unused2) -> {
-            lock();
+            lock.lock();
             try {
                 if (destroyed) {
                     return null;
@@ -121,7 +121,7 @@ final class DefaultHealthCheckerContext
                     copy.forEach(f -> f.cancel(false));
                 }
             } finally {
-                unlock();
+                lock.unlock();
             }
 
             onUpdateHealth.accept(originalEndpoint, false);
@@ -191,58 +191,58 @@ final class DefaultHealthCheckerContext
 
     @Override
     public void execute(Runnable command) {
-        lock();
+        lock.lock();
         try {
             rejectIfDestroyed(command);
             add(eventLoopGroup().submit(command));
         } finally {
-            unlock();
+            lock.unlock();
         }
     }
 
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        lock();
+        lock.lock();
         try {
             rejectIfDestroyed(command);
             return add(eventLoopGroup().schedule(command, delay, unit));
         } finally {
-            unlock();
+            lock.unlock();
         }
     }
 
     @Override
     public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        lock();
+        lock.lock();
         try {
             rejectIfDestroyed(callable);
             return add(eventLoopGroup().schedule(callable, delay, unit));
         } finally {
-            unlock();
+            lock.unlock();
         }
     }
 
     @Override
     public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
                                                   TimeUnit unit) {
-        lock();
+        lock.lock();
         try {
             rejectIfDestroyed(command);
             return add(eventLoopGroup().scheduleAtFixedRate(command, initialDelay, period, unit));
         } finally {
-            unlock();
+            lock.unlock();
         }
     }
 
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
                                                      TimeUnit unit) {
-        lock();
+        lock.lock();
         try {
             rejectIfDestroyed(command);
             return add(eventLoopGroup().scheduleWithFixedDelay(command, initialDelay, delay, unit));
         } finally {
-            unlock();
+            lock.unlock();
         }
     }
 
@@ -283,14 +283,15 @@ final class DefaultHealthCheckerContext
         }
     }
 
+    @SuppressWarnings("GuardedBy")
     private <T extends Future<U>, U> T add(T future) {
         scheduledFutures.put(future, Boolean.TRUE);
         future.addListener(f -> {
-            lock();
+            lock.lock();
             try {
                 scheduledFutures.remove(f);
             } finally {
-                unlock();
+                lock.unlock();
             }
         });
         return future;
@@ -328,13 +329,5 @@ final class DefaultHealthCheckerContext
                           .add("destroyed", destroyed)
                           .add("refCnt", refCnt)
                           .toString();
-    }
-
-    private void lock() {
-        lock.lock();
-    }
-
-    private void unlock() {
-        lock.unlock();
     }
 }

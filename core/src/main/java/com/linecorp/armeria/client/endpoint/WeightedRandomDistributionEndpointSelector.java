@@ -73,7 +73,7 @@ final class WeightedRandomDistributionEndpointSelector {
         }
 
         final ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
-        lock();
+        lock.lock();
         try {
             long target = threadLocalRandom.nextLong(remaining);
             final Iterator<Entry> it = currentEntries.iterator();
@@ -99,7 +99,7 @@ final class WeightedRandomDistributionEndpointSelector {
                 }
             }
         } finally {
-            unlock();
+            lock.unlock();
         }
 
         // Since `allEntries` is not empty, should select one Endpoint from `allEntries`.
@@ -141,13 +141,5 @@ final class WeightedRandomDistributionEndpointSelector {
         boolean isFull() {
             return counter >= endpoint.weight();
         }
-    }
-
-    private void lock() {
-        lock.lock();
-    }
-
-    private void unlock() {
-        lock.unlock();
     }
 }

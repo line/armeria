@@ -152,7 +152,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         final List<Endpoint> endpoints = healthCheckStrategy.select(candidates);
         final HashMap<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>(endpoints.size());
 
-        lock();
+        lock.lock();
         try {
             for (Endpoint endpoint : endpoints) {
                 final DefaultHealthCheckerContext context = findContext(endpoint);
@@ -187,10 +187,11 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 return null;
             });
         } finally {
-            unlock();
+            lock.unlock();
         }
     }
 
+    @SuppressWarnings("GuardedBy")
     @VisibleForTesting
     Queue<HealthCheckContextGroup> contextGroupChain() {
         return contextGroupChain;
@@ -198,7 +199,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
     @VisibleForTesting
     List<Endpoint> allHealthyEndpoints() {
-        lock();
+        lock.lock();
         try {
             final HealthCheckContextGroup newGroup = contextGroupChain.peekLast();
             if (newGroup == null) {
@@ -226,13 +227,13 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             }
             return allHealthyEndpoints;
         } finally {
-            unlock();
+            lock.unlock();
         }
     }
 
     @Nullable
     private DefaultHealthCheckerContext findContext(Endpoint endpoint) {
-        lock();
+        lock.lock();
         try {
             for (HealthCheckContextGroup contextGroup : contextGroupChain) {
                 final DefaultHealthCheckerContext context = contextGroup.contexts().get(endpoint);
@@ -241,7 +242,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
             }
         } finally {
-            unlock();
+            lock.unlock();
         }
         return null;
     }
@@ -252,7 +253,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void destroyOldContexts(HealthCheckContextGroup contextGroup) {
-        lock();
+        lock.lock();
         try {
             final Iterator<HealthCheckContextGroup> it = contextGroupChain.iterator();
             while (it.hasNext()) {
@@ -266,7 +267,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 it.remove();
             }
         } finally {
-            unlock();
+            lock.unlock();
         }
     }
 
@@ -294,7 +295,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     protected void doCloseAsync(CompletableFuture<?> future) {
         // Stop the health checkers in parallel.
         final CompletableFuture<?> stopFutures;
-        lock();
+        lock.lock();
         try {
             final ImmutableList.Builder<CompletableFuture<?>> completionFutures = ImmutableList.builder();
             for (HealthCheckContextGroup group : contextGroupChain) {
@@ -316,15 +317,15 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
             }
             stopFutures = CompletableFutures.allAsList(completionFutures.build());
         } finally {
-            unlock();
+            lock.unlock();
         }
 
         stopFutures.handle((unused1, unused2) -> {
-            lock();
+            lock.lock();
             try {
                 contextGroupChain.clear();
             } finally {
-                unlock();
+                lock.unlock();
             }
             return delegate.closeAsync();
         }).handle((unused1, unused2) -> future.complete(null));
@@ -346,6 +347,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         return new HealthCheckedEndpointGroupMetrics(this, idPrefix);
     }
 
+    @SuppressWarnings("GuardedBy")
     @Override
     public String toString() {
         final List<Endpoint> endpoints = endpoints();
@@ -361,13 +363,5 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                           .add("selectionTimeoutMillis", selectionTimeoutMillis)
                           .add("contextGroupChain", contextGroupChain)
                           .toString();
-    }
-
-    private void lock() {
-        lock.lock();
-    }
-
-    private void unlock() {
-        lock.unlock();
     }
 }
