@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.util;
 import static java.util.Objects.requireNonNull;
 
 import com.google.errorprone.annotations.concurrent.GuardedBy;
+
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
