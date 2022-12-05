@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.server.docs;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * Represents the different type that is used for {@link DocService}.
  */
+@UnstableApi
 public enum TypeSignatureType {
 
     /**
@@ -27,12 +30,13 @@ public enum TypeSignatureType {
     BASE(false, false),
 
     /**
-     * Named type.
+     * Struct of exception type. The {@link TypeSignature} whose type is {@link #STRUCT} is converted to a
+     * {@link StructInfo} or {@link ExceptionInfo}
      */
-    NAMED(false, true),
+    STRUCT(false, true),
 
     /**
-     * Enum type.
+     * Enum type. The {@link TypeSignature} whose type is {@link #ENUM} is converted to a {@link EnumInfo}.
      */
     ENUM(false, true),
 
@@ -56,10 +60,13 @@ public enum TypeSignatureType {
      */
     CONTAINER(true, false),
 
+    // TODO(minwoox): Support oneof type:
+    //                https://json-schema.org/understanding-json-schema/reference/combining.html#oneof
+
     /**
      * Unresolved type.
      */
-    UNRESOLVED(false, false),;
+    UNRESOLVED(false, false);
 
     private final boolean hasParameter;
     private final boolean hasTypeDescriptor;

@@ -25,38 +25,39 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A named {@link TypeSignature}.
+ * A descriptive {@link TypeSignature}.
  */
 @UnstableApi
-public final class NamedTypeSignature extends DefaultTypeSignature {
+public final class DescriptiveTypeSignature extends DefaultTypeSignature {
 
     static final Pattern NAMED_PATTERN = Pattern.compile("^([^.<>]+(?:\\.[^.<>]+)+)$");
 
-    private final Object namedTypeDescriptor;
+    private final Object descriptor;
 
-    NamedTypeSignature(TypeSignatureType type, Class<?> namedTypeDescriptor) {
-        super(type, namedTypeDescriptor.getName());
-        final String typeName = namedTypeDescriptor.getName();
-        checkArgument(NAMED_PATTERN.matcher(typeName).matches(), "%s: %s", namedTypeDescriptor, typeName);
-        checkArgument(!namedTypeDescriptor.isArray(),
-                      "%s is an array: %s", namedTypeDescriptor, typeName);
-        checkArgument(!namedTypeDescriptor.isPrimitive(),
-                      "%s is a primitive type: %s", namedTypeDescriptor, typeName);
-        this.namedTypeDescriptor = namedTypeDescriptor;
+    DescriptiveTypeSignature(TypeSignatureType type, Class<?> descriptor) {
+        super(type, descriptor.getName());
+        assert type.hasTypeDescriptor();
+        final String typeName = descriptor.getName();
+        checkArgument(NAMED_PATTERN.matcher(typeName).matches(), "%s: %s", descriptor, typeName);
+        checkArgument(!descriptor.isArray(),
+                      "%s is an array: %s", descriptor, typeName);
+        checkArgument(!descriptor.isPrimitive(),
+                      "%s is a primitive type: %s", descriptor, typeName);
+        this.descriptor = descriptor;
     }
 
-    NamedTypeSignature(TypeSignatureType type, String name, Object namedTypeDescriptor) {
+    DescriptiveTypeSignature(TypeSignatureType type, String name, Object descriptor) {
         super(type, name);
-        this.namedTypeDescriptor = namedTypeDescriptor;
+        this.descriptor = descriptor;
     }
 
     /**
-     * Returns the descriptor of the type if and only if this type signature represents a named type.
+     * Returns the descriptor of the type if and only if this type signature represents a descriptive type.
      * For reflection-based {@link DocServicePlugin}s, this will probably be a {@link Class}, but
      * other plugins may use an actual instance with descriptor information.
      */
-    public Object namedTypeDescriptor() {
-        return namedTypeDescriptor;
+    public Object descriptor() {
+        return descriptor;
     }
 
     @Override
@@ -64,18 +65,18 @@ public final class NamedTypeSignature extends DefaultTypeSignature {
         if (this == o) {
             return true;
         }
-        if (!(o instanceof NamedTypeSignature)) {
+        if (!(o instanceof DescriptiveTypeSignature)) {
             return false;
         }
 
-        final NamedTypeSignature that = (NamedTypeSignature) o;
+        final DescriptiveTypeSignature that = (DescriptiveTypeSignature) o;
         return type() == that.type() &&
                name().equals(that.name()) &&
-               Objects.equals(namedTypeDescriptor, that.namedTypeDescriptor);
+               Objects.equals(descriptor, that.descriptor);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type(), name(), namedTypeDescriptor);
+        return Objects.hash(type(), name(), descriptor);
     }
 }

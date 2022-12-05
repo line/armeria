@@ -57,18 +57,18 @@ import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeSignature;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
-import com.linecorp.armeria.server.docs.NamedTypeSignature;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.grpc.GrpcService;
-import com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider;
+import com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider;
 
 import io.grpc.MethodDescriptor;
 
@@ -240,7 +240,7 @@ class GrpcDocServicePluginTest {
         // Make sure all services and their endpoints exist in the specification.
         final ServiceSpecification specification = generator.generateSpecification(
                 ImmutableSet.copyOf(serverBuilder.build().serviceConfigs()),
-                unifyFilter(include, exclude), new ProtobufNamedTypeInfoProvider());
+                unifyFilter(include, exclude), new ProtobufDescriptiveTypeInfoProvider());
         return specification
                 .services()
                 .stream()
@@ -267,13 +267,15 @@ class GrpcDocServicePluginTest {
                                     .build()));
         assertThat(methodInfo.name()).isEqualTo("UnaryCall");
         assertThat(methodInfo.returnTypeSignature().name()).isEqualTo("armeria.grpc.testing.SimpleResponse");
-        assertThat(((NamedTypeSignature) methodInfo.returnTypeSignature()).namedTypeDescriptor())
+        assertThat(((DescriptiveTypeSignature) methodInfo.returnTypeSignature()).descriptor())
                 .isEqualTo(SimpleResponse.getDescriptor());
         assertThat(methodInfo.parameters()).hasSize(1);
         assertThat(methodInfo.parameters().get(0).name()).isEqualTo("request");
         assertThat(methodInfo.parameters().get(0).typeSignature().name())
                 .isEqualTo("armeria.grpc.testing.SimpleRequest");
-        assertThat(((NamedTypeSignature) methodInfo.parameters().get(0).typeSignature()).namedTypeDescriptor())
+        assertThat(((DescriptiveTypeSignature) methodInfo.parameters()
+                                                         .get(0)
+                                                         .typeSignature()).descriptor())
                 .isEqualTo(SimpleRequest.getDescriptor());
         assertThat(methodInfo.exceptionTypeSignatures()).isEmpty();
         assertThat(methodInfo.descriptionInfo()).isSameAs(DescriptionInfo.empty());
@@ -311,12 +313,12 @@ class GrpcDocServicePluginTest {
         assertThat(emptyCall.name()).isEqualTo("EmptyCall");
         assertThat(emptyCall.parameters())
                 .containsExactly(FieldInfo.builder("request",
-                                                   TypeSignature.ofNamed("armeria.grpc.testing.Empty",
-                                                                         Empty.getDescriptor()))
+                                                   TypeSignature.ofStruct("armeria.grpc.testing.Empty",
+                                                                          Empty.getDescriptor()))
                                           .requirement(FieldRequirement.REQUIRED)
                                           .build());
         assertThat(emptyCall.returnTypeSignature())
-                .isEqualTo(TypeSignature.ofNamed("armeria.grpc.testing.Empty", Empty.getDescriptor()));
+                .isEqualTo(TypeSignature.ofStruct("armeria.grpc.testing.Empty", Empty.getDescriptor()));
 
         // Just sanity check that all methods are present, function conversion is more thoroughly tested in
         // newMethodInfo()

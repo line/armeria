@@ -68,7 +68,8 @@ public interface TypeSignature {
      * @throws IllegalArgumentException if the specified type name is not valid or
      *                                  {@code elementTypeSignatures} is empty.
      */
-    static TypeSignature ofContainer(String containerTypeName, TypeSignature... elementTypeSignatures) {
+    static ContainerTypeSignature ofContainer(String containerTypeName,
+                                              TypeSignature... elementTypeSignatures) {
         requireNonNull(elementTypeSignatures, "elementTypeSignatures");
         return ofContainer(containerTypeName, ImmutableList.copyOf(elementTypeSignatures));
     }
@@ -80,8 +81,8 @@ public interface TypeSignature {
      * @throws IllegalArgumentException if the specified type name is not valid or
      *                                  {@code elementTypeSignatures} is empty.
      */
-    static TypeSignature ofContainer(String containerTypeName,
-                                     Iterable<TypeSignature> elementTypeSignatures) {
+    static ContainerTypeSignature ofContainer(String containerTypeName,
+                                              Iterable<TypeSignature> elementTypeSignatures) {
         checkBaseTypeName(containerTypeName, "containerTypeName");
         requireNonNull(elementTypeSignatures, "elementTypeSignatures");
         return new ContainerTypeSignature(TypeSignatureType.CONTAINER, containerTypeName,
@@ -95,7 +96,7 @@ public interface TypeSignature {
      * ofContainer("list", elementTypeSignature);
      * }</pre>
      */
-    static TypeSignature ofList(TypeSignature elementTypeSignature) {
+    static ContainerTypeSignature ofList(TypeSignature elementTypeSignature) {
         requireNonNull(elementTypeSignature, "elementTypeSignature");
         return ofIterable("list", elementTypeSignature);
     }
@@ -107,7 +108,7 @@ public interface TypeSignature {
      * ofContainer("set", elementTypeSignature);
      * }</pre>
      */
-    static TypeSignature ofSet(TypeSignature elementTypeSignature) {
+    static ContainerTypeSignature ofSet(TypeSignature elementTypeSignature) {
         requireNonNull(elementTypeSignature, "elementTypeSignature");
         return ofIterable("set", elementTypeSignature);
     }
@@ -119,7 +120,7 @@ public interface TypeSignature {
      * @throws IllegalArgumentException if the specified type name is not valid or
      *                                  {@code elementTypeSignatures} is empty.
      */
-    static TypeSignature ofIterable(String iterableTypeName, TypeSignature elementTypeSignature) {
+    static ContainerTypeSignature ofIterable(String iterableTypeName, TypeSignature elementTypeSignature) {
         requireNonNull(iterableTypeName, "iterableTypeName");
         requireNonNull(elementTypeSignature, "elementTypeSignature");
         return new ContainerTypeSignature(TypeSignatureType.ITERABLE, iterableTypeName,
@@ -133,7 +134,7 @@ public interface TypeSignature {
      * ofMap("map", keyTypeSignature, valueTypeSignature);
      * }</pre>
      */
-    static TypeSignature ofMap(TypeSignature keyTypeSignature, TypeSignature valueTypeSignature) {
+    static MapTypeSignature ofMap(TypeSignature keyTypeSignature, TypeSignature valueTypeSignature) {
         requireNonNull(keyTypeSignature, "keyTypeSignature");
         requireNonNull(valueTypeSignature, "valueTypeSignature");
         return new MapTypeSignature(keyTypeSignature, valueTypeSignature);
@@ -141,49 +142,47 @@ public interface TypeSignature {
 
     /**
      * Creates a new type signature for the optional type with the specified element type signature.
-     * This method is a shortcut for:
-     * <pre>{@code
-     * ofContainer("optional", elementTypeSignature);
-     * }</pre>
      */
-    static TypeSignature ofOptional(TypeSignature elementTypeSignature) {
+    static ContainerTypeSignature ofOptional(TypeSignature elementTypeSignature) {
         requireNonNull(elementTypeSignature, "elementTypeSignature");
         return new ContainerTypeSignature(TypeSignatureType.OPTIONAL, "optional",
                                           ImmutableList.of(elementTypeSignature));
     }
 
     /**
-     * Creates a new named type signature for the specified type.
+     * Creates a new struct type signature for the specified type. An {@link Exception} type is also created
+     * using this method.
      */
-    static TypeSignature ofNamed(Class<?> namedType) {
-        requireNonNull(namedType, "namedType");
-        return new NamedTypeSignature(TypeSignatureType.NAMED, namedType);
+    static DescriptiveTypeSignature ofStruct(Class<?> structType) {
+        requireNonNull(structType, "structType");
+        return new DescriptiveTypeSignature(TypeSignatureType.STRUCT, structType);
     }
 
     /**
-     * Creates a new named type signature for the provided name and arbitrary descriptor.
+     * Creates a new struct type signature for the provided name and arbitrary descriptor.
+     * An {@link Exception} type is also created using this method.
      */
-    static TypeSignature ofNamed(String name, Object namedTypeDescriptor) {
+    static DescriptiveTypeSignature ofStruct(String name, Object typeDescriptor) {
         requireNonNull(name, "name");
-        requireNonNull(namedTypeDescriptor, "namedTypeDescriptor");
-        return new NamedTypeSignature(TypeSignatureType.NAMED, name, namedTypeDescriptor);
+        requireNonNull(typeDescriptor, "typeDescriptor");
+        return new DescriptiveTypeSignature(TypeSignatureType.STRUCT, name, typeDescriptor);
     }
 
     /**
-     * Creates a new named type signature for the specified type.
+     * Creates a new enum type signature for the specified type.
      */
-    static TypeSignature ofEnum(Class<?> enumType) {
+    static DescriptiveTypeSignature ofEnum(Class<?> enumType) {
         requireNonNull(enumType, "enumType");
-        return new NamedTypeSignature(TypeSignatureType.ENUM, enumType);
+        return new DescriptiveTypeSignature(TypeSignatureType.ENUM, enumType);
     }
 
     /**
-     * Creates a new named type signature for the provided name and arbitrary descriptor.
+     * Creates a new enum type signature for the provided name and arbitrary descriptor.
      */
-    static TypeSignature ofEnum(String name, Object enumTypeDescriptor) {
+    static DescriptiveTypeSignature ofEnum(String name, Object enumTypeDescriptor) {
         requireNonNull(name, "name");
         requireNonNull(enumTypeDescriptor, "enumTypeDescriptor");
-        return new NamedTypeSignature(TypeSignatureType.ENUM, name, enumTypeDescriptor);
+        return new DescriptiveTypeSignature(TypeSignatureType.ENUM, name, enumTypeDescriptor);
     }
 
     /**

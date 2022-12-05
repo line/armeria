@@ -18,7 +18,7 @@ package com.linecorp.armeria.internal.server.annotation;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.toTypeSignature;
-import static com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProvider.isNullable;
+import static com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProvider.isNullable;
 
 import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Field;
@@ -32,25 +32,25 @@ import javax.annotation.Nonnull;
 import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.docs.ContainerTypeSignature;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldRequirement;
-import com.linecorp.armeria.server.docs.NamedTypeInfo;
-import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.docs.TypeSignatureType;
 
-enum ReflectiveNamedTypeInfoProvider implements NamedTypeInfoProvider {
+enum ReflectiveDescriptiveTypeInfoProvider implements DescriptiveTypeInfoProvider {
 
     INSTANCE;
 
     @Nonnull
     @Override
-    public NamedTypeInfo newNamedTypeInfo(Object typeDescriptor) {
+    public DescriptiveTypeInfo newDescriptiveTypeInfo(Object typeDescriptor) {
         final Class<?> clazz = (Class<?>) typeDescriptor;
         final List<FieldInfo> fieldInfos = Arrays.stream(clazz.getDeclaredFields())
                                                  .filter(field -> !Modifier.isStatic(field.getModifiers()))
-                                                 .map(ReflectiveNamedTypeInfoProvider::fieldInfo)
+                                                 .map(ReflectiveDescriptiveTypeInfoProvider::fieldInfo)
                                                  .collect(toImmutableList());
         final DescriptionInfo descriptionInfo = descriptionInfo(clazz);
         return new StructInfo(clazz.getName(), fieldInfos, descriptionInfo);

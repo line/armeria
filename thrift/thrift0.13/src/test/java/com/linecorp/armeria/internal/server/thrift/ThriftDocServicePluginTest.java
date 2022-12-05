@@ -56,7 +56,8 @@ class ThriftDocServicePluginTest {
 
     private static final ThriftDocServicePlugin generator = new ThriftDocServicePlugin();
 
-    private static final ThriftNamedTypeInfoProvider namedTypeInfoProvider = new ThriftNamedTypeInfoProvider();
+    private static final ThriftDescriptiveTypeInfoProvider
+            descriptiveTypeInfoProvider = new ThriftDescriptiveTypeInfoProvider();
 
     @Test
     void servicesTest() {
@@ -103,7 +104,7 @@ class ThriftDocServicePluginTest {
         final ServiceSpecification specification = generator.generateSpecification(
                 ImmutableSet.copyOf(server.serviceConfigs()),
                 unifyFilter((plugin, service, method) -> true,
-                            (plugin, service, method) -> false), namedTypeInfoProvider);
+                            (plugin, service, method) -> false), descriptiveTypeInfoProvider);
 
         final ServiceInfo fooServiceInfo = specification.services().iterator().next();
         final Map<String, MethodInfo> methods =
@@ -194,7 +195,7 @@ class ThriftDocServicePluginTest {
         // Generate the specification with the ServiceConfigs.
         final ServiceSpecification specification = generator.generateSpecification(
                 ImmutableSet.copyOf(server.serviceConfigs()),
-                unifyFilter(include, exclude), namedTypeInfoProvider);
+                unifyFilter(include, exclude), descriptiveTypeInfoProvider);
 
         // Ensure the specification contains all services.
         return specification.services()
@@ -247,7 +248,7 @@ class ThriftDocServicePluginTest {
         assertThat(bar2.exceptionTypeSignatures()).hasSize(1);
         assertThat(bar2.exampleRequests()).isEmpty();
 
-        final TypeSignature foo = TypeSignature.ofNamed(FooStruct.class);
+        final TypeSignature foo = TypeSignature.ofStruct(FooStruct.class);
         final MethodInfo bar3 = methods.get("bar3");
         assertThat(bar3.parameters()).containsExactly(
                 FieldInfo.of("intVal", TypeSignature.ofBase("i32")),

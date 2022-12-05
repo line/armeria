@@ -36,7 +36,7 @@ public class ContainerTypeSignature extends DefaultTypeSignature {
     private final List<TypeSignature> typeParameters;
 
     ContainerTypeSignature(TypeSignatureType type, String name,
-                           Iterable<TypeSignature> typeParameters) {
+                           List<TypeSignature> typeParameters) {
         super(type, name);
         final List<TypeSignature> typeParametersCopy = ImmutableList.copyOf(typeParameters);
         checkArgument(!typeParametersCopy.isEmpty(), "typeParameters is empty.");

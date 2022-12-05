@@ -58,6 +58,8 @@ public final class MethodInfo {
     private final HttpMethod httpMethod;
     private final DescriptionInfo descriptionInfo;
 
+    // TODO(minwoox): consider using fluent builder.
+
     /**
      * Creates a new instance.
      */
@@ -74,14 +76,21 @@ public final class MethodInfo {
         );
     }
 
-    private static String createId(String serviceName, String name, int overloadId, HttpMethod httpMethod) {
-        final String methodName;
-        if (overloadId > 0) {
-            methodName = name + '-' + overloadId;
-        } else {
-            methodName = name;
-        }
-        return serviceName + '/' + methodName + '/' + httpMethod.name();
+    /**
+     * Creates a new instance.
+     */
+    public MethodInfo(String serviceName, String name,
+                      int overloadId, TypeSignature returnTypeSignature,
+                      Iterable<FieldInfo> parameters,
+                      Iterable<EndpointInfo> endpoints,
+                      Iterable<String> examplePaths,
+                      Iterable<String> exampleQueries,
+                      HttpMethod httpMethod,
+                      DescriptionInfo descriptionInfo) {
+        this(name, returnTypeSignature, parameters, ImmutableList.of(), endpoints, ImmutableList.of(),
+             ImmutableList.of(), examplePaths, exampleQueries, httpMethod, descriptionInfo,
+             createId(serviceName, name, overloadId, httpMethod)
+        );
     }
 
     /**
@@ -314,5 +323,15 @@ public final class MethodInfo {
                           .add("httpMethod", httpMethod())
                           .add("descriptionInfo", descriptionInfo())
                           .toString();
+    }
+
+    private static String createId(String serviceName, String name, int overloadId, HttpMethod httpMethod) {
+        final String methodName;
+        if (overloadId > 0) {
+            methodName = name + '-' + overloadId;
+        } else {
+            methodName = name;
+        }
+        return serviceName + '/' + methodName + '/' + httpMethod.name();
     }
 }

@@ -61,6 +61,9 @@ import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
+import com.linecorp.armeria.server.docs.DescriptiveTypeSignature;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
@@ -69,9 +72,6 @@ import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
-import com.linecorp.armeria.server.docs.NamedTypeInfo;
-import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
-import com.linecorp.armeria.server.docs.NamedTypeSignature;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
@@ -109,10 +109,10 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     @Override
     public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
                                                       DocServiceFilter filter,
-                                                      NamedTypeInfoProvider namedTypeInfoProvider) {
+                                                      DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(filter, "filter");
-        requireNonNull(namedTypeInfoProvider, "namedTypeInfoProvider");
+        requireNonNull(descriptiveTypeInfoProvider, "descriptiveTypeInfoProvider");
 
         final Set<GrpcService> addedService = new HashSet<>();
         final ImmutableList.Builder<HttpEndpoint> httpEndpoints = ImmutableList.builder();
@@ -186,7 +186,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         return generate(ImmutableList.<ServiceInfo>builder()
                                      .addAll(serviceInfosBuilder.build(filter))
                                      .addAll(buildHttpServiceInfos(httpEndpoints.build()))
-                                     .build(), namedTypeInfoProvider);
+                                     .build(), descriptiveTypeInfoProvider);
     }
 
     private static void addServiceDescriptor(ServiceInfosBuilder serviceInfosBuilder, GrpcService grpcService) {
@@ -325,15 +325,11 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
 
             methodInfos.add(new MethodInfo(
                     serviceName,
-                    // Order 0 is primary.
-                    firstSpec.order() == 0 ? firstSpec.methodName()
-                                           : firstSpec.methodName() + '-' + firstSpec.order(),
-                    namedMessageSignature(firstSpec.methodDescriptor().getOutputType()),
-                    /* exceptionTypeSignatures */ fieldInfosBuilder.build(),
-                    ImmutableList.of(),
-                    /* exampleHeaders */ endpointInfos,
-                    /* exampleRequests */ ImmutableList.of(),
-                    ImmutableList.of(),
+                    firstSpec.methodName(),
+                    firstSpec.order(),
+                    descriptiveMessageSignature(firstSpec.methodDescriptor().getOutputType()),
+                    fieldInfosBuilder.build(),
+                    endpointInfos,
                     examplePaths,
                     exampleQueries,
                     firstEndpoint.httpMethod(), DescriptionInfo.empty()));
@@ -341,8 +337,8 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
         return new ServiceInfo(serviceName, methodInfos.build());
     }
 
-    private static TypeSignature namedMessageSignature(Descriptor descriptor) {
-        return TypeSignature.ofNamed(descriptor.getFullName(), descriptor);
+    private static TypeSignature descriptiveMessageSignature(Descriptor descriptor) {
+        return TypeSignature.ofStruct(descriptor.getFullName(), descriptor);
     }
 
     private static TypeSignature toTypeSignature(Parameter parameter) {
@@ -383,17 +379,20 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
     }
 
     @VisibleForTesting
-    ServiceSpecification generate(List<ServiceInfo> services, NamedTypeInfoProvider namedTypeInfoProvider) {
+    ServiceSpecification generate(List<ServiceInfo> services,
+                                  DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
         return ServiceSpecification.generate(
-                services, typeSignature -> newNamedTypeInfo(typeSignature, namedTypeInfoProvider));
+                services, typeSignature -> newDescriptiveTypeInfo(typeSignature, descriptiveTypeInfoProvider));
     }
 
-    private static NamedTypeInfo newNamedTypeInfo(NamedTypeSignature typeSignature,
-                                                  NamedTypeInfoProvider namedTypeInfoProvider) {
-        final Object descriptor = typeSignature.namedTypeDescriptor();
+    private static DescriptiveTypeInfo newDescriptiveTypeInfo(
+            DescriptiveTypeSignature typeSignature, DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
+        final Object descriptor = typeSignature.descriptor();
         assert descriptor instanceof Descriptor || descriptor instanceof EnumDescriptor;
-        final NamedTypeInfo namedTypeInfo = namedTypeInfoProvider.newNamedTypeInfo(descriptor);
-        return requireNonNull(namedTypeInfo, "namedTypeInfoProvider.newNamedTypeInfo() returned null");
+        final DescriptiveTypeInfo descriptiveTypeInfo =
+                descriptiveTypeInfoProvider.newDescriptiveTypeInfo(descriptor);
+        return requireNonNull(descriptiveTypeInfo,
+                              "descriptiveTypeInfoProvider.newDescriptiveTypeInfo() returned null");
     }
 
     @VisibleForTesting
@@ -403,8 +402,9 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 serviceName,
                 method.getName(),
                 // gRPC methods always take a single request parameter of message type.
-                namedMessageSignature(method.getOutputType()),
-                ImmutableList.of(FieldInfo.builder("request", namedMessageSignature(method.getInputType()))
+                descriptiveMessageSignature(method.getOutputType()),
+                ImmutableList.of(FieldInfo.builder("request",
+                                                   descriptiveMessageSignature(method.getInputType()))
                                           .requirement(FieldRequirement.REQUIRED).build()),
                 ImmutableList.of(),
                 endpointInfos,

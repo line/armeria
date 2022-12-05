@@ -1,11 +1,11 @@
 {
   "services": [
     {
-      "name": "com.linecorp.armeria.server.protobuf.ScalaPbNamedTypeInfoProviderTest$ScalaPbService",
+      "name": "com.linecorp.armeria.server.protobuf.ScalaPbDescriptiveTypeInfoProviderTest$ScalaPbService",
       "methods": [
         {
           "name": "json",
-          "id": "com.linecorp.armeria.server.protobuf.ScalaPbNamedTypeInfoProviderTest$ScalaPbService/json/POST",
+          "id": "com.linecorp.armeria.server.protobuf.ScalaPbDescriptiveTypeInfoProviderTest$ScalaPbService/json/POST",
           "returnTypeSignature": "Future<com.linecorp.armeria.scalapb.testing.messages.TestMessage>",
           "parameters": [
             {

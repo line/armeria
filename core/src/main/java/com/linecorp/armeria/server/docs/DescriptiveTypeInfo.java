@@ -23,10 +23,10 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * Metadata about a named type.
+ * Metadata about a descriptive type.
  */
 @UnstableApi
-public interface NamedTypeInfo {
+public interface DescriptiveTypeInfo {
 
     /**
      * Returns the fully qualified type name.
@@ -43,7 +43,7 @@ public interface NamedTypeInfo {
     /**
      * Returns all enum, struct and exception types referred by this type.
      */
-    default Set<NamedTypeSignature> findNamedTypes() {
+    default Set<DescriptiveTypeSignature> findDescriptiveTypes() {
         return ImmutableSet.of();
     }
 }

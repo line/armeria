@@ -142,13 +142,13 @@ public final class ServiceInfo {
     /**
      * Returns all enum, struct and exception {@link TypeSignature}s referred to by this service.
      */
-    public Set<NamedTypeSignature> findNamedTypes() {
-        final Set<NamedTypeSignature> requestNamedTypes = findNamedTypes(true);
-        final Set<NamedTypeSignature> responseNamedType = findNamedTypes(false);
-        final int estimatedSize = requestNamedTypes.size() + responseNamedType.size();
-        return ImmutableSet.<NamedTypeSignature>builderWithExpectedSize(estimatedSize)
-                           .addAll(requestNamedTypes)
-                           .addAll(responseNamedType)
+    public Set<DescriptiveTypeSignature> findDescriptiveTypes() {
+        final Set<DescriptiveTypeSignature> requestDescriptiveTypes = findDescriptiveTypes(true);
+        final Set<DescriptiveTypeSignature> responseDescriptiveType = findDescriptiveTypes(false);
+        final int estimatedSize = requestDescriptiveTypes.size() + responseDescriptiveType.size();
+        return ImmutableSet.<DescriptiveTypeSignature>builderWithExpectedSize(estimatedSize)
+                           .addAll(requestDescriptiveTypes)
+                           .addAll(responseDescriptiveType)
                            .build();
     }
 
@@ -157,29 +157,31 @@ public final class ServiceInfo {
      * {@code request} is set to true. Otherwise, returns all {@link MethodInfo#returnTypeSignature()} and
      * {@link MethodInfo#exceptionTypeSignatures()} of the {@link #methods()}.
      */
-    public Set<NamedTypeSignature> findNamedTypes(boolean request) {
-        final Set<NamedTypeSignature> collectedNamedTypes = new HashSet<>();
+    public Set<DescriptiveTypeSignature> findDescriptiveTypes(boolean request) {
+        final Set<DescriptiveTypeSignature> collectedDescriptiveTypes = new HashSet<>();
         methods().forEach(m -> {
             if (request) {
-                m.parameters().forEach(p -> findNamedTypes(collectedNamedTypes, p.typeSignature()));
+                m.parameters().forEach(p -> findDescriptiveTypes(collectedDescriptiveTypes, p.typeSignature()));
             } else {
-                findNamedTypes(collectedNamedTypes, m.returnTypeSignature());
-                m.exceptionTypeSignatures().forEach(s -> findNamedTypes(collectedNamedTypes, s));
+                findDescriptiveTypes(collectedDescriptiveTypes, m.returnTypeSignature());
+                m.exceptionTypeSignatures().forEach(s -> findDescriptiveTypes(collectedDescriptiveTypes, s));
             }
         });
-        return ImmutableSet.copyOf(collectedNamedTypes);
+        return ImmutableSet.copyOf(collectedDescriptiveTypes);
     }
 
-    static void findNamedTypes(Set<NamedTypeSignature> collectedNamedTypes, TypeSignature typeSignature) {
+    static void findDescriptiveTypes(Set<DescriptiveTypeSignature> collectedDescriptiveTypes,
+                                     TypeSignature typeSignature) {
         final TypeSignatureType type = typeSignature.type();
         if (type.hasTypeDescriptor()) {
-            collectedNamedTypes.add((NamedTypeSignature) typeSignature);
+            collectedDescriptiveTypes.add((DescriptiveTypeSignature) typeSignature);
             return;
         }
 
         if (typeSignature instanceof ContainerTypeSignature) {
-            ((ContainerTypeSignature) typeSignature).typeParameters()
-                                                    .forEach(p -> findNamedTypes(collectedNamedTypes, p));
+            ((ContainerTypeSignature) typeSignature)
+                    .typeParameters()
+                    .forEach(p -> findDescriptiveTypes(collectedDescriptiveTypes, p));
         }
     }
 

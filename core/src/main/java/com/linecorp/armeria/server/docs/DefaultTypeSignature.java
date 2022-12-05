@@ -29,9 +29,14 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * The default {@link TypeSignature}.
  */
 @UnstableApi
-public class DefaultTypeSignature implements TypeSignature {
+class DefaultTypeSignature implements TypeSignature {
 
     private static final Pattern BASE_PATTERN = Pattern.compile("^([^.<>]+)$");
+
+    static void checkBaseTypeName(String baseTypeName, String parameterName) {
+        requireNonNull(baseTypeName, parameterName);
+        checkArgument(BASE_PATTERN.matcher(baseTypeName).matches(), "%s: %s", parameterName, baseTypeName);
+    }
 
     private final TypeSignatureType type;
     private final String name;
@@ -39,11 +44,6 @@ public class DefaultTypeSignature implements TypeSignature {
     DefaultTypeSignature(TypeSignatureType type, String name) {
         this.type = type;
         this.name = name;
-    }
-
-    static void checkBaseTypeName(String baseTypeName, String parameterName) {
-        requireNonNull(baseTypeName, parameterName);
-        checkArgument(BASE_PATTERN.matcher(baseTypeName).matches(), "%s: %s", parameterName, baseTypeName);
     }
 
     @Override

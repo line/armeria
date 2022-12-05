@@ -26,8 +26,8 @@ class CaseClassDefaultNameTypeInfoProviderTest extends FunSuite {
 
   test(s"should support @Description for case class") {
     List(true, false).foreach { request =>
-      val provider = new DefaultNamedTypeInfoProvider(request)
-      val struct: StructInfo = provider.newNamedTypeInfo(classOf[DescriptionResult]).asInstanceOf[StructInfo]
+      val provider = new DefaultDescriptiveTypeInfoProvider(request)
+      val struct: StructInfo = provider.newDescriptiveTypeInfo(classOf[DescriptionResult]).asInstanceOf[StructInfo]
 
       assertEquals(struct.name(), classOf[DescriptionResult].getName())
       assertEquals(struct.descriptionInfo(), DescriptionInfo.of("Class description"))

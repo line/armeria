@@ -16,20 +16,20 @@
 
 package com.linecorp.armeria.server.protobuf;
 
-import static com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider.BOOL;
-import static com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider.BYTES;
-import static com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider.DOUBLE;
-import static com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider.FIXED32;
-import static com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider.FIXED64;
-import static com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider.FLOAT;
-import static com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider.INT32;
-import static com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider.INT64;
-import static com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider.SINT32;
-import static com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider.SINT64;
-import static com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider.STRING;
-import static com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider.UINT32;
-import static com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider.UINT64;
-import static com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider.newFieldTypeInfo;
+import static com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider.BOOL;
+import static com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider.BYTES;
+import static com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider.DOUBLE;
+import static com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider.FIXED32;
+import static com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider.FIXED64;
+import static com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider.FLOAT;
+import static com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider.INT32;
+import static com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider.INT64;
+import static com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider.SINT32;
+import static com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider.SINT64;
+import static com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider.STRING;
+import static com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider.UINT32;
+import static com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider.UINT64;
+import static com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider.newFieldTypeInfo;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -59,20 +59,20 @@ import com.linecorp.armeria.server.annotation.ConsumesJson;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.docs.ContainerTypeSignature;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MapTypeSignature;
-import com.linecorp.armeria.server.docs.NamedTypeInfo;
-import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.docs.TypeSignatureType;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class ProtobufNamedTypeInfoProviderTest {
+class ProtobufDescriptiveTypeInfoProviderTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -88,15 +88,17 @@ class ProtobufNamedTypeInfoProviderTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.annotatedService(new SimpleService());
-            sb.serviceUnder("/docs", DocService.builder()
-                                               .namedTypeInfoProvider(new CustomNamedTypeInfoProvider())
-                                               .build());
+            sb.serviceUnder("/docs",
+                            DocService.builder()
+                                      .descriptiveTypeInfoProvider(new CustomDescriptiveTypeInfoProvider())
+                                      .build());
         }
     };
 
     @Test
     void newStructInfo() throws Exception {
-        final StructInfo structInfo = ProtobufNamedTypeInfoProvider.newStructInfo(TestMessage.getDescriptor());
+        final StructInfo structInfo =
+                ProtobufDescriptiveTypeInfoProvider.newStructInfo(TestMessage.getDescriptor());
         assertThat(structInfo.name()).isEqualTo("armeria.protobuf.testing.TestMessage");
         assertThat(structInfo.fields()).hasSize(19);
         assertThat(structInfo.fields().get(0).name()).isEqualTo("bool");
@@ -163,7 +165,8 @@ class ProtobufNamedTypeInfoProviderTest {
 
     @Test
     void newEnumInfo() throws Exception {
-        final EnumInfo enumInfo = ProtobufNamedTypeInfoProvider.newEnumInfo(CompressionType.getDescriptor());
+        final EnumInfo enumInfo =
+                ProtobufDescriptiveTypeInfoProvider.newEnumInfo(CompressionType.getDescriptor());
         assertThat(enumInfo).isEqualTo(new EnumInfo(
                 "armeria.protobuf.testing.CompressionType",
                 ImmutableList.of(new EnumValueInfo("NONE", 0),
@@ -195,8 +198,8 @@ class ProtobufNamedTypeInfoProviderTest {
                                         .asJson(JsonNode.class)
                                         .execute()
                                         .content();
-        final InputStream resourceAsStream = ProtobufNamedTypeInfoProviderTest.class.getResourceAsStream(
-                "ProtobufNamedTypeInfoProviderTest_specification.json5");
+        final InputStream resourceAsStream = ProtobufDescriptiveTypeInfoProviderTest.class.getResourceAsStream(
+                "ProtobufDescriptiveTypeInfoProviderTest_specification.json5");
         final JsonMapper json5Mapper = JsonMapper.builder()
                                                  .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS.mappedFeature())
                                                  .enable(JsonReadFeature.ALLOW_TRAILING_COMMA.mappedFeature())
@@ -227,7 +230,8 @@ class ProtobufNamedTypeInfoProviderTest {
         assertThat(fieldInfos.size()).isEqualTo(1);
         assertThat(fieldInfos.get(0).get("name").textValue()).isEqualTo("foo");
         assertThat(fieldInfos.get(0).get("typeSignature").textValue()).isEqualTo("foo");
-        // Make sure that the default `NamedTypeInfoProvider`s are set as the fallback of the custom provider.
+        // Make sure that the default `DescriptiveTypeInfoProvider`s are set as the fallback of
+        // the custom provider.
         assertThat(response.get("structs").get(0).get("name").textValue())
                 .isEqualTo("armeria.protobuf.testing.SimpleResponse");
     }
@@ -250,11 +254,11 @@ class ProtobufNamedTypeInfoProviderTest {
         }
     }
 
-    private static final class CustomNamedTypeInfoProvider implements NamedTypeInfoProvider {
+    private static final class CustomDescriptiveTypeInfoProvider implements DescriptiveTypeInfoProvider {
 
         @Nullable
         @Override
-        public NamedTypeInfo newNamedTypeInfo(Object typeDescriptor) {
+        public DescriptiveTypeInfo newDescriptiveTypeInfo(Object typeDescriptor) {
             if (SimpleRequest.class.isAssignableFrom((Class<?>) typeDescriptor)) {
                 return new StructInfo("CustomSimpleRequest",
                                       ImmutableList.of(FieldInfo.of("foo", TypeSignature.ofBase("foo"))));

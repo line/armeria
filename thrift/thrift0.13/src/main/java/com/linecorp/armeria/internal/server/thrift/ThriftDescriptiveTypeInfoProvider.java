@@ -43,21 +43,21 @@ import org.apache.thrift.protocol.TType;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.ExceptionInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldRequirement;
-import com.linecorp.armeria.server.docs.NamedTypeInfo;
-import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 
 /**
- * A {@link NamedTypeInfoProvider} to create a {@link NamedTypeInfo} from a Thrift type such as {@link TBase}
- * {@link TEnum} or {@link TException}.
+ * A {@link DescriptiveTypeInfoProvider} to create a {@link DescriptiveTypeInfo} from a Thrift type
+ * such as {@link TBase} {@link TEnum} or {@link TException}.
  */
-public final class ThriftNamedTypeInfoProvider implements NamedTypeInfoProvider {
+public final class ThriftDescriptiveTypeInfoProvider implements DescriptiveTypeInfoProvider {
 
     static final TypeSignature VOID = TypeSignature.ofBase("void");
     private static final TypeSignature BOOL = TypeSignature.ofBase("bool");
@@ -71,7 +71,7 @@ public final class ThriftNamedTypeInfoProvider implements NamedTypeInfoProvider 
 
     @Nullable
     @Override
-    public NamedTypeInfo newNamedTypeInfo(Object typeDescriptor) {
+    public DescriptiveTypeInfo newDescriptiveTypeInfo(Object typeDescriptor) {
         if (!(typeDescriptor instanceof Class)) {
             return null;
         }
@@ -141,7 +141,7 @@ public final class ThriftNamedTypeInfoProvider implements NamedTypeInfoProvider 
             parentType.getSimpleName().equals(fieldValueMetaData.getTypedefName())) {
             // Handle the special case where a struct field refers to itself,
             // where the Thrift compiler handles it as a typedef.
-            typeSignature = TypeSignature.ofNamed(parentType);
+            typeSignature = TypeSignature.ofStruct(parentType);
         } else {
             typeSignature = toTypeSignature(fieldValueMetaData);
         }
@@ -166,7 +166,7 @@ public final class ThriftNamedTypeInfoProvider implements NamedTypeInfoProvider 
 
     static TypeSignature toTypeSignature(FieldValueMetaData fieldValueMetaData) {
         if (fieldValueMetaData instanceof StructMetaData) {
-            return TypeSignature.ofNamed(((StructMetaData) fieldValueMetaData).structClass);
+            return TypeSignature.ofStruct(((StructMetaData) fieldValueMetaData).structClass);
         }
 
         if (fieldValueMetaData instanceof EnumMetaData) {

@@ -57,19 +57,19 @@ import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.Markup;
-import com.linecorp.armeria.server.docs.NamedTypeInfo;
-import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-class DefaultNamedTypeInfoProviderTest {
+class DefaultDescriptiveTypeInfoProviderTest {
 
     private static final JsonMapper json5Mapper =
             JsonMapper.builder()
@@ -84,9 +84,10 @@ class DefaultNamedTypeInfoProviderTest {
             sb.annotatedService(new JsonService());
 
             sb.serviceUnder("/docs", new DocService());
-            sb.serviceUnder("/docs-custom", DocService.builder()
-                                                      .namedTypeInfoProvider(new CustomNamedTypeInfoProvider())
-                                                      .build());
+            sb.serviceUnder("/docs-custom",
+                            DocService.builder()
+                                      .descriptiveTypeInfoProvider(new CustomDescriptiveTypeInfoProvider())
+                                      .build());
             sb.decorator(LoggingService.newDecorator());
         }
     };
@@ -100,54 +101,57 @@ class DefaultNamedTypeInfoProviderTest {
         }
     };
 
-    final DefaultNamedTypeInfoProvider requestStructInfoProvider = new DefaultNamedTypeInfoProvider(true);
-    final DefaultNamedTypeInfoProvider responseStructInfoProvider = new DefaultNamedTypeInfoProvider(false);
+    final DefaultDescriptiveTypeInfoProvider
+            requestStructInfoProvider = new DefaultDescriptiveTypeInfoProvider(true);
+    final DefaultDescriptiveTypeInfoProvider
+            responseStructInfoProvider = new DefaultDescriptiveTypeInfoProvider(false);
 
     @Test
     void requestObject() {
-        final StructInfo structInfo = (StructInfo) requestStructInfoProvider.newNamedTypeInfo(FooRequest.class);
+        final StructInfo structInfo =
+                (StructInfo) requestStructInfoProvider.newDescriptiveTypeInfo(FooRequest.class);
         assertThat(structInfo.name()).isEqualTo(FooRequest.class.getName());
         assertThat(structInfo.fields()).containsExactlyInAnyOrder(
                 newRequiredField("intField", INT),
                 newRequiredField("stringField", STRING),
-                newRequiredField("sameName", TypeSignature.ofNamed(Inner.class),
+                newRequiredField("sameName", TypeSignature.ofStruct(Inner.class),
                                  newRequiredField("innerValue", BOOLEAN)),
-                newRequiredField("rename", TypeSignature.ofNamed(Inner.class),
+                newRequiredField("rename", TypeSignature.ofStruct(Inner.class),
                                     newRequiredField("innerValue", BOOLEAN)),
-                newRequiredField("collection", TypeSignature.ofList(TypeSignature.ofNamed(Inner.class))),
+                newRequiredField("collection", TypeSignature.ofList(TypeSignature.ofStruct(Inner.class))),
                 newOptionalField("nullableField", STRING),
-                newOptionalField("optionalField", TypeSignature.ofNamed(Inner.class),
+                newOptionalField("optionalField", TypeSignature.ofStruct(Inner.class),
                                  newRequiredField("innerValue", BOOLEAN)),
-                newRequiredField("circular", TypeSignature.ofNamed(FooRequest.class)));
+                newRequiredField("circular", TypeSignature.ofStruct(FooRequest.class)));
     }
 
     @Test
     void responseObject() {
         final StructInfo structInfo =
-                (StructInfo) responseStructInfoProvider.newNamedTypeInfo(BarResponse.class);
+                (StructInfo) responseStructInfoProvider.newDescriptiveTypeInfo(BarResponse.class);
         assertThat(structInfo.name()).isEqualTo(BarResponse.class.getName());
         assertThat(structInfo.fields()).containsExactlyInAnyOrder(
                 newRequiredField("intField", INT),
                 newRequiredField("getterField", STRING),
                 newOptionalField("getterNullableField", STRING),
-                newRequiredField("sameName", TypeSignature.ofNamed(Inner.class),
+                newRequiredField("sameName", TypeSignature.ofStruct(Inner.class),
                                  newRequiredField("innerValue", BOOLEAN)),
-                newRequiredField("rename", TypeSignature.ofNamed(Inner.class),
+                newRequiredField("rename", TypeSignature.ofStruct(Inner.class),
                                     newRequiredField("innerValue", BOOLEAN)),
-                newRequiredField("collection", TypeSignature.ofList(TypeSignature.ofNamed(Inner.class))),
+                newRequiredField("collection", TypeSignature.ofList(TypeSignature.ofStruct(Inner.class))),
                 newOptionalField("nullableField", STRING),
                 newOptionalField("optionalField", STRING),
-                newRequiredField("circular", TypeSignature.ofNamed(BarResponse.class)));
+                newRequiredField("circular", TypeSignature.ofStruct(BarResponse.class)));
     }
 
-    @ArgumentsSource(UnnamedTypeProvider.class)
+    @ArgumentsSource(UndescriptiveTypeProvider.class)
     @ParameterizedTest
-    void unnamedTypes(Class<?> clazz) {
-        StructInfo structInfo = (StructInfo) requestStructInfoProvider.newNamedTypeInfo(clazz);
+    void undescriptiveTypes(Class<?> clazz) {
+        StructInfo structInfo = (StructInfo) requestStructInfoProvider.newDescriptiveTypeInfo(clazz);
         assertThat(structInfo.name()).isEqualTo(clazz.getName());
         assertThat(structInfo.fields()).isEmpty();
 
-        structInfo = (StructInfo) responseStructInfoProvider.newNamedTypeInfo(clazz);
+        structInfo = (StructInfo) responseStructInfoProvider.newDescriptiveTypeInfo(clazz);
         assertThat(structInfo.name()).isEqualTo(clazz.getName());
         assertThat(structInfo.fields()).isEmpty();
     }
@@ -155,7 +159,7 @@ class DefaultNamedTypeInfoProviderTest {
     @Test
     void requestDescriptor() {
         StructInfo structInfo =
-                (StructInfo) requestStructInfoProvider.newNamedTypeInfo(RequestConstructor.class);
+                (StructInfo) requestStructInfoProvider.newDescriptiveTypeInfo(RequestConstructor.class);
         assertThat(structInfo.fields()).containsExactlyInAnyOrder(
                 FieldInfo.builder("constructorField1", STRING)
                          .requirement(FieldRequirement.REQUIRED)
@@ -166,7 +170,7 @@ class DefaultNamedTypeInfoProviderTest {
                          .descriptionInfo(DescriptionInfo.of("constructor description2", Markup.NONE))
                          .build());
 
-        structInfo = (StructInfo) requestStructInfoProvider.newNamedTypeInfo(RequestSetters.class);
+        structInfo = (StructInfo) requestStructInfoProvider.newDescriptiveTypeInfo(RequestSetters.class);
         assertThat(structInfo.fields()).containsExactlyInAnyOrder(
                 FieldInfo.builder("setterField1", STRING)
                          .requirement(FieldRequirement.REQUIRED)
@@ -177,7 +181,8 @@ class DefaultNamedTypeInfoProviderTest {
                          .descriptionInfo(DescriptionInfo.of("setter description2", Markup.NONE))
                          .build());
 
-        structInfo = (StructInfo) requestStructInfoProvider.newNamedTypeInfo(RequestWithSettersNonPrefix.class);
+        structInfo = (StructInfo) requestStructInfoProvider.newDescriptiveTypeInfo(
+                RequestWithSettersNonPrefix.class);
         assertThat(structInfo.fields()).containsExactlyInAnyOrder(
                 FieldInfo.builder("nonPrefixSetterField1", STRING)
                          .requirement(FieldRequirement.REQUIRED)
@@ -192,7 +197,7 @@ class DefaultNamedTypeInfoProviderTest {
     @Test
     void responseDescriptor() {
         StructInfo structInfo =
-                (StructInfo) responseStructInfoProvider.newNamedTypeInfo(ResponseGetters.class);
+                (StructInfo) responseStructInfoProvider.newDescriptiveTypeInfo(ResponseGetters.class);
         assertThat(structInfo.fields()).containsExactly(
                 FieldInfo.builder("getterField1", STRING)
                          .requirement(FieldRequirement.REQUIRED)
@@ -204,7 +209,8 @@ class DefaultNamedTypeInfoProviderTest {
                          .build());
 
         structInfo =
-                (StructInfo) responseStructInfoProvider.newNamedTypeInfo(ResponseGettersWithNonPrefix.class);
+                (StructInfo) responseStructInfoProvider.newDescriptiveTypeInfo(
+                        ResponseGettersWithNonPrefix.class);
         assertThat(structInfo.fields()).containsExactly(
                 FieldInfo.builder("nonPrefixGetterField1", STRING)
                          .requirement(FieldRequirement.REQUIRED)
@@ -218,9 +224,9 @@ class DefaultNamedTypeInfoProviderTest {
 
     @Test
     void reflectiveStructInfo() {
-        for (NamedTypeInfoProvider provider : ImmutableList.of(requestStructInfoProvider,
-                                                               responseStructInfoProvider)) {
-            StructInfo structInfo = (StructInfo) provider.newNamedTypeInfo(ParamId.class);
+        for (DescriptiveTypeInfoProvider provider : ImmutableList.of(requestStructInfoProvider,
+                                                                     responseStructInfoProvider)) {
+            StructInfo structInfo = (StructInfo) provider.newDescriptiveTypeInfo(ParamId.class);
             assertThat(structInfo.name()).isEqualTo(ParamId.class.getName());
             assertThat(structInfo.descriptionInfo()).isEqualTo(DescriptionInfo.of("ParamId class"));
             assertThat(structInfo.fields()).containsExactly(
@@ -229,7 +235,7 @@ class DefaultNamedTypeInfoProviderTest {
                              .descriptionInfo(DescriptionInfo.of("param id"))
                              .build());
 
-            structInfo = (StructInfo) provider.newNamedTypeInfo(ParamQuery.class);
+            structInfo = (StructInfo) provider.newDescriptiveTypeInfo(ParamQuery.class);
             assertThat(structInfo.name()).isEqualTo(ParamQuery.class.getName());
             assertThat(structInfo.descriptionInfo()).isEqualTo(DescriptionInfo.of("ParamQuery class"));
             assertThat(structInfo.fields())
@@ -250,8 +256,8 @@ class DefaultNamedTypeInfoProviderTest {
                                         .execute()
                                         .content();
 
-        final InputStream resourceAsStream = DefaultNamedTypeInfoProviderTest.class.getResourceAsStream(
-                "ReflectiveNamedTypeInfoProviderTest_specification.json5");
+        final InputStream resourceAsStream = DefaultDescriptiveTypeInfoProviderTest.class.getResourceAsStream(
+                "ReflectiveDescriptiveTypeInfoProviderTest_specification.json5");
         final JsonNode expected = json5Mapper.readTree(resourceAsStream);
 
         assertThat(response.get("services").get(0).get("name").textValue())
@@ -270,8 +276,8 @@ class DefaultNamedTypeInfoProviderTest {
                                         .asJson(JsonNode.class)
                                         .execute()
                                         .content();
-        final InputStream resourceAsStream = DefaultNamedTypeInfoProviderTest.class.getResourceAsStream(
-                "JsonNamedTypeInfoProviderTest_specification.json5");
+        final InputStream resourceAsStream = DefaultDescriptiveTypeInfoProviderTest.class.getResourceAsStream(
+                "JsonDescriptiveTypeInfoProviderTest_specification.json5");
         final JsonNode expected = json5Mapper.readTree(resourceAsStream);
 
         assertThat(response.get("services").get(0).get("name").textValue())
@@ -326,11 +332,11 @@ class DefaultNamedTypeInfoProviderTest {
                       .build();
     }
 
-    private static final class CustomNamedTypeInfoProvider implements NamedTypeInfoProvider {
+    private static final class CustomDescriptiveTypeInfoProvider implements DescriptiveTypeInfoProvider {
 
         @Nullable
         @Override
-        public NamedTypeInfo newNamedTypeInfo(Object typeDescriptor) {
+        public DescriptiveTypeInfo newDescriptiveTypeInfo(Object typeDescriptor) {
             final Class<?> clazz = (Class<?>) typeDescriptor;
             if (FooRequest.class.isAssignableFrom(clazz)) {
                 return new StructInfo("CustomFooRequestInfo",
@@ -344,7 +350,7 @@ class DefaultNamedTypeInfoProviderTest {
         }
     }
 
-    private static final class UnnamedTypeProvider implements ArgumentsProvider {
+    private static final class UndescriptiveTypeProvider implements ArgumentsProvider {
 
         @Override
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) throws Exception {

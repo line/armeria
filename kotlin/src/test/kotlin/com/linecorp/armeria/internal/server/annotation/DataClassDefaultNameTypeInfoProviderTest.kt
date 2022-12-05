@@ -34,8 +34,11 @@ class DataClassDefaultNameTypeInfoProviderTest {
     @CsvSource(value = ["true", "false"])
     @ParameterizedTest
     fun dataClass(request: Boolean) {
-        val provider = DefaultNamedTypeInfoProvider(request)
-        val struct: StructInfo = (provider.newNamedTypeInfo(DescriptionResult::class.java) as StructInfo)
+        val provider =
+            DefaultDescriptiveTypeInfoProvider(
+                request
+            )
+        val struct: StructInfo = (provider.newDescriptiveTypeInfo(DescriptionResult::class.java) as StructInfo)
 
         assertThat(struct.name()).isEqualTo(DescriptionResult::class.java.name)
         assertThat(struct.descriptionInfo()).isEqualTo(DescriptionInfo.of("Class description"))
@@ -71,9 +74,12 @@ class DataClassDefaultNameTypeInfoProviderTest {
     @CsvSource(value = ["true", "false"])
     @ParameterizedTest
     fun enumClass(request: Boolean) {
-        val requestProvider = DefaultNamedTypeInfoProvider(request)
+        val requestProvider =
+            DefaultDescriptiveTypeInfoProvider(
+                request
+            )
         val enumInfo: EnumInfo =
-            (requestProvider.newNamedTypeInfo(EnumParam::class.java) as EnumInfo)
+            (requestProvider.newDescriptiveTypeInfo(EnumParam::class.java) as EnumInfo)
         assertThat(enumInfo.name()).isEqualTo(EnumParam::class.java.name)
         assertThat(enumInfo.descriptionInfo()).isEqualTo(DescriptionInfo.of("Enum description"))
         assertThat(enumInfo.values()).containsExactlyInAnyOrder(

@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * Metadata about a struct type.
  */
 @UnstableApi
-public final class StructInfo implements NamedTypeInfo {
+public final class StructInfo implements DescriptiveTypeInfo {
 
     private final String name;
     @Nullable
@@ -149,10 +149,10 @@ public final class StructInfo implements NamedTypeInfo {
     }
 
     @Override
-    public Set<NamedTypeSignature> findNamedTypes() {
-        final Set<NamedTypeSignature> collectedNamedTypes = new HashSet<>();
-        fields().forEach(f -> ServiceInfo.findNamedTypes(collectedNamedTypes, f.typeSignature()));
-        return ImmutableSortedSet.copyOf(comparing(TypeSignature::name), collectedNamedTypes);
+    public Set<DescriptiveTypeSignature> findDescriptiveTypes() {
+        final Set<DescriptiveTypeSignature> collectedDescriptiveTypes = new HashSet<>();
+        fields().forEach(f -> ServiceInfo.findDescriptiveTypes(collectedDescriptiveTypes, f.typeSignature()));
+        return ImmutableSortedSet.copyOf(comparing(TypeSignature::name), collectedDescriptiveTypes);
     }
 
     @Override
