@@ -27,8 +27,6 @@ import io.netty.channel.EventLoop;
 
 final class HeapBasedEventLoopState extends AbstractEventLoopState {
 
-    private final ReentrantLock lock = new ReentrantLock();
-
     /**
      * A binary heap of Entry. Ordered by:
      * <ul>
@@ -277,13 +275,5 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
         public String toString() {
             return "(" + index + ", " + id + ", " + activeRequests() + ')';
         }
-    }
-
-    private void lock() {
-        lock.lock();
-    }
-
-    private void unlock() {
-        lock.unlock();
     }
 }

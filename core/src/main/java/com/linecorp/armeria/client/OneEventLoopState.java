@@ -24,8 +24,6 @@ import io.netty.channel.EventLoop;
 
 final class OneEventLoopState extends AbstractEventLoopState {
 
-    private final ReentrantLock lock = new ReentrantLock();
-
     private final List<AbstractEventLoopEntry> entry = new ArrayList<>();
 
     private int allActiveRequests;
@@ -105,13 +103,5 @@ final class OneEventLoopState extends AbstractEventLoopState {
         void setIndex(int index) {
             throw new UnsupportedOperationException();
         }
-    }
-
-    private void lock() {
-        lock.lock();
-    }
-
-    private void unlock() {
-        lock.unlock();
     }
 }
