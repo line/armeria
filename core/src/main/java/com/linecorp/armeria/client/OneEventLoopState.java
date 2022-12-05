@@ -18,7 +18,6 @@ package com.linecorp.armeria.client;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
 
 import io.netty.channel.EventLoop;
 
