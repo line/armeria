@@ -55,16 +55,16 @@ class RetryingClientWithDecoratorTest {
                                              .thenBackoff();
         final WebClient client =
                 WebClient.builder(server.httpUri())
+                         .decorator((delegate, ctx, req) -> delegate.execute(ctx, req)
+                                                                    .mapHeaders(headers -> {
+                                                                        throw new AnticipatedException();
+                                                                    }))
                          .decorator((delegate, ctx, req) -> {
                              ctx.log()
                                 .whenAvailable(RequestLogProperty.RESPONSE_CAUSE)
                                 .thenAccept(log -> logExceptionCounter.incrementAndGet());
                              return delegate.execute(ctx, req);
                          })
-                         .decorator((delegate, ctx, req) -> delegate.execute(ctx, req)
-                                                                    .mapHeaders(headers -> {
-                                                                        throw new AnticipatedException();
-                                                                    }))
                          .decorator(RetryingClient.builder(retryRule).newDecorator())
                          .build();
         assertThatThrownBy(() -> client.get("/hello").aggregate().join())
