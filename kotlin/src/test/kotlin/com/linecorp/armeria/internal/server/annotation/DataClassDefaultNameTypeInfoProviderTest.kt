@@ -34,10 +34,7 @@ class DataClassDefaultNameTypeInfoProviderTest {
     @CsvSource(value = ["true", "false"])
     @ParameterizedTest
     fun dataClass(request: Boolean) {
-        val provider =
-            DefaultDescriptiveTypeInfoProvider(
-                request
-            )
+        val provider = DefaultDescriptiveTypeInfoProvider(request)
         val struct: StructInfo = (provider.newDescriptiveTypeInfo(DescriptionResult::class.java) as StructInfo)
 
         assertThat(struct.name()).isEqualTo(DescriptionResult::class.java.name)
@@ -74,10 +71,7 @@ class DataClassDefaultNameTypeInfoProviderTest {
     @CsvSource(value = ["true", "false"])
     @ParameterizedTest
     fun enumClass(request: Boolean) {
-        val requestProvider =
-            DefaultDescriptiveTypeInfoProvider(
-                request
-            )
+        val requestProvider = DefaultDescriptiveTypeInfoProvider(request)
         val enumInfo: EnumInfo =
             (requestProvider.newDescriptiveTypeInfo(EnumParam::class.java) as EnumInfo)
         assertThat(enumInfo.name()).isEqualTo(EnumParam::class.java.name)

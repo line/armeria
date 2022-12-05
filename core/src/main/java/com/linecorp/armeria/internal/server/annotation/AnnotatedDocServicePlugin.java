@@ -171,7 +171,6 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         final Route route = service.route();
         final EndpointInfo endpoint = endpointInfo(route, hostnamePattern);
         final Method method = service.method();
-        final String methodName = method.getName();
         final int overloadId = service.overloadId();
         final TypeSignature returnTypeSignature = getReturnTypeSignature(method);
         final List<FieldInfo> fieldInfos = fieldInfos(service.annotatedValueResolvers(),
@@ -179,8 +178,8 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         route.methods().forEach(
                 httpMethod -> {
                     final MethodInfo methodInfo = new MethodInfo(
-                            serviceClass.getName(), methodName, overloadId, returnTypeSignature, fieldInfos,
-                            ImmutableList.of(), // Ignore exceptions.
+                            serviceClass.getName(), method.getName(), overloadId, returnTypeSignature, fieldInfos,
+                            ImmutableList.of(),
                             ImmutableList.of(endpoint), httpMethod,
                             AnnotatedServiceFactory.findDescription(method));
 
@@ -480,9 +479,10 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                                                         requestDescriptiveTypes));
     }
 
-    private static DescriptiveTypeInfo newDescriptiveTypeInfo(DescriptiveTypeSignature typeSignature,
-                                                        DescriptiveTypeInfoProvider provider,
-                                                        Set<DescriptiveTypeSignature> requestDescriptiveTypes) {
+    private static DescriptiveTypeInfo newDescriptiveTypeInfo(
+            DescriptiveTypeSignature typeSignature,
+            DescriptiveTypeInfoProvider provider,
+            Set<DescriptiveTypeSignature> requestDescriptiveTypes) {
         final Object typeDescriptor = typeSignature.descriptor();
         DescriptiveTypeInfo descriptiveTypeInfo = provider.newDescriptiveTypeInfo(typeDescriptor);
         if (descriptiveTypeInfo != null) {
