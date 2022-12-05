@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
@@ -35,6 +36,7 @@ import java.util.function.Consumer;
 
 import javax.net.ssl.SSLSession;
 
+import ch.qos.logback.classic.AsyncAppender;
 import org.apache.thrift.protocol.TMessage;
 import org.apache.thrift.protocol.TMessageType;
 import org.junit.jupiter.api.AfterEach;
@@ -82,6 +84,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 class RequestContextExportingAppenderTest {
 
+    public static final int ASYNC_LOG_WAIT_TIMEOUT = 5000;
     private static final RpcRequest RPC_REQ = RpcRequest.of(Object.class, "hello", "world");
     private static final RpcResponse RPC_RES = RpcResponse.of("Hello, world!");
     private static final ThriftCall THRIFT_CALL =
@@ -619,7 +622,7 @@ class RequestContextExportingAppenderTest {
             testLogger.trace("{}", value);
 
             final ArgumentCaptor<ILoggingEvent> eventCaptor = ArgumentCaptor.forClass(ILoggingEvent.class);
-            verify(sa).doAppend(eventCaptor.capture());
+            verify(sa, timeout(ASYNC_LOG_WAIT_TIMEOUT)).doAppend(eventCaptor.capture());
 
             final Map<String, String> mdc = eventCaptor.getValue().getMDCPropertyMap();
             assertThat(mdc).isInstanceOf(Collections.EMPTY_MAP.getClass());
@@ -635,7 +638,7 @@ class RequestContextExportingAppenderTest {
             testLogger.trace("{}", value);
 
             final ArgumentCaptor<ILoggingEvent> eventCaptor = ArgumentCaptor.forClass(ILoggingEvent.class);
-            verify(sa).doAppend(eventCaptor.capture());
+            verify(sa, timeout(ASYNC_LOG_WAIT_TIMEOUT)).doAppend(eventCaptor.capture());
 
             final Map<String, String> mdc = eventCaptor.getValue().getMDCPropertyMap();
             assertThat(mdc).isInstanceOf(HashMap.class);
@@ -716,16 +719,19 @@ class RequestContextExportingAppenderTest {
     @SafeVarargs
     private final SocketAppender prepareSocketAppender(
             Consumer<RequestContextExportingAppender>... configurators) {
-        final RequestContextExportingAppender a = new RequestContextExportingAppender();
+        final RequestContextExportingAppender rcea = new RequestContextExportingAppender();
         for (Consumer<RequestContextExportingAppender> c : configurators) {
-            c.accept(a);
+            c.accept(rcea);
         }
 
         final SocketAppender sa = mock(SocketAppender.class);
-        a.addAppender(sa);
+        final AsyncAppender aa = new AsyncAppender();
+        aa.addAppender(sa);
+        rcea.addAppender(aa);
         sa.start();
-        a.start();
-        testLogger.addAppender(a);
+        aa.start();
+        rcea.start();
+        testLogger.addAppender(rcea);
         return sa;
     }
 }

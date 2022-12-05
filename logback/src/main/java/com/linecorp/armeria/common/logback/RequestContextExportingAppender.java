@@ -238,10 +238,23 @@ public final class RequestContextExportingAppender
         // When SocketAppender is used and event object contains classes
         // that are not on whitelist, HardenedObjectInputStream raises
         // InvalidClassException: Unauthorized deserialization attempt.
-        if (newAppender instanceof AbstractSocketAppender) {
-            needsHashMap = true;
-        }
+        needsHashMap = isSocketAppender(newAppender);
         aai.addAppender(newAppender);
+    }
+
+    @SuppressWarnings("unchecked")
+    private boolean isSocketAppender(Appender<ILoggingEvent> appender) {
+        if (appender instanceof AppenderAttachable) {
+            boolean result = false;
+            for (Iterator<Appender<ILoggingEvent>> i = ((AppenderAttachable<ILoggingEvent>) appender)
+                    .iteratorForAppenders(); i.hasNext();) {
+                final Appender<ILoggingEvent> nested = i.next();
+                result = result || isSocketAppender(nested);
+            }
+            return result;
+        }
+
+        return appender instanceof AbstractSocketAppender;
     }
 
     @Override
