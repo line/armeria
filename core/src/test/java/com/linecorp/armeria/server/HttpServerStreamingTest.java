@@ -165,7 +165,7 @@ class HttpServerStreamingTest {
         final byte[] content = new byte[maxContentLength + 1];
         final AggregatedHttpResponse res = client.post("/non-existent", content).aggregate().get();
         assertThat(res.status()).isSameAs(HttpStatus.NOT_FOUND);
-        assertThat(res.contentUtf8()).startsWith("Status: 404\n");
+        assertThat(res.contentUtf8()).isEqualTo("404 Not Found");
     }
 
     @ParameterizedTest
