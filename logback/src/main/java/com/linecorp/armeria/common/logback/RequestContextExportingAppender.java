@@ -244,17 +244,18 @@ public final class RequestContextExportingAppender
 
     @SuppressWarnings("unchecked")
     private boolean isSocketAppender(Appender<ILoggingEvent> appender) {
-        if (appender instanceof AppenderAttachable) {
-            boolean result = false;
-            for (Iterator<Appender<ILoggingEvent>> i = ((AppenderAttachable<ILoggingEvent>) appender)
-                    .iteratorForAppenders(); i.hasNext();) {
-                final Appender<ILoggingEvent> nested = i.next();
-                result = result || isSocketAppender(nested);
-            }
-            return result;
+        if (appender instanceof AbstractSocketAppender) {
+            return true;
         }
-
-        return appender instanceof AbstractSocketAppender;
+        if (appender instanceof AppenderAttachable) {
+            for (final Iterator<Appender<ILoggingEvent>> i = ((AppenderAttachable<ILoggingEvent>) appender)
+                    .iteratorForAppenders(); i.hasNext();) {
+                if (isSocketAppender(i.next())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Override
