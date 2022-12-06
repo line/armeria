@@ -43,7 +43,7 @@ public final class ShutdownHooks {
 
     private static final Logger logger = LoggerFactory.getLogger(ShutdownHooks.class);
 
-    @GuardedBy("autoCloseableOnShutdownTasks")
+    @GuardedBy("reentrantLock")
     private static final Map<AutoCloseable, Queue<Runnable>> autoCloseableOnShutdownTasks =
             new LinkedHashMap<>();
 
