@@ -20,6 +20,7 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import java.security.cert.Certificate;
 import java.security.cert.X509Certificate;
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiConsumer;
 
 import javax.net.ssl.SSLPeerUnverifiedException;
@@ -75,6 +76,8 @@ public final class ServletTlsAttributes {
             40, 56, 128
     };
 
+    private static final ReentrantLock lock = new ReentrantLock();
+
     /**
      * Fills the Servlet TLS attributes from {@link SSLSession} into {@code ServletRequest}.
      *
@@ -108,7 +111,8 @@ public final class ServletTlsAttributes {
             return attrs;
         }
 
-        synchronized (session) {
+        lock.lock();
+        try {
             attrs = (ServletTlsAttributes) session.getValue(ATTR_NAME);
             if (attrs == null) {
                 final byte[] sessionIdBytes = session.getId();
@@ -125,6 +129,8 @@ public final class ServletTlsAttributes {
                 session.putValue(ATTR_NAME, attrs);
             }
             return attrs;
+        } finally {
+            lock.unlock();
         }
     }
 

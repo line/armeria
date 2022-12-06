@@ -48,6 +48,7 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
@@ -62,6 +63,7 @@ import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.Flags;
@@ -117,6 +119,8 @@ public final class Server implements ListenableAsyncCloseable {
 
     private final StartStopSupport<Void, Void, Void, ServerListener> startStop;
     private final Set<ServerChannel> serverChannels = new NonBlockingHashSet<>();
+    private final ReentrantLock lock = new ReentrantLock();
+    @GuardedBy("lock")
     private final Map<InetSocketAddress, ServerPort> activePorts = new LinkedHashMap<>();
     private final ConnectionLimitingHandler connectionLimitingHandler;
 
@@ -178,8 +182,11 @@ public final class Server implements ListenableAsyncCloseable {
      * @see Server#activePort()
      */
     public Map<InetSocketAddress, ServerPort> activePorts() {
-        synchronized (activePorts) {
+        lock.lock();
+        try {
             return Collections.unmodifiableMap(new LinkedHashMap<>(activePorts));
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -210,7 +217,8 @@ public final class Server implements ListenableAsyncCloseable {
     @Nullable
     private ServerPort activePort0(@Nullable SessionProtocol protocol) {
         ServerPort candidate = null;
-        synchronized (activePorts) {
+        lock.lock();
+        try {
             for (ServerPort serverPort : activePorts.values()) {
                 if (protocol == null || serverPort.hasProtocol(protocol)) {
                     if (!isLocalPort(serverPort)) {
@@ -220,6 +228,8 @@ public final class Server implements ListenableAsyncCloseable {
                     }
                 }
             }
+        } finally {
+            lock.unlock();
         }
         return candidate;
     }
@@ -244,8 +254,10 @@ public final class Server implements ListenableAsyncCloseable {
         return activeLocalPort0(requireNonNull(protocol, "protocol"));
     }
 
+    @SuppressWarnings("GuardedBy")
     private int activeLocalPort0(@Nullable SessionProtocol protocol) {
-        synchronized (activePorts) {
+        lock.lock();
+        try {
             return activePorts.values().stream()
                               .filter(activePort -> (protocol == null || activePort.hasProtocol(protocol)) &&
                                                     isLocalPort(activePort))
@@ -256,6 +268,8 @@ public final class Server implements ListenableAsyncCloseable {
                                       activePorts.values()))
                               .localAddress()
                               .getPort();
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -620,8 +634,11 @@ public final class Server implements ListenableAsyncCloseable {
             final Set<Channel> serverChannels = ImmutableSet.copyOf(Server.this.serverChannels);
             ChannelUtil.close(serverChannels).handle((unused1, unused2) -> {
                 // All server ports have been closed.
-                synchronized (activePorts) {
+                lock.lock();
+                try {
                     activePorts.clear();
+                } finally {
+                    lock.unlock();
                 }
 
                 // Close all accepted sockets.
@@ -755,9 +772,12 @@ public final class Server implements ListenableAsyncCloseable {
                 // Update the boss thread so its name contains the actual port.
                 Thread.currentThread().setName(bossThreadName(actualPort));
 
-                synchronized (activePorts) {
+                lock.lock();
+                try {
                     // Update the map of active ports.
                     activePorts.put(localAddress, actualPort);
+                } finally {
+                    lock.unlock();
                 }
 
                 if (logger.isInfoEnabled()) {
@@ -808,13 +828,16 @@ public final class Server implements ListenableAsyncCloseable {
             final long portGroup = next.portGroup();
             if (portGroup != 0) {
                 int previousPort = 0;
-                synchronized (activePorts) {
+                lock.lock();
+                try {
                     for (ServerPort activePort : activePorts.values()) {
                         if (activePort.portGroup() == portGroup) {
                             previousPort = activePort.localAddress().getPort();
                             break;
                         }
                     }
+                } finally {
+                    lock.unlock();
                 }
 
                 if (previousPort > 0) {

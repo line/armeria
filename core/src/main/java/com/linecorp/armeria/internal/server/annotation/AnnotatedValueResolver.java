@@ -51,6 +51,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -1501,6 +1502,8 @@ final class AnnotatedValueResolver {
      * A context which is used while resolving parameter values.
      */
     static class ResolverContext {
+        private final ReentrantLock lock = new ReentrantLock();
+
         private final ServiceRequestContext context;
         private final HttpRequest request;
 
@@ -1537,13 +1540,16 @@ final class AnnotatedValueResolver {
         QueryParams queryParams() {
             QueryParams result = queryParams;
             if (result == null) {
-                synchronized (this) {
+                lock.lock();
+                try {
                     result = queryParams;
                     if (result == null) {
                         queryParams = result = queryParamsOf(context.query(),
                                                              request.contentType(),
                                                              aggregatedResult);
                     }
+                } finally {
+                    lock.unlock();
                 }
             }
             return result;
