@@ -285,7 +285,7 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
-     * Adds the default HTTP header for an {@link HttpRequest} sent by this {@link Client}.
+     * Adds the default HTTP header for an {@link HttpRequest} that will be sent by this {@link Client}.
      *
      * <p>Note that the values of the default HTTP headers could be overridden if the same
      * {@link HttpHeaderNames} are defined in the {@link HttpRequest#headers()} or
@@ -299,7 +299,7 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
-     * Adds the default HTTP headers for an {@link HttpRequest} sent by this {@link Client}.
+     * Adds the default HTTP headers for an {@link HttpRequest} that will be sent by this {@link Client}.
      *
      * <p>Note that the values of the default HTTP headers could be overridden if the same
      * {@link HttpHeaderNames} are defined in the {@link HttpRequest#headers()} or
@@ -313,7 +313,7 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
-     * Sets the default HTTP header for an {@link HttpRequest} sent by this {@link Client}.
+     * Sets the default HTTP header for an {@link HttpRequest} that will be sent by this {@link Client}.
      *
      * <p>Note that the default HTTP header could be overridden if the same {@link HttpHeaderNames} are
      * defined in {@link HttpRequest#headers()} or {@link ClientRequestContext#additionalRequestHeaders()}.
@@ -326,7 +326,7 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
-     * Sets the default HTTP headers for an {@link HttpRequest} sent by this {@link Client}.
+     * Sets the default HTTP headers for an {@link HttpRequest} that will be sent by this {@link Client}.
      *
      * <p>Note that the values of the default HTTP headers could be overridden if the same
      * {@link HttpHeaderNames} are defined in {@link HttpRequest#headers()} or

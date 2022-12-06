@@ -25,6 +25,7 @@ import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -388,6 +389,10 @@ public final class Clients {
      * }
      * }</pre>
      *
+     * <p>Note that the specified header will be stored into
+     * {@link ClientRequestContext#additionalRequestHeaders()} which take precedence over
+     * {@link HttpRequest#headers()}.
+     *
      * @see #withHeaders(Consumer)
      */
     @MustBeClosed
@@ -426,6 +431,10 @@ public final class Clients {
      *     }
      * }
      * }</pre>
+     *
+     * <p>Note that the specified header will be stored into
+     * {@link ClientRequestContext#additionalRequestHeaders()} which take precedence over
+     * {@link HttpRequest#headers()}.
      *
      * @see #withHeaders(Consumer)
      */
@@ -472,6 +481,10 @@ public final class Clients {
      *     }
      * }
      * }</pre>
+     *
+     * <p>Note that the mutated headers will be stored into
+     * {@link ClientRequestContext#additionalRequestHeaders()} which take precedence over
+     * {@link HttpRequest#headers()}.
      *
      * @see #withHeader(CharSequence, String)
      */

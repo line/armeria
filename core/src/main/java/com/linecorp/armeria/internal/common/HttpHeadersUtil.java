@@ -91,20 +91,38 @@ public final class HttpHeadersUtil {
 
         final RequestHeadersBuilder builder = headers.toBuilder();
 
+        // Additional headers
+        String authority = additionalHeaders.get(HttpHeaderNames.AUTHORITY);
+        if (authority == null) {
+            authority = additionalHeaders.get(HttpHeaderNames.HOST);
+        }
+        if (authority != null) {
+            builder.authority(authority);
+        }
+
         for (AsciiString name : additionalHeaders.names()) {
             if (name.equals(HttpHeaderNames.AUTHORITY) || name.equals(HttpHeaderNames.HOST)) {
-                builder.authority(additionalHeaders.get(name));
+                continue; // Manually handled above.
             } else if (!ADDITIONAL_REQUEST_HEADER_DISALLOWED_LIST.contains(name)) {
                 builder.remove(name);
                 additionalHeaders.forEachValue(name, value -> builder.add(name, value));
             }
         }
 
+        // Default headers
+        if (builder.authority() == null) {
+            String authority0 = defaultHeaders.get(HttpHeaderNames.AUTHORITY);
+            if (authority0 == null) {
+                authority0 = defaultHeaders.get(HttpHeaderNames.HOST);
+            }
+            if (authority0 != null) {
+                builder.authority(authority0);
+            }
+        }
+
         for (AsciiString name : defaultHeaders.names()) {
             if (name.equals(HttpHeaderNames.AUTHORITY) || name.equals(HttpHeaderNames.HOST)) {
-                if (builder.authority() == null) {
-                    builder.authority(defaultHeaders.get(name));
-                }
+                continue; // Manually handled above.
             } else if (!ADDITIONAL_REQUEST_HEADER_DISALLOWED_LIST.contains(name) && !builder.contains(name)) {
                 defaultHeaders.forEachValue(name, value -> builder.add(name, value));
             }

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -101,6 +101,26 @@ class WebClientAdditionalAuthorityTest {
     void shouldRespectAuthorityInAdditionalHeaders(String protocol, String headerName) {
         try (SafeCloseable ignored = Clients.withContextCustomizer(
                 ctx -> ctx.addAdditionalRequestHeader(headerName, "bar.com"));
+             ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+
+            assertThat(client.get(protocol + "://foo.com:" + fooServer.httpPort()).contentUtf8())
+                    .isEqualTo("foo.com/bar.com");
+            assertThat(captor.get().endpoint().authority())
+                    .isEqualTo("foo.com:" + fooServer.httpPort());
+            assertThat(captor.get().log().whenComplete().join().requestHeaders().authority())
+                    .isEqualTo("bar.com");
+        }
+    }
+
+    @CsvSource({ "h1c", "h2c", "http" })
+    @ParameterizedTest
+    void shouldRespectAuthorityOverHostHeader(String protocol) {
+        try (SafeCloseable ignored = Clients.withContextCustomizer(
+                ctx -> {
+                    ctx.addAdditionalRequestHeader(":authority", "bar.com");
+                    ctx.addAdditionalRequestHeader("Host", "ignored.com");
+                }
+        );
              ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
 
             assertThat(client.get(protocol + "://foo.com:" + fooServer.httpPort()).contentUtf8())
@@ -243,20 +263,19 @@ class WebClientAdditionalAuthorityTest {
 
         try (SafeCloseable ignored = Clients.withContextCustomizer(
                 ctx -> ctx.addAdditionalRequestHeader(headerName,
-                                                      "bar.com:" + barServer.httpPort()))) {
+                                                      "bar.com:" + barServer.httpPort()));
+             ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
 
-            try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
-                final HttpRequest request2 = HttpRequest.of(HttpMethod.GET, "/");
-                // The default authority (`foo`) got overridden to `bar` but the endpoint (fooServer) has not
-                // changed.
-                assertThat(clientA.execute(request2).aggregate().join().contentUtf8())
-                        .isEqualTo("foo.com/bar.com:" + barServer.httpPort());
+            final HttpRequest request2 = HttpRequest.of(HttpMethod.GET, "/");
+            // The default authority (`foo`) got overridden to `bar` but the endpoint (fooServer) has not
+            // changed.
+            assertThat(clientA.execute(request2).aggregate().join().contentUtf8())
+                    .isEqualTo("foo.com/bar.com:" + barServer.httpPort());
 
-                assertThat(captor.get().endpoint().authority())
-                        .isEqualTo("foo.com:" + fooServer.httpPort());
-                assertThat(captor.get().log().whenComplete().join().requestHeaders().authority())
-                        .isEqualTo("bar.com:" + barServer.httpPort());
-            }
+            assertThat(captor.get().endpoint().authority())
+                    .isEqualTo("foo.com:" + fooServer.httpPort());
+            assertThat(captor.get().log().whenComplete().join().requestHeaders().authority())
+                    .isEqualTo("bar.com:" + barServer.httpPort());
         }
     }
 

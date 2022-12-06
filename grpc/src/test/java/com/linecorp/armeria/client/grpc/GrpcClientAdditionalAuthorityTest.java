@@ -170,7 +170,7 @@ class GrpcClientAdditionalAuthorityTest {
             public <I, O> ClientCall<I, O> interceptCall(
                     MethodDescriptor<I, O> method,
                     CallOptions callOptions, Channel next) {
-                return next.newCall(method, callOptions.withAuthority("bar.com"));
+                return next.newCall(method, callOptions.withAuthority("ignored.com"));
             }
         };
 
