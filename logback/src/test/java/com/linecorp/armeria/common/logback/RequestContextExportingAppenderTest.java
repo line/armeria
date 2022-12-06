@@ -658,7 +658,7 @@ class RequestContextExportingAppenderTest {
             testLogger.trace("{}", value);
 
             final ArgumentCaptor<ILoggingEvent> eventCaptor = ArgumentCaptor.forClass(ILoggingEvent.class);
-            verify(sa).doAppend(eventCaptor.capture());
+            verify(sa, timeout(ASYNC_LOG_WAIT_TIMEOUT)).doAppend(eventCaptor.capture());
 
             final Map<String, String> mdc = eventCaptor.getValue().getMDCPropertyMap();
             assertThat(mdc).isInstanceOf(HashMap.class);
