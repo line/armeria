@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,12 +15,6 @@
  */
 
 package com.linecorp.armeria.common.util;
-
-import java.util.function.Function;
-
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.throttling.ThrottlingService;
 
 /**
  * Provides an executor interface which
@@ -50,11 +44,6 @@ public interface LimitedBlockingTaskExecutor extends BlockingTaskExecutor {
                                             SettableIntSupplier limitSupplier) {
         return new DefaultLimitedBlockingTaskExecutor(blockingTaskExecutor, limitSupplier);
     }
-
-    /**
-     * Returns a new decorator to throttle giving {@link LimitedBlockingTaskExecutor}.
-     */
-    Function<? super HttpService, ThrottlingService> asDecorator(@Nullable String name);
 
     /**
      * Returns whether the queue hits the given limit or not.

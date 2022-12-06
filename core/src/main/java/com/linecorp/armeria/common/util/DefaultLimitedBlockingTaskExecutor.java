@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -18,7 +18,6 @@ package com.linecorp.armeria.common.util;
 
 import static com.google.common.base.Preconditions.checkArgument;
 
-import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -26,61 +25,72 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.function.Function;
-import java.util.function.Supplier;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.throttling.ThrottlingService;
-import com.linecorp.armeria.server.throttling.ThrottlingStrategy;
+import com.google.common.collect.ImmutableList;
 
 final class DefaultLimitedBlockingTaskExecutor implements LimitedBlockingTaskExecutor {
-    private static final Logger logger = LoggerFactory.getLogger(DefaultLimitedBlockingTaskExecutor.class);
-
     private final BlockingTaskExecutor delegate;
 
     private final SettableIntSupplier limitSupplier;
 
-    private final Supplier<Integer> currentQueueingSize;
+    private final AtomicInteger taskCounter = new AtomicInteger(0);
 
     DefaultLimitedBlockingTaskExecutor(BlockingTaskExecutor delegate, SettableIntSupplier limitSupplier) {
         this.delegate = delegate;
         this.limitSupplier = limitSupplier;
-        final ThreadPoolExecutor executor = unwrapThreadPoolExecutor();
-        currentQueueingSize = () -> executor.getQueue().size();
-    }
-
-    @Override
-    public Function<? super HttpService, ThrottlingService> asDecorator(@Nullable String name) {
-        return ThrottlingService.newDecorator(ThrottlingStrategy.blockingTaskLimiting(this, name));
     }
 
     @Override
     public ScheduledFuture<?> schedule(Runnable command, long delay, TimeUnit unit) {
-        return delegate.schedule(command, delay, unit);
+        return delegate.schedule(() -> {
+            try {
+                taskCounter.incrementAndGet();
+                command.run();
+            } finally {
+                taskCounter.decrementAndGet();
+            }
+        }, delay, unit);
     }
 
     @Override
     public <V> ScheduledFuture<V> schedule(Callable<V> callable, long delay, TimeUnit unit) {
-        return delegate.schedule(callable, delay, unit);
+        return delegate.schedule(() -> {
+            try {
+                taskCounter.incrementAndGet();
+                return callable.call();
+            } finally {
+                taskCounter.decrementAndGet();
+            }
+        }, delay, unit);
     }
 
     @Override
     public ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
                                                   TimeUnit unit) {
-        return delegate.scheduleAtFixedRate(command, initialDelay, period, unit);
+        return delegate.scheduleAtFixedRate(() -> {
+            try {
+                taskCounter.incrementAndGet();
+                command.run();
+            } finally {
+                taskCounter.decrementAndGet();
+            }
+        }, initialDelay, period, unit);
     }
 
     @Override
     public ScheduledFuture<?> scheduleWithFixedDelay(Runnable command, long initialDelay, long delay,
                                                      TimeUnit unit) {
-        return delegate.scheduleAtFixedRate(command, initialDelay, delay, unit);
+        return delegate.scheduleAtFixedRate(() -> {
+            try {
+                taskCounter.incrementAndGet();
+                command.run();
+            } finally {
+                taskCounter.decrementAndGet();
+            }
+        }, initialDelay, delay, unit);
     }
 
     @Override
@@ -110,45 +120,115 @@ final class DefaultLimitedBlockingTaskExecutor implements LimitedBlockingTaskExe
 
     @Override
     public <T> Future<T> submit(Callable<T> task) {
-        return delegate.submit(task);
+        return delegate.submit(() -> {
+            try {
+                taskCounter.incrementAndGet();
+                return task.call();
+            } finally {
+                taskCounter.decrementAndGet();
+            }
+        });
     }
 
     @Override
     public <T> Future<T> submit(Runnable task, T result) {
-        return delegate.submit(task, result);
+        return delegate.submit(() -> {
+            try {
+                taskCounter.incrementAndGet();
+                task.run();
+            } finally {
+                taskCounter.decrementAndGet();
+            }
+        }, result);
     }
 
     @Override
     public Future<?> submit(Runnable task) {
-        return delegate.submit(task);
+        return delegate.submit(() -> {
+            try {
+                taskCounter.incrementAndGet();
+                System.out.println(
+                        "incremented count " + taskCounter.get() + " by " + Thread.currentThread().getName());
+                task.run();
+            } finally {
+                taskCounter.decrementAndGet();
+                System.out.println(
+                        "decremented count " + taskCounter.get() + " by " + Thread.currentThread().getName());
+            }
+        });
     }
 
     @Override
     public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks) throws InterruptedException {
-        return delegate.invokeAll(tasks);
+        return delegate.invokeAll(tasks.stream()
+                                       .map(task -> (Callable<T>) () -> {
+                                           try {
+                                               taskCounter.incrementAndGet();
+                                               return task.call();
+                                           } finally {
+                                               taskCounter.decrementAndGet();
+                                           }
+                                       })
+                                       .collect(ImmutableList.toImmutableList()));
     }
 
     @Override
     public <T> List<Future<T>> invokeAll(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
             throws InterruptedException {
-        return delegate.invokeAll(tasks, timeout, unit);
+        return delegate.invokeAll(tasks.stream()
+                                       .map(task -> (Callable<T>) () -> {
+                                           try {
+                                               taskCounter.incrementAndGet();
+                                               return task.call();
+                                           } finally {
+                                               taskCounter.decrementAndGet();
+                                           }
+                                       })
+                                       .collect(ImmutableList.toImmutableList()),
+                                  timeout, unit);
     }
 
     @Override
     public <T> T invokeAny(Collection<? extends Callable<T>> tasks)
             throws InterruptedException, ExecutionException {
-        return delegate.invokeAny(tasks);
+        return delegate.invokeAny(tasks.stream()
+                                       .map(task -> (Callable<T>) () -> {
+                                           try {
+                                               taskCounter.incrementAndGet();
+                                               return task.call();
+                                           } finally {
+                                               taskCounter.decrementAndGet();
+                                           }
+                                       })
+                                       .collect(ImmutableList.toImmutableList()));
     }
 
     @Override
     public <T> T invokeAny(Collection<? extends Callable<T>> tasks, long timeout, TimeUnit unit)
             throws InterruptedException, ExecutionException, TimeoutException {
-        return delegate.invokeAny(tasks, timeout, unit);
+        return delegate.invokeAny(tasks.stream()
+                                       .map(task -> (Callable<T>) () -> {
+                                           try {
+                                               taskCounter.incrementAndGet();
+                                               return task.call();
+                                           } finally {
+                                               taskCounter.decrementAndGet();
+                                           }
+                                       })
+                                       .collect(ImmutableList.toImmutableList()),
+                                  timeout, unit);
     }
 
     @Override
     public void execute(Runnable command) {
-        delegate.execute(command);
+        delegate.execute(() -> {
+            try {
+                taskCounter.incrementAndGet();
+                command.run();
+            } finally {
+                taskCounter.decrementAndGet();
+            }
+        });
     }
 
     @Override
@@ -159,22 +239,6 @@ final class DefaultLimitedBlockingTaskExecutor implements LimitedBlockingTaskExe
     @Override
     public boolean hitLimit() {
         checkArgument(limitSupplier.getAsInt() > 0, "limit must larger than zero");
-        return currentQueueingSize.get() >= limitSupplier.getAsInt();
-    }
-
-    private ThreadPoolExecutor unwrapThreadPoolExecutor() {
-        try {
-            final Field executor = getClass().getSuperclass().getSuperclass().getSuperclass()
-                                             .getDeclaredField("executor");
-            executor.setAccessible(true);
-            final LimitedBlockingTaskExecutor limitedBlockingTaskExecutor =
-                    (LimitedBlockingTaskExecutor) executor.get(this);
-            final Field delegate = limitedBlockingTaskExecutor.getClass().getDeclaredField("delegate");
-            delegate.setAccessible(true);
-            return (ThreadPoolExecutor) delegate.get(limitedBlockingTaskExecutor);
-        } catch (NoSuchFieldException | IllegalAccessException | RuntimeException e) {
-            logger.info("Cannot unwrap ThreadPoolExecutor", e);
-            throw new IllegalStateException("Cannot throttle unwrap ThreadPoolExecutor", e);
-        }
+        return taskCounter.get() >= limitSupplier.getAsInt();
     }
 }
