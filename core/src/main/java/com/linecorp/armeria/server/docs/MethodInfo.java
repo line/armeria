@@ -198,8 +198,8 @@ public final class MethodInfo {
     }
 
     /**
-     * Returns a new {@link MethodInfo} with the specified {@link DescriptionInfo}.
-     * Returns {@code this} if this {@link MethodInfo} has the same {@link DescriptionInfo}.
+     * Returns a new {@link MethodInfo} with the specified {@code parameters}.
+     * Returns {@code this} if this {@link MethodInfo} has the same {@code parameters}.
      */
     public MethodInfo withParameters(Iterable<FieldInfo> parameters) {
         requireNonNull(parameters, "parameters");

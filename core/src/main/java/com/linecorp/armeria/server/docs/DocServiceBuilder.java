@@ -32,6 +32,7 @@ import com.google.common.collect.ListMultimap;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -456,6 +457,7 @@ public final class DocServiceBuilder {
      * Adds the specified {@link DescriptiveTypeInfoProvider}s used to create a {@link DescriptiveTypeInfo} from
      * a type descriptor.
      */
+    @UnstableApi
     public DocServiceBuilder descriptiveTypeInfoProvider(
             Iterable<? extends DescriptiveTypeInfoProvider> descriptiveTypeInfoProviders) {
         requireNonNull(descriptiveTypeInfoProviders, "descriptiveTypeInfoProviders");
@@ -469,6 +471,7 @@ public final class DocServiceBuilder {
      * Adds the specified {@link DescriptiveTypeInfoProvider} used to create a {@link DescriptiveTypeInfo} from
      * a type descriptor.
      */
+    @UnstableApi
     public DocServiceBuilder descriptiveTypeInfoProvider(
             DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
         requireNonNull(descriptiveTypeInfoProvider, "descriptiveTypeInfoProvider");

@@ -33,6 +33,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public class ContainerTypeSignature extends DefaultTypeSignature {
 
+    private static final Joiner JOINER = Joiner.on(", ");
+
     private final List<TypeSignature> typeParameters;
 
     ContainerTypeSignature(TypeSignatureType type, String name,
@@ -52,7 +54,7 @@ public class ContainerTypeSignature extends DefaultTypeSignature {
 
     @Override
     public String signature() {
-        return name() + '<' + Joiner.on(", ").join(typeParameters) + '>';
+        return name() + '<' + JOINER.join(typeParameters) + '>';
     }
 
     @Override
