@@ -331,8 +331,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             response.aggregate().handle((aggregated, cause) -> {
                 if (cause != null) {
                     derivedCtx.logBuilder().endResponse(cause);
-                    handleMaybeErrorResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes,
-                                             future, derivedCtx, HttpResponse.ofFailure(cause), cause);
+                    handleResponseWithoutContent(config, ctx, rootReqDuplicator, originalReq, returnedRes,
+                                                 future, derivedCtx, HttpResponse.ofFailure(cause), cause);
                     return null;
                 }
                 handleResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx,
@@ -345,11 +345,11 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         }
     }
 
-    private void handleMaybeErrorResponse(RetryConfig<HttpResponse> config, ClientRequestContext ctx,
-                                          HttpRequestDuplicator rootReqDuplicator, HttpRequest originalReq,
-                                          HttpResponse returnedRes, CompletableFuture<HttpResponse> future,
-                                          ClientRequestContext derivedCtx, HttpResponse response,
-                                          @Nullable Throwable responseCause) {
+    private void handleResponseWithoutContent(RetryConfig<HttpResponse> config, ClientRequestContext ctx,
+                                              HttpRequestDuplicator rootReqDuplicator, HttpRequest originalReq,
+                                              HttpResponse returnedRes, CompletableFuture<HttpResponse> future,
+                                              ClientRequestContext derivedCtx, HttpResponse response,
+                                              @Nullable Throwable responseCause) {
         try {
             final RetryRule retryRule = retryRule(config);
             final CompletionStage<RetryDecision> f = retryRule.shouldRetry(derivedCtx, responseCause);
@@ -423,8 +423,8 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             }
             final HttpResponse response0 = aggregatedRes != null ? aggregatedRes.toHttpResponse()
                                                                  : response;
-            handleMaybeErrorResponse(retryConfig, ctx, rootReqDuplicator, originalReq, returnedRes,
-                                     future, derivedCtx, response0, responseCause);
+            handleResponseWithoutContent(retryConfig, ctx, rootReqDuplicator, originalReq, returnedRes,
+                                         future, derivedCtx, response0, responseCause);
         });
     }
 
