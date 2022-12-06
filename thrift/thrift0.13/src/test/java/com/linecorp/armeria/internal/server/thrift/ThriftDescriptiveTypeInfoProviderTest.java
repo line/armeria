@@ -16,11 +16,11 @@
 
 package com.linecorp.armeria.internal.server.thrift;
 
-import static com.linecorp.armeria.internal.server.thrift.ThriftNamedTypeInfoProvider.newEnumInfo;
-import static com.linecorp.armeria.internal.server.thrift.ThriftNamedTypeInfoProvider.newExceptionInfo;
-import static com.linecorp.armeria.internal.server.thrift.ThriftNamedTypeInfoProvider.newFieldInfo;
-import static com.linecorp.armeria.internal.server.thrift.ThriftNamedTypeInfoProvider.newStructInfo;
-import static com.linecorp.armeria.internal.server.thrift.ThriftNamedTypeInfoProvider.toTypeSignature;
+import static com.linecorp.armeria.internal.server.thrift.ThriftDescriptiveTypeInfoProvider.newEnumInfo;
+import static com.linecorp.armeria.internal.server.thrift.ThriftDescriptiveTypeInfoProvider.newExceptionInfo;
+import static com.linecorp.armeria.internal.server.thrift.ThriftDescriptiveTypeInfoProvider.newFieldInfo;
+import static com.linecorp.armeria.internal.server.thrift.ThriftDescriptiveTypeInfoProvider.newStructInfo;
+import static com.linecorp.armeria.internal.server.thrift.ThriftDescriptiveTypeInfoProvider.toTypeSignature;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.ArrayList;
@@ -46,7 +46,7 @@ import com.linecorp.armeria.service.test.thrift.main.FooServiceException;
 import com.linecorp.armeria.service.test.thrift.main.FooStruct;
 import com.linecorp.armeria.service.test.thrift.main.FooUnion;
 
-class ThriftNamedTypeInfoProviderTest {
+class ThriftDescriptiveTypeInfoProviderTest {
 
     @Test
     void testNewEnumInfo() {
@@ -83,13 +83,13 @@ class ThriftNamedTypeInfoProviderTest {
         fields.add(FieldInfo.of("doubleVal", TypeSignature.ofBase("double")));
         fields.add(FieldInfo.of("stringVal", string));
         fields.add(FieldInfo.of("binaryVal", TypeSignature.ofBase("binary")));
-        fields.add(FieldInfo.of("enumVal", TypeSignature.ofNamed(FooEnum.class)));
-        fields.add(FieldInfo.of("unionVal", TypeSignature.ofNamed(FooUnion.class)));
+        fields.add(FieldInfo.of("enumVal", TypeSignature.ofEnum(FooEnum.class)));
+        fields.add(FieldInfo.of("unionVal", TypeSignature.ofStruct(FooUnion.class)));
         fields.add(FieldInfo.of("mapVal", TypeSignature.ofMap(
-                string, TypeSignature.ofNamed(FooEnum.class))));
-        fields.add(FieldInfo.of("setVal", TypeSignature.ofSet(FooUnion.class)));
+                string, TypeSignature.ofEnum(FooEnum.class))));
+        fields.add(FieldInfo.of("setVal", TypeSignature.ofSet(TypeSignature.ofStruct(FooUnion.class))));
         fields.add(FieldInfo.of("listVal", TypeSignature.ofList(string)));
-        fields.add(FieldInfo.builder("selfRef", TypeSignature.ofNamed(FooStruct.class))
+        fields.add(FieldInfo.builder("selfRef", TypeSignature.ofStruct(FooStruct.class))
                             .requirement(FieldRequirement.OPTIONAL).build());
 
         final StructInfo fooStruct = newStructInfo(FooStruct.class);

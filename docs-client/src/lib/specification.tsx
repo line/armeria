@@ -42,6 +42,7 @@ export interface Endpoint {
 
 export interface Method {
   name: string;
+  id: string;
   returnTypeSignature: string;
   parameters: Parameter[];
   exceptionTypeSignatures: string[];

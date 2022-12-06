@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * Metadata about an enum type.
  */
 @UnstableApi
-public final class EnumInfo implements NamedTypeInfo {
+public final class EnumInfo implements DescriptiveTypeInfo {
 
     private final String name;
     private final List<EnumValueInfo> values;

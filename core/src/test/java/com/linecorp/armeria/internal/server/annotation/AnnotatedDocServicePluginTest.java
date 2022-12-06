@@ -142,12 +142,12 @@ class AnnotatedDocServicePluginTest {
                 toTypeSignature(FieldContainer.class.getDeclaredField("biFunction").getGenericType());
         assertThat(biFunction).isEqualTo(TypeSignature.ofContainer(
                 "BiFunction",
-                TypeSignature.ofNamed(JsonNode.class),
+                TypeSignature.ofStruct(JsonNode.class),
                 TypeSignature.ofUnresolved(""),
                 TypeSignature.ofBase("string")));
 
         assertThat(toTypeSignature(FieldContainer.class)).isEqualTo(
-                TypeSignature.ofNamed(FieldContainer.class));
+                TypeSignature.ofStruct(FieldContainer.class));
         final TypeSignature optional =
                 toTypeSignature(FieldContainer.class.getDeclaredField("optional").getGenericType());
         assertThat(optional).isEqualTo(TypeSignature.ofOptional(TypeSignature.ofBase("string")));

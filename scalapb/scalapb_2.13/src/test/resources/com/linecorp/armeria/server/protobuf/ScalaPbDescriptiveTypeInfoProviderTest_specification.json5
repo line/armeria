@@ -1,10 +1,11 @@
 {
   "services": [
     {
-      "name": "com.linecorp.armeria.server.protobuf.ScalaPbNamedTypeInfoProviderTest$ScalaPbService",
+      "name": "com.linecorp.armeria.server.protobuf.ScalaPbDescriptiveTypeInfoProviderTest$ScalaPbService",
       "methods": [
         {
           "name": "json",
+          "id": "com.linecorp.armeria.server.protobuf.ScalaPbDescriptiveTypeInfoProviderTest$ScalaPbService/json/POST",
           "returnTypeSignature": "Future<com.linecorp.armeria.scalapb.testing.messages.TestMessage>",
           "parameters": [
             {
@@ -254,41 +255,7 @@
                           "location": "UNSPECIFIED",
                           "requirement": "OPTIONAL",
                           "typeSignature": "armeria.protobuf.testing.SimpleOneof",
-                          "childFieldInfos": [
-                            {
-                              "name": "lit",
-                              "location": "UNSPECIFIED",
-                              "requirement": "OPTIONAL",
-                              "typeSignature": "armeria.protobuf.testing.Literal",
-                              "childFieldInfos": [
-                                {
-                                  "name": "value",
-                                  "location": "UNSPECIFIED",
-                                  "requirement": "OPTIONAL",
-                                  "typeSignature": "int32",
-                                  "childFieldInfos": [ ],
-                                  "descriptionInfo": {
-                                    "docString": "",
-                                    "markup": "NONE"
-                                  }
-                                }
-                              ],
-                              "descriptionInfo": {
-                                "docString": "",
-                                "markup": "NONE"
-                              }
-                            }, {
-                              "name": "add",
-                              "location": "UNSPECIFIED",
-                              "requirement": "OPTIONAL",
-                              "typeSignature": "armeria.protobuf.testing.Add",
-                              "childFieldInfos": [ ],
-                              "descriptionInfo": {
-                                "docString": "",
-                                "markup": "NONE"
-                              }
-                            }
-                          ],
+                          "childFieldInfos": [ ],
                           "descriptionInfo": {
                             "docString": "",
                             "markup": "NONE"
@@ -453,63 +420,7 @@
               "location": "UNSPECIFIED",
               "requirement": "OPTIONAL",
               "typeSignature": "armeria.protobuf.testing.Add",
-              "childFieldInfos": [
-                {
-                  "name": "left",
-                  "location": "UNSPECIFIED",
-                  "requirement": "OPTIONAL",
-                  "typeSignature": "armeria.protobuf.testing.SimpleOneof",
-                  "childFieldInfos": [ ],
-                  "descriptionInfo": {
-                    "docString": "",
-                    "markup": "NONE"
-                  }
-                }, {
-                  "name": "right",
-                  "location": "UNSPECIFIED",
-                  "requirement": "OPTIONAL",
-                  "typeSignature": "armeria.protobuf.testing.SimpleOneof",
-                  "childFieldInfos": [
-                    {
-                      "name": "lit",
-                      "location": "UNSPECIFIED",
-                      "requirement": "OPTIONAL",
-                      "typeSignature": "armeria.protobuf.testing.Literal",
-                      "childFieldInfos": [
-                        {
-                          "name": "value",
-                          "location": "UNSPECIFIED",
-                          "requirement": "OPTIONAL",
-                          "typeSignature": "int32",
-                          "childFieldInfos": [ ],
-                          "descriptionInfo": {
-                            "docString": "",
-                            "markup": "NONE"
-                          }
-                        }
-                      ],
-                      "descriptionInfo": {
-                        "docString": "",
-                        "markup": "NONE"
-                      }
-                    }, {
-                      "name": "add",
-                      "location": "UNSPECIFIED",
-                      "requirement": "OPTIONAL",
-                      "typeSignature": "armeria.protobuf.testing.Add",
-                      "childFieldInfos": [ ],
-                      "descriptionInfo": {
-                        "docString": "",
-                        "markup": "NONE"
-                      }
-                    }
-                  ],
-                  "descriptionInfo": {
-                    "docString": "",
-                    "markup": "NONE"
-                  }
-                }
-              ],
+              "childFieldInfos": [ ],
               "descriptionInfo": {
                 "docString": "",
                 "markup": "NONE"
@@ -591,41 +502,7 @@
               "location": "UNSPECIFIED",
               "requirement": "OPTIONAL",
               "typeSignature": "armeria.protobuf.testing.SimpleOneof",
-              "childFieldInfos": [
-                {
-                  "name": "lit",
-                  "location": "UNSPECIFIED",
-                  "requirement": "OPTIONAL",
-                  "typeSignature": "armeria.protobuf.testing.Literal",
-                  "childFieldInfos": [
-                    {
-                      "name": "value",
-                      "location": "UNSPECIFIED",
-                      "requirement": "OPTIONAL",
-                      "typeSignature": "int32",
-                      "childFieldInfos": [ ],
-                      "descriptionInfo": {
-                        "docString": "",
-                        "markup": "NONE"
-                      }
-                    }
-                  ],
-                  "descriptionInfo": {
-                    "docString": "",
-                    "markup": "NONE"
-                  }
-                }, {
-                  "name": "add",
-                  "location": "UNSPECIFIED",
-                  "requirement": "OPTIONAL",
-                  "typeSignature": "armeria.protobuf.testing.Add",
-                  "childFieldInfos": [ ],
-                  "descriptionInfo": {
-                    "docString": "",
-                    "markup": "NONE"
-                  }
-                }
-              ],
+              "childFieldInfos": [ ],
               "descriptionInfo": {
                 "docString": "",
                 "markup": "NONE"
@@ -887,41 +764,7 @@
                   "location": "UNSPECIFIED",
                   "requirement": "OPTIONAL",
                   "typeSignature": "armeria.protobuf.testing.SimpleOneof",
-                  "childFieldInfos": [
-                    {
-                      "name": "lit",
-                      "location": "UNSPECIFIED",
-                      "requirement": "OPTIONAL",
-                      "typeSignature": "armeria.protobuf.testing.Literal",
-                      "childFieldInfos": [
-                        {
-                          "name": "value",
-                          "location": "UNSPECIFIED",
-                          "requirement": "OPTIONAL",
-                          "typeSignature": "int32",
-                          "childFieldInfos": [ ],
-                          "descriptionInfo": {
-                            "docString": "",
-                            "markup": "NONE"
-                          }
-                        }
-                      ],
-                      "descriptionInfo": {
-                        "docString": "",
-                        "markup": "NONE"
-                      }
-                    }, {
-                      "name": "add",
-                      "location": "UNSPECIFIED",
-                      "requirement": "OPTIONAL",
-                      "typeSignature": "armeria.protobuf.testing.Add",
-                      "childFieldInfos": [ ],
-                      "descriptionInfo": {
-                        "docString": "",
-                        "markup": "NONE"
-                      }
-                    }
-                  ],
+                  "childFieldInfos": [ ],
                   "descriptionInfo": {
                     "docString": "",
                     "markup": "NONE"

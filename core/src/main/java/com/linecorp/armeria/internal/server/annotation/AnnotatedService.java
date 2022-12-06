@@ -86,6 +86,7 @@ public final class AnnotatedService implements HttpService {
 
     private final Object object;
     private final Method method;
+    private final int overloadId;
     private final MethodHandle methodHandle;
     @Nullable
     private final MethodHandle callKotlinSuspendingMethod;
@@ -109,7 +110,7 @@ public final class AnnotatedService implements HttpService {
     private final boolean serviceNameSetByAnnotation;
 
     AnnotatedService(Object object, Method method,
-                     List<AnnotatedValueResolver> resolvers,
+                     int overloadId, List<AnnotatedValueResolver> resolvers,
                      List<ExceptionHandlerFunction> exceptionHandlers,
                      List<ResponseConverterFunction> responseConverters,
                      Route route,
@@ -119,6 +120,9 @@ public final class AnnotatedService implements HttpService {
                      boolean useBlockingTaskExecutor) {
         this.object = requireNonNull(object, "object");
         this.method = requireNonNull(method, "method");
+        checkArgument(overloadId >= 0, "overloadId: %s (expected: >= 0)", overloadId);
+        this.overloadId = overloadId;
+
         checkArgument(!method.isVarArgs(), "%s#%s declared to take a variable number of arguments",
                       method.getDeclaringClass().getSimpleName(), method.getName());
         isKotlinSuspendingMethod = KotlinUtil.isSuspendingFunction(method);
@@ -231,6 +235,10 @@ public final class AnnotatedService implements HttpService {
 
     Method method() {
         return method;
+    }
+
+    int overloadId() {
+        return overloadId;
     }
 
     List<AnnotatedValueResolver> annotatedValueResolvers() {

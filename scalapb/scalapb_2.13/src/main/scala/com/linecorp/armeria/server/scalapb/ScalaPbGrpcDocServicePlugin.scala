@@ -20,9 +20,9 @@ import com.google.common.collect.ImmutableSet
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin
 import com.linecorp.armeria.server.docs.{
   DescriptionInfo,
+  DescriptiveTypeInfoProvider,
   DocServiceFilter,
   DocServicePlugin,
-  NamedTypeInfoProvider,
   ServiceSpecification
 }
 import com.linecorp.armeria.server.{Service, ServiceConfig}
@@ -47,8 +47,8 @@ class ScalaPbGrpcDocServicePlugin extends DocServicePlugin {
   override def generateSpecification(
       serviceConfigs: JSet[ServiceConfig],
       filter: DocServiceFilter,
-      namedTypeInfoProvider: NamedTypeInfoProvider): ServiceSpecification =
-    grpcDocServicePlugin.generateSpecification(serviceConfigs, filter, namedTypeInfoProvider)
+      descriptiveTypeInfoProvider: DescriptiveTypeInfoProvider): ServiceSpecification =
+    grpcDocServicePlugin.generateSpecification(serviceConfigs, filter, descriptiveTypeInfoProvider)
 
   override def loadDocStrings(serviceConfigs: JSet[ServiceConfig]): JMap[String, DescriptionInfo] =
     grpcDocServicePlugin.loadDocStrings(serviceConfigs)
