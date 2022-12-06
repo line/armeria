@@ -390,7 +390,7 @@ public final class Clients {
      * }</pre>
      *
      * <p>Note that the specified header will be stored into
-     * {@link ClientRequestContext#additionalRequestHeaders()} which take precedence over
+     * {@link ClientRequestContext#additionalRequestHeaders()} which takes precedence over
      * {@link HttpRequest#headers()}.
      *
      * @see #withHeaders(Consumer)
@@ -433,7 +433,7 @@ public final class Clients {
      * }</pre>
      *
      * <p>Note that the specified header will be stored into
-     * {@link ClientRequestContext#additionalRequestHeaders()} which take precedence over
+     * {@link ClientRequestContext#additionalRequestHeaders()} which takes precedence over
      * {@link HttpRequest#headers()}.
      *
      * @see #withHeaders(Consumer)
@@ -483,7 +483,7 @@ public final class Clients {
      * }</pre>
      *
      * <p>Note that the mutated headers will be stored into
-     * {@link ClientRequestContext#additionalRequestHeaders()} which take precedence over
+     * {@link ClientRequestContext#additionalRequestHeaders()} which takes precedence over
      * {@link HttpRequest#headers()}.
      *
      * @see #withHeader(CharSequence, String)
