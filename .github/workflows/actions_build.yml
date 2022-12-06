@@ -16,7 +16,7 @@ concurrency:
 
 env:
   LC_ALL: "en_US.UTF-8"
-  BUILD_JDK_VERSION: '19'
+  BUILD_JDK_VERSION: "19"
 
 jobs:
   build:
@@ -56,8 +56,8 @@ jobs:
           distribution: 'temurin'
           java-version: ${{ matrix.java }}
 
-      - id: setup-jdk-${{ env.BUILD_JDK_VERSION }}
-        name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
+      - id: setup-build-jdk
+        name: Set up build JDK ${{ env.BUILD_JDK_VERSION }}
         uses: actions/setup-java@v2
         with:
           distribution: 'temurin'
@@ -152,7 +152,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - id: setup-jdk-${{ env.BUILD_JDK_VERSION }}
+      - id: setup-build-jdk
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
         uses: actions/setup-java@v2
         with:
@@ -180,7 +180,7 @@ jobs:
           sudo apt-get -y install cargo && cargo install svgbob_cli
           echo "$HOME/.cargo/bin" >> $GITHUB_PATH
 
-      - id: setup-jdk-${{ env.BUILD_JDK_VERSION }}
+      - id: setup-build-jdk
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
         uses: actions/setup-java@v2
         with:
@@ -202,7 +202,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - id: setup-jdk-${{ env.BUILD_JDK_VERSION }}
+      - id: setup-build-jdk
         name: Set up JDK ${{ env.BUILD_JDK_VERSION }}
         uses: actions/setup-java@v2
         with:
