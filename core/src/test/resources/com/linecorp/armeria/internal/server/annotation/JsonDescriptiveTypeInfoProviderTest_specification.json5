@@ -1,14 +1,15 @@
 {
   "services": [
     {
-      "name": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$JsonService",
+      "name": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$JsonService",
       "methods": [
         {
           "name": "json",
-          "returnTypeSignature": "CompletableFuture<com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$BarResponse>",
+          "id" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$JsonService/json/POST",
+          "returnTypeSignature": "CompletableFuture<com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$BarResponse>",
           "parameters": [
             {
-              "name": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$FooRequest",
+              "name": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$FooRequest",
               "location": "UNSPECIFIED",
               "requirement": "REQUIRED",
               "typeSignature": "object",
@@ -37,7 +38,7 @@
                   "name": "sameName",
                   "location": "UNSPECIFIED",
                   "requirement": "REQUIRED", // Non-null is assumed by default.
-                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner",
+                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
                   "childFieldInfos": [
                     {
                       "name": "innerValue",
@@ -58,8 +59,8 @@
                 }, {
                   "name": "rename",
                   "location": "UNSPECIFIED",
-                  "requirement": "UNSPECIFIED", // requirement is unspecified if no field information is given.
-                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner",
+                  "requirement": "REQUIRED",
+                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
                   "childFieldInfos": [
                     {
                       "name": "innerValue",
@@ -81,7 +82,7 @@
                   "name": "collection",
                   "location": "UNSPECIFIED",
                   "requirement": "REQUIRED",
-                  "typeSignature": "list<com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner>",
+                  "typeSignature": "list<com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner>",
                   "childFieldInfos": [ ],
                   "descriptionInfo": {
                     "docString": "",
@@ -101,7 +102,7 @@
                   "name": "optionalField",
                   "location": "UNSPECIFIED",
                   "requirement": "OPTIONAL", // An `Optional` object
-                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner",
+                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
                   "childFieldInfos": [
                     {
                       "name": "innerValue",
@@ -123,7 +124,7 @@
                   "name": "circular",
                   "location": "UNSPECIFIED",
                   "requirement": "REQUIRED",
-                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$FooRequest",
+                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$FooRequest",
                   "childFieldInfos": [ ], // Stop traversing if a circular field is detected.
                   "descriptionInfo": {
                     "docString": "",
@@ -166,7 +167,7 @@
   "enums": [ ],
   "structs": [
     {
-      "name": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$BarResponse",
+      "name": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$BarResponse",
       "fields": [
         {
           "name": "getterField",
@@ -202,7 +203,7 @@
           "name": "sameName",
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
-          "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner",
+          "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
           "childFieldInfos": [
             {
               "name": "innerValue",
@@ -223,8 +224,8 @@
         }, {
           "name": "rename",
           "location": "UNSPECIFIED",
-          "requirement": "UNSPECIFIED",
-          "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner",
+          "requirement": "REQUIRED",
+          "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
           "childFieldInfos": [
             {
               "name": "innerValue",
@@ -246,7 +247,7 @@
           "name": "collection",
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
-          "typeSignature": "list<com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner>",
+          "typeSignature": "list<com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner>",
           "childFieldInfos": [ ],
           "descriptionInfo": {
             "docString": "",
@@ -276,7 +277,7 @@
           "name": "circular",
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
-          "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$BarResponse",
+          "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$BarResponse",
           "childFieldInfos": [ ],
           "descriptionInfo": {
             "docString": "",
@@ -289,7 +290,7 @@
         "markup": "NONE"
       }
     }, {
-      "name": "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$Inner",
+      "name": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
       "fields": [
         {
           "name": "innerValue",

@@ -22,14 +22,15 @@ import com.fasterxml.jackson.databind.json.JsonMapper
 import com.linecorp.armeria.scalapb.testing.messages.TestMessage
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.annotation.{ConsumesJson, Post, ProducesJson}
-import com.linecorp.armeria.server.docs.{DocService, FieldInfo, FieldRequirement, StructInfo}
-import com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider._
-import com.linecorp.armeria.server.scalapb.{ScalaPbNamedTypeInfoProvider, ServerSuite}
+import com.linecorp.armeria.server.docs.{ContainerTypeSignature, DocService, FieldInfo, FieldRequirement, MapTypeSignature, StructInfo, TypeSignatureType}
+import ProtobufDescriptiveTypeInfoProvider._
+import com.linecorp.armeria.server.scalapb.{ScalaPbDescriptiveTypeInfoProvider, ServerSuite}
 import munit.FunSuite
 import net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson
+
 import scala.concurrent.Future
 
-class ScalaPbNamedTypeInfoProviderTest extends FunSuite with ServerSuite {
+class ScalaPbDescriptiveTypeInfoProviderTest extends FunSuite with ServerSuite {
 
   override def configureServer: ServerBuilder => Unit = {
     _.annotatedService(new ScalaPbService, Array.emptyObjectArray: _*)
@@ -37,8 +38,8 @@ class ScalaPbNamedTypeInfoProviderTest extends FunSuite with ServerSuite {
   }
 
   test("GeneratedMessage") {
-    val provider = new ScalaPbNamedTypeInfoProvider()
-    val namedInfo = provider.newNamedTypeInfo(classOf[TestMessage])
+    val provider = new ScalaPbDescriptiveTypeInfoProvider()
+    val namedInfo = provider.newDescriptiveTypeInfo(classOf[TestMessage])
     assert(namedInfo.isInstanceOf[StructInfo])
     val structInfo: StructInfo = namedInfo.asInstanceOf[StructInfo]
     assertEquals(structInfo.name, "armeria.protobuf.testing.TestMessage")
@@ -84,12 +85,16 @@ class ScalaPbNamedTypeInfoProviderTest extends FunSuite with ServerSuite {
           .build()))
 
     assertEquals(structInfo.fields.get(15).name, "strings")
-    assertEquals(structInfo.fields.get(15).typeSignature.typeParameters.size(), 1)
-    assert(structInfo.fields.get(15).typeSignature.typeParameters.contains(STRING))
+    val repeatedTypeSignature = structInfo.fields.get(15).typeSignature
+    assertEquals(repeatedTypeSignature.`type`(), TypeSignatureType.ITERABLE)
+    val repeatedTypeParameters = repeatedTypeSignature.asInstanceOf[ContainerTypeSignature].typeParameters
+    assertEquals(repeatedTypeParameters.size(), 1)
+    assertEquals(repeatedTypeParameters.get(0), STRING)
     assertEquals(structInfo.fields.get(16).name, "map")
-    assertEquals(structInfo.fields.get(16).typeSignature.typeParameters.size(), 2)
-    assert(structInfo.fields.get(16).typeSignature.typeParameters.contains(STRING))
-    assert(structInfo.fields.get(16).typeSignature.typeParameters.contains(INT32))
+    val mapTypeSignature = structInfo.fields.get(16).typeSignature
+    assertEquals(mapTypeSignature.`type`(), TypeSignatureType.MAP)
+    assertEquals(mapTypeSignature.asInstanceOf[MapTypeSignature].keyTypeSignature(), STRING)
+    assertEquals(mapTypeSignature.asInstanceOf[MapTypeSignature].valueTypeSignature(), INT32)
     val self = structInfo.fields.get(17)
     assertEquals(self.name, "self")
     // Don't visit the field infos of a circular type
@@ -103,15 +108,15 @@ class ScalaPbNamedTypeInfoProviderTest extends FunSuite with ServerSuite {
     assertEquals(oneof.childFieldInfos().get(1).typeSignature().signature(), "armeria.protobuf.testing.Add")
   }
 
-  test("should not handle com.google.protobuf.Message with ScalaPbNamedTypeInfoProvider") {
-    val provider = new ScalaPbNamedTypeInfoProvider()
-    assert(provider.newNamedTypeInfo(classOf[com.google.protobuf.Message]) == null)
+  test("should not handle com.google.protobuf.Message with ScalaPbDescriptiveTypeInfoProvider") {
+    val provider = new ScalaPbDescriptiveTypeInfoProvider()
+    assert(provider.newDescriptiveTypeInfo(classOf[com.google.protobuf.Message]) == null)
   }
 
   test("should not handle scalapb.GenerateMessage with ProtobufNamedTyeInfoProvider") {
-    val provider = new ProtobufNamedTypeInfoProvider()
-    assert(provider.newNamedTypeInfo(classOf[scalapb.GeneratedMessage]) == null)
-    assert(provider.newNamedTypeInfo(classOf[scalapb.GeneratedOneof]) == null)
+    val provider = new ProtobufDescriptiveTypeInfoProvider()
+    assert(provider.newDescriptiveTypeInfo(classOf[scalapb.GeneratedMessage]) == null)
+    assert(provider.newDescriptiveTypeInfo(classOf[scalapb.GeneratedOneof]) == null)
   }
 
   test("specification") {
@@ -123,8 +128,8 @@ class ScalaPbNamedTypeInfoProviderTest extends FunSuite with ServerSuite {
       .execute()
       .content()
 
-    val resourceAsStream = classOf[ScalaPbNamedTypeInfoProviderTest].getResourceAsStream(
-      "ScalaPbNamedTypeInfoProviderTest_specification.json5")
+    val resourceAsStream = classOf[ScalaPbDescriptiveTypeInfoProviderTest].getResourceAsStream(
+      "ScalaPbDescriptiveTypeInfoProviderTest_specification.json5")
     val json5Mapper = JsonMapper
       .builder()
       .enable(JsonReadFeature.ALLOW_JAVA_COMMENTS.mappedFeature)

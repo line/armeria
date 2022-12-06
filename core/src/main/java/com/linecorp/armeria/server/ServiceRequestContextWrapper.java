@@ -51,7 +51,7 @@ public class ServiceRequestContextWrapper
 
     @Override
     public ServiceRequestContext root() {
-        return delegate().root();
+        return unwrap().root();
     }
 
     @Nonnull
@@ -65,181 +65,181 @@ public class ServiceRequestContextWrapper
     @Nonnull
     @Override
     public <A extends SocketAddress> A remoteAddress() {
-        return delegate().remoteAddress();
+        return unwrap().remoteAddress();
     }
 
     @Nonnull
     @Override
     public <A extends SocketAddress> A localAddress() {
-        return delegate().localAddress();
+        return unwrap().localAddress();
     }
 
     @Override
     public InetAddress clientAddress() {
-        return delegate().clientAddress();
+        return unwrap().clientAddress();
     }
 
     @Override
     public ServiceConfig config() {
-        return delegate().config();
+        return unwrap().config();
     }
 
     @Override
     public RoutingContext routingContext() {
-        return delegate().routingContext();
+        return unwrap().routingContext();
     }
 
     @Override
     public Map<String, String> pathParams() {
-        return delegate().pathParams();
+        return unwrap().pathParams();
     }
 
     @Override
     public QueryParams queryParams() {
-        return delegate().queryParams();
+        return unwrap().queryParams();
     }
 
     @Override
     public ContextAwareScheduledExecutorService blockingTaskExecutor() {
-        return delegate().blockingTaskExecutor();
+        return unwrap().blockingTaskExecutor();
     }
 
     @Override
     public String mappedPath() {
-        return delegate().mappedPath();
+        return unwrap().mappedPath();
     }
 
     @Override
     public String decodedMappedPath() {
-        return delegate().decodedMappedPath();
+        return unwrap().decodedMappedPath();
     }
 
     @Nullable
     @Override
     public MediaType negotiatedResponseMediaType() {
-        return delegate().negotiatedResponseMediaType();
+        return unwrap().negotiatedResponseMediaType();
     }
 
     @Override
     public long requestTimeoutMillis() {
-        return delegate().requestTimeoutMillis();
+        return unwrap().requestTimeoutMillis();
     }
 
     @Override
     public void clearRequestTimeout() {
-        delegate().clearRequestTimeout();
+        unwrap().clearRequestTimeout();
     }
 
     @Override
     public void setRequestTimeoutMillis(TimeoutMode mode, long requestTimeoutMillis) {
-        delegate().setRequestTimeoutMillis(mode, requestTimeoutMillis);
+        unwrap().setRequestTimeoutMillis(mode, requestTimeoutMillis);
     }
 
     @Override
     public void setRequestTimeout(TimeoutMode mode, Duration requestTimeout) {
-        delegate().setRequestTimeout(mode, requestTimeout);
+        unwrap().setRequestTimeout(mode, requestTimeout);
     }
 
     @Override
     public CompletableFuture<Throwable> whenRequestCancelling() {
-        return delegate().whenRequestCancelling();
+        return unwrap().whenRequestCancelling();
     }
 
     @Override
     public CompletableFuture<Throwable> whenRequestCancelled() {
-        return delegate().whenRequestCancelled();
+        return unwrap().whenRequestCancelled();
     }
 
     @Deprecated
     @Override
     public CompletableFuture<Void> whenRequestTimingOut() {
-        return delegate().whenRequestTimingOut();
+        return unwrap().whenRequestTimingOut();
     }
 
     @Deprecated
     @Override
     public CompletableFuture<Void> whenRequestTimedOut() {
-        return delegate().whenRequestTimedOut();
+        return unwrap().whenRequestTimedOut();
     }
 
     @Override
     public boolean isCancelled() {
-        return delegate().isCancelled();
+        return unwrap().isCancelled();
     }
 
     @Override
     public boolean isTimedOut() {
-        return delegate().isTimedOut();
+        return unwrap().isTimedOut();
     }
 
     @Override
     public ExchangeType exchangeType() {
-        return delegate().exchangeType();
+        return unwrap().exchangeType();
     }
 
     @Override
     public long maxRequestLength() {
-        return delegate().maxRequestLength();
+        return unwrap().maxRequestLength();
     }
 
     @Override
     public void setMaxRequestLength(long maxRequestLength) {
-        delegate().setMaxRequestLength(maxRequestLength);
+        unwrap().setMaxRequestLength(maxRequestLength);
     }
 
     @Override
     public HttpHeaders additionalResponseHeaders() {
-        return delegate().additionalResponseHeaders();
+        return unwrap().additionalResponseHeaders();
     }
 
     @Override
     public void setAdditionalResponseHeader(CharSequence name, Object value) {
-        delegate().setAdditionalResponseHeader(name, value);
+        unwrap().setAdditionalResponseHeader(name, value);
     }
 
     @Override
     public void addAdditionalResponseHeader(CharSequence name, Object value) {
-        delegate().addAdditionalResponseHeader(name, value);
+        unwrap().addAdditionalResponseHeader(name, value);
     }
 
     @Override
     public void mutateAdditionalResponseHeaders(Consumer<HttpHeadersBuilder> mutator) {
-        delegate().mutateAdditionalResponseHeaders(mutator);
+        unwrap().mutateAdditionalResponseHeaders(mutator);
     }
 
     @Override
     public HttpHeaders additionalResponseTrailers() {
-        return delegate().additionalResponseTrailers();
+        return unwrap().additionalResponseTrailers();
     }
 
     @Override
     public void setAdditionalResponseTrailer(CharSequence name, Object value) {
-        delegate().setAdditionalResponseTrailer(name, value);
+        unwrap().setAdditionalResponseTrailer(name, value);
     }
 
     @Override
     public void addAdditionalResponseTrailer(CharSequence name, Object value) {
-        delegate().addAdditionalResponseTrailer(name, value);
+        unwrap().addAdditionalResponseTrailer(name, value);
     }
 
     @Override
     public void mutateAdditionalResponseTrailers(Consumer<HttpHeadersBuilder> mutator) {
-        delegate().mutateAdditionalResponseTrailers(mutator);
+        unwrap().mutateAdditionalResponseTrailers(mutator);
     }
 
     @Override
     public ProxiedAddresses proxiedAddresses() {
-        return delegate().proxiedAddresses();
+        return unwrap().proxiedAddresses();
     }
 
     @Override
     public CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros) {
-        return delegate().initiateConnectionShutdown(drainDurationMicros);
+        return unwrap().initiateConnectionShutdown(drainDurationMicros);
     }
 
     @Override
     public CompletableFuture<Void> initiateConnectionShutdown() {
-        return delegate().initiateConnectionShutdown();
+        return unwrap().initiateConnectionShutdown();
     }
 
     @Override

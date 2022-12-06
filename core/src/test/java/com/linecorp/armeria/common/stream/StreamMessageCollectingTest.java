@@ -53,11 +53,9 @@ class StreamMessageCollectingTest {
         assertThat(stream1.collect().join()).isEqualTo(ImmutableList.of());
 
         final StreamMessage<Object> stream2 = StreamMessage.of();
-        final Throwable cause = new IllegalStateException("oops");
-        stream2.abort(cause);
-        assertThatThrownBy(() -> stream2.collect().join())
-                .isInstanceOf(CompletionException.class)
-                .hasCause(cause);
+        stream2.abort();
+        // An empty stream isn't aborted.
+        assertThat(stream1.collect().join()).isEqualTo(ImmutableList.of());
 
         final DefaultStreamMessage<Object> stream3 = new DefaultStreamMessage<>();
         stream3.close();
@@ -69,6 +67,7 @@ class StreamMessageCollectingTest {
         assertThat(collectingFuture.join()).isEqualTo(ImmutableList.of());
 
         final DefaultStreamMessage<Object> stream5 = new DefaultStreamMessage<>();
+        final Throwable cause = new IllegalStateException("oops");
         stream5.abort(cause);
         assertThatThrownBy(() -> stream5.collect().join())
                 .isInstanceOf(CompletionException.class)

@@ -114,7 +114,7 @@ final class DocStringSupport {
                 .withDescriptionInfo(descriptionInfo);
     }
 
-    private FieldInfo addFieldDocString(NamedTypeInfo parent, FieldInfo field) {
+    private FieldInfo addFieldDocString(DescriptiveTypeInfo parent, FieldInfo field) {
         final DescriptionInfo descriptionInfo =
                 findDescription(parent.name() + '/' + field.name(), field.descriptionInfo());
         return field.withDescriptionInfo(descriptionInfo);

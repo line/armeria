@@ -23,16 +23,16 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin;
 
 /**
- * Creates a new {@link NamedTypeInfo} loaded dynamically via Java SPI (Service Provider Interface).
- * The loaded {@link NamedTypeInfoProvider}s are used in the {@link DocServicePlugin}s to extract
- * a {@link NamedTypeInfo} from the given {@code typeDescriptor}.
+ * Creates a new {@link DescriptiveTypeInfo} loaded dynamically via Java SPI (Service Provider Interface).
+ * The loaded {@link DescriptiveTypeInfoProvider}s are used in the {@link DocServicePlugin}s to extract
+ * a {@link DescriptiveTypeInfo} from the given {@code typeDescriptor}.
  */
 @UnstableApi
 @FunctionalInterface
-public interface NamedTypeInfoProvider {
+public interface DescriptiveTypeInfoProvider {
 
     /**
-     * Creates a new {@link NamedTypeInfo} for the specified {@code typeDescriptor}.
+     * Creates a new {@link DescriptiveTypeInfo} for the specified {@code typeDescriptor}.
      * If a {@code null} value is returned, a {@link DocServicePlugin} will try to convert the
      * {@code typeDescriptor} by the next converter.
      *
@@ -46,24 +46,25 @@ public interface NamedTypeInfoProvider {
      *        {@code org.apache.thrift.TException} for {@code ThriftDocServicePlugin}</li>
      * </ul>
      *
-     * @return a new {@link NamedTypeInfo}. {@code null} if this {@link NamedTypeInfoProvider} cannot convert
-     *         the {@code typeDescriptor} to the {@link NamedTypeInfo}.
+     * @return a new {@link DescriptiveTypeInfo}. {@code null} if this {@link DescriptiveTypeInfoProvider}
+     *         cannot convert the {@code typeDescriptor} to the {@link DescriptiveTypeInfo}.
      */
     @Nullable
-    NamedTypeInfo newNamedTypeInfo(Object typeDescriptor);
+    DescriptiveTypeInfo newDescriptiveTypeInfo(Object typeDescriptor);
 
     /**
-     * Returns a newly created {@link NamedTypeInfoProvider} that tries this {@link NamedTypeInfoProvider}
-     * first and then the specified {@link NamedTypeInfoProvider} when the first call returns {@code null}.
+     * Returns a newly created {@link DescriptiveTypeInfoProvider} that tries this
+     * {@link DescriptiveTypeInfoProvider} first and then the specified {@link DescriptiveTypeInfoProvider}
+     * when the first call returns {@code null}.
      */
-    default NamedTypeInfoProvider orElse(NamedTypeInfoProvider other) {
+    default DescriptiveTypeInfoProvider orElse(DescriptiveTypeInfoProvider other) {
         requireNonNull(other, "other");
         return typeDescriptor -> {
-            final NamedTypeInfo structInfo = newNamedTypeInfo(typeDescriptor);
+            final DescriptiveTypeInfo structInfo = newDescriptiveTypeInfo(typeDescriptor);
             if (structInfo != null) {
                 return structInfo;
             } else {
-                return other.newNamedTypeInfo(typeDescriptor);
+                return other.newDescriptiveTypeInfo(typeDescriptor);
             }
         };
     }

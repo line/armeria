@@ -87,10 +87,12 @@ class MainService(private val backendClient: WebClient) : HttpService {
         require(ctx.eventLoop().inEventLoop())
 
         val nums = mutableListOf<Long>()
-        for (token in Iterables.concat(
-            NUM_SPLITTER.split(aggregatedHttpRequest.path().substring(1)),
-            NUM_SPLITTER.split(aggregatedHttpRequest.contentUtf8())
-        )) {
+        for (
+            token in Iterables.concat(
+                NUM_SPLITTER.split(aggregatedHttpRequest.path().substring(1)),
+                NUM_SPLITTER.split(aggregatedHttpRequest.contentUtf8())
+            )
+        ) {
             nums.add(token.toLong())
         }
         return nums

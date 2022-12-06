@@ -583,9 +583,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                    "gRPC encoding is not supported for non-framed requests.");
         }
 
-        final MediaType jsonContentType = GrpcSerializationFormats.JSON.mediaType();
         grpcHeaders.method(HttpMethod.POST)
-                   .contentType(jsonContentType);
+                   .contentType(GrpcSerializationFormats.JSON.mediaType());
         // All clients support no encoding, and we don't support gRPC encoding for non-framed requests, so just
         // clear the header if it's present.
         grpcHeaders.remove(GrpcHeaderNames.GRPC_ACCEPT_ENCODING);
@@ -601,9 +600,10 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                 } else {
                     try {
                         ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, spec.method);
+                        // Set JSON media type (https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_filters/grpc_json_transcoder_filter#sending-arbitrary-content)
                         frameAndServe(unwrap(), ctx, grpcHeaders.build(),
-                                      convertToJson(ctx, clientRequest, spec),
-                                      responseFuture, generateResponseBodyConverter(spec), jsonContentType);
+                                      convertToJson(ctx, clientRequest, spec), responseFuture,
+                                      generateResponseBodyConverter(spec), MediaType.JSON_UTF_8);
                     } catch (IllegalArgumentException iae) {
                         responseFuture.completeExceptionally(
                                 HttpStatusException.of(HttpStatus.BAD_REQUEST, iae));
