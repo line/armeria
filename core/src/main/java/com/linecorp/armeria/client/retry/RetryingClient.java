@@ -296,14 +296,39 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         final RetryConfig<HttpResponse> config = mapping().get(ctx, duplicateReq);
         if (config.requiresResponseTrailers()) {
             response.aggregate().handle((aggregated, cause) -> {
-                final HttpResponse response0 = cause != null ? HttpResponse.ofFailure(cause) : null;
+                if (cause != null) {
+                    derivedCtx.logBuilder().endResponse(cause);
+                    handleResponseWithoutContent(config, ctx, rootReqDuplicator, originalReq, returnedRes,
+                                                 future, derivedCtx, HttpResponse.ofFailure(cause), cause);
+                    return null;
+                }
                 handleResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx,
-                               response0, aggregated);
+                               null, aggregated);
                 return null;
             });
         } else {
             handleResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes,
                            future, derivedCtx, response, null);
+        }
+    }
+
+    private void handleResponseWithoutContent(RetryConfig<HttpResponse> config, ClientRequestContext ctx,
+                                              HttpRequestDuplicator rootReqDuplicator, HttpRequest originalReq,
+                                              HttpResponse returnedRes, CompletableFuture<HttpResponse> future,
+                                              ClientRequestContext derivedCtx, HttpResponse response,
+                                              @Nullable Throwable responseCause) {
+        try {
+            final RetryRule retryRule = retryRule(config);
+            final CompletionStage<RetryDecision> f = retryRule.shouldRetry(derivedCtx, responseCause);
+            f.handle((decision, shouldRetryCause) -> {
+                warnIfExceptionIsRaised(retryRule, shouldRetryCause);
+                handleRetryDecision(decision, ctx, derivedCtx, rootReqDuplicator,
+                                    originalReq, returnedRes, future, response);
+                return null;
+            });
+        } catch (Throwable cause) {
+            response.abort();
+            handleException(ctx, rootReqDuplicator, future, cause, false);
         }
     }
 
@@ -362,23 +387,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 }
                 return;
             }
-            try {
-                final RetryRule retryRule = retryRule(retryConfig);
-                final CompletionStage<RetryDecision> f = retryRule.shouldRetry(derivedCtx, responseCause);
-                final HttpResponse response0 = aggregatedRes != null ? aggregatedRes.toHttpResponse()
-                                                                     : response;
-                f.handle((decision, cause) -> {
-                    warnIfExceptionIsRaised(retryRule, cause);
-                    handleRetryDecision(decision, ctx, derivedCtx, rootReqDuplicator,
-                                        originalReq, returnedRes, future, response0);
-                    return null;
-                });
-            } catch (Throwable cause) {
-                if (response != null) {
-                    response.abort(cause);
-                }
-                handleException(ctx, rootReqDuplicator, future, cause, false);
-            }
+            final HttpResponse response0 = aggregatedRes != null ? aggregatedRes.toHttpResponse()
+                                                                 : response;
+            handleResponseWithoutContent(retryConfig, ctx, rootReqDuplicator, originalReq, returnedRes,
+                                         future, derivedCtx, response0, responseCause);
         });
     }
 
