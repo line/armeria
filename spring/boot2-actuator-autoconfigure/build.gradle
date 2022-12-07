@@ -32,7 +32,10 @@ task generateSources(type: Copy) {
     from "${rootProject.projectDir}/spring/boot2-autoconfigure/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
     include '**/ArmeriaConfigurationNetUtil.java'
+    include '**/ArmeriaConfigurationTlsUtil.java'
     include '**/ArmeriaServerConfigurator.java'
+    include '**/CustomAlias*KeyManager*.java'
+
     include '**/ArmeriaSettings.java'
     include '**/InternalServiceId.java'
     include '**/SpringDependencyInjector.java'

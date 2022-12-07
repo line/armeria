@@ -1,0 +1,33 @@
+# Use-legacy-processing to use this application-testbed.yml file instead of application.yml
+spring:
+  config:
+    use-legacy-processing: true
+
+armeria:
+  ports:
+    - port: 0
+  internal-services:
+    include: metrics, health, actuator
+    port: 0
+    protocols: http, https
+  ssl:
+    enabled: true
+    key-store: classpath:keystore_with_two_keys.pkcs12
+    key-store-type: PKCS12
+    key-store-password: mystorepass
+    key-alias: key1
+
+management:
+  server:
+    port: 0
+    base-path: /foo
+    ssl:
+      enabled: true
+      key-store: classpath:keystore_with_two_keys.pkcs12
+      key-store-type: PKCS12
+      key-store-password: mystorepass
+      key-alias: key2
+  endpoints:
+    web:
+      exposure:
+        include: health, loggers, prometheus

@@ -70,7 +70,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     private InternalServices internalServices;
 
     @Test
-    void exposeInternalServicesToManagementServerPort() throws Exception {
+    void managementEndpointContainsBasePath() throws Exception {
         final Port internalServicePort = internalServices.internalServicePort();
         assertThat(internalServicePort).isNotNull();
         assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
@@ -141,6 +141,52 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
                           internalServiceStatus = 404;
                       }
                       assertActuatorStatus(port, actuatorStatus);
+                      assertInternalServiceStatus(port, internalServiceStatus, settings, false);
+                  });
+        }
+    }
+
+    @SpringBootTest(classes = TestConfiguration.class)
+    @ActiveProfiles({ "local", "basePathTest" })
+    @DirtiesContext
+    @AutoConfigureMetrics
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    @Timeout(10)
+    static class BasePathTest {
+        @LocalManagementPort
+        private Integer actuatorPort;
+        @Inject
+        private Server server;
+        @Inject
+        private ArmeriaSettings settings;
+        @Inject
+        private InternalServices internalServices;
+
+        @Test
+        void exposeActuatorServiceToInternalServicePort() throws Exception {
+            final Port internalServicePort = internalServices.internalServicePort();
+            assertThat(internalServicePort).isNotNull();
+            assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
+            assertThat(internalServicePort.getPort()).isNotEqualTo(actuatorPort);
+            assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.METRICS,
+                                                                                    InternalServiceId.HEALTH,
+                                                                                    InternalServiceId.ACTUATOR);
+            assertThat(internalServices.managementServerPort().getPort()).isEqualTo(actuatorPort);
+
+            server.activePorts().values().stream()
+                  .map(p -> p.localAddress().getPort())
+                  .forEach(port -> {
+                      final int actuatorStatus;
+                      final int internalServiceStatus;
+                      if (actuatorPort.equals(port) || internalServicePort.getPort() == port) {
+                          actuatorStatus = 200;
+                          internalServiceStatus = 200;
+                      } else {
+                          actuatorStatus = 404;
+                          internalServiceStatus = 404;
+                      }
+                      assertActuatorStatus(port, actuatorStatus, "/foo");
                       assertInternalServiceStatus(port, internalServiceStatus, settings, false);
                   });
         }
@@ -232,10 +278,14 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     }
 
     private static void assertActuatorStatus(int port, int actuatorStatus) {
-        assertStatus(port, "/actuator", actuatorStatus);
-        assertStatus(port, "/actuator/health", actuatorStatus);
-        assertStatus(port, "/actuator/loggers/" + TEST_LOGGER_NAME, actuatorStatus);
-        assertStatus(port, "/actuator/prometheus", actuatorStatus);
+        assertActuatorStatus(port, actuatorStatus, "");
+    }
+
+    private static void assertActuatorStatus(int port, int actuatorStatus, String basePath) {
+        assertStatus(port, basePath + "/actuator", actuatorStatus);
+        assertStatus(port, basePath + "/actuator/health", actuatorStatus);
+        assertStatus(port, basePath + "/actuator/loggers/" + TEST_LOGGER_NAME, actuatorStatus);
+        assertStatus(port, basePath + "/actuator/prometheus", actuatorStatus);
     }
 
     private static void assertInternalServiceStatus(int port, int internalServiceStatus,

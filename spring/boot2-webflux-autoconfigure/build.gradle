@@ -33,6 +33,7 @@ task generateSources(type: Copy) {
     include '**/ArmeriaConfigurationNetUtil.java'
     include '**/ArmeriaConfigurationSettingsUtil.java'
     include '**/ArmeriaConfigurationUtil.java'
+    include '**/ArmeriaConfigurationTlsUtil.java'
     include '**/CustomAlias*KeyManager*.java'
     include '**/SpringDependencyInjector.java'
     include '**/ThriftServiceUtils.java'

@@ -19,6 +19,7 @@ package com.linecorp.armeria.spring.actuate;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.maybeNewPort;
 import static com.linecorp.armeria.spring.actuate.WebOperationService.HAS_WEB_SERVER_NAMESPACE;
 import static com.linecorp.armeria.spring.actuate.WebOperationService.toMediaType;
 import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.addAdditionalPath;
@@ -33,6 +34,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.BeanFactory;
 import org.springframework.beans.factory.NoSuchBeanDefinitionException;
 import org.springframework.beans.factory.NoUniqueBeanDefinitionException;
@@ -60,12 +63,12 @@ import org.springframework.boot.actuate.health.HealthEndpointGroups;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.web.server.Ssl;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.env.PropertySource;
-import org.springframework.util.SocketUtils;
 import org.springframework.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -78,7 +81,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
-import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
@@ -91,6 +93,8 @@ import com.linecorp.armeria.spring.ArmeriaSettings.InternalServiceProperties;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.InternalServiceId;
 
+import io.netty.handler.ssl.ClientAuth;
+
 /**
  * A {@link Configuration} to enable actuator endpoints on an Armeria server. Corresponds to
  * {@link WebEndpointAutoConfiguration}.
@@ -102,6 +106,8 @@ import com.linecorp.armeria.spring.InternalServiceId;
         ArmeriaSettings.class
 })
 public class ArmeriaSpringActuatorAutoConfiguration {
+
+    private static final Logger logger = LoggerFactory.getLogger(ArmeriaSpringActuatorAutoConfiguration.class);
 
     @VisibleForTesting
     static final MediaType ACTUATOR_MEDIA_TYPE;
@@ -179,13 +185,29 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             ManagementServerProperties serverProperties,
             BeanFactory beanFactory,
             ArmeriaSettings armeriaSettings) {
-        final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
+        // default base-path is empty, so we can just concat it
+        final EndpointMapping endpointMapping =
+                new EndpointMapping(serverProperties.getBasePath() + properties.getBasePath());
         final Collection<ExposableWebEndpoint> endpoints = endpointsSupplier.getEndpoints();
         return sb -> {
             final Integer managementPort = obtainManagementServerPort(sb, beanFactory, serverProperties);
             if (managementPort != null) {
                 addLocalManagementPortPropertyAlias(environment, managementPort);
             }
+
+            if (serverProperties.getSsl() != null &&
+                (serverProperties.getSsl().getKeyStore() != null ||
+                 serverProperties.getSsl().getTrustStore() != null)) {
+                logger.warn("Use armeria.ssl instead of management.server.ssl to set key or trust store, " +
+                            "management.server.ssl will be ignored except management.server.ssl.enabled");
+            }
+
+            if (serverProperties.getSsl() != null && serverProperties.getSsl().isEnabled() &&
+                armeriaSettings.getSsl() != null) {
+                // TODO how to detect duplication better?
+                // configureTls(sb, armeriaSettings.getSsl());
+            }
+
             final Integer internalServicePort = getExposedInternalServicePort(beanFactory, armeriaSettings);
             final CorsServiceBuilder cors = corsServiceBuilder(corsProperties);
             final List<Integer> exposedPorts = Stream.of(managementPort, internalServicePort)
@@ -251,15 +273,10 @@ public class ArmeriaSpringActuatorAutoConfiguration {
         }
 
         if (internalServices == null) {
-            Integer port = properties.getPort();
-            if (port == null || port < 0) {
-                return null;
-            }
-            if (port == 0) {
-                port = SocketUtils.findAvailableTcpPort();
-            }
             // The management port was not configured by ArmeriaAutoConfiguration
-            final Port managementPort = new Port().setPort(port).setProtocol(SessionProtocol.HTTP);
+            final Port managementPort =
+                    maybeNewPort(properties.getPort(), properties.getAddress(),
+                                 properties.getSsl() != null && properties.getSsl().isEnabled());
             configurePorts(serverBuilder, ImmutableList.of(managementPort));
             return managementPort.getPort();
         }
@@ -370,7 +387,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     }
 
     private static Route route(
-            String method, String path, Collection<String> consumes, Collection<String> produces) {
+            String method, String path, Collection<String> consumes,
+            Collection<String> produces) {
         return Route.builder()
                     .path(path)
                     .methods(ImmutableSet.of(HttpMethod.valueOf(method)))
@@ -381,5 +399,39 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
     private static Set<MediaType> convertMediaTypes(Iterable<String> mediaTypes) {
         return Streams.stream(mediaTypes).map(MediaType::parse).collect(toImmutableSet());
+    }
+
+    private static com.linecorp.armeria.spring.Ssl toArmeriaSslConfiguration(Ssl ssl) {
+        if (!ssl.isEnabled()) {
+            return new com.linecorp.armeria.spring.Ssl();
+        }
+
+        ClientAuth clientAuth = null;
+        if (ssl.getClientAuth() != null) {
+            switch (ssl.getClientAuth()) {
+                case NEED:
+                    clientAuth = ClientAuth.REQUIRE;
+                    break;
+                case WANT:
+                    clientAuth = ClientAuth.OPTIONAL;
+                    break;
+            }
+        }
+        return new com.linecorp.armeria.spring.Ssl()
+                .setEnabled(ssl.isEnabled())
+                .setClientAuth(clientAuth)
+                .setCiphers(ssl.getCiphers() != null ? ImmutableList.copyOf(ssl.getCiphers()) : null)
+                .setEnabledProtocols(ssl.getEnabledProtocols() != null ? ImmutableList.copyOf(
+                        ssl.getEnabledProtocols()) : null)
+                .setKeyAlias(ssl.getKeyAlias())
+                .setKeyPassword(ssl.getKeyPassword())
+                .setKeyStore(ssl.getKeyStore())
+                .setKeyStorePassword(ssl.getKeyStorePassword())
+                .setKeyStoreType(ssl.getKeyStoreType())
+                .setKeyStoreProvider(ssl.getKeyStoreProvider())
+                .setTrustStore(ssl.getTrustStore())
+                .setTrustStorePassword(ssl.getTrustStorePassword())
+                .setTrustStoreType(ssl.getTrustStoreType())
+                .setTrustStoreProvider(ssl.getTrustStoreProvider());
     }
 }
