@@ -200,6 +200,9 @@ version.ref = "brotli4j"
 [libraries.brotli4j-osx]
 module = "com.aayushatharva.brotli4j:native-osx-x86_64"
 version.ref = "brotli4j"
+[libraries.brotli4j-osx-aarch64]
+module = "com.aayushatharva.brotli4j:native-osx-aarch64"
+version.ref = "brotli4j"
 [libraries.brotli4j-windows]
 module = "com.aayushatharva.brotli4j:native-windows-x86_64"
 version.ref = "brotli4j"

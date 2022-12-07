@@ -19,6 +19,7 @@ package com.linecorp.armeria.server.encoding;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -72,7 +73,8 @@ class HttpDecodedRequestTest {
     void unpooledPayload_unpooledDrain() {
         final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpRequest delegate = HttpRequest.of(REQUEST_HEADERS, payload);
-        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODER, ByteBufAllocator.DEFAULT);
+        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODER, ByteBufAllocator.DEFAULT,
+                                                           0);
         final HttpData decodedPayload = requestData(decoded, false);
 
         assertThat(decodedPayload.isPooled()).isFalse();
@@ -83,7 +85,8 @@ class HttpDecodedRequestTest {
         final ByteBuf payloadBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD);
         final HttpData payload = HttpData.wrap(payloadBuf).withEndOfStream();
         final HttpRequest delegate = HttpRequest.of(REQUEST_HEADERS, payload);
-        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODER, ByteBufAllocator.DEFAULT);
+        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODER, ByteBufAllocator.DEFAULT,
+                                                           0);
         final HttpData decodedPayload = requestData(decoded, false);
 
         assertThat(decodedPayload.isPooled()).isFalse();
@@ -94,7 +97,8 @@ class HttpDecodedRequestTest {
     void unpooledPayload_pooledDrain() {
         final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpRequest delegate = HttpRequest.of(REQUEST_HEADERS, payload);
-        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODER, ByteBufAllocator.DEFAULT);
+        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODER, ByteBufAllocator.DEFAULT,
+                                                           0);
         final HttpData decodedPayload = requestData(decoded, true);
 
         assertThat(decodedPayload.isPooled()).isTrue();
@@ -107,7 +111,8 @@ class HttpDecodedRequestTest {
         final ByteBuf payloadBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD);
         final HttpData payload = HttpData.wrap(payloadBuf).withEndOfStream();
         final HttpRequest delegate = HttpRequest.of(REQUEST_HEADERS, payload);
-        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODER, ByteBufAllocator.DEFAULT);
+        final HttpRequest decoded = new HttpDecodedRequest(delegate, DECODER, ByteBufAllocator.DEFAULT,
+                                                           0);
         final HttpData decodedPayload = requestData(decoded, true);
         final ByteBuf decodedPayloadBuf = decodedPayload.byteBuf();
 
@@ -125,10 +130,11 @@ class HttpDecodedRequestTest {
 
         final StreamDecoderFactory factory = mock(StreamDecoderFactory.class);
         final StreamDecoder streamDecoder = mock(StreamDecoder.class);
-        when(factory.newDecoder(any())).thenReturn(streamDecoder);
+        when(factory.newDecoder(any(), eq(0))).thenReturn(streamDecoder);
         when(streamDecoder.decode(any())).thenReturn(data);
 
-        final HttpRequest decoded = new HttpDecodedRequest(request, factory, ByteBufAllocator.DEFAULT);
+        final HttpRequest decoded = new HttpDecodedRequest(request, factory, ByteBufAllocator.DEFAULT,
+                                                           0);
         decoded.subscribe(new CancelSubscriber());
 
         await().untilAsserted(() -> verify(streamDecoder, times(1)).finish());

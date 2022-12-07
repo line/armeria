@@ -77,6 +77,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -503,12 +504,15 @@ class HttpClientIntegrationTest {
                                                   .build()
                                                   .blocking();
 
-        final AggregatedHttpResponse response =
-                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding"));
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo(
-                Brotli.isAvailable() ? "br" : "gzip");
-        assertThat(response.contentUtf8()).isEqualTo(
-                "some content to compress more content to compress");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final AggregatedHttpResponse response =
+                    client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding"));
+            final RequestLog log = captor.get().log().whenComplete().join();
+            assertThat(log.responseHeaders().get(HttpHeaderNames.CONTENT_ENCODING))
+                    .isEqualTo(Brotli.isAvailable() ? "br" : "gzip");
+            assertThat(response.contentUtf8()).isEqualTo(
+                    "some content to compress more content to compress");
+        }
     }
 
     @Test
@@ -520,11 +524,15 @@ class HttpClientIntegrationTest {
                                                   .build()
                                                   .blocking();
 
-        final AggregatedHttpResponse response =
-                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding"));
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
-        assertThat(response.contentUtf8()).isEqualTo(
-                "some content to compress more content to compress");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final AggregatedHttpResponse response =
+                    client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding"));
+            final RequestLog log = captor.get().log().whenComplete().join();
+            assertThat(log.responseHeaders().get(HttpHeaderNames.CONTENT_ENCODING))
+                    .isEqualTo("gzip");
+            assertThat(response.contentUtf8()).isEqualTo(
+                    "some content to compress more content to compress");
+        }
     }
 
     @Test
@@ -536,11 +544,15 @@ class HttpClientIntegrationTest {
                                                   .build()
                                                   .blocking();
 
-        final AggregatedHttpResponse response =
-                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding"));
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("deflate");
-        assertThat(response.contentUtf8()).isEqualTo(
-                "some content to compress more content to compress");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final AggregatedHttpResponse response =
+                    client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding"));
+            final RequestLog log = captor.get().log().whenComplete().join();
+            assertThat(log.responseHeaders().get(HttpHeaderNames.CONTENT_ENCODING))
+                    .isEqualTo("deflate");
+            assertThat(response.contentUtf8()).isEqualTo(
+                    "some content to compress more content to compress");
+        }
     }
 
     @Test

@@ -38,9 +38,9 @@ final class HttpDecodedRequest extends FilteredHttpRequest {
     private boolean decoderFinished;
 
     HttpDecodedRequest(HttpRequest delegate, StreamDecoderFactory decoderFactory,
-                       ByteBufAllocator alloc) {
+                       ByteBufAllocator alloc, int maxRequestLength) {
         super(delegate);
-        responseDecoder = decoderFactory.newDecoder(alloc);
+        responseDecoder = decoderFactory.newDecoder(alloc, maxRequestLength);
     }
 
     @Override

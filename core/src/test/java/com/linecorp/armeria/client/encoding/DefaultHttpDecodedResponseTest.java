@@ -17,8 +17,10 @@
 package com.linecorp.armeria.client.encoding;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -30,6 +32,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.zip.GZIPOutputStream;
 
 import org.junit.jupiter.api.Test;
@@ -38,9 +41,15 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.collect.ImmutableMap;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.common.AggregationOptions;
+import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
@@ -51,6 +60,7 @@ import com.linecorp.armeria.internal.common.encoding.DefaultHttpDecodedResponse;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
+import io.netty.handler.codec.compression.DecompressionException;
 
 class DefaultHttpDecodedResponseTest {
 
@@ -63,12 +73,13 @@ class DefaultHttpDecodedResponseTest {
     private static final ResponseHeaders RESPONSE_HEADERS =
             ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_ENCODING, "gzip");
 
+    private static final String ORIGINAL_MESSAGE = "hello";
     private static final byte[] PAYLOAD;
 
     static {
         final ByteArrayOutputStream bos = new ByteArrayOutputStream();
         try (GZIPOutputStream gos = new GZIPOutputStream(bos)) {
-            gos.write("hello".getBytes(StandardCharsets.UTF_8));
+            gos.write(ORIGINAL_MESSAGE.getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
             throw new UncheckedIOException(e);
         }
@@ -79,8 +90,9 @@ class DefaultHttpDecodedResponseTest {
     void unpooledPayload_unpooledDrain() {
         final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final HttpResponse decoded =
-                new DefaultHttpDecodedResponse(delegate, DECODER, ByteBufAllocator.DEFAULT, false);
+                new DefaultHttpDecodedResponse(delegate, DECODER, ctx, false);
         final HttpData decodedPayload = responseData(decoded, false);
 
         assertThat(decodedPayload.isPooled()).isFalse();
@@ -90,9 +102,10 @@ class DefaultHttpDecodedResponseTest {
     void pooledPayload_unpooledDrain() {
         final ByteBuf payloadBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD);
         final HttpData payload = HttpData.wrap(payloadBuf).withEndOfStream();
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
         final HttpResponse decoded =
-                new DefaultHttpDecodedResponse(delegate, DECODER, ByteBufAllocator.DEFAULT, false);
+                new DefaultHttpDecodedResponse(delegate, DECODER, ctx, false);
         final HttpData decodedPayload = responseData(decoded, false);
 
         assertThat(decodedPayload.isPooled()).isFalse();
@@ -103,8 +116,8 @@ class DefaultHttpDecodedResponseTest {
     void unpooledPayload_pooledDrain() {
         final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
-        final HttpResponse decoded = new DefaultHttpDecodedResponse(delegate, DECODER, ByteBufAllocator.DEFAULT,
-                                                                    false);
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final HttpResponse decoded = new DefaultHttpDecodedResponse(delegate, DECODER, ctx, false);
         final HttpData decodedPayload = responseData(decoded, true);
 
         assertThat(decodedPayload.isPooled()).isTrue();
@@ -117,8 +130,9 @@ class DefaultHttpDecodedResponseTest {
         final ByteBuf payloadBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD);
         final HttpData payload = HttpData.wrap(payloadBuf).withEndOfStream();
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final HttpResponse decoded =
-                new DefaultHttpDecodedResponse(delegate, DECODER, ByteBufAllocator.DEFAULT, false);
+                new DefaultHttpDecodedResponse(delegate, DECODER, ctx, false);
         final HttpData decodedPayload = responseData(decoded, true);
         final ByteBuf decodedPayloadBuf = decodedPayload.byteBuf();
 
@@ -132,8 +146,9 @@ class DefaultHttpDecodedResponseTest {
     void unpooledPayload_unpooledDrain_withOldDecoder() {
         final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final HttpResponse decoded =
-                new DefaultHttpDecodedResponse(delegate, OLD_DECODER, ByteBufAllocator.DEFAULT, false);
+                new DefaultHttpDecodedResponse(delegate, OLD_DECODER, ctx, false);
         final HttpData decodedPayload = responseData(decoded, false);
 
         assertThat(decodedPayload.isPooled()).isFalse();
@@ -144,8 +159,9 @@ class DefaultHttpDecodedResponseTest {
         final ByteBuf payloadBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD);
         final HttpData payload = HttpData.wrap(payloadBuf).withEndOfStream();
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final HttpResponse decoded =
-                new DefaultHttpDecodedResponse(delegate, OLD_DECODER, ByteBufAllocator.DEFAULT, false);
+                new DefaultHttpDecodedResponse(delegate, OLD_DECODER, ctx, false);
         final HttpData decodedPayload = responseData(decoded, false);
 
         assertThat(decodedPayload.isPooled()).isFalse();
@@ -156,8 +172,9 @@ class DefaultHttpDecodedResponseTest {
     void unpooledPayload_pooledDrain_withOldDecoder() {
         final HttpData payload = HttpData.wrap(PAYLOAD);
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final HttpResponse decoded =
-                new DefaultHttpDecodedResponse(delegate, OLD_DECODER, ByteBufAllocator.DEFAULT, false);
+                new DefaultHttpDecodedResponse(delegate, OLD_DECODER, ctx, false);
         final HttpData decodedPayload = responseData(decoded, true);
 
         assertThat(decodedPayload.isPooled()).isTrue();
@@ -170,8 +187,9 @@ class DefaultHttpDecodedResponseTest {
         final ByteBuf payloadBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD);
         final HttpData payload = HttpData.wrap(payloadBuf).withEndOfStream();
         final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, payload);
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
         final HttpResponse decoded =
-                new DefaultHttpDecodedResponse(delegate, OLD_DECODER, ByteBufAllocator.DEFAULT, false);
+                new DefaultHttpDecodedResponse(delegate, OLD_DECODER, ctx, false);
         final HttpData decodedPayload = responseData(decoded, true);
         final ByteBuf decodedPayloadBuf = decodedPayload.byteBuf();
 
@@ -182,23 +200,48 @@ class DefaultHttpDecodedResponseTest {
     }
 
     @Test
-    void streamDecoderFinishedIsCalledWhenRequestCanceled() throws InterruptedException {
+    void streamDecoderFinishedIsCalledWhenRequestCanceled() {
         final HttpResponseWriter response = HttpResponse.streaming();
         response.write(ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_ENCODING, "foo"));
         final HttpData data = HttpData.ofUtf8("bar");
         response.write(data);
+        final ClientRequestContext ctx = ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
 
         final com.linecorp.armeria.common.encoding.StreamDecoderFactory factory = mock(
                 com.linecorp.armeria.common.encoding.StreamDecoderFactory.class);
         final com.linecorp.armeria.common.encoding.StreamDecoder streamDecoder = mock(StreamDecoder.class);
-        when(factory.newDecoder(any())).thenReturn(streamDecoder);
+        when(factory.newDecoder(any(), eq((int) ctx.maxResponseLength()))).thenReturn(streamDecoder);
         when(streamDecoder.decode(any())).thenReturn(data);
 
         final HttpResponse decoded = new DefaultHttpDecodedResponse(response, ImmutableMap.of("foo", factory),
-                                                                    ByteBufAllocator.DEFAULT, true);
+                                                                    ctx, true);
         decoded.subscribe(new CancelSubscriber());
 
         await().untilAsserted(() -> verify(streamDecoder, times(1)).finish());
+    }
+
+    @Test
+    void lengthLimit() {
+        final ByteBuf payloadBuf = ByteBufAllocator.DEFAULT.buffer().writeBytes(PAYLOAD);
+        final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, HttpData.wrap(payloadBuf));
+        final RequestOptions requestOptions = RequestOptions.builder()
+                                                            .maxResponseLength(ORIGINAL_MESSAGE.length() - 1)
+                                                            .build();
+        final ClientRequestContext ctx =
+                ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
+                                    .requestOptions(requestOptions)
+                                    .build();
+        final HttpResponse decoded = new DefaultHttpDecodedResponse(delegate, DECODER, ctx, false);
+
+        assertThatThrownBy(decoded.aggregate(AggregationOptions.usePooledObjects(ctx.alloc()))::join)
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(ContentTooLargeException.class)
+                .hasRootCauseInstanceOf(DecompressionException.class)
+                .satisfies(cause -> {
+                    assertThat(((ContentTooLargeException) cause.getCause()).maxContentLength())
+                            .isEqualTo(ctx.maxResponseLength());
+                });
+        assertThat(payloadBuf.refCnt()).isZero();
     }
 
     private static HttpData responseData(HttpResponse decoded, boolean withPooledObjects) {

@@ -26,10 +26,13 @@ import java.util.function.Function;
 import com.google.common.base.Ascii;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
+import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.server.DecoratingService;
 import com.linecorp.armeria.server.HttpService;
@@ -39,6 +42,9 @@ import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 /**
  * A {@link DecoratingService} that requests and decodes HTTP encoding (e.g., gzip) that has been applied to the
  * content of an {@link HttpRequest}.
+ *
+ * <p>Note that if a decoded content exceeds {@link ServiceRequestContext#maxRequestLength()},
+ * a {@link ContentTooLargeException} will be raised.
  */
 public final class DecodingService extends SimpleDecoratingHttpService {
 
@@ -85,21 +91,29 @@ public final class DecodingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        final String contentEncoding = req.headers().get(HttpHeaderNames.CONTENT_ENCODING);
+        final RequestHeaders headers = req.headers();
+        final String contentEncoding = headers.get(HttpHeaderNames.CONTENT_ENCODING);
         if (contentEncoding == null) {
             // If the request does not contain [Content-Encoding] header,
             // pass the request to the next service.
             return unwrap().serve(ctx, req);
         }
+
         final StreamDecoderFactory decoderFactory = decoderFactories.get(Ascii.toLowerCase(contentEncoding));
-        if (decoderFactory != null) {
-            final HttpDecodedRequest decodedRequest = new HttpDecodedRequest(req, decoderFactory, ctx.alloc());
-            ctx.updateRequest(decodedRequest);
-            return unwrap().serve(ctx, decodedRequest);
-        } else {
+        if (decoderFactory == null) {
             // The request contain [Content-Encoding] but not exist appropriate decoder,
             // pass the request to the next service.
             return unwrap().serve(ctx, req);
         }
+
+        // As the compressed content should be decoded, the Content-Encoding header is no longer valid.
+        final RequestHeaders newHeaders = headers.toBuilder()
+                                                 .removeAndThen(HttpHeaderNames.CONTENT_ENCODING)
+                                                 .build();
+        final HttpRequest newReq = req.withHeaders(newHeaders);
+        final HttpDecodedRequest decodedRequest = new HttpDecodedRequest(
+                newReq, decoderFactory, ctx.alloc(), Ints.saturatedCast(ctx.maxRequestLength()));
+        ctx.updateRequest(decodedRequest);
+        return unwrap().serve(ctx, decodedRequest);
     }
 }

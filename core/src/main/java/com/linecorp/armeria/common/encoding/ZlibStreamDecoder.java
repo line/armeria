@@ -17,14 +17,29 @@
 package com.linecorp.armeria.common.encoding;
 
 import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.codec.compression.ZlibCodecFactory;
+import io.netty.handler.codec.compression.JZlibDecoder;
+import io.netty.handler.codec.compression.JdkZlibDecoder;
+import io.netty.handler.codec.compression.ZlibDecoder;
 import io.netty.handler.codec.compression.ZlibWrapper;
+import io.netty.util.internal.SystemPropertyUtil;
 
 /**
  * A {@link StreamDecoder} that uses zlib ('gzip' or 'deflate').
  */
 final class ZlibStreamDecoder extends AbstractStreamDecoder {
-    ZlibStreamDecoder(ZlibWrapper zlibWrapper, ByteBufAllocator alloc) {
-        super(ZlibCodecFactory.newZlibDecoder(zlibWrapper), alloc);
+
+    private static final boolean noJdkZlibDecoder =
+            SystemPropertyUtil.getBoolean("io.netty.noJdkZlibDecoder", false);
+
+    ZlibStreamDecoder(ZlibWrapper zlibWrapper, ByteBufAllocator alloc, int maxLength) {
+        super(newZlibDecoder(zlibWrapper, maxLength), alloc, maxLength, false);
+    }
+
+    private static ZlibDecoder newZlibDecoder(ZlibWrapper wrapper, int maxLength) {
+        if (noJdkZlibDecoder) {
+            return new JZlibDecoder(wrapper, maxLength);
+        } else {
+            return new JdkZlibDecoder(wrapper, true, maxLength);
+        }
     }
 }
