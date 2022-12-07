@@ -132,7 +132,6 @@ class HttpEncodedResponseTest {
                 orig, HttpEncodingType.BROTLI, mediaType -> true, ByteBufAllocator.DEFAULT, 1);
 
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
-        // Drain the stream.
         encoded.subscribe(new Subscriber<HttpObject>() {
 
             private Subscription subscription;
@@ -159,8 +158,7 @@ class HttpEncodedResponseTest {
             }
 
             @Override
-            public void onComplete() {
-            }
+            public void onComplete() {}
         }, ImmediateEventExecutor.INSTANCE, SubscriptionOption.NOTIFY_CANCELLATION);
 
         await().untilAsserted(() -> {

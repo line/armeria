@@ -74,7 +74,7 @@ public final class ContentTooLargeExceptionBuilder {
     }
 
     /**
-     * Sets the cause that caused this {@link ContentTooLargeException} to get thrown.
+     * Sets the {@link Throwable} that caused this {@link ContentTooLargeException} to get thrown.
      */
     @UnstableApi
     public ContentTooLargeExceptionBuilder cause(Throwable cause) {
