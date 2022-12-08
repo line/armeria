@@ -116,6 +116,10 @@ class AbstractStreamDecoder implements StreamDecoder {
             length += decoded.readableBytes();
         }
         if (length > maxLength) {
+            if (decoded != null) {
+                decoded.release();
+            }
+            newBuf.release();
             throw ContentTooLargeException.builder()
                                           .maxContentLength(maxLength)
                                           .transferred(length)
