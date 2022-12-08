@@ -16,10 +16,8 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.BOOLEAN;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.INT;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedDocServicePlugin.STRING;
-import static com.linecorp.armeria.server.docs.FieldRequirement.UNSPECIFIED;
 import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -40,6 +38,7 @@ import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.json.JsonMapper;
@@ -61,7 +60,6 @@ import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.FieldInfo;
-import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.Markup;
 import com.linecorp.armeria.server.docs.StructInfo;
@@ -101,43 +99,38 @@ class DefaultDescriptiveTypeInfoProviderTest {
         }
     };
 
-    final DefaultDescriptiveTypeInfoProvider
-            requestStructInfoProvider = new DefaultDescriptiveTypeInfoProvider(true);
-    final DefaultDescriptiveTypeInfoProvider
-            responseStructInfoProvider = new DefaultDescriptiveTypeInfoProvider(false);
+    static final DefaultDescriptiveTypeInfoProvider REQUEST_STRUCT_INFO_PROVIDER =
+            new DefaultDescriptiveTypeInfoProvider(true);
+    static final DefaultDescriptiveTypeInfoProvider RESPONSE_STRUCT_INFO_PROVIDER =
+            new DefaultDescriptiveTypeInfoProvider(false);
 
     @Test
     void requestObject() {
         final StructInfo structInfo =
-                (StructInfo) requestStructInfoProvider.newDescriptiveTypeInfo(FooRequest.class);
+                (StructInfo) REQUEST_STRUCT_INFO_PROVIDER.newDescriptiveTypeInfo(FooRequest.class);
         assertThat(structInfo.name()).isEqualTo(FooRequest.class.getName());
         assertThat(structInfo.fields()).containsExactlyInAnyOrder(
                 newRequiredField("intField", INT),
                 newRequiredField("stringField", STRING),
-                newRequiredField("sameName", TypeSignature.ofStruct(Inner.class),
-                                 newRequiredField("innerValue", BOOLEAN)),
-                newRequiredField("rename", TypeSignature.ofStruct(Inner.class),
-                                    newRequiredField("innerValue", BOOLEAN)),
+                newRequiredField("sameName", TypeSignature.ofStruct(Inner.class)),
+                newRequiredField("rename", TypeSignature.ofStruct(Inner.class)),
                 newRequiredField("collection", TypeSignature.ofList(TypeSignature.ofStruct(Inner.class))),
                 newOptionalField("nullableField", STRING),
-                newOptionalField("optionalField", TypeSignature.ofStruct(Inner.class),
-                                 newRequiredField("innerValue", BOOLEAN)),
+                newOptionalField("optionalField", TypeSignature.ofStruct(Inner.class)),
                 newRequiredField("circular", TypeSignature.ofStruct(FooRequest.class)));
     }
 
     @Test
     void responseObject() {
         final StructInfo structInfo =
-                (StructInfo) responseStructInfoProvider.newDescriptiveTypeInfo(BarResponse.class);
+                (StructInfo) RESPONSE_STRUCT_INFO_PROVIDER.newDescriptiveTypeInfo(BarResponse.class);
         assertThat(structInfo.name()).isEqualTo(BarResponse.class.getName());
         assertThat(structInfo.fields()).containsExactlyInAnyOrder(
                 newRequiredField("intField", INT),
                 newRequiredField("getterField", STRING),
                 newOptionalField("getterNullableField", STRING),
-                newRequiredField("sameName", TypeSignature.ofStruct(Inner.class),
-                                 newRequiredField("innerValue", BOOLEAN)),
-                newRequiredField("rename", TypeSignature.ofStruct(Inner.class),
-                                    newRequiredField("innerValue", BOOLEAN)),
+                newRequiredField("sameName", TypeSignature.ofStruct(Inner.class)),
+                newRequiredField("rename", TypeSignature.ofStruct(Inner.class)),
                 newRequiredField("collection", TypeSignature.ofList(TypeSignature.ofStruct(Inner.class))),
                 newOptionalField("nullableField", STRING),
                 newOptionalField("optionalField", STRING),
@@ -147,11 +140,11 @@ class DefaultDescriptiveTypeInfoProviderTest {
     @ArgumentsSource(UndescriptiveTypeProvider.class)
     @ParameterizedTest
     void undescriptiveTypes(Class<?> clazz) {
-        StructInfo structInfo = (StructInfo) requestStructInfoProvider.newDescriptiveTypeInfo(clazz);
+        StructInfo structInfo = (StructInfo) REQUEST_STRUCT_INFO_PROVIDER.newDescriptiveTypeInfo(clazz);
         assertThat(structInfo.name()).isEqualTo(clazz.getName());
         assertThat(structInfo.fields()).isEmpty();
 
-        structInfo = (StructInfo) responseStructInfoProvider.newDescriptiveTypeInfo(clazz);
+        structInfo = (StructInfo) RESPONSE_STRUCT_INFO_PROVIDER.newDescriptiveTypeInfo(clazz);
         assertThat(structInfo.name()).isEqualTo(clazz.getName());
         assertThat(structInfo.fields()).isEmpty();
     }
@@ -159,7 +152,7 @@ class DefaultDescriptiveTypeInfoProviderTest {
     @Test
     void requestDescriptor() {
         StructInfo structInfo =
-                (StructInfo) requestStructInfoProvider.newDescriptiveTypeInfo(RequestConstructor.class);
+                (StructInfo) REQUEST_STRUCT_INFO_PROVIDER.newDescriptiveTypeInfo(RequestConstructor.class);
         assertThat(structInfo.fields()).containsExactlyInAnyOrder(
                 FieldInfo.builder("constructorField1", STRING)
                          .requirement(FieldRequirement.REQUIRED)
@@ -170,7 +163,7 @@ class DefaultDescriptiveTypeInfoProviderTest {
                          .descriptionInfo(DescriptionInfo.of("constructor description2", Markup.NONE))
                          .build());
 
-        structInfo = (StructInfo) requestStructInfoProvider.newDescriptiveTypeInfo(RequestSetters.class);
+        structInfo = (StructInfo) REQUEST_STRUCT_INFO_PROVIDER.newDescriptiveTypeInfo(RequestSetters.class);
         assertThat(structInfo.fields()).containsExactlyInAnyOrder(
                 FieldInfo.builder("setterField1", STRING)
                          .requirement(FieldRequirement.REQUIRED)
@@ -181,7 +174,7 @@ class DefaultDescriptiveTypeInfoProviderTest {
                          .descriptionInfo(DescriptionInfo.of("setter description2", Markup.NONE))
                          .build());
 
-        structInfo = (StructInfo) requestStructInfoProvider.newDescriptiveTypeInfo(
+        structInfo = (StructInfo) REQUEST_STRUCT_INFO_PROVIDER.newDescriptiveTypeInfo(
                 RequestWithSettersNonPrefix.class);
         assertThat(structInfo.fields()).containsExactlyInAnyOrder(
                 FieldInfo.builder("nonPrefixSetterField1", STRING)
@@ -197,7 +190,7 @@ class DefaultDescriptiveTypeInfoProviderTest {
     @Test
     void responseDescriptor() {
         StructInfo structInfo =
-                (StructInfo) responseStructInfoProvider.newDescriptiveTypeInfo(ResponseGetters.class);
+                (StructInfo) RESPONSE_STRUCT_INFO_PROVIDER.newDescriptiveTypeInfo(ResponseGetters.class);
         assertThat(structInfo.fields()).containsExactly(
                 FieldInfo.builder("getterField1", STRING)
                          .requirement(FieldRequirement.REQUIRED)
@@ -209,7 +202,7 @@ class DefaultDescriptiveTypeInfoProviderTest {
                          .build());
 
         structInfo =
-                (StructInfo) responseStructInfoProvider.newDescriptiveTypeInfo(
+                (StructInfo) RESPONSE_STRUCT_INFO_PROVIDER.newDescriptiveTypeInfo(
                         ResponseGettersWithNonPrefix.class);
         assertThat(structInfo.fields()).containsExactly(
                 FieldInfo.builder("nonPrefixGetterField1", STRING)
@@ -224,8 +217,8 @@ class DefaultDescriptiveTypeInfoProviderTest {
 
     @Test
     void reflectiveStructInfo() {
-        for (DescriptiveTypeInfoProvider provider : ImmutableList.of(requestStructInfoProvider,
-                                                                     responseStructInfoProvider)) {
+        for (DescriptiveTypeInfoProvider provider : ImmutableList.of(REQUEST_STRUCT_INFO_PROVIDER,
+                                                                     RESPONSE_STRUCT_INFO_PROVIDER)) {
             StructInfo structInfo = (StructInfo) provider.newDescriptiveTypeInfo(ParamId.class);
             assertThat(structInfo.name()).isEqualTo(ParamId.class.getName());
             assertThat(structInfo.descriptionInfo()).isEqualTo(DescriptionInfo.of("ParamId class"));
@@ -289,7 +282,7 @@ class DefaultDescriptiveTypeInfoProviderTest {
     }
 
     @Test
-    void customStructInfo() {
+    void customStructInfo() throws JsonProcessingException {
         final BlockingWebClient client = jsonServer.blockingWebClient();
 
         final JsonNode response = client.prepare()
@@ -297,39 +290,32 @@ class DefaultDescriptiveTypeInfoProviderTest {
                                         .asJson(JsonNode.class)
                                         .execute()
                                         .content();
+
         final JsonNode param = response.get("services").get(0).get("methods").get(0)
                                        .get("parameters").get(0);
-        assertThat(param.get("name").textValue()).isEqualTo("CustomFooRequestInfo");
-        final JsonNode fieldInfos = param.get("childFieldInfos");
+        assertThat(param.get("name").textValue()).isEqualTo("req");
+        assertThat(param.get("typeSignature").textValue()).isEqualTo(
+                "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$" +
+                "FooRequest");
+        final JsonNode struct = response.get("structs").get(1);
+        assertThat(struct.get("name").textValue()).isEqualTo("CustomFooRequestInfo");
+        final JsonNode fieldInfos = struct.get("fields");
         assertThat(fieldInfos.size()).isEqualTo(1);
         assertThat(fieldInfos.get(0).get("name").textValue()).isEqualTo("foo");
         assertThat(fieldInfos.get(0).get("typeSignature").textValue()).isEqualTo("foo");
         assertThat(response.get("structs").get(0).get("name").textValue()).isEqualTo("CustomBarRequestInfo");
     }
 
-    private static FieldInfo newRequiredField(String name, TypeSignature signature, FieldInfo... childFields) {
-        return newField(name, signature, FieldRequirement.REQUIRED, childFields);
+    private static FieldInfo newRequiredField(String name, TypeSignature signature) {
+        return newField(name, signature, FieldRequirement.REQUIRED);
     }
 
-    private static FieldInfo newOptionalField(String name, TypeSignature signature, FieldInfo... childFields) {
-        return newField(name, signature, FieldRequirement.OPTIONAL, childFields);
+    private static FieldInfo newOptionalField(String name, TypeSignature signature) {
+        return newField(name, signature, FieldRequirement.OPTIONAL);
     }
 
-    private static FieldInfo newUnspecifiedField(String name, TypeSignature signature,
-                                                 FieldInfo... childFields) {
-        return newField(name, signature, UNSPECIFIED, childFields);
-    }
-
-    private static FieldInfo newField(String name, TypeSignature signature, FieldRequirement fieldRequirement,
-                                      FieldInfo... childFields) {
-        final FieldInfoBuilder builder;
-        if (childFields.length == 0) {
-            builder = FieldInfo.builder(name, signature);
-        } else {
-            builder = FieldInfo.builder(name, signature, childFields);
-        }
-        return builder.requirement(fieldRequirement)
-                      .build();
+    private static FieldInfo newField(String name, TypeSignature signature, FieldRequirement fieldRequirement) {
+        return FieldInfo.builder(name, signature).requirement(fieldRequirement).build();
     }
 
     private static final class CustomDescriptiveTypeInfoProvider implements DescriptiveTypeInfoProvider {

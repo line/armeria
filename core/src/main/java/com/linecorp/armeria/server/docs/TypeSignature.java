@@ -22,6 +22,8 @@ import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.internal.server.docs.RequestObjectTypeSignature;
+import com.linecorp.armeria.server.annotation.RequestObject;
 
 /**
  * Type signature of a method parameter, a method return value or a struct/exception field.
@@ -183,6 +185,18 @@ public interface TypeSignature {
         requireNonNull(name, "name");
         requireNonNull(enumTypeDescriptor, "enumTypeDescriptor");
         return new DescriptiveTypeSignature(TypeSignatureType.ENUM, name, enumTypeDescriptor);
+    }
+
+    /**
+     * Creates a new type signature for the specified type that is a {@link RequestObject}.
+     */
+    static DescriptiveTypeSignature ofRequestObject(String name, Class<?> type,
+                                                    Object annotatedValueResolvers) {
+        requireNonNull(name, "name");
+        requireNonNull(type, "type");
+        requireNonNull(annotatedValueResolvers, "annotatedValueResolvers");
+        return new RequestObjectTypeSignature(TypeSignatureType.REQUEST_OBJECT, name, type,
+                                              annotatedValueResolvers);
     }
 
     /**

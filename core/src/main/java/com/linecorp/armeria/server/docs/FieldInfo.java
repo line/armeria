@@ -18,12 +18,10 @@ package com.linecorp.armeria.server.docs;
 
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.Objects;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -43,7 +41,7 @@ public final class FieldInfo {
      */
     public static FieldInfo of(String name, TypeSignature typeSignature) {
         return new FieldInfo(name, FieldLocation.UNSPECIFIED, FieldRequirement.UNSPECIFIED, typeSignature,
-                             ImmutableList.of(), DescriptionInfo.empty());
+                             DescriptionInfo.empty());
     }
 
     /**
@@ -53,7 +51,7 @@ public final class FieldInfo {
      */
     public static FieldInfo of(String name, TypeSignature typeSignature, DescriptionInfo descriptionInfo) {
         return new FieldInfo(name, FieldLocation.UNSPECIFIED, FieldRequirement.UNSPECIFIED, typeSignature,
-                             ImmutableList.of(), descriptionInfo);
+                             descriptionInfo);
     }
 
     /**
@@ -63,41 +61,21 @@ public final class FieldInfo {
         return new FieldInfoBuilder(name, typeSignature);
     }
 
-    /**
-     * Returns a newly created {@link FieldInfoBuilder}.
-     */
-    public static FieldInfoBuilder builder(String name, TypeSignature typeSignature,
-                                           FieldInfo... childFieldInfos) {
-        return new FieldInfoBuilder(name, typeSignature, childFieldInfos);
-    }
-
-    /**
-     * Returns a newly created {@link FieldInfoBuilder}.
-     */
-    public static FieldInfoBuilder builder(String name, TypeSignature typeSignature,
-                                           Iterable<FieldInfo> childFieldInfos) {
-        return new FieldInfoBuilder(name, typeSignature, childFieldInfos);
-    }
-
     private final String name;
     private final FieldLocation location;
     private final FieldRequirement requirement;
     private final TypeSignature typeSignature;
-    private final List<FieldInfo> childFieldInfos;
-
     private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
      */
     FieldInfo(String name, FieldLocation location, FieldRequirement requirement,
-              TypeSignature typeSignature, List<FieldInfo> childFieldInfos,
-              DescriptionInfo descriptionInfo) {
+              TypeSignature typeSignature, DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
         this.location = requireNonNull(location, "name");
         this.requirement = requireNonNull(requirement, "requirement");
         this.typeSignature = requireNonNull(typeSignature, "typeSignature");
-        this.childFieldInfos = requireNonNull(childFieldInfos, "childFieldInfos");
         this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
     }
 
@@ -134,14 +112,6 @@ public final class FieldInfo {
     }
 
     /**
-     * Returns the child field infos of the field.
-     */
-    @JsonProperty
-    public List<FieldInfo> childFieldInfos() {
-        return childFieldInfos;
-    }
-
-    /**
      * Returns the description information object of the field.
      */
     @JsonProperty
@@ -158,7 +128,7 @@ public final class FieldInfo {
         if (descriptionInfo.equals(this.descriptionInfo)) {
             return this;
         }
-        return new FieldInfo(name, location, requirement, typeSignature, childFieldInfos, descriptionInfo);
+        return new FieldInfo(name, location, requirement, typeSignature, descriptionInfo);
     }
 
     @Override
@@ -176,13 +146,12 @@ public final class FieldInfo {
                location == that.location &&
                requirement == that.requirement &&
                typeSignature.equals(that.typeSignature) &&
-               childFieldInfos.equals(that.childFieldInfos) &&
                descriptionInfo.equals(that.descriptionInfo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, location, requirement, typeSignature, childFieldInfos, descriptionInfo);
+        return Objects.hash(name, location, requirement, typeSignature, descriptionInfo);
     }
 
     @Override
@@ -192,8 +161,6 @@ public final class FieldInfo {
                           .add("location", location)
                           .add("requirement", requirement)
                           .add("typeSignature", typeSignature)
-                          .add("childFieldInfos", childFieldInfos)
-                          .add("descriptionInfo", descriptionInfo)
                           .add("descriptionInfo", descriptionInfo)
                           .toString();
     }

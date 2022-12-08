@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server.docs;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.annotation.RequestObject;
 
 /**
  * Represents the different type that is used for {@link DocService}.
@@ -34,6 +35,11 @@ public enum TypeSignatureType {
      * {@link StructInfo} or {@link ExceptionInfo}
      */
     STRUCT(false, true),
+
+    /**
+     * The type for a class that is a {@link RequestObject}.
+     */
+    REQUEST_OBJECT(false, true),
 
     /**
      * Enum type. The {@link TypeSignature} whose type is {@link #ENUM} is converted to a {@link EnumInfo}.
