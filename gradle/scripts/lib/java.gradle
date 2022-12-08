@@ -7,7 +7,7 @@ if (rootProject.hasProperty('buildJdkVersion')) {
     }
 }
 
-logger.quiet("JDK ${buildJdkVersion} is used to build ${project.name}")
+logger.info("Using JDK ${buildJdkVersion} to build ${project.name}")
 rootProject.ext.set("buildJdkVersion", buildJdkVersion)
 
 def testJavaVersion = buildJdkVersion
@@ -19,7 +19,7 @@ if (rootProject.hasProperty('testJavaVersion')) {
     }
 }
 
-logger.quiet("JRE ${testJavaVersion} is used to test ${project.name}")
+logger.info("Using JRE ${testJavaVersion} to test ${project.name}")
 rootProject.ext.set("testJavaVersion", testJavaVersion)
 
 // Enable checkstyle if the rule file exists.

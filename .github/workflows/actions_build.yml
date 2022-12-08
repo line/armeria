@@ -76,7 +76,7 @@ jobs:
           -PnoLint \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
-          -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-19.outputs.path }},${{ steps.setup-jdk.outputs.path }}
+          -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
 
       - name: Build with Gradle
@@ -89,7 +89,7 @@ jobs:
           -PflakyTests=false \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
-          -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-19.outputs.path }},${{ steps.setup-jdk.outputs.path }}
+          -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
         shell: bash
 
       - if: ${{ matrix.snapshot && github.ref_name == 'master' }}
@@ -114,7 +114,7 @@ jobs:
           -PflakyTests=false \
           -PbuildJdkVersion=${{ env.BUILD_JDK_VERSION }} \
           -PtestJavaVersion=${{ matrix.java }} \
-          -Porg.gradle.java.installations.paths=${{ steps.setup-jdk-19.outputs.path }},${{ steps.setup-jdk.outputs.path }}
+          -Porg.gradle.java.installations.paths=${{ steps.setup-build-jdk.outputs.path }},${{ steps.setup-jdk.outputs.path }}
 
           SUMMARY_FILE="build/failed-tests-result.txt"
           if test -f "$SUMMARY_FILE"; then
