@@ -99,9 +99,11 @@ public final class DefaultHttpDecodedResponse extends AbstractHttpDecodedRespons
                 }
             }
             if (decoder != null) {
-                // As the compressed content should be decoded, the Content-Encoding header is no longer valid.
+                // As the compressed content should be decoded, Content-Encoding and Content-Length
+                // header are no longer valid.
                 return headers.toBuilder()
                               .removeAndThen(HttpHeaderNames.CONTENT_ENCODING)
+                              .removeAndThen(HttpHeaderNames.CONTENT_LENGTH)
                               .build();
             } else {
                 return headers;
