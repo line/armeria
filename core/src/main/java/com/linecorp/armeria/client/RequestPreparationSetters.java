@@ -16,14 +16,10 @@
 
 package com.linecorp.armeria.client;
 
-import java.time.Duration;
-
 import com.linecorp.armeria.common.HttpMessageSetters;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.PathAndQueryParamSetters;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-
-import io.netty.util.AttributeKey;
 
 /**
  * Provides the setters for building an {@link HttpRequest} and {@link RequestOptions}.
@@ -34,8 +30,8 @@ public interface RequestPreparationSetters extends PathAndQueryParamSetters, Htt
 
     /**
      * Sets the specified {@link RequestOptions} that could overwrite the previously configured values such as
-     * {@link #responseTimeout(Duration)}, {@link #writeTimeout(Duration)}, {@link #maxResponseLength(long)}
-     * and {@link #attr(AttributeKey, Object)}.
+     * {@code #responseTimeout(Duration)}, {@code #writeTimeout(Duration)}, {@code #maxResponseLength(long)}
+     * and {@code #attr(AttributeKey, Object)}.
      */
     RequestPreparationSetters requestOptions(RequestOptions requestOptions);
 }

@@ -1,4 +1,4 @@
-def buildJdkVersion = 17
+def buildJdkVersion = Integer.parseInt(JavaVersion.current().getMajorVersion())
 if (rootProject.hasProperty('buildJdkVersion')) {
     def jdkVersion = Integer.parseInt(rootProject.findProperty('buildJdkVersion'))
     if (buildJdkVersion != jdkVersion) {
@@ -6,6 +6,8 @@ if (rootProject.hasProperty('buildJdkVersion')) {
         logger.quiet("Overriding JDK for build with ${buildJdkVersion}")
     }
 }
+
+logger.quiet("JDK ${buildJdkVersion} is used to build ${project.name}")
 rootProject.ext.set("buildJdkVersion", buildJdkVersion)
 
 def testJavaVersion = buildJdkVersion
@@ -16,6 +18,8 @@ if (rootProject.hasProperty('testJavaVersion')) {
         logger.quiet("Overriding JRE for tests with ${testJavaVersion}")
     }
 }
+
+logger.quiet("JRE ${testJavaVersion} is used to test ${project.name}")
 rootProject.ext.set("testJavaVersion", testJavaVersion)
 
 // Enable checkstyle if the rule file exists.
