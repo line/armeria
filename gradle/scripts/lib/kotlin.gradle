@@ -4,13 +4,19 @@ configure(projectsWithFlags('kotlin')) {
 
     def target = project.findProperty('javaTargetCompatibility') ?: '1.8'
     def compilerArgs = ['-java-parameters', '-Xjsr305=strict', '-Xskip-prerelease-check']
-    compileKotlin {
-        kotlinOptions.jvmTarget = target
-        kotlinOptions.freeCompilerArgs = compilerArgs
-    }
-    compileTestKotlin {
-        kotlinOptions.jvmTarget = target
-        kotlinOptions.freeCompilerArgs = compilerArgs
+
+    // compileJmhKotlin is injected by 'jmh' plugin while a benchmark module is being initialized.
+    afterEvaluate {
+        // A workaround to find all Kotlin compilation tasks.
+        // The standard way, `tasks.withType(KotlinCompile)`, does not work here.
+        tasks.matching {
+            def name = it.name
+            // Expected task names: "compile<Name>Kotlin" or "kaptGenerateStubs<Name>Kotlin"
+            (name.startsWith("compile") || name.startsWith("kaptGenerateStubs")) && name.endsWith("Kotlin")
+        }.each { task ->
+            task.kotlinOptions.jvmTarget = target
+            task.kotlinOptions.freeCompilerArgs = compilerArgs
+        }
     }
 
     if (!rootProject.hasProperty('noLint')) {

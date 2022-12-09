@@ -70,7 +70,7 @@ allprojects {
         jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
         jvmArgs "-XX:HeapDumpPath=${rootProject.buildDir}"
 
-        // The default value of the java.security.manager system property to disallow in Java 18
+        // The default value of the java.security.manager system property is changed to disallow in Java 18.
         // - https://openjdk.org/jeps/411
         // - https://bugs.openjdk.org/browse/JDK-8270380
         if (rootProject.ext.testJavaVersion >= 17) {

@@ -322,7 +322,15 @@ private Configuration configureShadedTestRuntimeConfiguration(
                     return
                 }
 
-                project.dependencies.add(shadedTestRuntime.name, dep)
+                if (dep.artifacts.isEmpty()) {
+                    project.dependencies.add(shadedTestRuntime.name, dep)
+                } else {
+                    dep.artifacts.each { art ->
+                        project.dependencies.add(shadedTestRuntime.name, dep) {
+                            artifact { classifier = art.classifier }
+                        }
+                    }
+                }
             }
         }
     }
