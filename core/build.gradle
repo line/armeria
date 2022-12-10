@@ -121,11 +121,6 @@ dependencies {
     implementation(variantOf(libs.netty.resolver.dns.native.macos) { classifier("osx-x86_64") })
     implementation(variantOf(libs.netty.resolver.dns.native.macos) { classifier("osx-aarch_64") })
 
-    implementation(variantOf(libs.netty.transport.native.unix.common) { classifier("linux-x86_64") })
-    implementation(variantOf(libs.netty.transport.native.epoll) { classifier("linux-x86_64") })
-    implementation(variantOf(libs.netty.resolver.dns.native.macos) { classifier("osx-x86_64") })
-    implementation(variantOf(libs.netty.resolver.dns.native.macos) { classifier("osx-aarch_64") })
-
     // Note that tcnative now needs explicit classifiers
     // Related: https://github.com/netty/netty-tcnative/pull/709
     ['linux-x86_64', 'linux-aarch_64', 'osx-x86_64', 'osx-aarch_64', 'windows-x86_64'].each { arch ->
