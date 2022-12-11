@@ -17,11 +17,11 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.errorprone.annotations.concurrent.GuardedBy;
-
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
+
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.util.IdentityHashStrategy;
@@ -47,12 +47,12 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
      */
     protected final void notifyListeners(T latestValue) {
         final Consumer<? super T>[] updateListeners;
-        lock();
+        reentrantLock.lock();
         try {
             //noinspection unchecked
             updateListeners = this.updateListeners.toArray((Consumer<? super T>[]) EMPTY_LISTENERS);
         } finally {
-            unlock();
+            reentrantLock.unlock();
         }
 
         for (Consumer<? super T> listener : updateListeners) {
@@ -84,7 +84,7 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
      */
     public final void addListener(Consumer<? super T> listener, boolean notifyLatestValue) {
         requireNonNull(listener, "listener");
-        lock();
+        reentrantLock.lock();
         try {
             if (notifyLatestValue) {
                 final T latest = latestValue();
@@ -94,26 +94,18 @@ public abstract class AbstractListenable<T> implements Listenable<T> {
             }
             updateListeners.add(listener);
         } finally {
-            unlock();
+            reentrantLock.unlock();
         }
     }
 
     @Override
     public final void removeListener(Consumer<?> listener) {
         requireNonNull(listener, "listener");
-        lock();
+        reentrantLock.lock();
         try {
             updateListeners.remove(listener);
         } finally {
-            unlock();
+            reentrantLock.unlock();
         }
-    }
-
-    void lock() {
-        reentrantLock.lock();
-    }
-
-    void unlock() {
-        reentrantLock.unlock();
     }
 }

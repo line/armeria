@@ -39,6 +39,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Strings;
@@ -46,7 +47,6 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
-import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * Represents an exception that is a composite of one or more other exceptions. A {@code CompositeException}
@@ -155,7 +155,7 @@ public final class CompositeException extends RuntimeException {
 
                     final StringBuilder aggregateMessage = new StringBuilder();
                     aggregateMessage.append("Multiple exceptions (").append(exceptions.size())
-                        .append(')').append(separator);
+                                    .append(')').append(separator);
 
                     for (Throwable inner : exceptions) {
                         int depth = 0;
@@ -181,11 +181,11 @@ public final class CompositeException extends RuntimeException {
                             final StackTraceElement[] st = inner.getStackTrace();
                             if (st.length > 0) {
                                 final int maxStackTraceSize =
-                                    isVerboseException ? st.length
-                                        : Math.min(DEFAULT_MAX_NUM_STACK_TRACES, st.length);
+                                        isVerboseException ? st.length
+                                                           : Math.min(DEFAULT_MAX_NUM_STACK_TRACES, st.length);
                                 for (int i = 0; i < maxStackTraceSize; i++) {
                                     aggregateMessage.append(messagePadding).append("at ")
-                                        .append(st[i]).append(separator);
+                                                    .append(st[i]).append(separator);
                                 }
                             }
 

@@ -161,7 +161,7 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
                 case STARTED:
                     if (failIfStarted) {
                         return exceptionallyCompletedFuture(
-                            new IllegalStateException("must be stopped to start; currently " + state));
+                                new IllegalStateException("must be stopped to start; currently " + state));
                     } else {
                         @SuppressWarnings("unchecked")
                         final UnmodifiableFuture<V> castFuture = (UnmodifiableFuture<V>) future;
@@ -171,8 +171,8 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
                     // A user called start() to restart, but not stopped completely yet.
                     // Try again once stopped.
                     return UnmodifiableFuture.wrap(
-                        future.exceptionally(unused -> null)
-                            .thenComposeAsync(unused -> start(arg, failIfStarted), executor));
+                            future.exceptionally(unused -> null)
+                                  .thenComposeAsync(unused -> start(arg, failIfStarted), executor));
             }
 
             assert state == State.STOPPED : "state: " + state;
@@ -210,21 +210,21 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
             }
 
             final UnmodifiableFuture<V> future = UnmodifiableFuture.wrap(
-                startFuture.handleAsync((result, cause) -> {
-                    if (cause != null) {
-                        // Failed to start. Stop and complete with the start failure cause.
-                        final CompletableFuture<Void> rollbackFuture =
-                            stop(rollbackArg, true).exceptionally(stopCause -> {
-                                rollbackFailed(Exceptions.peel(stopCause));
-                                return null;
-                            });
+                    startFuture.handleAsync((result, cause) -> {
+                        if (cause != null) {
+                            // Failed to start. Stop and complete with the start failure cause.
+                            final CompletableFuture<Void> rollbackFuture =
+                                    stop(rollbackArg, true).exceptionally(stopCause -> {
+                                        rollbackFailed(Exceptions.peel(stopCause));
+                                        return null;
+                                    });
 
-                        return rollbackFuture.<V>thenCompose(unused -> exceptionallyCompletedFuture(cause));
-                    } else {
-                        enter(State.STARTED, arg, null, result);
-                        return completedFuture(result);
-                    }
-                }, executor).thenCompose(Function.identity()));
+                            return rollbackFuture.<V>thenCompose(unused -> exceptionallyCompletedFuture(cause));
+                        } else {
+                            enter(State.STARTED, arg, null, result);
+                            return completedFuture(result);
+                        }
+                    }, executor).thenCompose(Function.identity()));
 
             this.future = future;
             return future;
@@ -264,8 +264,8 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
                     if (!rollback) {
                         // Try again once started.
                         return UnmodifiableFuture.wrap(
-                            future.exceptionally(unused -> null) // Ignore the exception.
-                                .thenComposeAsync(unused -> stop(arg), executor));
+                                future.exceptionally(unused -> null) // Ignore the exception.
+                                      .thenComposeAsync(unused -> stop(arg), executor));
                     } else {
                         break;
                     }
@@ -273,7 +273,7 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
                 case STOPPED:
                     @SuppressWarnings("unchecked")
                     final UnmodifiableFuture<Void> castFuture =
-                        (UnmodifiableFuture<Void>) future;
+                            (UnmodifiableFuture<Void>) future;
                     return castFuture;
             }
 
@@ -312,8 +312,8 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
             }
 
             final UnmodifiableFuture<Void> future = UnmodifiableFuture.wrap(
-                stopFuture.whenCompleteAsync((unused1, cause) -> enter(State.STOPPED, null, arg, null),
-                    executor));
+                    stopFuture.whenCompleteAsync((unused1, cause) -> enter(State.STOPPED, null, arg, null),
+                                                 executor));
             this.future = future;
             return future;
         } finally {

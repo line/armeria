@@ -251,16 +251,15 @@ public abstract class AbstractOption<
                 final AbstractOption<?, ?, ?> oldOption = options.get(name);
                 if (oldOption != null) {
                     throw new IllegalStateException(
-                        '\'' + type.getName() + '#' + name + "' exists already.");
+                            '\'' + type.getName() + '#' + name + "' exists already.");
                 }
 
                 final T newOption = optionFactory.get(name, defaultValue, validator, mergeFunction);
                 checkArgument(type.isInstance(newOption),
-                    "OptionFactory.newOption() must return an instance of %s.", type);
+                              "OptionFactory.newOption() must return an instance of %s.", type);
                 options.put(name, newOption);
                 return newOption;
-            }
-            finally {
+            } finally {
                 unlock();
             }
         }
@@ -271,7 +270,7 @@ public abstract class AbstractOption<
                 final AbstractOption<?, ?, ?> option = options.get(name);
                 if (option == null) {
                     throw new NoSuchElementException(
-                        '\'' + type.getName() + '#' + name + "' does not exist.");
+                            '\'' + type.getName() + '#' + name + "' does not exist.");
                 }
 
                 return option;

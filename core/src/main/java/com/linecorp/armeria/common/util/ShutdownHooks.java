@@ -18,19 +18,18 @@ package com.linecorp.armeria.common.util;
 
 import static java.util.Objects.requireNonNull;
 
-import com.google.errorprone.annotations.concurrent.GuardedBy;
-
 import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadFactory;
-
 import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -102,16 +101,22 @@ public final class ShutdownHooks {
             onShutdownTasks.add(task);
             if (!addedShutdownHook) {
                 Runtime.getRuntime().addShutdownHook(THREAD_FACTORY.newThread(() -> {
-                    autoCloseableOnShutdownTasks.forEach((factory, queue) -> {
-                        for (; ; ) {
-                            final Runnable onShutdown = queue.poll();
-                            if (onShutdown == null) {
-                                break;
-                            } else {
-                                onShutdown.run();
+                    reentrantLock.lock();
+                    try {
+                        autoCloseableOnShutdownTasks.forEach((factory, queue) -> {
+                            for (; ; ) {
+                                final Runnable onShutdown = queue.poll();
+                                if (onShutdown == null) {
+                                    break;
+                                } else {
+                                    onShutdown.run();
+                                }
                             }
-                        }
-                    });
+                        });
+                    }
+                    finally {
+                        reentrantLock.unlock();
+                    }
                 }));
                 addedShutdownHook = true;
             }
