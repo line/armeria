@@ -136,6 +136,19 @@ public class MyAnnotatedService {
 }
 ```
 
+<Tip>
+
+  Note that even if the return is `void` or `Void`, `200 OK` will be returned if a <type://@Produces>
+  annotation is added.
+
+  ```java
+  @ProducesJson
+  @Post("/users/{name}")
+  public void createUser(@Param("name") String name) { ... } // 200 is returned
+  ```
+
+</Tip>
+
 You can define a service method which handles a request only if it contains a header or parameter the method
 requires. The following methods are bound to the same path `/users` but a request may be routed based on the
 `client-type` header.
