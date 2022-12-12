@@ -123,6 +123,6 @@ public final class AuthService extends SimpleDecoratingHttpService {
                                        @Nullable Throwable cause) throws Exception {
         final AuthFailureHandler handler = authorizerFailureHandler == null ? defaultFailureHandler
                                                                             : authorizerFailureHandler;
-        return handler.authFailed(delegate, ctx, req, cause);
+        return handler.authFailed(delegate, ctx, req, Exceptions.peel(cause));
     }
 }
