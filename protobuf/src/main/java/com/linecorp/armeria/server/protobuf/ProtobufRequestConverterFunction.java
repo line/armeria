@@ -231,7 +231,7 @@ public final class ProtobufRequestConverterFunction implements RequestConverterF
         return contentType != null && contentType.isJson();
     }
 
-    private static Message.Builder getMessageBuilder(Class<?> clazz) {
+    static Message.Builder getMessageBuilder(Class<?> clazz) {
         final MethodHandle methodHandle = methodCache.get(clazz);
         if (methodHandle == unknownMethodHandle) {
             throw new IllegalStateException("Failed to find a static newBuilder() method from " + clazz);

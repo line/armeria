@@ -195,7 +195,7 @@ public final class ArmeriaConfigurationUtil {
         dependencyInjectors.forEach(injector -> {
             server.dependencyInjector(injector, false); // The injector is closed by Spring.
         });
-        if (settings.enableAutoInjection()) {
+        if (settings.isEnableAutoInjection()) {
             server.dependencyInjector(SpringDependencyInjector.of(beanFactory), false);
         }
     }

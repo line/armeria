@@ -16,33 +16,48 @@
 
 package com.linecorp.armeria.server;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import org.reactivestreams.Subscriber;
 
+import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpObject;
-import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
+import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 
 import io.netty.channel.EventLoop;
 import io.netty.util.concurrent.EventExecutor;
 
 final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
 
-    private final HttpRequest delegate;
+    private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
+
     private final EventLoop eventLoop;
     private final int id;
     private final int streamId;
+    private final RequestHeaders headers;
     private final boolean keepAlive;
     private final RoutingContext routingContext;
     private final ExchangeType exchangeType;
+    private final long requestStartTimeNanos;
+    private final long requestStartTimeMicros;
     @Nullable
     private ServiceRequestContext ctx;
+
+    @Nullable
+    private CompletableFuture<AggregatedHttpRequest> aggregateFuture;
 
     @Nullable
     private HttpResponse response;
@@ -50,14 +65,17 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
 
     EmptyContentDecodedHttpRequest(EventLoop eventLoop, int id, int streamId, RequestHeaders headers,
                                    boolean keepAlive, RoutingContext routingContext,
-                                   ExchangeType exchangeType) {
-        delegate = HttpRequest.of(headers);
+                                   ExchangeType exchangeType, long requestStartTimeNanos,
+                                   long requestStartTimeMicros) {
         this.eventLoop = eventLoop;
         this.id = id;
         this.streamId = streamId;
+        this.headers = headers;
         this.keepAlive = keepAlive;
         this.routingContext = routingContext;
         this.exchangeType = exchangeType;
+        this.requestStartTimeNanos = requestStartTimeNanos;
+        this.requestStartTimeMicros = requestStartTimeMicros;
     }
 
     @Override
@@ -95,33 +113,40 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
 
     @Override
     public boolean isOpen() {
-        return delegate.isOpen();
+        return false;
     }
 
     @Override
     public boolean isEmpty() {
-        return delegate.isEmpty();
+        return true;
     }
 
     @Override
     public long demand() {
-        return delegate.demand();
+        return 0;
     }
 
     @Override
     public CompletableFuture<Void> whenComplete() {
-        return delegate.whenComplete();
-    }
-
-    @Override
-    public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor) {
-        delegate.subscribe(subscriber, executor);
+        return completionFuture;
     }
 
     @Override
     public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
-        delegate.subscribe(subscriber, executor, options);
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        if (executor.inEventLoop()) {
+            subscribe0(subscriber);
+        } else {
+            executor.execute(() -> subscribe0(subscriber));
+        }
+    }
+
+    private void subscribe0(Subscriber<? super HttpObject> subscriber) {
+        subscriber.onSubscribe(NoopSubscription.get());
+        subscriber.onComplete();
+        completionFuture.complete(null);
     }
 
     @Override
@@ -131,22 +156,33 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
 
     @Override
     public void abort() {
-        delegate.abort();
+        completionFuture.complete(null);
     }
 
     @Override
     public void abort(Throwable cause) {
-        delegate.abort(cause);
+        completionFuture.complete(null);
     }
 
     @Override
     public CompletableFuture<List<HttpObject>> collect(EventExecutor executor, SubscriptionOption... options) {
-        return delegate.collect(executor, options);
+        completionFuture.complete(null);
+        return UnmodifiableFuture.completedFuture(ImmutableList.of());
+    }
+
+    @Override
+    public CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options) {
+        if (aggregateFuture != null) {
+            return aggregateFuture;
+        }
+        completionFuture.complete(null);
+        aggregateFuture = UnmodifiableFuture.completedFuture(AggregatedHttpRequest.of(headers));
+        return aggregateFuture;
     }
 
     @Override
     public RequestHeaders headers() {
-        return delegate.headers();
+        return headers;
     }
 
     @Override
@@ -183,12 +219,22 @@ final class EmptyContentDecodedHttpRequest implements DecodedHttpRequest {
     }
 
     @Override
-    public boolean isAggregated() {
+    public boolean needsAggregation() {
         return false;
     }
 
     @Override
     public ExchangeType exchangeType() {
         return exchangeType;
+    }
+
+    @Override
+    public long requestStartTimeNanos() {
+        return requestStartTimeNanos;
+    }
+
+    @Override
+    public long requestStartTimeMicros() {
+        return requestStartTimeMicros;
     }
 }

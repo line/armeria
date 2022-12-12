@@ -1,0 +1,267 @@
+import org.yaml.snakeyaml.Yaml
+
+buildscript {
+    repositories {
+        mavenCentral()
+        gradlePluginPortal()
+    }
+
+    dependencies {
+        // These should be the only dependencies that need hard-coded versions.
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.39.0'
+        classpath 'org.yaml:snakeyaml:1.33'
+    }
+}
+
+rootProject.ext {
+    def dependenciesYamlFile = new File("${project.projectDir}/dependencies.yml")
+    if (dependenciesYamlFile.exists()) {
+        dependenciesYaml = Collections.unmodifiableMap(new Yaml().loadAs(dependenciesYamlFile.text, Map))
+    } else {
+        dependenciesYaml = Collections.emptyMap()
+    }
+}
+
+def managedDependencyVersions = new TreeMap<String, String>() {
+    @Override
+    String get(Object key) {
+        def value = super.get(key)
+        if (value != null) {
+            return value
+        } else {
+            throw new IllegalArgumentException("Missing managed dependency: ${key}")
+        }
+    }
+}
+def managedDependencyExclusions = [:].withDefault { [] }
+def managedDependencyOverrides = [] as Set
+rootProject.ext.dependenciesYaml.forEach { String key, value ->
+    if (key == 'boms') {
+        value.each {
+            def parsed = it.split(':')
+            managedDependencyVersions["${parsed[0]}:${parsed[1]}"] = parsed[2]
+        }
+    } else {
+        def groupId = key
+        def artifact = value as Map
+        artifact.forEach { String artifactId, Map props ->
+            if (props.containsKey('version')) {
+                managedDependencyVersions["${groupId}:${artifactId}"] = String.valueOf(props['version'])
+            }
+            if (props.containsKey('exclusions')) {
+                props['exclusions'].each { String spec ->
+                    def parsed = spec.split(':')
+                    managedDependencyExclusions["${groupId}:${artifactId}"].add([
+                            group: parsed[0],
+                            module: parsed[1],
+                    ])
+                }
+            }
+        }
+    }
+}
+
+allprojects {
+    ext {
+        managedVersions = managedDependencyVersions
+    }
+}
+
+def dependencyManagementProjects = projectsWithFlags('dependencyManagement')
+assert !dependencyManagementProjects.isEmpty() // Guaranteed by settings-flags.gradle
+def dependencyManagementProject = dependencyManagementProjects[0]
+
+configure(dependencyManagementProject) {
+    apply plugin: 'java-platform'
+    apply plugin: com.github.benmanes.gradle.versions.VersionsPlugin
+
+    repositories {
+        google()
+        // Since we manage plugin versions here too.
+        gradlePluginPortal()
+        mavenCentral()
+    }
+
+    javaPlatform {
+        allowDependencies()
+    }
+
+    dependencies {
+        if (rootProject.ext.dependenciesYaml.containsKey('boms')) {
+            dependenciesYaml['boms'].each {
+                api platform("${it}")
+            }
+        }
+
+        constraints {
+            rootProject.ext.dependenciesYaml.forEach { String key, value ->
+                if (key != 'boms') {
+                    def groupId = key
+                    def artifact = value as Map
+                    artifact.forEach { String artifactId, Map props ->
+                        if (props.containsKey('version')) {
+                            api "${groupId}:${artifactId}:${props['version']}"
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    tasks {
+        dependencyUpdates {
+            revision = 'release'
+
+            resolutionStrategy {
+                componentSelection { rules ->
+                    rules.all { ComponentSelection selection ->
+                        boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm', 'preview'].any { qualifier ->
+                            selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
+                        }
+                        if (rejected) {
+                            selection.reject('Release candidate')
+                        }
+                    }
+                }
+            }
+
+            checkConstraints = true
+
+            // We have downgraded versions for legacy artifacts which versions plugin has no way of handling.
+            // But we can provide a reminder to manually check for updates.
+            doLast {
+                logger.quiet "Don't forget to check the following for updates to legacy version downgrades"
+                managedDependencyOverrides.each { override ->
+                    def (group, artifact, version) = override.split(':')
+                    def parts = version.split('\\.')
+                    if (parts.length >= 2) {
+                        logger.quiet "${artifact} is currently version ${version}"
+                        logger.quiet "https://search.maven.org/search?q=g:${group}%20a:${artifact}%20v:${parts[0]}.${parts[1]}.*\n"
+                    }
+                }
+            }
+        }
+    }
+}
+
+configure(projectsWithFlags('java')) {
+
+    configurations.configureEach { configuration ->
+        configuration.dependencies.whenObjectAdded { dep ->
+            if (dep instanceof org.gradle.api.artifacts.ModuleDependency) {
+                managedDependencyExclusions["${dep.group}:${dep.name}"].each {
+                    exclude it
+                }
+            }
+        }
+    }
+
+    // We need to use afterEvaluate because there is no way to guarantee configuration.canBeResolved and
+    // canBeConsumed are set otherwise.
+    afterEvaluate {
+        // From Boot 2.3.0, productionRuntimeClasspath is newly added and its canBeConsumed is set to true
+        // so change it to false. Otherwise, Gradle can't resolve the dependency in bootJar task
+        // because the version will not be added in the following `Add to resolvable configurations`.
+        // https://github.com/spring-projects/spring-boot/blob/v2.3.0.RELEASE/spring-boot-project/spring-boot-tools/spring-boot-gradle-plugin/src/main/java/org/springframework/boot/gradle/plugin/JavaPluginAction.java#L175-L178
+        def springBootGradlePlugin = plugins.findPlugin('org.springframework.boot')
+        def bootJarTask = tasks.findByName('bootJar')
+        def productionRuntimeClasspathConfig = configurations.findByName('productionRuntimeClasspath')
+        if (springBootGradlePlugin != null && bootJarTask != null && productionRuntimeClasspathConfig != null) {
+            productionRuntimeClasspathConfig.canBeConsumed(false)
+        }
+
+        dependencies {
+            configurations.configureEach { configuration ->
+                // Add to resolvable configurations
+                if (configuration.canBeResolved && !configuration.canBeConsumed) {
+                    add(configuration.name, platform(dependencyManagementProject))
+                }
+
+                // Find version overrides in dependency declaration configurations
+                if (!configuration.canBeResolved && !configuration.canBeConsumed) {
+                    configuration.dependencies.configureEach { dep ->
+                        if (dep instanceof org.gradle.api.artifacts.ExternalDependency) {
+                            if (dep.version != null) {
+                                managedDependencyOverrides.add(String.valueOf("${dep.module}:${dep.version}"))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Create a new configuration called 'allDependencies'.
+rootProject.configurations {
+    allDependencies {
+        visible = false
+        transitive = false
+    }
+}
+
+rootProject.ext {
+    // Build the relocation table from dependencies.yml.
+    relocations = dependenciesYaml.entrySet().inject([]) { list, Map.Entry<String, Object> entry ->
+        if (entry.key != 'boms') {
+            def groupId = entry.key
+            entry.value.forEach { String artifactId, Map props ->
+                if (props.containsKey('relocations')) {
+                    props.get('relocations').each {
+                        list.add([
+                                name: "${groupId}:${artifactId}",
+                                from: it['from'],
+                                to: it['to']])
+                    }
+                }
+            }
+        }
+        return list
+    }
+
+    // Build the Javadoc link table from dependencies.yml.
+    javadocLinks = dependenciesYaml.entrySet().inject([]) { list, Map.Entry<String, Object> entry ->
+        if (entry.key != 'boms') {
+            def groupId = entry.key
+            entry.value.forEach { String artifactId, Map props ->
+                if (props.containsKey('javadocs')) {
+                    props['javadocs'].each { url ->
+                        list.add([
+                                groupId: groupId,
+                                artifactId: artifactId,
+                                url: url
+                        ])
+                    }
+                }
+            }
+        }
+        return list
+    }
+}
+
+subprojects {
+    ext {
+        dependenciesYaml = rootProject.ext.dependenciesYaml
+        relocations = rootProject.ext.relocations
+        javadocLinks = rootProject.ext.javadocLinks
+    }
+}
+
+configure(rootProject) {
+    task managedVersions(
+            group: 'Build',
+            description: 'Generates the file that contains dependency versions.') {
+
+        def f = file("${project.buildDir}/managed_versions.yml")
+        inputs.properties managedDependencyVersions
+        outputs.file(f)
+
+        doLast {
+            f.parentFile.mkdir()
+            f.withWriter('UTF-8') {
+                new Yaml().dump(managedDependencyVersions, it)
+            }
+        }
+    }
+}

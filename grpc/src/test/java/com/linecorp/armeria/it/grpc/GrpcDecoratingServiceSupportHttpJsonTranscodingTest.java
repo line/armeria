@@ -25,7 +25,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.linecorp.armeria.client.BlockingWebClient;
-import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
@@ -52,6 +51,11 @@ class GrpcDecoratingServiceSupportHttpJsonTranscodingTest {
             final GrpcService grpcService = GrpcService.builder().addService(
                     new HttpJsonTranscodingTestService()).enableHttpJsonTranscoding(true).build();
             sb.requestTimeoutMillis(5000);
+            sb.decorator((delegate, ctx, req) -> {
+                // We can aggregate request if it's not a streaming request.
+                req.aggregate();
+                return delegate.serve(ctx, req);
+            });
             sb.decorator(LoggingService.newDecorator());
             sb.service(grpcService);
         }
@@ -65,8 +69,11 @@ class GrpcDecoratingServiceSupportHttpJsonTranscodingTest {
 
     @Test
     void shouldGetMessageV1ByWebClient() throws Exception {
-        final AggregatedHttpResponse response = webClient.get("/v1/messages/1");
-        final JsonNode root = mapper.readTree(response.contentUtf8());
+        final JsonNode root = webClient.prepare()
+                .get("/v1/messages/1")
+                .asJson(JsonNode.class)
+                .execute()
+                .content();
         assertThat(root.get("text").asText()).isEqualTo("messages/1");
         assertThat(FIRST_TEST_RESULT).isEqualTo("FirstDecorator/MethodFirstDecorator");
     }

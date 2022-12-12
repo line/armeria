@@ -17,10 +17,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 
-type DocString = string | JSX.Element;
-
-interface HasDocString {
-  docString?: DocString;
+export interface DescriptionInfo {
+  docString: string;
+  markup: string;
 }
 
 export interface Parameter {
@@ -29,7 +28,7 @@ export interface Parameter {
   childFieldInfos: Parameter[];
   requirement: string;
   typeSignature: string;
-  docString?: DocString;
+  descriptionInfo?: DescriptionInfo;
 }
 
 export interface Endpoint {
@@ -43,6 +42,7 @@ export interface Endpoint {
 
 export interface Method {
   name: string;
+  id: string;
   returnTypeSignature: string;
   parameters: Parameter[];
   exceptionTypeSignatures: string[];
@@ -52,39 +52,40 @@ export interface Method {
   examplePaths: string[];
   exampleQueries: string[];
   httpMethod: string;
-  docString?: DocString;
+  descriptionInfo?: DescriptionInfo;
 }
 
 export interface Service {
   name: string;
   methods: Method[];
   exampleHeaders: { [name: string]: string }[];
-  docString?: DocString;
+  descriptionInfo?: DescriptionInfo;
 }
 
 export interface Value {
   name: string;
   intValue?: number;
-  docString?: DocString;
+  descriptionInfo?: DescriptionInfo;
 }
 
 export interface Enum {
   name: string;
   values: Value[];
-  docString?: DocString;
+  descriptionInfo?: DescriptionInfo;
 }
 
 export interface Field {
   name: string;
   requirement: string;
   typeSignature: string;
-  docString?: DocString;
+  descriptionInfo?: DescriptionInfo;
 }
 
 export interface Struct {
   name: string;
+  alias?: string;
   fields: Field[];
-  docString?: DocString;
+  descriptionInfo: DescriptionInfo;
 }
 
 export interface SpecificationData {
@@ -113,6 +114,14 @@ function createMapByName<T extends NamedObject>(objs: T[]): Map<string, T> {
   return new Map(objs.map((obj) => [obj.name, obj] as [string, T]));
 }
 
+function createMapByAlias(objs: Struct[]): Map<string, Struct> {
+  return new Map(
+    objs
+      .filter((obj) => obj)
+      .map((obj) => [obj.alias, obj] as [string, Struct]),
+  );
+}
+
 function hasUniqueNames<T extends NamedObject>(map: Map<string, T>): boolean {
   const names = new Set();
   for (const key of map.keys()) {
@@ -130,6 +139,8 @@ export class Specification {
 
   private readonly structsByName: Map<string, Struct>;
 
+  private readonly structsByAlias: Map<string, Struct>;
+
   private readonly uniqueEnumNames: boolean;
 
   private readonly uniqueServiceNames: boolean;
@@ -145,6 +156,7 @@ export class Specification {
       ...this.data.structs,
       ...this.data.exceptions,
     ]);
+    this.structsByAlias = createMapByAlias(this.data.structs);
 
     this.uniqueEnumNames = hasUniqueNames(this.enumsByName);
     this.uniqueServiceNames = hasUniqueNames(this.servicesByName);
@@ -199,7 +211,7 @@ export class Specification {
 
   public getTypeSignatureHtml(typeSignature: string) {
     // Split on all non-identifier parts and optimistically find matches for type identifiers.
-    const parts = typeSignature.split(/([^\w.]+)/g);
+    const parts = typeSignature.split(/([^$\w.]+)/g);
     return <>{parts.map((part) => this.renderTypePart(part))}</>;
   }
 
@@ -208,7 +220,7 @@ export class Specification {
     if (type) {
       return this.getTypeLink(type.name, 'enum');
     }
-    type = this.structsByName.get(part);
+    type = this.structsByName.get(part) || this.structsByAlias.get(part);
     if (type) {
       return this.getTypeLink(type.name, 'struct');
     }
@@ -227,51 +239,36 @@ export class Specification {
     for (const service of this.data.services) {
       for (const method of service.methods) {
         const childDocStrings = this.parseParamDocStrings(
-          method.docString as string,
-        );
-        method.docString = this.removeParamDocStrings(
-          method.docString as string,
+          method.descriptionInfo?.docString as string,
         );
         for (const param of method.parameters) {
           const childDocString = childDocStrings.get(param.name);
           if (childDocString) {
-            param.docString = childDocString;
+            param.descriptionInfo = {
+              docString: childDocString,
+              markup: 'NONE',
+            };
           }
         }
       }
     }
-
-    // TODO(trustin): Handle the docstrings of enum values.
-    for (const enm of this.data.enums) {
-      enm.docString = this.removeParamDocStrings(enm.docString as string);
-    }
-
     this.updateStructDocStrings(this.data.structs);
     this.updateStructDocStrings(this.data.exceptions);
-
-    this.data.enums.forEach(this.renderDocString);
-    this.data.exceptions.forEach(this.renderDocString);
-    for (const service of this.data.services) {
-      this.renderDocString(service);
-      for (const method of service.methods) {
-        this.renderDocString(method as HasDocString);
-        method.parameters.forEach(this.renderDocString);
-      }
-    }
-    this.data.structs.forEach(this.renderDocString);
   }
 
   private updateStructDocStrings(structs: Struct[]) {
     // TODO(trustin): Handle the docstrings of return values and exceptions.
     for (const struct of structs) {
       const childDocStrings = this.parseParamDocStrings(
-        struct.docString as string,
+        struct.descriptionInfo?.docString as string,
       );
-      struct.docString = this.removeParamDocStrings(struct.docString as string);
       for (const field of struct.fields) {
         const childDocString = childDocStrings.get(field.name);
         if (childDocString) {
-          field.docString = childDocString;
+          field.descriptionInfo = {
+            docString: childDocString,
+            markup: 'NONE',
+          };
         }
       }
     }
@@ -289,32 +286,5 @@ export class Specification {
       match = pattern.exec(docString);
     }
     return parameters;
-  }
-
-  private removeParamDocStrings(docString: string | undefined) {
-    if (!docString) {
-      return '';
-    }
-    return docString.replace(/@param .*[\n\r]*/gim, '');
-  }
-
-  private renderDocString(item: HasDocString) {
-    if (!item.docString) {
-      return;
-    }
-    const docString = item.docString as string;
-    const lines = docString.split(/(?:\r\n|\n|\r)/gim);
-    // eslint-disable-next-line no-param-reassign
-    item.docString = (
-      <>
-        {lines.map((line, i) => (
-          // eslint-disable-next-line react/no-array-index-key
-          <React.Fragment key={`${line}-${i}`}>
-            {line}
-            {i < lines.length - 1 ? <br /> : null}
-          </React.Fragment>
-        ))}
-      </>
-    );
   }
 }

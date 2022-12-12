@@ -18,6 +18,7 @@ package com.linecorp.armeria.common;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -67,5 +68,11 @@ final class DeferredHttpResponse extends DeferredStreamMessage<HttpObject> imple
             return executor;
         }
         return super.defaultSubscriberExecutor();
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public CompletableFuture<AggregatedHttpResponse> aggregate(AggregationOptions options) {
+        return super.aggregate(options);
     }
 }

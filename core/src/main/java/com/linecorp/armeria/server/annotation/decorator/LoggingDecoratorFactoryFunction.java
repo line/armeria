@@ -27,7 +27,7 @@ import com.linecorp.armeria.server.logging.LoggingService;
 public final class LoggingDecoratorFactoryFunction implements DecoratorFactoryFunction<LoggingDecorator> {
 
     /**
-     * Creates a new decorator with the specified {@code parameter}.
+     * Creates a new decorator with the specified {@link LoggingDecorator}.
      */
     @Override
     public Function<? super HttpService, ? extends HttpService> newDecorator(LoggingDecorator parameter) {

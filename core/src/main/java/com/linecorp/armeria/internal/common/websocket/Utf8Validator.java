@@ -55,7 +55,7 @@ import io.netty.util.ByteProcessor;
 
 final class Utf8Validator implements ByteProcessor {
 
-    // Forked from Netty 4.1.69 at 34a31522f0145e2d434aaea2ef8ac5ed8d1a91a0
+    // Forked from Netty 4.1.85 at 7cc84285ea6f90f6af62fa465d1aafbbc497e889
 
     private static final int UTF8_ACCEPT = 0;
     private static final int UTF8_REJECT = 12;
@@ -82,9 +82,9 @@ final class Utf8Validator implements ByteProcessor {
     private int codep;
     private boolean checking;
 
-    void check(ByteBuf buffer) {
+    void check(ByteBuf buffer, int index, int length) {
         checking = true;
-        buffer.forEachByte(this);
+        buffer.forEachByte(index, length, this);
     }
 
     @Override

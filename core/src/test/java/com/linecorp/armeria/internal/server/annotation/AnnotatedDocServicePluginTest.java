@@ -37,6 +37,7 @@ import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
@@ -139,12 +140,17 @@ class AnnotatedDocServicePluginTest {
 
         final TypeSignature biFunction =
                 toTypeSignature(FieldContainer.class.getDeclaredField("biFunction").getGenericType());
-        assertThat(biFunction).isEqualTo(TypeSignature.ofContainer("BiFunction",
-                                                                   TypeSignature.ofBase("JsonNode"),
-                                                                   TypeSignature.ofUnresolved(""),
-                                                                   TypeSignature.ofBase("string")));
+        assertThat(biFunction).isEqualTo(TypeSignature.ofContainer(
+                "BiFunction",
+                TypeSignature.ofStruct(JsonNode.class),
+                TypeSignature.ofUnresolved(""),
+                TypeSignature.ofBase("string")));
 
-        assertThat(toTypeSignature(FieldContainer.class)).isEqualTo(TypeSignature.ofBase("FieldContainer"));
+        assertThat(toTypeSignature(FieldContainer.class)).isEqualTo(
+                TypeSignature.ofStruct(FieldContainer.class));
+        final TypeSignature optional =
+                toTypeSignature(FieldContainer.class.getDeclaredField("optional").getGenericType());
+        assertThat(optional).isEqualTo(TypeSignature.ofOptional(TypeSignature.ofBase("string")));
     }
 
     @Test
@@ -369,7 +375,7 @@ class AnnotatedDocServicePluginTest {
         final Server server = builder.build();
         final ServiceSpecification specification =
                 plugin.generateSpecification(ImmutableSet.copyOf(server.serviceConfigs()),
-                                             unifyFilter(include, exclude));
+                                             unifyFilter(include, exclude), typeDescriptor -> null);
         return specification.services()
                             .stream()
                             .collect(toImmutableMap(ServiceInfo::name, Function.identity()));
@@ -434,6 +440,7 @@ class AnnotatedDocServicePluginTest {
         CompletableFuture<T> typeVariableFuture;
         List<String>[] genericArray;
         BiFunction<JsonNode, ?, String> biFunction;
+        Optional<String> optional;
     }
 
     private static class FooClass {

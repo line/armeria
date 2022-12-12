@@ -133,29 +133,21 @@ class WebSocketServiceTest {
         assertThat(frames.size()).isEqualTo(4);
         WebSocketFrame frame = frames.get(0);
         assertThat(frame.isFinalFragment()).isFalse();
-        assertThat(frame.isText()).isTrue();
-        assertThat(frame.isBinary()).isFalse();
         assertThat(frame.type()).isSameAs(WebSocketFrameType.TEXT);
         assertThat(frame.text()).isEqualTo("foo");
 
         frame = frames.get(1);
         assertThat(frame.isFinalFragment()).isTrue();
-        assertThat(frame.isText()).isTrue();
-        assertThat(frame.isBinary()).isFalse();
         assertThat(frame.type()).isSameAs(WebSocketFrameType.CONTINUATION);
         assertThat(frame.text()).isEqualTo("bar");
 
         frame = frames.get(2);
         assertThat(frame.isFinalFragment()).isFalse();
-        assertThat(frame.isBinary()).isTrue();
-        assertThat(frame.isText()).isFalse();
         assertThat(frame.type()).isSameAs(WebSocketFrameType.BINARY);
         assertThat(frame.text()).isEqualTo("foo");
 
         frame = frames.get(3);
         assertThat(frame.isFinalFragment()).isTrue();
-        assertThat(frame.isBinary()).isTrue();
-        assertThat(frame.isText()).isFalse();
         assertThat(frame.type()).isSameAs(WebSocketFrameType.CONTINUATION);
         assertThat(frame.text()).isEqualTo("bar");
     }
@@ -194,9 +186,8 @@ class WebSocketServiceTest {
                                 break;
                             case CLOSE:
                                 assert frame instanceof CloseWebSocketFrame;
-                                final CloseWebSocketFrame closeWebSocketFrame =
-                                        (CloseWebSocketFrame) frame;
-                                onClose(writer, closeWebSocketFrame.status(), closeWebSocketFrame.reasonPhase());
+                                final CloseWebSocketFrame closeFrame = (CloseWebSocketFrame) frame;
+                                onClose(writer, closeFrame.status(), closeFrame.reasonPhrase());
                                 break;
                             default:
                                 // no-op

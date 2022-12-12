@@ -16,7 +16,6 @@
 package com.linecorp.armeria.internal.common.websocket;
 
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.closeWebSocketInboundStream;
-import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.intMask;
 import static java.util.Objects.requireNonNull;
 
 import org.slf4j.Logger;
@@ -25,7 +24,6 @@ import org.slf4j.LoggerFactory;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.HttpDecoder;
 import com.linecorp.armeria.common.stream.StreamDecoderInput;
@@ -36,12 +34,12 @@ import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.server.websocket.WebSocketProtocolViolationException;
 
 import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufUtil;
+import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
 
 public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> {
 
-    // Forked from Netty 4.1.69 at 34a31522f0145e2d434aaea2ef8ac5ed8d1a91a0
+    // Forked from Netty 4.1.85 at 7cc84285ea6f90f6af62fa465d1aafbbc497e889
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketFrameDecoder.class);
 
@@ -62,13 +60,12 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
     private final WebSocketCloseHandler webSocketCloseHandler;
     private final boolean expectMaskedFrames;
 
-    private boolean frameFinalFlag;
+    private boolean finalFragment;
     private boolean frameMasked;
     private int frameRsv;
     private int frameOpcode;
     private long framePayloadLength;
-    @Nullable
-    private byte[] maskingKey;
+    private int mask;
     private int framePayloadLen1;
     private boolean receivedClosingHandshake;
     private int currentFragmentOpcode = -1;
@@ -110,7 +107,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
 
                     // FIN, RSV, OPCODE
                     byte b = in.readByte();
-                    frameFinalFlag = (b & 0x80) != 0;
+                    finalFragment = (b & 0x80) != 0;
                     // TODO(minwoox): support rsv
                     frameRsv = (b & 0x70) >> 4;
                     frameOpcode = b & 0x0F;
@@ -141,7 +138,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                     if (frameOpcode > 7) { // control frame (have MSB in opcode set)
 
                         // control frames MUST NOT be fragmented
-                        if (!frameFinalFlag) {
+                        if (!finalFragment) {
                             protocolViolation("fragmented control frame");
                             return;
                         }
@@ -210,6 +207,10 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                             return;
                         }
                         framePayloadLength = in.readLong();
+                        if (framePayloadLength < 0) {
+                            protocolViolation("invalid data frame length (negative length)");
+                            return;
+                        }
 
                         if (framePayloadLength < 65536) {
                             protocolViolation("invalid data frame length (not using minimal length encoding)");
@@ -235,9 +236,7 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                         if (in.readableBytes() < 4) {
                             return;
                         }
-                        final ByteBuf maskingKeyByteBuf = in.readBytes(4);
-                        maskingKey = ByteBufUtil.getBytes(maskingKeyByteBuf);
-                        maskingKeyByteBuf.release();
+                        mask = in.readInt();
                     }
                     state = State.PAYLOAD;
                     // fallthrough
@@ -246,16 +245,18 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                         return;
                     }
 
-                    ByteBuf payloadBuffer = null;
+                    ByteBuf payloadBuffer = Unpooled.EMPTY_BUFFER;
                     try {
-                        payloadBuffer = in.readBytes(toFrameLength(framePayloadLength));
+                        if (framePayloadLength > 0) {
+                            payloadBuffer = in.readBytes(toFrameLength(framePayloadLength));
+                        }
 
                         // Now we have all the data, the next checkpoint must be the next
                         // frame
                         state = State.READING_FIRST;
 
                         // Unmask data if needed
-                        if (frameMasked) {
+                        if (frameMasked & framePayloadLength > 0) {
                             unmask(payloadBuffer);
                         }
 
@@ -289,27 +290,27 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
                             continue;
                         }
 
-                        if (!frameFinalFlag && currentFragmentOpcode == -1) {
+                        if (!finalFragment && currentFragmentOpcode == -1) {
                             currentFragmentOpcode = frameOpcode;
                         }
 
                         // Return the frame
                         if (frameOpcode == WebSocketFrameType.TEXT.opcode()) {
-                            out.add(WebSocketFrame.ofPooledText(payloadBuffer, frameFinalFlag));
+                            out.add(WebSocketFrame.ofPooledText(payloadBuffer, finalFragment));
                             payloadBuffer = null;
                         } else if (frameOpcode == WebSocketFrameType.BINARY.opcode()) {
-                            out.add(WebSocketFrame.ofPooledBinary(payloadBuffer, frameFinalFlag));
+                            out.add(WebSocketFrame.ofPooledBinary(payloadBuffer, finalFragment));
                             payloadBuffer = null;
                         } else if (frameOpcode == WebSocketFrameType.CONTINUATION.opcode()) {
                             final boolean isText = currentFragmentOpcode == WebSocketFrameType.TEXT.opcode();
-                            out.add(WebSocketFrame.ofPooledContinuation(payloadBuffer, frameFinalFlag, isText));
+                            out.add(WebSocketFrame.ofPooledContinuation(payloadBuffer, isText, finalFragment));
                             payloadBuffer = null;
                         } else {
                             protocolViolation(WebSocketCloseStatus.INVALID_MESSAGE_TYPE,
                                               "Cannot decode web socket frame with opcode: " + frameOpcode);
                         }
 
-                        if (frameFinalFlag) {
+                        if (finalFragment) {
                             currentFragmentOpcode = -1;
                         }
                     } finally {
@@ -328,16 +329,23 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
     }
 
     private void unmask(ByteBuf frame) {
-        final int intMask = intMask(maskingKey);
+        long longMask = mask & 0xFFFFFFFFL;
+        longMask |= longMask << 32;
+
         int i = frame.readerIndex();
         final int end = frame.writerIndex();
-        for (; i + 3 < end; i += 4) {
-            final int unmasked = frame.getInt(i) ^ intMask;
-            frame.setInt(i, unmasked);
+        for (final int lim = end - 7; i < lim; i += 8) {
+            frame.setLong(i, frame.getLong(i) ^ longMask);
         }
-        final int mod = i % 4;
+
+        if (i < end - 3) {
+            frame.setInt(i, frame.getInt(i) ^ (int) longMask);
+            i += 4;
+        }
+
+        int maskOffset = 0;
         for (; i < end; i++) {
-            frame.setByte(i, frame.getByte(i) ^ maskingKey[(i - mod) % 4]);
+            frame.setByte(i, frame.getByte(i) ^ WebSocketUtil.byteAtIndex(mask, maskOffset++ & 3));
         }
     }
 
@@ -360,26 +368,20 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
             protocolViolation(WebSocketCloseStatus.INVALID_PAYLOAD_DATA, "Invalid close frame body");
         }
 
-        // Save reader index
-        final int idx = buffer.readerIndex();
-
         // Must have 2 byte integer within the valid range
-        final int statusCode = buffer.readShort();
+        final int statusCode = buffer.getShort(buffer.readerIndex());
         if (!WebSocketCloseStatus.isValidStatusCode(statusCode)) {
             protocolViolation("Invalid close frame status code: " + statusCode);
         }
 
         // May have UTF-8 message
-        if (buffer.isReadable()) {
+        if (buffer.readableBytes() > 2) {
             try {
-                new Utf8Validator().check(buffer);
+                new Utf8Validator().check(buffer, buffer.readerIndex() + 2, buffer.readableBytes() - 2);
             } catch (IllegalArgumentException ex) {
                 protocolViolation(WebSocketCloseStatus.INVALID_PAYLOAD_DATA, "bytes are not UTF-8");
             }
         }
-
-        // Restore reader index
-        buffer.readerIndex(idx);
     }
 
     @Override
@@ -393,11 +395,11 @@ public final class WebSocketFrameDecoder implements HttpDecoder<WebSocketFrame> 
         } else {
             closeStatus = WebSocketCloseStatus.INTERNAL_SERVER_ERROR;
         }
-        String reasonPhase = cause.getMessage();
-        if (reasonPhase == null) {
-            reasonPhase = closeStatus.reasonPhase();
+        String reasonPhrase = cause.getMessage();
+        if (reasonPhrase == null) {
+            reasonPhrase = closeStatus.reasonPhrase();
         }
-        final ByteBuf encoded = encoder.encode(ctx, WebSocketFrame.ofClose(closeStatus, reasonPhase));
+        final ByteBuf encoded = encoder.encode(ctx, WebSocketFrame.ofClose(closeStatus, reasonPhrase));
         if (writer.tryWrite(HttpData.wrap(encoded))) {
             webSocketCloseHandler.closeStreams(cause);
         }

@@ -29,7 +29,6 @@ import com.google.common.base.Ascii;
 
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
-import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequestWriter;
@@ -66,6 +65,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.TooLongHttpLineException;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Settings;
@@ -182,7 +182,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                     keepAliveHandler.increaseNumRequests();
                     final HttpRequest nettyReq = (HttpRequest) msg;
                     if (!nettyReq.decoderResult().isSuccess()) {
-                        fail(id, null, HttpStatus.BAD_REQUEST, "Decoder failure", null);
+                        final Throwable cause = nettyReq.decoderResult().cause();
+                        if (cause instanceof TooLongHttpLineException) {
+                            fail(id, null, HttpStatus.REQUEST_URI_TOO_LONG, "Too Long URI", cause);
+                        } else {
+                            fail(id, null, HttpStatus.BAD_REQUEST, "Decoder failure", cause);
+                        }
                         return;
                     }
 
@@ -250,16 +255,13 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                             final ServiceConfig serviceConfig = routingCtx.result().value();
                             if (serviceConfig.service().as(WebSocketService.class) != null &&
                                 isHttp1WebSocketUpgradeRequest(headers)) {
-                                final StreamingDecodedHttpRequest request =
-                                        new StreamingDecodedHttpRequest(eventLoop, id, 1, headers, keepAlive,
-                                                                        inboundTrafficController,
-                                                                        serviceConfig.maxRequestLength(),
-                                                                        routingCtx,
-                                                                        ExchangeType.BIDI_STREAMING);
-                                this.req = request;
+                                this.req = req = DecodedHttpRequest.of(false, eventLoop, id, 1, headers,
+                                                                       keepAlive, inboundTrafficController,
+                                                                       routingCtx);
+                                assert req instanceof StreamingDecodedHttpRequest;
                                 webSocketUpgradeContext.setLastWebSocketUpgradeRequestId(id);
-                                WebSocketUtil.setWebSocketInboundStream(ctx.channel(), request);
-                                ctx.fireChannelRead(request);
+                                WebSocketUtil.setWebSocketInboundStream(ctx.channel(), (HttpRequestWriter) req);
+                                ctx.fireChannelRead(req);
                                 return;
                             }
                         } catch (Throwable cause) {
@@ -274,7 +276,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                                                            keepAlive, inboundTrafficController, routingCtx);
 
                     // An aggregating request will be fired after all objects are collected.
-                    if (!req.isAggregated()) {
+                    if (!req.needsAggregation()) {
                         ctx.fireChannelRead(req);
                     }
                 } else {
@@ -336,9 +338,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                         if (!trailingHeaders.isEmpty()) {
                             decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
                         }
-
                         decodedReq.close();
-                        if (decodedReq.isAggregated()) {
+                        if (decodedReq.needsAggregation()) {
                             // An aggregated request is now ready to be fired.
                             ctx.fireChannelRead(decodedReq);
                         }

@@ -44,7 +44,7 @@ public interface HttpData extends HttpObject, Bytes {
      * Returns an empty {@link HttpData}.
      */
     static HttpData empty() {
-        return DefaultHttpData.empty;
+        return ByteArrayHttpData.EMPTY;
     }
 
     /**
@@ -59,7 +59,7 @@ public interface HttpData extends HttpObject, Bytes {
             return empty();
         }
 
-        return DefaultHttpData.of(data);
+        return new ByteArrayHttpData(data);
     }
 
     /**
@@ -81,10 +81,10 @@ public interface HttpData extends HttpObject, Bytes {
         }
 
         if (data.length == length) {
-            return DefaultHttpData.of(data);
+            return new ByteArrayHttpData(data);
         }
 
-        return DefaultHttpData.of(Unpooled.wrappedBuffer(data, offset, length), false);
+        return new ByteBufHttpData(Unpooled.wrappedBuffer(data, offset, length), false);
     }
 
     /**
@@ -106,7 +106,7 @@ public interface HttpData extends HttpObject, Bytes {
             return empty();
         }
 
-        final HttpData data = DefaultHttpData.of(buf, true);
+        final HttpData data = new ByteBufHttpData(buf, true);
         buf.touch(data);
         return data;
     }
@@ -122,7 +122,7 @@ public interface HttpData extends HttpObject, Bytes {
             return empty();
         }
 
-        return DefaultHttpData.of(data.clone());
+        return new ByteArrayHttpData(data.clone());
     }
 
     /**
@@ -143,7 +143,7 @@ public interface HttpData extends HttpObject, Bytes {
             return empty();
         }
 
-        return DefaultHttpData.of(Arrays.copyOfRange(data, offset, offset + length));
+        return new ByteArrayHttpData(Arrays.copyOfRange(data, offset, offset + length));
     }
 
     /**

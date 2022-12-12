@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.common.websocket;
 
+import java.util.function.Supplier;
+
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessageAndWriter;
 
@@ -24,6 +26,9 @@ import com.linecorp.armeria.common.stream.StreamMessageAndWriter;
  */
 @UnstableApi
 public interface WebSocketWriter extends WebSocket, StreamMessageAndWriter<WebSocketFrame> {
+
+    @Override
+    boolean tryWrite(WebSocketFrame o);
 
     /**
      * Write a text {@link WebSocketFrame} to this {@link WebSocket}.
@@ -101,7 +106,7 @@ public interface WebSocketWriter extends WebSocket, StreamMessageAndWriter<WebSo
     /**
      * Sends the closing handshake with the {@link WebSocketCloseStatus} and the reason.
      */
-    void close(WebSocketCloseStatus status, String reasonPhase);
+    void close(WebSocketCloseStatus status, String reasonPhrase);
 
     /**
      * Sends the closing handshake with the {@link WebSocketCloseStatus#INTERNAL_SERVER_ERROR} and

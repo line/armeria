@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -37,7 +37,7 @@ import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 /**
  * A {@link ByteBuf}-based {@link Bytes}.
  */
-public final class ByteBufBytes implements Bytes, ResourceLeakHint {
+public class ByteBufBytes implements Bytes, ResourceLeakHint {
 
     private final ByteBuf buf;
     private final boolean pooled;
@@ -45,16 +45,16 @@ public final class ByteBufBytes implements Bytes, ResourceLeakHint {
     @Nullable
     private byte[] array;
 
-    public static ByteBufBytes of(ByteBuf buf, boolean pooled) {
-        return new ByteBufBytes(buf, pooled);
-    }
-
     /**
      * Creates a new instance.
      */
-    public ByteBufBytes(ByteBuf buf, boolean pooled) {
+    protected ByteBufBytes(ByteBuf buf, boolean pooled) {
         this.buf = requireNonNull(buf, "buf");
         this.pooled = pooled;
+    }
+
+    protected ByteBuf buf() {
+        return buf;
     }
 
     @Override
@@ -250,7 +250,7 @@ public final class ByteBufBytes implements Bytes, ResourceLeakHint {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof ByteBufBytes)) {
+        if (!(obj instanceof Bytes)) {
             return false;
         }
 
@@ -258,7 +258,7 @@ public final class ByteBufBytes implements Bytes, ResourceLeakHint {
             return true;
         }
 
-        final ByteBufBytes that = (ByteBufBytes) obj;
+        final Bytes that = (Bytes) obj;
         if (buf.readableBytes() != that.length()) {
             return false;
         }

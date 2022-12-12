@@ -25,6 +25,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -39,12 +41,17 @@ import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceIm
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceBlockingStub;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
+import com.linecorp.armeria.grpc.testing.UnitTestBarServiceGrpc.UnitTestBarServiceBlockingStub;
+import com.linecorp.armeria.grpc.testing.UnitTestBarServiceGrpc.UnitTestBarServiceImplBase;
+import com.linecorp.armeria.grpc.testing.UnitTestFooServiceGrpc.UnitTestFooServiceBlockingStub;
+import com.linecorp.armeria.grpc.testing.UnitTestFooServiceGrpc.UnitTestFooServiceImplBase;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.Decorator;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
@@ -56,6 +63,12 @@ class GrpcDecoratingServiceTest {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.requestTimeoutMillis(5000);
+            sb.decorator(LoggingService.newDecorator());
+            sb.decorator((delegate, ctx, req) -> {
+                // We can aggregate request if it's not a streaming request.
+                req.aggregate();
+                return delegate.serve(ctx, req);
+            });
             sb.service(GrpcService.builder()
                                   .addService(new TestServiceImpl())
                                   .addService(new MetricsServiceImpl())
@@ -63,6 +76,18 @@ class GrpcDecoratingServiceTest {
                                   .addService("/foo", new FooTestServiceImpl())
                                   .addService("/bar", new BarTestServiceImpl(),
                                               TestServiceGrpc.getUnaryCallMethod())
+                                  .addService(new UnitTestFooServiceImpl(),
+                                              ImmutableList.of(
+                                                      delegate -> delegate.decorate(new SecondDecorator())))
+                                  .addService(new UnitTestBarServiceImpl(),
+                                              ImmutableList.of(
+                                                      delegate -> delegate.decorate(new SecondDecorator()),
+                                                      delegate -> delegate.decorate(new ThirdDecorator())
+                                              ))
+                                  .addService("/foo/bar",
+                                              new UnitTestFooServiceImpl(),
+                                              ImmutableList.of(
+                                                      delegate -> delegate.decorate(new SecondDecorator())))
                                   .build());
         }
     };
@@ -139,6 +164,53 @@ class GrpcDecoratingServiceTest {
         assertThat(client.unaryCall(SimpleRequest.getDefaultInstance()).getUsername()).isEqualTo("bar user");
         assertThat(decorators.poll()).isEqualTo("FourthDecorator");
         assertThat(decorators.poll()).isEqualTo("MethodFourthDecorator");
+        assertThat(decorators).isEmpty();
+    }
+
+    @Test
+    void withAdditionalDecorators() {
+        final UnitTestFooServiceBlockingStub client = GrpcClients.newClient(
+                server.httpUri(), UnitTestFooServiceBlockingStub.class);
+        assertThat(client.staticUnaryCall(SimpleRequest.getDefaultInstance()))
+                .isEqualTo(SimpleResponse.getDefaultInstance());
+        assertThat(decorators.poll()).isEqualTo("SecondDecorator");
+        assertThat(decorators.poll()).isEqualTo("FirstDecorator");
+        assertThat(decorators.poll()).isEqualTo("MethodFirstDecorator");
+        assertThat(decorators).isEmpty();
+    }
+
+    @Test
+    void onlyAdditionalDecorators() {
+        final UnitTestBarServiceBlockingStub client = GrpcClients.newClient(
+                server.httpUri(), UnitTestBarServiceBlockingStub.class);
+        assertThat(client.staticUnaryCall(SimpleRequest.getDefaultInstance()))
+                .isEqualTo(SimpleResponse.getDefaultInstance());
+        assertThat(decorators.poll()).isEqualTo("SecondDecorator");
+        assertThat(decorators.poll()).isEqualTo("ThirdDecorator");
+        assertThat(decorators).isEmpty();
+    }
+
+    @Test
+    void prefixAndAdditionalDecorators() {
+        final UnitTestFooServiceBlockingStub client = GrpcClients
+                .builder(server.httpUri())
+                .decorator((delegate, ctx, req) -> {
+                    final String path = req.path();
+                    final HttpRequest newReq = req.mapHeaders(
+                            headers -> headers.toBuilder()
+                                              .path(path.replace(
+                                                      "armeria.grpc.testing.UnitTestFooService",
+                                                      "foo/bar"))
+                                              .build());
+                    ctx.updateRequest(newReq);
+                    return delegate.execute(ctx, newReq);
+                })
+                .build(UnitTestFooServiceBlockingStub.class);
+        assertThat(client.staticUnaryCall(SimpleRequest.getDefaultInstance()))
+                .isEqualTo(SimpleResponse.getDefaultInstance());
+        assertThat(decorators.poll()).isEqualTo("SecondDecorator");
+        assertThat(decorators.poll()).isEqualTo("FirstDecorator");
+        assertThat(decorators.poll()).isEqualTo("MethodFirstDecorator");
         assertThat(decorators).isEmpty();
     }
 
@@ -296,6 +368,24 @@ class GrpcDecoratingServiceTest {
         @Override
         public void start(Empty request, StreamObserver<Empty> responseObserver) {
             responseObserver.onNext(Empty.getDefaultInstance());
+            responseObserver.onCompleted();
+        }
+    }
+
+    @Decorator(FirstDecorator.class)
+    private static class UnitTestFooServiceImpl extends UnitTestFooServiceImplBase {
+        @Decorator(MethodFirstDecorator.class)
+        @Override
+        public void staticUnaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onNext(SimpleResponse.getDefaultInstance());
+            responseObserver.onCompleted();
+        }
+    }
+
+    private static class UnitTestBarServiceImpl extends UnitTestBarServiceImplBase {
+        @Override
+        public void staticUnaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            responseObserver.onNext(SimpleResponse.getDefaultInstance());
             responseObserver.onCompleted();
         }
     }

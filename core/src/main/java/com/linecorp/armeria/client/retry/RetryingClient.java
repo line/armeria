@@ -30,11 +30,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestDuplicator;
@@ -49,6 +49,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 import com.linecorp.armeria.internal.client.ClientPendingThrowableUtil;
+import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
 import io.netty.handler.codec.DateFormatter;
@@ -244,15 +245,16 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
             final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
             doExecute0(ctx, reqDuplicator, req, res, responseFuture);
         } else {
-            req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((agg, cause) -> {
-                if (cause != null) {
-                    handleException(ctx, null, responseFuture, cause, true);
-                } else {
-                    final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
-                    doExecute0(ctx, reqDuplicator, req, res, responseFuture);
-                }
-                return null;
-            });
+            req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
+               .handle((agg, cause) -> {
+                   if (cause != null) {
+                       handleException(ctx, null, responseFuture, cause, true);
+                   } else {
+                       final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
+                       doExecute0(ctx, reqDuplicator, req, res, responseFuture);
+                   }
+                   return null;
+               });
         }
         return res;
     }
@@ -309,14 +311,15 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
 
         final HttpResponse response;
         final EndpointGroup endpointGroup = derivedCtx.endpointGroup();
-        if (!initialAttempt && derivedCtx instanceof DefaultClientRequestContext &&
+        final ClientRequestContextExtension ctxExtension = derivedCtx.as(ClientRequestContextExtension.class);
+        if (!initialAttempt && ctxExtension != null &&
             endpointGroup != null && derivedCtx.endpoint() == null) {
             // clear the pending throwable to retry endpoint selection
             ClientPendingThrowableUtil.removePendingThrowable(derivedCtx);
             // if the endpoint hasn't been selected, try to initialize the ctx with a new endpoint/event loop
-            final DefaultClientRequestContext casted = (DefaultClientRequestContext) derivedCtx;
-            response = initContextAndExecuteWithFallback(unwrap(), casted, endpointGroup, HttpResponse::from,
-                                                         (context, cause) -> HttpResponse.ofFailure(cause));
+            response = initContextAndExecuteWithFallback(
+                    unwrap(), ctxExtension, endpointGroup, HttpResponse::from,
+                    (context, cause) -> HttpResponse.ofFailure(cause));
         } else {
             response = executeWithFallback(unwrap(), derivedCtx,
                                            (context, cause) -> HttpResponse.ofFailure(cause));
@@ -326,14 +329,39 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
         if (!ctx.exchangeType().isResponseStreaming() || config.requiresResponseTrailers()) {
             // XXX(ikhoon): Should we use `response.aggregateWithPooledObjects()`?
             response.aggregate().handle((aggregated, cause) -> {
-                final HttpResponse response0 = cause != null ? HttpResponse.ofFailure(cause) : null;
+                if (cause != null) {
+                    derivedCtx.logBuilder().endResponse(cause);
+                    handleResponseWithoutContent(config, ctx, rootReqDuplicator, originalReq, returnedRes,
+                                                 future, derivedCtx, HttpResponse.ofFailure(cause), cause);
+                    return null;
+                }
                 handleResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes, future, derivedCtx,
-                               response0, aggregated);
+                               null, aggregated);
                 return null;
             });
         } else {
             handleResponse(config, ctx, rootReqDuplicator, originalReq, returnedRes,
                            future, derivedCtx, response, null);
+        }
+    }
+
+    private void handleResponseWithoutContent(RetryConfig<HttpResponse> config, ClientRequestContext ctx,
+                                              HttpRequestDuplicator rootReqDuplicator, HttpRequest originalReq,
+                                              HttpResponse returnedRes, CompletableFuture<HttpResponse> future,
+                                              ClientRequestContext derivedCtx, HttpResponse response,
+                                              @Nullable Throwable responseCause) {
+        try {
+            final RetryRule retryRule = retryRule(config);
+            final CompletionStage<RetryDecision> f = retryRule.shouldRetry(derivedCtx, responseCause);
+            f.handle((decision, shouldRetryCause) -> {
+                warnIfExceptionIsRaised(retryRule, shouldRetryCause);
+                handleRetryDecision(decision, ctx, derivedCtx, rootReqDuplicator,
+                                    originalReq, returnedRes, future, response);
+                return null;
+            });
+        } catch (Throwable cause) {
+            response.abort();
+            handleException(ctx, rootReqDuplicator, future, cause, false);
         }
     }
 
@@ -393,23 +421,10 @@ public final class RetryingClient extends AbstractRetryingClient<HttpRequest, Ht
                 }
                 return;
             }
-            try {
-                final RetryRule retryRule = retryRule(retryConfig);
-                final CompletionStage<RetryDecision> f = retryRule.shouldRetry(derivedCtx, responseCause);
-                final HttpResponse response0 = aggregatedRes != null ? aggregatedRes.toHttpResponse()
-                                                                     : response;
-                f.handle((decision, cause) -> {
-                    warnIfExceptionIsRaised(retryRule, cause);
-                    handleRetryDecision(decision, ctx, derivedCtx, rootReqDuplicator,
-                                        originalReq, returnedRes, future, response0);
-                    return null;
-                });
-            } catch (Throwable cause) {
-                if (response != null) {
-                    response.abort(cause);
-                }
-                handleException(ctx, rootReqDuplicator, future, cause, false);
-            }
+            final HttpResponse response0 = aggregatedRes != null ? aggregatedRes.toHttpResponse()
+                                                                 : response;
+            handleResponseWithoutContent(retryConfig, ctx, rootReqDuplicator, originalReq, returnedRes,
+                                         future, derivedCtx, response0, responseCause);
         });
     }
 

@@ -126,6 +126,6 @@ public abstract class Http2ObjectEncoder implements HttpObjectEncoder {
 
     @Override
     public boolean isClosed() {
-        return closed;
+        return closed || !channel().isActive();
     }
 }

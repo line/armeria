@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -29,19 +29,12 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufUtil;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.buffer.Unpooled;
-import io.netty.util.internal.EmptyArrays;
 import it.unimi.dsi.fastutil.io.FastByteArrayInputStream;
 
 /**
  * A {@code byte[]}-based {@link Bytes}.
  */
-public final class ByteArrayBytes implements Bytes {
-
-    private static final Bytes empty = new ByteArrayBytes(EmptyArrays.EMPTY_BYTES);
-
-    public static Bytes empty() {
-        return empty;
-    }
+public class ByteArrayBytes implements Bytes {
 
     private static final byte[] SAFE_OCTETS = new byte[256];
 
@@ -53,16 +46,12 @@ public final class ByteArrayBytes implements Bytes {
         }
     }
 
-    public static ByteArrayBytes of(byte[] array) {
-        return new ByteArrayBytes(array);
-    }
-
     private final byte[] array;
 
     /**
      * Creates a new instance.
      */
-    private ByteArrayBytes(byte[] array) {
+    protected ByteArrayBytes(byte[] array) {
         this.array = requireNonNull(array, "array");
     }
 
@@ -176,7 +165,7 @@ public final class ByteArrayBytes implements Bytes {
 
     @Override
     public boolean equals(Object obj) {
-        if (!(obj instanceof ByteArrayBytes)) {
+        if (!(obj instanceof Bytes)) {
             return false;
         }
 
@@ -184,7 +173,7 @@ public final class ByteArrayBytes implements Bytes {
             return true;
         }
 
-        final ByteArrayBytes that = (ByteArrayBytes) obj;
+        final Bytes that = (Bytes) obj;
         if (length() != that.length()) {
             return false;
         }

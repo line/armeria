@@ -212,16 +212,43 @@ files into the specific location in the class path.
   ```java
   import com.linecorp.armeria.server.annotation.Description;
 
-  @Description("A service that provides user information.")
+  @Description(value = "### A service that provides user information.", markup=Markup.MARKDOWN)
   public class UserService {
 
       @Get("/users/{id}")
       @Description("Retrieves the user information by the given user ID.")
-      public User getUser(@Param("id") @Description("the user ID") String id) { ... }
+      public User getUser(
+            @Param("id") @Description("the user ID") String id,
+            @Param("userType") @Description("the user type") UserType userType
+      ) { ... }
 
       ...
   }
+
+  public class User {
+      @Description("User Identification")
+      private String id;
+
+      @Description("User name")
+      private String name;
+  }
+
+  @Description(value = "flowchart LR\n" +
+                       " ADMIN --- USER",
+               markup = Markup.MERMAID)
+  public enum UserType {
+      @Description(value = "`Admin` type", markup = Markup.MARKDOWN)
+      ADMIN,
+      @Description(value = "`User` type", markup = Markup.MARKDOWN)
+      USER;
+  }
   ```
+
+  <Tip>
+
+  You can render the description as [Markdown](https://github.github.com/gfm/) or [Mermaid](https://mermaid-js.github.io/mermaid/#/) using <type://Markup>.
+
+  </Tip>
 
   Using JavaDoc:
 

@@ -197,7 +197,7 @@ public final class WebSocketService extends AbstractHttpService {
     }
 
     // Generate Sec-WebSocket-Accept using Sec-WebSocket-Key.
-    // See https://datatracker.ietf.org/doc/html/rfc6455#section-11.3.3
+    // See https://datatracker.ietf.org/doc/html/rfc6455#section-11-3-3
     private static String generateSecWebSocketAccept(String webSocketKey) {
         final String acceptSeed = webSocketKey + WEBSOCKET_13_ACCEPT_GUID;
         final byte[] sha1 = Hashing.sha1().hashBytes(acceptSeed.getBytes(StandardCharsets.US_ASCII)).asBytes();

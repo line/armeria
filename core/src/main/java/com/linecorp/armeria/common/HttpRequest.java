@@ -48,7 +48,6 @@ import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.internal.common.DefaultHttpRequest;
 import com.linecorp.armeria.internal.common.DefaultSplitHttpRequest;
-import com.linecorp.armeria.internal.common.HttpMessageAggregator;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBufAllocator;
@@ -332,6 +331,7 @@ public interface HttpRequest extends Request, HttpMessage {
 
     /**
      * Returns the value of the {@code 'content-type'} header.
+     *
      * @return the valid header value if present, or {@code null} otherwise.
      */
     @Nullable
@@ -358,7 +358,9 @@ public interface HttpRequest extends Request, HttpMessage {
      * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
      * and also referenced in
      * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
+     *
      * @param supportedLocales an {@link Iterable} of {@link Locale}s supported by the server.
+     *
      * @return The best matching {@link Locale} or {@code null} if no {@link Locale} matches.
      */
     @Nullable
@@ -375,7 +377,9 @@ public interface HttpRequest extends Request, HttpMessage {
      * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.4">RFC2616 Accept-Language (obsoleted)</a>
      * and also referenced in
      * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.5">RFC7231 Accept-Language</a>.
+     *
      * @param supportedLocales {@link Locale}s supported by the server.
+     *
      * @return The best matching {@link Locale} or {@code null} if no {@link Locale} matches.
      */
     @Nullable
@@ -452,8 +456,34 @@ public interface HttpRequest extends Request, HttpMessage {
     }
 
     /**
+     * Aggregates this request with the specified {@link AggregationOptions}. The returned
+     * {@link CompletableFuture} will be notified when the content and the trailers of the request are
+     * fully received.
+     * <pre>{@code
+     * AggregationOptions options =
+     *     AggregationOptions.builder()
+     *                       .cacheResult(false)
+     *                       .executor(...)
+     *                       .build();
+     * HttpRequest request = ...;
+     * AggregatedHttpRequest aggregated = request.aggregate(options).join();
+     * }</pre>
+     */
+    @UnstableApi
+    CompletableFuture<AggregatedHttpRequest> aggregate(AggregationOptions options);
+
+    /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the request is received fully.
+     *
+     * <p>The {@link AggregatedHttpRequest} is cached by default. So you can repeatedly call this method and
+     * get the cached value after the first aggregation.
+     * <pre>{@code
+     * HttpRequest request = ...;
+     * AggregatedHttpRequest aggregated0 = request.aggregate().join();
+     * AggregatedHttpRequest aggregated1 = request.aggregate().join();
+     * assert aggregated0 == aggregated1;
+     * }</pre>
      */
     default CompletableFuture<AggregatedHttpRequest> aggregate() {
         return aggregate(defaultSubscriberExecutor());
@@ -462,10 +492,22 @@ public interface HttpRequest extends Request, HttpMessage {
     /**
      * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
      * the trailers of the request is received fully.
+     *
+     * <p>The {@link AggregatedHttpRequest} is cached by default. So you can repeatedly call this method and
+     * get the cached value after the first aggregation.
+     * <pre>{@code
+     * HttpRequest request = ...;
+     * AggregatedHttpRequest aggregated0 = request.aggregate(executor).join();
+     * AggregatedHttpRequest aggregated1 = request.aggregate(executor).join();
+     * assert aggregated0 == aggregated1;
+     * }</pre>
      */
     default CompletableFuture<AggregatedHttpRequest> aggregate(EventExecutor executor) {
         requireNonNull(executor, "executor");
-        return HttpMessageAggregator.aggregateRequest(this, executor, null);
+        return aggregate(AggregationOptions.builder()
+                                           .executor(executor)
+                                           .cacheResult(true)
+                                           .build());
     }
 
     /**
@@ -474,24 +516,53 @@ public interface HttpRequest extends Request, HttpMessage {
      * {@link AggregatedHttpRequest#content()} will return a pooled object, and the caller must ensure
      * to release it. If you don't know what this means, use {@link #aggregate()}.
      *
+     * <p>The pooled {@link AggregatedHttpRequest} is not cached. So it is NOT allowed to access the
+     * {@link AggregatedHttpRequest} from this method after the first aggregation.
+     * <pre>{@code
+     * HttpRequest request = ...;
+     * AggregatedHttpRequest aggregated = request.aggregateWithPooledObjects(alloc).join();
+     * // An `IllegalStateException` will be raised.
+     * request.aggregateWithPooledObjects(alloc).join();
+     * }</pre>
+     *
      * @see PooledObjects
+     *
+     * @deprecated Use {@link #aggregate(AggregationOptions)} with
+     *             {@link AggregationOptions#usePooledObjects(ByteBufAllocator)}.
      */
+    @Deprecated
     @UnstableApi
     default CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(ByteBufAllocator alloc) {
         return aggregateWithPooledObjects(defaultSubscriberExecutor(), alloc);
     }
 
     /**
-     * Aggregates this request. The returned {@link CompletableFuture} will be notified when the content and
-     * the trailers of the request is received fully. {@link AggregatedHttpRequest#content()} will
-     * return a pooled object, and the caller must ensure to release it. If you don't know what this means,
-     * use {@link #aggregate()}.
+     * (Advanced users only) Aggregates this request. The returned {@link CompletableFuture} will be notified
+     * when the content and the trailers of the request is received fully.
+     * {@link AggregatedHttpRequest#content()} will return a pooled object, and the caller must ensure to
+     * release it. If you don't know what this means, use {@link #aggregate()}.
+     *
+     * <p>The pooled {@link AggregatedHttpRequest} is not cached. So it is NOT allowed to access the
+     * {@link AggregatedHttpRequest} from this method after the first aggregation.
+     * <pre>{@code
+     * HttpRequest request = ...;
+     * AggregatedHttpRequest aggregated = request.aggregateWithPooledObjects(executor, alloc).join();
+     * // An `IllegalStateException` will be raised.
+     * request.aggregateWithPooledObjects(executor, alloc).join();
+     * }</pre>
+     *
+     * @deprecated Use {@link #aggregate(AggregationOptions)} with
+     *             {@link AggregationOptions#usePooledObjects(ByteBufAllocator)}.
      */
+    @Deprecated
     default CompletableFuture<AggregatedHttpRequest> aggregateWithPooledObjects(
             EventExecutor executor, ByteBufAllocator alloc) {
         requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        return HttpMessageAggregator.aggregateRequest(this, executor, alloc);
+        return aggregate(AggregationOptions.builder()
+                                           .executor(executor)
+                                           .usePooledObjects(alloc)
+                                           .build());
     }
 
     @Override

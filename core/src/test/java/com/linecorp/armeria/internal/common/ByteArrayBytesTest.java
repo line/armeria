@@ -31,7 +31,7 @@ class ByteArrayBytesTest {
     @Test
     void arrayBacked() {
         final byte[] array = { 1, 2, 3, 4 };
-        final ByteArrayBytes data = ByteArrayBytes.of(array);
+        final ByteArrayBytes data = new ByteArrayBytes(array);
         assertThat(data.array()).isSameAs(array);
         assertThat(data.byteBuf().array()).isSameAs(array);
         assertThat(data.isEmpty()).isFalse();
@@ -44,7 +44,7 @@ class ByteArrayBytesTest {
     @EnumSource(value = ByteBufAccessMode.class, names = { "DUPLICATE", "RETAINED_DUPLICATE" })
     void duplicateOrSlice(ByteBufAccessMode mode) {
         final byte[] array = { 1, 2, 3, 4 };
-        final ByteArrayBytes data = ByteArrayBytes.of(array);
+        final ByteArrayBytes data = new ByteArrayBytes(array);
         final ByteBuf buf = data.byteBuf(mode);
         assertThat(buf.isDirect()).isFalse();
         assertThat(buf.readableBytes()).isEqualTo(4);
@@ -65,7 +65,7 @@ class ByteArrayBytesTest {
 
     @Test
     void directCopy() {
-        final ByteArrayBytes data = ByteArrayBytes.of(new byte[] { 1, 2, 3, 4 });
+        final ByteArrayBytes data = new ByteArrayBytes(new byte[] { 1, 2, 3, 4 });
         final ByteBuf buf = data.byteBuf(ByteBufAccessMode.FOR_IO);
         assertThat(buf.isDirect()).isTrue();
         assertThat(buf.readableBytes()).isEqualTo(4);
@@ -81,24 +81,24 @@ class ByteArrayBytesTest {
 
     @Test
     void hash() {
-        final ByteArrayBytes data = ByteArrayBytes.of(new byte[] { 2, 3, 4, 5 });
+        final ByteArrayBytes data = new ByteArrayBytes(new byte[] { 2, 3, 4, 5 });
         assertThat(data.hashCode()).isEqualTo(((2 * 31 + 3) * 31 + 4) * 31 + 5);
 
         // Ensure 33rd+ bytes are ignored.
         final byte[] bigArray = new byte[33];
         bigArray[32] = 1;
-        final ByteArrayBytes bigData = ByteArrayBytes.of(bigArray);
+        final ByteArrayBytes bigData = new ByteArrayBytes(bigArray);
         assertThat(bigData.hashCode()).isZero();
     }
 
     @Test
     void equals() {
-        final ByteArrayBytes a = ByteArrayBytes.of(new byte[] { 1, 2, 3, 4 });
-        final ByteArrayBytes b = ByteArrayBytes.of(new byte[] { 1, 2, 3, 4 });
-        final ByteArrayBytes c = ByteArrayBytes.of(new byte[] { 1, 2, 3 });
-        final ByteArrayBytes d = ByteArrayBytes.of(new byte[] { 4, 5, 6, 7 });
+        final ByteArrayBytes a = new ByteArrayBytes(new byte[] { 1, 2, 3, 4 });
+        final ByteArrayBytes b = new ByteArrayBytes(new byte[] { 1, 2, 3, 4 });
+        final ByteArrayBytes c = new ByteArrayBytes(new byte[] { 1, 2, 3 });
+        final ByteArrayBytes d = new ByteArrayBytes(new byte[] { 4, 5, 6, 7 });
         final ByteBufBytes bufData =
-                ByteBufBytes.of(Unpooled.directBuffer().writeInt(0x01020304), true);
+                new ByteBufBytes(Unpooled.directBuffer().writeInt(0x01020304), true);
 
         assertThat(a).isEqualTo(a);
         assertThat(a).isEqualTo(b);
@@ -112,12 +112,11 @@ class ByteArrayBytesTest {
 
     @Test
     void testToString() {
-        assertThat(ByteArrayBytes.empty()).hasToString("{0B}");
-        assertThat(ByteArrayBytes.of(new byte[] { 'f', 'o', 'o' })).hasToString("{3B, text=foo}");
-        assertThat(ByteArrayBytes.of(new byte[] { 1, 2, 3 })).hasToString("{3B, hex=010203}");
+        assertThat(new ByteArrayBytes(new byte[] { 'f', 'o', 'o' })).hasToString("{3B, text=foo}");
+        assertThat(new ByteArrayBytes(new byte[] { 1, 2, 3 })).hasToString("{3B, hex=010203}");
 
         // Longer than 16 bytes
-        assertThat(ByteArrayBytes.of(new byte[] {
+        assertThat(new ByteArrayBytes(new byte[] {
                 '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f', -1
         })).hasToString("{17B, text=0123456789abcdef}");
     }

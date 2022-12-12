@@ -135,7 +135,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         if (!endStream) {
             final HttpResponse res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, false);
             convertHeaders(headers, res.headers(), isTrailersEmpty);
-            maybeSetTransferEncoding(res);
+            maybeSetTransferEncoding(res, statusCode);
             return res;
         }
 
@@ -145,12 +145,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         convertHeaders(headers, outHeaders, isTrailersEmpty);
 
         if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
-            if (statusCode == 304) {
-                // 304 response can have the "content-length" header when it is a response to a conditional
-                // GET request. See https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
-            } else {
-                outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
-            }
+            maybeRemoveContentLength(statusCode, outHeaders);
         } else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
             // NB: Set the 'content-length' only when not set rather than always setting to 0.
             //     It's because a response to a HEAD request can have empty content while having
@@ -182,13 +177,27 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         }
     }
 
-    private static void maybeSetTransferEncoding(HttpMessage out) {
-        final io.netty.handler.codec.http.HttpHeaders outHeaders = out.headers();
-        final long contentLength = HttpUtil.getContentLength(out, -1L);
-        if (contentLength < 0) {
-            // Use chunked encoding.
-            outHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+    private static void maybeRemoveContentLength(int statusCode,
+                                                 io.netty.handler.codec.http.HttpHeaders outHeaders) {
+        if (statusCode == 304) {
+            // 304 response can have the "content-length" header when it is a response to a conditional
+            // GET request. See https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
+        } else {
             outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+        }
+    }
+
+    private static void maybeSetTransferEncoding(HttpMessage out, int statusCode) {
+        final io.netty.handler.codec.http.HttpHeaders outHeaders = out.headers();
+        if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
+            maybeRemoveContentLength(statusCode, outHeaders);
+        } else {
+            final long contentLength = HttpUtil.getContentLength(out, -1L);
+            if (contentLength < 0) {
+                // Use chunked encoding.
+                outHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+                outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+            }
         }
     }
 

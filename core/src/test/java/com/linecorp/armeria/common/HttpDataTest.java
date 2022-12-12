@@ -156,4 +156,81 @@ class HttpDataTest {
         assertThat(HttpData.ofAscii((CharSequence) "가A").toStringUtf8()).isEqualTo("?A");
         assertThat(HttpData.ofAscii(CharBuffer.wrap("あB")).toStringUtf8()).isEqualTo("?B");
     }
+
+    @Test
+    void empty() {
+        final HttpData data = ByteArrayHttpData.EMPTY;
+        assertThat(data.array()).isEmpty();
+        assertThat(data.byteBuf()).isSameAs(Unpooled.EMPTY_BUFFER);
+        assertThat(data.isEmpty()).isTrue();
+        assertThat(data.isEndOfStream()).isFalse();
+        assertThat(data.withEndOfStream()).isSameAs(ByteArrayHttpData.EMPTY_EOS);
+        assertThat(data.withEndOfStream(false)).isSameAs(data);
+        assertThat(data.isPooled()).isFalse();
+
+        for (int i = 0; i < 2; i++) {
+            // close() should not release anything.
+            data.close();
+            assertThat(data.byteBuf().refCnt()).isOne();
+        }
+    }
+
+    @Test
+    void emptyEoS() {
+        final HttpData data = ByteArrayHttpData.EMPTY_EOS;
+        assertThat(data.array()).isEmpty();
+        assertThat(data.byteBuf()).isSameAs(Unpooled.EMPTY_BUFFER);
+        assertThat(data.isEmpty()).isTrue();
+        assertThat(data.isEndOfStream()).isTrue();
+        assertThat(data.withEndOfStream()).isSameAs(data);
+        assertThat(data.withEndOfStream(false)).isSameAs(ByteArrayHttpData.EMPTY);
+        assertThat(data.isPooled()).isFalse();
+    }
+
+    @Test
+    void arrayBacked() {
+        final byte[] array = { 1, 2, 3, 4 };
+        final HttpData data = HttpData.wrap(array);
+        assertThat(data.array()).isSameAs(array);
+        assertThat(data.byteBuf().array()).isSameAs(array);
+        assertThat(data.isEmpty()).isFalse();
+        assertThat(data.length()).isEqualTo(4);
+        assertThat(data.isEndOfStream()).isFalse();
+        assertThat(data.withEndOfStream(false)).isSameAs(data);
+        assertThat(data.toInputStream()).hasBinaryContent(array);
+        assertThat(data.isPooled()).isFalse();
+
+        final HttpData dataEoS = data.withEndOfStream();
+        assertThat(dataEoS.array()).isSameAs(array);
+        assertThat(dataEoS.byteBuf().array()).isSameAs(array);
+        assertThat(dataEoS.isEmpty()).isFalse();
+        assertThat(dataEoS.length()).isSameAs(4);
+        assertThat(dataEoS.isEndOfStream()).isTrue();
+        assertThat(dataEoS.withEndOfStream()).isSameAs(dataEoS);
+        assertThat(dataEoS.withEndOfStream(false).isEndOfStream()).isFalse();
+        assertThat(dataEoS.toInputStream()).hasBinaryContent(array);
+        assertThat(dataEoS.isPooled()).isFalse();
+    }
+
+    @Test
+    void unpooled() {
+        final byte[] array = { 1, 2, 3, 4 };
+        final ByteBuf buf = Unpooled.wrappedBuffer(array);
+        final HttpData data = new ByteBufHttpData(buf, false);
+        assertThat(data.isPooled()).isFalse();
+        assertThat(data.length()).isEqualTo(4);
+        assertThat(data.array()).isSameAs(buf.array());
+        assertThat(data.array()).isSameAs(data.array()); // Should be cached
+        assertThat(data.withEndOfStream(false)).isSameAs(data);
+
+        final HttpData dataEoS = data.withEndOfStream();
+        assertThat(dataEoS.isPooled()).isFalse();
+        assertThat(dataEoS.array()).isSameAs(data.array());
+        assertThat(dataEoS.withEndOfStream()).isSameAs(dataEoS);
+
+        // close() on an unpooled data should not release the buffer.
+        data.close();
+        assertThat(buf.refCnt()).isOne();
+        buf.release();
+    }
 }

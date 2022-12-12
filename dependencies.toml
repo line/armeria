@@ -1,0 +1,1139 @@
+[versions]
+akka = "2.6.20"
+akka-http-cors = "1.0.0"
+akka-grpc-runtime = "1.0.3"
+apache-httpclient = "4.5.13"
+assertj = "3.23.1"
+awaitility = "4.2.0"
+bouncycastle = "1.70"
+brave = "5.14.0"
+brotli4j = "1.8.0"
+bucket4j = "7.6.0"
+caffeine = "2.9.3"
+cglib = "3.3.0"
+checkerframework = "2.5.5"
+checkstyle = "10.3.2"
+consul = "2.2.1"
+curator = "5.3.0"
+dagger = "2.44"
+dgs = "5.2.4"
+dropwizard1 = "1.3.29"
+dropwizard2 = "2.1.1"
+dropwizard-metrics = "4.2.12"
+errorprone = "2.15.0"
+errorprone-gradle-plugin = "2.0.2"
+eureka = "1.10.17"
+fastutil = "8.5.9"
+finagle = "22.7.0"
+findbugs = "3.0.2"
+futures-completable = "0.3.5"
+futures-extra = "4.3.1"
+gax-grpc = "2.19.1"
+graphql-java = "19.2"
+graphql-kotlin = "6.2.5"
+groovy = "3.0.13"
+grpc-java = "1.49.1"
+grpc-kotlin = "1.3.0"
+guava = "31.1-jre"
+hamcrest = "2.2"
+hbase = "1.2.6"
+hibernate-validator = "6.2.3.Final"
+j2objc = "1.3"
+jackson = "2.13.4"
+java-websocket = "1.5.3"
+javax-annotation = "1.3.2"
+javax-inject = "1"
+javax-jsr311 = "1.1.1"
+javax-validation = "2.0.1.Final"
+jctools = "4.0.1"
+jetty93 = '9.3.30.v20211001'
+jetty94 = "9.4.48.v20220622"
+jetty-alpn-api = "1.1.3.v20160715"
+jetty-alpn-agent = "2.0.10"
+jmh-core = "1.35"
+jmh-extras = "0.3.7"
+jmh-gradle-plugin = "0.6.8"
+joor = "0.9.14"
+json-unit = "2.35.0"
+jsoup = "1.15.3"
+junit4 = "4.13.2"
+junit5 = "5.9.1"
+junit-pioneer = "1.7.1"
+jwt = "4.0.0"
+kafka = "3.3.0"
+kotlin = "1.7.20"
+kotlin-coroutine = "1.6.4"
+ktlint-gradle-plugin = "11.0.0"
+logback = "1.2.11"
+micrometer = "1.9.4"
+micrometer13 = "1.3.20"
+mockito = "4.8.0"
+monix = "3.4.1"
+munit = "0.7.29"
+netty = "4.1.82.Final"
+netty-incubator-transport-native-io_uring = "0.0.15.Final"
+nexus-publish = "1.1.0"
+node-gradle-plugin = "3.4.0"
+okhttp2 = "2.7.5"
+okhttp3 = { strictly = "3.14.9" }
+okhttp4 = "4.10.0"
+opensaml = "3.4.6"
+osdetector = "1.7.1"
+proguard = "7.2.2"
+prometheus = "0.16.0"
+protobuf = "3.21.1"
+protobuf-gradle-plugin = "0.8.19"
+protobuf-jackson = "2.0.0"
+reactive-grpc = "1.2.3"
+reactive-streams = "1.0.4"
+reactor = "3.4.23"
+reactor-kotlin = "1.1.7"
+reflections = "0.9.11"
+resteasy = "5.0.4.Final"
+resteasy-jboss-logging = "3.4.3.Final"
+resteasy-jboss-logging-annotations = "2.2.1.Final"
+retrofit2 = "2.9.0"
+rxjava2 = "2.2.21"
+rxjava3 = "3.1.5"
+sangria = "3.3.0"
+sangria-slowlog = "2.0.4"
+scala-collection-compat = "2.8.1"
+scala-java8-compat = "1.0.2"
+scala212 = "2.12.17"
+scala213 = "2.13.9"
+scala3 = "3.2.0"
+scalafmt-gradle-plugin = "1.16.2"
+scalapb = "0.11.11"
+scalapb-json = "0.12.0"
+shadow-gradle-plugin = "6.1.0"
+shibboleth-utilities = "7.5.2"
+snappy = "1.1.8.4"
+slf4j = "1.7.36"
+spring = "5.3.23"
+spring-boot1 = "1.5.22.RELEASE"
+spring-boot2 = "2.7.4"
+testng = "7.5"
+thrift09 = { strictly = "0.9.3-1" }
+thrift012 = { strictly = "0.12.0" }
+thrift013 = { strictly = "0.13.0" }
+thrift014 = { strictly = "0.14.2" }
+thrift015 = { strictly = "0.15.0" }
+thrift016 = { strictly = "0.16.0" }
+tomcat8 = "8.5.81"
+tomcat9 = "9.0.65"
+xml-apis = "1.4.01"
+zookeeper = "3.6.3"
+zookeeper-junit = "1.2"
+
+[boms]
+brave = { module = "io.zipkin.brave:brave-bom", version.ref = "brave" }
+dropwizard-metrics = { module = "io.dropwizard.metrics:metrics-bom", version.ref = "dropwizard-metrics" }
+# Ensure that we use the same Protobuf version as what gRPC depends on.
+# See: https://github.com/grpc/grpc-java/blob/master/gradle/libs.versions.toml
+#      (Switch to the right tag and look for "protobuf".)
+grpc-java = { module = "io.grpc:grpc-bom", version.ref = "grpc-java" }
+jackson = { module = "com.fasterxml.jackson:jackson-bom", version.ref = "jackson" }
+junit5 = { module = "org.junit:junit-bom", version.ref = "junit5" }
+netty = { module = "io.netty:netty-bom", version.ref = "netty" }
+
+# Akka is used only for testing in it:grpcweb module.
+[libraries.akka-http-cors_v213]
+module = "ch.megard:akka-http-cors_2.13"
+version.ref = "akka-http-cors"
+[libraries.akka-grpc-runtime_v213]
+module = "com.lightbend.akka.grpc:akka-grpc-runtime_2.13"
+version.ref = "akka-grpc-runtime"
+[libraries.akka-actor-typed_v213]
+module = "com.typesafe.akka:akka-actor-typed_2.13"
+version.ref = "akka"
+[libraries.akka-discovery_v213]
+module = "com.typesafe.akka:akka-discovery_2.13"
+version.ref = "akka"
+[libraries.akka-stream_v213]
+module = "com.typesafe.akka:akka-stream_2.13"
+version.ref = "akka"
+
+[libraries.apache-httpclient]
+module = "org.apache.httpcomponents:httpclient"
+version.ref = "apache-httpclient"
+exclusions = "commons-logging:commons-logging"
+
+[libraries.assertj]
+module = "org.assertj:assertj-core"
+version.ref = "assertj"
+
+[libraries.awaitility]
+module = "org.awaitility:awaitility"
+version.ref = "awaitility"
+
+[libraries.bouncycastle-bcpkix]
+module = "org.bouncycastle:bcpkix-jdk15on"
+version.ref = "bouncycastle"
+relocations = { from = "org.bouncycastle", to = "com.linecorp.armeria.internal.shaded.bouncycastle" }
+[libraries.bouncycastle-bcprov]
+module = "org.bouncycastle:bcprov-jdk15on"
+version.ref = "bouncycastle"
+relocations = { from = "org.bouncycastle", to = "com.linecorp.armeria.internal.shaded.bouncycastle" }
+[libraries.bouncycastle-bcutil]
+module = "org.bouncycastle:bcutil-jdk15on"
+version.ref = "bouncycastle"
+relocations = { from = "org.bouncycastle", to = "com.linecorp.armeria.internal.shaded.bouncycastle" }
+
+[libraries.brave]
+module = "io.zipkin.brave:brave"
+# ":site:javadoc" fails when we use a newer version of Javadoc.
+javadocs = [
+    "https://www.javadoc.io/doc/io.zipkin.brave/brave/5.6.3/",
+    "https://www.javadoc.io/doc/io.zipkin.brave/brave-instrumentation-http/5.6.3/"]
+[libraries.brave-context-slf4j]
+module = 'io.zipkin.brave:brave-context-slf4j'
+[libraries.brave-instrumentation-http]
+module = "io.zipkin.brave:brave-instrumentation-http"
+[libraries.brave-instrumentation-http-tests]
+module = "io.zipkin.brave:brave-instrumentation-http-tests"
+
+[libraries.brotli4j]
+module = "com.aayushatharva.brotli4j:brotli4j"
+version.ref = "brotli4j"
+[libraries.brotli4j-linux]
+module = "com.aayushatharva.brotli4j:native-linux-x86_64"
+version.ref = "brotli4j"
+[libraries.brotli4j-osx]
+module = "com.aayushatharva.brotli4j:native-osx-x86_64"
+version.ref = "brotli4j"
+[libraries.brotli4j-windows]
+module = "com.aayushatharva.brotli4j:native-windows-x86_64"
+version.ref = "brotli4j"
+
+[libraries.bucket4j]
+module = "com.github.vladimir-bukhtoyarov:bucket4j-core"
+version.ref = "bucket4j"
+javadocs = "https://javadoc.io/doc/com.github.vladimir-bukhtoyarov/bucket4j-core/7.6.0/"
+
+# Don"t upgrade Caffeine to 3.x that requires Java 11.
+[libraries.caffeine]
+module = "com.github.ben-manes.caffeine:caffeine"
+version.ref = "caffeine"
+exclusions = "com.google.errorprone:error_prone_annotations"
+javadocs = "https://www.javadoc.io/doc/com.github.ben-manes.caffeine/caffeine/2.9.3/"
+relocations = { from = "com.github.benmanes.caffeine", to = "com.linecorp.armeria.internal.shaded.caffeine" }
+
+[libraries.cglib]
+module = "cglib:cglib"
+version.ref = "cglib"
+
+[libraries.checkerframework]
+module = "org.checkerframework:checker-compat-qual"
+version.ref = "checkerframework"
+
+[libraries.checkstyle]
+module = "com.puppycrawl.tools:checkstyle"
+version.ref = "checkstyle"
+
+[libraries.consul]
+module = "com.pszymczyk.consul:embedded-consul"
+version.ref = "consul"
+
+# Ensure that we use the same ZooKeeper version as what Curator depends on.
+# See: https://github.com/apache/curator/blob/master/pom.xml
+#      (Switch to the right tag to find out the right version.)
+[libraries.curator-recipes]
+module = "org.apache.curator:curator-recipes"
+version.ref = "curator"
+javadocs = [
+    "https://www.javadoc.io/doc/org.apache.curator/curator-framework/5.3.0/",
+    "https://www.javadoc.io/doc/org.apache.curator/curator-recipes/5.3.0/"]
+exclusions = "org.apache.zookeeper:zookeeper"
+[libraries.curator-discovery]
+module = "org.apache.curator:curator-x-discovery"
+version.ref = "curator"
+javadocs = "https://www.javadoc.io/doc/org.apache.curator/curator-x-discovery/5.3.0/"
+
+# This is only used for examples/context-propagation/dagger
+[libraries.dagger]
+module = "com.google.dagger:dagger"
+version.ref = "dagger"
+[libraries.dagger-compiler]
+module = "com.google.dagger:dagger-compiler"
+version.ref = "dagger"
+[libraries.dagger-producers]
+module = "com.google.dagger:dagger-producers"
+version.ref = "dagger"
+
+# DGS is used only for testing in it:dgs module.
+[libraries.dgs]
+module = "com.netflix.graphql.dgs:graphql-dgs-client"
+version.ref = "dgs"
+[libraries.dropwizard1-core]
+module = "io.dropwizard:dropwizard-core"
+version.ref = "dropwizard1"
+[libraries.dropwizard1-util]
+module = "io.dropwizard:dropwizard-util"
+version.ref = "dropwizard1"
+[libraries.dropwizard1-lifecycle]
+module = "io.dropwizard:dropwizard-lifecycle"
+version.ref = "dropwizard1"
+[libraries.dropwizard1-jackson]
+module = "io.dropwizard:dropwizard-jackson"
+version.ref = "dropwizard1"
+[libraries.dropwizard1-validation]
+module = "io.dropwizard:dropwizard-validation"
+version.ref = "dropwizard1"
+[libraries.dropwizard1-jersey]
+module = "io.dropwizard:dropwizard-jersey"
+version.ref = "dropwizard1"
+[libraries.dropwizard1-jetty]
+module = "io.dropwizard:dropwizard-jetty"
+version.ref = "dropwizard1"
+[libraries.dropwizard1-testing]
+module = "io.dropwizard:dropwizard-testing"
+version.ref = "dropwizard1"
+
+[libraries.dropwizard2-core]
+module = "io.dropwizard:dropwizard-core"
+version.ref = "dropwizard2"
+javadocs = "https://www.javadoc.io/doc/io.dropwizard/dropwizard-core/2.1.1/"
+[libraries.dropwizard2-jackson]
+module = "io.dropwizard:dropwizard-jackson"
+version.ref = "dropwizard2"
+[libraries.dropwizard2-lifecycle]
+module = "io.dropwizard:dropwizard-lifecycle"
+version.ref = "dropwizard2"
+[libraries.dropwizard2-jersey]
+module = "io.dropwizard:dropwizard-jersey"
+version.ref = "dropwizard2"
+[libraries.dropwizard2-jetty]
+module = "io.dropwizard:dropwizard-jetty"
+version.ref = "dropwizard2"
+[libraries.dropwizard2-testing]
+module = "io.dropwizard:dropwizard-testing"
+version.ref = "dropwizard2"
+[libraries.dropwizard2-util]
+module = "io.dropwizard:dropwizard-util"
+version.ref = "dropwizard2"
+[libraries.dropwizard2-validation]
+module = "io.dropwizard:dropwizard-validation"
+version.ref = "dropwizard2"
+
+[libraries.dropwizard-metrics-core]
+module = "io.dropwizard.metrics:metrics-core"
+[libraries.dropwizard-metrics-json]
+module = "io.dropwizard.metrics:metrics-json"
+
+[libraries.errorprone-core]
+module = "com.google.errorprone:error_prone_core"
+version.ref = "errorprone"
+[libraries.errorprone-annotations]
+module = "com.google.errorprone:error_prone_annotations"
+version.ref = "errorprone"
+
+# Eureka is used only for testing in eureka module.
+[libraries.eureka-client]
+module = "com.netflix.eureka:eureka-client"
+version.ref = "eureka"
+[libraries.eureka-test-utils]
+module = "com.netflix.eureka:eureka-test-utils"
+version.ref = "eureka"
+
+[libraries.fastutil]
+module = "it.unimi.dsi:fastutil"
+version.ref = "fastutil"
+relocations = { from = "it.unimi.dsi.fastutil", to = "com.linecorp.armeria.internal.shaded.fastutil" }
+
+# Finagle is used only for testing in zookeeper module.
+[libraries.finagle-serversets_v213]
+module = "com.twitter:finagle-serversets_2.13"
+version.ref = "finagle"
+
+[libraries.findbugs]
+module = "com.google.code.findbugs:jsr305"
+version.ref = "findbugs"
+
+[libraries.futures-completable]
+module = "com.spotify:completable-futures"
+version.ref = "futures-completable"
+relocations = { from = "com.spotify.futures", to = "com.linecorp.armeria.internal.shaded.futures" }
+[libraries.futures-extra]
+module = "com.spotify:futures-extra"
+version.ref = "futures-extra"
+
+# gax-grpc is only used for gRPC test module.
+[libraries.gax-grpc]
+module = "com.google.api:gax-grpc"
+version.ref = "gax-grpc"
+
+[libraries.graphql-java]
+module = "com.graphql-java:graphql-java"
+version.ref = "graphql-java"
+
+[libraries.graphql-kotlin-client]
+module = "com.expediagroup:graphql-kotlin-client"
+version.ref = "graphql-kotlin"
+[libraries.graphql-kotlin-client-jackson]
+module = "com.expediagroup:graphql-kotlin-client-jackson"
+version.ref = "graphql-kotlin"
+[libraries.graphql-kotlin-client-serialization]
+module = "com.expediagroup:graphql-kotlin-client-serialization"
+version.ref = "graphql-kotlin"
+[libraries.graphql-kotlin-schema-generator]
+module = "com.expediagroup:graphql-kotlin-schema-generator"
+version.ref = "graphql-kotlin"
+
+# Groovy is only used for testing consul
+[libraries.groovy-xml]
+module = "org.codehaus.groovy:groovy-xml"
+version.ref = "groovy"
+
+[libraries.grpc-core]
+module = "io.grpc:grpc-core"
+javadocs = [
+    "https://grpc.io/grpc-java/javadoc/",
+    "https://developers.google.com/protocol-buffers/docs/reference/java/"]
+exclusions = [
+    "com.google.errorprone:error_prone_annotations",
+    "org.codehaus.mojo:animal-sniffer-annotations"]
+[libraries.grpc-interop-testing]
+module = "io.grpc:grpc-interop-testing"
+exclusions = [
+    "com.google.errorprone:error_prone_annotations",
+    "com.google.guava:guava-jdk5",
+    "com.google.j2objc:j2objc-annotations",
+    "io.grpc:grpc-alts",
+    "io.grpc:grpc-xds",
+    "io.netty:netty-codec-http",
+    "io.netty:netty-codec-http2",
+    "io.netty:netty-codec-socks",
+    "io.netty:netty-handler-proxy",
+    "io.netty:netty-transport",
+    "io.netty:netty-tcnative-boringssl-static"]
+[libraries.grpc-protobuf]
+module = "io.grpc:grpc-protobuf"
+[libraries.grpc-services]
+module = "io.grpc:grpc-services"
+[libraries.grpc-stub]
+module = "io.grpc:grpc-stub"
+[libraries.grpc-okhttp]
+module = "io.grpc:grpc-okhttp"
+[libraries.grpc-testing]
+module = 'io.grpc:grpc-testing'
+[libraries.grpc-netty-shaded]
+module = "io.grpc:grpc-netty-shaded"
+
+[libraries.grpc-kotlin]
+module = "io.grpc:grpc-kotlin-stub"
+version.ref = "grpc-kotlin"
+
+[libraries.grpc-kotlin-protoc]
+module = "io.grpc:protoc-gen-grpc-kotlin"
+version.ref = "grpc-kotlin"
+
+[libraries.guava]
+module = "com.google.guava:guava"
+version.ref = "guava"
+exclusions = [
+    "com.google.errorprone:error_prone_annotations",
+    "com.google.j2objc:j2objc-annotations",
+    "org.codehaus.mojo:animal-sniffer-annotations"]
+relocations = [
+    { from = "com.google.common", to = "com.linecorp.armeria.internal.shaded.guava" },
+    { from = "com.google.thirdparty.publicsuffix", to = "com.linecorp.armeria.internal.shaded.publicsuffix" }]
+[libraries.guava-testlib]
+module = "com.google.guava:guava-testlib"
+version.ref = "guava"
+exclusions = ["com.google.errorprone:error_prone_annotations", "com.google.j2objc:j2objc-annotations"]
+relocations = { from = "com.google.common", to = "com.linecorp.armeria.internal.shaded.guava" }
+# A transitive dependency of Guava which needs relocation as well.
+[libraries.guava-failureaccess]
+module = "com.google.guava:failureaccess"
+version = "1.0.1"
+exclusions = ["com.google.errorprone:error_prone_annotations", "com.google.j2objc:j2objc-annotations"]
+relocations = { from = "com.google.common", to = "com.linecorp.armeria.internal.shaded.guava" }
+
+[libraries.hamcrest]
+module = "org.hamcrest:hamcrest"
+version.ref = "hamcrest"
+[libraries.hamcrest-library]
+module = "org.hamcrest:hamcrest-library"
+version.ref = "hamcrest"
+
+# This is only used for it/server test
+[libraries.hbase]
+module = "org.apache.hbase:hbase-shaded-client"
+version.ref = "hbase"
+exclusions = [
+    "com.github.stephenc.findbugs:findbugs-annotations",
+    "commons-logging:commons-logging",
+    "log4j:log4j",
+    "org.slf4j:slf4j-log4j12"]
+
+# Validator is only used for examples and testings in Spring
+# version 7 starts using jakarta api, which isn't compatible with spring-boot2
+[libraries.hibernate-validator]
+module = "org.hibernate.validator:hibernate-validator"
+version.ref = "hibernate-validator"
+
+# We do not depend on j2objc-annotations. We just need this to stop Javadoc from
+# complaining about "unknown enum constant Level.FULL".
+[libraries.j2objc]
+module = "com.google.j2objc:j2objc-annotations"
+version.ref = "j2objc"
+
+[libraries.jackson-annotations]
+module = "com.fasterxml.jackson.core:jackson-annotations"
+javadocs = "https://fasterxml.github.io/jackson-annotations/javadoc/2.13/"
+[libraries.jackson-core]
+module = "com.fasterxml.jackson.core:jackson-core"
+javadocs = "https://fasterxml.github.io/jackson-core/javadoc/2.13/"
+[libraries.jackson-databind]
+module = "com.fasterxml.jackson.core:jackson-databind"
+javadocs = "https://fasterxml.github.io/jackson-databind/javadoc/2.13/"
+[libraries.jackson-datatype-jdk8]
+module = "com.fasterxml.jackson.datatype:jackson-datatype-jdk8"
+javadocs = "https://fasterxml.github.io/jackson-modules-java8/javadoc/datatypes/2.13/"
+[libraries.jackson-datatype-jsr310]
+module = "com.fasterxml.jackson.datatype:jackson-datatype-jsr310"
+javadocs = "https://fasterxml.github.io/jackson-modules-java8/javadoc/datetime/2.13/"
+[libraries.jackson-kotlin]
+module = "com.fasterxml.jackson.module:jackson-module-kotlin"
+[libraries.jackson-scala_v212]
+module = "com.fasterxml.jackson.module:jackson-module-scala_2.12"
+[libraries.jackson-scala_v213]
+module = "com.fasterxml.jackson.module:jackson-module-scala_2.13"
+[libraries.jackson-scala_v3]
+module = "com.fasterxml.jackson.module:jackson-module-scala_3"
+
+
+# java-websocket is only used for testing in it:websocket module.
+[libraries.java-websocket]
+module = "org.java-websocket:Java-WebSocket"
+version.ref = "java-websocket"
+
+[libraries.javax-annotation]
+module = "javax.annotation:javax.annotation-api"
+version.ref = "javax-annotation"
+[libraries.javax-inject]
+module = "javax.inject:javax.inject"
+version.ref = "javax-inject"
+[libraries.javax-jsr311]
+module = "javax.ws.rs:jsr311-api"
+version.ref = "javax-jsr311"
+[libraries.javax-validation]
+module = "javax.validation:validation-api"
+version.ref = "javax-validation"
+# Ensure that we use the same javax.ws.rs version as what eureka-client depends on.
+# See: https://github.com/Netflix/eureka/blob/master/eureka-client/build.gradle
+
+[libraries.jctools]
+module = "org.jctools:jctools-core"
+version.ref = "jctools"
+relocations = { from = "org.jctools", to = "com.linecorp.armeria.internal.shaded.jctools" }
+
+[libraries.jetty93-annotations]
+module = "org.eclipse.jetty:jetty-annotations"
+exclusions = ["org.ow2.asm:asm", "org.ow2.asm:asm-commons"]
+version.ref = "jetty93"
+[libraries.jetty93-server]
+module = "org.eclipse.jetty:jetty-server"
+javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/9.4.42.v20210604/"
+version.ref = "jetty93"
+# jetty-webapp for testing interoperability with other servers.
+[libraries.jetty93-webapp]
+module = "org.eclipse.jetty:jetty-webapp"
+version.ref = "jetty93"
+[libraries.jetty93-apache-jsp]
+module = "org.eclipse.jetty:apache-jsp"
+version.ref = "jetty93"
+[libraries.jetty93-apache-jstl]
+module = "org.eclipse.jetty:apache-jstl"
+version.ref = "jetty93"
+
+[libraries.jetty94-annotations]
+module = "org.eclipse.jetty:jetty-annotations"
+exclusions = ["org.ow2.asm:asm", "org.ow2.asm:asm-commons"]
+version.ref = "jetty94"
+[libraries.jetty94-server]
+module = "org.eclipse.jetty:jetty-server"
+javadocs = "https://javadoc.io/doc/org.eclipse.jetty/jetty-server/9.4.42.v20210604/"
+version.ref = "jetty94"
+# jetty-webapp for testing interoperability with other servers.
+[libraries.jetty94-webapp]
+module = "org.eclipse.jetty:jetty-webapp"
+version.ref = "jetty94"
+[libraries.jetty94-http2-server]
+module = "org.eclipse.jetty.http2:http2-server"
+version.ref = "jetty94"
+[libraries.jetty94-apache-jsp]
+module = "org.eclipse.jetty:apache-jsp"
+version.ref = "jetty94"
+[libraries.jetty94-apache-jstl]
+module = "org.eclipse.jetty:apache-jstl"
+version.ref = "jetty94"
+
+[libraries.jetty-alpn-api]
+module = "org.eclipse.jetty.alpn:alpn-api"
+version.ref = "jetty-alpn-api"
+[libraries.jetty-alpn-agent]
+module = "org.mortbay.jetty.alpn:jetty-alpn-agent"
+version.ref = "jetty-alpn-agent"
+
+[libraries.jmh-extras]
+module = "pl.project13.scala:sbt-jmh-extras"
+version.ref = "jmh-extras"
+
+[libraries.joor]
+module = "org.jooq:joor"
+version.ref = "joor"
+
+[libraries.json-unit]
+module = "net.javacrumbs.json-unit:json-unit"
+version.ref = "json-unit"
+[libraries.json-unit-fluent]
+module = "net.javacrumbs.json-unit:json-unit-fluent"
+version.ref = "json-unit"
+
+# JSoup is only used for Gradle script and SAML testing.
+[libraries.jsoup]
+module = "org.jsoup:jsoup"
+version.ref = "jsoup"
+
+[libraries.junit4]
+module = "junit:junit"
+version.ref = "junit4"
+javadocs = "https://junit.org/junit4/javadoc/4.13/"
+
+[libraries.junit5-jupiter-api]
+module = "org.junit.jupiter:junit-jupiter-api"
+# ":site:javadoc" fails when we use a newer version of Javadoc.
+javadocs = "https://junit.org/junit5/docs/5.5.2/api/"
+[libraries.junit5-jupiter-params]
+module = "org.junit.jupiter:junit-jupiter-params"
+[libraries.junit5-jupiter-engine]
+module = "org.junit.jupiter:junit-jupiter-engine"
+[libraries.junit5-vintage-engine]
+module = "org.junit.vintage:junit-vintage-engine"
+[libraries.junit5-platform-commons]
+module = "org.junit.platform:junit-platform-commons"
+[libraries.junit5-platform-launcher]
+module = "org.junit.platform:junit-platform-launcher"
+
+[libraries.junit-pioneer]
+module = "org.junit-pioneer:junit-pioneer"
+version.ref = "junit-pioneer"
+
+[libraries.jwt]
+module = "com.auth0:java-jwt"
+version.ref = "jwt"
+javadocs = "https://www.javadoc.io/doc/com.auth0/java-jwt/4.0.0/"
+
+[libraries.kafka]
+module = "org.apache.kafka:kafka-clients"
+version.ref = "kafka"
+javadocs = "https://kafka.apache.org/30/javadoc/"
+
+[libraries.kotlin-allopen]
+module = "org.jetbrains.kotlin:kotlin-allopen"
+version.ref = "kotlin"
+[libraries.kotlin-stdlib-jdk8]
+module = "org.jetbrains.kotlin:kotlin-stdlib-jdk8"
+version.ref = "kotlin"
+[libraries.kotlin-reflect]
+module = "org.jetbrains.kotlin:kotlin-reflect"
+version.ref = "kotlin"
+
+[libraries.kotlin-coroutines-core]
+module = "org.jetbrains.kotlinx:kotlinx-coroutines-core"
+version.ref = "kotlin-coroutine"
+[libraries.kotlin-coroutines-jdk8]
+module = "org.jetbrains.kotlinx:kotlinx-coroutines-jdk8"
+version.ref = "kotlin-coroutine"
+# kotlinx-coroutines-reactor is only used for testing :it:spring:boot2-kotlin
+[libraries.kotlin-coroutines-reactor]
+module = "org.jetbrains.kotlinx:kotlinx-coroutines-reactor"
+version.ref = "kotlin-coroutine"
+[libraries.kotlin-coroutines-rx2]
+module = "org.jetbrains.kotlinx:kotlinx-coroutines-rx2"
+version.ref = "kotlin-coroutine"
+
+# Don't upgrade Logback 1.4.0 which requires Java 11
+# TODO(ikhoon): Upgrade Logback to 1.3.0 when Spring Boot 2 supports it.
+[libraries.logback]
+module = "ch.qos.logback:logback-classic"
+version.ref = "logback"
+javadocs = "https://www.javadoc.io/doc/ch.qos.logback/logback-classic/1.2.11/"
+
+[libraries.micrometer-core]
+module = "io.micrometer:micrometer-core"
+version.ref = "micrometer"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-core/1.9.4/"
+[libraries.micrometer-prometheus]
+module = "io.micrometer:micrometer-registry-prometheus"
+version.ref = "micrometer"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-registry-prometheus/1.9.4/"
+[libraries.micrometer-spring-legacy]
+module = "io.micrometer:micrometer-spring-legacy"
+version.ref = "micrometer"
+javadocs = "https://www.javadoc.io/doc/io.micrometer/micrometer-spring-legacy/1.3.9/"
+exclusions = ["org.springframework:spring-web", "org.springframework:spring-webmvc"]
+
+[libraries.micrometer13-core]
+module = "io.micrometer:micrometer-core"
+version.ref = "micrometer13"
+[libraries.micrometer13-prometheus]
+module = "io.micrometer:micrometer-registry-prometheus"
+version.ref = "micrometer13"
+[libraries.micrometer13-spring-legacy]
+module = "io.micrometer:micrometer-spring-legacy"
+version.ref = "micrometer13"
+exclusions = ["org.springframework:spring-web", "org.springframework:spring-webmvc"]
+
+[libraries.mockito]
+module = "org.mockito:mockito-core"
+version.ref = "mockito"
+[libraries.mockito-junit-jupiter]
+module = "org.mockito:mockito-junit-jupiter"
+version.ref = "mockito"
+
+[libraries.monix-reactive_v212]
+module = "io.monix:monix-reactive_2.12"
+version.ref = "monix"
+[libraries.monix-reactive_v213]
+module = "io.monix:monix-reactive_2.13"
+version.ref = "monix"
+[libraries.monix-reactive_v3]
+module = "io.monix:monix-reactive_3"
+version.ref = "monix"
+
+[libraries.munit_v212]
+module = "org.scalameta:munit_2.12"
+version.ref = "munit"
+[libraries.munit_v213]
+module = "org.scalameta:munit_2.13"
+version.ref = "munit"
+[libraries.munit_v3]
+module = "org.scalameta:munit_3"
+version.ref = "munit"
+
+[libraries.netty-codec-http2]
+module = "io.netty:netty-codec-http2"
+[libraries.netty-codec-haproxy]
+module = "io.netty:netty-codec-haproxy"
+[libraries.netty-common]
+module = "io.netty:netty-common"
+javadocs = "https://netty.io/4.1/api/"
+[libraries.netty-handler-proxy]
+module = "io.netty:netty-handler-proxy"
+[libraries.netty-transport]
+module = "io.netty:netty-transport"
+[libraries.netty-resolver-dns]
+module = "io.netty:netty-resolver-dns"
+[libraries.netty-resolver-dns-native-macos]
+module = "io.netty:netty-resolver-dns-native-macos"
+[libraries.netty-transport-native-unix-common]
+module = "io.netty:netty-transport-native-unix-common"
+[libraries.netty-transport-native-epoll]
+module = "io.netty:netty-transport-native-epoll"
+[libraries.netty-tcnative-boringssl]
+module = 'io.netty:netty-tcnative-boringssl-static'
+[libraries.netty-io_uring]
+module = "io.netty.incubator:netty-incubator-transport-native-io_uring"
+version.ref = "netty-incubator-transport-native-io_uring"
+
+[libraries.prometheus]
+module = "io.prometheus:simpleclient_common"
+version.ref = "prometheus"
+javadocs = "https://prometheus.github.io/client_java/"
+
+# Ensure that we use the same Protobuf version as what gRPC depends on.
+# See: https://github.com/grpc/grpc-java/blob/master/build.gradle
+#      (Switch to the right tag and look for "protobuf".)
+#      e.g. https://github.com/grpc/grpc-java/blob/v1.48.0/gradle/libs.versions.toml
+[libraries.protobuf-java]
+module = "com.google.protobuf:protobuf-java"
+version.ref = "protobuf"
+[libraries.protobuf-java-util]
+module = "com.google.protobuf:protobuf-java-util"
+version.ref = "protobuf"
+exclusions = "com.google.errorprone:error_prone_annotations"
+[libraries.protobuf-protoc]
+module = "com.google.protobuf:protoc"
+version.ref = "protobuf"
+[libraries.protobuf-gradle-plugin]
+module = "com.google.protobuf:protobuf-gradle-plugin"
+version.ref = "protobuf-gradle-plugin"
+
+[libraries.protobuf-jackson]
+module = "org.curioswitch.curiostack:protobuf-jackson"
+version.ref = "protobuf-jackson"
+exclusions = "javax.annotation:javax.annotation-api"
+javadocs = "https://developers.curioswitch.org/apidocs/java/"
+
+[libraries.reactor-core]
+module = "io.projectreactor:reactor-core"
+version.ref = "reactor"
+javadocs = "https://projectreactor.io/docs/core/release/api/"
+[libraries.reactor-test]
+module = "io.projectreactor:reactor-test"
+version.ref = "reactor"
+[libraries.reactor-kotlin]
+module = "io.projectreactor.kotlin:reactor-kotlin-extensions"
+version.ref = "reactor-kotlin"
+
+[libraries.reactor-grpc]
+module = "com.salesforce.servicelibs:reactor-grpc"
+version.ref = "reactive-grpc"
+[libraries.reactor-grpc-stub]
+module = "com.salesforce.servicelibs:reactor-grpc-stub"
+version.ref = "reactive-grpc"
+
+[libraries.resteasy-core]
+module = "org.jboss.resteasy:resteasy-core"
+version.ref = "resteasy"
+[libraries.resteasy-core-spi]
+module = "org.jboss.resteasy:resteasy-core-spi"
+version.ref = "resteasy"
+javadocs = "https://docs.jboss.org/resteasy/docs/5.0.2.Final/javadocs/"
+[libraries.resteasy-client]
+module = "org.jboss.resteasy:resteasy-client"
+version.ref = "resteasy"
+[libraries.resteasy-jackson2-provider]
+module = "org.jboss.resteasy:resteasy-jackson2-provider"
+version.ref = "resteasy"
+# "provided" dependency required by RESTEasy "resteasy-core-spi"
+# jboss 3.5.0 requires at least jdk 11
+[libraries.resteasy-jboss-logging]
+module = "org.jboss.logging:jboss-logging"
+version.ref = "resteasy-jboss-logging"
+javadocs = "https://javadoc.io/doc/org.jboss.logging/jboss-logging/3.4.3.Final/"
+[libraries.resteasy-jboss-logging-annotations]
+module = "org.jboss.logging:jboss-logging-annotations"
+version.ref = "resteasy-jboss-logging-annotations"
+javadocs = "https://javadoc.io/doc/org.jboss.logging/jboss-logging-annotations/2.2.1.Final/"
+
+[libraries.rxjava2]
+module = "io.reactivex.rxjava2:rxjava"
+version.ref = "rxjava2"
+javadocs = "http://reactivex.io/RxJava/2.x/javadoc/"
+[libraries.rxjava3]
+module = "io.reactivex.rxjava3:rxjava"
+version.ref = "rxjava3"
+javadocs = "http://reactivex.io/RxJava/3.x/javadoc/"
+
+[libraries.shibboleth-utilities]
+module = "net.shibboleth.utilities:java-support"
+version.ref = "shibboleth-utilities"
+
+# snappy-java is only used for testing zookeeper3 module.
+[libraries.snappy]
+module = "org.xerial.snappy:snappy-java"
+version.ref = "snappy"
+
+# Don"t upgrade OpenSAML to 4.x that requires Java 11.
+[libraries.opensaml-core]
+module = "org.opensaml:opensaml-core"
+version.ref = "opensaml"
+[libraries.opensaml-messaging-api]
+module = "org.opensaml:opensaml-messaging-api"
+version.ref = "opensaml"
+[libraries.opensaml-messaging-impl]
+module = "org.opensaml:opensaml-messaging-impl"
+version.ref = "opensaml"
+[libraries.opensaml-saml-api]
+module = "org.opensaml:opensaml-saml-api"
+version.ref = "opensaml"
+[libraries.opensaml-saml-impl]
+module = "org.opensaml:opensaml-saml-impl"
+version.ref = "opensaml"
+[libraries.opensaml-soap-api]
+module = "org.opensaml:opensaml-soap-api"
+version.ref = "opensaml"
+[libraries.opensaml-soap-impl]
+module = "org.opensaml:opensaml-soap-impl"
+version.ref = "opensaml"
+
+[libraries.okhttp2]
+module = "com.squareup.okhttp:okhttp"
+version = "2.7.5"
+[libraries.okhttp3]
+module = "com.squareup.okhttp:okhttp"
+version.ref = "okhttp3"
+[libraries.okhttp4]
+module = "com.squareup.okhttp3:okhttp"
+version.ref = "okhttp4"
+[libraries.okhttp4-tls]
+module = "com.squareup.okhttp3:okhttp-tls"
+version.ref = "okhttp4"
+
+[libraries.proguard]
+module = "com.guardsquare:proguard-gradle"
+version.ref = "proguard"
+
+[libraries.retrofit2]
+module = "com.squareup.retrofit2:retrofit"
+version.ref = "retrofit2"
+javadocs = "https://square.github.io/retrofit/2.x/retrofit/"
+[libraries.retrofit2-converter-jackson]
+module = "com.squareup.retrofit2:converter-jackson"
+version.ref = "retrofit2"
+
+[libraries.reactivestreams]
+module = "org.reactivestreams:reactive-streams"
+version.ref = "reactive-streams"
+[libraries.reactivestreams-tck]
+module = "org.reactivestreams:reactive-streams-tck"
+version.ref = "reactive-streams"
+exclusions = "org.yaml:snakeyaml"
+
+# Upgrade once https://github.com/ronmamo/reflections/issues/279 is fixed.
+[libraries.reflections]
+module = "org.reflections:reflections"
+version.ref = "reflections"
+exclusions = [
+    "com.google.errorprone:error_prone_annotations",
+    "com.google.j2objc:j2objc-annotations",
+    "org.codehaus.mojo:animal-sniffer-annotations"]
+relocations = { from = "org.reflections", to = "com.linecorp.armeria.internal.shaded.reflections" }
+
+[libraries.sangria_v212]
+module = "org.sangria-graphql:sangria_2.12"
+version.ref = "sangria"
+[libraries.sangria_v213]
+module = "org.sangria-graphql:sangria_2.13"
+version.ref = "sangria"
+[libraries.sangria-slowlog_v212]
+module = "org.sangria-graphql:sangria-slowlog_2.12"
+version.ref = "sangria-slowlog"
+[libraries.sangria-slowlog_v213]
+module = "org.sangria-graphql:sangria-slowlog_2.13"
+version.ref = "sangria-slowlog"
+
+# If you want to change `scala_v212` or `scala_v213`,
+# you also need to change the scala version in `scala.gradle`.
+[libraries.scala_v212]
+module = "org.scala-lang:scala-library"
+version.ref = "scala212"
+[libraries.scala_v213]
+module = "org.scala-lang:scala-library"
+version.ref = "scala213"
+[libraries.scala_v3]
+module = "org.scala-lang:scala3-library_3"
+version.ref = "scala3"
+
+[libraries.scala-collection-compat_v212]
+module = "org.scala-lang.modules:scala-collection-compat_2.12"
+version.ref = "scala-collection-compat"
+[libraries.scala-java8-compat_v212]
+module = "org.scala-lang.modules:scala-java8-compat_2.12"
+version.ref = "scala-java8-compat"
+[libraries.scala-java8-compat_v213]
+module = "org.scala-lang.modules:scala-java8-compat_2.13"
+version.ref = "scala-java8-compat"
+[libraries.scala-java8-compat_v3]
+module = "org.scala-lang.modules:scala-java8-compat_3"
+version.ref = "scala-java8-compat"
+
+[libraries.scalapb-runtime_v212]
+module = "com.thesamet.scalapb:scalapb-runtime_2.12"
+version.ref = "scalapb"
+[libraries.scalapb-runtime_v213]
+module = "com.thesamet.scalapb:scalapb-runtime_2.13"
+version.ref = "scalapb"
+[libraries.scalapb-runtime_v3]
+module = "com.thesamet.scalapb:scalapb-runtime_3"
+version.ref = "scalapb"
+[libraries.scalapb-runtime-grpc_v212]
+module = "com.thesamet.scalapb:scalapb-runtime-grpc_2.12"
+version.ref = "scalapb"
+[libraries.scalapb-runtime-grpc_v213]
+module = "com.thesamet.scalapb:scalapb-runtime-grpc_2.13"
+version.ref = "scalapb"
+[libraries.scalapb-runtime-grpc_v3]
+module = "com.thesamet.scalapb:scalapb-runtime-grpc_3"
+version.ref = "scalapb"
+[libraries.scalapb-json4s_v212]
+module = "com.thesamet.scalapb:scalapb-json4s_2.12"
+version.ref = "scalapb-json"
+[libraries.scalapb-json4s_v213]
+module = "com.thesamet.scalapb:scalapb-json4s_2.13"
+version.ref = "scalapb-json"
+[libraries.scalapb-json4s_v3]
+module = "com.thesamet.scalapb:scalapb-json4s_3"
+version.ref = "scalapb-json"
+
+[libraries.shadow-gradle-plugin]
+module = "com.github.jengelman.gradle.plugins:shadow"
+version.ref = "shadow-gradle-plugin"
+
+[libraries.slf4j-api]
+module = "org.slf4j:slf4j-api"
+version.ref = "slf4j"
+javadocs = "https://www.javadoc.io/doc/org.slf4j/slf4j-api/1.7.36/"
+[libraries.slf4j-jcl-over-slf4j]
+module = "org.slf4j:jcl-over-slf4j"
+version.ref = "slf4j"
+[libraries.slf4j-jul-to-slf4j]
+module = "org.slf4j:jul-to-slf4j"
+version.ref = "slf4j"
+[libraries.slf4j-log4j-over-slf4j]
+module = "org.slf4j:log4j-over-slf4j"
+version.ref = "slf4j"
+[libraries.slf4j-simple]
+module = "org.slf4j:slf4j-simple"
+version.ref = "slf4j"
+
+[libraries.spring-web]
+module = "org.springframework:spring-web"
+version.ref = "spring"
+
+[libraries.spring-boot1-autoconfigure]
+module = "org.springframework.boot:spring-boot-autoconfigure"
+version.ref = "spring-boot1"
+[libraries.spring-boot1-configuration-processor]
+module = "org.springframework.boot:spring-boot-configuration-processor"
+version.ref = "spring-boot1"
+[libraries.spring-boot1-starter]
+module = "org.springframework.boot:spring-boot-starter"
+version.ref = "spring-boot1"
+[libraries.spring-boot1-starter-test]
+module = "org.springframework.boot:spring-boot-starter-test"
+version.ref = "spring-boot1"
+
+[libraries.spring-boot2-actuator-autoconfigure]
+module = "org.springframework.boot:spring-boot-actuator-autoconfigure"
+version.ref = "spring-boot2"
+[libraries.spring-boot2-autoconfigure]
+module = "org.springframework.boot:spring-boot-autoconfigure"
+version.ref = "spring-boot2"
+[libraries.spring-boot2-starter]
+module = "org.springframework.boot:spring-boot-starter"
+version.ref = "spring-boot2"
+javadocs = "https://docs.spring.io/spring/docs/current/javadoc-api/"
+[libraries.spring-boot2-starter-actuator]
+module = "org.springframework.boot:spring-boot-starter-actuator"
+version.ref = "spring-boot2"
+[libraries.spring-boot2-starter-security]
+module = "org.springframework.boot:spring-boot-starter-security"
+version.ref = "spring-boot2"
+[libraries.spring-boot2-starter-test]
+module = "org.springframework.boot:spring-boot-starter-test"
+version.ref = "spring-boot2"
+[libraries.spring-boot2-starter-web]
+module = "org.springframework.boot:spring-boot-starter-web"
+version.ref = "spring-boot2"
+[libraries.spring-boot2-starter-webflux]
+module = "org.springframework.boot:spring-boot-starter-webflux"
+version.ref = "spring-boot2"
+exclusions = "org.springframework.boot:spring-boot-starter-reactor-netty"
+[libraries.spring-boot2-configuration-processor]
+module = "org.springframework.boot:spring-boot-configuration-processor"
+version.ref = "spring-boot2"
+
+# jdk 11 is required from testng version 7.6
+[libraries.testng]
+module = "org.testng:testng"
+version.ref = "testng"
+
+[libraries.thrift09]
+module = "org.apache.thrift:libthrift"
+version.ref = "thrift09"
+exclusions = [
+    "javax.annotation:javax.annotation-api",
+    "org.apache.httpcomponents:httpcore",
+    "org.apache.httpcomponents:httpclient"]
+[libraries.thrift012]
+module = "org.apache.thrift:libthrift"
+version.ref = "thrift012"
+exclusions = [
+    "javax.annotation:javax.annotation-api",
+    "org.apache.httpcomponents:httpcore",
+    "org.apache.httpcomponents:httpclient"]
+[libraries.thrift013]
+module = "org.apache.thrift:libthrift"
+version.ref = "thrift013"
+exclusions = [
+    "javax.annotation:javax.annotation-api",
+    "org.apache.httpcomponents:httpcore",
+    "org.apache.httpcomponents:httpclient"]
+[libraries.thrift014]
+module = "org.apache.thrift:libthrift"
+version.ref = "thrift014"
+exclusions = [
+    "javax.annotation:javax.annotation-api",
+    "org.apache.httpcomponents:httpcore",
+    "org.apache.httpcomponents:httpclient"]
+[libraries.thrift015]
+module = "org.apache.thrift:libthrift"
+version.ref = "thrift015"
+exclusions = [
+    "javax.annotation:javax.annotation-api",
+    "org.apache.httpcomponents:httpcore",
+    "org.apache.httpcomponents:httpclient"]
+[libraries.thrift016]
+module = "org.apache.thrift:libthrift"
+version.ref = "thrift016"
+javadocs = "https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.16.0/"
+exclusions = [
+    "javax.annotation:javax.annotation-api",
+    "org.apache.httpcomponents:httpcore",
+    "org.apache.httpcomponents:httpclient"]
+[libraries.thrift017]
+module = "org.apache.thrift:libthrift"
+version = { strictly = "0.17.0" }
+javadocs = "https://www.javadoc.io/doc/org.apache.thrift/libthrift/0.17.0/"
+exclusions = [
+    "javax.annotation:javax.annotation-api",
+    "org.apache.httpcomponents:httpcore",
+    "org.apache.httpcomponents:httpclient"]
+
+[libraries.tomcat8-core]
+module = "org.apache.tomcat.embed:tomcat-embed-core"
+version.ref = "tomcat8"
+javadocs = "https://tomcat.apache.org/tomcat-9.0-doc/api/"
+[libraries.tomcat8-jasper]
+module = "org.apache.tomcat.embed:tomcat-embed-jasper"
+version.ref = "tomcat8"
+[libraries.tomcat8-el]
+module = "org.apache.tomcat.embed:tomcat-embed-el"
+version.ref = "tomcat8"
+[libraries.tomcat9-core]
+module = "org.apache.tomcat.embed:tomcat-embed-core"
+version.ref = "tomcat9"
+javadocs = "https://tomcat.apache.org/tomcat-9.0-doc/api/"
+[libraries.tomcat9-jasper]
+module = "org.apache.tomcat.embed:tomcat-embed-jasper"
+version.ref = "tomcat9"
+[libraries.tomcat9-el]
+module = "org.apache.tomcat.embed:tomcat-embed-el"
+version.ref = "tomcat9"
+
+# Needed to work around the problem with Gradle not supporting POM relocation correctly.
+[libraries.xml-apis]
+module = "xml-apis:xml-apis"
+version.ref = "xml-apis"
+
+# Ensure that we use the same ZooKeeper version as what Curator depends on.
+# See: https://github.com/apache/curator/blob/master/pom.xml
+#      (Switch to the right tag to find out the right version.)
+[libraries.zookeeper]
+module = "org.apache.zookeeper:zookeeper"
+version.ref = "zookeeper"
+exclusions = [
+    "io.netty:netty-all",
+    "log4j:log4j",
+    "org.slf4j:slf4j-log4j12"]
+
+[libraries.zookeeper-junit]
+module = "org.dmonix.junit:zookeeper-junit"
+version.ref = "zookeeper-junit"
+
+[plugins]
+jmh = { id = "me.champeau.jmh", version.ref = "jmh-gradle-plugin" }
+osdetector = { id = "com.google.osdetector", version.ref = "osdetector" }
+kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-allopen = { id = "org.jetbrains.kotlin.plugin.allopen", version.ref = "kotlin" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+scalafmt = { id = "cz.alenkacz.gradle.scalafmt", version.ref = "scalafmt-gradle-plugin" }
+nexus-publish = { id = "io.github.gradle-nexus.publish-plugin", version.ref = "nexus-publish" }
+ktlint = { id = "org.jlleitschuh.gradle.ktlint", version.ref = "ktlint-gradle-plugin" }
+errorprone = { id = "net.ltgt.errorprone", version.ref = "errorprone-gradle-plugin" }
+node-gradle = { id = "com.github.node-gradle.node", version.ref = "node-gradle-plugin" }
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot2" }

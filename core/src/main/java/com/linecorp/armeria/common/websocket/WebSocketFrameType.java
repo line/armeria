@@ -20,7 +20,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 /**
  * Represents the {@link WebSocketFrame} types.
  *
- * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.2">Base Framing Protocol</a>
+ * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-2">Base Framing Protocol</a>
  */
 @UnstableApi
 public enum WebSocketFrameType {

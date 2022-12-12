@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpObject;
+import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
@@ -34,7 +35,7 @@ public final class WebSocketUtil {
     private static final AttributeKey<StreamWriter<HttpObject>> WEB_SOCKET_STREAM =
             AttributeKey.valueOf(WebSocketUtil.class, "WEB_SOCKET_STREAM");
 
-    public static void setWebSocketInboundStream(AttributeMap attributeMap, StreamWriter<HttpObject> writer) {
+    public static void setWebSocketInboundStream(AttributeMap attributeMap, HttpRequestWriter writer) {
         requireNonNull(attributeMap, "attributeMap");
         requireNonNull(writer, "writer");
         attributeMap.attr(WEB_SOCKET_STREAM).set(writer);
@@ -87,13 +88,8 @@ public final class WebSocketUtil {
                HttpHeaderValues.WEBSOCKET.contentEqualsIgnoreCase(headers.get(HttpHeaderNames.PROTOCOL));
     }
 
-    static int intMask(byte[] mask) {
-        // Remark: & 0xFF is necessary because Java will do signed expansion from
-        // byte to int which we don't want.
-        return ((mask[0] & 0xFF) << 24) |
-               ((mask[1] & 0xFF) << 16) |
-               ((mask[2] & 0xFF) << 8) |
-               (mask[3] & 0xFF);
+    static int byteAtIndex(int mask, int index) {
+        return (mask >> 8 * (3 - index)) & 0xFF;
     }
 
     private WebSocketUtil() {}

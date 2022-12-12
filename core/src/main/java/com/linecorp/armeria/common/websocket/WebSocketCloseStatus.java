@@ -30,8 +30,6 @@
  */
 package com.linecorp.armeria.common.websocket;
 
-import static io.netty.util.internal.ObjectUtil.checkNotNull;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -40,8 +38,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * <pre>
  *
  * RFC-6455 The WebSocket Protocol, December 2011:
- * <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4.1"
- *         >https://datatracker.ietf.org/doc/html/rfc6455#section-7.4.1</a>
+ * <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7-4-1"
+ *         >https://datatracker.ietf.org/doc/html/rfc6455#section-7-4-1</a>
  *
  * WebSocket Protocol Registries, April 2019:
  * <a href="https://www.iana.org/assignments/websocket/websocket.xhtml#close-code-number"
@@ -190,7 +188,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 @UnstableApi
 public final class WebSocketCloseStatus {
 
-    // Forked from Netty 4.1.69 at 34a31522f0145e2d434aaea2ef8ac5ed8d1a91a0
+    // Forked from Netty 4.1.85 at 7cc84285ea6f90f6af62fa465d1aafbbc497e889
 
     public static final WebSocketCloseStatus NORMAL_CLOSURE =
         new WebSocketCloseStatus(1000, "Bye");
@@ -232,90 +230,21 @@ public final class WebSocketCloseStatus {
     //public static final WebSocketCloseStatus SPECIFIC_MEANING = register(1004, "...");
 
     public static final WebSocketCloseStatus EMPTY =
-        new WebSocketCloseStatus(1005, "Empty", false);
+        new WebSocketCloseStatus(1005, "Empty");
 
     public static final WebSocketCloseStatus ABNORMAL_CLOSURE =
-        new WebSocketCloseStatus(1006, "Abnormal closure", false);
+        new WebSocketCloseStatus(1006, "Abnormal closure");
 
     public static final WebSocketCloseStatus TLS_HANDSHAKE_FAILED =
-        new WebSocketCloseStatus(1015, "TLS handshake failed", false);
-
-    private final int statusCode;
-    private final String reasonPhase;
-    @Nullable
-    private String text;
-
-    private WebSocketCloseStatus(int statusCode, String reasonPhase) {
-        this(statusCode, reasonPhase, true);
-    }
-
-    private WebSocketCloseStatus(int statusCode, String reasonPhase, boolean validate) {
-        if (validate && !isValidStatusCode(statusCode)) {
-            throw new IllegalArgumentException(
-                "WebSocket close status code does NOT comply with RFC-6455: " + statusCode);
-        }
-        this.statusCode = statusCode;
-        this.reasonPhase = checkNotNull(reasonPhase, "reasonPhase");
-    }
-
-    /**
-     * Returns the status code.
-     *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4">Status Codes</a>
-     */
-    public int code() {
-        return statusCode;
-    }
-
-    /**
-     * Returns the text that indicates the reason for closure.
-     *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7.4">Status Codes</a>
-     */
-    public String reasonPhase() {
-        return reasonPhase;
-    }
-
-    /**
-     * Equality of {@link WebSocketCloseStatus} only depends on {@link #code()}.
-     */
-    @Override
-    public boolean equals(Object o) {
-        if (this == o) {
-            return true;
-        }
-        if (null == o || getClass() != o.getClass()) {
-            return false;
-        }
-
-        final WebSocketCloseStatus that = (WebSocketCloseStatus) o;
-
-        return statusCode == that.statusCode;
-    }
-
-    @Override
-    public int hashCode() {
-        return statusCode;
-    }
-
-    @Override
-    public String toString() {
-        String text = this.text;
-        if (text == null) {
-            // E.g.: "1000 Bye", "1009 Message too big"
-            this.text = text = code() + " " + reasonPhase();
-        }
-        return text;
-    }
+        new WebSocketCloseStatus(1015, "TLS handshake failed");
 
     /**
      * Tells whether the {@code code} is valid.
      */
     public static boolean isValidStatusCode(int code) {
-        return code < 0 ||
-            1000 <= code && code <= 1003 ||
-            1007 <= code && code <= 1014 ||
-            3000 <= code;
+        return 1000 <= code && code <= 1003 ||
+               1007 <= code && code <= 1014 ||
+               3000 <= code;
     }
 
     /**
@@ -355,7 +284,70 @@ public final class WebSocketCloseStatus {
             case 1015:
                 return TLS_HANDSHAKE_FAILED;
             default:
+                if (!isValidStatusCode(code)) {
+                    throw new IllegalArgumentException(
+                            "WebSocket close status code does NOT comply with RFC-6455: " + code);
+                }
                 return new WebSocketCloseStatus(code, "Close status #" + code);
         }
+    }
+
+    private final int statusCode;
+    private final String reasonPhrase;
+    @Nullable
+    private String text;
+
+    private WebSocketCloseStatus(int statusCode, String reasonPhrase) {
+        this.statusCode = statusCode;
+        this.reasonPhrase = reasonPhrase;
+    }
+
+    /**
+     * Returns the status code.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7-4">Status Codes</a>
+     */
+    public int code() {
+        return statusCode;
+    }
+
+    /**
+     * Returns the text that indicates the reason for closure.
+     *
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-7-4">Status Codes</a>
+     */
+    public String reasonPhrase() {
+        return reasonPhrase;
+    }
+
+    /**
+     * Equality of {@link WebSocketCloseStatus} only depends on {@link #code()}.
+     */
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof WebSocketCloseStatus)) {
+            return false;
+        }
+        if (this == o) {
+            return true;
+        }
+        final WebSocketCloseStatus that = (WebSocketCloseStatus) o;
+
+        return statusCode == that.statusCode;
+    }
+
+    @Override
+    public int hashCode() {
+        return statusCode;
+    }
+
+    @Override
+    public String toString() {
+        String text = this.text;
+        if (text == null) {
+            // For example: "1000 Bye", "1009 Message too big"
+            this.text = text = code() + " " + reasonPhrase();
+        }
+        return text;
     }
 }

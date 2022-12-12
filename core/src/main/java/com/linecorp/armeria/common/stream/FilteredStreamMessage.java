@@ -48,7 +48,7 @@ import io.netty.util.concurrent.EventExecutor;
  * will happen from an I/O thread, meaning the order of the filtering will match the
  * order that the {@code delegate} processes the objects in.
  */
-public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
+public abstract class FilteredStreamMessage<T, U> extends AggregationSupport implements StreamMessage<U> {
 
     private static final Logger logger = LoggerFactory.getLogger(FilteredStreamMessage.class);
 
@@ -139,7 +139,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         final SubscriptionOption[] filterOptions = filterSupportsPooledObjects ? POOLED_OBJECTS : EMPTY_OPTIONS;
         return upstream.collect(executor, filterOptions).handle((result, cause) -> {
             // CollectingSubscriberAndSubscription just captures cancel(), onComplete(), and onError() signals
-            // from the sub class of FilteredStreamMessage. So we need to follow regular Reactive Streams
+            // from the subclass of FilteredStreamMessage. So we need to follow regular Reactive Streams
             // specifications.
             final CollectingSubscriberAndSubscription<U> subscriberAndSubscription =
                     new CollectingSubscriberAndSubscription<>();

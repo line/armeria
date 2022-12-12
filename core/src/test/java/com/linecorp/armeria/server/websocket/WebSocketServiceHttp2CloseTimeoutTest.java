@@ -39,8 +39,8 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
@@ -59,16 +59,16 @@ class WebSocketServiceHttp2CloseTimeoutTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final AbstractWebSocketHandler handler = new AbstractWebSocketHandler() {
+            final AbstractWebSocketHandler immediateClosingHandler = new AbstractWebSocketHandler() {
                 @Override
                 void onOpen(WebSocketWriter writer) {
                     writer.close();
                 }
             };
-            sb.service("/noCloseTimeout", WebSocketService.builder(handler)
+            sb.service("/noCloseTimeout", WebSocketService.builder(immediateClosingHandler)
                                                           .closeTimeoutMillis(Long.MAX_VALUE)
                                                           .build());
-            sb.service("/2000MillisTimeout", WebSocketService.builder(handler)
+            sb.service("/2000MillisTimeout", WebSocketService.builder(immediateClosingHandler)
                                                              .closeTimeoutMillis(2000)
                                                              .build());
         }
@@ -107,9 +107,9 @@ class WebSocketServiceHttp2CloseTimeoutTest {
 
         await().atLeast(1000, TimeUnit.MILLISECONDS) // buffer 1000 milliseconds
                .until(() -> requestWriter.whenComplete().isCompletedExceptionally());
-        // Request is aborted because the client didn't send the close frame.
+        // Because the client didn't send the close frame, the request is complete exceptionally.
         assertThatThrownBy(() -> requestWriter.whenComplete().join())
-                .hasCauseInstanceOf(AbortedStreamException.class);
+                .hasCauseInstanceOf(ResponseCompleteException.class);
         checkCloseFrame(bodySubscriber.messageQueue.take());
         // Response is completed normally because the client received close frame.
         bodySubscriber.whenComplete.join();

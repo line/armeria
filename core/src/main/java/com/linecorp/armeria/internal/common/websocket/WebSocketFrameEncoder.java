@@ -68,9 +68,7 @@
 
 package com.linecorp.armeria.internal.common.websocket;
 
-import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.intMask;
-
-import java.nio.ByteBuffer;
+import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.byteAtIndex;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -83,6 +81,7 @@ import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.TooLongFrameException;
+import io.netty.util.internal.ThreadLocalRandom;
 
 /**
  * <p>
@@ -92,12 +91,12 @@ import io.netty.handler.codec.TooLongFrameException;
  */
 public final class WebSocketFrameEncoder {
 
-    // Forked from Netty 4.1.69 at 34a31522f0145e2d434aaea2ef8ac5ed8d1a91a0
+    // Forked from Netty 4.1.85 at 7cc84285ea6f90f6af62fa465d1aafbbc497e889
 
     private static final Logger logger = LoggerFactory.getLogger(WebSocketFrameEncoder.class);
 
     /**
-     * The size threshold for gathering writes. Non-Masked messages bigger than this size will be be sent
+     * The size threshold for gathering writes. Non-Masked messages bigger than this size will be sent
      * fragmented as a header and a content ByteBuf whereas messages smaller than the size will be merged
      * into a single buffer and sent at once.<br>
      * Masked messages will always be sent at once.
@@ -130,19 +129,19 @@ public final class WebSocketFrameEncoder {
     private ByteBuf encode0(RequestContext ctx, WebSocketFrame msg) {
         final WebSocketFrameType type = msg.type();
         final int length = msg.length();
-        if (type == WebSocketFrameType.PING && length > 125) {
-            throw new TooLongFrameException("invalid payload for PING (payload length must be <= 125, was " +
-                                            length);
+        if (type.isControlFrame() && length > 125) {
+            throw new TooLongFrameException("the payload length " + length +
+                                            " of a control frame exceeded the limit 125. frame type: " + type);
         }
 
-        logger.trace("Encoding WebSocket Frame opCode={} length={}", type.opcode(), length);
+        logger.trace("Encoding WebSocket Frame. opCode={} length={}", type.opcode(), length);
 
-        // https://datatracker.ietf.org/doc/html/rfc6455#section-5.2
+        // https://datatracker.ietf.org/doc/html/rfc6455#section-5-2
         int b0 = 0;
         if (msg.isFinalFragment()) {
             b0 |= 1 << 7;
         }
-        // b0 |= msg.rsv() << 4; // TODO(minwoox): Support rsv
+        // b0 |= msg.rsv() << 4; // TODO(minwoox): Support rsv when we introduce the extension.
         b0 |= type.opcode();
 
         boolean release = true;
@@ -156,7 +155,7 @@ public final class WebSocketFrameEncoder {
                 // maskPayload + payload length (<= 125)
                 final byte b = (byte) (maskPayload ? 0x80 | (byte) length : (byte) length);
                 buf.writeByte(b);
-            } else if (length <= 0xFFFF) {
+            } else if (length <= 65535) {
                 int size = 4 + maskLength;
                 if (maskPayload || length <= GATHERING_WRITE_THRESHOLD) {
                     size += length;
@@ -183,27 +182,31 @@ public final class WebSocketFrameEncoder {
 
             // Write payload
             if (maskPayload) {
-                final int random = (int) (Math.random() * Integer.MAX_VALUE);
-                final byte[] mask = ByteBuffer.allocate(4).putInt(random).array();
-                buf.writeBytes(mask);
+                final int mask = ThreadLocalRandom.current().nextInt(Integer.MAX_VALUE);
+                buf.writeInt(mask);
 
-                final int intMask = intMask(mask);
-                int counter = 0;
+                long longMask = mask & 0xFFFFFFFFL;
+                longMask |= longMask << 32;
+
                 final ByteBuf data = msg.byteBuf();
                 int i = data.readerIndex();
                 final int end = data.writerIndex();
-
-                for (; i + 3 < end; i += 4) {
-                    final int intData = data.getInt(i);
-                    buf.writeInt(intData ^ intMask);
+                for (final int lim = end - 7; i < lim; i += 8) {
+                    buf.writeLong(data.getLong(i) ^ longMask);
                 }
+
+                if (i < end - 3) {
+                    buf.writeInt(data.getInt(i) ^ (int) longMask);
+                    i += 4;
+                }
+                int maskOffset = 0;
                 for (; i < end; i++) {
                     final byte byteData = data.getByte(i);
-                    buf.writeByte(byteData ^ mask[counter++ % 4]);
+                    buf.writeByte(byteData ^ byteAtIndex(mask, maskOffset++ & 3));
                 }
             } else {
                 if (buf.writableBytes() >= msg.length()) {
-                    // merge buffers as this is cheaper then a gathering write if the payload is small enough
+                    // merge buffers as this is cheaper than a gathering write if the payload is small enough
                     buf.writeBytes(msg.byteBuf());
                 } else {
                     buf = Unpooled.wrappedBuffer(buf, msg.byteBuf(ByteBufAccessMode.FOR_IO));

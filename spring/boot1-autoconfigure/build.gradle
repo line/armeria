@@ -1,56 +1,28 @@
-final def SPRING_BOOT_VERSION = '1.5.22.RELEASE'
-final def MICROMETER_VERSION = '1.3.20'
-
 dependencies {
     // To let a user choose between thrift and thrift0.9.
-    compileOnly project(':thrift0.16')
+    compileOnly project(':thrift0.17')
     implementation project(':logback')
 
-    [ 'micrometer-core', 'micrometer-spring-legacy' ].each {
-        implementation("io.micrometer:$it") {
-            version {
-                // Will fail the build if the override doesn't work
-                strictly MICROMETER_VERSION
-            }
-        }
-    }
+    implementation libs.micrometer13.core
+    implementation libs.micrometer13.spring.legacy
 
     // TODO(anuraaga): Consider removing these since this module does not have related functionality.
-    optionalApi("io.micrometer:micrometer-registry-prometheus") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly MICROMETER_VERSION
-        }
-    }
-    optionalApi 'io.dropwizard.metrics:metrics-json'
+    optionalApi libs.micrometer13.prometheus
 
-    api 'javax.inject:javax.inject'
-    compileOnly 'javax.validation:validation-api'
-    api("org.springframework.boot:spring-boot-autoconfigure") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly SPRING_BOOT_VERSION
-        }
-    }
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor") {
-        version {
-            // Will fail the build if the override doesn't work
-            strictly SPRING_BOOT_VERSION
-        }
-    }
+    optionalApi libs.dropwizard.metrics.json
+
+    api libs.javax.inject
+    compileOnly libs.javax.validation
+    api libs.spring.boot1.autoconfigure
+
+    annotationProcessor libs.spring.boot1.configuration.processor
 
     testImplementation project(':grpc')
-    testImplementation project(':thrift0.16')
-    [ 'spring-boot-starter', 'spring-boot-starter-test' ].each {
-        testImplementation("org.springframework.boot:$it") {
-            version {
-                // Will fail the build if the override doesn't work
-                strictly SPRING_BOOT_VERSION
-            }
-        }
-    }
+    testImplementation project(':thrift0.17')
+    testImplementation libs.spring.boot1.starter
+    testImplementation libs.spring.boot1.starter.test
     // Enables cglib for testing
-    testImplementation 'org.hibernate.validator:hibernate-validator'
+    testImplementation libs.hibernate.validator
 }
 
 // Use the sources from ':spring:boot2-autoconfigure'.
@@ -81,4 +53,11 @@ tasks.compileTestJava.dependsOn(project(':spring:boot2-autoconfigure').tasks.com
 // Disable checkstyle because it's checked by ':spring:boot2-autoconfigure'.
 tasks.withType(Checkstyle) {
     onlyIf { false }
+}
+
+// allows illegal access by cglib
+if (rootProject.ext.testJavaVersion >= 16) {
+    tasks.withType(Test) {
+        jvmArgs '--add-opens=java.base/java.lang=ALL-UNNAMED'
+    }
 }

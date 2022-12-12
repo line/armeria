@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.stream.ClosedStreamException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -251,7 +250,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
             // Attempted to write something on a finished request/response; discard.
             // e.g. the request already timed out.
             ReferenceCountUtil.release(obj);
-            promise.setFailure(ClosedStreamException.get());
+            promise.setFailure(ClosedSessionException.get());
             return promise;
         }
 
@@ -351,7 +350,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
         if (minClosedId <= maxIdWithPendingWrites) {
             final ClosedSessionException cause =
-                    new ClosedSessionException("An HTTP/1 stream has been reset: " + error);
+                    new ClosedSessionException("An HTTP/1 connection has been reset: " + error);
             for (int i = minClosedId; i <= maxIdWithPendingWrites; i++) {
                 final PendingWrites pendingWrites = pendingWritesMap.remove(i);
                 for (;;) {
@@ -417,7 +416,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     @Override
     public final boolean isClosed() {
-        return closed;
+        return closed || !channel().isActive();
     }
 
     private static final class PendingWrites extends ArrayDeque<Entry<HttpObject, ChannelPromise>> {

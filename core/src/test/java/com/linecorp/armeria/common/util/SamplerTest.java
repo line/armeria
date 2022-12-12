@@ -31,10 +31,14 @@ class SamplerTest {
         // 'always'
         assertThat(Sampler.of("always")).isSameAs(Sampler.always());
         assertThat(Sampler.of(" always ")).isSameAs(Sampler.always());
+        assertThat(Sampler.of("true")).isSameAs(Sampler.always());
+        assertThat(Sampler.of(" true ")).isSameAs(Sampler.always());
 
         // 'never'
         assertThat(Sampler.of("never")).isSameAs(Sampler.never());
         assertThat(Sampler.of(" never ")).isSameAs(Sampler.never());
+        assertThat(Sampler.of("false")).isSameAs(Sampler.never());
+        assertThat(Sampler.of(" false ")).isSameAs(Sampler.never());
 
         // 'random=<probability>'
         assertThat(Sampler.of("random=0")).isSameAs(Sampler.never());

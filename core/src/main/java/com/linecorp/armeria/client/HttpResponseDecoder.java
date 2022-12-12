@@ -29,12 +29,14 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
@@ -318,7 +320,7 @@ abstract class HttpResponseDecoder {
             cancelTimeoutOrLog(cause, cancel);
             if (ctx != null) {
                 if (cause == null) {
-                    ctx.request().abort();
+                    ctx.request().abort(ResponseCompleteException.get());
                 } else {
                     ctx.request().abort(cause);
                 }
@@ -354,9 +356,11 @@ abstract class HttpResponseDecoder {
         private void cancelTimeoutOrLog(@Nullable Throwable cause, boolean cancel) {
 
             CancellationScheduler responseCancellationScheduler = null;
-            if (ctx instanceof DefaultClientRequestContext) {
-                responseCancellationScheduler =
-                        ((DefaultClientRequestContext) ctx).responseCancellationScheduler();
+            if (ctx != null) {
+                final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
+                if (ctxExtension != null) {
+                    responseCancellationScheduler = ctxExtension.responseCancellationScheduler();
+                }
             }
 
             if (responseCancellationScheduler == null || !responseCancellationScheduler.isFinished()) {
@@ -398,9 +402,13 @@ abstract class HttpResponseDecoder {
         }
 
         void initTimeout() {
-            if (ctx instanceof DefaultClientRequestContext) {
+            if (ctx == null) {
+                return;
+            }
+            final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
+            if (ctxExtension != null) {
                 final CancellationScheduler responseCancellationScheduler =
-                        ((DefaultClientRequestContext) ctx).responseCancellationScheduler();
+                        ctxExtension.responseCancellationScheduler();
                 responseCancellationScheduler.init(
                         ctx.eventLoop(), newCancellationTask(),
                         TimeUnit.MILLISECONDS.toNanos(responseTimeoutMillis), /* server */ false);

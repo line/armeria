@@ -15,16 +15,14 @@
  */
 package com.linecorp.armeria.common.websocket;
 
-import static com.linecorp.armeria.common.websocket.DefaultWebSocketFrame.emptyPing;
-import static com.linecorp.armeria.common.websocket.DefaultWebSocketFrame.emptyPong;
+import static com.linecorp.armeria.common.websocket.ByteArrayWebSocketFrame.EMPTY_PING;
+import static com.linecorp.armeria.common.websocket.ByteArrayWebSocketFrame.EMPTY_PONG;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.charset.StandardCharsets;
 
 import com.linecorp.armeria.common.Bytes;
 import com.linecorp.armeria.common.annotation.UnstableApi;
-import com.linecorp.armeria.internal.common.ByteArrayBytes;
-import com.linecorp.armeria.internal.common.ByteBufBytes;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.buffer.ByteBuf;
@@ -38,10 +36,10 @@ import io.netty.buffer.ByteBuf;
 public interface WebSocketFrame extends Bytes {
 
     /**
-     * Returns a new text {@link WebSocketFrame} with the text whose {@code finalFragment}
+     * Returns a new text {@link WebSocketFrame} with the text whose {@link #isFinalFragment()}
      * is set to {@code true}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-6">Data Frames</a>
      */
     static WebSocketFrame ofText(String text) {
         return ofText(text, true);
@@ -49,20 +47,21 @@ public interface WebSocketFrame extends Bytes {
 
     /**
      * Returns a new text {@link WebSocketFrame} with the text and {@code finalFragment}. When the
-     * {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[], boolean)} frames must be followed.
+     * {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[])} frames must be followed.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-6">Data Frames</a>
      */
     static WebSocketFrame ofText(String text, boolean finalFragment) {
         requireNonNull(text, "text");
-        return new TextWebSocketFrame(text, finalFragment);
+        return new ByteArrayWebSocketFrame(text.getBytes(StandardCharsets.UTF_8), WebSocketFrameType.TEXT,
+                                           finalFragment, text);
     }
 
     /**
-     * Returns a new text {@link WebSocketFrame} with the UTF-8 encoded text whose {@code finalFragment} is set
-     * to {@code true}.
+     * Returns a new text {@link WebSocketFrame} with the UTF-8 encoded text whose {@link #isFinalFragment()}
+     * is set to {@code true}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-6">Data Frames</a>
      */
     static WebSocketFrame ofText(byte[] text) {
         requireNonNull(text, "text");
@@ -71,138 +70,142 @@ public interface WebSocketFrame extends Bytes {
 
     /**
      * Returns a new text {@link WebSocketFrame} with the UTF-8 encoded text and {@code finalFragment}.
-     * When the {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[], boolean)} frames
+     * When the {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[])} frames
      * must be followed.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-6">Data Frames</a>
      */
     static WebSocketFrame ofText(byte[] text, boolean finalFragment) {
         requireNonNull(text, "text");
-        return new TextWebSocketFrame(text, finalFragment);
+        return new ByteArrayWebSocketFrame(text, WebSocketFrameType.TEXT, finalFragment);
     }
 
     /**
-     * Returns a new binary {@link WebSocketFrame} whose {@code finalFragment} is set to {@code true}.
+     * Returns a new binary {@link WebSocketFrame} whose {@link #isFinalFragment()} is set to {@code true}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-6">Data Frames</a>
      */
-    static WebSocketFrame ofBinary(byte[] binary) {
-        requireNonNull(binary, "binary");
-        return ofBinary(binary, true);
+    static WebSocketFrame ofBinary(byte[] data) {
+        requireNonNull(data, "data");
+        return ofBinary(data, true);
     }
 
     /**
      * Returns a new binary {@link WebSocketFrame} with the {@code finalFragment}. When the
-     * {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[], boolean)} frames must be followed.
+     * {@code finalFragment} is {@code false}, {@link #ofContinuation(byte[])} frames must be followed.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.6">Data Frames</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-6">Data Frames</a>
      */
-    static WebSocketFrame ofBinary(byte[] binary, boolean finalFragment) {
-        requireNonNull(binary, "binary");
-        return new BinaryWebSocketFrame(binary, finalFragment);
+    static WebSocketFrame ofBinary(byte[] data, boolean finalFragment) {
+        requireNonNull(data, "data");
+        return new ByteArrayWebSocketFrame(data, WebSocketFrameType.BINARY, finalFragment);
     }
 
     /**
      * Returns a new {@link CloseWebSocketFrame} with the {@link WebSocketCloseStatus}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.1">Close</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-1">Close</a>
      */
     static CloseWebSocketFrame ofClose(WebSocketCloseStatus status) {
         requireNonNull(status, "status");
-        return ofClose(status, status.reasonPhase());
+        return ofClose(status, status.reasonPhrase());
     }
 
     /**
      * Returns a new {@link CloseWebSocketFrame} with the {@link WebSocketCloseStatus} and the reason.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.1">Close</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-1">Close</a>
      */
     static CloseWebSocketFrame ofClose(WebSocketCloseStatus status, String reason) {
         requireNonNull(status, "status");
         requireNonNull(reason, "reason");
-        return new CloseWebSocketFrame(status, reason);
+        return new CloseByteBufWebSocketFrame(status, reason);
     }
 
     /**
-     * Returns a new {@link CloseWebSocketFrame} with the {@code binary}.
+     * Returns a new {@link CloseWebSocketFrame} with the {@code data} that contains
+     * {@link WebSocketCloseStatus}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.1">Close</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-1">Close</a>
      */
-    static CloseWebSocketFrame ofClose(byte[] binary) {
-        requireNonNull(binary, "binary");
-        return new CloseWebSocketFrame(binary);
+    static CloseWebSocketFrame ofClose(byte[] data) {
+        requireNonNull(data, "data");
+        return new CloseByteBufWebSocketFrame(data);
     }
 
     /**
      * Returns a ping {@link WebSocketFrame}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.2">Ping</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-2">Ping</a>
      */
     static WebSocketFrame ofPing() {
-        return emptyPing;
+        return EMPTY_PING;
     }
 
     /**
-     * Returns a new ping {@link WebSocketFrame} with the {@code binary}.
+     * Returns a new ping {@link WebSocketFrame} with the {@code data}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.2">Ping</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-2">Ping</a>
      */
-    static WebSocketFrame ofPing(byte[] binary) {
-        requireNonNull(binary, "binary");
-        if (binary.length == 0) {
-            return emptyPing;
+    static WebSocketFrame ofPing(byte[] data) {
+        requireNonNull(data, "data");
+        if (data.length == 0) {
+            return EMPTY_PING;
         }
-        return new DefaultWebSocketFrame(WebSocketFrameType.PING, ByteArrayBytes.of(binary));
+        return new ByteArrayWebSocketFrame(data, WebSocketFrameType.PING);
     }
 
     /**
      * Returns a pong {@link WebSocketFrame}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.3">Pong</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-3">Pong</a>
      */
     static WebSocketFrame ofPong() {
-        return emptyPong;
+        return EMPTY_PONG;
     }
 
     /**
-     * Returns a new pong {@link WebSocketFrame} with the {@code binary}.
+     * Returns a new pong {@link WebSocketFrame} with the {@code data}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.5.3">Pong</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-5-3">Pong</a>
      */
-    static WebSocketFrame ofPong(byte[] binary) {
-        requireNonNull(binary, "binary");
-        if (binary.length == 0) {
-            return emptyPong;
+    static WebSocketFrame ofPong(byte[] data) {
+        requireNonNull(data, "data");
+        if (data.length == 0) {
+            return EMPTY_PONG;
         }
-        return new DefaultWebSocketFrame(WebSocketFrameType.BINARY, ByteArrayBytes.of(binary));
+        return new ByteArrayWebSocketFrame(data, WebSocketFrameType.PING);
     }
 
     /**
-     * Returns a new continuation {@link WebSocketFrame} whose {@code finalFragment} is set to {@code true}.
-     * Specify {@code isText} as {@code true} when the continuation frame is followed by a text frame.
+     * Returns a new continuation {@link WebSocketFrame} whose {@link #isFinalFragment()}
+     * is set to {@code true}.
+     * {@code isText} must be {@code true} if this continuation frame follows a text frame.
+     * {@code false} if this follows a binary frame.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.4">Fragmentation</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-4">Fragmentation</a>
      */
-    static WebSocketFrame ofContinuation(byte[] binary, boolean isText) {
-        return ofContinuation(binary, true, isText);
+    static WebSocketFrame ofContinuation(byte[] data) {
+        return ofContinuation(data, true);
     }
 
     /**
-     * Returns a new continuation {@link WebSocketFrame} with the binary and {@code finalFragment}.
-     * Specify {@code isText} as {@code true} when the continuation frame is followed by a text frame.
+     * Returns a new continuation {@link WebSocketFrame} with the data and {@code finalFragment}.
+     * {@code isText} must be {@code true} if this continuation frame follows a text frame.
+     * {@code false} if this follows a binary frame.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.4">Fragmentation</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-4">Fragmentation</a>
      */
-    static WebSocketFrame ofContinuation(byte[] binary, boolean frameFinalFlag, boolean isText) {
-        requireNonNull(binary, "binary");
-        return new ContinuationWebSocketFrame(binary, frameFinalFlag, isText);
+    static WebSocketFrame ofContinuation(byte[] data, boolean finalFragment) {
+        requireNonNull(data, "data");
+        return new ByteArrayWebSocketFrame(data, WebSocketFrameType.CONTINUATION, finalFragment);
     }
 
     /**
-     * Returns a new text continuation {@link WebSocketFrame} whose {@code finalFragment}
+     * Returns a new text continuation {@link WebSocketFrame} whose {@link #isFinalFragment()}
      * is set to {@code true}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.4">Fragmentation</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-4">Fragmentation</a>
      */
     static WebSocketFrame ofContinuation(String text) {
         return ofContinuation(text, true);
@@ -211,16 +214,17 @@ public interface WebSocketFrame extends Bytes {
     /**
      * Returns a new text continuation {@link WebSocketFrame} with the text and {@code finalFragment}.
      *
-     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5.4">Fragmentation</a>
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-5-4">Fragmentation</a>
      */
-    static WebSocketFrame ofContinuation(String text, boolean frameFinalFlag) {
+    static WebSocketFrame ofContinuation(String text, boolean finalFragment) {
         requireNonNull(text, "text");
-        return ofContinuation(text.getBytes(StandardCharsets.UTF_8), frameFinalFlag, true);
+        return new ByteArrayWebSocketFrame(text.getBytes(StandardCharsets.UTF_8),
+                                           WebSocketFrameType.CONTINUATION, finalFragment, text);
     }
 
     /**
      * (Advanced users only) Returns a new text {@link WebSocketFrame} with the {@link ByteBuf}
-     * whose {@code finalFragment} is set to {@code true}.
+     * whose {@link #isFinalFragment()} is set to {@code true}.
      *
      * @see #ofText(byte[])
      * @see PooledObjects
@@ -240,19 +244,19 @@ public interface WebSocketFrame extends Bytes {
      */
     static WebSocketFrame ofPooledText(ByteBuf text, boolean finalFragment) {
         requireNonNull(text, "text");
-        return new TextWebSocketFrame(text, finalFragment);
+        return new ByteBufWebSocketFrame(text, WebSocketFrameType.TEXT, finalFragment);
     }
 
     /**
      * (Advanced users only) Returns a new binary {@link WebSocketFrame} with the {@link ByteBuf}
-     * whose {@code finalFragment} is set to {@code true}.
+     * whose {@link #isFinalFragment()} is set to {@code true}.
      *
      * @see #ofBinary(byte[])
      * @see PooledObjects
      */
-    static WebSocketFrame ofPooledBinary(ByteBuf binary) {
-        requireNonNull(binary, "binary");
-        return ofPooledBinary(binary, true);
+    static WebSocketFrame ofPooledBinary(ByteBuf data) {
+        requireNonNull(data, "data");
+        return ofPooledBinary(data, true);
     }
 
     /**
@@ -263,9 +267,9 @@ public interface WebSocketFrame extends Bytes {
      * @see #ofBinary(byte[], boolean)
      * @see PooledObjects
      */
-    static WebSocketFrame ofPooledBinary(ByteBuf binary, boolean finalFragment) {
-        requireNonNull(binary, "binary");
-        return new BinaryWebSocketFrame(binary, finalFragment);
+    static WebSocketFrame ofPooledBinary(ByteBuf data, boolean finalFragment) {
+        requireNonNull(data, "data");
+        return new ByteBufWebSocketFrame(data, WebSocketFrameType.BINARY, finalFragment);
     }
 
     /**
@@ -274,9 +278,9 @@ public interface WebSocketFrame extends Bytes {
      * @see #ofClose(byte[])
      * @see PooledObjects
      */
-    static CloseWebSocketFrame ofPooledClose(ByteBuf binary) {
-        requireNonNull(binary, "binary");
-        return new CloseWebSocketFrame(binary);
+    static CloseWebSocketFrame ofPooledClose(ByteBuf data) {
+        requireNonNull(data, "data");
+        return new CloseByteBufWebSocketFrame(data, true);
     }
 
     /**
@@ -285,13 +289,13 @@ public interface WebSocketFrame extends Bytes {
      * @see #ofPing(byte[])
      * @see PooledObjects
      */
-    static WebSocketFrame ofPooledPing(ByteBuf binary) {
-        requireNonNull(binary, "binary");
-        if (binary.readableBytes() == 0) {
-            binary.release();
-            return emptyPing;
+    static WebSocketFrame ofPooledPing(ByteBuf data) {
+        requireNonNull(data, "data");
+        if (data.readableBytes() == 0) {
+            data.release();
+            return EMPTY_PING;
         }
-        return new DefaultWebSocketFrame(WebSocketFrameType.PING, ByteBufBytes.of(binary, true));
+        return new ByteBufWebSocketFrame(data, WebSocketFrameType.PING, true);
     }
 
     /**
@@ -300,38 +304,41 @@ public interface WebSocketFrame extends Bytes {
      * @see #ofPong(byte[])
      * @see PooledObjects
      */
-    static WebSocketFrame ofPooledPong(ByteBuf binary) {
-        requireNonNull(binary, "binary");
-        if (binary.readableBytes() == 0) {
-            binary.release();
-            return emptyPong;
+    static WebSocketFrame ofPooledPong(ByteBuf data) {
+        requireNonNull(data, "data");
+        if (data.readableBytes() == 0) {
+            data.release();
+            return EMPTY_PONG;
         }
-        return new DefaultWebSocketFrame(WebSocketFrameType.PONG, ByteBufBytes.of(binary, true));
+        return new ByteBufWebSocketFrame(data, WebSocketFrameType.PONG, true);
     }
 
     /**
      * (Advanced users only) Returns a new continuation {@link WebSocketFrame} with the {@link ByteBuf}
-     * whose {@code finalFragment} is set to {@code true}.
-     * Specify {@code isText} as {@code true} when the continuation frame is followed by a text frame.
+     * whose {@link #isFinalFragment()} is set to {@code true}.
+     * {@code isText} must be {@code true} if this continuation frame follows a text frame.
+     * {@code false} if this follows a binary frame.
      *
-     * @see #ofContinuation(byte[], boolean)
+     * @see #ofContinuation(byte[])
      * @see PooledObjects
      */
-    static WebSocketFrame ofPooledContinuation(ByteBuf binary, boolean isText) {
-        return ofPooledContinuation(binary, true, isText);
+    static WebSocketFrame ofPooledContinuation(ByteBuf data, boolean isText) {
+        return ofPooledContinuation(data, isText, true);
     }
 
     /**
      * (Advanced users only) Returns a new binary {@link WebSocketFrame} with the {@link ByteBuf}
      * and {@code finalFragment}.
-     * Specify {@code isText} as {@code true} when the continuation frame is followed by a text frame.
+     * {@code isText} must be {@code true} if this continuation frame follows a text frame.
+     * {@code false} if this follows a binary frame.
      *
-     * @see #ofContinuation(byte[], boolean, boolean)
+     * @see #ofContinuation(byte[])
      * @see PooledObjects
      */
-    static WebSocketFrame ofPooledContinuation(ByteBuf binary, boolean frameFinalFlag, boolean isText) {
-        requireNonNull(binary, "binary");
-        return new ContinuationWebSocketFrame(binary, frameFinalFlag, isText);
+    static WebSocketFrame ofPooledContinuation(ByteBuf data, boolean isText, boolean finalFragment) {
+        requireNonNull(data, "data");
+        return new ByteBufWebSocketFrame(data, WebSocketFrameType.CONTINUATION,
+                                         finalFragment);
     }
 
     /**
@@ -342,27 +349,9 @@ public interface WebSocketFrame extends Bytes {
     /**
      * Tells whether this frame is a final fragment or not.
      *
-     * @see #ofContinuation(byte[], boolean)
+     * @see #ofContinuation(byte[])
      */
     boolean isFinalFragment();
-
-    /**
-     * Tells whether this frame is a text frame or not.
-     * The {@linkplain #ofContinuation(byte[], boolean) continuation} frame followed by a text frame
-     * also returns {@code true}.
-     *
-     * @see #ofText(String)
-     */
-    boolean isText();
-
-    /**
-     * Tells whether this frame is a binary frame or not.
-     * The {@linkplain #ofContinuation(byte[], boolean) continuation} frame followed by a binary frame
-     * also returns {@code true}.
-     *
-     * @see #ofBinary(byte[])
-     */
-    boolean isBinary();
 
     /**
      * Returns the text data in this frame.

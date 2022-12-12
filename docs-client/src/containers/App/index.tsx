@@ -55,6 +55,8 @@ import {
   Version,
   Versions,
 } from '../../lib/versions';
+import { SpecLoadingStatus } from '../../lib/types';
+import LoadingContainer from '../../components/LoadingContainer';
 
 if (process.env.WEBPACK_DEV === 'true') {
   // DocService must always be accessed at the URL with a trailing slash. In non-dev mode, the server redirects
@@ -216,15 +218,11 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                   {service.methods.map((method) => (
                     <ListItem
                       dense
-                      key={`${service.name}/${method.name}/${method.httpMethod}`}
+                      key={`${method.id}`}
                       button
-                      onClick={() =>
-                        navigateTo(
-                          `/methods/${service.name}/${method.name}/${method.httpMethod}`,
-                        )
-                      }
+                      onClick={() => navigateTo(`/methods/${method.id}`)}
                     >
-                      <Grid container alignItems="center" spacing={2}>
+                      <Grid container alignItems="center" spacing={1}>
                         <Grid item xs="auto">
                           <Typography
                             className={httpMethodClass(method.httpMethod)}
@@ -240,6 +238,16 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                           >
                             <code>{`${method.name}()`}</code>
                           </ListItemText>
+                          {method.endpoints.map((endpoint) => (
+                            <ListItemText
+                              key={`${method.id}`}
+                              primaryTypographyProps={{
+                                variant: 'caption',
+                              }}
+                            >
+                              {endpoint.pathMapping}
+                            </ListItemText>
+                          ))}
                         </Grid>
                       </Grid>
                     </ListItem>
@@ -359,17 +367,59 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
   );
 };
 
+interface RouterServicesProps {
+  versions: Versions | undefined;
+  specification: Specification;
+}
+
+const RouterServices: React.FunctionComponent<RouterServicesProps> = ({
+  versions,
+  specification,
+}) => {
+  return (
+    <div>
+      <Route
+        exact
+        path="/"
+        render={(p) => <HomePage {...p} versions={versions} />}
+      />
+      <Route
+        path="/enums/:name"
+        render={(p) => <EnumPage {...p} specification={specification} />}
+      />
+      <Route
+        path="/methods/:serviceName/:methodName/:httpMethod"
+        render={(p) => <MethodPage {...p} specification={specification} />}
+      />
+      <Route
+        path="/structs/:name"
+        render={(p) => <StructPage {...p} specification={specification} />}
+      />
+    </div>
+  );
+};
+
 interface OpenServices {
   [name: string]: boolean;
 }
 
 const toggle = (current: boolean) => !current;
 
+const dummySpecification = new Specification({
+  enums: [],
+  exampleHeaders: [],
+  exceptions: [],
+  services: [],
+  structs: [],
+});
+
 const App: React.FunctionComponent<Props> = (props) => {
   const [mobileDrawerOpen, setMobileDrawerOpen] = useState(false);
-  const [specification, setSpecification] = useState<
-    Specification | undefined
-  >();
+  const [specification, setSpecification] =
+    useState<Specification>(dummySpecification);
+  const [specLoadingStatus, setSpecLoadingStatus] = useState<SpecLoadingStatus>(
+    SpecLoadingStatus.INITIALIZED,
+  );
   const [versions, setVersions] = useState<Versions | undefined>();
   const [openServices, toggleOpenService] = useReducer(
     (current: OpenServices, serviceName: string) => ({
@@ -385,13 +435,19 @@ const App: React.FunctionComponent<Props> = (props) => {
 
   useEffect(() => {
     (async () => {
-      const httpResponse = await fetch('specification.json');
-      const specificationData: SpecificationData = await httpResponse.json();
-      const initialSpecification = new Specification(specificationData);
-      initialSpecification.getServices().forEach((service) => {
-        toggleOpenService(service.name);
-      });
-      setSpecification(initialSpecification);
+      try {
+        const httpResponse = await fetch('specification.json');
+        const specificationData: SpecificationData = await httpResponse.json();
+        const initialSpecification = new Specification(specificationData);
+        initialSpecification.getServices().forEach((service) => {
+          toggleOpenService(service.name);
+        });
+        setSpecification(initialSpecification);
+      } catch (e) {
+        setSpecLoadingStatus(SpecLoadingStatus.FAILED);
+        return;
+      }
+      setSpecLoadingStatus(SpecLoadingStatus.SUCCESS);
     })();
   }, []);
 
@@ -453,10 +509,6 @@ const App: React.FunctionComponent<Props> = (props) => {
     },
     [classes],
   );
-
-  if (!specification) {
-    return null;
-  }
 
   const { pathname, search } = props.location;
   if (pathname.startsWith('/method/')) {
@@ -556,23 +608,12 @@ const App: React.FunctionComponent<Props> = (props) => {
       </Hidden>
       <main className={classes.content}>
         <div className={classes.toolbar} />
-        <Route
-          exact
-          path="/"
-          render={(p) => <HomePage {...p} versions={versions} />}
-        />
-        <Route
-          path="/enums/:name"
-          render={(p) => <EnumPage {...p} specification={specification} />}
-        />
-        <Route
-          path="/methods/:serviceName/:methodName/:httpMethod"
-          render={(p) => <MethodPage {...p} specification={specification} />}
-        />
-        <Route
-          path="/structs/:name"
-          render={(p) => <StructPage {...p} specification={specification} />}
-        />
+        <LoadingContainer
+          status={specLoadingStatus}
+          failureMessage="Failed to load specifications. Try refreshing!"
+        >
+          <RouterServices versions={versions} specification={specification} />
+        </LoadingContainer>
       </main>
     </div>
   );

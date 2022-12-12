@@ -960,4 +960,20 @@ public interface FlagsProvider {
     default Path defaultMultipartUploadsLocation() {
         return null;
     }
+
+    /**
+     * Returns the {@link Sampler} that determines whether to trace the stack trace of request contexts leaks
+     * and how frequently to keeps stack trace. A sampled exception will have the stack trace while the others
+     * will have an empty stack trace to eliminate the cost of capturing the stack trace.
+     *
+     * <p>The default value of this flag is {@link Sampler#never()}.
+     * Specify the {@code -Dcom.linecorp.armeria.requestContextLeakDetectionSampler=<specification>} JVM option
+     * to override the default. This feature is disabled if {@link Sampler#never()} is specified.
+     * See {@link Sampler#of(String)} for the specification string format.</p>
+     */
+    @UnstableApi
+    @Nullable
+    default Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
+        return null;
+    }
 }

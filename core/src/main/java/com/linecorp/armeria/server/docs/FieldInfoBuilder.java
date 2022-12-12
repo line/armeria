@@ -15,16 +15,13 @@
  */
 package com.linecorp.armeria.server.docs;
 
-import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
@@ -39,8 +36,7 @@ public final class FieldInfoBuilder {
 
     private FieldRequirement requirement = FieldRequirement.UNSPECIFIED;
     private FieldLocation location = FieldLocation.UNSPECIFIED;
-    @Nullable
-    private String docString;
+    private DescriptionInfo descriptionInfo = DescriptionInfo.empty();
 
     FieldInfoBuilder(String name, TypeSignature typeSignature) {
         this.name = requireNonNull(name, "name");
@@ -55,8 +51,6 @@ public final class FieldInfoBuilder {
     FieldInfoBuilder(String name, TypeSignature typeSignature, Iterable<FieldInfo> childFieldInfos) {
         this.name = requireNonNull(name, "name");
         this.typeSignature = typeSignature;
-        checkArgument(!Iterables.isEmpty(requireNonNull(childFieldInfos, "childFieldInfos")),
-                      "childFieldInfos can't be empty.");
         this.childFieldInfos = ImmutableList.copyOf(childFieldInfos);
     }
 
@@ -77,10 +71,10 @@ public final class FieldInfoBuilder {
     }
 
     /**
-     * Sets the documentation string of the field.
+     * Sets the description information of the field.
      */
-    public FieldInfoBuilder docString(String docString) {
-        this.docString = requireNonNull(docString, "docString");
+    public FieldInfoBuilder descriptionInfo(DescriptionInfo descriptionInfo) {
+        this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
         return this;
     }
 
@@ -88,18 +82,19 @@ public final class FieldInfoBuilder {
      * Returns a newly-created {@link FieldInfo} based on the properties of this builder.
      */
     public FieldInfo build() {
-        return new FieldInfo(name, location, requirement, typeSignature, childFieldInfos, docString);
+        return new FieldInfo(name, location, requirement, typeSignature,
+                             childFieldInfos, descriptionInfo);
     }
 
     @Override
     public String toString() {
-        return MoreObjects.toStringHelper(this).omitNullValues()
+        return MoreObjects.toStringHelper(this)
                           .add("name", name)
                           .add("location", location)
                           .add("requirement", requirement)
                           .add("typeSignature", typeSignature)
                           .add("childFieldInfos", childFieldInfos)
-                          .add("docString", docString)
+                          .add("descriptionInfo", descriptionInfo)
                           .toString();
     }
 }

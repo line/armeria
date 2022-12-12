@@ -43,6 +43,9 @@ import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.reactivestreams.Publisher;
 
 import com.google.common.collect.ImmutableList;
 
@@ -83,10 +86,14 @@ import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.Produces;
+import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import reactor.core.publisher.Mono;
 
 class AnnotatedServiceTest {
 
@@ -251,6 +258,63 @@ class AnnotatedServiceTest {
         @Get("/void/200")
         @ResponseConverter(VoidTo200ResponseConverter.class)
         public void void200() {}
+
+        @Get("/void/json/200")
+        @ProducesJson
+        public void voidJson200() {}
+
+        @Get("/void/json/204")
+        @StatusCode(204)
+        @ProducesJson
+        public void voidJson204() {}
+
+        @Get("/voidPublisher/204")
+        public Publisher<Void> voidPublisher204() {
+            return Mono.empty();
+        }
+
+        @Get("/voidPublisher/200")
+        @ResponseConverter(VoidTo200ResponseConverter.class)
+        public Publisher<Void> voidPublisher200() {
+            return Mono.empty();
+        }
+
+        @Get("/voidPublisher/json/200")
+        @ProducesJson
+        public Publisher<Void> voidPublisherJson200() {
+            return Mono.empty();
+        }
+
+        @Get("/voidPublisher/json/204")
+        @StatusCode(204)
+        @ProducesJson
+        public Publisher<Void> voidPublisherJson204() {
+            return Mono.empty();
+        }
+
+        @Get("/voidFuture/204")
+        public CompletionStage<Void> voidFuture204() {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+
+        @Get("/voidFuture/200")
+        @ResponseConverter(VoidTo200ResponseConverter.class)
+        public CompletionStage<Void> voidFuture200() {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+
+        @Get("/voidFuture/json/200")
+        @ProducesJson
+        public CompletionStage<Void> voidFutureJson200() {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+
+        @Get("/voidFuture/json/204")
+        @StatusCode(204)
+        @ProducesJson
+        public CompletionStage<Void> voidFutureJson204() {
+            return UnmodifiableFuture.completedFuture(null);
+        }
     }
 
     static class VoidTo200ResponseConverter implements ResponseConverterFunction {
@@ -1076,11 +1140,16 @@ class AnnotatedServiceTest {
         }
     }
 
-    @Test
-    void testReturnVoid() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = { "void", "voidPublisher", "voidFuture" })
+    void testReturnVoid(String returnType) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            testStatusCode(hc, get("/1/void/204"), 204);
-            testBodyAndContentType(hc, get("/1/void/200"), "200 OK", MediaType.PLAIN_TEXT_UTF_8.toString());
+            testStatusCode(hc, get("/1/" + returnType + "/204"), 204);
+            testBodyAndContentType(hc, get("/1/" + returnType + "/200"),
+                                   "200 OK", MediaType.PLAIN_TEXT_UTF_8.toString());
+            testStatusCode(hc, get("/1/" + returnType + "/json/204"), 204);
+            testBodyAndContentType(hc, get("/1/" + returnType + "/json/200"),
+                                   "null", MediaType.JSON_UTF_8.toString());
         }
     }
 

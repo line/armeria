@@ -48,7 +48,7 @@ import io.netty.buffer.Unpooled;
 
 class WebSocketFrameEncoderAndDecoderTest {
 
-    // Forked from Netty 4.1.69 at 34a31522f0145e2d434aaea2ef8ac5ed8d1a91a0
+    // Forked from Netty 4.1.85 at 7cc84285ea6f90f6af62fa465d1aafbbc497e889
     // - Change to use HttpRequestWriter and HttpResponseWriter instead of EmbeddedChannel.
 
     private static final int MAX_TEST_DATA_LENGTH = 100 * 1024;
@@ -183,7 +183,11 @@ class WebSocketFrameEncoderAndDecoderTest {
     private static void testBinaryWithLen(WebSocketFrameEncoder encoder, HttpRequestWriter requestWriter,
                                           int testDataLength) throws InterruptedException {
         setByteBufWriterIndex(testDataLength);
-        requestWriter.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofPooledBinary(byteBuf))));
+        try {
+            requestWriter.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofPooledBinary(byteBuf))));
+        } catch (Throwable t) {
+            throw t;
+        }
         final WebSocketFrame decoded = frameQueue.take();
         assertThat(decoded.type()).isSameAs(WebSocketFrameType.BINARY);
         final ByteBuf decodedBuf = decoded.byteBuf();

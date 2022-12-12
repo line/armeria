@@ -21,6 +21,8 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
 import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getAllMethods;
@@ -37,6 +39,7 @@ import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -103,6 +106,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.annotation.Trace;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 
 /**
  * Builds a list of {@link AnnotatedService}s from an {@link Object}.
@@ -156,29 +160,41 @@ public final class AnnotatedServiceFactory {
             List<ExceptionHandlerFunction> exceptionHandlerFunctions,
             DependencyInjector dependencyInjector, @Nullable String queryDelimiter) {
         final List<Method> methods = requestMappingMethods(object);
-        return methods.stream()
-                      .flatMap((Method method) ->
-                                       create(pathPrefix, object, method, useBlockingTaskExecutor,
-                                              requestConverterFunctions, responseConverterFunctions,
-                                              exceptionHandlerFunctions, dependencyInjector, queryDelimiter
-                                       ).stream())
-                      .collect(toImmutableList());
+        final Builder<AnnotatedServiceElement> builder = ImmutableList.builder();
+
+        final Map<String, Integer> overloadIds = new HashMap<>();
+        // Can't sort methods to find the overloaded methods because methods are ordered using @Order.
+        for (Method method : methods) {
+            final String methodName = method.getName();
+            final int overloadId;
+            if (overloadIds.containsKey(methodName)) {
+                overloadId = overloadIds.get(methodName) + 1;
+            } else {
+                overloadId = 0;
+            }
+            overloadIds.put(methodName, overloadId);
+            builder.addAll(create(pathPrefix, object, method, overloadId, useBlockingTaskExecutor,
+                                  requestConverterFunctions, responseConverterFunctions,
+                                  exceptionHandlerFunctions, dependencyInjector, queryDelimiter));
+        }
+        return builder.build();
     }
 
-    private static HttpStatus defaultResponseStatus(Method method) {
+    private static HttpStatus defaultResponseStatus(Method method, Class<?> clazz) {
         final StatusCode statusCodeAnnotation = AnnotationUtil.findFirst(method, StatusCode.class);
-        if (statusCodeAnnotation == null) {
-            // Set a default HTTP status code for a response depending on the return type of the method.
-            final Class<?> returnType = method.getReturnType();
-            return returnType == Void.class ||
-                   returnType == void.class ||
-                   KotlinUtil.isSuspendingAndReturnTypeUnit(method) ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+        if (statusCodeAnnotation != null) {
+            return HttpStatus.valueOf(statusCodeAnnotation.value());
         }
 
-        final int statusCode = statusCodeAnnotation.value();
-        checkArgument(statusCode >= 0,
-                      "invalid HTTP status code: %s (expected: >= 0)", statusCode);
-        return HttpStatus.valueOf(statusCode);
+        if (!producibleMediaTypes(method, clazz).isEmpty()) {
+            return HttpStatus.OK;
+        }
+        // Set a default HTTP status code for a response depending on the return type of the method.
+        final Class<?> returnType = typeToClass(unwrapAsyncType(method.getGenericReturnType()));
+
+        return returnType == Void.class ||
+               returnType == void.class ||
+               KotlinUtil.isSuspendingAndReturnTypeUnit(method) ? HttpStatus.NO_CONTENT : HttpStatus.OK;
     }
 
     private static <T extends Annotation> void setAdditionalHeader(HttpHeadersBuilder headers,
@@ -215,7 +231,7 @@ public final class AnnotatedServiceFactory {
      */
     @VisibleForTesting
     static List<AnnotatedServiceElement> create(String pathPrefix, Object object, Method method,
-                                                boolean useBlockingTaskExecutor,
+                                                int overloadId, boolean useBlockingTaskExecutor,
                                                 List<RequestConverterFunction> baseRequestConverters,
                                                 List<ResponseConverterFunction> baseResponseConverters,
                                                 List<ExceptionHandlerFunction> baseExceptionHandlers,
@@ -250,7 +266,7 @@ public final class AnnotatedServiceFactory {
         final HttpHeaders responseHeaders = responseHeaders(method, clazz, classAlias, methodAlias);
         final HttpHeaders responseTrailers = responseTrailers(method, clazz, classAlias, methodAlias);
 
-        final HttpStatus defaultStatus = defaultResponseStatus(method);
+        final HttpStatus defaultStatus = defaultResponseStatus(method, clazz);
         if (defaultStatus.isContentAlwaysEmpty() && !responseTrailers.isEmpty()) {
             logger.warn("A response with HTTP status code '{}' cannot have a content. " +
                         "Trailers defined at '{}' might be ignored if HTTP/1.1 is used.",
@@ -267,7 +283,7 @@ public final class AnnotatedServiceFactory {
                                                queryDelimiter);
             return new AnnotatedServiceElement(
                     route,
-                    new AnnotatedService(object, method, resolvers, eh, res, route, defaultStatus,
+                    new AnnotatedService(object, method, overloadId, resolvers, eh, res, route, defaultStatus,
                                          responseHeaders, responseTrailers, needToUseBlockingTaskExecutor),
                     decorator(method, clazz, dependencyInjector));
         }).collect(toImmutableList());
@@ -581,15 +597,14 @@ public final class AnnotatedServiceFactory {
     /**
      * Returns the description of the specified {@link AnnotatedElement}.
      */
-    @Nullable
-    static String findDescription(AnnotatedElement annotatedElement) {
+    static DescriptionInfo findDescription(AnnotatedElement annotatedElement) {
         requireNonNull(annotatedElement, "annotatedElement");
         final Description description = AnnotationUtil.findFirst(annotatedElement, Description.class);
         if (description != null) {
             final String value = description.value();
             if (DefaultValues.isSpecified(value)) {
                 checkArgument(!value.isEmpty(), "value is empty.");
-                return value;
+                return DescriptionInfo.from(description);
             }
         } else if (annotatedElement instanceof Parameter) {
             // JavaDoc/KDoc descriptions only exist for method parameters
@@ -600,22 +615,25 @@ public final class AnnotatedServiceFactory {
             final String propertyName = executable.getName() + '.' + parameter.getName();
             final Properties cachedProperties = DOCUMENTATION_PROPERTIES_CACHE.getIfPresent(fileName);
             if (cachedProperties != null) {
-                return cachedProperties.getProperty(propertyName);
+                final String propertyValue = cachedProperties.getProperty(propertyName);
+                return propertyValue != null ? DescriptionInfo.of(propertyValue) : DescriptionInfo.empty();
             }
             try (InputStream stream = AnnotatedServiceFactory.class.getClassLoader()
                                                                    .getResourceAsStream(fileName)) {
                 if (stream == null) {
-                    return null;
+                    return DescriptionInfo.empty();
                 }
                 final Properties properties = new Properties();
                 properties.load(stream);
                 DOCUMENTATION_PROPERTIES_CACHE.put(fileName, properties);
-                return properties.getProperty(propertyName);
+
+                final String propertyValue = properties.getProperty(propertyName);
+                return propertyValue != null ? DescriptionInfo.of(propertyValue) : DescriptionInfo.empty();
             } catch (IOException exception) {
                 logger.warn("Failed to load an API description file: {}", fileName, exception);
             }
         }
-        return null;
+        return DescriptionInfo.empty();
     }
 
     /**

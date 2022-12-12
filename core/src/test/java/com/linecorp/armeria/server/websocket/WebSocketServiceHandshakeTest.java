@@ -151,7 +151,7 @@ class WebSocketServiceHandshakeTest {
             assertThat(res.status()).isSameAs(HttpStatus.OK);
         }
 
-        // Borrowed from the RFC. https://datatracker.ietf.org/doc/html/rfc6455#section-1.2
+        // Borrowed from the RFC. https://datatracker.ietf.org/doc/html/rfc6455#section-1-2
         headersBuilder.add(HttpHeaderNames.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==")
                       .add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "superchat");
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {

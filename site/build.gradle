@@ -13,13 +13,14 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath "com.github.node-gradle:gradle-node-plugin:${managedVersions['com.github.node-gradle:gradle-node-plugin']}"
-        classpath 'org.jsoup:jsoup:1.14.3'
+        classpath libs.jsoup
     }
 }
 
-apply plugin: 'base'
-apply plugin: 'com.github.node-gradle.node'
+plugins {
+    id 'base'
+    alias(libs.plugins.node.gradle)
+}
 
 node {
     version = '16.14.0'

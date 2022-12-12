@@ -19,6 +19,7 @@ package com.linecorp.armeria.client;
 import java.net.InetSocketAddress;
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.ToLongFunction;
 
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
@@ -87,13 +88,17 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
         return builder.build();
     }
 
-    private final int minTtl;
-    private final int maxTtl;
     private final int negativeTtl;
 
-    private final Backoff refreshBackoff;
     private final List<DnsRecordType> dnsRecordTypes;
     private final DnsCache dnsResolverCache;
+
+    private final boolean autoRefresh;
+    @Nullable
+    private final Backoff autoRefreshBackoff;
+    @Nullable
+    private final ToLongFunction<String> autoRefreshTimeoutFunction;
+
     private final List<String> searchDomains;
     private final int ndots;
     private final long queryTimeoutMillis;
@@ -105,21 +110,22 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
     private final ResolvedAddressTypes resolvedAddressTypes;
 
     RefreshingAddressResolverGroup(
-            String cacheSpec, int minTtl, int maxTtl, int negativeTtl, Backoff refreshBackoff,
-            @Nullable ResolvedAddressTypes resolvedAddressTypes,
-            DnsCache dnsResolverCache, List<String> searchDomains, int ndots, long queryTimeoutMillis,
+            String cacheSpec, int negativeTtl, @Nullable ResolvedAddressTypes resolvedAddressTypes,
+            DnsCache dnsResolverCache, boolean autoRefresh, @Nullable Backoff autoRefreshBackoff,
+            @Nullable ToLongFunction<String> autoRefreshTimeoutFunction,
+            List<String> searchDomains, int ndots, long queryTimeoutMillis,
             HostsFileEntriesResolver hostsFileEntriesResolver,
             Consumer<DnsNameResolverBuilder> resolverConfigurator) {
-        this.minTtl = minTtl;
-        this.maxTtl = maxTtl;
         this.negativeTtl = negativeTtl;
-        this.refreshBackoff = refreshBackoff;
         if (resolvedAddressTypes == null) {
             dnsRecordTypes = defaultDnsRecordTypes;
         } else {
             dnsRecordTypes = dnsRecordTypes(resolvedAddressTypes);
         }
         this.dnsResolverCache = dnsResolverCache;
+        this.autoRefresh = autoRefresh;
+        this.autoRefreshBackoff = autoRefreshBackoff;
+        this.autoRefreshTimeoutFunction = autoRefreshTimeoutFunction;
         this.searchDomains = searchDomains;
         this.ndots = ndots;
         this.queryTimeoutMillis = queryTimeoutMillis;
@@ -147,7 +153,8 @@ final class RefreshingAddressResolverGroup extends AddressResolverGroup<InetSock
                                                                   searchDomains, ndots, queryTimeoutMillis,
                                                                   hostsFileEntriesResolver);
         return new RefreshingAddressResolver(eventLoop, resolver, dnsRecordTypes, addressResolverCache,
-                                             dnsResolverCache, negativeTtl, refreshBackoff);
+                                             dnsResolverCache, negativeTtl, autoRefresh,
+                                             autoRefreshBackoff, autoRefreshTimeoutFunction);
     }
 
     @Override

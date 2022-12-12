@@ -398,4 +398,9 @@ final class DefaultFlagsProvider implements FlagsProvider {
                          File.separatorChar + "armeria" +
                          File.separatorChar + "multipart-uploads");
     }
+
+    @Override
+    public Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
+        return Sampler.never();
+    }
 }

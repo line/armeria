@@ -33,6 +33,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
+import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.util.concurrent.EventExecutor;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -44,7 +45,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  * @param <T> the type of element signaled
  */
 @UnstableApi
-public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
+public class DeferredStreamMessage<T> extends CancellableStreamMessage<T> {
 
     @SuppressWarnings("rawtypes")
     private static final AtomicReferenceFieldUpdater<DeferredStreamMessage, SubscriptionImpl>
@@ -128,10 +129,17 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
 
         if (!collectingFutureUpdater.compareAndSet(this, null, NO_COLLECTING_FUTURE)) {
             upstream.collect(collectingExecutor, collectionOptions).handle((result, cause) -> {
-                if (cause == null) {
-                    collectingFuture.complete(result);
-                } else {
+                final CompletableFuture<List<T>> collectingFuture = this.collectingFuture;
+                assert collectingFuture != null;
+                if (cause != null) {
                     collectingFuture.completeExceptionally(cause);
+                } else {
+                    // `collectingFuture` can be completed exceptionally by `abort()`
+                    if (!collectingFuture.complete(result)) {
+                        for (final T obj : result) {
+                            PooledObjects.close(obj);
+                        }
+                    }
                 }
                 return null;
             });
@@ -323,6 +331,13 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
             return;
         }
 
+        //noinspection unchecked
+        final CompletableFuture<List<?>> collectingFuture =
+                (CompletableFuture<List<?>>) (CompletableFuture<?>) this.collectingFuture;
+        if (collectingFuture != null && collectingFuture != NO_COLLECTING_FUTURE) {
+            collectingFuture.completeExceptionally(cause);
+        }
+
         final CloseEvent closeEvent = newCloseEvent(cause);
         final SubscriptionImpl downstreamSubscription = this.downstreamSubscription;
         assert downstreamSubscription != null;
@@ -356,6 +371,10 @@ public class DeferredStreamMessage<T> extends AbstractStreamMessage<T> {
         collectingExecutor = executor;
         collectionOptions = options;
         if (collectingFutureUpdater.compareAndSet(this, null, collectingFuture)) {
+            final Throwable abortCause = this.abortCause;
+            if (abortCause != null) {
+                collectingFuture.completeExceptionally(abortCause);
+            }
             return collectingFuture;
         } else {
             final StreamMessage<T> upstream0 = this.upstream;
