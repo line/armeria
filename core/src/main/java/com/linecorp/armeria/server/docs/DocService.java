@@ -189,7 +189,7 @@ public final class DocService extends SimpleDecoratingHttpService {
 
         // Build the Specification after all the services are added to the server.
         final ServerConfig config = server.config();
-        final List<VirtualHost> virtualHosts = config.findVirtualHosts(DocService.this);
+        final List<VirtualHost> virtualHosts = config.findVirtualHosts(this);
 
         final List<ServiceConfig> services =
                 config.serviceConfigs().stream()
