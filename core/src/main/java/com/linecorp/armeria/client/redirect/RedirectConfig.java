@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Configuration for
- * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a>.
+ * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6-4">automatic redirection</a>.
  */
 @UnstableApi
 public final class RedirectConfig {

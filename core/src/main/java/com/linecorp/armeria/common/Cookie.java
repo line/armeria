@@ -571,7 +571,7 @@ public interface Cookie extends Comparable<Cookie> {
      * Encodes this {@link Cookie} into a single {@code "Cookie"} header value.
      * Note that you must use {@link #toCookieHeader(Collection)} when encoding more than one {@link Cookie},
      * because it is prohibited to send multiple {@code "Cookie"} headers in an HTTP request,
-     * according to <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-5.4">RFC 6265</a>.
+     * according to <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-5-4">RFC 6265</a>.
      *
      * @return a single RFC 6265-style {@code "Cookie"} header value.
      */
@@ -583,7 +583,7 @@ public interface Cookie extends Comparable<Cookie> {
      * Encodes this {@link Cookie} into a single {@code "Cookie"} header value.
      * Note that you must use {@link #toCookieHeader(boolean, Collection)} when encoding
      * more than one {@link Cookie}, because it is prohibited to send multiple {@code "Cookie"} headers
-     * in an HTTP request, according to <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-5.4">RFC 6265</a>.
+     * in an HTTP request, according to <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-5-4">RFC 6265</a>.
      *
      * @param strict whether to validate that the cookie name and value are in the valid scope
      *               defined in RFC 6265.

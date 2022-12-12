@@ -536,7 +536,7 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> interval.
+     * Sets the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6-7">PING</a> interval.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -556,7 +556,7 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> interval.
+     * Sets the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6-7">PING</a> interval.
      *
      * <p>Note that this settings is only in effect when {@link #idleTimeoutMillis(long)}} or
      * {@link #idleTimeout(Duration)} is greater than the specified PING interval.
@@ -986,7 +986,7 @@ public final class ServerBuilder implements TlsSetters {
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9-2-2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
      *
      * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
@@ -1005,7 +1005,7 @@ public final class ServerBuilder implements TlsSetters {
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9-2-2">Section 9.2.2, RFC7540</a> for
      * more information. This option is disabled by default.
      *
      * @param tlsAllowUnsafeCiphers Whether to allow the unsafe ciphers

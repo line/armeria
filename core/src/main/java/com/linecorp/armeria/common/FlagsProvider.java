@@ -448,9 +448,9 @@ public interface FlagsProvider {
 
     /**
      * Returns the default value for the PING interval.
-     * A <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame
+     * A <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6-7">PING</a> frame
      * is sent for HTTP/2 server and client or
-     * an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with
+     * an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4-3-7">OPTIONS</a> request with
      * an asterisk ("*") is sent for HTTP/1 client.
      *
      * <p>Note that this flag is only in effect when {@link #defaultServerIdleTimeoutMillis()} for server and

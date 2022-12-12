@@ -51,7 +51,7 @@ import com.linecorp.armeria.internal.common.auth.oauth2.OAuth2Constants;
 
 /**
  * Defines a structure of the Token Introspection Response, as per
- * <a href="https://datatracker.ietf.org/doc/html/rfc7662#section-2.2">[RFC7662], Section 2.2</a>.
+ * <a href="https://datatracker.ietf.org/doc/html/rfc7662#section-2-2">[RFC7662], Section 2.2</a>.
  */
 @UnstableApi
 public class OAuth2TokenDescriptor implements Serializable {
@@ -93,7 +93,7 @@ public class OAuth2TokenDescriptor implements Serializable {
      * {@value OAuth2Constants#SCOPE} Token Introspection Response field,
      * OPTIONAL. A JSON string containing a space-separated list of scopes associated with this token,
      * in the format described at
-     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-3-3">[RFC6749], Section 3.3</a>.
      */
     @Nullable
     private final String scope;
@@ -121,7 +121,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     /**
      * {@value OAuth2Constants#TOKEN_TYPE} Token Introspection Response field,
      * OPTIONAL. Type of the token as defined at
-     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-7-1">[RFC6749], Section 7.1</a>.
      */
     @Nullable
     private final String tokenType;
@@ -265,7 +265,7 @@ public class OAuth2TokenDescriptor implements Serializable {
      * {@value OAuth2Constants#SCOPE} Token Introspection Response field,
      * OPTIONAL. A JSON string containing a space-separated list of scopes associated with this token,
      * in the format described at
-     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-3.3">[RFC6749], Section 3.3</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-3-3">[RFC6749], Section 3.3</a>.
      */
     @Nullable
     public String scope() {
@@ -302,7 +302,7 @@ public class OAuth2TokenDescriptor implements Serializable {
     /**
      * {@value OAuth2Constants#TOKEN_TYPE} Token Introspection Response field,
      * OPTIONAL. Type of the token as defined at
-     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-7-1">[RFC6749], Section 7.1</a>.
      */
     @Nullable
     public String tokenType() {

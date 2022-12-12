@@ -230,7 +230,7 @@ final class HttpServerUpgradeHandler extends ChannelInboundHandlerAdapter {
         if (handlingUpgrade && msg instanceof LastHttpContent) {
             // The client should send a full payload body before sending HTTP/2 frames.
             // Hence, 'sourceCodec' could be lazily removed with the 'LastHttpContent'.
-            // https://datatracker.ietf.org/doc/html/rfc7540#section-3.2
+            // https://datatracker.ietf.org/doc/html/rfc7540#section-3-2
             sourceCodec.upgradeFrom(ctx);
             ctx.fireChannelReadComplete();
             ctx.pipeline().remove(this);

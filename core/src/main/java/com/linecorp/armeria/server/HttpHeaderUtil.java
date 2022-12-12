@@ -140,7 +140,7 @@ final class HttpHeaderUtil {
             (firstChar == 'u' && "unknown".equals(address))) {
             // To early return when the address is not an IP address.
             // - an obfuscated identifier which must start with '_'
-            //   - https://datatracker.ietf.org/doc/html/rfc7239#section-6.3
+            //   - https://datatracker.ietf.org/doc/html/rfc7239#section-6-3
             // - the "unknown" identifier
             return null;
         }

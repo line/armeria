@@ -43,7 +43,7 @@ public final class OAuth2Constants {
 
     /**
      * Access Token Response constants, as per
-     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-5.1">[RFC6749], Section 5.1</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-5-1">[RFC6749], Section 5.1</a>.
      */
     public static final String ACCESS_TOKEN = "access_token";
     public static final String REFRESH_TOKEN = "refresh_token";
@@ -60,7 +60,7 @@ public final class OAuth2Constants {
 
     /**
      * Token Introspection Response constants, as per
-     * <a href="https://datatracker.ietf.org/doc/html/rfc7662#section-2.2">[RFC7662], Section 2.2</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7662#section-2-2">[RFC7662], Section 2.2</a>.
      */
     public static final String ACTIVE = "active";
     public static final String EXPIRES_AT = "exp";
@@ -73,7 +73,7 @@ public final class OAuth2Constants {
 
     /**
      * Error Response constants, as per
-     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-5.2">[RFC6749], Section 5.2</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-5-2">[RFC6749], Section 5.2</a>.
      */
     public static final String ERROR = "error";
     public static final String ERROR_DESCRIPTION = "error_description";
@@ -81,7 +81,7 @@ public final class OAuth2Constants {
 
     /**
      * Error Response types, as per
-     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-5.2">[RFC6749], Section 5.2</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-5-2">[RFC6749], Section 5.2</a>.
      */
     public static final String INVALID_REQUEST = "invalid_request";
     public static final String INVALID_CLIENT = "invalid_client";

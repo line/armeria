@@ -210,7 +210,7 @@ public final class OAuth2TokenDescriptorBuilder {
     /**
      * {@code token_type} Token Introspection Response field,
      * OPTIONAL. Type of the token as defined at
-     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-7-1">[RFC6749], Section 7.1</a>.
      */
     public OAuth2TokenDescriptorBuilder tokenType(String tokenType) {
         this.tokenType = requireNonNull(tokenType, "tokenType");

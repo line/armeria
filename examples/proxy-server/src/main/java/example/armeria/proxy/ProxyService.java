@@ -21,7 +21,7 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 public final class ProxyService extends AbstractHttpService {
 
     // This is a simplified example. Please refer to
-    // https://datatracker.ietf.org/doc/html/rfc7230#section-5.7.1 for more information about Via header.
+    // https://datatracker.ietf.org/doc/html/rfc7230#section-5-7-1 for more information about Via header.
     private static final String viaHeaderValue = "HTTP/2.0 Armeria proxy"; // The pseudonym is Armeria proxy.
 
     /**

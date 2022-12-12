@@ -80,7 +80,7 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
             nettyHeaders.remove(HttpHeaderNames.TRANSFER_ENCODING);
 
             // Set or remove the 'content-length' header depending on request method.
-            // See: https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
+            // See: https://datatracker.ietf.org/doc/html/rfc7230#section-3-3-2
             //
             // > A user agent SHOULD send a Content-Length in a request message when
             // > no Transfer-Encoding is sent and the request method defines a meaning

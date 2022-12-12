@@ -237,7 +237,7 @@ public final class HttpHeaderNames {
      */
     public static final AsciiString HOST = create("Host");
     /**
-     * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-3.2.1">{@code "HTTP2-Settings"}
+     * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-3-2-1">{@code "HTTP2-Settings"}
      * </a> header field name.
      */
     public static final AsciiString HTTP2_SETTINGS = create("HTTP2-Settings");
@@ -372,7 +372,7 @@ public final class HttpHeaderNames {
     public static final AsciiString CONTENT_BASE = create("Content-Base");
     /**
      * The HTTP/MIME {@code "Content-Description"} header field name.
-     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-6.2">RFC 1521:
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-6-2">RFC 1521:
      * MIME Part One: Optional Content-Description Header Field</a>
      */
     public static final AsciiString CONTENT_DESCRIPTION = create("Content-Description");
@@ -388,7 +388,7 @@ public final class HttpHeaderNames {
     public static final AsciiString CONTENT_ENCODING = create("Content-Encoding");
     /**
      * The HTTP/MIME {@code "Content-ID"} header field name.
-     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-6.1">RFC 1521:
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-6-1">RFC 1521:
      * MIME Part One: Optional Content-ID Header Field</a>
      */
     public static final AsciiString CONTENT_ID = create("Content-ID");
@@ -518,7 +518,7 @@ public final class HttpHeaderNames {
     public static final AsciiString SOURCE_MAP = create("SourceMap");
 
     /**
-     * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc6797#section-6.1">{@code
+     * The HTTP <a href="https://datatracker.ietf.org/doc/html/rfc6797#section-6-1">{@code
      * Strict-Transport-Security}</a> header field name.
      */
     public static final AsciiString STRICT_TRANSPORT_SECURITY = create("Strict-Transport-Security");

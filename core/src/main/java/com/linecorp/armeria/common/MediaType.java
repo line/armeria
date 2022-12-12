@@ -70,7 +70,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 /**
  * Represents an <a href="https://en.wikipedia.org/wiki/Internet_media_type">Internet Media Type</a>
  * (also known as a MIME Type or Content Type). This class also supports the concept of media ranges
- * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.1">defined by HTTP/1.1</a>.
+ * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14-1">defined by HTTP/1.1</a>.
  * As such, the {@code *} character is treated as a wildcard and is used to represent any acceptable
  * type or subtype value. A media type may not have wildcard type with a declared subtype. The
  * {@code *} character has no special meaning as part of a parameter. All values for type, subtype,
@@ -180,7 +180,7 @@ public final class MediaType {
     public static final MediaType PLAIN_TEXT_UTF_8 = createConstantUtf8(TEXT_TYPE, "plain");
 
     /**
-     * The <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7.1.2">text/plain</a> content type is
+     * The <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7-1-2">text/plain</a> content type is
      * the generic subtype for plain text.
      */
     public static final MediaType PLAIN_TEXT = createConstant(TEXT_TYPE, "plain");
@@ -302,7 +302,7 @@ public final class MediaType {
     public static final MediaType L24_AUDIO = createConstant(AUDIO_TYPE, "l24");
 
     /**
-     * Basic Audio, as defined by <a href="https://datatracker.ietf.org/doc/html/rfc2046#section-4.3">RFC
+     * Basic Audio, as defined by <a href="https://datatracker.ietf.org/doc/html/rfc2046#section-4-3">RFC
      * 2046</a>.
      */
     public static final MediaType BASIC_AUDIO = createConstant(AUDIO_TYPE, "basic");
@@ -415,21 +415,21 @@ public final class MediaType {
 
     /**
      * A {@link MediaType} constant representing {@code multipart/alternative} media type.
-     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7.2.3">RFC 1521:
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7-2-3">RFC 1521:
      * MIME Part One: Mechanisms for Specifying and Describing the Format of Internet Message Bodies</a>
      */
     public static final MediaType MULTIPART_ALTERNATIVE = createConstant(MULTIPART_TYPE, "alternative");
 
     /**
      * A {@link MediaType} constant representing {@code multipart/digest} media type.
-     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7.2.4">RFC 1521:
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7-2-4">RFC 1521:
      * MIME Part One: Mechanisms for Specifying and Describing the Format of Internet Message Bodies</a>
      */
     public static final MediaType MULTIPART_DIGEST = createConstant(MULTIPART_TYPE, "digest");
 
     /**
      * A {@link MediaType} constant representing {@code multipart/encrypted} media type.
-     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1847#section-2.2">RFC 1847:
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1847#section-2-2">RFC 1847:
      * Security Multiparts for MIME: Multipart/Signed and Multipart/Encrypted</a>
      */
     public static final MediaType MULTIPART_ENCRYPTED = createConstant(MULTIPART_TYPE, "encrypted");
@@ -443,14 +443,14 @@ public final class MediaType {
 
     /**
      * A {@link MediaType} constant representing {@code multipart/mixed} media type.
-     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7.2.2">RFC 1521:
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7-2-2">RFC 1521:
      * MIME Part One: Mechanisms for Specifying and Describing the Format of Internet Message Bodies</a>
      */
     public static final MediaType MULTIPART_MIXED = createConstant(MULTIPART_TYPE, "mixed");
 
     /**
      * A {@link MediaType} constant representing {@code multipart/parallel} media type.
-     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7.2.5">RFC 1521:
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1521#section-7-2-5">RFC 1521:
      * MIME Part One: Mechanisms for Specifying and Describing the Format of Internet Message Bodies</a>
      */
     public static final MediaType MULTIPART_PARALLEL = createConstant(MULTIPART_TYPE, "parallel");
@@ -464,7 +464,7 @@ public final class MediaType {
 
     /**
      * A {@link MediaType} constant representing {@code multipart/signed} media type.
-     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1847#section-2.1">RFC 1847:
+     * As described in <a href="https://datatracker.ietf.org/doc/html/rfc1847#section-2-1">RFC 1847:
      * Security Multiparts for MIME: Multipart/Signed and Multipart/Encrypted</a>
      */
     public static final MediaType MULTIPART_SIGNED = createConstant(MULTIPART_TYPE, "signed");
@@ -1018,7 +1018,7 @@ public final class MediaType {
 
     /**
      * Returns {@code true} if this instance falls within the range (as defined by <a
-     * href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.1">the HTTP Accept header</a>) given
+     * href="https://datatracker.ietf.org/doc/html/rfc2616#section-14-1">the HTTP Accept header</a>) given
      * by the argument according to three criteria:
      *
      * <ol>

@@ -367,7 +367,7 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
-     * Enables <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a>.
+     * Enables <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6-4">automatic redirection</a>.
      */
     @UnstableApi
     public AbstractClientOptionsBuilder followRedirects() {
@@ -376,7 +376,7 @@ public class AbstractClientOptionsBuilder {
 
     /**
      * Sets the {@link RedirectConfig} to enable
-     * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a>.
+     * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6-4">automatic redirection</a>.
      */
     @UnstableApi
     public AbstractClientOptionsBuilder followRedirects(RedirectConfig redirectConfig) {

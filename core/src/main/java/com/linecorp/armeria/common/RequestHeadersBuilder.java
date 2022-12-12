@@ -112,28 +112,28 @@ public interface RequestHeadersBuilder extends HttpHeadersBuilder, RequestHeader
     }
 
     /**
-     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.2">cookie</a> header.
+     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4-2">cookie</a> header.
      */
     RequestHeadersBuilder cookie(Cookie cookie);
 
     /**
-     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.2">cookie</a> header.
+     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4-2">cookie</a> header.
      */
     RequestHeadersBuilder cookies(Iterable<? extends Cookie> cookies);
 
     /**
-     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4.2">cookie</a> header.
+     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc6265#section-4-2">cookie</a> header.
      */
     RequestHeadersBuilder cookies(Cookie... cookies);
 
     /**
-     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2">Accept</a>
+     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5-3-2">Accept</a>
      * header.
      */
     RequestHeadersBuilder accept(MediaType... mediaTypes);
 
     /**
-     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5.3.2">Accept</a>
+     * Adds the <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-5-3-2">Accept</a>
      * header.
      */
     RequestHeadersBuilder accept(Iterable<MediaType> mediaTypes);

@@ -28,7 +28,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * An exception indicating that
- * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">automatic redirection</a> exceeds the
+ * <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6-4">automatic redirection</a> exceeds the
  * maximum limit number.
  *
  * @see RedirectConfigBuilder#maxRedirects(int)

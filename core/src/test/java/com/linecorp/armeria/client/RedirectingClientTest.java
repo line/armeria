@@ -247,7 +247,7 @@ class RedirectingClientTest {
     @Test
     void referenceResolution() {
         // /a/b with ./c is resolved to a/c
-        // See https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.4
+        // See https://datatracker.ietf.org/doc/html/rfc3986#section-5-2-4
         final WebClient client = WebClient.builder(server.httpUri())
                                           .factory(ClientFactory.insecure())
                                           .followRedirects()

@@ -81,7 +81,7 @@ public final class Http2GoAwayHandler {
             // Should not close a connection if a last stream identifier is 2^31-1 and a NO_ERROR code.
             // The server attempted to gracefully shut a connection down.
             // The server will send another GOAWAY frame with an updated last stream identifier.
-            // https://datatracker.ietf.org/doc/html/rfc7540#section-6.8
+            // https://datatracker.ietf.org/doc/html/rfc7540#section-6-8
             return;
         }
 

@@ -88,7 +88,7 @@ public final class ClientFactoryOptions
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9-2-2">Section 9.2.2, RFC7540</a> for
      * more information.
      *
      * @deprecated It's not recommended to enable this option. Use it only when you have no other way to
@@ -108,7 +108,7 @@ public final class ClientFactoryOptions
                                        eventLoopGroup -> new DnsResolverGroupBuilder().build(eventLoopGroup));
 
     /**
-     * The HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection flow-control
+     * The HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6-9-2">initial connection flow-control
      * window size</a>.
      */
     public static final ClientFactoryOption<Integer> HTTP2_INITIAL_CONNECTION_WINDOW_SIZE =
@@ -116,7 +116,7 @@ public final class ClientFactoryOptions
                                        Flags.defaultHttp2InitialConnectionWindowSize());
 
     /**
-     * The <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
+     * The <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6-5-2">SETTINGS_INITIAL_WINDOW_SIZE</a>
      * for HTTP/2 stream-level flow control.
      */
     public static final ClientFactoryOption<Integer> HTTP2_INITIAL_STREAM_WINDOW_SIZE =
@@ -124,14 +124,14 @@ public final class ClientFactoryOptions
                                        Flags.defaultHttp2InitialStreamWindowSize());
 
     /**
-     * The <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
+     * The <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6-5-2">SETTINGS_MAX_FRAME_SIZE</a>
      * that indicates the size of the largest frame payload that this client is willing to receive.
      */
     public static final ClientFactoryOption<Integer> HTTP2_MAX_FRAME_SIZE =
             ClientFactoryOption.define("HTTP2_MAX_FRAME_SIZE", Flags.defaultHttp2MaxFrameSize());
 
     /**
-     * The HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
+     * The HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6-5-2">SETTINGS_MAX_HEADER_LIST_SIZE</a>
      * that indicates the maximum size of header list that the client is prepared to accept, in octets.
      */
     public static final ClientFactoryOption<Long> HTTP2_MAX_HEADER_LIST_SIZE =
@@ -165,8 +165,8 @@ public final class ClientFactoryOptions
     /**
      * The PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
-     * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
-     * or an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with
+     * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6-7">PING</a> frame is sent for HTTP/2
+     * or an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4-3-7">OPTIONS</a> request with
      * an asterisk ("*") is sent for HTTP/1.
      */
     public static final ClientFactoryOption<Long> PING_INTERVAL_MILLIS =
@@ -397,7 +397,7 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.9.2">initial connection
+     * Returns the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6-9-2">initial connection
      * flow-control window size</a>.
      */
     public int http2InitialConnectionWindowSize() {
@@ -405,7 +405,7 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_INITIAL_WINDOW_SIZE</a>
+     * Returns the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6-5-2">SETTINGS_INITIAL_WINDOW_SIZE</a>
      * for HTTP/2 stream-level flow control.
      */
     public int http2InitialStreamWindowSize() {
@@ -413,7 +413,7 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">SETTINGS_MAX_FRAME_SIZE</a>
+     * Returns the <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6-5-2">SETTINGS_MAX_FRAME_SIZE</a>
      * that indicates the size of the largest frame payload that this client is willing to receive.
      */
     public int http2MaxFrameSize() {
@@ -421,7 +421,7 @@ public final class ClientFactoryOptions
     }
 
     /**
-     * Returns the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.5.2">
+     * Returns the HTTP/2 <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6-5-2">
      * SETTINGS_MAX_HEADER_LIST_SIZE</a> that indicates the maximum size of header list
      * that the client is prepared to accept, in octets.
      */
@@ -460,8 +460,8 @@ public final class ClientFactoryOptions
     /**
      * Returns the PING interval in milliseconds.
      * When neither read nor write was performed for the specified period of time,
-     * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6.7">PING</a> frame is sent for HTTP/2
-     * or an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4.3.7">OPTIONS</a> request with
+     * a <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-6-7">PING</a> frame is sent for HTTP/2
+     * or an <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-4-3-7">OPTIONS</a> request with
      * an asterisk ("*") is sent for HTTP/1.
      */
     public long pingIntervalMillis() {
@@ -537,7 +537,7 @@ public final class ClientFactoryOptions
      * <p>Note that enabling this option increases the security risk of your connection.
      * Use it only when you must communicate with a legacy system that does not support
      * secure cipher suites.
-     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9.2.2">Section 9.2.2, RFC7540</a> for
+     * See <a href="https://datatracker.ietf.org/doc/html/rfc7540#section-9-2-2">Section 9.2.2, RFC7540</a> for
      * more information.
      */
     public boolean tlsAllowUnsafeCiphers() {

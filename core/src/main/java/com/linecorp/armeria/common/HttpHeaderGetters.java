@@ -43,7 +43,7 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
 
     /**
      * Returns the value of the
-     * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.13">content-length</a> header,
+     * <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14-13">content-length</a> header,
      * or {@code -1} if this value is not known.
      */
     long contentLength();

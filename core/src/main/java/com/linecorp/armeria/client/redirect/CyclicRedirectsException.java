@@ -26,7 +26,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
  * An exception indicating that a client detected cyclical redirections.
- * See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6.4">cyclical redirections</a>
+ * See <a href="https://datatracker.ietf.org/doc/html/rfc7231#section-6-4">cyclical redirections</a>
  * for more information.
  */
 public final class CyclicRedirectsException extends RedirectsException {

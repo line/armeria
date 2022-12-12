@@ -79,7 +79,7 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
     /**
      * Provides client authorization for the OAuth 2.0 Introspection requests based on encoded authorization
      * token and authorization type,
-     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2-3">[RFC6749], Section 2.3</a>.
      *
      * @param authorizationSupplier A supplier of encoded client authorization token.
      * @param authorizationType One of the registered HTTP authentication schemes as per
@@ -95,7 +95,7 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
     /**
      * Provides client authorization for the OAuth 2.0 Introspection requests based on encoded authorization
      * token and {@code Basic} authorization type,
-     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2-3">[RFC6749], Section 2.3</a>.
      *
      * @param authorizationSupplier A supplier of encoded client authorization token.
      */
@@ -108,7 +108,7 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
     /**
      * Provides client authorization for the OAuth 2.0 Introspection requests based on client credentials and
      * authorization type,
-     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2-3">[RFC6749], Section 2.3</a>.
      *
      * @param credentialsSupplier A supplier of client credentials.
      * @param authorizationType One of the registered HTTP authentication schemes as per
@@ -124,7 +124,7 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
     /**
      * Provides client authorization for the OAuth 2.0 Introspection requests based on client credentials and
      * {@code Basic} authorization type,
-     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2-3">[RFC6749], Section 2.3</a>.
      *
      * @param credentialsSupplier A supplier of client credentials.
      */
@@ -136,7 +136,7 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
 
     /**
      * Access Token type permitted by this authorizer,
-     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-7.1">[RFC6749], Section 7.1</a>.
+     * as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-7-1">[RFC6749], Section 7.1</a>.
      * The authorizer will accept any type if empty. OPTIONAL.
      */
     public OAuth2TokenIntrospectionAuthorizerBuilder accessTokenType(String accessTokenType) {
@@ -172,7 +172,7 @@ public final class OAuth2TokenIntrospectionAuthorizerBuilder {
 
     /**
      * Provides caching facility for OAuth 2.0 {@link OAuth2TokenDescriptor} in order to avoid continuous Token
-     * Introspection as per <a href="https://datatracker.ietf.org/doc/html/rfc7662#section-2.2">[RFC7662], Section 2.2</a>.
+     * Introspection as per <a href="https://datatracker.ietf.org/doc/html/rfc7662#section-2-2">[RFC7662], Section 2.2</a>.
      * Sets the {@linkplain CaffeineSpec Caffeine specification string} of the cache that stores the tokens.
      * If not set, {@value DEFAULT_CACHE_SPEC} is used by default.
      */

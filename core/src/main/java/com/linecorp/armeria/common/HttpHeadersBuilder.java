@@ -51,7 +51,7 @@ public interface HttpHeadersBuilder extends HttpHeaderGetters {
     HttpHeadersBuilder endOfStream(boolean endOfStream);
 
     /**
-     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14.13">content-length</a> header.
+     * Sets the <a href="https://datatracker.ietf.org/doc/html/rfc2616#section-14-13">content-length</a> header.
      */
     HttpHeadersBuilder contentLength(long contentLength);
 

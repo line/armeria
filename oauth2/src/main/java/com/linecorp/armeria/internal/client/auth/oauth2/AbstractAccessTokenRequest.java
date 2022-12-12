@@ -43,7 +43,7 @@ public abstract class AbstractAccessTokenRequest extends AbstractOAuth2Request<G
      * @param accessTokenEndpointPath A URI path that corresponds to the Access Token endpoint of the
      *                                OAuth 2 system.
      * @param clientAuthorization Provides client authorization for the OAuth requests,
-     *                            as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2.3">[RFC6749], Section 2.3</a>.
+     *                            as per <a href="https://datatracker.ietf.org/doc/html/rfc6749#section-2-3">[RFC6749], Section 2.3</a>.
      */
     protected AbstractAccessTokenRequest(WebClient accessTokenEndpoint, String accessTokenEndpointPath,
                                          @Nullable ClientAuthorization clientAuthorization) {

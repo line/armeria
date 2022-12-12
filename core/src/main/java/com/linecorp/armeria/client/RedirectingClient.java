@@ -277,7 +277,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             !(method == HttpMethod.GET || method == HttpMethod.HEAD)) {
             // HTTP methods are changed to GET when the status is 303.
             // https://developer.mozilla.org/en-US/docs/Web/HTTP/Redirections
-            // https://datatracker.ietf.org/doc/html/rfc7231#section-6.4.4
+            // https://datatracker.ietf.org/doc/html/rfc7231#section-6-4-4
             builder.method(HttpMethod.GET);
             reqDuplicator.abort();
             // TODO(minwoox): implement https://github.com/line/armeria/issues/1409
