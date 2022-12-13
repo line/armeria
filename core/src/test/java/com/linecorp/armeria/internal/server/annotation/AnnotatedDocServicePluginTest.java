@@ -51,6 +51,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.docs.RequestObjectTypeSignature;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RouteBuilder;
 import com.linecorp.armeria.server.Server;
@@ -70,6 +71,7 @@ import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
+import com.linecorp.armeria.server.docs.TypeSignatureType;
 
 class AnnotatedDocServicePluginTest {
 
@@ -404,8 +406,9 @@ class AnnotatedDocServicePluginTest {
 
     static FieldInfo compositeBean() {
         return FieldInfo.builder("compositeBean",
-                                 TypeSignature.ofRequestObject(CompositeBean.class.getName(),
-                                                               CompositeBean.class, ImmutableList.of()))
+                                 new RequestObjectTypeSignature(TypeSignatureType.STRUCT,
+                                                                CompositeBean.class.getName(),
+                                                                CompositeBean.class, ImmutableList.of()))
                         .requirement(REQUIRED)
                         .build();
     }

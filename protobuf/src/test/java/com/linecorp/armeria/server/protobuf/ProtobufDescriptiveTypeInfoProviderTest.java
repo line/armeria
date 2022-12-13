@@ -40,10 +40,8 @@ import java.util.concurrent.CompletableFuture;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.common.collect.ImmutableList;
 
@@ -218,13 +216,6 @@ class ProtobufDescriptiveTypeInfoProviderTest {
                                         .asJson(JsonNode.class)
                                         .execute()
                                         .content();
-        try {
-            System.err.println(
-                    new ObjectMapper().writerWithDefaultPrettyPrinter().writeValueAsString(response));
-        } catch (JsonProcessingException e) {
-            throw new RuntimeException(e);
-        }
-
         final JsonNode param = response.get("services").get(0).get("methods").get(0)
                                        .get("parameters").get(0);
         assertThat(param.get("name").textValue()).isEqualTo("req");

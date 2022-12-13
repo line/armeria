@@ -266,8 +266,9 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                 }
 
                 final Class<?> type = beanFactoryId.type();
-                final DescriptiveTypeSignature typeSignature = TypeSignature.ofRequestObject(
-                        type.getName(), type, new AnnotatedValueResolversWrapper(resolvers));
+                final DescriptiveTypeSignature typeSignature =
+                        new RequestObjectTypeSignature(TypeSignatureType.STRUCT, type.getName(), type,
+                                                       new AnnotatedValueResolversWrapper(resolvers));
                 return FieldInfo.builder(resolver.httpElementName(), typeSignature)
                                 .requirement(resolver.shouldExist() ?
                                              FieldRequirement.REQUIRED : FieldRequirement.OPTIONAL)
@@ -472,7 +473,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             return descriptiveTypeInfo;
         }
 
-        if (typeSignature.type() == TypeSignatureType.REQUEST_OBJECT) {
+        if (typeSignature instanceof RequestObjectTypeSignature) {
             final Object annotatedValueResolvers =
                     ((RequestObjectTypeSignature) typeSignature).annotatedValueResolvers();
             if (annotatedValueResolvers instanceof AnnotatedValueResolversWrapper) {
