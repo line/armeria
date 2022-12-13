@@ -134,7 +134,7 @@ public final class WebSocketFrameEncoder {
                                             " of a control frame exceeded the limit 125. frame type: " + type);
         }
 
-        logger.trace("Encoding WebSocket Frame. opCode={} length={}", type.opcode(), length);
+        logger.trace("Encoding a WebSocket Frame. type: {}, length: {}", type.opcode(), length);
 
         // https://datatracker.ietf.org/doc/html/rfc6455#section-5-2
         int b0 = 0;

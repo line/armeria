@@ -155,8 +155,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
         if (msg == EMPTY_LAST_CONTENT) {
             if (req == null || webSocketUpgradeContext.lastWebSocketUpgradeRequestId() > 0) {
                 // EMPTY_LAST_CONTENT can be read after web socket upgrade failed or
-                // before an upgrade response is sent. In that case, let
-                // WebSocketUpgradeListener.upgraded() handle the req.
+                // before an upgrade response is sent so just ignore it.
                 return;
             }
         }
@@ -168,12 +167,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
         final int id = req != null ? req.id() : ++receivedRequests;
         try {
             if (discarding) {
-                return;
-            }
-
-            if (!webSocketUpgradeContext.webSocketEstablished() &&
-                webSocketUpgradeContext.lastWebSocketUpgradeRequestId() > 0) {
-                fail(id, null, HttpStatus.BAD_REQUEST, "Invalid decoder state", null);
                 return;
             }
 
@@ -255,9 +248,11 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                             final ServiceConfig serviceConfig = routingCtx.result().value();
                             if (serviceConfig.service().as(WebSocketService.class) != null &&
                                 isHttp1WebSocketUpgradeRequest(headers)) {
+                                logger.trace("Received WebSocket upgrade headers: {}", headers);
                                 this.req = req = DecodedHttpRequest.of(false, eventLoop, id, 1, headers,
                                                                        keepAlive, inboundTrafficController,
                                                                        routingCtx);
+                                // Because endOfStream is false and the exchangeType is BIDI_STREAMING.
                                 assert req instanceof StreamingDecodedHttpRequest;
                                 webSocketUpgradeContext.setLastWebSocketUpgradeRequestId(id);
                                 WebSocketUtil.setWebSocketInboundStream(ctx.channel(), (HttpRequestWriter) req);
@@ -332,19 +327,19 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                     }
                 }
 
-                if (!webSocketUpgradeContext.webSocketEstablished()) {
-                    if (msg instanceof LastHttpContent) {
-                        final HttpHeaders trailingHeaders = ((LastHttpContent) msg).trailingHeaders();
-                        if (!trailingHeaders.isEmpty()) {
-                            decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
-                        }
-                        decodedReq.close();
-                        if (decodedReq.needsAggregation()) {
-                            // An aggregated request is now ready to be fired.
-                            ctx.fireChannelRead(decodedReq);
-                        }
-                        this.req = null;
+                // If a WebSocket session established, ignore the LastHttpContent.
+                if (!webSocketUpgradeContext.webSocketSessionEstablished() &&
+                    msg instanceof LastHttpContent) {
+                    final HttpHeaders trailingHeaders = ((LastHttpContent) msg).trailingHeaders();
+                    if (!trailingHeaders.isEmpty()) {
+                        decodedReq.write(ArmeriaHttpUtil.toArmeria(trailingHeaders));
                     }
+                    decodedReq.close();
+                    if (decodedReq.needsAggregation()) {
+                        // An aggregated request is now ready to be fired.
+                        ctx.fireChannelRead(decodedReq);
+                    }
+                    this.req = null;
                 }
             }
         } catch (URISyntaxException e) {

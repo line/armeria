@@ -18,6 +18,9 @@ package com.linecorp.armeria.server;
 
 import static com.linecorp.armeria.internal.common.websocket.WebSocketUtil.isHttp1WebSocketUpgradeResponse;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -31,6 +34,7 @@ import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
+import com.linecorp.armeria.server.websocket.WebSocketService;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -47,6 +51,8 @@ import io.netty.handler.codec.http.HttpVersion;
 
 final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements ServerHttpObjectEncoder {
 
+    private static final Logger logger = LoggerFactory.getLogger(ServerHttp1ObjectEncoder.class);
+
     private final KeepAliveHandler keepAliveHandler;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
@@ -59,14 +65,14 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     private int lastResponseHeadersId;
 
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, KeepAliveHandler keepAliveHandler,
-                             boolean isWebSocketServiceEnabled, boolean enableDateHeader,
+                             boolean hasWebSocketService, boolean enableDateHeader,
                              boolean enableServerHeader, Http1HeaderNaming http1HeaderNaming) {
         super(ch, protocol);
         assert keepAliveHandler instanceof Http1ServerKeepAliveHandler ||
                keepAliveHandler instanceof NoopKeepAliveHandler;
         this.keepAliveHandler = keepAliveHandler;
-        webSocketUpgradeContext = isWebSocketServiceEnabled ? new DefaultWebSocketUpgradeContext()
-                                                            : WebSocketUpgradeContext.noop();
+        webSocketUpgradeContext = hasWebSocketService ? new DefaultWebSocketUpgradeContext()
+                                                      : WebSocketUpgradeContext.noop();
         this.enableServerHeader = enableServerHeader;
         this.enableDateHeader = enableDateHeader;
         this.http1HeaderNaming = http1HeaderNaming;
@@ -94,10 +100,12 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
         if (webSocketUpgradeContext.lastWebSocketUpgradeRequestId() == id) {
             if (isHttp1WebSocketUpgradeResponse(headers)) {
-                webSocketUpgradeContext.setWebSocketEstablished(true);
+                webSocketUpgradeContext.setWebSocketSessionEstablished(true);
+                logger.trace("WebSocket session is established. id: {}, response headers: {}", id, headers);
                 return handleWebSocketUpgradeResponse(id, headers);
             }
-            webSocketUpgradeContext.setWebSocketEstablished(false);
+            logger.trace("Failed to establish a WebSocket session. id: {}, response headers: {}", id, headers);
+            webSocketUpgradeContext.setWebSocketSessionEstablished(false);
         }
 
         final HttpResponse converted = convertHeaders(headers, endStream, isTrailersEmpty);
@@ -242,20 +250,47 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         return future.addListener(ChannelFutureListener.CLOSE);
     }
 
+    /**
+     * The context that has WebSocket upgrade and session information.
+     */
     interface WebSocketUpgradeContext {
 
+        /**
+         * A noop context. This is used when the server doesn't have any {@link WebSocketService}.
+         */
         static WebSocketUpgradeContext noop() {
             return NoopWebSocketUpgradeContext.INSTANCE;
         }
 
+        /**
+         * Sets the ID of the request that lastly tries to establish a WebSocket session.
+         * The ID will be used to find the corresponding response. If the response contains the proper
+         * WebSocket upgrade response headers, the WebSocket session will be established.
+         */
         void setLastWebSocketUpgradeRequestId(int id);
 
+        /**
+         * Returns the ID of the request that lastly tries to establish a WebSocket session.
+         */
         int lastWebSocketUpgradeRequestId();
 
-        void setWebSocketEstablished(boolean success);
+        /**
+         * Sets whether a WebSocket session is established. This will also reset the last request ID to -1 if
+         * {@code success} is {@code false}.
+         */
+        void setWebSocketSessionEstablished(boolean success);
 
-        boolean webSocketEstablished();
+        /**
+         * Tells whether WebSocket session is established.
+         */
+        boolean webSocketSessionEstablished();
 
+        /**
+         * Sets the listener that this context notifies when a WebSocket session is established or failed.
+         * The listener is {@link Http1RequestDecoder}.
+         * When the upgrade fails, the {@link Http1RequestDecoder} closes the request and removes
+         * the reference of the request.
+         */
         void setWebSocketUpgradeListener(WebSocketUpgradeListener listener);
     }
 
@@ -283,7 +318,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         }
 
         @Override
-        public void setWebSocketEstablished(boolean success) {
+        public void setWebSocketSessionEstablished(boolean success) {
             webSocketEstablished = success;
             if (!success) {
                 lastWebSocketUpgradeRequestId = -1; // reset
@@ -292,7 +327,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         }
 
         @Override
-        public boolean webSocketEstablished() {
+        public boolean webSocketSessionEstablished() {
             return webSocketEstablished;
         }
 
@@ -315,10 +350,10 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         }
 
         @Override
-        public void setWebSocketEstablished(boolean success) {}
+        public void setWebSocketSessionEstablished(boolean success) {}
 
         @Override
-        public boolean webSocketEstablished() {
+        public boolean webSocketSessionEstablished() {
             return false;
         }
 

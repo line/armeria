@@ -101,7 +101,10 @@ final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequestDeco
 
         @Override
         protected void decode(ChannelHandlerContext ctx, ByteBuf buffer, List<Object> out) throws Exception {
-            if (webSocketUpgradeContext.webSocketEstablished()) {
+            if (webSocketUpgradeContext.webSocketSessionEstablished()) {
+                // Because this request is in a WebSocket session, just create DefaultHttpContent and add to
+                // out. The content will be converted to an HttpData and written to the Armeria HttpRequest
+                // in Http1RequestDecoder.
                 final int toRead = Math.min(buffer.readableBytes(), maxChunkSize);
                 if (toRead > 0) {
                     final ByteBuf content = buffer.readRetainedSlice(toRead);

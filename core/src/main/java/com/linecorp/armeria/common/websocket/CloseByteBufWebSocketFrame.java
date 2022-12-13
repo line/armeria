@@ -60,7 +60,7 @@ final class CloseByteBufWebSocketFrame extends ByteBufWebSocketFrame implements 
         }
 
         final int index = data.readerIndex();
-        final int statusCode = data.getShort(0);
+        final int statusCode = data.readShort();
         data.readerIndex(index);
         try {
             validateStatusCode(statusCode);

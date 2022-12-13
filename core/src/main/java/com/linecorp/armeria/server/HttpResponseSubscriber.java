@@ -137,6 +137,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                                 " (service: " + service() + ')'), true);
                         return;
                     }
+                    // Only HTTP/1.x uses informational status for the WebSocket response.
                     if (!(reqCtx.sessionProtocol().isHttp1() && isHttp1WebSocketUpgradeResponse(headers))) {
                         responseEncoder.writeHeaders(req.id(), req.streamId(), headers, false, false)
                                        .addListener(writeHeadersFutureListener(false));

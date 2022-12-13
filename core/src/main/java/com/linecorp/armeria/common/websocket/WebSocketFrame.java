@@ -237,7 +237,7 @@ public interface WebSocketFrame extends Bytes {
     /**
      * (Advanced users only) Returns a new text {@link WebSocketFrame} with the {@link ByteBuf}
      * and {@code finalFragment}. When the {@code finalFragment} is {@code false},
-     * {@link #ofPooledContinuation(ByteBuf, boolean)} frames must be followed.
+     * {@link #ofPooledContinuation(ByteBuf)} frames must be followed.
      *
      * @see #ofText(byte[])
      * @see PooledObjects
@@ -262,7 +262,7 @@ public interface WebSocketFrame extends Bytes {
     /**
      * (Advanced users only) Returns a new binary {@link WebSocketFrame} with the {@link ByteBuf}
      * and {@code finalFragment}. When the {@code finalFragment} is {@code false},
-     * {@link #ofPooledContinuation(ByteBuf, boolean)} frames must be followed.
+     * {@link #ofPooledContinuation(ByteBuf)} frames must be followed.
      *
      * @see #ofBinary(byte[], boolean)
      * @see PooledObjects
@@ -322,8 +322,8 @@ public interface WebSocketFrame extends Bytes {
      * @see #ofContinuation(byte[])
      * @see PooledObjects
      */
-    static WebSocketFrame ofPooledContinuation(ByteBuf data, boolean isText) {
-        return ofPooledContinuation(data, isText, true);
+    static WebSocketFrame ofPooledContinuation(ByteBuf data) {
+        return ofPooledContinuation(data, true);
     }
 
     /**
@@ -335,7 +335,7 @@ public interface WebSocketFrame extends Bytes {
      * @see #ofContinuation(byte[])
      * @see PooledObjects
      */
-    static WebSocketFrame ofPooledContinuation(ByteBuf data, boolean isText, boolean finalFragment) {
+    static WebSocketFrame ofPooledContinuation(ByteBuf data, boolean finalFragment) {
         requireNonNull(data, "data");
         return new ByteBufWebSocketFrame(data, WebSocketFrameType.CONTINUATION,
                                          finalFragment);
