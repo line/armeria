@@ -51,7 +51,6 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.server.docs.RequestObjectTypeSignature;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RouteBuilder;
 import com.linecorp.armeria.server.Server;

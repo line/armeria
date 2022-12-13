@@ -57,7 +57,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.internal.server.RouteUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
-import com.linecorp.armeria.internal.server.docs.RequestObjectTypeSignature;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;

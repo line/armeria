@@ -14,23 +14,23 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.server.docs;
+package com.linecorp.armeria.internal.server.annotation;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.docs.DescriptiveTypeSignature;
 import com.linecorp.armeria.server.docs.TypeSignatureType;
 
-public final class RequestObjectTypeSignature extends DescriptiveTypeSignature {
+final class RequestObjectTypeSignature extends DescriptiveTypeSignature {
 
     private final Object annotatedValueResolvers;
 
-    public RequestObjectTypeSignature(TypeSignatureType requestObject, String name, Class<?> type,
-                                      Object annotatedValueResolvers) {
+    RequestObjectTypeSignature(TypeSignatureType requestObject, String name, Class<?> type,
+                               Object annotatedValueResolvers) {
         super(requestObject, name, type);
         this.annotatedValueResolvers = annotatedValueResolvers;
     }
 
-    public Object annotatedValueResolvers() {
+    Object annotatedValueResolvers() {
         return annotatedValueResolvers;
     }
 
