@@ -1,7 +1,0 @@
-dependencies {
-     testImplementation project(':core')
-
-     testImplementation libs.reactor.core
-     testImplementation libs.spring.boot2.starter.test
-     testImplementation libs.spring.boot2.starter.web
-}

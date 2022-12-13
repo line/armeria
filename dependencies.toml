@@ -37,9 +37,13 @@ grpc-kotlin = "1.3.0"
 guava = "31.1-jre"
 hamcrest = "2.2"
 hbase = "1.2.6"
-hibernate-validator = "6.2.3.Final"
+hibernate-validator6 = "6.2.3.Final"
+hibernate-validator8 = "8.0.0.Final"
 j2objc = "1.3"
 jackson = "2.13.4"
+jakarta-inject = "2.0.1"
+jakarta-validation = "3.0.2"
+jakarta-websocket= "2.1.0"
 javax-annotation = "1.3.2"
 javax-inject = "1"
 javax-jsr311 = "1.1.1"
@@ -64,7 +68,7 @@ kotlin = "1.7.20"
 kotlin-coroutine = "1.6.4"
 ktlint-gradle-plugin = "11.0.0"
 logback = "1.2.11"
-micrometer = "1.9.4"
+micrometer = "1.10.2"
 micrometer13 = "1.3.20"
 mockito = "4.8.0"
 monix = "3.4.1"
@@ -104,13 +108,14 @@ scala3 = "3.2.0"
 scalafmt-gradle-plugin = "1.16.2"
 scalapb = "0.11.11"
 scalapb-json = "0.12.0"
-shadow-gradle-plugin = "6.1.0"
+shadow-gradle-plugin = "7.1.2"
 shibboleth-utilities = "7.5.2"
 snappy = "1.1.8.4"
 slf4j = "1.7.36"
 spring = "5.3.23"
 spring-boot1 = "1.5.22.RELEASE"
 spring-boot2 = "2.7.4"
+spring-boot3 = "3.0.0"
 testng = "7.5"
 thrift09 = { strictly = "0.9.3-1" }
 thrift012 = { strictly = "0.12.0" }
@@ -467,15 +472,31 @@ exclusions = [
 
 # Validator is only used for examples and testings in Spring
 # version 7 starts using jakarta api, which isn't compatible with spring-boot2
-[libraries.hibernate-validator]
+[libraries.hibernate-validator6]
 module = "org.hibernate.validator:hibernate-validator"
-version.ref = "hibernate-validator"
+version.ref = "hibernate-validator6"
+[libraries.hibernate-validator8]
+module = "org.hibernate.validator:hibernate-validator"
+version.ref = "hibernate-validator8"
 
 # We do not depend on j2objc-annotations. We just need this to stop Javadoc from
 # complaining about "unknown enum constant Level.FULL".
 [libraries.j2objc]
 module = "com.google.j2objc:j2objc-annotations"
 version.ref = "j2objc"
+
+[libraries.jakarta-inject]
+module = "jakarta.inject:jakarta.inject-api"
+version.ref = "jakarta-inject"
+[libraries.jakarta-validation]
+module = "jakarta.validation:jakarta.validation-api"
+version.ref = "jakarta-validation"
+[libraries.jakarta-websocket]
+module = "jakarta.websocket:jakarta.websocket-api"
+version.ref = "jakarta-websocket"
+[libraries.jakarta-websocket-client]
+module = "jakarta.websocket:jakarta.websocket-client-api"
+version.ref = "jakarta-websocket"
 
 [libraries.jackson-annotations]
 module = "com.fasterxml.jackson.core:jackson-annotations"
@@ -953,7 +974,7 @@ module = "com.thesamet.scalapb:scalapb-json4s_3"
 version.ref = "scalapb-json"
 
 [libraries.shadow-gradle-plugin]
-module = "com.github.jengelman.gradle.plugins:shadow"
+module = "gradle.plugin.com.github.johnrengelman:shadow"
 version.ref = "shadow-gradle-plugin"
 
 [libraries.slf4j-api]
@@ -1019,6 +1040,36 @@ exclusions = "org.springframework.boot:spring-boot-starter-reactor-netty"
 [libraries.spring-boot2-configuration-processor]
 module = "org.springframework.boot:spring-boot-configuration-processor"
 version.ref = "spring-boot2"
+
+[libraries.spring-boot3-actuator-autoconfigure]
+module = "org.springframework.boot:spring-boot-actuator-autoconfigure"
+version.ref = "spring-boot3"
+[libraries.spring-boot3-autoconfigure]
+module = "org.springframework.boot:spring-boot-autoconfigure"
+version.ref = "spring-boot3"
+[libraries.spring-boot3-starter]
+module = "org.springframework.boot:spring-boot-starter"
+version.ref = "spring-boot3"
+javadocs = "https://docs.spring.io/spring/docs/current/javadoc-api/"
+[libraries.spring-boot3-starter-actuator]
+module = "org.springframework.boot:spring-boot-starter-actuator"
+version.ref = "spring-boot3"
+[libraries.spring-boot3-starter-security]
+module = "org.springframework.boot:spring-boot-starter-security"
+version.ref = "spring-boot3"
+[libraries.spring-boot3-starter-test]
+module = "org.springframework.boot:spring-boot-starter-test"
+version.ref = "spring-boot3"
+[libraries.spring-boot3-starter-web]
+module = "org.springframework.boot:spring-boot-starter-web"
+version.ref = "spring-boot3"
+[libraries.spring-boot3-starter-webflux]
+module = "org.springframework.boot:spring-boot-starter-webflux"
+version.ref = "spring-boot3"
+exclusions = "org.springframework.boot:spring-boot-starter-reactor-netty"
+[libraries.spring-boot3-configuration-processor]
+module = "org.springframework.boot:spring-boot-configuration-processor"
+version.ref = "spring-boot3"
 
 # jdk 11 is required from testng version 7.6
 [libraries.testng]

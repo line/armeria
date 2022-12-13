@@ -9,7 +9,7 @@ buildscript {
         google()
     }
     dependencies {
-        classpath "com.github.jengelman.gradle.plugins:shadow:${managedVersions['com.github.jengelman.gradle.plugins:shadow']}"
+        classpath "gradle.plugin.com.github.johnrengelman:shadow:${managedVersions['gradle.plugin.com.github.johnrengelman:shadow']}"
         classpath "com.guardsquare:proguard-gradle:${managedVersions['com.guardsquare:proguard-gradle']}"
     }
 }

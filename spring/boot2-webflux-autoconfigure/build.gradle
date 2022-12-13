@@ -24,35 +24,18 @@ dependencies {
     testImplementation libs.spring.boot2.starter.test
 }
 
-// Copy common files from boot2-autoconfigure module to gen-src directory in order to use them as a source set.
-task generateSources(type: Copy) {
-    from "${rootProject.projectDir}/spring/boot2-autoconfigure/src/main/java"
-    into "${project.ext.genSrcDir}/main/java"
+// Use the sources from ':spring:boot3-webflux-autoconfigure'.
+def boot3WebFlux = "boot3-webflux-autoconfigure"
+def boot3WebFluxProjectDir = "${rootProject.projectDir}/spring/$boot3WebFlux"
+tasks.compileJava.dependsOn(project(":spring:$boot3WebFlux").tasks.compileJava)
+tasks.compileTestJava.dependsOn(project(":spring:$boot3WebFlux").tasks.compileTestJava)
 
-    // Copy from /internal/spring package.
-    include '**/ArmeriaConfigurationNetUtil.java'
-    include '**/ArmeriaConfigurationSettingsUtil.java'
-    include '**/ArmeriaConfigurationUtil.java'
-    include '**/CustomAlias*KeyManager*.java'
-    include '**/SpringDependencyInjector.java'
-    include '**/ThriftServiceUtils.java'
-
-    // Copy from /spring package.
-    include '**/*ArmeriaBeanPostProcessor*.java'
-    include '**/ArmeriaServerConfigurator.java'
-    include '**/ArmeriaSettings.java'
-    include '**/DocServiceConfigurator.java'
-    include '**/DropwizardExpositionService.java'
-    include '**/DropwizardSupport.java'
-    include '**/HealthCheckServiceConfigurator.java'
-    include '**/InternalServiceId.java'
-    include '**/InternalServices.java'
-    include '**/MetricCollectingServiceConfigurator.java'
-    include '**/LocalArmeriaPort.java'
-    include '**/LocalArmeriaPorts.java'
-    include '**/PrometheusSupport.java'
-    include '**/SpringDependencyInjector.java'
-    include '**/Ssl.java'
-}
-
-tasks.compileJava.dependsOn(generateSources)
+tasks.compileJava.source "${boot3WebFluxProjectDir}/src/main/java",
+        "${boot3WebFluxProjectDir}/gen-src/main/java"
+tasks.processResources.from "${boot3WebFluxProjectDir}/src/main/resources"
+tasks.compileTestJava.source "${boot3WebFluxProjectDir}/src/test/java",
+        "${boot3WebFluxProjectDir}/gen-src/test/java"
+tasks.processTestResources.from "${boot3WebFluxProjectDir}/src/test/resources"
+tasks.sourcesJar.from "${boot3WebFluxProjectDir}/src/main/java", "${boot3WebFluxProjectDir}/gen-src/main/java"
+tasks.sourcesJar.from "${boot3WebFluxProjectDir}/src/main/resources"
+tasks.javadoc.source "${boot3WebFluxProjectDir}/src/main/java", "${boot3WebFluxProjectDir}/gen-src/main/java"

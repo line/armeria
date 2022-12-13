@@ -1,0 +1,7 @@
+dependencies {
+     testImplementation project(':core')
+
+     testImplementation libs.reactor.core
+     testImplementation libs.spring.boot3.starter.test
+     testImplementation libs.spring.boot3.starter.web
+}
