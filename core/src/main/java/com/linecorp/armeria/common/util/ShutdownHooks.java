@@ -104,7 +104,7 @@ public final class ShutdownHooks {
                     reentrantLock.lock();
                     try {
                         autoCloseableOnShutdownTasks.forEach((factory, queue) -> {
-                            for (; ; ) {
+                            for (;;) {
                                 final Runnable onShutdown = queue.poll();
                                 if (onShutdown == null) {
                                     break;
