@@ -24,9 +24,9 @@ final class RequestObjectTypeSignature extends DescriptiveTypeSignature {
 
     private final Object annotatedValueResolvers;
 
-    RequestObjectTypeSignature(TypeSignatureType requestObject, String name, Class<?> type,
+    RequestObjectTypeSignature(TypeSignatureType type, String name, Class<?> clazz,
                                Object annotatedValueResolvers) {
-        super(requestObject, name, type);
+        super(type, name, clazz);
         this.annotatedValueResolvers = annotatedValueResolvers;
     }
 

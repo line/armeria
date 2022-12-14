@@ -462,6 +462,7 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                                                         requestDescriptiveTypes));
     }
 
+    @VisibleForTesting
     static DescriptiveTypeInfo newDescriptiveTypeInfo(
             DescriptiveTypeSignature typeSignature,
             DescriptiveTypeInfoProvider provider,
