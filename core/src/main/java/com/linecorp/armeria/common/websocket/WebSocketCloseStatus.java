@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -343,11 +343,11 @@ public final class WebSocketCloseStatus {
 
     @Override
     public String toString() {
-        String text = this.text;
-        if (text == null) {
-            // For example: "1000 Bye", "1009 Message too big"
-            this.text = text = code() + " " + reasonPhrase();
+        if (text != null) {
+            return text;
         }
+        // For example: "1000 Bye", "1009 Message too big"
+        text = code() + " " + reasonPhrase();
         return text;
     }
 }

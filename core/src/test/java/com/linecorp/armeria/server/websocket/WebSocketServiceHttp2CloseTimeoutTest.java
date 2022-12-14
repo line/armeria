@@ -94,7 +94,7 @@ class WebSocketServiceHttp2CloseTimeoutTest {
         client.execute(requestWriter).split().body().subscribe(bodySubscriber);
 
         bodySubscriber.whenComplete.join();
-        checkCloseFrame(bodySubscriber.messageQueue.take());
+        checkCloseFrame(bodySubscriber.messageQueue.take(), WebSocketCloseStatus.INTERNAL_SERVER_ERROR);
         await().until(() -> requestWriter.whenComplete().isDone());
     }
 
@@ -110,7 +110,7 @@ class WebSocketServiceHttp2CloseTimeoutTest {
         // Because the client didn't send the close frame, the request is complete exceptionally.
         assertThatThrownBy(() -> requestWriter.whenComplete().join())
                 .hasCauseInstanceOf(ResponseCompleteException.class);
-        checkCloseFrame(bodySubscriber.messageQueue.take());
+        checkCloseFrame(bodySubscriber.messageQueue.take(), WebSocketCloseStatus.INTERNAL_SERVER_ERROR);
         // Response is completed normally because the client received close frame.
         bodySubscriber.whenComplete.join();
     }

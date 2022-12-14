@@ -32,7 +32,6 @@ import org.java_websocket.client.WebSocketClient;
 import org.java_websocket.framing.BinaryFrame;
 import org.java_websocket.framing.ContinuousFrame;
 import org.java_websocket.framing.Framedata;
-import org.java_websocket.framing.PingFrame;
 import org.java_websocket.framing.TextFrame;
 import org.java_websocket.handshake.ServerHandshake;
 import org.junit.jupiter.api.BeforeEach;
@@ -52,6 +51,7 @@ import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.websocket.WebSocketHandler;
+import com.linecorp.armeria.server.websocket.WebSocketProtocolViolationException;
 import com.linecorp.armeria.server.websocket.WebSocketService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -61,7 +61,9 @@ class WebSocketServiceItTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/chat", WebSocketService.of(new WebSocketEchoHandler()));
+            sb.service("/chat", WebSocketService.builder(new WebSocketEchoHandler())
+                                                .closeTimeoutMillis(3000)
+                                                .build());
         }
     };
 
@@ -106,6 +108,9 @@ class WebSocketServiceItTest {
         client.send(Strings.repeat("a", 64 * 1024));
         await().until(() -> client.closeStatus().get() == WebSocketCloseStatus.MESSAGE_TOO_BIG.code());
         assertThat(client.closeReason().get()).isEqualTo("Max frame length of 65535 has been exceeded.");
+        final ServiceRequestContext ctx = server.requestContextCaptor().take();
+        assertThat(ctx.log().whenComplete().join().responseCause()).isInstanceOf(
+                WebSocketProtocolViolationException.class);
     }
 
     @Test
@@ -149,20 +154,9 @@ class WebSocketServiceItTest {
         await().until(() -> client.closeStatus().get() == WebSocketCloseStatus.PROTOCOL_ERROR.code());
         assertThat(client.closeReason().get()).isEqualTo(
                 "received non-continuation data frame while inside fragmented message");
-    }
-
-    @Test
-    void pongSentByDefaultWhenPing() throws Exception {
-        final PingFrame pingFrame = new PingFrame();
-        final String pingMessage = "It's a ping";
-        pingFrame.setPayload(ByteBuffer.wrap(pingMessage.getBytes(StandardCharsets.UTF_8)));
-        client.sendFrame(pingFrame);
-
-        assertThat(pingMessage).isEqualTo(client.receivedMessages().take());
-        assertThat(client.receivedMessages()).isEmpty();
-
-        client.close();
-        await().until(() -> client.closeStatus().get() == WebSocketCloseStatus.NORMAL_CLOSURE.code());
+        final ServiceRequestContext ctx = server.requestContextCaptor().take();
+        assertThat(ctx.log().whenComplete().join().responseCause()).isInstanceOf(
+                WebSocketProtocolViolationException.class);
     }
 
     private static final class JavaWebSocketClient extends WebSocketClient {

@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SystemInfo;
+import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
 import com.linecorp.armeria.server.HttpService;
 
 import io.netty.channel.Channel;
@@ -284,6 +285,15 @@ public interface RequestLogBuilder extends RequestLogAccess {
      * Sets the {@link RequestLog#responseTrailers()}.
      */
     void responseTrailers(HttpHeaders responseTrailers);
+
+    /**
+     * Sets the {@link RequestLog#responseCause()}.
+     * This method should be used when an exception is raised, and you want to convert the exception into a
+     * normal response such as {@link CloseWebSocketFrame}.
+     * If you want to end the response right away when an exception is raised,
+     * please use {@link #endResponse(Throwable)}.
+     */
+    void responseCause(Throwable cause);
 
     /**
      * Finishes the collection of the {@link Response} information. If a {@link Throwable} cause has been set

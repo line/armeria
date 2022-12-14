@@ -102,7 +102,7 @@ class ByteArrayWebSocketFrame extends ByteArrayBytes implements WebSocketFrame {
 
     private String toString(String bytes) {
         return MoreObjects.toStringHelper(this).omitNullValues()
-                          .add("type", type())
+                          .add("type", type)
                           .add("finalFragment", finalFragment)
                           .add("bytes", bytes)
                           .toString();

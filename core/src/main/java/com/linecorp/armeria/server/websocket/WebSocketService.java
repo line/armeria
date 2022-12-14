@@ -23,6 +23,9 @@ import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 import java.util.Set;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Splitter;
 import com.google.common.hash.Hashing;
 
@@ -60,6 +63,8 @@ import io.netty.handler.codec.http.websocketx.WebSocketVersion;
 @UnstableApi
 public final class WebSocketService extends AbstractHttpService {
 
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketService.class);
+
     private static final String WEBSOCKET_13_ACCEPT_GUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
     private static final String SUB_PROTOCOL_WILDCARD = "*";
@@ -86,6 +91,7 @@ public final class WebSocketService extends AbstractHttpService {
 
     private static final Splitter commaSplitter = Splitter.on(',').trimResults().omitEmptyStrings();
 
+    // Server-side encoder do not mask the payloads.
     private static final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(false);
 
     /**
@@ -152,24 +158,28 @@ public final class WebSocketService extends AbstractHttpService {
         }
         final RequestHeaders headers = req.headers();
         if (!isHttp1WebSocketUpgradeRequest(headers)) {
+            logger.trace("RequestHeaders does not contain headers for WebSocket upgrade. headers: {}", headers);
             return missingHttp1WebSocketUpgradeHeader.toHttpResponse();
         }
 
         if (!allowedOrigins.isEmpty()) {
             final String origin = headers.get(HttpHeaderNames.ORIGIN);
             if (isNullOrEmpty(origin) || !allowedOrigins.contains(origin)) {
+                logger.trace("not allowed origin: {}, allowed: {}", origin, allowedOrigins);
                 return HttpResponse.of(HttpStatus.FORBIDDEN);
             }
         }
 
         // Currently we only support v13.
-        if (!WebSocketVersion.V13.toHttpHeaderValue().equalsIgnoreCase(
-                headers.get(HttpHeaderNames.SEC_WEBSOCKET_VERSION))) {
+        final String version = headers.get(HttpHeaderNames.SEC_WEBSOCKET_VERSION);
+        if (!WebSocketVersion.V13.toHttpHeaderValue().equalsIgnoreCase(version)) {
+            logger.trace("not supported WebSocket version: {} (expected: 13)", version);
             return HttpResponse.of(unsupportedWebSocketVersion);
         }
 
         final String webSocketKey = headers.get(HttpHeaderNames.SEC_WEBSOCKET_KEY);
         if (isNullOrEmpty(webSocketKey)) {
+            logger.trace("missing Sec-WebSocket-Key. headers: {}", headers);
             return missingWebSocketKeyHeader.toHttpResponse();
         }
 
@@ -206,18 +216,20 @@ public final class WebSocketService extends AbstractHttpService {
 
     private HttpResponse handleUpgradeRequest(ServiceRequestContext ctx, HttpRequest req,
                                               ResponseHeaders responseHeaders) {
+        ctx.setRequestTimeoutMillis(Long.MAX_VALUE);
         if (ctx.requestTimeoutMillis() < closeTimeoutMillis) {
-            ctx.setRequestTimeoutMillis(TimeoutMode.EXTEND, closeTimeoutMillis);
+            // RequestTimeout should at least be greater than closeTimeoutMillis.
+            ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, closeTimeoutMillis);
         }
 
         final HttpResponseWriter responseWriter = HttpResponse.streaming();
         responseWriter.write(responseHeaders);
         responseWriter.whenConsumed().thenRun(() -> {
             final WebSocketCloseHandler webSocketCloseHandler =
-                    new WebSocketCloseHandler(ctx, responseWriter, closeTimeoutMillis);
-            final WebSocketFrameDecoder decoder = new WebSocketFrameDecoder(
-                    ctx, maxFramePayloadLength, allowMaskMismatch, responseWriter,
-                    encoder, webSocketCloseHandler, true);
+                    new WebSocketCloseHandler(ctx, responseWriter, encoder, closeTimeoutMillis);
+            final WebSocketFrameDecoder decoder =
+                    new WebSocketFrameDecoder(maxFramePayloadLength, allowMaskMismatch, webSocketCloseHandler,
+                                              true); // client sends masked frames.
             final StreamMessage<WebSocketFrame> inboundFrames = req.decode(decoder, ctx.alloc());
             try {
                 final WebSocket outboundFrames = handler.handle(ctx, new WebSocketWrapper(inboundFrames));
@@ -265,11 +277,13 @@ public final class WebSocketService extends AbstractHttpService {
         }
         final RequestHeaders headers = req.headers();
         if (!isHttp2WebSocketUpgradeRequest(headers)) {
+            logger.trace("RequestHeaders does not contain headers for WebSocket upgrade. headers: {}", headers);
             return missingHttp2WebSocketUpgradeHeader.toHttpResponse();
         }
         // Currently we only support v13.
-        if (!WebSocketVersion.V13.toHttpHeaderValue().equalsIgnoreCase(
-                headers.get(HttpHeaderNames.SEC_WEBSOCKET_VERSION))) {
+        final String version = headers.get(HttpHeaderNames.SEC_WEBSOCKET_VERSION);
+        if (!WebSocketVersion.V13.toHttpHeaderValue().equalsIgnoreCase(version)) {
+            logger.trace("not supported WebSocket version: {} (expected: 13)", version);
             return HttpResponse.of(unsupportedWebSocketVersion);
         }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,8 +14,6 @@
  * under the License.
  */
 package com.linecorp.armeria.common.websocket;
-
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessageAndWriter;
@@ -52,8 +50,8 @@ public interface WebSocketWriter extends WebSocket, StreamMessageAndWriter<WebSo
      *
      * @see WebSocketFrame#ofBinary(byte[])
      */
-    default void write(byte[] binary) {
-        write(binary, true);
+    default void write(byte[] data) {
+        write(data, true);
     }
 
     /**
@@ -62,7 +60,7 @@ public interface WebSocketWriter extends WebSocket, StreamMessageAndWriter<WebSo
      *
      * @see WebSocketFrame#ofBinary(byte[], boolean)
      */
-    void write(byte[] binary, boolean finalFragment);
+    void write(byte[] data, boolean finalFragment);
 
     /**
      * Write a ping {@link WebSocketFrame} to this {@link WebSocket}.
@@ -72,11 +70,11 @@ public interface WebSocketWriter extends WebSocket, StreamMessageAndWriter<WebSo
     void ping();
 
     /**
-     * Write a ping {@link WebSocketFrame} to this {@link WebSocket} with the binary.
+     * Write a ping {@link WebSocketFrame} to this {@link WebSocket} with the data.
      *
      * @see WebSocketFrame#ofPing(byte[])
      */
-    void ping(byte[] binary);
+    void ping(byte[] data);
 
     /**
      * Write a pong {@link WebSocketFrame} to this {@link WebSocket}.
@@ -86,11 +84,11 @@ public interface WebSocketWriter extends WebSocket, StreamMessageAndWriter<WebSo
     void pong();
 
     /**
-     * Write a pong {@link WebSocketFrame} to this {@link WebSocket} with the binary.
+     * Write a pong {@link WebSocketFrame} to this {@link WebSocket} with the data.
      *
      * @see WebSocketFrame#ofPong(byte[])
      */
-    void pong(byte[] binary);
+    void pong(byte[] data);
 
     /**
      * Sends the closing handshake with {@link WebSocketCloseStatus#NORMAL_CLOSURE}.

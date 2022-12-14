@@ -17,19 +17,23 @@ package com.linecorp.armeria.server.websocket;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
+import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.internal.common.websocket.WebSocketCloseHandler;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
-import io.netty.buffer.ByteBuf;
-
 final class WebSocketResponseSubscriber implements Subscriber<WebSocketFrame> {
+
+    private static final Logger logger = LoggerFactory.getLogger(WebSocketResponseSubscriber.class);
 
     private final ServiceRequestContext ctx;
     private final HttpResponseWriter writer;
@@ -62,28 +66,39 @@ final class WebSocketResponseSubscriber implements Subscriber<WebSocketFrame> {
                 return;
             }
 
-            final ByteBuf encoded = encoder.encode(ctx, webSocketFrame);
-            if (!writer.tryWrite(HttpData.wrap(encoded))) {
+            if (!writer.tryWrite(HttpData.wrap(encoder.encode(ctx, webSocketFrame)))) {
                 subscription.cancel();
-            } else if (webSocketFrame.type() == WebSocketFrameType.CLOSE) {
+                return;
+            }
+
+            if (webSocketFrame.type() == WebSocketFrameType.CLOSE) {
+                logger.trace("Close frame is sent: {}", webSocketFrame);
                 webSocketCloseHandler.closeFrameSent();
                 subscription.cancel();
-            } else {
-                writer.whenConsumed().thenRun(() -> subscription.request(1));
+                return;
             }
+            writer.whenConsumed().thenRun(() -> subscription.request(1));
         } catch (Throwable t) {
             subscription.cancel();
-            writer.close(t);
+            webSocketCloseHandler.closeStreams(t, false);
         }
     }
 
     @Override
     public void onError(Throwable t) {
-        writer.close(t);
+        webSocketCloseHandler.closeStreams(t, false);
     }
 
     @Override
     public void onComplete() {
-        // writer is closed by the webSocketCloseHandler.
+        if (webSocketCloseHandler.isCloseFrameSent()) {
+            return;
+        }
+        // Consider creating a static field for close frame HttpData.
+        final CloseWebSocketFrame closeFrame = WebSocketFrame.ofClose(WebSocketCloseStatus.NORMAL_CLOSURE);
+        if (writer.tryWrite(HttpData.wrap(encoder.encode(ctx, closeFrame)))) {
+            logger.trace("Close frame is sent: {}", closeFrame);
+            webSocketCloseHandler.closeFrameSent();
+        }
     }
 }

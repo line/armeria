@@ -25,6 +25,10 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.stream.StreamWriter;
+import com.linecorp.armeria.common.websocket.CloseWebSocketFrame;
+import com.linecorp.armeria.common.websocket.WebSocketCloseStatus;
+import com.linecorp.armeria.common.websocket.WebSocketFrame;
+import com.linecorp.armeria.server.websocket.WebSocketProtocolViolationException;
 
 import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.util.AttributeKey;
@@ -90,6 +94,21 @@ public final class WebSocketUtil {
 
     static int byteAtIndex(int mask, int index) {
         return (mask >> 8 * (3 - index)) & 0xFF;
+    }
+
+    //TODO(minwoox): provide an exception handler that converts a cause into a CloseWebSocketFrame.
+    public static CloseWebSocketFrame closeWebSocketFrameFrom(Throwable cause) {
+        final WebSocketCloseStatus closeStatus;
+        if (cause instanceof WebSocketProtocolViolationException) {
+            closeStatus = ((WebSocketProtocolViolationException) cause).closeStatus();
+        } else {
+            closeStatus = WebSocketCloseStatus.INTERNAL_SERVER_ERROR;
+        }
+        String reasonPhrase = cause.getMessage();
+        if (reasonPhrase == null) {
+            reasonPhrase = closeStatus.reasonPhrase();
+        }
+        return WebSocketFrame.ofClose(closeStatus, reasonPhrase);
     }
 
     private WebSocketUtil() {}

@@ -48,6 +48,7 @@ import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.common.websocket.WebSocketFrameType;
 import com.linecorp.armeria.common.websocket.WebSocketWriter;
 import com.linecorp.armeria.internal.common.websocket.WebSocketFrameEncoder;
+import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
@@ -57,9 +58,15 @@ import io.netty.handler.codec.http.HttpHeaderValues;
 class WebSocketServiceTest {
 
     private static final AbstractWebSocketHandler handler = new AbstractWebSocketHandler() {
+
         @Override
-        void onOpen(WebSocketWriter writer) {
-            writer.close();
+        void onText(WebSocketWriter writer, String message) {
+            if ("exception".equals(message)) {
+                throw new AnticipatedException();
+            }
+            if ("close".equals(message)) {
+                writer.close();
+            }
         }
     };
 
@@ -79,30 +86,44 @@ class WebSocketServiceTest {
                                    .build();
     }
 
+    private static RequestHeaders webSocketUpgradeHeaders() {
+        return RequestHeaders.builder(HttpMethod.GET, "/chat")
+                             .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE.toString())
+                             .add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString())
+                             .addInt(HttpHeaderNames.SEC_WEBSOCKET_VERSION, 13)
+                             .add(HttpHeaderNames.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==")
+                             .add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "superchat")
+                             .build();
+    }
+
     @Test
     void responseIsClosedRightAwayIfCloseFrameReceived() throws Exception {
-        final ByteBuf encodedFrame =
-                encoder.encode(ctx, WebSocketFrame.ofClose(WebSocketCloseStatus.NORMAL_CLOSURE));
-        req.write(HttpData.wrap(encodedFrame));
+        req.write(toHttpData(WebSocketFrame.ofText("close")));
+        req.write(toHttpData(WebSocketFrame.ofClose(WebSocketCloseStatus.NORMAL_CLOSURE)));
         final HttpResponse response = webSocketService.serve(ctx, req);
         final HttpResponseSubscriber httpResponseSubscriber = new HttpResponseSubscriber();
         response.subscribe(httpResponseSubscriber);
         httpResponseSubscriber.whenComplete.join();
-        checkCloseFrame(httpResponseSubscriber.messageQueue.take());
+        checkCloseFrame(httpResponseSubscriber.messageQueue.take(), WebSocketCloseStatus.NORMAL_CLOSURE);
     }
 
-    static void checkCloseFrame(HttpData httpData) throws InterruptedException {
+    static void checkCloseFrame(HttpData httpData, WebSocketCloseStatus closeStatus) {
         // 0 ~ 3 FIN, RSV1, RSV2, RSV3. 4 ~ 7 opcode
-        assertThat(httpData.array()[0] & 0x0F).isEqualTo(WebSocketFrameType.CLOSE.opcode());
+        final ByteBuf byteBuf = httpData.byteBuf();
+        assertThat(byteBuf.readByte() & 0x0F).isEqualTo(WebSocketFrameType.CLOSE.opcode());
+        // Skip 1 bytes.
+        byteBuf.readByte();
+        assertThat((int) byteBuf.readShort()).isEqualTo(closeStatus.code());
     }
 
     @Test
     void responseIsClosedAfterCloseTimeoutIfCloseFrameNotReceived() throws Exception {
+        req.write(toHttpData(WebSocketFrame.ofText("close")));
         final HttpResponse response = webSocketService.serve(ctx, req);
         final HttpResponseSubscriber httpResponseSubscriber = new HttpResponseSubscriber();
         response.subscribe(httpResponseSubscriber);
         // 0 ~ 3 FIN, RSV1, RSV2, RSV3. 4 ~ 7 opcode
-        checkCloseFrame(httpResponseSubscriber.messageQueue.take());
+        checkCloseFrame(httpResponseSubscriber.messageQueue.take(), WebSocketCloseStatus.NORMAL_CLOSURE);
         final CompletableFuture<Void> whenComplete = httpResponseSubscriber.whenComplete;
         assertThat(whenComplete.isDone()).isFalse();
         // response is complete 2000 milliseconds after the service sends the close frame.
@@ -120,12 +141,10 @@ class WebSocketServiceTest {
         });
 
         final HttpResponse response = webSocketService.serve(ctx, req);
-        req.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofText("foo", false))));
-        req.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofContinuation("bar", true))));
-        req.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofBinary(
-                "foo".getBytes(StandardCharsets.UTF_8), false))));
-        req.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofContinuation(
-                "bar".getBytes(StandardCharsets.UTF_8), true))));
+        req.write(toHttpData(WebSocketFrame.ofText("foo", false)));
+        req.write(toHttpData(WebSocketFrame.ofContinuation("bar", true)));
+        req.write(toHttpData(WebSocketFrame.ofBinary("foo".getBytes(StandardCharsets.UTF_8), false)));
+        req.write(toHttpData(WebSocketFrame.ofContinuation("bar".getBytes(StandardCharsets.UTF_8), true)));
         req.close();
 
         response.subscribe(NoopSubscriber.get());
@@ -152,14 +171,39 @@ class WebSocketServiceTest {
         assertThat(frame.text()).isEqualTo("bar");
     }
 
-    private static RequestHeaders webSocketUpgradeHeaders() {
-        return RequestHeaders.builder(HttpMethod.GET, "/chat")
-                             .add(HttpHeaderNames.CONNECTION, HttpHeaderValues.UPGRADE.toString())
-                             .add(HttpHeaderNames.UPGRADE, HttpHeaderValues.WEBSOCKET.toString())
-                             .addInt(HttpHeaderNames.SEC_WEBSOCKET_VERSION, 13)
-                             .add(HttpHeaderNames.SEC_WEBSOCKET_KEY, "dGhlIHNhbXBsZSBub25jZQ==")
-                             .add(HttpHeaderNames.SEC_WEBSOCKET_PROTOCOL, "superchat")
-                             .build();
+    @Test
+    void closeAfterCloseTimeoutMillisIfNormalException() throws Exception {
+        req.write(toHttpData(WebSocketFrame.ofText("exception")));
+        final HttpResponse response = webSocketService.serve(ctx, req);
+        final HttpResponseSubscriber httpResponseSubscriber = new HttpResponseSubscriber();
+        response.subscribe(httpResponseSubscriber);
+        checkCloseFrame(httpResponseSubscriber.messageQueue.take(), WebSocketCloseStatus.INTERNAL_SERVER_ERROR);
+        final CompletableFuture<Void> whenComplete = httpResponseSubscriber.whenComplete;
+        assertThat(whenComplete.isDone()).isFalse();
+        // response is complete 2000 milliseconds after the service sends the close frame.
+        await().atLeast(1000 /* buffer 1000 milliseconds */, TimeUnit.MILLISECONDS)
+               .until(whenComplete::isDone);
+        assertThat(whenComplete.isCompletedExceptionally()).isFalse();
+        assertThat(ctx.log().partial().responseCause()).isInstanceOf(AnticipatedException.class);
+    }
+
+    @Test
+    void closeRightAwayIfProtocolException()  throws Exception {
+        req.write(toHttpData(WebSocketFrame.ofText("blah", false)));
+        // protocol exception.
+        req.write(toHttpData(WebSocketFrame.ofBinary(new byte[] {}, false)));
+        final HttpResponse response = webSocketService.serve(ctx, req);
+        final HttpResponseSubscriber httpResponseSubscriber = new HttpResponseSubscriber();
+        response.subscribe(httpResponseSubscriber);
+        checkCloseFrame(httpResponseSubscriber.messageQueue.take(), WebSocketCloseStatus.PROTOCOL_ERROR);
+        final CompletableFuture<Void> whenComplete = httpResponseSubscriber.whenComplete;
+        await().atMost(1000, TimeUnit.MILLISECONDS).until(whenComplete::isDone);
+        assertThat(ctx.log().partial().responseCause()).isInstanceOf(
+                WebSocketProtocolViolationException.class);
+    }
+
+    private HttpData toHttpData(WebSocketFrame frame) {
+        return HttpData.wrap(encoder.encode(ctx, frame));
     }
 
     static class AbstractWebSocketHandler implements WebSocketHandler {
@@ -179,10 +223,10 @@ class WebSocketServiceTest {
                     try (WebSocketFrame frame = webSocketFrame) {
                         switch (frame.type()) {
                             case TEXT:
-                                onMessage(writer, frame.text());
+                                onText(writer, frame.text());
                                 break;
                             case BINARY:
-                                onMessage(writer, frame.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE));
+                                onBinary(writer, frame.byteBuf(ByteBufAccessMode.RETAINED_DUPLICATE));
                                 break;
                             case CLOSE:
                                 assert frame instanceof CloseWebSocketFrame;
@@ -192,6 +236,8 @@ class WebSocketServiceTest {
                             default:
                                 // no-op
                         }
+                    } catch (Throwable t) {
+                        writer.close(t);
                     }
                 }
 
@@ -210,21 +256,21 @@ class WebSocketServiceTest {
 
         void onOpen(WebSocketWriter writer) {}
 
-        void onMessage(WebSocketWriter writer, String message) {}
+        void onText(WebSocketWriter writer, String message) {}
 
-        void onMessage(WebSocketWriter writer, ByteBuf message) {
+        void onBinary(WebSocketWriter writer, ByteBuf message) {
             try {
                 if (message.hasArray()) {
-                    onMessage(writer, message);
+                    onBinary(writer, message.array());
                 } else {
-                    onMessage(writer, ByteBufUtil.getBytes(message));
+                    onBinary(writer, ByteBufUtil.getBytes(message));
                 }
             } finally {
                 message.release();
             }
         }
 
-        void onMessage(WebSocketWriter writer, byte[] message) {}
+        void onBinary(WebSocketWriter writer, byte[] message) {}
 
         void onClose(WebSocketWriter writer, WebSocketCloseStatus status, String reason) {
             writer.close(status, reason);

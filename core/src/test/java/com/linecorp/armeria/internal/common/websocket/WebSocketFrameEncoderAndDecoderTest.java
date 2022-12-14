@@ -96,8 +96,8 @@ class WebSocketFrameEncoderAndDecoderTest {
         final int maxPayloadLength = 255;
         final HttpResponseWriter httpResponseWriter = HttpResponse.streaming();
         final WebSocketFrameEncoder encoder = WebSocketFrameEncoder.of(true);
-        final WebSocketFrameDecoder decoder = frameDecoder(encoder, httpResponseWriter,
-                                                           maxPayloadLength, false, true);
+        final WebSocketFrameDecoder decoder =
+                frameDecoder(encoder, httpResponseWriter, maxPayloadLength, false, true);
         final HttpRequestWriter requestWriter = HttpRequest.streaming(RequestHeaders.of(HttpMethod.GET, "/"));
         final CompletableFuture<Void> whenComplete = new CompletableFuture<>();
         requestWriter.decode(decoder, ctx.alloc()).subscribe(subscriber(whenComplete));
@@ -121,9 +121,10 @@ class WebSocketFrameEncoderAndDecoderTest {
                                                       HttpResponseWriter httpResponseWriter,
                                                       int maxPayloadLength,
                                                       boolean allowMaskMismatch, boolean maskPayload) {
-        final WebSocketCloseHandler closeHandler = new WebSocketCloseHandler(ctx, httpResponseWriter, 1000);
-        return new WebSocketFrameDecoder(ctx, maxPayloadLength, allowMaskMismatch, httpResponseWriter,
-                                         encoder, closeHandler, maskPayload);
+        final WebSocketCloseHandler closeHandler =
+                new WebSocketCloseHandler(ctx, httpResponseWriter, encoder, 1000);
+        return new WebSocketFrameDecoder(maxPayloadLength, allowMaskMismatch,
+                                         closeHandler, maskPayload);
     }
 
     @CsvSource({ "false, false", "false, true", "true, false", "true, true" })
@@ -183,11 +184,7 @@ class WebSocketFrameEncoderAndDecoderTest {
     private static void testBinaryWithLen(WebSocketFrameEncoder encoder, HttpRequestWriter requestWriter,
                                           int testDataLength) throws InterruptedException {
         setByteBufWriterIndex(testDataLength);
-        try {
-            requestWriter.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofPooledBinary(byteBuf))));
-        } catch (Throwable t) {
-            throw t;
-        }
+        requestWriter.write(HttpData.wrap(encoder.encode(ctx, WebSocketFrame.ofPooledBinary(byteBuf))));
         final WebSocketFrame decoded = frameQueue.take();
         assertThat(decoded.type()).isSameAs(WebSocketFrameType.BINARY);
         final ByteBuf decodedBuf = decoded.byteBuf();

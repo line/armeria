@@ -1172,6 +1172,17 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Override
+    public void responseCause(Throwable cause) {
+        if (isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+            return;
+        }
+
+        requireNonNull(cause, "cause");
+        responseCause = cause;
+        updateFlags(RequestLogProperty.RESPONSE_CAUSE);
+    }
+
+    @Override
     public long responseLength() {
         ensureAvailable(RequestLogProperty.RESPONSE_LENGTH);
         return responseLength;
@@ -1265,7 +1276,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             if (!rpcResponse.isDone()) {
                 throw new IllegalArgumentException("responseContent must be complete: " + responseContent);
             }
-            if (rpcResponse.cause() != null) {
+            if (responseCause == null && rpcResponse.cause() != null) {
                 responseCause = rpcResponse.cause();
                 updateFlags(RequestLogProperty.RESPONSE_CAUSE);
             }

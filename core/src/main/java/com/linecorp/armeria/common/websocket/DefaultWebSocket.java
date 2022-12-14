@@ -1,5 +1,5 @@
 /*
- * Copyright 2021 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -35,8 +35,8 @@ final class DefaultWebSocket extends DefaultStreamMessage<WebSocketFrame> implem
     }
 
     @Override
-    public void write(byte[] binary, boolean finalFragment) {
-        write(WebSocketFrame.ofBinary(binary, finalFragment));
+    public void write(byte[] data, boolean finalFragment) {
+        write(WebSocketFrame.ofBinary(data, finalFragment));
     }
 
     @Override
@@ -45,8 +45,8 @@ final class DefaultWebSocket extends DefaultStreamMessage<WebSocketFrame> implem
     }
 
     @Override
-    public void ping(byte[] binary) {
-        write(WebSocketFrame.ofPing(binary));
+    public void ping(byte[] data) {
+        write(WebSocketFrame.ofPing(data));
     }
 
     @Override
@@ -55,8 +55,8 @@ final class DefaultWebSocket extends DefaultStreamMessage<WebSocketFrame> implem
     }
 
     @Override
-    public void pong(byte[] binary) {
-        write(WebSocketFrame.ofPong(binary));
+    public void pong(byte[] data) {
+        write(WebSocketFrame.ofPong(data));
     }
 
     @Override
@@ -77,17 +77,5 @@ final class DefaultWebSocket extends DefaultStreamMessage<WebSocketFrame> implem
     private void close(CloseWebSocketFrame closeFrame) {
         // There's chance that the stream is already closed, so we use tryWrite.
         final boolean ignored = tryWrite(closeFrame);
-        // super.close(); is called by the WebSocketCloseHandler
-    }
-
-    @Override
-    public void close(Throwable cause) {
-        final String reasonPhrase;
-        if (cause.getMessage() != null) {
-            reasonPhrase = cause.getMessage();
-        } else {
-            reasonPhrase = WebSocketCloseStatus.INTERNAL_SERVER_ERROR.reasonPhrase();
-        }
-        close(WebSocketFrame.ofClose(WebSocketCloseStatus.INTERNAL_SERVER_ERROR, reasonPhrase));
     }
 }
