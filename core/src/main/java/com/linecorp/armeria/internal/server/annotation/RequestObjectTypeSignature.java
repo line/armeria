@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.docs.DescriptiveTypeSignature;
 import com.linecorp.armeria.server.docs.TypeSignatureType;
 
@@ -32,20 +31,5 @@ final class RequestObjectTypeSignature extends DescriptiveTypeSignature {
 
     Object annotatedValueResolvers() {
         return annotatedValueResolvers;
-    }
-
-    @Override
-    @SuppressWarnings("RedundantMethodOverride")
-    public int hashCode() {
-        return super.hashCode();
-    }
-
-    @Override
-    public boolean equals(@Nullable Object o) {
-        if (!(o instanceof RequestObjectTypeSignature)) {
-            return false;
-        }
-        // Do not check annotatedValueResolvers.
-        return super.equals(o);
     }
 }
