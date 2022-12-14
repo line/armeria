@@ -39,7 +39,6 @@ import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
@@ -221,7 +220,7 @@ public final class ClientFactoryOptions
      * The {@link MeterRegistry} which collects various stats.
      */
     public static final ClientFactoryOption<MeterRegistry> METER_REGISTRY =
-            ClientFactoryOption.define("METER_REGISTRY", Metrics.globalRegistry);
+            ClientFactoryOption.define("METER_REGISTRY", Flags.meterRegistry());
 
     /**
      * The {@link ProxyConfigSelector} which determines the {@link ProxyConfig} to be used.
