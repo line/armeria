@@ -468,11 +468,6 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
             DescriptiveTypeInfoProvider provider,
             Set<DescriptiveTypeSignature> requestDescriptiveTypes) {
         final Object typeDescriptor = typeSignature.descriptor();
-        DescriptiveTypeInfo descriptiveTypeInfo = provider.newDescriptiveTypeInfo(typeDescriptor);
-        if (descriptiveTypeInfo != null) {
-            return descriptiveTypeInfo;
-        }
-
         if (typeSignature instanceof RequestObjectTypeSignature) {
             final Object annotatedValueResolvers =
                     ((RequestObjectTypeSignature) typeSignature).annotatedValueResolvers();
@@ -481,6 +476,10 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
                         (AnnotatedValueResolversWrapper) annotatedValueResolvers;
                 return new StructInfo(typeSignature.name(), fieldInfos(resolvers.resolvers()));
             }
+        }
+        DescriptiveTypeInfo descriptiveTypeInfo = provider.newDescriptiveTypeInfo(typeDescriptor);
+        if (descriptiveTypeInfo != null) {
+            return descriptiveTypeInfo;
         }
         if (requestDescriptiveTypes.contains(typeSignature)) {
             descriptiveTypeInfo =
