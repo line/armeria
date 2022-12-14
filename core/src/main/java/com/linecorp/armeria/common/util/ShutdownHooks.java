@@ -113,8 +113,7 @@ public final class ShutdownHooks {
                                 }
                             }
                         });
-                    }
-                    finally {
+                    } finally {
                         reentrantLock.unlock();
                     }
                 }));
