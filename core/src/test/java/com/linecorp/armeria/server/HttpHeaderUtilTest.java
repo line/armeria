@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 
-class UserAgentUtilTest {
+class HttpHeaderUtilTest {
 
     private static final Predicate<InetAddress> ACCEPT_ANY = addr -> true;
 
