@@ -43,7 +43,6 @@ import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
-import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.websocket.WebSocket;
 import com.linecorp.armeria.common.websocket.WebSocketFrame;
 import com.linecorp.armeria.internal.common.websocket.WebSocketCloseHandler;
@@ -113,15 +112,18 @@ public final class WebSocketService extends AbstractHttpService {
     private final boolean allowMaskMismatch;
     private final Set<String> subprotocols;
     private final Set<String> allowedOrigins;
+    private long requestTimeoutMillis;
     private final long closeTimeoutMillis;
 
     WebSocketService(WebSocketHandler handler, int maxFramePayloadLength, boolean allowMaskMismatch,
-                     Set<String> subprotocols, Set<String> allowedOrigins, long closeTimeoutMillis) {
+                     Set<String> subprotocols, Set<String> allowedOrigins,
+                     long requestTimeoutMillis, long closeTimeoutMillis) {
         this.handler = handler;
         this.maxFramePayloadLength = maxFramePayloadLength;
         this.allowMaskMismatch = allowMaskMismatch;
         this.subprotocols = subprotocols;
         this.allowedOrigins = allowedOrigins;
+        this.requestTimeoutMillis = Math.max(requestTimeoutMillis, closeTimeoutMillis);
         this.closeTimeoutMillis = closeTimeoutMillis;
     }
 
@@ -216,11 +218,7 @@ public final class WebSocketService extends AbstractHttpService {
 
     private HttpResponse handleUpgradeRequest(ServiceRequestContext ctx, HttpRequest req,
                                               ResponseHeaders responseHeaders) {
-        ctx.setRequestTimeoutMillis(Long.MAX_VALUE);
-        if (ctx.requestTimeoutMillis() < closeTimeoutMillis) {
-            // RequestTimeout should at least be greater than closeTimeoutMillis.
-            ctx.setRequestTimeoutMillis(TimeoutMode.SET_FROM_START, closeTimeoutMillis);
-        }
+        ctx.setRequestTimeoutMillis(requestTimeoutMillis);
 
         final HttpResponseWriter responseWriter = HttpResponse.streaming();
         responseWriter.write(responseHeaders);

@@ -25,9 +25,6 @@ import com.linecorp.armeria.common.stream.StreamMessageAndWriter;
 @UnstableApi
 public interface WebSocketWriter extends WebSocket, StreamMessageAndWriter<WebSocketFrame> {
 
-    @Override
-    boolean tryWrite(WebSocketFrame o);
-
     /**
      * Write a text {@link WebSocketFrame} to this {@link WebSocket}.
      *
@@ -43,7 +40,9 @@ public interface WebSocketWriter extends WebSocket, StreamMessageAndWriter<WebSo
      *
      * @see WebSocketFrame#ofText(String, boolean)
      */
-    void write(String text, boolean finalFragment);
+    default void write(String text, boolean finalFragment) {
+        write(WebSocketFrame.ofText(text, finalFragment));
+    }
 
     /**
      * Write a binary {@link WebSocketFrame} to this {@link WebSocket}.
@@ -60,35 +59,89 @@ public interface WebSocketWriter extends WebSocket, StreamMessageAndWriter<WebSo
      *
      * @see WebSocketFrame#ofBinary(byte[], boolean)
      */
-    void write(byte[] data, boolean finalFragment);
+    default void write(byte[] data, boolean finalFragment) {
+        write(WebSocketFrame.ofBinary(data, finalFragment));
+    }
+
+    /**
+     * Write a text {@link WebSocketFrame} to this {@link WebSocket}.
+     *
+     * @return {@code true} if the text has been scheduled for publication. {@code false} if the
+     *         writer has been closed already.
+     * @see WebSocketFrame#ofText(String)
+     */
+    default boolean tryWrite(String text) {
+        return tryWrite(text, true);
+    }
+
+    /**
+     * Write a text {@link WebSocketFrame} to this {@link WebSocket}.
+     *
+     * @return {@code true} if the text has been scheduled for publication. {@code false} if the
+     *         writer has been closed already.
+     * @see WebSocketFrame#ofText(String)
+     */
+    default boolean tryWrite(String text, boolean finalFragment) {
+        return tryWrite(WebSocketFrame.ofText(text, finalFragment));
+    }
+
+    /**
+     * Write a binary {@link WebSocketFrame} to this {@link WebSocket}.
+     *
+     * @return {@code true} if the data has been scheduled for publication. {@code false} if the
+     *         writer has been closed already.
+     * @see WebSocketFrame#ofBinary(byte[])
+     */
+    default boolean tryWrite(byte[] data) {
+        return tryWrite(data, true);
+    }
+
+    /**
+     * Write a binary {@link WebSocketFrame} to this {@link WebSocket}.
+     *
+     * @return {@code true} if the data has been scheduled for publication. {@code false} if the
+     *         writer has been closed already.
+     * @see WebSocketFrame#ofBinary(byte[])
+     */
+    default boolean tryWrite(byte[] data, boolean finalFragment) {
+        return tryWrite(WebSocketFrame.ofBinary(data, finalFragment));
+    }
 
     /**
      * Write a ping {@link WebSocketFrame} to this {@link WebSocket}.
      *
      * @see WebSocketFrame#ofPing()
      */
-    void ping();
+    default void ping() {
+        write(WebSocketFrame.ofPing());
+    }
 
     /**
      * Write a ping {@link WebSocketFrame} to this {@link WebSocket} with the data.
      *
      * @see WebSocketFrame#ofPing(byte[])
      */
-    void ping(byte[] data);
+    default void ping(byte[] data) {
+        write(WebSocketFrame.ofPing(data));
+    }
 
     /**
      * Write a pong {@link WebSocketFrame} to this {@link WebSocket}.
      *
      * @see WebSocketFrame#ofPong()
      */
-    void pong();
+    default void pong() {
+        write(WebSocketFrame.ofPong());
+    }
 
     /**
      * Write a pong {@link WebSocketFrame} to this {@link WebSocket} with the data.
      *
      * @see WebSocketFrame#ofPong(byte[])
      */
-    void pong(byte[] data);
+    default void pong(byte[] data) {
+        write(WebSocketFrame.ofPong(data));
+    }
 
     /**
      * Sends the closing handshake with {@link WebSocketCloseStatus#NORMAL_CLOSURE}.

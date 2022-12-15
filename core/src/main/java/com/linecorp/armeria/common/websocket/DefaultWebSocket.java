@@ -30,36 +30,6 @@ final class DefaultWebSocket extends DefaultStreamMessage<WebSocketFrame> implem
     }
 
     @Override
-    public void write(String text, boolean finalFragment) {
-        write(WebSocketFrame.ofText(text, finalFragment));
-    }
-
-    @Override
-    public void write(byte[] data, boolean finalFragment) {
-        write(WebSocketFrame.ofBinary(data, finalFragment));
-    }
-
-    @Override
-    public void ping() {
-        write(WebSocketFrame.ofPing());
-    }
-
-    @Override
-    public void ping(byte[] data) {
-        write(WebSocketFrame.ofPing(data));
-    }
-
-    @Override
-    public void pong() {
-        write(WebSocketFrame.ofPong());
-    }
-
-    @Override
-    public void pong(byte[] data) {
-        write(WebSocketFrame.ofPong(data));
-    }
-
-    @Override
     public void close(WebSocketCloseStatus status) {
         close(WebSocketFrame.ofClose(status));
     }

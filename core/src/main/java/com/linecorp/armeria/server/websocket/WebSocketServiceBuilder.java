@@ -42,6 +42,7 @@ public final class WebSocketServiceBuilder {
     private Set<String> subprotocols = ImmutableSet.of();
     private Set<String> allowedOrigins = ImmutableSet.of();
     private long closeTimeoutMillis = Flags.defaultRequestTimeoutMillis();
+    private long requestTimeoutMillis = Long.MAX_VALUE;
 
     WebSocketServiceBuilder(WebSocketHandler handler) {
         this.handler = requireNonNull(handler, "handler");
@@ -107,6 +108,23 @@ public final class WebSocketServiceBuilder {
     }
 
     /**
+     * Sets the timeout of a request. {@link Long#MAX_VALUE} is used by default.
+     */
+    public WebSocketServiceBuilder requestTimeout(Duration timeout) {
+        return requestTimeoutMillis(requireNonNull(timeout, "timeout").toMillis());
+    }
+
+    /**
+     * Sets the timeout of a request in milliseconds. {@link Long#MAX_VALUE} is used by default.
+     */
+    public WebSocketServiceBuilder requestTimeoutMillis(long requestTimeoutMillis) {
+        checkArgument(requestTimeoutMillis >= 0,
+                      "requestTimeoutMillis: %s (expected >= 0)", requestTimeoutMillis);
+        this.requestTimeoutMillis = requestTimeoutMillis;
+        return this;
+    }
+
+    /**
      * Sets the timeout that waits a close frame from the peer after sending a close frame to the peer.
      *
      * @see <a href="https://datatracker.ietf.org/doc/html/rfc6455#section-1-4">Closing Handshake</a>
@@ -133,6 +151,6 @@ public final class WebSocketServiceBuilder {
      */
     public WebSocketService build() {
         return new WebSocketService(handler, maxFramePayloadLength, allowMaskMismatch,
-                                    subprotocols, allowedOrigins, closeTimeoutMillis);
+                                    subprotocols, allowedOrigins, requestTimeoutMillis, closeTimeoutMillis);
     }
 }

@@ -892,11 +892,6 @@ public final class ArmeriaHttpUtil {
                 continue;
             }
 
-            /*if (HttpHeaderNames.CONNECTION.contentEqualsIgnoreCase(name) &&
-                !HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(value)) {
-                continue;
-            }*/
-
             if (isTrailer && isTrailerDisallowed(name)) {
                 continue;
             }
@@ -945,11 +940,6 @@ public final class ArmeriaHttpUtil {
             if (HTTP2_TO_HTTP_HEADER_DISALLOWED_LIST.contains(name)) {
                 continue;
             }
-
-            /*if (HttpHeaderNames.CONNECTION.contentEqualsIgnoreCase(name) &&
-                !HttpHeaderValues.UPGRADE.contentEqualsIgnoreCase(value)) {
-                continue;
-            }*/
 
             if (isTrailer && isTrailerDisallowed(name)) {
                 continue;
