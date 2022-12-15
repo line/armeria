@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.common.zookeeper;
 
-
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Arrays;

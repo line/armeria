@@ -125,6 +125,7 @@ thrift015 = { strictly = "0.15.0" }
 thrift016 = { strictly = "0.16.0" }
 tomcat8 = "8.5.81"
 tomcat9 = "9.0.65"
+tomcat10 = "10.1.4"
 xml-apis = "1.4.01"
 zookeeper = "3.6.3"
 zookeeper-junit = "1.2"
@@ -1148,6 +1149,16 @@ version.ref = "tomcat9"
 [libraries.tomcat9-el]
 module = "org.apache.tomcat.embed:tomcat-embed-el"
 version.ref = "tomcat9"
+[libraries.tomcat10-core]
+module = "org.apache.tomcat.embed:tomcat-embed-core"
+version.ref = "tomcat10"
+javadocs = "https://tomcat.apache.org/tomcat-10.0-doc/api/"
+[libraries.tomcat10-jasper]
+module = "org.apache.tomcat.embed:tomcat-embed-jasper"
+version.ref = "tomcat10"
+[libraries.tomcat10-el]
+module = "org.apache.tomcat.embed:tomcat-embed-el"
+version.ref = "tomcat10"
 
 # Needed to work around the problem with Gradle not supporting POM relocation correctly.
 [libraries.xml-apis]

@@ -46,9 +46,9 @@ class SpringTomcatApplicationItTest {
     private TestRestTemplate restTemplate;
     @Inject
     private GreetingController greetingController;
-    @Value("${armeria-tomcat.version.major:9}")
+    @Value("${armeria-tomcat.version.major:10}")
     private int tomcatMajorVersion;
-    @Value("${armeria-tomcat.version.minor:0}")
+    @Value("${armeria-tomcat.version.minor:1}")
     private int tomcatMinorVersion;
 
     @BeforeEach

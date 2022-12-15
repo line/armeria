@@ -1,7 +1,7 @@
 dependencies {
     implementation project(':spring:boot3-starter')
     implementation project(':spring:boot3-webflux-starter')
-    implementation project(':tomcat9')
+    implementation project(':tomcat10')
     implementation(libs.spring.boot3.starter.web) {
         exclude group: 'org.springframework.boot', module: 'spring-boot-starter-tomcat'
     }

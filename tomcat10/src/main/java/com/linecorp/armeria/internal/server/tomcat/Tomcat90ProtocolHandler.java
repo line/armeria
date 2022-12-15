@@ -123,7 +123,6 @@ public final class Tomcat90ProtocolHandler implements ProtocolHandler {
         return 0;
     }
 
-    @Override
     public boolean isAprRequired() {
         return false;
     }

@@ -23,6 +23,7 @@ import java.io.File;
 import java.time.Duration;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 import org.apache.catalina.startup.Tomcat;
 import org.apache.catalina.valves.AbstractAccessLogValve;
@@ -34,6 +35,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.tomcat.TomcatVersion;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -45,6 +47,8 @@ class TomcatServiceAccessLogTest {
     public static final class FakeAccessLogValve extends AbstractAccessLogValve {
         static FakeAccessLogValve create() {
             final FakeAccessLogValve fakeAccessLogValve = new FakeAccessLogValve();
+            // '%D' returns milliseconds in Tomcat 9 but microseconds in Tomcat 10.
+            // https://github.com/apache/tomcat/blob/e75b643aa8d94aa8e467be204747a5ec0de11c6a/java/org/apache/catalina/valves/AbstractAccessLogValve.java#L1372
             fakeAccessLogValve.setPattern("%D");
             return fakeAccessLogValve;
         }
@@ -105,6 +109,12 @@ class TomcatServiceAccessLogTest {
     void haveCorrectProcessingTime() throws Exception {
         final BlockingWebClient client = WebClient.of(server.httpUri()).blocking();
         client.get("/no-webapp/");
-        assertThat(Long.parseLong(accessLogValve.popLog())).isLessThan(Duration.ofSeconds(10).toMillis());
+
+        long maybeMillis = Long.parseLong(accessLogValve.popLog());
+        if (TomcatVersion.major() >= 10) {
+            maybeMillis = TimeUnit.MICROSECONDS.toMillis(maybeMillis);
+        }
+
+        assertThat(maybeMillis).isLessThan(Duration.ofSeconds(10).toMillis());
     }
 }

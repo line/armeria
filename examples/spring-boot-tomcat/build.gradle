@@ -5,7 +5,7 @@ plugins {
 dependencies {
     implementation project(':core')
     implementation project(':spring:boot3-starter')
-    implementation project(':tomcat9')
+    implementation project(':tomcat10')
 
     implementation libs.spring.boot3.starter.web
     annotationProcessor libs.spring.boot3.configuration.processor

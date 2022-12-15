@@ -86,6 +86,9 @@ public abstract class TomcatService implements HttpService {
     static final Class<?> PROTOCOL_HANDLER_CLASS;
 
     private static final MethodHandle PROCESSOR_CONSTRUCTOR;
+    // Request.setStartTime() is deprecated and performs nothing in Tomcat 10.
+    @Nullable
+    private static final MethodHandle SET_START_TIME_NANOS_MH;
 
     static {
         final String prefix = TomcatVersion.class.getPackage().getName() + '.';
@@ -142,6 +145,18 @@ public abstract class TomcatService implements HttpService {
                 logger.debug("Failed to initialize Tomcat ConfigFileLoader.source:", cause);
             }
         }
+
+        MethodHandle setStartTimeNanosMH = null;
+        if (TomcatVersion.major() >= 10) {
+            try {
+                setStartTimeNanosMH = MethodHandles.lookup()
+                                                   .findVirtual(Request.class, "setStartTimeNanos",
+                                                                MethodType.methodType(void.class, long.class));
+            } catch (NoSuchMethodException | IllegalAccessException e) {
+                logger.debug("Failed to Request.setStarTimeNanos(long) in Tomcat {}", TomcatVersion.major(), e);
+            }
+        }
+        SET_START_TIME_NANOS_MH = setStartTimeNanosMH;
     }
 
     private static final ResponseHeaders INVALID_AUTHORITY_HEADERS =
@@ -465,8 +480,15 @@ public abstract class TomcatService implements HttpService {
         coyoteReq.scheme().setString(req.scheme());
 
         // Set the start time which is used by Tomcat access logging
-        coyoteReq.setStartTime(ctx.log().ensureAvailable(RequestLogProperty.REQUEST_START_TIME)
-                                  .requestStartTimeMillis());
+        if (SET_START_TIME_NANOS_MH != null) {
+            // Request.setStartTime() is deprecated and performs nothing in Tomcat 10.
+            SET_START_TIME_NANOS_MH.invoke(coyoteReq,
+                                           ctx.log().ensureAvailable(RequestLogProperty.REQUEST_START_TIME)
+                                              .requestStartTimeNanos());
+        } else {
+            coyoteReq.setStartTime(ctx.log().ensureAvailable(RequestLogProperty.REQUEST_START_TIME)
+                                      .requestStartTimeMillis());
+        }
 
         // Set the remote host/address.
         final InetSocketAddress remoteAddr = ctx.remoteAddress();
