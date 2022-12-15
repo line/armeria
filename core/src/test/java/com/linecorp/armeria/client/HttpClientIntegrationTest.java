@@ -80,7 +80,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.client.HttpHeaderUtil;
+import com.linecorp.armeria.internal.client.UserAgentUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -377,7 +377,7 @@ class HttpClientIntegrationTest {
                 "/foo",
                 port -> "GET /foo HTTP/1.1\r\n" +
                         "host: 127.0.0.1:" + port + "\r\n" +
-                        "user-agent: " + HttpHeaderUtil.USER_AGENT + "\r\n\r\n");
+                        "user-agent: " + UserAgentUtil.USER_AGENT + "\r\n\r\n");
     }
 
     @Test

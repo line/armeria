@@ -1640,6 +1640,7 @@ public final class ServerBuilder implements TlsSetters {
      *       {@link VirtualHostAnnotatedServiceBindingBuilder#addHeader(CharSequence, Object)}</li>
      * </ul>
      */
+    @UnstableApi
     public ServerBuilder addHeader(CharSequence name, Object value) {
         virtualHostTemplate.addHeader(name, value);
         return this;
@@ -1658,6 +1659,7 @@ public final class ServerBuilder implements TlsSetters {
      *       {@link VirtualHostAnnotatedServiceBindingBuilder#addHeaders(Iterable)}</li>
      * </ul>
      */
+    @UnstableApi
     public ServerBuilder addHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
         virtualHostTemplate.addHeaders(defaultHeaders);
@@ -1677,6 +1679,7 @@ public final class ServerBuilder implements TlsSetters {
      *       {@link VirtualHostAnnotatedServiceBindingBuilder#setHeader(CharSequence, Object)}</li>
      * </ul>
      */
+    @UnstableApi
     public ServerBuilder setHeader(CharSequence name, Object value) {
         virtualHostTemplate.setHeader(name, value);
         return this;
@@ -1695,6 +1698,7 @@ public final class ServerBuilder implements TlsSetters {
      *       {@link VirtualHostAnnotatedServiceBindingBuilder#setHeaders(Iterable)}</li>
      * </ul>
      */
+    @UnstableApi
     public ServerBuilder setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
         virtualHostTemplate.setHeaders(defaultHeaders);

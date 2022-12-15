@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestHeadersBuilder;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
-import com.linecorp.armeria.internal.client.HttpHeaderUtil;
+import com.linecorp.armeria.internal.client.UserAgentUtil;
 import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
 import io.netty.util.AsciiString;
@@ -130,7 +130,7 @@ public final class HttpHeadersUtil {
 
         // Framework headers
         if (!builder.contains(HttpHeaderNames.USER_AGENT)) {
-            builder.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
+            builder.add(HttpHeaderNames.USER_AGENT, UserAgentUtil.USER_AGENT.toString());
         }
 
         return builder.build();
