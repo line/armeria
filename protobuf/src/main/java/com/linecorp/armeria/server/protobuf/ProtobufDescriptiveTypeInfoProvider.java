@@ -21,9 +21,7 @@ import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunct
 import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunctionProvider.isProtobufMessage;
 import static java.util.Objects.requireNonNull;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Descriptors.Descriptor;
@@ -33,21 +31,21 @@ import com.google.protobuf.Message;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
-import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldRequirement;
-import com.linecorp.armeria.server.docs.NamedTypeInfo;
-import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 
 /**
- * A {@link NamedTypeInfoProvider} to create a {@link NamedTypeInfo} from a protobuf {@link Message}.
+ * A {@link DescriptiveTypeInfoProvider} to create a {@link DescriptiveTypeInfo}
+ * from a protobuf {@link Message}.
  */
 @UnstableApi
-public final class ProtobufNamedTypeInfoProvider implements NamedTypeInfoProvider {
+public final class ProtobufDescriptiveTypeInfoProvider implements DescriptiveTypeInfoProvider {
 
     @VisibleForTesting
     static final TypeSignature BOOL = TypeSignature.ofBase("bool");
@@ -84,7 +82,7 @@ public final class ProtobufNamedTypeInfoProvider implements NamedTypeInfoProvide
 
     @Nullable
     @Override
-    public NamedTypeInfo newNamedTypeInfo(Object typeDescriptor) {
+    public DescriptiveTypeInfo newDescriptiveTypeInfo(Object typeDescriptor) {
         requireNonNull(typeDescriptor, "typeDescriptor");
 
         if (typeDescriptor instanceof Descriptor) {
@@ -114,34 +112,20 @@ public final class ProtobufNamedTypeInfoProvider implements NamedTypeInfoProvide
     @UnstableApi
     public static StructInfo newStructInfo(Descriptor descriptor) {
         requireNonNull(descriptor, "descriptor");
-        final Set<Descriptor> visiting = new HashSet<>();
-        visiting.add(descriptor);
-        return new StructInfo(descriptor.getFullName(), newFieldInfos(descriptor, visiting));
+        return new StructInfo(descriptor.getFullName(), newFieldInfos(descriptor));
     }
 
-    private static List<FieldInfo> newFieldInfos(Descriptor descriptor, Set<Descriptor> visiting) {
+    private static List<FieldInfo> newFieldInfos(Descriptor descriptor) {
         return descriptor.getFields().stream()
-                         .map(fieldDescriptor -> newFieldInfo(fieldDescriptor, visiting))
+                         .map(fieldDescriptor -> {
+                             final TypeSignature typeSignature = newFieldTypeInfo(fieldDescriptor);
+                             return FieldInfo.builder(fieldDescriptor.getName(), typeSignature)
+                                             .requirement(
+                                                     fieldDescriptor.isRequired() ? FieldRequirement.REQUIRED
+                                                                                  : FieldRequirement.OPTIONAL)
+                                             .build();
+                         })
                          .collect(toImmutableList());
-    }
-
-    private static FieldInfo newFieldInfo(FieldDescriptor fieldDescriptor, Set<Descriptor> visiting) {
-        final TypeSignature typeSignature = newFieldTypeInfo(fieldDescriptor);
-        final Object typeDescriptor = typeSignature.namedTypeDescriptor();
-        final FieldInfoBuilder builder;
-        if (typeDescriptor instanceof Descriptor && visiting.add((Descriptor) typeDescriptor)) {
-            builder = FieldInfo.builder(fieldDescriptor.getName(), typeSignature,
-                                        newFieldInfos((Descriptor) typeDescriptor, visiting));
-        } else {
-            builder = FieldInfo.builder(fieldDescriptor.getName(), typeSignature);
-        }
-
-        final FieldInfo fieldInfo =
-                builder.requirement(fieldDescriptor.isRequired() ? FieldRequirement.REQUIRED
-                                                                 : FieldRequirement.OPTIONAL)
-                       .build();
-        visiting.remove(typeDescriptor);
-        return fieldInfo;
     }
 
     @VisibleForTesting
@@ -199,27 +183,27 @@ public final class ProtobufNamedTypeInfoProvider implements NamedTypeInfoProvide
                 fieldType = UINT64;
                 break;
             case MESSAGE:
-                fieldType = namedMessageSignature(fieldDescriptor.getMessageType());
+                fieldType = descriptiveMessageSignature(fieldDescriptor.getMessageType());
                 break;
             case GROUP:
                 // This type has been deprecated since the launch of protocol buffers to open source.
-                // There is no real metadata for this in the descriptor so we just treat as UNKNOWN
-                // since it shouldn't happen in practice anyways.
+                // There is no real metadata for this in the descriptor, so we just treat as UNKNOWN
+                // since it shouldn't happen in practice anyway.
                 fieldType = UNKNOWN;
                 break;
             case ENUM:
-                fieldType = TypeSignature.ofNamed(
+                fieldType = TypeSignature.ofEnum(
                         fieldDescriptor.getEnumType().getFullName(), fieldDescriptor.getEnumType());
                 break;
             default:
                 fieldType = UNKNOWN;
                 break;
         }
-        return fieldDescriptor.isRepeated() ? TypeSignature.ofContainer("repeated", fieldType) : fieldType;
+        return fieldDescriptor.isRepeated() ? TypeSignature.ofIterable("repeated", fieldType) : fieldType;
     }
 
-    private static TypeSignature namedMessageSignature(Descriptor descriptor) {
-        return TypeSignature.ofNamed(descriptor.getFullName(), descriptor);
+    private static TypeSignature descriptiveMessageSignature(Descriptor descriptor) {
+        return TypeSignature.ofStruct(descriptor.getFullName(), descriptor);
     }
 
     @VisibleForTesting

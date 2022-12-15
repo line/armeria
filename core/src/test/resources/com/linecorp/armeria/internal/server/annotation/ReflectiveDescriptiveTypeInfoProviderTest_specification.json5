@@ -1,15 +1,15 @@
 {
   "services" : [ {
-    "name" : "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$ParamService",
+    "name" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamService",
     "methods" : [ {
       "name" : "param",
+      "id" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamService/param/GET",
       "returnTypeSignature" : "CompletableFuture<string>",
       "parameters" : [ {
         "name" : "id",
         "location" : "PATH",
         "requirement" : "REQUIRED",
-        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$ParamId",
-        "childFieldInfos" : [ ],
+        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamId",
         "descriptionInfo" : {
           "docString" : "",
           "markup" : "NONE"
@@ -18,8 +18,7 @@
         "name" : "query",
         "location" : "QUERY",
         "requirement" : "OPTIONAL",
-        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$ParamQuery",
-        "childFieldInfos" : [ ],
+        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamQuery",
         "descriptionInfo" : {
           "docString" : "",
           "markup" : "NONE"
@@ -49,13 +48,12 @@
   } ],
   "enums" : [ ],
   "structs" : [ {
-    "name" : "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$ParamId",
+    "name" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamId",
     "fields" : [ {
       "name" : "id",
       "location" : "UNSPECIFIED",
       "requirement" : "REQUIRED",
       "typeSignature" : "int",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "param id",
         "markup" : "NONE"
@@ -66,13 +64,12 @@
       "markup" : "NONE"
     }
   }, {
-    "name" : "com.linecorp.armeria.internal.server.annotation.DefaultNamedTypeInfoProviderTest$ParamQuery",
+    "name" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamQuery",
     "fields" : [ {
       "name" : "query",
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "string",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "param query",
         "markup" : "NONE"

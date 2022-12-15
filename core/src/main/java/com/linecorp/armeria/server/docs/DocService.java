@@ -65,7 +65,6 @@ import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerConfig;
-import com.linecorp.armeria.server.ServerListenerAdapter;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -103,14 +102,14 @@ public final class DocService extends SimpleDecoratingHttpService {
     static final List<DocServicePlugin> plugins = ImmutableList.copyOf(ServiceLoader.load(
             DocServicePlugin.class, DocService.class.getClassLoader()));
 
-    static final List<NamedTypeInfoProvider> spiNamedTypeInfoProviders =
+    static final List<DescriptiveTypeInfoProvider> SPI_DESCRIPTIVE_TYPE_INFO_PROVIDERS =
             ImmutableList.copyOf(ServiceLoader.load(
-                    NamedTypeInfoProvider.class, DocService.class.getClassLoader()));
+                    DescriptiveTypeInfoProvider.class, DocService.class.getClassLoader()));
 
     static {
         logger.debug("Available {}s: {}", DocServicePlugin.class.getSimpleName(), plugins);
-        logger.debug("Available {}s: {}", NamedTypeInfoProvider.class.getSimpleName(),
-                     spiNamedTypeInfoProviders);
+        logger.debug("Available {}s: {}", DescriptiveTypeInfoProvider.class.getSimpleName(),
+                     SPI_DESCRIPTIVE_TYPE_INFO_PROVIDERS);
     }
 
     /**
@@ -142,18 +141,19 @@ public final class DocService extends SimpleDecoratingHttpService {
                Map<String, ListMultimap<String, String>> examplePaths,
                Map<String, ListMultimap<String, String>> exampleQueries,
                List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
-               DocServiceFilter filter, @Nullable NamedTypeInfoProvider namedTypeInfoProvider) {
+               DocServiceFilter filter, @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
         this(new ExampleSupport(immutableCopyOf(exampleHeaders, "exampleHeaders"),
                                 immutableCopyOf(exampleRequests, "exampleRequests"),
                                 immutableCopyOf(examplePaths, "examplePaths"),
                                 immutableCopyOf(exampleQueries, "exampleQueries")),
-             injectedScriptSuppliers, filter, namedTypeInfoProvider);
+             injectedScriptSuppliers, filter, descriptiveTypeInfoProvider);
     }
 
     private DocService(ExampleSupport exampleSupport,
                        List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers,
-                       DocServiceFilter filter, @Nullable NamedTypeInfoProvider namedTypeInfoProvider) {
-        this(new SpecificationLoader(exampleSupport, filter, namedTypeInfoProvider),
+                       DocServiceFilter filter,
+                       @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
+        this(new SpecificationLoader(exampleSupport, filter, descriptiveTypeInfoProvider),
              injectedScriptSuppliers);
     }
 
@@ -189,24 +189,18 @@ public final class DocService extends SimpleDecoratingHttpService {
         server = cfg.server();
 
         // Build the Specification after all the services are added to the server.
-        server.addListener(new ServerListenerAdapter() {
-            @Override
-            public void serverStarting(Server server) throws Exception {
-                final ServerConfig config = server.config();
-                final List<VirtualHost> virtualHosts = config.findVirtualHosts(DocService.this);
+        final ServerConfig config = server.config();
+        final List<VirtualHost> virtualHosts = config.findVirtualHosts(this);
 
-                final List<ServiceConfig> services =
-                        config.serviceConfigs().stream()
-                              .filter(se -> virtualHosts.contains(se.virtualHost()))
-                              .collect(toImmutableList());
-
-                final ExecutorService executorService = Executors.newSingleThreadExecutor(
-                        ThreadFactories.newThreadFactory("docservice-loader", true));
-                vfs().specificationLoader.updateServices(services, executorService).handle((res, e) -> {
-                    executorService.shutdown();
-                    return null;
-                });
-            }
+        final List<ServiceConfig> services =
+                config.serviceConfigs().stream()
+                      .filter(se -> virtualHosts.contains(se.virtualHost()))
+                      .collect(toImmutableList());
+        final ExecutorService executorService = Executors.newSingleThreadExecutor(
+                ThreadFactories.newThreadFactory("docservice-loader", true));
+        vfs().specificationLoader.updateServices(services, executorService).handle((res, e) -> {
+            executorService.shutdown();
+            return null;
         });
     }
 
@@ -252,17 +246,17 @@ public final class DocService extends SimpleDecoratingHttpService {
 
         private final ExampleSupport exampleSupport;
         private final DocServiceFilter filter;
-        private final NamedTypeInfoProvider namedTypeInfoProvider;
+        private final DescriptiveTypeInfoProvider descriptiveTypeInfoProvider;
         private final Map<String, CompletableFuture<AggregatedHttpFile>> files = new ConcurrentHashMap<>();
         private List<ServiceConfig> services = Collections.emptyList();
 
         SpecificationLoader(
                 ExampleSupport exampleSupport,
                 DocServiceFilter filter,
-                @Nullable NamedTypeInfoProvider namedTypeInfoProvider) {
+                @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
             this.exampleSupport = exampleSupport;
             this.filter = filter;
-            this.namedTypeInfoProvider = composeNamedTypeInfoProvider(namedTypeInfoProvider);
+            this.descriptiveTypeInfoProvider = composeDescriptiveTypeInfoProvider(descriptiveTypeInfoProvider);
         }
 
         boolean contains(String path) {
@@ -361,25 +355,28 @@ public final class DocService extends SimpleDecoratingHttpService {
             return ServiceSpecification.merge(
                     plugins.stream()
                            .map(plugin -> plugin.generateSpecification(
-                                   findSupportedServices(plugin, services), filter, namedTypeInfoProvider))
+                                   findSupportedServices(plugin, services),
+                                   filter, descriptiveTypeInfoProvider))
                            .collect(toImmutableList()));
         }
 
-        private static NamedTypeInfoProvider composeNamedTypeInfoProvider(
-                @Nullable NamedTypeInfoProvider namedTypeInfoProvider) {
+        private static DescriptiveTypeInfoProvider composeDescriptiveTypeInfoProvider(
+                @Nullable DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
             return typeDescriptor -> {
-                if (namedTypeInfoProvider != null) {
+                if (descriptiveTypeInfoProvider != null) {
                     // Respect user-defined provider first.
-                    final NamedTypeInfo namedTypeInfo = namedTypeInfoProvider.newNamedTypeInfo(typeDescriptor);
-                    if (namedTypeInfo != null) {
-                        return namedTypeInfo;
+                    final DescriptiveTypeInfo descriptiveTypeInfo =
+                            descriptiveTypeInfoProvider.newDescriptiveTypeInfo(typeDescriptor);
+                    if (descriptiveTypeInfo != null) {
+                        return descriptiveTypeInfo;
                     }
                 }
 
-                for (NamedTypeInfoProvider provider : spiNamedTypeInfoProviders) {
-                    final NamedTypeInfo namedTypeInfo = provider.newNamedTypeInfo(typeDescriptor);
-                    if (namedTypeInfo != null) {
-                        return namedTypeInfo;
+                for (DescriptiveTypeInfoProvider provider : SPI_DESCRIPTIVE_TYPE_INFO_PROVIDERS) {
+                    final DescriptiveTypeInfo descriptiveTypeInfo =
+                            provider.newDescriptiveTypeInfo(typeDescriptor);
+                    if (descriptiveTypeInfo != null) {
+                        return descriptiveTypeInfo;
                     }
                 }
                 return null;

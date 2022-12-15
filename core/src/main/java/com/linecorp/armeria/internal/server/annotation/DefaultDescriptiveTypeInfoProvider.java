@@ -27,9 +27,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -45,22 +43,25 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 import com.linecorp.armeria.server.annotation.Description;
+import com.linecorp.armeria.server.docs.ContainerTypeSignature;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
+import com.linecorp.armeria.server.docs.DescriptiveTypeSignature;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldRequirement;
-import com.linecorp.armeria.server.docs.NamedTypeInfo;
-import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
+import com.linecorp.armeria.server.docs.TypeSignatureType;
 
 /**
- * A default {@link NamedTypeInfoProvider} to create a {@link StructInfo} from a {@code typeDescriptor}.
+ * A default {@link DescriptiveTypeInfoProvider} to create a {@link StructInfo} from a {@code typeDescriptor}.
  * If {@code typeDescriptor} is unknown type, Jackson is used to try to extract fields
  * and their metadata.
  */
-public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider {
+public final class DefaultDescriptiveTypeInfoProvider implements DescriptiveTypeInfoProvider {
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
@@ -69,13 +70,13 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
 
     private final boolean request;
 
-    DefaultNamedTypeInfoProvider(boolean request) {
+    DefaultDescriptiveTypeInfoProvider(boolean request) {
         this.request = request;
     }
 
     @Nullable
     @Override
-    public NamedTypeInfo newNamedTypeInfo(Object typeDescriptor) {
+    public DescriptiveTypeInfo newDescriptiveTypeInfo(Object typeDescriptor) {
         requireNonNull(typeDescriptor, "typeDescriptor");
         if (!(typeDescriptor instanceof Class)) {
             return null;
@@ -122,35 +123,27 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
         if (!mapper.canDeserialize(javaType)) {
             return newReflectiveStructInfo(type);
         }
-        final Set<JavaType> visiting = new HashSet<>();
-        return new StructInfo(type.getName(), requestFieldInfos(javaType, visiting, true),
+        return new StructInfo(type.getName(), requestFieldInfos(javaType),
                               classDescriptionInfo(javaType.getRawClass()));
     }
 
-    private List<FieldInfo> requestFieldInfos(JavaType javaType, Set<JavaType> visiting, boolean root) {
+    private List<FieldInfo> requestFieldInfos(JavaType javaType) {
         if (!mapper.canDeserialize(javaType)) {
-            return ImmutableList.of();
-        }
-
-        if (!visiting.add(javaType)) {
             return ImmutableList.of();
         }
 
         final BeanDescription description = mapper.getDeserializationConfig().introspect(javaType);
         final List<BeanPropertyDefinition> properties = description.findProperties();
-        if (root && properties.isEmpty()) {
+        if (properties.isEmpty()) {
             return newReflectiveStructInfo(javaType.getRawClass()).fields();
         }
 
-        final List<FieldInfo> fieldInfos = properties.stream().map(property -> {
-            return fieldInfos(javaType,
-                              property.getName(),
-                              property.getInternalName(),
-                              property.getPrimaryType(),
-                              childType -> requestFieldInfos(childType, visiting, false));
-        }).collect(toImmutableList());
-        visiting.remove(javaType);
-        return fieldInfos;
+        return properties.stream()
+                         .map(property -> fieldInfos(javaType,
+                                                     property.getName(),
+                                                     property.getInternalName(),
+                                                     property.getPrimaryType()))
+                         .collect(toImmutableList());
     }
 
     private StructInfo responseStructInfo(Class<?> type) {
@@ -158,46 +151,39 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
             return newReflectiveStructInfo(type);
         }
         final JavaType javaType = mapper.constructType(type);
-        final Set<JavaType> visiting = new HashSet<>();
-        return new StructInfo(type.getName(), responseFieldInfos(javaType, visiting, true),
-                              classDescriptionInfo(type));
+        return new StructInfo(type.getName(), responseFieldInfos(javaType), classDescriptionInfo(type));
     }
 
-    private List<FieldInfo> responseFieldInfos(JavaType javaType, Set<JavaType> visiting, boolean root) {
+    private List<FieldInfo> responseFieldInfos(JavaType javaType) {
         if (!mapper.canSerialize(javaType.getRawClass())) {
-            return ImmutableList.of();
-        }
-
-        if (!visiting.add(javaType)) {
             return ImmutableList.of();
         }
 
         final BeanDescription description = mapper.getSerializationConfig().introspect(javaType);
         final List<BeanPropertyDefinition> properties = description.findProperties();
-        if (root && properties.isEmpty()) {
+        if (properties.isEmpty()) {
             return newReflectiveStructInfo(javaType.getRawClass()).fields();
         }
 
-        final List<FieldInfo> fieldInfos = properties.stream().map(property -> {
-            return fieldInfos(javaType,
-                              property.getName(),
-                              property.getInternalName(),
-                              property.getPrimaryType(),
-                              childType -> responseFieldInfos(childType, visiting, false));
-        }).collect(toImmutableList());
-        visiting.remove(javaType);
-        return fieldInfos;
+        return properties.stream()
+                         .map(property -> fieldInfos(javaType,
+                                                     property.getName(),
+                                                     property.getInternalName(),
+                                                     property.getPrimaryType()))
+                         .collect(toImmutableList());
     }
 
-    private FieldInfo fieldInfos(JavaType javaType, String name, String internalName, JavaType fieldType,
-                                 Function<JavaType, List<FieldInfo>> childFieldsResolver) {
+    private FieldInfo fieldInfos(JavaType javaType, String name, String internalName, JavaType fieldType) {
         TypeSignature typeSignature = toTypeSignature(fieldType);
         final FieldRequirement fieldRequirement;
-        if (typeSignature.isOptional()) {
-            typeSignature = typeSignature.typeParameters().get(0);
-            if (typeSignature.namedTypeDescriptor() instanceof Class) {
-                //noinspection OverlyStrongTypeCast
-                fieldType = mapper.constructType((Class<?>) typeSignature.namedTypeDescriptor());
+        if (typeSignature.type() == TypeSignatureType.OPTIONAL) {
+            typeSignature = ((ContainerTypeSignature) typeSignature).typeParameters().get(0);
+            if (typeSignature.type().hasTypeDescriptor()) {
+                final Object descriptor =
+                        ((DescriptiveTypeSignature) typeSignature).descriptor();
+                if (descriptor instanceof Class) {
+                    fieldType = mapper.constructType((Class<?>) descriptor);
+                }
             }
             fieldRequirement = FieldRequirement.OPTIONAL;
         } else {
@@ -205,25 +191,10 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
         }
 
         final DescriptionInfo descriptionInfo = fieldDescriptionInfo(javaType, fieldType, internalName);
-        if (typeSignature.isBase() || typeSignature.isContainer()) {
-            return FieldInfo.builder(name, typeSignature)
-                            .requirement(fieldRequirement)
-                            .descriptionInfo(descriptionInfo)
-                            .build();
-        } else {
-            final List<FieldInfo> fieldInfos = childFieldsResolver.apply(fieldType);
-            if (fieldInfos.isEmpty()) {
-                return FieldInfo.builder(name, typeSignature)
-                                .requirement(fieldRequirement)
-                                .descriptionInfo(descriptionInfo)
-                                .build();
-            } else {
-                return FieldInfo.builder(name, typeSignature, fieldInfos)
-                                .requirement(fieldRequirement)
-                                .descriptionInfo(descriptionInfo)
-                                .build();
-            }
-        }
+        return FieldInfo.builder(name, typeSignature)
+                        .requirement(fieldRequirement)
+                        .descriptionInfo(descriptionInfo)
+                        .build();
     }
 
     private FieldRequirement fieldRequirement(JavaType classType, JavaType fieldType, String fieldName) {
@@ -457,6 +428,6 @@ public final class DefaultNamedTypeInfoProvider implements NamedTypeInfoProvider
     }
 
     private static StructInfo newReflectiveStructInfo(Class<?> clazz) {
-        return (StructInfo) ReflectiveNamedTypeInfoProvider.INSTANCE.newNamedTypeInfo(clazz);
+        return (StructInfo) ReflectiveDescriptiveTypeInfoProvider.INSTANCE.newDescriptiveTypeInfo(clazz);
     }
 }

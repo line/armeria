@@ -17,20 +17,22 @@
 package com.linecorp.armeria.server.scalapb
 
 import com.linecorp.armeria.common.annotation.UnstableApi
-import com.linecorp.armeria.server.protobuf.ProtobufNamedTypeInfoProvider
-import com.linecorp.armeria.server.docs.{NamedTypeInfo, NamedTypeInfoProvider}
+import com.linecorp.armeria.server.docs.{DescriptiveTypeInfo, DescriptiveTypeInfoProvider}
+import com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil.isProtobufMessage
 
 /**
- * A `NamedTypeInfoProvider` to create a `NamedTypeInfo` from a ScalaPB `GeneratedMessage`.
+ * A `DescriptiveTypeInfoProvider` to create a `DescriptiveTypeInfo` from a ScalaPB `GeneratedMessage`.
  */
 @UnstableApi
-final class ScalaPbNamedTypeInfoProvider extends NamedTypeInfoProvider {
-  override def newNamedTypeInfo(typeDescriptor: Any): NamedTypeInfo = {
+final class ScalaPbDescriptiveTypeInfoProvider extends DescriptiveTypeInfoProvider {
+  override def newDescriptiveTypeInfo(typeDescriptor: Any): DescriptiveTypeInfo = {
     typeDescriptor match {
       case clazz: Class[_] if isProtobufMessage(clazz) =>
         val message = ScalaPbRequestConverterFunction.getDefaultInstance(clazz)
-        ProtobufNamedTypeInfoProvider.newStructInfo(message.companion.javaDescriptor).withAlias(clazz.getName())
+        ProtobufDescriptiveTypeInfoProvider
+          .newStructInfo(message.companion.javaDescriptor)
+          .withAlias(clazz.getName())
       case _ => null
     }
   }
