@@ -28,7 +28,7 @@ class ZooKeeperTestUtilTest {
     void testUnusedTcpPorts() {
         final int[] ports = ZooKeeperTestUtil.unusedTcpPorts(5);
         assertThat(ports).doesNotContain(0)
-                                 .hasSize(5);
+                         .hasSize(5);
         assertThat(Arrays.stream(ports).distinct().count())
                 .isEqualTo(ports.length);
     }

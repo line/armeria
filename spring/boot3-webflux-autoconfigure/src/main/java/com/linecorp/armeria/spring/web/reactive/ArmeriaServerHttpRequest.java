@@ -115,7 +115,7 @@ final class ArmeriaServerHttpRequest extends AbstractServerHttpRequest {
         return (T) req;
     }
 
-    // This method become a non-default method in Spring 6.
+    // This method became a non-default method in Spring 6.
     @Override
     public HttpMethod getMethod() {
         return HttpMethod.valueOf(req.method().name());
