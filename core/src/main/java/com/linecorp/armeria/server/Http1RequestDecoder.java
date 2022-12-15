@@ -262,8 +262,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     if (maxContentLength > 0 && transferredLength > maxContentLength) {
                         final Routed<ServiceConfig> routed = req.route();
                         if (routed != null && routed.route().isFallback()) {
-                            // Don't need to return an error response. `FallbackService` will respond to the
-                            // request without consuming the response.
+                            // Don't need to return an error response. `FallbackService` immediately respond to
+                            // the request without consuming data.
+                            this.req = null;
                         } else {
                             final ContentTooLargeException cause =
                                     ContentTooLargeException.builder()

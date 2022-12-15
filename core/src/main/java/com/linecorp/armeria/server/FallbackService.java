@@ -42,9 +42,8 @@ final class FallbackService implements HttpService {
         final HttpStatusException cause = routingCtx.deferredStatusException();
         if (cause == null || cause.httpStatus() == HttpStatus.NOT_FOUND) {
             return handleNotFound(ctx, routingCtx);
-        } else {
-            return HttpResponse.of(cause.httpStatus());
         }
+        return HttpResponse.of(cause.httpStatus());
     }
 
     private static HttpResponse handleNotFound(ServiceRequestContext ctx, RoutingContext routingCtx) {
