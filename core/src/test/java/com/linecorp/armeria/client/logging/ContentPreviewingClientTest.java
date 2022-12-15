@@ -141,7 +141,6 @@ class ContentPreviewingClientTest {
 
             assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
         }
-
     }
 
     @Test

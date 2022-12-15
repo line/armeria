@@ -27,6 +27,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -101,7 +102,16 @@ final class HttpEncodedResponse extends FilteredHttpResponse {
                 return obj;
             }
 
-            encodedStream = new ByteBufOutputStream(alloc.buffer());
+            final ByteBuf buf;
+            final long contentLength = headers.contentLength();
+            if (contentLength > 0) {
+                // A compression ratio heavily depends on the content but the compression ratio is higher than
+                // 50% in common cases.
+                buf = alloc.buffer(Ints.saturatedCast(contentLength) / 2);
+            } else {
+                buf = alloc.buffer();
+            }
+            encodedStream = new ByteBufOutputStream(buf);
             encodingStream = HttpEncoders.getEncodingOutputStream(encodingType, encodedStream);
 
             final ResponseHeadersBuilder mutable = headers.toBuilder();

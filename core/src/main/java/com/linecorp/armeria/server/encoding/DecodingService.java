@@ -106,7 +106,8 @@ public final class DecodingService extends SimpleDecoratingHttpService {
             return unwrap().serve(ctx, req);
         }
 
-        // As the compressed content should be decoded, Content-Encoding and Content-Length header are no longer valid.
+        // As the compressed content should be decoded, Content-Encoding and Content-Length header
+        // are no longer valid.
         final RequestHeaders newHeaders = headers.toBuilder()
                                                  .removeAndThen(HttpHeaderNames.CONTENT_ENCODING)
                                                  .removeAndThen(HttpHeaderNames.CONTENT_LENGTH)

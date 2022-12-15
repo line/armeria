@@ -58,6 +58,9 @@ public interface StreamDecoderFactory extends com.linecorp.armeria.client.encodi
 
     /**
      * Construct a new {@link StreamDecoder} to use to decode an {@link HttpMessage}.
+     *
+     * @param alloc the {@link ByteBufAllocator} to allocate a new {@link ByteBuf} for the decoded
+     *              {@link HttpMessage}.
      */
     @Override
     default StreamDecoder newDecoder(ByteBufAllocator alloc) {

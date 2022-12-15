@@ -33,9 +33,12 @@ import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.zip.GZIPOutputStream;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
@@ -55,12 +58,15 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.encoding.StreamDecoder;
+import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
+import com.linecorp.armeria.common.util.CompositeException;
 import com.linecorp.armeria.internal.common.encoding.DefaultHttpDecodedResponse;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.handler.codec.compression.DecompressionException;
+import reactor.test.StepVerifier;
 
 class DefaultHttpDecodedResponseTest {
 
@@ -242,6 +248,103 @@ class DefaultHttpDecodedResponseTest {
                             .isEqualTo(ctx.maxResponseLength());
                 });
         assertThat(payloadBuf.refCnt()).isZero();
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void shouldHandleExceptionInDecoderFinishOnComplete(boolean aggregation) {
+        final HttpResponse decoded = newFailingDecodedResponse();
+        if (aggregation) {
+            assertThatThrownBy(() -> decoded.aggregate().join())
+                    .isInstanceOf(CompletionException.class)
+                    .hasCauseInstanceOf(ContentTooLargeException.class);
+        } else {
+            StepVerifier.create(decoded)
+                        // Content-Encoding header is removed by decoder.
+                        .expectNext(ResponseHeaders.of(200))
+                        .expectNext(HttpData.ofUtf8("Hello"))
+                        .expectError(ContentTooLargeException.class)
+                        .verify();
+        }
+        assertThatThrownBy(() -> decoded.whenComplete().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(ContentTooLargeException.class);
+    }
+
+    @Test
+    void shouldHandleExceptionInDecoderFinishOnError() {
+        final HttpResponse decoded = newFailingDecodedResponse();
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
+        decoded.subscribe(new Subscriber<HttpObject>() {
+            @Override
+            public void onSubscribe(Subscription s) {
+                s.request(1);
+            }
+
+            @Override
+            public void onNext(HttpObject httpObject) {
+                decoded.abort();
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                causeRef.set(t);
+            }
+
+            @Override
+            public void onComplete() {}
+        });
+        await().untilAsserted(() -> {
+            assertThat(causeRef.get())
+                    .isInstanceOf(CompositeException.class)
+                    .satisfies(cause -> {
+                        final CompositeException compositeException = (CompositeException) cause;
+                        assertThat(compositeException.getExceptions().get(0))
+                                .isInstanceOf(AbortedStreamException.class);
+
+                        assertThat(compositeException.getExceptions().get(1))
+                                .isInstanceOf(ContentTooLargeException.class);
+                    });
+        });
+        assertThatThrownBy(() -> decoded.whenComplete().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(CompositeException.class);
+    }
+
+    private static HttpResponse newFailingDecodedResponse() {
+        final HttpResponse delegate = HttpResponse.of(RESPONSE_HEADERS, HttpData.ofUtf8("Hello"));
+        final ClientRequestContext ctx =
+                ClientRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+
+        final com.linecorp.armeria.common.encoding.StreamDecoderFactory decoderFactory =
+                new com.linecorp.armeria.common.encoding.StreamDecoderFactory() {
+
+                    @Override
+                    public String encodingHeaderValue() {
+                        return "gzip";
+                    }
+
+                    @Override
+                    public StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength) {
+                        return new StreamDecoder() {
+                            @Override
+                            public HttpData decode(HttpData obj) {
+                                return HttpData.ofUtf8("Hello");
+                            }
+
+                            @Override
+                            public HttpData finish() {
+                                throw ContentTooLargeException.get();
+                            }
+
+                            @Override
+                            public int maxLength() {
+                                return maxLength;
+                            }
+                        };
+                    }
+                };
+        return new DefaultHttpDecodedResponse(delegate, ImmutableMap.of("gzip", decoderFactory), ctx, false);
     }
 
     private static HttpData responseData(HttpResponse decoded, boolean withPooledObjects) {
