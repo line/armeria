@@ -431,14 +431,14 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageAndWriter<T> {
     }
 
     @Override
-    public void close() {
+    public final void close() {
         if (setState(State.OPEN, State.CLOSED)) {
             addObjectOrEvent(SUCCESSFUL_CLOSE);
         }
     }
 
     @Override
-    public void close(Throwable cause) {
+    public final void close(Throwable cause) {
         requireNonNull(cause, "cause");
         if (cause instanceof CancelledSubscriptionException) {
             throw new IllegalArgumentException("cause: " + cause + " (must use Subscription.cancel())");

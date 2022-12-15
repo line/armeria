@@ -24,7 +24,7 @@ final class DefaultWebSocket extends DefaultStreamMessage<WebSocketFrame> implem
         final boolean written = super.tryWrite(obj);
         if (written && obj.type() == WebSocketFrameType.CLOSE) {
             // Close the stream if a close frame is written.
-            super.close();
+            close();
         }
         return written;
     }
@@ -60,11 +60,6 @@ final class DefaultWebSocket extends DefaultStreamMessage<WebSocketFrame> implem
     }
 
     @Override
-    public void close() {
-        close(WebSocketCloseStatus.NORMAL_CLOSURE);
-    }
-
-    @Override
     public void close(WebSocketCloseStatus status) {
         close(WebSocketFrame.ofClose(status));
     }
@@ -75,7 +70,7 @@ final class DefaultWebSocket extends DefaultStreamMessage<WebSocketFrame> implem
     }
 
     private void close(CloseWebSocketFrame closeFrame) {
-        // There's chance that the stream is already closed, so we use tryWrite.
+        // There's a chance that the stream is already closed, so we use tryWrite.
         final boolean ignored = tryWrite(closeFrame);
     }
 }
