@@ -9,8 +9,6 @@ dependencies {
 
     runtimeOnly project(':spring:boot3-actuator-starter')
 
-    testImplementation libs.jakarta.websocket
-    testImplementation libs.jakarta.websocket.client
     testImplementation libs.junit5.jupiter.api
     testImplementation libs.spring.boot3.starter.test
 }

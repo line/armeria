@@ -11,18 +11,20 @@ dependencies {
     compileOnly project(':thrift0.17')
     implementation project(':logback')
 
-    optionalApi libs.micrometer.prometheus
-    optionalApi libs.dropwizard.metrics.json
+    api libs.spring.boot3.starter.webflux
     api libs.jakarta.inject
     compileOnly libs.jakarta.validation
-    api libs.spring.boot3.starter.webflux
+    // We may remove jakarta.websocket dependencies if Armeria webflux module supports WebSocket.
+    implementation libs.jakarta.websocket
+    implementation libs.jakarta.websocket.client
+
+    optionalApi libs.micrometer.prometheus
+    optionalApi libs.dropwizard.metrics.json
 
     annotationProcessor libs.spring.boot3.configuration.processor
 
     testImplementation project(':spring:boot3-actuator-autoconfigure')
     testImplementation project(':thrift0.17')
-    testImplementation libs.jakarta.websocket
-    testImplementation libs.jakarta.websocket.client
     testImplementation libs.spring.boot3.starter.test
     // Added for sharing test suites with boot2
     testImplementation libs.javax.inject
