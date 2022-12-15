@@ -10,7 +10,6 @@
         "location" : "PATH",
         "requirement" : "REQUIRED",
         "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamId",
-        "childFieldInfos" : [ ],
         "descriptionInfo" : {
           "docString" : "",
           "markup" : "NONE"
@@ -20,7 +19,6 @@
         "location" : "QUERY",
         "requirement" : "OPTIONAL",
         "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$ParamQuery",
-        "childFieldInfos" : [ ],
         "descriptionInfo" : {
           "docString" : "",
           "markup" : "NONE"
@@ -56,7 +54,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "REQUIRED",
       "typeSignature" : "int",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "param id",
         "markup" : "NONE"
@@ -73,7 +70,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "string",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "param query",
         "markup" : "NONE"

@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A descriptive {@link TypeSignature}.
  */
 @UnstableApi
-public final class DescriptiveTypeSignature extends DefaultTypeSignature {
+public class DescriptiveTypeSignature extends DefaultTypeSignature {
 
     static final Pattern NAMED_PATTERN = Pattern.compile("^([^.<>]+(?:\\.[^.<>]+)+)$");
 
@@ -46,7 +46,10 @@ public final class DescriptiveTypeSignature extends DefaultTypeSignature {
         this.descriptor = descriptor;
     }
 
-    DescriptiveTypeSignature(TypeSignatureType type, String name, Object descriptor) {
+    /**
+     * Create a new instance.
+     */
+    protected DescriptiveTypeSignature(TypeSignatureType type, String name, Object descriptor) {
         super(type, name);
         this.descriptor = descriptor;
     }
@@ -68,7 +71,6 @@ public final class DescriptiveTypeSignature extends DefaultTypeSignature {
         if (!(o instanceof DescriptiveTypeSignature)) {
             return false;
         }
-
         final DescriptiveTypeSignature that = (DescriptiveTypeSignature) o;
         return type() == that.type() &&
                name().equals(that.name()) &&

@@ -135,7 +135,7 @@ class AnnotatedDocServiceTest {
     };
 
     @Test
-    void jsonSpecification() throws InterruptedException {
+    void jsonSpecification() throws InterruptedException, JsonProcessingException {
         if (TestUtil.isDocServiceDemoMode()) {
             Thread.sleep(Long.MAX_VALUE);
         }
@@ -148,7 +148,7 @@ class AnnotatedDocServiceTest {
         addRegexMethodInfo(methodInfos);
         addPrefixMethodInfo(methodInfos);
         addConsumesMethodInfo(methodInfos);
-        addBeanMethodInfo(methodInfos);
+         addBeanMethodInfo(methodInfos);
         addMultiMethodInfo(methodInfos);
         addJsonMethodInfo(methodInfos);
         addOverloadMethodInfo(methodInfos);
@@ -167,7 +167,8 @@ class AnnotatedDocServiceTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CACHE_CONTROL))
                 .isEqualTo("no-cache, max-age=0, must-revalidate");
-        assertThatJson(res.contentUtf8()).when(IGNORING_ARRAY_ORDER).isEqualTo(expectedJson);
+        assertThatJson(res.contentUtf8()).when(IGNORING_ARRAY_ORDER)
+                                         .whenIgnoringPaths("structs").isEqualTo(expectedJson);
     }
 
     private static void addFooMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
@@ -316,13 +317,7 @@ class AnnotatedDocServiceTest {
                                                    .availableMimeTypes(MediaType.JSON_UTF_8)
                                                    .build();
         final FieldInfo jsonRequest =
-                FieldInfo.builder(JsonRequest.class.getName(), AnnotatedDocServicePlugin.OBJECT,
-                                  ImmutableList.of(FieldInfo.builder("foo", INT)
-                                                            .requirement(REQUIRED)
-                                                            .build(),
-                                                   FieldInfo.builder("bar", STRING)
-                                                            .requirement(REQUIRED)
-                                                            .build()))
+                FieldInfo.builder("request", TypeSignature.ofStruct(JsonRequest.class))
                          .requirement(REQUIRED)
                          .build();
         final MethodInfo methodInfo1 = new MethodInfo(
