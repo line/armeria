@@ -33,7 +33,7 @@ final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
 
     private static final RequestHeaders HTTP1_PING_REQUEST =
             RequestHeaders.builder(HttpMethod.OPTIONS, "*")
-                          .add(HttpHeaderNames.USER_AGENT, UserAgentUtil.USER_AGENT.toString())
+                          .set(HttpHeaderNames.USER_AGENT, UserAgentUtil.USER_AGENT.toString())
                           .build();
 
     private final HttpSession httpSession;

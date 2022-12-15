@@ -149,9 +149,9 @@ final class ArmeriaChannel extends Channel implements ClientBuilderParams, Unwra
             }
         }
         if (credentials != null) {
-            client = new CallCredentialsDecoratingClient(httpClient, credentials, method,
-                                                         !Strings.isNullOrEmpty(callAuthority) ? callAuthority :
-                                                         authority());
+            client = new CallCredentialsDecoratingClient(
+                    httpClient, credentials, method,
+                    !Strings.isNullOrEmpty(callAuthority) ? callAuthority : authority());
         } else {
             client = httpClient;
         }

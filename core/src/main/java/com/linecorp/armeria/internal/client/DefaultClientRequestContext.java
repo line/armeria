@@ -426,8 +426,8 @@ public final class DefaultClientRequestContext
         final String authority = getAuthority(headers);
         if (authority != null && endpoint != null && endpoint.isIpAddrOnly()) {
             // The connection will be established with the IP address but `host` set to the `Endpoint`
-            // could be used for SNI. It would make users send HTTPS requests with CSLB or configure reverse
-            // proxy based on authority.
+            // could be used for SNI. It would make users send HTTPS requests with CSLB or configure a reverse
+            // proxy based on an authority.
             final String host = HostAndPort.fromString(removeUserInfo(authority)).getHost();
             if (!NetUtil.isValidIpV4Address(host) && !NetUtil.isValidIpV6Address(host)) {
                 endpoint = endpoint.withHost(host);
@@ -510,7 +510,7 @@ public final class DefaultClientRequestContext
         defaultRequestHeaders = ctx.defaultRequestHeaders();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
 
-        for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext(); ) {
+        for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
         }
 
@@ -736,7 +736,7 @@ public final class DefaultClientRequestContext
     @Override
     public void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator) {
         requireNonNull(mutator, "mutator");
-        for (; ; ) {
+        for (;;) {
             final HttpHeaders oldValue = additionalRequestHeaders;
             final HttpHeadersBuilder builder = oldValue.toBuilder();
             mutator.accept(builder);
