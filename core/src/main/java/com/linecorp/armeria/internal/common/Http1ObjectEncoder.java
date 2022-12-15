@@ -445,10 +445,6 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         return closed || !channel().isActive();
     }
 
-    protected final int currentId() {
-        return currentId;
-    }
-
     protected final int lastResponseHeadersId() {
         return lastResponseHeadersId;
     }
