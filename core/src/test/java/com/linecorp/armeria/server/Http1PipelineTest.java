@@ -130,7 +130,6 @@ class Http1PipelineTest {
                 splitHttpResponse.body().collect().join();
             }).isInstanceOf(CompletionException.class)
               .hasCauseInstanceOf(ClosedSessionException.class);
-            final ServiceRequestContext sctx = server.requestContextCaptor().take();
         }
     }
 }
