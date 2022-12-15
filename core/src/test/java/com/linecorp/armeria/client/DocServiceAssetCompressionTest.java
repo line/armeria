@@ -28,6 +28,9 @@ class DocServiceAssetCompressionTest {
     @ValueSource(strings = {"index.html", "main.js"})
     @ParameterizedTest
     void shouldNotIncludeUncompressedAssets(String file) {
+        // `doc-client` should produce compressed asserts when building bundle files for DocService and
+        // they should exist in the classpath of the core module.
+        // If Gradle build task is excuted with `-PnoWeb`, this test may be broken.
         assertThat(DocService.class.getResource(file)).isNull();
         assertThat(DocService.class.getResource(file + ".br")).isNotNull();
     }
