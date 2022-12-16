@@ -20,6 +20,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.maybeNewPort;
+import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationTlsUtil.configureTls;
 import static com.linecorp.armeria.spring.actuate.WebOperationService.HAS_WEB_SERVER_NAMESPACE;
 import static com.linecorp.armeria.spring.actuate.WebOperationService.toMediaType;
 import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.addAdditionalPath;
@@ -82,6 +83,7 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.spring.ArmeriaConfigurationTlsUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -192,7 +194,8 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                 addLocalManagementPortPropertyAlias(environment, managementPort);
                 if (serverProperties.getSsl() != null &&
                     serverProperties.getSsl().isEnabled()) {
-                    // TODO configure https
+                    configureTls(sb.virtualHost(managementPort),
+                                 toArmeriaSslConfiguration(serverProperties.getSsl()));
                 }
             }
 
@@ -221,7 +224,11 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                 configureExposableWebEndpoint(sb, managementPort, endpoints, statusMapper,
                                               mediaTypes, endpointMapping, cors);
             }
-            if (internalServicePort != null && !Objects.equals(internalServicePort, managementPort)) {
+            // If internal-services.port != management.server.port or management.server has it's own address
+            // We need to add actuator to internal-services port without base-path,
+            if (internalServicePort != null &&
+                (!Objects.equals(internalServicePort, managementPort) ||
+                 serverProperties.getAddress() != null)) {
                 final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
                 configureExposableWebEndpoint(sb, internalServicePort, endpoints, statusMapper, mediaTypes,
                                               endpointMapping, cors);

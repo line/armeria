@@ -33,8 +33,10 @@ import org.springframework.util.ResourceUtils;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.VirtualHostBuilder;
 import com.linecorp.armeria.spring.Ssl;
 
 import io.netty.handler.ssl.ClientAuth;
@@ -57,27 +59,48 @@ public final class ArmeriaConfigurationTlsUtil {
     }
 
     /**
-     * Adds SSL/TLS context to the specified {@link ServerBuilder}.
+     * Adds SSL/TLS context to the specified {@link VirtualHostBuilder}.
      */
+    public static void configureTls(VirtualHostBuilder sb, Ssl ssl) {
+        if (!ssl.isEnabled()) {
+            return;
+        }
+        if (ssl.getKeyStore() == null && ssl.getTrustStore() == null) {
+            logger.warn("Configuring TLS with a self-signed certificate " +
+                        "because no key or trust store was specified");
+            sb.tlsSelfSigned();
+            return;
+        }
+        doConfigureTls(sb, ssl, null, null);
+    }
+
     public static void configureTls(ServerBuilder sb, Ssl ssl, @Nullable Supplier<KeyStore> keyStoreSupplier,
                                     @Nullable Supplier<KeyStore> trustStoreSupplier) {
         if (!ssl.isEnabled()) {
             return;
         }
+        if (keyStoreSupplier == null && trustStoreSupplier == null &&
+            ssl.getKeyStore() == null && ssl.getTrustStore() == null) {
+            logger.warn("Configuring TLS with a self-signed certificate " +
+                        "because no key or trust store was specified");
+            sb.tlsSelfSigned();
+            return;
+        }
+        doConfigureTls(sb, ssl, null, null);
+    }
 
+    /**
+     * Adds SSL/TLS context to the specified {@link ServerBuilder}.
+     */
+    public static void doConfigureTls(TlsSetters tlsSetters, Ssl ssl,
+                                      @Nullable Supplier<KeyStore> keyStoreSupplier,
+                                      @Nullable Supplier<KeyStore> trustStoreSupplier) {
         try {
-            if (keyStoreSupplier == null && trustStoreSupplier == null &&
-                ssl.getKeyStore() == null && ssl.getTrustStore() == null) {
-                logger.warn("Configuring TLS with a self-signed certificate " +
-                            "because no key or trust store was specified");
-                sb.tlsSelfSigned();
-                return;
-            }
             final KeyManagerFactory keyManagerFactory = getKeyManagerFactory(ssl, keyStoreSupplier);
             final TrustManagerFactory trustManagerFactory = getTrustManagerFactory(ssl, trustStoreSupplier);
 
-            sb.tls(keyManagerFactory);
-            sb.tlsCustomizer(sslContextBuilder -> {
+            tlsSetters.tls(keyManagerFactory);
+            tlsSetters.tlsCustomizer(sslContextBuilder -> {
                 sslContextBuilder.trustManager(trustManagerFactory);
 
                 final SslProvider sslProvider = ssl.getProvider();

@@ -341,6 +341,39 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         }
     }
 
+    @SpringBootTest(classes = TestConfiguration.class)
+    @ActiveProfiles({ "local", "managementLocalhostTest" })
+    @DirtiesContext
+    @AutoConfigureMetrics
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    @Timeout(10)
+    static class ManagementLocalhostTest {
+        @LocalManagementPort
+        private Integer actuatorPort;
+        @Inject
+        private ArmeriaSettings settings;
+        @Inject
+        private InternalServices internalServices;
+
+        @Test
+        void bindToLocalhost() throws Exception {
+            final Port internalServicePort = internalServices.internalServicePort();
+            assertThat(internalServicePort).isNotNull();
+            assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
+            assertThat(internalServicePort.getPort()).isNotEqualTo(actuatorPort);
+            assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.METRICS,
+                                                                                    InternalServiceId.HEALTH,
+                                                                                    InternalServiceId.ACTUATOR);
+            assertThat(internalServices.managementServerPort().getPort()).isEqualTo(actuatorPort);
+
+            assertActuatorStatus(actuatorPort, 200 );
+            assertInternalServiceStatus(actuatorPort, 200, settings, false);
+            assertActuatorStatus(internalServicePort.getPort(), 200);
+            assertInternalServiceStatus(internalServicePort.getPort(), 200, settings, false);
+        }
+    }
+
     private static void assertActuatorStatus(int port, int actuatorStatus) {
         assertActuatorStatus(port, actuatorStatus, "");
     }

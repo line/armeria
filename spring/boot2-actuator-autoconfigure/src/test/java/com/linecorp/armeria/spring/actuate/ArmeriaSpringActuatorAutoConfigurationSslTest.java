@@ -77,7 +77,7 @@ class ArmeriaSpringActuatorAutoConfigurationSslTest {
                                   .build()) {
 
             // Send a request to make the TrustManager record the certificate.
-            final WebClient client = WebClient.builder("h2://192.168.1.11:" + actuatorPort)
+            final WebClient client = WebClient.builder("h2://127.0.0.1:" + actuatorPort)
                                               .factory(clientFactory)
                                               .build();
             client.get("/").aggregate().join();
@@ -134,7 +134,7 @@ class ArmeriaSpringActuatorAutoConfigurationSslTest {
                                       .build()) {
 
                 // Send a request to make the TrustManager record the certificate.
-                final WebClient client = WebClient.builder("h2://192.168.1.11:" + actuatorPort)
+                final WebClient client = WebClient.builder("h2://127.0.0.1:" + actuatorPort)
                                                   .factory(clientFactory)
                                                   .build();
                 client.get("/").aggregate().join();
