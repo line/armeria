@@ -192,8 +192,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             final Integer managementPort = obtainManagementServerPort(sb, beanFactory, serverProperties);
             if (managementPort != null) {
                 addLocalManagementPortPropertyAlias(environment, managementPort);
-                if (serverProperties.getSsl() != null &&
-                    serverProperties.getSsl().isEnabled()) {
+                if (serverProperties.getSsl() != null && serverProperties.getSsl().isEnabled()) {
                     configureTls(sb.virtualHost(managementPort),
                                  toArmeriaSslConfiguration(serverProperties.getSsl()));
                 }
@@ -224,7 +223,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                 configureExposableWebEndpoint(sb, managementPort, endpoints, statusMapper,
                                               mediaTypes, endpointMapping, cors);
             }
-            // If internal-services.port != management.server.port or management.server has it's own address
+            // If internal-services.port != management.server.port or management.server has its own address
             // We need to add actuator to internal-services port without base-path,
             if (internalServicePort != null &&
                 (!Objects.equals(internalServicePort, managementPort) ||
