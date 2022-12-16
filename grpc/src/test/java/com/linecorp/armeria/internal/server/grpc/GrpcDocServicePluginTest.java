@@ -157,6 +157,7 @@ class GrpcDocServicePluginTest {
                                                       "StreamingOutputCall",
                                                       "UnaryCall",
                                                       "UnaryCall2",
+                                                      "UnaryCallWithAllDifferentParameterTypes",
                                                       "UnimplementedCall");
 
         // 3-1. Include serviceName specified.
@@ -174,6 +175,7 @@ class GrpcDocServicePluginTest {
                                                       "StreamingOutputCall",
                                                       "UnaryCall",
                                                       "UnaryCall2",
+                                                      "UnaryCallWithAllDifferentParameterTypes",
                                                       "UnimplementedCall");
 
         // 3-2. Include methodName specified.
@@ -197,6 +199,7 @@ class GrpcDocServicePluginTest {
                                                       "StreamingOutputCall",
                                                       "UnaryCall",
                                                       "UnaryCall2",
+                                                      "UnaryCallWithAllDifferentParameterTypes",
                                                       "UnimplementedCall");
 
         // 4-2. Include and exclude specified.
@@ -308,7 +311,7 @@ class GrpcDocServicePluginTest {
                                                          .stream()
                                                          .collect(toImmutableMap(MethodInfo::name,
                                                                                  Function.identity()));
-        assertThat(functions).hasSize(8);
+        assertThat(functions).hasSize(9);
         final MethodInfo emptyCall = functions.get("EmptyCall");
         assertThat(emptyCall.name()).isEqualTo("EmptyCall");
         assertThat(emptyCall.parameters())
@@ -322,6 +325,8 @@ class GrpcDocServicePluginTest {
 
         // Just sanity check that all methods are present, function conversion is more thoroughly tested in
         // newMethodInfo()
+        assertThat(functions.get("UnaryCallWithAllDifferentParameterTypes").name()).isEqualTo(
+                "UnaryCallWithAllDifferentParameterTypes");
         assertThat(functions.get("UnaryCall").name()).isEqualTo("UnaryCall");
         assertThat(functions.get("UnaryCall2").name()).isEqualTo("UnaryCall2");
         assertThat(functions.get("StreamingOutputCall").name()).isEqualTo("StreamingOutputCall");
