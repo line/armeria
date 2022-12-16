@@ -70,7 +70,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
     private InternalServices internalServices;
 
     @Test
-    void managementEndpointContainsBasePath() throws Exception {
+    void exposeInternalServicesToManagementServerPort() throws Exception {
         final Port internalServicePort = internalServices.internalServicePort();
         assertThat(internalServicePort).isNotNull();
         assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
@@ -157,14 +157,12 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
         @LocalManagementPort
         private Integer actuatorPort;
         @Inject
-        private Server server;
-        @Inject
         private ArmeriaSettings settings;
         @Inject
         private InternalServices internalServices;
 
         @Test
-        void exposeActuatorServiceToInternalServicePort() throws Exception {
+        void exposeActuatorServiceHasCustomPrefix() throws Exception {
             final Port internalServicePort = internalServices.internalServicePort();
             assertThat(internalServicePort).isNotNull();
             assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
@@ -174,19 +172,85 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
                                                                                     InternalServiceId.ACTUATOR);
             assertThat(internalServices.managementServerPort().getPort()).isEqualTo(actuatorPort);
 
+            assertActuatorStatus(actuatorPort, 200, "/foo");
+            assertInternalServiceStatus(actuatorPort, 200, settings, false);
+            assertActuatorStatus(internalServicePort.getPort(), 200);
+            assertInternalServiceStatus(internalServicePort.getPort(), 200, settings, false);
+            assertActuatorStatus(internalServicePort.getPort(), 404, "/foo");
+        }
+    }
+
+    @SpringBootTest(classes = TestConfiguration.class)
+    @ActiveProfiles({ "local", "basePathSamePortTest" })
+    @DirtiesContext
+    @AutoConfigureMetrics
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    @Timeout(10)
+    static class BasePathSamePortTest {
+        @LocalManagementPort
+        private Integer actuatorPort;
+        @Inject
+        private ArmeriaSettings settings;
+        @Inject
+        private InternalServices internalServices;
+
+        @Test
+        void exposeActuatorServiceHasSingleCustomPrefixAtInternalPort() throws Exception {
+            final Port internalServicePort = internalServices.internalServicePort();
+            assertThat(internalServicePort).isNotNull();
+            assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
+            assertThat(internalServicePort.getPort()).isEqualTo(actuatorPort);
+            assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.METRICS,
+                                                                                    InternalServiceId.HEALTH,
+                                                                                    InternalServiceId.ACTUATOR);
+            assertThat(internalServices.managementServerPort().getPort()).isEqualTo(actuatorPort);
+
+            assertActuatorStatus(actuatorPort, 200, "/foo");
+            assertInternalServiceStatus(actuatorPort, 200, settings, false);
+            assertActuatorStatus(internalServicePort.getPort(), 404);
+            assertInternalServiceStatus(internalServicePort.getPort(), 200, settings, false);
+        }
+    }
+
+    @SpringBootTest(classes = TestConfiguration.class)
+    @ActiveProfiles({ "local", "basePathWithoutPortTest" })
+    @DirtiesContext
+    @AutoConfigureMetrics
+    @EnableAutoConfiguration
+    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
+    @Timeout(10)
+    static class BasePathWithoutPortTest {
+        @Inject
+        private Server server;
+        @Inject
+        private ArmeriaSettings settings;
+        @Inject
+        private InternalServices internalServices;
+
+        @Test
+        void exposeActuatorServiceIgnoreBasePathSettingWithoutPort() throws Exception {
+            final Port internalServicePort = internalServices.internalServicePort();
+            assertThat(internalServicePort).isNotNull();
+            assertThat(internalServicePort.getProtocols()).containsExactly(SessionProtocol.HTTP);
+            assertThat(settings.getInternalServices().getInclude()).containsExactly(InternalServiceId.METRICS,
+                                                                                    InternalServiceId.HEALTH,
+                                                                                    InternalServiceId.ACTUATOR);
+            assertThat(internalServices.managementServerPort()).isNull();
+
             server.activePorts().values().stream()
                   .map(p -> p.localAddress().getPort())
                   .forEach(port -> {
                       final int actuatorStatus;
                       final int internalServiceStatus;
-                      if (actuatorPort.equals(port) || internalServicePort.getPort() == port) {
+                      if (internalServicePort.getPort() == port) {
                           actuatorStatus = 200;
                           internalServiceStatus = 200;
                       } else {
                           actuatorStatus = 404;
                           internalServiceStatus = 404;
                       }
-                      assertActuatorStatus(port, actuatorStatus, "/foo");
+                      assertActuatorStatus(port, actuatorStatus);
                       assertInternalServiceStatus(port, internalServiceStatus, settings, false);
                   });
         }
