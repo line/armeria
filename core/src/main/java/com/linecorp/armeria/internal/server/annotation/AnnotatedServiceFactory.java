@@ -186,15 +186,23 @@ public final class AnnotatedServiceFactory {
             return HttpStatus.valueOf(statusCodeAnnotation.value());
         }
 
-        if (!producibleMediaTypes(method, clazz).isEmpty()) {
-            return HttpStatus.OK;
-        }
         // Set a default HTTP status code for a response depending on the return type of the method.
         final Class<?> returnType = typeToClass(unwrapAsyncType(method.getGenericReturnType()));
 
-        return returnType == Void.class ||
-               returnType == void.class ||
-               KotlinUtil.isSuspendingAndReturnTypeUnit(method) ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+        final boolean isVoidReturnType = returnType == Void.class ||
+                                         returnType == void.class ||
+                                         KotlinUtil.isSuspendingAndReturnTypeUnit(method);
+
+        if (isVoidReturnType) {
+            final List<Produces> producesAnnotations = AnnotationUtil.findAll(method, Produces.class);
+            if (!producesAnnotations.isEmpty()) {
+                logger.warn("The following @Produces annotations '{}' for '{}.{}' will be ignored " +
+                            "because the return type is void.",
+                            producesAnnotations, clazz.getSimpleName(), method.getName());
+            }
+        }
+
+        return isVoidReturnType ? HttpStatus.NO_CONTENT : HttpStatus.OK;
     }
 
     private static <T extends Annotation> void setAdditionalHeader(HttpHeadersBuilder headers,
