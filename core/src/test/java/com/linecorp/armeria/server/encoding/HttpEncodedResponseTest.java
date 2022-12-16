@@ -199,9 +199,15 @@ class HttpEncodedResponseTest {
         final List<HttpData> data = encoded.split().body().collect().join();
         final StreamDecoder decoder = StreamDecoderFactory.deflate().newDecoder(ByteBufAllocator.DEFAULT);
 
-        String result = data.stream().map(encodedData -> decoder.decode(encodedData).toStringUtf8())
+        String result = data.stream().map(encodedData -> {
+                                try (HttpData httpData = decoder.decode(encodedData)) {
+                                    return httpData.toStringUtf8();
+                                }
+                            })
                             .collect(Collectors.joining());
-        result += decoder.finish().toStringUtf8();
+        final HttpData finish = decoder.finish();
+        result += finish.toStringUtf8();
+        finish.close();
         assertThat(result).isEqualTo("foobarbaz");
         assertThat(encoded.encodedStream.buffer().refCnt()).isZero();
     }

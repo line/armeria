@@ -52,6 +52,8 @@ class DecoderLengthLimitTest {
         final HttpData decode0 = lenientStreamDecoder.decode(httpData);
         final HttpData decode1 = lenientStreamDecoder.finish();
         assertThat(decode0.toStringUtf8() + decode1.toStringUtf8()).isEqualTo(originalMessage);
+        decode0.close();
+        decode1.close();
 
         final StreamDecoder strictStreamDecoder = newStreamDecoder(encodingType, 9999);
         assertThatThrownBy(() -> {
