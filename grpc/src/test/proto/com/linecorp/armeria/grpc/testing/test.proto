@@ -97,6 +97,11 @@ service TestService {
   // The test server will not implement this method. It will be used
   // to test the behavior when clients call unimplemented methods.
   rpc UnimplementedCall(armeria.grpc.testing.Empty) returns (armeria.grpc.testing.Empty);
+
+  // This method's parameter message contains all different types of parameters
+  // as well as the response type contains all different types of parameters.
+  // Can be used to check any kind of serialization issues.
+  rpc UnaryCallWithAllDifferentParameterTypes(ExtendedTestMessage) returns (ExtendedTestMessage);
 }
 
 // A service for use in unit tests with methods for fine-grained test conditions.

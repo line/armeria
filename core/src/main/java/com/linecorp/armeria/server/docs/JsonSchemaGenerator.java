@@ -26,7 +26,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
-import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
@@ -39,10 +38,11 @@ final class JsonSchemaGenerator {
 
     /**
      * Generate an array of json schema specifications for each method inside the service.
-     * @param serviceSpecification
+     * @param serviceSpecification the service specification to generate the json schema from.
      * @return ArrayNode that contains service specifications
      */
     public static ArrayNode generate(ServiceSpecification serviceSpecification) {
+        // TODO: Test for Thrift, GraphQL, and annotated services
         final JsonSchemaGenerator generator = new JsonSchemaGenerator(serviceSpecification);
         return generator.generate();
     }
@@ -86,28 +86,28 @@ final class JsonSchemaGenerator {
         root.put("$id", methodInfo.id())
             .put("title", methodInfo.name())
             .put("description", methodInfo.descriptionInfo().docString())
+            .put("additionalProperties", false)
             // TODO: Assumes every method takes an object, which is only valid for RPC based services
             //  and most of the REST services.
-            .put("additionalProperties", false).put("type", "object");
+            .put("type", "object");
 
-        // Workaround for gRPC services because they do not have parameters in method info.
+        // Workaround for gRPC services because we should unwrap the first "request" parameter.
         final boolean isProto = methodInfo.endpoints().stream().flatMap(x -> x.availableMimeTypes().stream())
-                                          .anyMatch(MediaType::isProtobuf);
+                                          .anyMatch(x -> x.isProtobuf() || x.toString().contains("grpc"));
 
         final List<FieldInfo> methodFields = (isProto) ? typeNameToStructMapping
                 .get(methodInfo.parameters().get(0)
                                .typeSignature()
                                .name()).fields() : methodInfo.parameters();
 
-        // TODO: Thrift is not working for child parameters, consider having a custom logic for Thrift too.
+        final Map<String, String> visited = new HashMap<>();
+        final String currentPath = "#";
 
-        generateFields(methodFields, root);
-
+        if (isProto) {
+            visited.put(methodInfo.parameters().get(0).typeSignature().name(), currentPath);
+        }
+        generateFields(methodFields, visited, currentPath, root);
         return root;
-    }
-
-    private void generateFields(List<FieldInfo> fields, ObjectNode root) {
-        generateFields(fields, new HashMap<>(), "#", root);
     }
 
     /**
@@ -134,7 +134,10 @@ final class JsonSchemaGenerator {
             // Field is not visited, create a new type definition for it.
             fieldNode.put("type", getSchemaType(field.typeSignature()));
             fieldNode.put("description", field.descriptionInfo().docString());
-            fieldNode.put("additionalProperties", false);
+
+            // TODO: Allow maps to have custom types for keys and values.
+            // Currently they are allowed to take any additional properties.
+            fieldNode.put("additionalProperties", field.typeSignature().type() == TypeSignatureType.MAP);
 
             // Fill required fields for the current object.
             if (field.requirement() == FieldRequirement.REQUIRED) {
@@ -190,29 +193,6 @@ final class JsonSchemaGenerator {
         root.set("required", required);
     }
 
-    /**
-     * Generate the JSON Schema for the given {@link StructInfo}.
-     * @param info struct info object.
-     * @return ObjectNode containing the JSON schema for the given struct.
-     */
-    private ObjectNode generateFromStructInfo(StructInfo info, String path) {
-        final ObjectNode root = mapper.createObjectNode();
-        root
-                .put("title", info.name())
-                .put("description", info.descriptionInfo().docString())
-                .put("additionalProperties", false)
-                .put("type", "object");
-
-        // Initialize an empty visit map, push current type to the visit map.
-        final Map<String, String> visited = new HashMap<>();
-        final String currentPath = "#";
-        visited.put(info.name(), currentPath);
-
-        generateFields(info.fields(), visited, currentPath, root);
-
-        return root;
-    }
-
     @Nullable
     private ArrayNode getEnumType(TypeSignature type) {
         final ArrayNode enumArray = mapper.createArrayNode();
@@ -233,19 +213,11 @@ final class JsonSchemaGenerator {
                 case "list":
                 case "array":
                 case "set":
+                    // TODO: Support nested types for arrays.
                     final TypeSignature head = ((ContainerTypeSignature) type).typeParameters().get(0);
-                    if (getSchemaType(type).equals("object")) {
-                        final StructInfo structInfo = typeNameToStructMapping.get(head.name());
-                        if (structInfo != null) {
-                            return generateFromStructInfo(structInfo, path);
-                        } else {
-                            return null;
-                        }
-                    } else {
-                        final ObjectNode primitiveNode = mapper.createObjectNode();
-                        primitiveNode.put("type", getSchemaType(head));
-                        return primitiveNode;
-                    }
+                    final ObjectNode primitiveNode = mapper.createObjectNode();
+                    primitiveNode.put("type", getSchemaType(head));
+                    return primitiveNode;
                 default:
                     return null;
             }

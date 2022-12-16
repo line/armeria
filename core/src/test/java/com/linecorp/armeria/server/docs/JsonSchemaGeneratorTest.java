@@ -22,52 +22,81 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
+
+import com.linecorp.armeria.common.HttpMethod;
+import com.linecorp.armeria.common.MediaType;
 
 class JsonSchemaGeneratorTest {
 
+    // Common Fixtures
+    private static final String methodName = "test-method";
+    private static final DescriptionInfo methodDescription = DescriptionInfo.of("test method");
+
+    // Generate a fake ServiceSpecification that only contains the happy path to parameters
     private static StructInfo newStructInfo(String name, List<FieldInfo> parameters) {
         return new StructInfo(name, parameters);
     }
 
+    private static EndpointInfo newGrpcEndpoint() {
+        return EndpointInfo.builder("", "").defaultMimeType(MediaType.PROTOBUF).build();
+    }
+
+    private static FieldInfo newFieldInfo() {
+        return FieldInfo.of("request", TypeSignature.ofStruct(methodName, new Object()));
+    }
+
+    private static MethodInfo newMethodInfo(FieldInfo... parameters) {
+        return new MethodInfo(
+                "test-service",
+                methodName,
+                0,
+                TypeSignature.ofBase("void"),
+                ImmutableList.of(),
+                ImmutableList.of(),
+                ImmutableList.of(newGrpcEndpoint()),
+                HttpMethod.POST,
+                methodDescription
+        ).withParameters(Arrays.asList(parameters));
+    }
+
     private static ServiceSpecification generateServiceSpecification(StructInfo... structInfos) {
         return new ServiceSpecification(
-                ImmutableList.of(),
+                ImmutableList.of(
+                        new ServiceInfo(
+                                "test-service",
+                                ImmutableList.of(newMethodInfo(newFieldInfo())),
+                                DescriptionInfo.empty()
+                        )
+                ),
                 ImmutableList.of(),
                 Arrays.stream(structInfos).collect(Collectors.toList()),
                 ImmutableList.of()
         );
     }
 
-    @Disabled("Temporarily disabled to check build on CI")
     @Test
     void testGenerateSimpleMethodWithoutParameters() {
-        final String methodName = "test-method";
         final List<FieldInfo> parameters = ImmutableList.of();
-        final DescriptionInfo description = DescriptionInfo.of("test method");
-        final StructInfo structInfo = newStructInfo(methodName, parameters).withDescriptionInfo(description);
+        final StructInfo structInfo = newStructInfo(methodName, parameters);
 
         final ServiceSpecification serviceSpecification = generateServiceSpecification(structInfo);
-        final ObjectNode jsonSchema = JsonSchemaGenerator.generate(serviceSpecification).objectNode();
+        final JsonNode jsonSchema = JsonSchemaGenerator.generate(serviceSpecification).get(0);
 
         // Base properties
         assertThat(jsonSchema.get("title").asText()).isEqualTo(methodName);
-        assertThat(jsonSchema.get("description").asText()).isEqualTo(description.docString());
+        assertThat(jsonSchema.get("description").asText()).isEqualTo(methodDescription.docString());
         assertThat(jsonSchema.get("type").asText()).isEqualTo("object");
 
         // Method specific properties
         assertThat(jsonSchema.get("properties").isEmpty()).isTrue();
     }
 
-    @Disabled("Temporarily disabled to check build on CI")
     @Test
     void testGenerateSimpleMethodWithPrimitiveParameters() {
-        final String methodName = "test-method";
         final List<FieldInfo> parameters = ImmutableList.of(
                 FieldInfo.of("param1", TypeSignature.ofBase("int"), DescriptionInfo.of("param1 description")),
                 FieldInfo.of("param2", TypeSignature.ofBase("double"),
@@ -76,15 +105,14 @@ class JsonSchemaGeneratorTest {
                              DescriptionInfo.of("param3 description")),
                 FieldInfo.of("param4", TypeSignature.ofBase("boolean"),
                              DescriptionInfo.of("param4 description")));
-        final DescriptionInfo description = DescriptionInfo.of("test method");
-        final StructInfo structInfo = newStructInfo(methodName, parameters).withDescriptionInfo(description);
+        final StructInfo structInfo = newStructInfo(methodName, parameters);
 
         final ServiceSpecification serviceSpecification = generateServiceSpecification(structInfo);
-        final ObjectNode jsonSchema = JsonSchemaGenerator.generate(serviceSpecification).objectNode();
+        final JsonNode jsonSchema = JsonSchemaGenerator.generate(serviceSpecification).get(0);
 
         // Base properties
         assertThat(jsonSchema.get("title").asText()).isEqualTo(methodName);
-        assertThat(jsonSchema.get("description").asText()).isEqualTo(description.docString());
+        assertThat(jsonSchema.get("description").asText()).isEqualTo(methodDescription.docString());
         assertThat(jsonSchema.get("type").asText()).isEqualTo("object");
 
         // Method specific properties
@@ -92,20 +120,23 @@ class JsonSchemaGeneratorTest {
         assertThat(properties).hasSize(4);
     }
 
-    @Disabled("Temporarily disabled to check build on CI")
     @Test
     void testMethodWithRecursivePath() {
-        final String methodName = "test-method";
         final List<FieldInfo> parameters = ImmutableList.of(
                 FieldInfo.of("param1", TypeSignature.ofBase("int"), DescriptionInfo.of("param1 description")),
                 FieldInfo.builder("paramRecursive", TypeSignature.ofStruct("rec", new Object())).build()
-//                                  FieldInfo.of("inner-param1", TypeSignature.ofBase("int32")),
-//                                  FieldInfo.of("inner-recurse", TypeSignature.ofStruct("rec", new Object()))
         );
+
         final StructInfo structInfo = newStructInfo(methodName, parameters);
 
-        final ServiceSpecification serviceSpecification = generateServiceSpecification(structInfo);
-        final ObjectNode jsonSchema = JsonSchemaGenerator.generate(serviceSpecification).objectNode();
+        final List<FieldInfo> parametersOfRec = ImmutableList.of(
+                FieldInfo.of("inner-param1", TypeSignature.ofBase("int32")),
+                FieldInfo.of("inner-recurse", TypeSignature.ofStruct("rec", new Object()))
+        );
+        final StructInfo rec = newStructInfo("rec", parametersOfRec);
+
+        final ServiceSpecification serviceSpecification = generateServiceSpecification(structInfo, rec);
+        final JsonNode jsonSchema = JsonSchemaGenerator.generate(serviceSpecification).get(0);
 
         assertThat(jsonSchema.get("properties").isNull()).isFalse();
         assertThat(jsonSchema.get("properties").get("paramRecursive")).isNotNull();
