@@ -40,6 +40,7 @@ import java.util.Map.Entry;
 import java.util.NoSuchElementException;
 import java.util.concurrent.atomic.AtomicReferenceArray;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Objects;
@@ -108,7 +109,9 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             return null;
         }
 
-        synchronized (head) {
+        ReentrantLock reentrantLock = new ReentrantLock();
+        reentrantLock.lock();
+        try {
             DefaultAttribute<?> curr = head;
             for (;;) {
                 final DefaultAttribute<?> next = curr.next;
@@ -126,6 +129,8 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
                 }
                 curr = next;
             }
+        } finally {
+            reentrantLock.unlock();
         }
     }
 
@@ -171,7 +176,9 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             head = attributes.get(i);
         }
 
-        synchronized (head) {
+        ReentrantLock reentrantLock = new ReentrantLock();
+        reentrantLock.lock();
+        try {
             DefaultAttribute<?> curr = head;
             for (;;) {
                 final DefaultAttribute<?> next = curr.next;
@@ -190,6 +197,8 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
 
                 curr = next;
             }
+        } finally {
+            reentrantLock.unlock();
         }
     }
 
@@ -231,7 +240,9 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             return false;
         }
 
-        synchronized (head) {
+        ReentrantLock reentrantLock = new ReentrantLock();
+        reentrantLock.lock();
+        try {
             DefaultAttribute<?> curr = head;
             for (;;) {
                 final DefaultAttribute<?> next = curr.next;
@@ -245,6 +256,8 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
                 }
                 curr = next;
             }
+        } finally {
+            reentrantLock.unlock();
         }
     }
 

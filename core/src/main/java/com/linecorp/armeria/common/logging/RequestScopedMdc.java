@@ -24,6 +24,7 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -219,7 +220,9 @@ public final class RequestScopedMdc {
         requireNonNull(ctx, "ctx");
         requireNonNull(key, "key");
 
-        synchronized (ctx) {
+        ReentrantLock reentrantLock = new ReentrantLock();
+        reentrantLock.lock();
+        try {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             final Object2ObjectMap<String, String> newMap;
             if (oldMap.isEmpty()) {
@@ -232,6 +235,8 @@ public final class RequestScopedMdc {
                 newMap = Object2ObjectMaps.unmodifiable(tmp);
             }
             ctx.setAttr(MAP, newMap);
+        } finally {
+            reentrantLock.unlock();
         }
     }
 
@@ -248,7 +253,8 @@ public final class RequestScopedMdc {
             return;
         }
 
-        synchronized (ctx) {
+        ReentrantLock reentrantLock = new ReentrantLock();
+        try {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             final Object2ObjectMap<String, String> newMap;
             if (oldMap.isEmpty()) {
@@ -259,6 +265,8 @@ public final class RequestScopedMdc {
                 newMap.putAll(map);
             }
             ctx.setAttr(MAP, Object2ObjectMaps.unmodifiable(newMap));
+        } finally {
+            reentrantLock.unlock();
         }
     }
 
@@ -317,7 +325,9 @@ public final class RequestScopedMdc {
         requireNonNull(ctx, "ctx");
         requireNonNull(key, "key");
 
-        synchronized (ctx) {
+        ReentrantLock reentrantLock = new ReentrantLock();
+        reentrantLock.lock();
+        try {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             if (!oldMap.containsKey(key)) {
                 return;
@@ -332,6 +342,8 @@ public final class RequestScopedMdc {
                 newMap = Object2ObjectMaps.unmodifiable(tmp);
             }
             ctx.setAttr(MAP, newMap);
+        } finally {
+            reentrantLock.unlock();
         }
     }
 
@@ -343,11 +355,15 @@ public final class RequestScopedMdc {
     public static void clear(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
 
-        synchronized (ctx) {
+        ReentrantLock reentrantLock = new ReentrantLock();
+        reentrantLock.lock();
+        try {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             if (!oldMap.isEmpty()) {
                 ctx.setAttr(MAP, Object2ObjectMaps.emptyMap());
             }
+        } finally {
+            reentrantLock.unlock();
         }
     }
 

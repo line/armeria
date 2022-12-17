@@ -19,6 +19,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,6 +31,8 @@ final class DefaultDependencyInjector implements DependencyInjector {
     private static final Logger logger = LoggerFactory.getLogger(DefaultDependencyInjector.class);
 
     private final Map<Class<?>, Object> singletons = new HashMap<>();
+
+    private final ReentrantLock reentrantLock = new ReentrantLock();
     private boolean isShutdown;
 
     DefaultDependencyInjector(Iterable<Object> singletons) {
@@ -41,30 +44,40 @@ final class DefaultDependencyInjector implements DependencyInjector {
     }
 
     @Override
-    public synchronized <T> T getInstance(Class<T> type) {
-        if (isShutdown) {
-            throw new IllegalStateException("Already shut down");
+    public <T> T getInstance(Class<T> type) {
+        reentrantLock.lock();
+        try {
+            if (isShutdown) {
+                throw new IllegalStateException("Already shut down");
+            }
+            final Object instance = singletons.get(type);
+            if (instance != null) {
+                //noinspection unchecked
+                return (T) instance;
+            }
+            return null;
+        } finally {
+            reentrantLock.unlock();
         }
-        final Object instance = singletons.get(type);
-        if (instance != null) {
-            //noinspection unchecked
-            return (T) instance;
-        }
-        return null;
     }
 
     @Override
-    public synchronized void close() {
-        if (isShutdown) {
-            return;
-        }
-        isShutdown = true;
-        for (Object instance : singletons.values()) {
-            if (instance instanceof AutoCloseable) {
-                close((AutoCloseable) instance);
+    public void close() {
+        reentrantLock.lock();
+        try {
+            if (isShutdown) {
+                return;
             }
+            isShutdown = true;
+            for (Object instance : singletons.values()) {
+                if (instance instanceof AutoCloseable) {
+                    close((AutoCloseable) instance);
+                }
+            }
+            singletons.clear();
+        } finally {
+            reentrantLock.unlock();
         }
-        singletons.clear();
     }
 
     private static void close(AutoCloseable closeable) {

@@ -26,12 +26,14 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 
 import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -96,7 +98,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
      * Updated by {@link #deferredFlagsUpdater}.
      */
     private volatile int deferredFlags;
+
+    @GuardedBy("reentrantLock")
     private final List<RequestLogFuture> pendingFutures = new ArrayList<>(4);
+
+    private final ReentrantLock reentrantLock = new ReentrantLock();
     @Nullable
     private UnmodifiableFuture<RequestLog> partiallyCompletedFuture;
     @Nullable
@@ -361,9 +367,12 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         } else {
             final RequestLogFuture[] satisfiedFutures;
             final RequestLogFuture newFuture = new RequestLogFuture(interestedFlags);
-            synchronized (pendingFutures) {
+            reentrantLock.lock();
+            try {
                 pendingFutures.add(newFuture);
                 satisfiedFutures = removeSatisfiedFutures();
+            } finally {
+                reentrantLock.unlock();
             }
             if (satisfiedFutures != null) {
                 completeSatisfiedFutures(satisfiedFutures, partial(flags));
@@ -405,8 +414,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
             if (flagsUpdater.compareAndSet(this, oldFlags, newFlags)) {
                 final RequestLogFuture[] satisfiedFutures;
-                synchronized (pendingFutures) {
+                reentrantLock.lock();
+                try {
                     satisfiedFutures = removeSatisfiedFutures();
+                } finally {
+                    reentrantLock.unlock();
                 }
                 if (satisfiedFutures != null) {
                     final RequestLog log = partial(newFlags);
