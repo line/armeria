@@ -52,8 +52,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
     private boolean shouldSendConnectionCloseHeader;
     private boolean sentConnectionCloseHeader;
 
-    private int lastResponseHeadersId;
-
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, KeepAliveHandler keepAliveHandler,
                              boolean enableDateHeader, boolean enableServerHeader,
                              Http1HeaderNaming http1HeaderNaming) {
@@ -86,7 +84,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         if (headers.status().isInformational()) {
             return write(id, converted, false);
         }
-        lastResponseHeadersId = id;
 
         if (shouldSendConnectionCloseHeader || keepAliveHandler.needToCloseConnection()) {
             converted.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
@@ -188,7 +185,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     @Override
     public boolean isResponseHeadersSent(int id, int streamId) {
-        return id <= lastResponseHeadersId;
+        return id <= lastResponseHeadersId();
     }
 
     @Override
