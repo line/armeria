@@ -35,7 +35,6 @@ import com.google.common.collect.ImmutableSortedSet;
 import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.Service;
@@ -112,32 +111,30 @@ public final class ServiceInfo {
     }
 
     /**
-     * Merges the {@link MethodInfo}s with the same method name and {@link HttpMethod} pair
+     * Merges the {@link MethodInfo}s with the same method {@link MethodInfo#id()}
      * into a single {@link MethodInfo}. Note that only the {@link EndpointInfo}s are merged
      * because the {@link MethodInfo}s being merged always have the same
      * {@code exampleHeaders} and {@code exampleRequests}.
      */
     @VisibleForTesting
     static Set<MethodInfo> mergeEndpoints(Iterable<MethodInfo> methodInfos) {
-        final Map<List<Object>, MethodInfo> methodInfoMap = new HashMap<>();
+        final Map<String, MethodInfo> methodInfoMap = new HashMap<>();
         for (MethodInfo methodInfo : methodInfos) {
-            final List<Object> mergeKey = ImmutableList.of(methodInfo.name(), methodInfo.httpMethod());
-            methodInfoMap.compute(mergeKey, (key, value) -> {
+            methodInfoMap.compute(methodInfo.id(), (key, value) -> {
                 if (value == null) {
                     return methodInfo;
-                } else {
-                    final Set<EndpointInfo> endpointInfos =
-                            Sets.union(value.endpoints(), methodInfo.endpoints());
-                    return new MethodInfo(value.name(), value.returnTypeSignature(),
-                                          value.parameters(), value.exceptionTypeSignatures(),
-                                          endpointInfos, value.exampleHeaders(),
-                                          value.exampleRequests(), value.examplePaths(), value.exampleQueries(),
-                                          value.httpMethod(), value.descriptionInfo());
                 }
+                final Set<EndpointInfo> endpointInfos =
+                        Sets.union(value.endpoints(), methodInfo.endpoints());
+                return new MethodInfo(value.name(), value.returnTypeSignature(), value.parameters(),
+                                      value.exceptionTypeSignatures(), endpointInfos, value.exampleHeaders(),
+                                      value.exampleRequests(), value.examplePaths(), value.exampleQueries(),
+                                      value.httpMethod(), value.descriptionInfo(), value.id());
             });
         }
         return ImmutableSortedSet
-                .orderedBy(comparing(MethodInfo::name).thenComparing(MethodInfo::httpMethod))
+                .orderedBy(comparing(MethodInfo::name).thenComparing(MethodInfo::httpMethod)
+                                                      .thenComparing(MethodInfo::id))
                 .addAll(methodInfoMap.values())
                 .build();
     }
@@ -145,13 +142,13 @@ public final class ServiceInfo {
     /**
      * Returns all enum, struct and exception {@link TypeSignature}s referred to by this service.
      */
-    public Set<TypeSignature> findNamedTypes() {
-        final Set<TypeSignature> requestNamedTypes = findNamedTypes(true);
-        final Set<TypeSignature> responseNamedType = findNamedTypes(false);
-        final int estimatedSize = requestNamedTypes.size() + responseNamedType.size();
-        return ImmutableSet.<TypeSignature>builderWithExpectedSize(estimatedSize)
-                           .addAll(requestNamedTypes)
-                           .addAll(responseNamedType)
+    public Set<DescriptiveTypeSignature> findDescriptiveTypes() {
+        final Set<DescriptiveTypeSignature> requestDescriptiveTypes = findDescriptiveTypes(true);
+        final Set<DescriptiveTypeSignature> responseDescriptiveType = findDescriptiveTypes(false);
+        final int estimatedSize = requestDescriptiveTypes.size() + responseDescriptiveType.size();
+        return ImmutableSet.<DescriptiveTypeSignature>builderWithExpectedSize(estimatedSize)
+                           .addAll(requestDescriptiveTypes)
+                           .addAll(responseDescriptiveType)
                            .build();
     }
 
@@ -160,26 +157,31 @@ public final class ServiceInfo {
      * {@code request} is set to true. Otherwise, returns all {@link MethodInfo#returnTypeSignature()} and
      * {@link MethodInfo#exceptionTypeSignatures()} of the {@link #methods()}.
      */
-    public Set<TypeSignature> findNamedTypes(boolean request) {
-        final Set<TypeSignature> collectedNamedTypes = new HashSet<>();
+    public Set<DescriptiveTypeSignature> findDescriptiveTypes(boolean request) {
+        final Set<DescriptiveTypeSignature> collectedDescriptiveTypes = new HashSet<>();
         methods().forEach(m -> {
             if (request) {
-                m.parameters().forEach(p -> findNamedTypes(collectedNamedTypes, p.typeSignature()));
+                m.parameters().forEach(p -> findDescriptiveTypes(collectedDescriptiveTypes, p.typeSignature()));
             } else {
-                findNamedTypes(collectedNamedTypes, m.returnTypeSignature());
-                m.exceptionTypeSignatures().forEach(s -> findNamedTypes(collectedNamedTypes, s));
+                findDescriptiveTypes(collectedDescriptiveTypes, m.returnTypeSignature());
+                m.exceptionTypeSignatures().forEach(s -> findDescriptiveTypes(collectedDescriptiveTypes, s));
             }
         });
-        return ImmutableSet.copyOf(collectedNamedTypes);
+        return ImmutableSet.copyOf(collectedDescriptiveTypes);
     }
 
-    static void findNamedTypes(Set<TypeSignature> collectedNamedTypes, TypeSignature typeSignature) {
-        if (typeSignature.isNamed()) {
-            collectedNamedTypes.add(typeSignature);
+    static void findDescriptiveTypes(Set<DescriptiveTypeSignature> collectedDescriptiveTypes,
+                                     TypeSignature typeSignature) {
+        final TypeSignatureType type = typeSignature.type();
+        if (type.hasTypeDescriptor()) {
+            collectedDescriptiveTypes.add((DescriptiveTypeSignature) typeSignature);
+            return;
         }
 
-        if (typeSignature.isContainer()) {
-            typeSignature.typeParameters().forEach(p -> findNamedTypes(collectedNamedTypes, p));
+        if (typeSignature instanceof ContainerTypeSignature) {
+            ((ContainerTypeSignature) typeSignature)
+                    .typeParameters()
+                    .forEach(p -> findDescriptiveTypes(collectedDescriptiveTypes, p));
         }
     }
 

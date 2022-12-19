@@ -44,7 +44,7 @@ interface Variable {
   childFieldInfos?: Variable[];
   requirement: string;
   typeSignature: string;
-  descriptionInfo?: DescriptionInfo;
+  descriptionInfo: DescriptionInfo;
 }
 
 interface Props {

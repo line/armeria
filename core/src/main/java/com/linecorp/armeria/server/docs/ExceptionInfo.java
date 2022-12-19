@@ -36,7 +36,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * Metadata about an exception type.
  */
 @UnstableApi
-public final class ExceptionInfo implements NamedTypeInfo {
+public final class ExceptionInfo implements DescriptiveTypeInfo {
 
     private final String name;
     private final List<FieldInfo> fields;
@@ -103,10 +103,10 @@ public final class ExceptionInfo implements NamedTypeInfo {
     }
 
     @Override
-    public Set<TypeSignature> findNamedTypes() {
-        final Set<TypeSignature> collectedNamedTypes = new HashSet<>();
-        fields().forEach(f -> ServiceInfo.findNamedTypes(collectedNamedTypes, f.typeSignature()));
-        return ImmutableSortedSet.copyOf(comparing(TypeSignature::name), collectedNamedTypes);
+    public Set<DescriptiveTypeSignature> findDescriptiveTypes() {
+        final Set<DescriptiveTypeSignature> collectedDescriptiveTypes = new HashSet<>();
+        fields().forEach(f -> ServiceInfo.findDescriptiveTypes(collectedDescriptiveTypes, f.typeSignature()));
+        return ImmutableSortedSet.copyOf(comparing(TypeSignature::name), collectedDescriptiveTypes);
     }
 
     @Override

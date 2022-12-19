@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -302,8 +303,9 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     }
 
     final void failAndReset(Throwable cause) {
-        if (cause instanceof ProxyConnectException) {
-            // ProxyConnectException is handled by HttpSessionHandler.exceptionCaught().
+        if (cause instanceof ProxyConnectException || cause instanceof ResponseCompleteException) {
+            // - ProxyConnectException is handled by HttpSessionHandler.exceptionCaught().
+            // - ResponseCompleteException means the response is successfully received.
             return;
         }
 

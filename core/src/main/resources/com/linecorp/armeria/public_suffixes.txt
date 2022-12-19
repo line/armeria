@@ -257,7 +257,6 @@ activetrail.biz
 actor
 ad
 ad.jp
-adac
 adachi.tokyo.jp
 adimo.co.uk
 adm.br
@@ -9029,7 +9028,6 @@ xn--j1ael8b.xn--p1acf
 xn--j1amh
 xn--j6w193g
 xn--jlq480n2rg
-xn--jlq61u9w7b
 xn--jlster-bya.no
 xn--jrpeland-54a.no
 xn--jvr189m

@@ -22,15 +22,6 @@ export interface DescriptionInfo {
   markup: string;
 }
 
-export interface Parameter {
-  name: string;
-  location?: string;
-  childFieldInfos: Parameter[];
-  requirement: string;
-  typeSignature: string;
-  descriptionInfo?: DescriptionInfo;
-}
-
 export interface Endpoint {
   hostnamePattern: string;
   pathMapping: string;
@@ -42,8 +33,9 @@ export interface Endpoint {
 
 export interface Method {
   name: string;
+  id: string;
   returnTypeSignature: string;
-  parameters: Parameter[];
+  parameters: Field[];
   exceptionTypeSignatures: string[];
   endpoints: Endpoint[];
   exampleHeaders: { [name: string]: string }[];
@@ -51,33 +43,34 @@ export interface Method {
   examplePaths: string[];
   exampleQueries: string[];
   httpMethod: string;
-  descriptionInfo?: DescriptionInfo;
+  descriptionInfo: DescriptionInfo;
 }
 
 export interface Service {
   name: string;
   methods: Method[];
   exampleHeaders: { [name: string]: string }[];
-  descriptionInfo?: DescriptionInfo;
+  descriptionInfo: DescriptionInfo;
 }
 
 export interface Value {
   name: string;
   intValue?: number;
-  descriptionInfo?: DescriptionInfo;
+  descriptionInfo: DescriptionInfo;
 }
 
 export interface Enum {
   name: string;
   values: Value[];
-  descriptionInfo?: DescriptionInfo;
+  descriptionInfo: DescriptionInfo;
 }
 
 export interface Field {
   name: string;
+  location: string;
   requirement: string;
   typeSignature: string;
-  descriptionInfo?: DescriptionInfo;
+  descriptionInfo: DescriptionInfo;
 }
 
 export interface Struct {
@@ -238,7 +231,7 @@ export class Specification {
     for (const service of this.data.services) {
       for (const method of service.methods) {
         const childDocStrings = this.parseParamDocStrings(
-          method.descriptionInfo?.docString as string,
+          method.descriptionInfo.docString as string,
         );
         for (const param of method.parameters) {
           const childDocString = childDocStrings.get(param.name);
@@ -259,7 +252,7 @@ export class Specification {
     // TODO(trustin): Handle the docstrings of return values and exceptions.
     for (const struct of structs) {
       const childDocStrings = this.parseParamDocStrings(
-        struct.descriptionInfo?.docString as string,
+        struct.descriptionInfo.docString as string,
       );
       for (const field of struct.fields) {
         const childDocString = childDocStrings.get(field.name);

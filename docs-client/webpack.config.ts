@@ -143,6 +143,8 @@ if (!isDev) {
     test: /\.(js|css|html|svg)$/,
     algorithm: 'brotliCompress',
     filename: '[path][base].br',
+    // If a `Accept-Encoding` is not specified, `DocService` decompresses the compressed content on the fly.
+    deleteOriginalAssets: true
   }) as any);
 }
 

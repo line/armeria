@@ -129,22 +129,16 @@ type Props = OwnProps &
   }>;
 
 const MethodPage: React.FunctionComponent<Props> = (props) => {
-  const service = props.specification.getServiceByName(
-    props.match.params.serviceName,
-  );
+  const params = props.match.params;
+  const service = props.specification.getServiceByName(params.serviceName);
   if (!service) {
     return <>Not found.</>;
   }
-
-  const method = service.methods.find(
-    (m) =>
-      m.name === props.match.params.methodName &&
-      m.httpMethod === props.match.params.httpMethod,
-  );
+  const id = `${params.serviceName}/${params.methodName}/${params.httpMethod}`;
+  const method = service.methods.find((m) => m.id === id);
   if (!method) {
     return <>Not found.</>;
   }
-
   const debugTransport = TRANSPORTS.getDebugTransport(method);
   const isAnnotatedService =
     debugTransport !== undefined &&

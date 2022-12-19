@@ -303,7 +303,7 @@ public final class Clients {
     public static <T> T newDerivedClient(
             T client, Function<? super ClientOptions, ClientOptions> configurator) {
         final ClientBuilderParams params = builderParams(client);
-        final ClientBuilder builder = builder(params.uri());
+        final ClientBuilder builder = newDerivedBuilder(params);
         builder.options(configurator.apply(params.options()));
 
         return newDerivedClient(builder, params.clientType());

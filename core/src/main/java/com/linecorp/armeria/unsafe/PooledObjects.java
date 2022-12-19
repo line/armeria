@@ -20,6 +20,7 @@ import java.util.concurrent.Executor;
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.AggregationOptions;
+import com.linecorp.armeria.common.Bytes;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -33,19 +34,20 @@ import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
 /**
- * Utility class that provides ways to create a pooled {@link HttpData} and manage its life cycle.
+ * Utility class that provides ways to create a pooled {@link Bytes} and manage its life cycle.
  *
- * <p><b>Warning</b>: Using a pooled {@link HttpData} is very advanced and can open up much more complicated
- * management of a reference counted {@link ByteBuf}. You should only ever do this if you are very comfortable
+ * <p><b>Warning</b>: Using a pooled {@link Bytes} is very advanced and can open up much more complicated
+ * management of a reference counted {@link Bytes}. You should only ever do this if you are very comfortable
  * with Netty. It is recommended to also read through
  * <a href="https://netty.io/wiki/reference-counted-objects.html">Reference counted objects</a>
  * for more information on pooled objects.</p>
  *
- * <h2>What is a pooled {@link HttpData}?</h2>
+ * <h2>What is a pooled {@link Bytes}?</h2>
  *
- * <p>A pooled {@link HttpData} is a special variant of {@link HttpData} whose {@link HttpData#isPooled()}
- * returns {@code true}. It's usually created via {@link HttpData#wrap(ByteBuf)} by wrapping an existing
- * {@link ByteBuf}. It can appear when you consume data using the operations such as:
+ * <p>A pooled {@link Bytes} is a special variant of {@link Bytes} whose {@link Bytes#isPooled()}
+ * returns {@code true}. Currently, {@link HttpData} is a {@link Bytes} and it's usually created via
+ * {@link HttpData#wrap(ByteBuf)} by wrapping an existing {@link ByteBuf}.
+ * It can appear when you consume data using the operations such as:
  * <ul>
  *   <li>{@link StreamMessage#subscribe(Subscriber, SubscriptionOption...)} with
  *       {@link SubscriptionOption#WITH_POOLED_OBJECTS}</li>
@@ -56,16 +58,16 @@ import io.netty.buffer.ByteBufAllocator;
  *   <li>{@link HttpFile#aggregateWithPooledObjects(Executor, ByteBufAllocator)}</li>
  * </ul>
  *
- * <p>To put it another way, you'll <b>never</b> see a pooled {@link HttpData} if you did not use such
+ * <p>To put it another way, you'll <b>never</b> see a pooled {@link Bytes} if you did not use such
  * operations. You can ignore the rest of this section if that's the case.</p>
  *
- * <p>Any time you receive a pooled {@link HttpData}, it will have an underlying {@link ByteBuf} that must be
+ * <p>Any time you receive a pooled {@link Bytes}, it will have an underlying {@link ByteBuf} that must be
  * released - failure to release the {@link ByteBuf} will result in a memory leak and poor performance.
  * You must make sure to do this by calling {@link HttpData#close()}, usually in a try-with-resources structure
  * to avoid side effects, e.g.
  * <pre>{@code
  * HttpResponse res = client.get("/");
- * res.aggregateWithPooledObjects(ctx.alloc(), ctx.executor())
+ * res.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.executor()))
  *    .thenApply(aggResp -> {
  *        // try-with-resources here ensures the content is released
  *        // if it is a pooled HttpData, or otherwise it's no-op.
@@ -91,36 +93,36 @@ import io.netty.buffer.ByteBufAllocator;
 public final class PooledObjects {
 
     /**
-     * Closes the given pooled {@link HttpData}. Does nothing if it's not a pooled {@link HttpData}.
+     * Closes the given pooled {@link Bytes}. Does nothing if it's not a pooled {@link Bytes}.
      *
-     * @param obj maybe an {@link HttpData} to close
+     * @param obj maybe an {@link Bytes} to close
      */
     public static void close(Object obj) {
-        if (obj instanceof HttpData) {
-            ((HttpData) obj).close();
+        if (obj instanceof Bytes) {
+            ((Bytes) obj).close();
         }
     }
 
     /**
-     * Calls {@link ByteBuf#touch(Object)} on the specified {@link HttpData}'s underlying {@link ByteBuf}.
-     * Uses the specified {@link HttpData} as a hint. Does nothing if it's not a pooled {@link HttpData}.
+     * Calls {@link ByteBuf#touch(Object)} on the specified {@link Bytes}' underlying {@link ByteBuf}.
+     * Uses the specified {@link Bytes} as a hint. Does nothing if it's not a pooled {@link Bytes}.
      *
-     * @param obj maybe a pooled {@link HttpData} to touch its underlying {@link ByteBuf}
+     * @param obj maybe a pooled {@link Bytes} to touch its underlying {@link ByteBuf}
      */
     public static <T> T touch(T obj) {
         return touch(obj, obj);
     }
 
     /**
-     * Calls {@link ByteBuf#touch(Object)} on the specified {@link HttpData}'s underlying {@link ByteBuf}.
-     * Does nothing if it's not a pooled {@link HttpData}.
+     * Calls {@link ByteBuf#touch(Object)} on the specified {@link Bytes}'s underlying {@link ByteBuf}.
+     * Does nothing if it's not a pooled {@link Bytes}.
      *
-     * @param obj maybe a pooled {@link HttpData} to touch its underlying {@link ByteBuf}
+     * @param obj maybe a pooled {@link Bytes} to touch its underlying {@link ByteBuf}
      * @param hint the hint to specify when calling {@link ByteBuf#touch(Object)}
      */
     public static <T> T touch(T obj, @Nullable Object hint) {
-        if (obj instanceof HttpData) {
-            ((HttpData) obj).touch(hint);
+        if (obj instanceof Bytes) {
+            ((Bytes) obj).touch(hint);
         }
         return obj;
     }

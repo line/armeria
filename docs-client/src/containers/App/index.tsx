@@ -40,6 +40,7 @@ import EnumPage from '../EnumPage';
 import HomePage from '../HomePage';
 import MethodPage from '../MethodPage';
 import StructPage from '../StructPage';
+import OverviewPage from '../OverviewPage';
 
 import {
   packageName,
@@ -183,11 +184,18 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
         <>
           <ListItem button onClick={toggleServicesOpen}>
             <ListItemText disableTypography>
-              <Typography variant="h5">Services</Typography>
+              <Typography variant="h5">Services </Typography>
             </ListItemText>
             {servicesSectionOpen ? <ExpandLess /> : <ExpandMore />}
           </ListItem>
           <Collapse in={servicesSectionOpen} timeout="auto">
+            <ListItem button onClick={() => navigateTo('/overview')}>
+              <ListItemText>
+                <Typography variant="subtitle1">
+                  <code> Overview </code>
+                </Typography>
+              </ListItemText>
+            </ListItem>
             {specification.getServices().map((service) => (
               <div key={service.name}>
                 <ListItem
@@ -197,7 +205,15 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                   {specification.hasUniqueServiceNames() ? (
                     <ListItemText>
                       <Typography display="inline" variant="subtitle1">
-                        <Tooltip title={service.name} placement="top">
+                        <Tooltip
+                          title={
+                            <>
+                              <code>{service.name}</code> <br />
+                              <code>{service.descriptionInfo?.docString}</code>
+                            </>
+                          }
+                          placement="top"
+                        >
                           <code>{simpleName(service.name)}</code>
                         </Tooltip>
                       </Typography>
@@ -218,13 +234,9 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                   {service.methods.map((method) => (
                     <ListItem
                       dense
-                      key={`${service.name}/${method.name}/${method.httpMethod}`}
+                      key={`${method.id}`}
                       button
-                      onClick={() =>
-                        navigateTo(
-                          `/methods/${service.name}/${method.name}/${method.httpMethod}`,
-                        )
-                      }
+                      onClick={() => navigateTo(`/methods/${method.id}`)}
                     >
                       <Grid container alignItems="center" spacing={1}>
                         <Grid item xs="auto">
@@ -244,7 +256,7 @@ const AppDrawer: React.FunctionComponent<AppDrawerProps> = ({
                           </ListItemText>
                           {method.endpoints.map((endpoint) => (
                             <ListItemText
-                              key={`${service.name}/${method.name}/${endpoint.pathMapping}`}
+                              key={`${method.id}`}
                               primaryTypographyProps={{
                                 variant: 'caption',
                               }}
@@ -386,6 +398,10 @@ const RouterServices: React.FunctionComponent<RouterServicesProps> = ({
         exact
         path="/"
         render={(p) => <HomePage {...p} versions={versions} />}
+      />
+      <Route
+        path="/overview"
+        render={(p) => <OverviewPage {...p} specification={specification} />}
       />
       <Route
         path="/enums/:name"

@@ -16,4 +16,7 @@
   <!-- Enable 'NoCopyrightHeader' for examples only. -->
   <suppress id="NoCopyrightHeader" files="^((?![\\/]examples[\\/]).)*$" />
   <suppress id="CopyrightHeader" files="[\\/]examples[\\/]" />
+  <!-- Suppress meterRegistry related checks in non-public code. -->
+  <suppress id="PreferFlagsMeterRegistry" files="[\\/](examples|internal|it|jmh|test)[\\/]" />
+  <suppress id="PreferFlagsMeterRegistry" files="[\\/](DefaultFlagsProvider.java|Flags.java|FlagsProvider.java)" />
 </suppressions>
