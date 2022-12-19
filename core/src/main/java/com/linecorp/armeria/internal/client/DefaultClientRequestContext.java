@@ -416,6 +416,7 @@ public final class DefaultClientRequestContext
         logBuilder.endResponse(wrapped);
     }
 
+    // TODO(ikhoon): Consider moving the logic for filling authority to `HttpClientDelegate.exceute()`.
     private void autoFillSchemeAndAuthority() {
         final HttpRequest req = request();
         if (req == null) {
