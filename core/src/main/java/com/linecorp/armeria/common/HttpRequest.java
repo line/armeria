@@ -137,7 +137,7 @@ public interface HttpRequest extends Request, HttpMessage {
      */
     @FormatMethod
     static HttpRequest of(HttpMethod method, String path, MediaType mediaType,
-                          @FormatString final String format, Object... args) {
+                          @FormatString String format, Object... args) {
         requireNonNull(method, "method");
         requireNonNull(path, "path");
         requireNonNull(mediaType, "mediaType");
