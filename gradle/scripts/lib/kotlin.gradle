@@ -4,7 +4,7 @@ configure(projectsWithFlags('kotlin')) {
 
     // compileJmhKotlin is injected by 'jmh' plugin while a benchmark module is being initialized.
     afterEvaluate {
-        def target = project.tasks.getByName('compileJava').targetCompatibility ?:
+        def target = project.tasks.findByName('compileJava')?.targetCompatibility ?:
                 project.findProperty('javaTargetCompatibility') ?: '1.8'
         def compilerArgs = ['-java-parameters', '-Xjsr305=strict', '-Xskip-prerelease-check']
         // A workaround to find all Kotlin compilation tasks.
