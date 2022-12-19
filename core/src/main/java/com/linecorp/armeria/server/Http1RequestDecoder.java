@@ -269,8 +269,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         final Routed<ServiceConfig> routed = req.route();
                         if (routed != null && routed.route().isFallback()) {
                             // Don't need to return an error response. `FallbackService` immediately respond to
-                            // the request without consuming data.
+                            // the request without consuming data. Set `req` to null to receive a new request.
+                            // If the client sends subsequent HttpMessages, a connection will be reset.
                             this.req = null;
+                            // The client could be suspicious or an attacker. Try to close the connection
+                            // after sending a `404 Not Found` response.
+                            ((ServerHttp1ObjectEncoder) encoder).initiateConnectionShutdown();
                         } else {
                             final ContentTooLargeException cause =
                                     ContentTooLargeException.builder()
