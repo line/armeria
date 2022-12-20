@@ -85,7 +85,7 @@ protobuf-gradle-plugin = "0.8.19"
 protobuf-jackson = "2.0.0"
 reactive-grpc = "1.2.3"
 reactive-streams = "1.0.4"
-reactor = "3.5.1"
+reactor = "3.4.26"
 reactor-kotlin = "1.2.1"
 reflections = "0.9.11"
 resteasy = "5.0.4.Final"
@@ -760,6 +760,7 @@ version.ref = "protobuf-jackson"
 exclusions = "javax.annotation:javax.annotation-api"
 javadocs = "https://developers.curioswitch.org/apidocs/java/"
 
+# Reactor 3.5 should be updated with Spring Boot 3
 [libraries.reactor-core]
 module = "io.projectreactor:reactor-core"
 version.ref = "reactor"
