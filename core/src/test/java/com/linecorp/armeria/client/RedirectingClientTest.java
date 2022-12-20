@@ -91,7 +91,11 @@ class RedirectingClientTest {
 
             sb.service("/anotherDomain", (ctx, req) -> HttpResponse.ofRedirect(
                     "http://foo.com:" + server.httpPort() + "/anotherDomainRedirect"));
-            sb.virtualHost("foo.com").service("/anotherDomainRedirect", (ctx, req) -> HttpResponse.of(200));
+            sb.virtualHost("foo.com")
+              .service("/anotherDomainRedirect", (ctx, req) -> {
+                assertThat(req.authority()).isEqualTo("foo.com:" + server.server().activeLocalPort());
+                return HttpResponse.of(200);
+            });
 
             sb.service("/removeDotSegments/foo", (ctx, req) -> HttpResponse.ofRedirect("./bar"))
               .service("/removeDotSegments/bar", (ctx, req) -> HttpResponse.of(200));
