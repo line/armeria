@@ -16,12 +16,15 @@
 
 package com.linecorp.armeria.common.encoding;
 
+import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelHandler;
 import io.netty.channel.embedded.EmbeddedChannel;
+import io.netty.handler.codec.compression.DecompressionException;
 
 /**
  * Skeletal {@link StreamDecoder} implementation. Netty implementation used to allow
@@ -30,15 +33,30 @@ import io.netty.channel.embedded.EmbeddedChannel;
 class AbstractStreamDecoder implements StreamDecoder {
 
     private final EmbeddedChannel decoder;
+    private final int maxLength;
+    private final boolean checkOverflow;
 
-    protected AbstractStreamDecoder(ChannelHandler handler, ByteBufAllocator alloc) {
+    protected AbstractStreamDecoder(ChannelHandler handler, ByteBufAllocator alloc, int maxLength,
+                                    boolean checkOverflow) {
         decoder = new EmbeddedChannel(false, handler);
         decoder.config().setAllocator(alloc);
+        this.maxLength = maxLength;
+        this.checkOverflow = maxLength > 0 && checkOverflow;
     }
 
     @Override
     public HttpData decode(HttpData obj) {
-        decoder.writeInbound(obj.byteBuf());
+        try {
+            decoder.writeInbound(obj.byteBuf());
+        } catch (DecompressionException ex) {
+            final String message = ex.getMessage();
+            if (message != null && message.startsWith("Decompression buffer has reached maximum size:")) {
+                throw ContentTooLargeException.builder()
+                                              .maxContentLength(maxLength)
+                                              .cause(ex)
+                                              .build();
+            }
+        }
         return fetchDecoderOutput();
     }
 
@@ -49,6 +67,11 @@ class AbstractStreamDecoder implements StreamDecoder {
         } else {
             return HttpData.empty();
         }
+    }
+
+    @Override
+    public int maxLength() {
+        return maxLength;
     }
 
     // Mostly copied from netty's HttpContentDecoder.
@@ -63,6 +86,8 @@ class AbstractStreamDecoder implements StreamDecoder {
                 buf.release();
                 continue;
             }
+
+            maybeCheckOverflow(decoded, buf);
             if (decoded == null) {
                 decoded = buf;
             } else {
@@ -79,5 +104,26 @@ class AbstractStreamDecoder implements StreamDecoder {
         }
 
         return HttpData.wrap(decoded);
+    }
+
+    private void maybeCheckOverflow(@Nullable ByteBuf decoded, ByteBuf newBuf) {
+        if (!checkOverflow) {
+            return;
+        }
+
+        long length = newBuf.readableBytes();
+        if (decoded != null) {
+            length += decoded.readableBytes();
+        }
+        if (length > maxLength) {
+            if (decoded != null) {
+                decoded.release();
+            }
+            newBuf.release();
+            throw ContentTooLargeException.builder()
+                                          .maxContentLength(maxLength)
+                                          .transferred(length)
+                                          .build();
+        }
     }
 }

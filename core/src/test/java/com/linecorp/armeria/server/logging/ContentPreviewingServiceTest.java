@@ -42,6 +42,8 @@ import org.reactivestreams.Subscription;
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream;
 import com.google.common.io.ByteStreams;
 
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.encoding.DecodingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -138,14 +140,14 @@ class ContentPreviewingServiceTest {
 
             sb.service("/deferred", httpService);
             sb.decorator("/deferred", ContentPreviewingService.newDecorator(100));
-            sb.decorator("/deferred", ((delegate, ctx, req) -> HttpResponse.from(
+            sb.decorator("/deferred", (delegate, ctx, req) -> HttpResponse.from(
                     completedFuture(null).handleAsync((ignored, cause) -> {
                         try {
                             return delegate.serve(ctx, req);
                         } catch (Exception e) {
                             return Exceptions.throwUnsafely(e);
                         }
-                    }, ctx.eventLoop()))));
+                    }, ctx.eventLoop())));
 
             sb.service("/failingRequestPreviewSanitizer", httpService);
             sb.decorator("/failingRequestPreviewSanitizer",
@@ -226,10 +228,13 @@ class ContentPreviewingServiceTest {
                                           .build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/encoded",
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
-        final AggregatedHttpResponse res = client.execute(headers, "Armeria").aggregate().join();
-        assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo(
-                Brotli.isAvailable() ? "br" : "gzip");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final AggregatedHttpResponse res = client.execute(headers, "Armeria").aggregate().join();
+            assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
+            final RequestLog requestLog = captor.get().log().whenComplete().join();
+            assertThat(requestLog.responseHeaders().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo(
+                    Brotli.isAvailable() ? "br" : "gzip");
+        }
 
         final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
         assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");

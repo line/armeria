@@ -37,7 +37,7 @@ import com.linecorp.armeria.server.Service;
 
 /**
  * The specification of one or more {@link Service}s that provides their {@link ServiceInfo}s and
- * {@link NamedTypeInfo}s.
+ * {@link DescriptiveTypeInfo}s.
  */
 @UnstableApi
 public final class ServiceSpecification {
@@ -59,37 +59,37 @@ public final class ServiceSpecification {
 
     /**
      * Generates a new {@link ServiceSpecification} from the specified {@link ServiceInfo}s and
-     * the factory {@link Function} that creates {@link NamedTypeInfo}s for the enum, struct or exception types
-     * referred by the specified {@link ServiceInfo}s.
+     * the factory {@link Function} that creates {@link DescriptiveTypeInfo}s for the enum, struct or
+     * exception types referred by the specified {@link ServiceInfo}s.
      */
     public static ServiceSpecification generate(
             Iterable<ServiceInfo> services,
-            Function<TypeSignature, ? extends NamedTypeInfo> namedTypeInfoFactory) {
+            Function<DescriptiveTypeSignature, ? extends DescriptiveTypeInfo> descriptiveTypeInfoFactory) {
         if (Iterables.isEmpty(services)) {
             return emptyServiceSpecification;
         }
 
-        // Collect all named types referred by the services.
-        final Set<TypeSignature> namedTypes =
+        // Collect all descriptive types referred by the services.
+        final Set<DescriptiveTypeSignature> descriptiveTypes =
                 Streams.stream(services)
-                       .flatMap(s -> s.findNamedTypes().stream())
+                       .flatMap(s -> s.findDescriptiveTypes().stream())
                        .collect(toImmutableSortedSet(comparing(TypeSignature::name)));
 
         final Map<String, EnumInfo> enums = new HashMap<>();
         final Map<String, StructInfo> structs = new HashMap<>();
         final Map<String, ExceptionInfo> exceptions = new HashMap<>();
 
-        generateNamedTypeInfos(namedTypeInfoFactory, enums, structs, exceptions, namedTypes);
+        generateDescriptiveTypeInfos(descriptiveTypeInfoFactory, enums, structs, exceptions, descriptiveTypes);
 
         return new ServiceSpecification(services, enums.values(), structs.values(), exceptions.values());
     }
 
-    private static void generateNamedTypeInfos(
-            Function<TypeSignature, ? extends NamedTypeInfo> namedTypeInfoFactory,
+    private static void generateDescriptiveTypeInfos(
+            Function<DescriptiveTypeSignature, ? extends DescriptiveTypeInfo> descriptiveTypeInfoFactory,
             Map<String, EnumInfo> enums, Map<String, StructInfo> structs,
-            Map<String, ExceptionInfo> exceptions, Set<TypeSignature> namedTypes) {
+            Map<String, ExceptionInfo> exceptions, Set<DescriptiveTypeSignature> descriptiveTypes) {
 
-        namedTypes.forEach(type -> {
+        descriptiveTypes.forEach(type -> {
             final String typeName = type.name();
             if (enums.containsKey(typeName) ||
                 structs.containsKey(typeName) ||
@@ -97,10 +97,12 @@ public final class ServiceSpecification {
                 return;
             }
 
-            final NamedTypeInfo newInfo = namedTypeInfoFactory.apply(type);
+            final DescriptiveTypeInfo newInfo = descriptiveTypeInfoFactory.apply(type);
             if (newInfo instanceof EnumInfo) {
                 enums.put(newInfo.name(), (EnumInfo) newInfo);
-            } else if (newInfo instanceof StructInfo) {
+                return;
+            }
+            if (newInfo instanceof StructInfo) {
                 structs.put(newInfo.name(), (StructInfo) newInfo);
             } else if (newInfo instanceof ExceptionInfo) {
                 exceptions.put(newInfo.name(), (ExceptionInfo) newInfo);
@@ -108,7 +110,8 @@ public final class ServiceSpecification {
                 throw new Error(); // Should never reach here.
             }
 
-            generateNamedTypeInfos(namedTypeInfoFactory, enums, structs, exceptions, newInfo.findNamedTypes());
+            generateDescriptiveTypeInfos(descriptiveTypeInfoFactory, enums, structs, exceptions,
+                                         newInfo.findDescriptiveTypes());
         });
     }
 
@@ -139,15 +142,16 @@ public final class ServiceSpecification {
 
         this.services = Streams.stream(requireNonNull(services, "services"))
                                .collect(toImmutableSortedSet(comparing(ServiceInfo::name)));
-        this.enums = collectNamedTypeInfo(enums, "enums");
-        this.structs = collectNamedTypeInfo(structs, "structs");
-        this.exceptions = collectNamedTypeInfo(exceptions, "exceptions");
+        this.enums = collectDescriptiveTypeInfo(enums, "enums");
+        this.structs = collectDescriptiveTypeInfo(structs, "structs");
+        this.exceptions = collectDescriptiveTypeInfo(exceptions, "exceptions");
         this.exampleHeaders = ImmutableList.copyOf(requireNonNull(exampleHeaders, "exampleHeaders"));
     }
 
-    private static <T extends NamedTypeInfo> Set<T> collectNamedTypeInfo(Iterable<T> values, String name) {
+    private static <T extends DescriptiveTypeInfo> Set<T> collectDescriptiveTypeInfo(
+            Iterable<T> values, String name) {
         return Streams.stream(requireNonNull(values, name))
-                      .collect(toImmutableSortedSet(comparing(NamedTypeInfo::name)));
+                      .collect(toImmutableSortedSet(comparing(DescriptiveTypeInfo::name)));
     }
 
     /**

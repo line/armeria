@@ -728,38 +728,6 @@ public final class Server implements ListenableAsyncCloseable {
         private void logStopFailure(Throwable cause) {
             logger.warn("Failed to stop a server: {}", cause.getMessage(), cause);
         }
-
-        private void shutdownExecutor(Iterable<ScheduledExecutorService> executors) {
-            for (ScheduledExecutorService executor : executors) {
-                if (executor instanceof UnstoppableScheduledExecutorService) {
-                    executor = ((UnstoppableScheduledExecutorService) executor).getExecutorService();
-                }
-
-                executor.shutdown();
-            }
-
-            boolean interrupted = false;
-            for (ScheduledExecutorService executor : executors) {
-                if (executor instanceof UnstoppableScheduledExecutorService) {
-                    executor = ((UnstoppableScheduledExecutorService) executor).getExecutorService();
-                }
-
-                try {
-                    while (!executor.isTerminated()) {
-                        try {
-                            executor.awaitTermination(1, TimeUnit.DAYS);
-                        } catch (InterruptedException ignore) {
-                            interrupted = true;
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.warn("Failed to shutdown the blockingTaskExecutor: {}", executor, e);
-                }
-            }
-            if (interrupted) {
-                Thread.currentThread().interrupt();
-            }
-        }
     }
 
     /**

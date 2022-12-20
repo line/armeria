@@ -180,7 +180,7 @@ private final class DefaultScalaRestClient(delegate: RestClient) extends ScalaRe
 
   override def uri(): URI = delegate.uri()
 
-  override def clientType(): Class[_] = delegate.clientType()
+  override def clientType(): Class[_] = classOf[ScalaRestClient]
 
   override def options(): ClientOptions = delegate.options()
 

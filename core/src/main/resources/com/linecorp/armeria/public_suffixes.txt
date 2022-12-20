@@ -105,6 +105,7 @@
 *.triton.zone
 *.tst.site
 *.uberspace.de
+*.user.fm
 *.user.localcert.dev
 *.usercontent.goog
 *.vps.myjino.ru
@@ -117,6 +118,21 @@
 0e.vc
 1.azurestaticapps.net
 1.bg
+123hjemmeside.dk
+123hjemmeside.no
+123homepage.it
+123kotisivu.fi
+123minsida.se
+123miweb.es
+123paginaweb.pt
+123sait.ru
+123siteweb.fr
+123webseite.at
+123webseite.de
+123website.be
+123website.ch
+123website.lu
+123website.nl
 12hp.at
 12hp.ch
 12hp.de
@@ -237,10 +253,10 @@ achi.nagano.jp
 aco
 act.au
 act.edu.au
+activetrail.biz
 actor
 ad
 ad.jp
-adac
 adachi.tokyo.jp
 adimo.co.uk
 adm.br
@@ -409,7 +425,6 @@ anan.nagano.jp
 anan.tokushima.jp
 anani.br
 ancona.it
-and.mom
 and.museum
 andasuolo.no
 andebu.no
@@ -1090,7 +1105,6 @@ bt
 bt.it
 bu.no
 budejju.no
-bugatti
 build
 builders
 building.museum
@@ -1298,6 +1312,7 @@ certmgr.org
 cesena-forli.it
 cesenaforli.it
 cf
+cf-ipfs.com
 cfa
 cfd
 cg
@@ -1436,6 +1451,7 @@ cloudapp.net
 cloudapps.digital
 cloudcontrolapp.com
 cloudcontrolled.com
+cloudflare-ipfs.com
 cloudfront.net
 cloudfunctions.net
 cloudjiffy.net
@@ -2595,10 +2611,6 @@ for-more.biz
 for-our.info
 for-some.biz
 for-the.biz
-for.men
-for.mom
-for.one
-for.sale
 force.museum
 ford
 forde.no
@@ -2729,8 +2741,6 @@ from-wi.com
 from-wv.com
 from-wy.com
 from.hr
-from.marketing
-from.work
 frontdoor
 frontier
 frosinone.it
@@ -3233,7 +3243,6 @@ gv.at
 gv.vc
 gw
 gwangju.kr
-gwiddle.co.uk
 gx.cn
 gy
 gyeongbuk.kr
@@ -3672,7 +3681,6 @@ in-vpn.de
 in-vpn.net
 in-vpn.org
 in.eu.org
-in.london
 in.na
 in.net
 in.ni
@@ -5409,6 +5417,7 @@ my-wan.de
 my.eu.org
 my.id
 myactivedirectory.com
+myamaze.net
 myasustor.com
 mycd.eu
 mycloud.by
@@ -5440,7 +5449,6 @@ myphotos.cc
 mypi.co
 mypsx.net
 myqnapcloud.com
-myravendb.com
 mysecuritycamera.com
 mysecuritycamera.net
 mysecuritycamera.org
@@ -5465,6 +5473,8 @@ myspreadshop.nl
 myspreadshop.no
 myspreadshop.pl
 myspreadshop.se
+mytabit.co.il
+mytabit.com
 mytis.ru
 mytuleap.com
 myvnc.com
@@ -6034,9 +6044,7 @@ odessa.ua
 odo.br
 oe.yamagata.jp
 of.by
-of.fashion
 of.je
-of.london
 of.no
 off.ai
 office
@@ -6632,7 +6640,6 @@ pomorskie.pl
 pomorze.pl
 poniatowa.pl
 ponpes.id
-pony.club
 pordenone.it
 porn
 porsanger.no
@@ -6785,6 +6792,7 @@ quicksytes.com
 r.bg
 r.cdn77.net
 r.se
+r2.dev
 ra.it
 racing
 rackmaze.com
@@ -6875,7 +6883,6 @@ rentals
 rep.br
 rep.kp
 repair
-repair.men
 repbody.aero
 repl.co
 repl.run
@@ -7497,6 +7504,10 @@ siljan.no
 silk
 silk.museum
 simple-url.com
+simplesite.com
+simplesite.com.br
+simplesite.gr
+simplesite.pl
 sina
 sinaapp.com
 singles
@@ -7909,7 +7920,6 @@ tawaramoto.nara.jp
 tax
 taxi
 taxi.br
-tbits.me
 tc
 tc.br
 tci
@@ -7962,7 +7972,6 @@ tf
 tg
 tgory.pl
 th
-that.win
 thd
 the.br
 theater
@@ -8022,7 +8031,6 @@ to.gt
 to.it
 to.leg.br
 to.md
-to.work
 toba.mie.jp
 tobe.ehime.jp
 tobetsu.hokkaido.jp
@@ -8342,7 +8350,6 @@ umi.fukuoka.jp
 umig.gov.pl
 unazuki.toyama.jp
 under.jp
-under.one
 undersea.museum
 uni5.net
 unicloud.pl
@@ -8764,7 +8771,6 @@ wine
 winners
 wios.gov.pl
 witd.gov.pl
-with.marketing
 withgoogle.com
 withyoutube.com
 wiw.gov.pl
@@ -9022,7 +9028,6 @@ xn--j1ael8b.xn--p1acf
 xn--j1amh
 xn--j6w193g
 xn--jlq480n2rg
-xn--jlq61u9w7b
 xn--jlster-bya.no
 xn--jrpeland-54a.no
 xn--jvr189m

@@ -2,7 +2,7 @@ configure(projectsWithFlags('kotlin')) {
 
     apply plugin: 'kotlin'
 
-    def target = "1.8"
+    def target = project.findProperty('javaTargetCompatibility') ?: '1.8'
     def compilerArgs = ['-java-parameters', '-Xjsr305=strict', '-Xskip-prerelease-check']
     compileKotlin {
         kotlinOptions.jvmTarget = target
@@ -17,8 +17,6 @@ configure(projectsWithFlags('kotlin')) {
         apply plugin: "org.jlleitschuh.gradle.ktlint"
 
         ktlint {
-            // https://github.com/pinterest/ktlint/issues/764
-            version.set("0.36.0")
             verbose.set(true)
             reporters {
                 reporter "html"
@@ -27,7 +25,7 @@ configure(projectsWithFlags('kotlin')) {
             disabledRules = ["import-ordering"]
 
             filter {
-                exclude("**/gen-src/**")
+                exclude { it.file.path.contains("gen-src/") }
             }
         }
 

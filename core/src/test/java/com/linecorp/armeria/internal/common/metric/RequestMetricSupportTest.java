@@ -214,9 +214,9 @@ class RequestMetricSupportTest {
                                "service=none}", 1.0)
                 .containsEntry("foo.timeouts#count{cause=ResponseTimeoutException," +
                                "http.status=0,method=POST,service=none}", 0.0)
-                .containsEntry("foo.response.duration#count{http.status=0,method=POST,service=none}", 0.0)
-                .containsEntry("foo.response.length#count{http.status=0,method=POST,service=none}", 0.0)
-                .containsEntry("foo.total.duration#count{http.status=0,method=POST,service=none}", 0.0);
+                .containsEntry("foo.response.duration#count{http.status=0,method=POST,service=none}", 1.0)
+                .containsEntry("foo.response.length#count{http.status=0,method=POST,service=none}", 1.0)
+                .containsEntry("foo.total.duration#count{http.status=0,method=POST,service=none}", 1.0);
     }
 
     private static ClientRequestContext setupClientRequestCtx(MeterRegistry registry) {

@@ -53,11 +53,11 @@ public interface DocServicePlugin {
      *                       {@link #supportedServiceTypes()}
      * @param filter the {@link DocServiceFilter} that checks whether a method will be included while
      *               building {@link DocService}
-     * @param namedTypeInfoProvider the {@link NamedTypeInfoProvider} to create a {@link NamedTypeInfo} from
-     *                              a type descriptor.
+     * @param descriptiveTypeInfoProvider the {@link DescriptiveTypeInfoProvider} to create a
+     *                                    {@link DescriptiveTypeInfo} from a type descriptor.
      */
     ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs, DocServiceFilter filter,
-                                               NamedTypeInfoProvider namedTypeInfoProvider);
+                                               DescriptiveTypeInfoProvider descriptiveTypeInfoProvider);
 
     // Methods related with extracting documentation strings.
     // TODO(trustin): Define the docstring format.

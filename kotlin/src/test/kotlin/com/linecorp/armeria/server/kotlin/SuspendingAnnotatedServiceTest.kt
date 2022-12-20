@@ -170,115 +170,136 @@ class SuspendingAnnotatedServiceTest {
                         listOf(customJacksonResponseConverterFunction()),
                         listOf(exceptionHandlerFunction())
                     )
-                    .annotatedService("/default", object {
-                        @Get("/string")
-                        suspend fun string(): String {
-                            assertInEventLoop()
-                            return "OK"
-                        }
+                    .annotatedService(
+                        "/default",
+                        object {
+                            @Get("/string")
+                            suspend fun string(): String {
+                                assertInEventLoop()
+                                return "OK"
+                            }
 
-                        @Get("/responseObject")
-                        @ProducesJson
-                        suspend fun responseObject(@Param("a") a: String, @Param("b") b: Int): MyResponse {
-                            assertInEventLoop()
-                            return MyResponse(a = a, b = b)
-                        }
+                            @Get("/responseObject")
+                            @ProducesJson
+                            suspend fun responseObject(@Param("a") a: String, @Param("b") b: Int): MyResponse {
+                                assertInEventLoop()
+                                return MyResponse(a = a, b = b)
+                            }
 
-                        @Get("/httpResponse/{msg}")
-                        suspend fun httpResponse(@Param("msg") msg: String): HttpResponse {
-                            assertInEventLoop()
-                            return HttpResponse.of(msg)
-                        }
+                            @Get("/httpResponse/{msg}")
+                            suspend fun httpResponse(@Param("msg") msg: String): HttpResponse {
+                                assertInEventLoop()
+                                return HttpResponse.of(msg)
+                            }
 
-                        @Get("/httpResult/{msg}")
-                        suspend fun httpResult(@Param("msg") msg: String): HttpResult<String> {
-                            assertInEventLoop()
-                            return HttpResult.of(
-                                ResponseHeaders.of(200),
-                                msg
+                            @Get("/httpResult/{msg}")
+                            suspend fun httpResult(@Param("msg") msg: String): HttpResult<String> {
+                                assertInEventLoop()
+                                return HttpResult.of(
+                                    ResponseHeaders.of(200),
+                                    msg
+                                )
+                            }
+
+                            @Get("/throwException")
+                            suspend fun throwException(): HttpResponse {
+                                ServiceRequestContext.current()
+                                throw RuntimeException()
+                            }
+
+                            @Delete("/noContent")
+                            suspend fun noContent() {
+                                ServiceRequestContext.current()
+                            }
+
+                            @Get("/context")
+                            suspend fun bar(): String {
+                                assertInEventLoop()
+                                withContext(Dispatchers.Default) {
+                                    delay(1)
+                                }
+                                assertInEventLoop()
+                                return "OK"
+                            }
+                        }
+                    )
+                    .annotatedService(
+                        "/customContext",
+                        object {
+                            @Get("/foo")
+                            suspend fun foo(): String {
+                                ServiceRequestContext.current()
+                                assertThat(coroutineContext[CoroutineName]?.name).isEqualTo("test")
+                                return "OK"
+                            }
+                        }
+                    )
+                    .decoratorUnder(
+                        "/customContext",
+                        CoroutineContextService.newDecorator {
+                            Dispatchers.Default + CoroutineName("test")
+                        }
+                    )
+                    .annotatedService(
+                        "/blocking",
+                        object {
+                            @Blocking
+                            @Get("/baz")
+                            suspend fun baz(): String {
+                                ServiceRequestContext.current()
+                                assertThat(Thread.currentThread().name).contains("armeria-common-blocking-tasks")
+                                return "OK"
+                            }
+                        }
+                    )
+                    .annotatedService(
+                        "/downstream-cancellation",
+                        object {
+                            @Get("/long-running-suspend-fun")
+                            suspend fun longRunningSuspendFun(): String {
+                                try {
+                                    delay(10000L)
+                                } catch (e: CancellationException) {
+                                    cancellationCallCounter.incrementAndGet()
+                                    throw e
+                                }
+                                return "OK"
+                            }
+
+                            @Get("/long-running-suspend-fun-ignore-exception")
+                            suspend fun unsafeLongRunningSuspendFun(): HttpResponse {
+                                try {
+                                    delay(10000L)
+                                } catch (ignored: CancellationException) {
+                                    cancellationCallCounter.incrementAndGet()
+                                }
+                                val response = HttpResponse.of("OK")
+                                httpResponseRef.set(response)
+                                return response
+                            }
+                        }
+                    )
+                    .annotatedService(
+                        "/response-converter-spi",
+                        object {
+                            @Get("/bar")
+                            suspend fun bar() = Bar()
+
+                            @Get("/bar-in-http-result")
+                            suspend fun barInHttpResult() = HttpResult.of(
+                                ResponseHeaders.of(HttpStatus.BAD_REQUEST, "x-custom-header", "value"), Bar()
                             )
                         }
-
-                        @Get("/throwException")
-                        suspend fun throwException(): HttpResponse {
-                            ServiceRequestContext.current()
-                            throw RuntimeException()
-                        }
-
-                        @Delete("/noContent")
-                        suspend fun noContent() {
-                            ServiceRequestContext.current()
-                        }
-
-                        @Get("/context")
-                        suspend fun bar(): String {
-                            assertInEventLoop()
-                            withContext(Dispatchers.Default) {
-                                delay(1)
+                    )
+                    .annotatedService(
+                        "/return-nothing-suspend-fun",
+                        object {
+                            @Get("/throw-error")
+                            suspend fun returnNothingSuspendFun(): Nothing {
+                                throw NotImplementedError()
                             }
-                            assertInEventLoop()
-                            return "OK"
                         }
-                    })
-                    .annotatedService("/customContext", object {
-                        @Get("/foo")
-                        suspend fun foo(): String {
-                            ServiceRequestContext.current()
-                            assertThat(coroutineContext[CoroutineName]?.name).isEqualTo("test")
-                            return "OK"
-                        }
-                    })
-                    .decoratorUnder("/customContext", CoroutineContextService.newDecorator {
-                        Dispatchers.Default + CoroutineName("test")
-                    })
-                    .annotatedService("/blocking", object {
-                        @Blocking
-                        @Get("/baz")
-                        suspend fun baz(): String {
-                            ServiceRequestContext.current()
-                            assertThat(Thread.currentThread().name).contains("armeria-common-blocking-tasks")
-                            return "OK"
-                        }
-                    })
-                    .annotatedService("/downstream-cancellation", object {
-                        @Get("/long-running-suspend-fun")
-                        suspend fun longRunningSuspendFun(): String {
-                            try {
-                                delay(10000L)
-                            } catch (e: CancellationException) {
-                                cancellationCallCounter.incrementAndGet()
-                                throw e
-                            }
-                            return "OK"
-                        }
-
-                        @Get("/long-running-suspend-fun-ignore-exception")
-                        suspend fun unsafeLongRunningSuspendFun(): HttpResponse {
-                            try {
-                                delay(10000L)
-                            } catch (ignored: CancellationException) {
-                                cancellationCallCounter.incrementAndGet()
-                            }
-                            val response = HttpResponse.of("OK")
-                            httpResponseRef.set(response)
-                            return response
-                        }
-                    })
-                    .annotatedService("/response-converter-spi", object {
-                        @Get("/bar")
-                        suspend fun bar() = Bar()
-
-                        @Get("/bar-in-http-result")
-                        suspend fun barInHttpResult() = HttpResult.of(
-                            ResponseHeaders.of(HttpStatus.BAD_REQUEST, "x-custom-header", "value"), Bar()
-                        )
-                    })
-                    .annotatedService("/return-nothing-suspend-fun", object {
-                        @Get("/throw-error")
-                        suspend fun returnNothingSuspendFun(): Nothing {
-                            throw NotImplementedError()
-                        }
-                    })
+                    )
                     .decorator(LoggingService.newDecorator())
                     .requestTimeoutMillis(500L) // to test cancellation
             }

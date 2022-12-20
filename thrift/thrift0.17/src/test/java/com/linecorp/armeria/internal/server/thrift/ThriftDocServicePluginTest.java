@@ -62,9 +62,10 @@ class ThriftDocServicePluginTest {
 
     private static final String FOO_NAME = FooService.class.getName();
 
-    private static final ThriftDocServicePlugin generator = new ThriftDocServicePlugin();
+    private static final ThriftDocServicePlugin GENERATOR = new ThriftDocServicePlugin();
 
-    private static final ThriftNamedTypeInfoProvider namedTypeInfoProvider = new ThriftNamedTypeInfoProvider();
+    private static final ThriftDescriptiveTypeInfoProvider DESCRIPTIVE_TYPE_INFO_PROVIDER =
+            new ThriftDescriptiveTypeInfoProvider();
 
     @Test
     void servicesTest() {
@@ -108,10 +109,10 @@ class ThriftDocServicePluginTest {
                                THttpService.ofFormats(mock(FooService.AsyncIface.class),
                                                       ThriftSerializationFormats.COMPACT))
                       .build();
-        final ServiceSpecification specification = generator.generateSpecification(
+        final ServiceSpecification specification = GENERATOR.generateSpecification(
                 ImmutableSet.copyOf(server.serviceConfigs()),
                 unifyFilter((plugin, service, method) -> true,
-                            (plugin, service, method) -> false), namedTypeInfoProvider);
+                            (plugin, service, method) -> false), DESCRIPTIVE_TYPE_INFO_PROVIDER);
 
         final ServiceInfo fooServiceInfo = specification.services().iterator().next();
         final Map<String, MethodInfo> methods =
@@ -200,9 +201,9 @@ class ThriftDocServicePluginTest {
                       .build();
 
         // Generate the specification with the ServiceConfigs.
-        final ServiceSpecification specification = generator.generateSpecification(
+        final ServiceSpecification specification = GENERATOR.generateSpecification(
                 ImmutableSet.copyOf(server.serviceConfigs()),
-                unifyFilter(include, exclude), namedTypeInfoProvider);
+                unifyFilter(include, exclude), DESCRIPTIVE_TYPE_INFO_PROVIDER);
 
         // Ensure the specification contains all services.
         return specification.services()
@@ -219,7 +220,7 @@ class ThriftDocServicePluginTest {
 
     @Test
     void testNewServiceInfo() {
-        final ServiceInfo service = generator.newServiceInfo(
+        final ServiceInfo service = GENERATOR.newServiceInfo(
                 FooService.class,
                 ImmutableList.of(EndpointInfo.builder("*", "/foo")
                                              .fragment("a").defaultFormat(ThriftSerializationFormats.BINARY)
@@ -255,7 +256,7 @@ class ThriftDocServicePluginTest {
         assertThat(bar2.exceptionTypeSignatures()).hasSize(1);
         assertThat(bar2.exampleRequests()).isEmpty();
 
-        final TypeSignature foo = TypeSignature.ofNamed(FooStruct.class);
+        final TypeSignature foo = TypeSignature.ofStruct(FooStruct.class);
         final MethodInfo bar3 = methods.get("bar3");
         assertThat(bar3.parameters()).containsExactly(
                 FieldInfo.of("intVal", TypeSignature.ofBase("i32")),

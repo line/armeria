@@ -147,9 +147,14 @@ public final class ContentPreviewingClient extends SimpleDecoratingHttpClient {
             return unwrap().execute(ctx, req);
         }
         ctx.setAttr(SETTING_CONTENT_PREVIEW, true);
-        final ContentPreviewer requestContentPreviewer =
-                contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
-        req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer, requestPreviewSanitizer);
+        if (!req.isEmpty()) {
+            final ContentPreviewer requestContentPreviewer =
+                    contentPreviewerFactory.requestContentPreviewer(ctx, req.headers());
+            req = setUpRequestContentPreviewer(ctx, req, requestContentPreviewer, requestPreviewSanitizer);
+        } else {
+            // Set empty String.
+            ctx.logBuilder().requestContentPreview("");
+        }
 
         ctx.logBuilder().defer(RequestLogProperty.RESPONSE_CONTENT_PREVIEW);
         final HttpResponse res = unwrap().execute(ctx, req);
