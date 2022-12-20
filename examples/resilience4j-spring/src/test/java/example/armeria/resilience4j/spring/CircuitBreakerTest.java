@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofit;
 import com.linecorp.armeria.common.HttpStatus;
@@ -64,9 +65,11 @@ public class CircuitBreakerTest {
                                                  .registry(circuitBreakerRegistry)
                                                  .factory((reg, key) -> reg.circuitBreaker(key, "defaultA"))
                                                  .build();
+
         final WebClient client = WebClient.builder("http://localhost:" + server.activeLocalPort())
-                .decorator(Resilience4JCircuitBreakerClientHandler.newDecorator(
-                        mapping, CircuitBreakerRule.onStatus(HttpStatus.INTERNAL_SERVER_ERROR)))
+                .decorator(CircuitBreakerClient.builder(CircuitBreakerRule.onStatus(HttpStatus.INTERNAL_SERVER_ERROR))
+                                               .handler(Resilience4JCircuitBreakerClientHandler.of(mapping))
+                                               .newDecorator())
                                           .build();
         final int windowSize = circuitBreakerRegistry.getConfiguration("defaultA")
                                                      .orElseThrow().getSlidingWindowSize();

@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThatNoException;
 
 import org.junit.jupiter.api.Test;
 
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
 import com.linecorp.armeria.common.HttpResponse;
@@ -28,10 +29,15 @@ class Resilience4jCircuitBreakerClientBuilderTest {
 
     @Test
     void testToString() {
-        assertThatNoException().isThrownBy(() -> Resilience4JCircuitBreakerClientHandler
-                .newDecorator(CircuitBreakerRule.onException()).toString());
-        assertThatNoException().isThrownBy(() -> Resilience4JCircuitBreakerClientHandler
-                .newDecorator(CircuitBreakerRuleWithContent.<HttpResponse>builder().onException()
-                                                      .thenSuccess()).toString());
+        assertThatNoException().isThrownBy(
+                () -> CircuitBreakerClient.builder(CircuitBreakerRule.onException())
+                                          .handler(Resilience4JCircuitBreakerClientHandler.of())
+                                          .newDecorator().toString());
+        assertThatNoException().isThrownBy(
+                () -> CircuitBreakerClient.builder(CircuitBreakerRuleWithContent.<HttpResponse>builder()
+                                                                                .onException()
+                                                                                .thenSuccess())
+                                          .handler(Resilience4JCircuitBreakerClientHandler.of())
+                                          .newDecorator().toString());
     }
 }

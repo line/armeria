@@ -62,7 +62,7 @@ class Resilience4jCircuitBreakerTest {
                                                                                            .perHost()
                                                                                            .build();
         final Function<? super HttpClient, CircuitBreakerClient> circuitBreakerDecorator =
-                Resilience4JCircuitBreakerClientHandler.newDecorator(mapping, rule);
+                CircuitBreakerClient.newDecorator(Resilience4JCircuitBreakerClientHandler.of(mapping), rule);
         final WebClient client = WebClient.builder(server.httpUri())
                                           .decorator(circuitBreakerDecorator)
                                           .build();
