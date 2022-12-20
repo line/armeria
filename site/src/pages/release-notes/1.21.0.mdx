@@ -1,0 +1,144 @@
+---
+date: 2022-12-20
+---
+
+## 🌟 New features
+
+- You can now set the default `MeterRegistry` by implementing a custom <type://FlagsProvider>. #4541
+  ```java
+  public class CustomFlagsProvider implements FlagsProvider {
+    @Override
+    public MeterRegistry meterRegistry() {
+        return PrometheusMeterRegistries.newRegistry(); // 👈👈👈
+    }
+  }
+  ```
+- You can now set default headers to <type://Server>, <type://VirtualHost> and <type://Service>. #4520
+  ```java
+  static AsciiString CUSTOM_HEADER = HttpHeaderNames.of("x-custom-header");
+
+  Server
+    .builder()
+    .setHeader(CUSTOM_HEADER, "server-default-header")
+    .virtualHost("foo.com")
+    .setHeader(CUSTOM_HEADER, "vhost-default-header").and()
+    .route()
+    .path("/foo")
+    .setHeader(CUSTOM_HEADER, "service-default-header")
+  ```
+- You can now set the target host of an <type://Endpoint> and `:authority` or `Host` header
+  differently using <type://ClientBuilder#setHeader(CharSequence,Object)>. #4440 #4520
+  ```java 
+  // A request is sent to reverse-proxy.example.com but 
+  // `my-order.service.com` is used for the `:authority` header.
+  WebClient
+    .builder("http://reverse-proxy.example.com/")
+    .setHeader(HeaderNames.AUTHORITY, "my-order.service.com")
+  ```
+- You can now use <type://RequestTimeout> to set a request timeout to annotated services and
+  gRPC services. #4463 #4499
+  ```java
+  import com.linecorp.armeria.server.annotation.decorator.RequestTimeout;
+  
+  @RequestTimeout(value = 1, unit = TimeUnit.SECONDS) // 👈👈👈
+  class MyAnnotationService {
+    // A request gets timed out in 1 second.
+    @Get("/fast/api")
+    public CompletableFuture<MyResponse> fastApi() {
+      ...
+    }
+
+    // A request gets timed out in 5 second.
+    @RequestTimeout(value = 5, unit = TimeUnit.SECONDS) // 👈👈👈
+    public CompletableFuture<MyResponse> slowApi() {
+      ...
+    }
+  }
+  ```
+- You can now override an authority of a gRPC client using `CallOptions`. #4445 #4520
+- <type://CircuitBreakerClient> can now be used with arbitrary <type://CircuitBreaker> implementations. #4426
+- Added <type://Bytes> that represents binary data. #4505
+- You can now see the description of services in the overview of <type://DocService>. #4480 #4537
+
+## 📈 Improvements
+
+- <type://DecodingClient> and <type://DecodingService> can now limit the maximum length of decompressed
+  data. #4469 #4564
+- Replace `synchronized` blocks with <type://ReentrantLock> to make virtual thread friendly. #4551 #4549
+- <type://ServiceSpecification> for <type://DocService> are lazily loaded so as not to block a <type://Server>
+  from starting. #4491
+
+## 🛠️ Bug fixes
+
+- Fixed a regression that `void` methods returns `200 OK` if `<type://Produce> annotation is added. #4575
+- Deleted uncompressed `DocService` assets that were added unintentionally. #4568
+- An exception raised in <type://Authorizer> is now properly peeled using
+  <type://Exceptions#peel(Throwable)>. #4567
+- You can now use the exception, which is raised in the decorator, to make a decision for retrying. #4559
+- <type://EndpointGroup> is now correctly copied to a newly derived client. #4556
+- <type://RequestContextExportingAppender> can now be used with logback `SocketAppender`. #4546 #4547
+- Reversed HTTP/1.1 responses are now correctly ordered even when HTTP/1.1 pipelining is enabled. #4536 #4470
+- `414 Request-URI Too Long` is now correctly returned for a long URI in HTTP/1.1. #4478 #4532
+- Fixed to propagate the cause of a decoder failure of an HTTP/1 request to
+  <type://ServerErrorHandler.onProtocolViolation(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)> #4478 #4532
+- You can use <type://DocService> even when <type://Server#reconfigure(ServerConfigurator)> is called. #4491 #4513
+- Context leak stack trace is more readable now. #4517
+- 
+
+## 🏚️ Deprecations
+
+- N/A
+
+## ☢️ Breaking changes
+
+- `FieldInfo.childFieldInfo` has been removed to eliminate duplicate information on <type://StructInfo>. #4566
+- The headers set by <type://ClientBuilder> are stored in <type://ClientRequestContext#defaultRequestHeaders()>
+  which have the lowest priority and don't override the values in <type://RequestHeaders>. Previously the 
+  headers were stored in <type://ClientRequestContext#additionalRequestHeaders()> which override the values in
+  <type:/RequestHeaders> #4440 #4520
+
+## ⛓ Dependencies
+
+- Apache Curator 5.3.0 → 5.4.0
+- Brave 5.14.0 → 5.14.1
+- Dropwizard 2.1.1 → 2.1.4
+- Eureka 1.10.17 → 2.0.0
+- graphql-dgs-client 5.2.4 → 5.5.0
+- GraphQL Java 19.2 → 20.0
+- gRPC Java 1.49.1 → 1.51.1
+- Jackson 2.13.4 → 2.14.1
+- java-jwt 4.0.0 → 4.2.1
+- Jetty 9.4.48 → 9.4.50
+- Kafka client 3.3.0 → 3.3.1
+- Kotlin 1.7.20 → 1.7.22
+- Micrometer 1.9.4 → 1.10.2
+- Netty 4.1.82 → 4.1.86
+  - io_uring 0.0.15 → 0.0.16
+- Protobuf 3.21.1 → 3.21.7
+- Reactor 3.4.23 → 3.5.1
+- Reactor Kotlin 1.1.7 → 1.2.1
+- Sangria 3.3.0 → 3.4.1
+- Sangria slowlog 2.0.4 → 2.0.5
+- Scala 2.13.9 → 2.13.10
+- scala-collection-compat 2.8.1 → 2.9.0
+- ScalaPB 0.11.11 → 0.11.12
+- Tomcat 8.5.81 → 8.5.84, 9.0.65 → 9.0.70
+- ZooKeeper 3.6.3 → 3.7.1
+
+## 🙇 Thank you
+
+<ThankYou usernames={[
+  'Bue-von-hon',
+  'Dogacel',
+  'Jimexist',
+  'Lincong',
+  'Yuri999',
+  'chris-ryan-square',
+  'ikhoon',
+  'j-min5u',
+  'jrhee17',
+  'ks-yim',
+  'minwoox',
+  'tobias-',
+  'Trustin'
+]} />
