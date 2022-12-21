@@ -32,7 +32,7 @@ import retrofit2.HttpException;
 import retrofit2.http.GET;
 
 @SpringBootTest(classes = Main.class)
-public class CircuitBreakerTest {
+class CircuitBreakerTest {
 
     @Inject
     CircuitBreakerRegistry circuitBreakerRegistry;
@@ -41,7 +41,7 @@ public class CircuitBreakerTest {
     private Server server;
 
     @Inject
-    private SimpleMeterRegistry meterRegistry;
+    private SimpleMeterRegistry simpleMeterRegistry;
 
     @Test
     void circuitBreakerRegistry() {
@@ -126,7 +126,7 @@ public class CircuitBreakerTest {
                               "{kind=failed,my-tag=custom-tag,name=micrometer}";
         final String successful = "resilience4j.circuitbreaker.calls#count" +
                                   "{kind=successful,my-tag=custom-tag,name=micrometer}";
-        assertThat(MoreMeters.measureAll(meterRegistry))
+        assertThat(MoreMeters.measureAll(simpleMeterRegistry))
                 .containsAnyOf(entry(successful, 1.0), entry(failed, 2.0));
     }
 

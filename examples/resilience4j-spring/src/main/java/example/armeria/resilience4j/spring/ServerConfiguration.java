@@ -4,10 +4,12 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.metric.PrometheusMeterRegistries;
 import com.linecorp.armeria.spring.ArmeriaServerConfigurator;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
-import io.micrometer.prometheus.PrometheusConfig;
 import io.micrometer.prometheus.PrometheusMeterRegistry;
 
 @Configuration
@@ -27,7 +29,16 @@ public class ServerConfiguration {
     }
 
     @Bean
-    public PrometheusMeterRegistry meterRegistry() {
-        return new PrometheusMeterRegistry(PrometheusConfig.DEFAULT);
+    public PrometheusMeterRegistry prometheusMeterRegistry() {
+        return PrometheusMeterRegistries.newRegistry();
+    }
+
+    @Bean
+    public MeterRegistry meterRegistry(SimpleMeterRegistry simpleMeterRegistry,
+                                       PrometheusMeterRegistry prometheusMeterRegistry) {
+        final CompositeMeterRegistry meterRegistry = new CompositeMeterRegistry();
+        meterRegistry.add(simpleMeterRegistry);
+        meterRegistry.add(prometheusMeterRegistry);
+        return meterRegistry;
     }
 }

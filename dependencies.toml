@@ -88,6 +88,7 @@ reactive-streams = "1.0.4"
 reactor = "3.4.23"
 reactor-kotlin = "1.1.7"
 reflections = "0.9.11"
+resilience4j = "1.7.1"
 resteasy = "5.0.4.Final"
 resteasy-jboss-logging = "3.4.3.Final"
 resteasy-jboss-logging-annotations = "2.2.1.Final"
@@ -1123,16 +1124,18 @@ version.ref = "zookeeper-junit"
 
 [libraries.resilience4j-circuitbreaker]
 module = "io.github.resilience4j:resilience4j-circuitbreaker"
-version = "1.7.1"
-[libraries.resilience4j-springboot]
+version.ref = "resilience4j"
+
+# Only used for tests
+[libraries.resilience4j-springboot2]
 module = "io.github.resilience4j:resilience4j-spring-boot2"
-version = "1.7.1"
+version.ref = "resilience4j"
 [libraries.resilience4j-micrometer]
 module = "io.github.resilience4j:resilience4j-micrometer"
-version = "1.7.1"
+version.ref = "resilience4j"
 [libraries.resilience4j-retrofit]
 module = "io.github.resilience4j:resilience4j-retrofit"
-version = "1.7.1"
+version.ref = "resilience4j"
 
 [plugins]
 jmh = { id = "me.champeau.jmh", version.ref = "jmh-gradle-plugin" }
