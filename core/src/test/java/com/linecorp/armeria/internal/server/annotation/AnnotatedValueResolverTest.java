@@ -290,7 +290,6 @@ class AnnotatedValueResolverTest {
         if (resolver.annotationType() == Param.class) {
             if (shouldHttpParameterExist(resolver) ||
                 shouldPathVariableExist(resolver)) {
-                assertThat(resolver.httpElementName()).isNotNull();
                 if (resolver.elementType().isEnum()) {
                     testEnum(value, resolver.httpElementName());
                 } else if (resolver.shouldWrapValueAsOptional()) {

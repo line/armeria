@@ -26,6 +26,7 @@ import java.util.Base64.Encoder;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -43,6 +44,7 @@ import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -50,6 +52,7 @@ import com.linecorp.armeria.common.auth.AuthToken;
 import com.linecorp.armeria.common.auth.BasicToken;
 import com.linecorp.armeria.common.auth.OAuth1aToken;
 import com.linecorp.armeria.common.auth.OAuth2Token;
+import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
@@ -418,6 +421,25 @@ class AuthServiceTest {
                         "HTTP/1.1 500 Internal Server Error");
             }
         }
+    }
+
+    @Test
+    void shouldPeelRedundantAuthorizerExceptions() throws Exception {
+        final AtomicReference<Throwable> causeRef = new AtomicReference<>();
+        final AuthService service =
+                AuthService.builder()
+                           .add((ctx, data) -> {
+                               return UnmodifiableFuture.exceptionallyCompletedFuture(
+                                       new AnticipatedException());
+                           })
+                           .onFailure((delegate, ctx, req, cause) -> {
+                               causeRef.set(cause);
+                               return HttpResponse.of(HttpStatus.FORBIDDEN);
+                           }).build((ctx, req) -> HttpResponse.of("OK"));
+        final ServiceRequestContext ctx = ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
+        final HttpResponse response = service.serve(ctx, ctx.request());
+        assertThat(response.aggregate().join().status()).isEqualTo(HttpStatus.FORBIDDEN);
+        assertThat(causeRef.get()).isInstanceOf(AnticipatedException.class);
     }
 
     private static HttpRequestBase getRequest(String path, String authorization) {

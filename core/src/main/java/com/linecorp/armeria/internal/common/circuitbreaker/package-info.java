@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2022 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,14 +13,12 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.encoding;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.codec.compression.ZlibWrapper;
+/**
+ * CircuitBreaker related classes used internally.
+ * Anything in this package can be changed or removed at any time.
+ */
+@NonNullByDefault
+package com.linecorp.armeria.internal.common.circuitbreaker;
 
-class ZlibStreamDecoderTest extends AbstractStreamDecoderTest {
-    @Override
-    StreamDecoder newDecoder() {
-        return new ZlibStreamDecoder(ZlibWrapper.NONE, ByteBufAllocator.DEFAULT);
-    }
-}
+import com.linecorp.armeria.common.annotation.NonNullByDefault;

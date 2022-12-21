@@ -25,6 +25,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
 /**
  * An {@link RpcClient} decorator that handles failures of RPC remote invocation based on
@@ -59,7 +60,8 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
     newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         requireNonNull(mapping, "mapping");
         requireNonNull(ruleWithContent, "ruleWithContent");
-        return delegate -> new CircuitBreakerRpcClient(delegate, mapping, ruleWithContent);
+        return delegate -> new CircuitBreakerRpcClient(
+                delegate, CircuitBreakerClientHandler.of(mapping), ruleWithContent);
     }
 
     /**
@@ -123,26 +125,26 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
     /**
      * Creates a new instance that decorates the specified {@link RpcClient}.
      */
-    CircuitBreakerRpcClient(RpcClient delegate, CircuitBreakerMapping mapping,
+    CircuitBreakerRpcClient(RpcClient delegate, CircuitBreakerClientHandler<RpcRequest> handler,
                             CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
-        super(delegate, mapping, requireNonNull(ruleWithContent, "ruleWithContent"));
+        super(delegate, handler, requireNonNull(ruleWithContent, "ruleWithContent"));
     }
 
     @Override
-    protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req, CircuitBreaker circuitBreaker)
+    protected RpcResponse doExecute(ClientRequestContext ctx, RpcRequest req, CircuitBreakerCallback callback)
             throws Exception {
         final RpcResponse response;
         try {
             response = unwrap().execute(ctx, req);
         } catch (Throwable cause) {
-            reportSuccessOrFailure(circuitBreaker, ruleWithContent().shouldReportAsSuccess(
-                    ctx, null, cause));
+            reportSuccessOrFailure(
+                    callback, ruleWithContent().shouldReportAsSuccess(ctx, null, cause), ctx, cause);
             throw cause;
         }
 
         response.handle((unused1, cause) -> {
-            reportSuccessOrFailure(circuitBreaker,
-                                   ruleWithContent().shouldReportAsSuccess(ctx, response, cause));
+            reportSuccessOrFailure(
+                    callback, ruleWithContent().shouldReportAsSuccess(ctx, response, cause), ctx, cause);
             return null;
         });
         return response;

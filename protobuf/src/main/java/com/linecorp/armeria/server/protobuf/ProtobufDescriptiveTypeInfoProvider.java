@@ -21,9 +21,7 @@ import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunct
 import static com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunctionProvider.isProtobufMessage;
 import static java.util.Objects.requireNonNull;
 
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Descriptors.Descriptor;
@@ -35,15 +33,12 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
-import com.linecorp.armeria.server.docs.DescriptiveTypeSignature;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
-import com.linecorp.armeria.server.docs.FieldInfoBuilder;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
-import com.linecorp.armeria.server.docs.TypeSignatureType;
 
 /**
  * A {@link DescriptiveTypeInfoProvider} to create a {@link DescriptiveTypeInfo}
@@ -117,36 +112,20 @@ public final class ProtobufDescriptiveTypeInfoProvider implements DescriptiveTyp
     @UnstableApi
     public static StructInfo newStructInfo(Descriptor descriptor) {
         requireNonNull(descriptor, "descriptor");
-        final Set<Descriptor> visiting = new HashSet<>();
-        visiting.add(descriptor);
-        return new StructInfo(descriptor.getFullName(), newFieldInfos(descriptor, visiting));
+        return new StructInfo(descriptor.getFullName(), newFieldInfos(descriptor));
     }
 
-    private static List<FieldInfo> newFieldInfos(Descriptor descriptor, Set<Descriptor> visiting) {
+    private static List<FieldInfo> newFieldInfos(Descriptor descriptor) {
         return descriptor.getFields().stream()
-                         .map(fieldDescriptor -> newFieldInfo(fieldDescriptor, visiting))
+                         .map(fieldDescriptor -> {
+                             final TypeSignature typeSignature = newFieldTypeInfo(fieldDescriptor);
+                             return FieldInfo.builder(fieldDescriptor.getName(), typeSignature)
+                                             .requirement(
+                                                     fieldDescriptor.isRequired() ? FieldRequirement.REQUIRED
+                                                                                  : FieldRequirement.OPTIONAL)
+                                             .build();
+                         })
                          .collect(toImmutableList());
-    }
-
-    private static FieldInfo newFieldInfo(FieldDescriptor fieldDescriptor, Set<Descriptor> visiting) {
-        final TypeSignature typeSignature = newFieldTypeInfo(fieldDescriptor);
-        final FieldInfoBuilder builder;
-        if (typeSignature.type() == TypeSignatureType.STRUCT) {
-            final Object descriptor = ((DescriptiveTypeSignature) typeSignature).descriptor();
-            if (visiting.add((Descriptor) descriptor)) {
-                builder = FieldInfo.builder(fieldDescriptor.getName(), typeSignature,
-                                            newFieldInfos((Descriptor) descriptor, visiting));
-                visiting.remove(descriptor);
-            } else {
-                builder = FieldInfo.builder(fieldDescriptor.getName(), typeSignature);
-            }
-        } else {
-            builder = FieldInfo.builder(fieldDescriptor.getName(), typeSignature);
-        }
-
-        return builder.requirement(fieldDescriptor.isRequired() ? FieldRequirement.REQUIRED
-                                                                : FieldRequirement.OPTIONAL)
-                      .build();
     }
 
     @VisibleForTesting

@@ -19,35 +19,21 @@ package com.linecorp.armeria.client.circuitbreaker;
 /**
  * Builder class for building a {@link CircuitBreakerMapping} based on a combination of host, method and path.
  */
-public final class CircuitBreakerMappingBuilder {
-    private boolean perHost;
-    private boolean perMethod;
-    private boolean perPath;
+public final class CircuitBreakerMappingBuilder extends AbstractCircuitBreakerMappingBuilder {
 
-    CircuitBreakerMappingBuilder() {}
-
-    /**
-     * Adds host dimension to the mapping Key.
-     */
+    @Override
     public CircuitBreakerMappingBuilder perHost() {
-        perHost = true;
-        return this;
+        return (CircuitBreakerMappingBuilder) super.perHost();
     }
 
-    /**
-     * Adds method dimension to the mapping Key.
-     */
+    @Override
     public CircuitBreakerMappingBuilder perMethod() {
-        perMethod = true;
-        return this;
+        return (CircuitBreakerMappingBuilder) super.perMethod();
     }
 
-    /**
-     * Adds path dimension to the mapping Key.
-     */
+    @Override
     public CircuitBreakerMappingBuilder perPath() {
-        perPath = true;
-        return this;
+        return (CircuitBreakerMappingBuilder) super.perPath();
     }
 
     /**
@@ -55,9 +41,9 @@ public final class CircuitBreakerMappingBuilder {
      * and properties set so far.
      */
     public CircuitBreakerMapping build(CircuitBreakerFactory factory) {
-        if (!perHost && !perMethod && !perPath) {
+        if (!validateMappingKeys()) {
             throw new IllegalStateException("A CircuitBreakerMapping must be per host, method and/or path");
         }
-        return new KeyedCircuitBreakerMapping(perHost, perMethod, perPath, factory);
+        return new KeyedCircuitBreakerMapping(isPerHost(), isPerMethod(), isPerPath(), factory);
     }
 }

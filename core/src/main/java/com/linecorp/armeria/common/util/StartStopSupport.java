@@ -25,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.Executor;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -61,6 +62,8 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
      * This future is {@code V}-typed when STARTING/STARTED and {@link Void}-typed when STOPPING/STOPPED.
      */
     private UnmodifiableFuture<?> future = completedFuture(null);
+
+    private final ReentrantLock reentrantLock = new ReentrantLock();
 
     /**
      * Creates a new instance.
@@ -146,85 +149,88 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
         return start0(arg, rollbackArg, failIfStarted);
     }
 
-    private synchronized UnmodifiableFuture<V> start0(@Nullable T arg,
-                                                      @Nullable U rollbackArg,
-                                                      boolean failIfStarted) {
-        if (closeable.isClosing()) {
-            return exceptionallyCompletedFuture(new IllegalStateException("closed already"));
-        }
-
-        switch (state) {
-            case STARTING:
-            case STARTED:
-                if (failIfStarted) {
-                    return exceptionallyCompletedFuture(
-                            new IllegalStateException("must be stopped to start; currently " + state));
-                } else {
-                    @SuppressWarnings("unchecked")
-                    final UnmodifiableFuture<V> castFuture = (UnmodifiableFuture<V>) future;
-                    return castFuture;
-                }
-            case STOPPING:
-                // A user called start() to restart, but not stopped completely yet.
-                // Try again once stopped.
-                return UnmodifiableFuture.wrap(
-                        future.exceptionally(unused -> null)
-                              .thenComposeAsync(unused -> start(arg, failIfStarted), executor));
-        }
-
-        assert state == State.STOPPED : "state: " + state;
-        state = State.STARTING;
-
-        // Attempt to start.
-        final CompletableFuture<V> startFuture = new CompletableFuture<>();
-        boolean submitted = false;
+    private UnmodifiableFuture<V> start0(@Nullable T arg, @Nullable U rollbackArg, boolean failIfStarted) {
+        lock();
         try {
-            executor.execute(() -> {
-                try {
-                    notifyListeners(State.STARTING, arg, null, null);
-                    final CompletionStage<V> f = doStart(arg);
-                    checkState(f != null, "doStart() returned null.");
-
-                    f.handle((result, cause) -> {
-                        if (cause != null) {
-                            startFuture.completeExceptionally(cause);
-                        } else {
-                            startFuture.complete(result);
-                        }
-                        return null;
-                    });
-                } catch (Exception e) {
-                    startFuture.completeExceptionally(e);
-                }
-            });
-            submitted = true;
-        } catch (Exception e) {
-            return exceptionallyCompletedFuture(e);
-        } finally {
-            if (!submitted) {
-                state = State.STOPPED;
+            if (closeable.isClosing()) {
+                return exceptionallyCompletedFuture(new IllegalStateException("closed already"));
             }
-        }
 
-        final UnmodifiableFuture<V> future = UnmodifiableFuture.wrap(
-                startFuture.handleAsync((result, cause) -> {
-                    if (cause != null) {
-                        // Failed to start. Stop and complete with the start failure cause.
-                        final CompletableFuture<Void> rollbackFuture =
-                                stop(rollbackArg, true).exceptionally(stopCause -> {
-                                    rollbackFailed(Exceptions.peel(stopCause));
-                                    return null;
-                                });
-
-                        return rollbackFuture.<V>thenCompose(unused -> exceptionallyCompletedFuture(cause));
+            switch (state) {
+                case STARTING:
+                case STARTED:
+                    if (failIfStarted) {
+                        return exceptionallyCompletedFuture(
+                                new IllegalStateException("must be stopped to start; currently " + state));
                     } else {
-                        enter(State.STARTED, arg, null, result);
-                        return completedFuture(result);
+                        @SuppressWarnings("unchecked")
+                        final UnmodifiableFuture<V> castFuture = (UnmodifiableFuture<V>) future;
+                        return castFuture;
                     }
-                }, executor).thenCompose(Function.identity()));
+                case STOPPING:
+                    // A user called start() to restart, but not stopped completely yet.
+                    // Try again once stopped.
+                    return UnmodifiableFuture.wrap(
+                            future.exceptionally(unused -> null)
+                                  .thenComposeAsync(unused -> start(arg, failIfStarted), executor));
+            }
 
-        this.future = future;
-        return future;
+            assert state == State.STOPPED : "state: " + state;
+            state = State.STARTING;
+
+            // Attempt to start.
+            final CompletableFuture<V> startFuture = new CompletableFuture<>();
+            boolean submitted = false;
+            try {
+                executor.execute(() -> {
+                    try {
+                        notifyListeners(State.STARTING, arg, null, null);
+                        final CompletionStage<V> f = doStart(arg);
+                        checkState(f != null, "doStart() returned null.");
+
+                        f.handle((result, cause) -> {
+                            if (cause != null) {
+                                startFuture.completeExceptionally(cause);
+                            } else {
+                                startFuture.complete(result);
+                            }
+                            return null;
+                        });
+                    } catch (Exception e) {
+                        startFuture.completeExceptionally(e);
+                    }
+                });
+                submitted = true;
+            } catch (Exception e) {
+                return exceptionallyCompletedFuture(e);
+            } finally {
+                if (!submitted) {
+                    state = State.STOPPED;
+                }
+            }
+
+            final UnmodifiableFuture<V> future = UnmodifiableFuture.wrap(
+                    startFuture.handleAsync((result, cause) -> {
+                        if (cause != null) {
+                            // Failed to start. Stop and complete with the start failure cause.
+                            final CompletableFuture<Void> rollbackFuture =
+                                    stop(rollbackArg, true).exceptionally(stopCause -> {
+                                        rollbackFailed(Exceptions.peel(stopCause));
+                                        return null;
+                                    });
+
+                            return rollbackFuture.<V>thenCompose(unused -> exceptionallyCompletedFuture(cause));
+                        } else {
+                            enter(State.STARTED, arg, null, result);
+                            return completedFuture(result);
+                        }
+                    }, executor).thenCompose(Function.identity()));
+
+            this.future = future;
+            return future;
+        } finally {
+            unlock();
+        }
     }
 
     /**
@@ -250,64 +256,69 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
         return stop0(arg, rollback);
     }
 
-    private synchronized UnmodifiableFuture<Void> stop0(@Nullable U arg, boolean rollback) {
-        switch (state) {
-            case STARTING:
-                if (!rollback) {
-                    // Try again once started.
-                    return UnmodifiableFuture.wrap(
-                            future.exceptionally(unused -> null) // Ignore the exception.
-                                  .thenComposeAsync(unused -> stop(arg), executor));
-                } else {
-                    break;
-                }
-            case STOPPING:
-            case STOPPED:
-                @SuppressWarnings("unchecked")
-                final UnmodifiableFuture<Void> castFuture =
-                        (UnmodifiableFuture<Void>) future;
-                return castFuture;
-        }
-
-        assert state == State.STARTED || rollback : "state: " + state + ", rollback: " + rollback;
-        final State oldState = state;
-        state = State.STOPPING;
-
-        final CompletableFuture<Void> stopFuture = new CompletableFuture<>();
-        boolean submitted = false;
+    private UnmodifiableFuture<Void> stop0(@Nullable U arg, boolean rollback) {
+        lock();
         try {
-            executor.execute(() -> {
-                try {
-                    notifyListeners(State.STOPPING, null, arg, null);
-                    final CompletionStage<Void> f = doStop(arg);
-                    checkState(f != null, "doStop() returned null.");
-
-                    f.handle((unused, cause) -> {
-                        if (cause != null) {
-                            stopFuture.completeExceptionally(cause);
-                        } else {
-                            stopFuture.complete(null);
-                        }
-                        return null;
-                    });
-                } catch (Exception e) {
-                    stopFuture.completeExceptionally(e);
-                }
-            });
-            submitted = true;
-        } catch (Exception e) {
-            return exceptionallyCompletedFuture(e);
-        } finally {
-            if (!submitted) {
-                state = oldState;
+            switch (state) {
+                case STARTING:
+                    if (!rollback) {
+                        // Try again once started.
+                        return UnmodifiableFuture.wrap(
+                                future.exceptionally(unused -> null) // Ignore the exception.
+                                      .thenComposeAsync(unused -> stop(arg), executor));
+                    } else {
+                        break;
+                    }
+                case STOPPING:
+                case STOPPED:
+                    @SuppressWarnings("unchecked")
+                    final UnmodifiableFuture<Void> castFuture =
+                            (UnmodifiableFuture<Void>) future;
+                    return castFuture;
             }
-        }
 
-        final UnmodifiableFuture<Void> future = UnmodifiableFuture.wrap(
-                stopFuture.whenCompleteAsync((unused1, cause) -> enter(State.STOPPED, null, arg, null),
-                                             executor));
-        this.future = future;
-        return future;
+            assert state == State.STARTED || rollback : "state: " + state + ", rollback: " + rollback;
+            final State oldState = state;
+            state = State.STOPPING;
+
+            final CompletableFuture<Void> stopFuture = new CompletableFuture<>();
+            boolean submitted = false;
+            try {
+                executor.execute(() -> {
+                    try {
+                        notifyListeners(State.STOPPING, null, arg, null);
+                        final CompletionStage<Void> f = doStop(arg);
+                        checkState(f != null, "doStop() returned null.");
+
+                        f.handle((unused, cause) -> {
+                            if (cause != null) {
+                                stopFuture.completeExceptionally(cause);
+                            } else {
+                                stopFuture.complete(null);
+                            }
+                            return null;
+                        });
+                    } catch (Exception e) {
+                        stopFuture.completeExceptionally(e);
+                    }
+                });
+                submitted = true;
+            } catch (Exception e) {
+                return exceptionallyCompletedFuture(e);
+            } finally {
+                if (!submitted) {
+                    state = oldState;
+                }
+            }
+
+            final UnmodifiableFuture<Void> future = UnmodifiableFuture.wrap(
+                    stopFuture.whenCompleteAsync((unused1, cause) -> enter(State.STOPPED, null, arg, null),
+                                                 executor));
+            this.future = future;
+            return future;
+        } finally {
+            unlock();
+        }
     }
 
     @Override
@@ -355,9 +366,12 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
     }
 
     private void enter(State state, @Nullable T startArg, @Nullable U stopArg, @Nullable V startResult) {
-        synchronized (this) {
+        lock();
+        try {
             assert this.state != state : "transition to the same state: " + state;
             this.state = state;
+        } finally {
+            unlock();
         }
         notifyListeners(state, startArg, stopArg, startResult);
     }
@@ -476,5 +490,13 @@ public abstract class StartStopSupport<T, U, V, L> implements ListenableAsyncClo
     @Override
     public String toString() {
         return state.name();
+    }
+
+    private void lock() {
+        reentrantLock.lock();
+    }
+
+    private void unlock() {
+        reentrantLock.unlock();
     }
 }
