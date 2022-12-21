@@ -11,7 +11,7 @@ date: 2022-12-21
   
   @RequestTimeout(value = 1, unit = TimeUnit.SECONDS) // 👈👈👈
   class MyAnnotationService {
-    // A request gets timed out in 1 second.
+    // A request gets timed out after 1 second.
     @Get("/fast/api")
     public CompletableFuture<MyResponse> fastApi() {
       ...
