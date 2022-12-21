@@ -17,7 +17,7 @@ date: 2022-12-21
       ...
     }
 
-    // A request gets timed out in 5 second.
+    // A request gets timed out after 5 seconds.
     @RequestTimeout(value = 5, unit = TimeUnit.SECONDS) // 👈👈👈
     public CompletableFuture<MyResponse> slowApi() {
       ...
