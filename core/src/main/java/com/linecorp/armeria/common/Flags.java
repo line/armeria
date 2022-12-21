@@ -71,8 +71,8 @@ import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
 import com.linecorp.armeria.server.logging.LoggingService;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -379,7 +379,7 @@ public final class Flags {
     private static final Sampler<? super RequestContext> REQUEST_CONTEXT_LEAK_DETECTION_SAMPLER =
             getValue(FlagsProvider::requestContextLeakDetectionSampler, "requestContextLeakDetectionSampler");
 
-    private static final CompositeMeterRegistry METER_REGISTRY =
+    private static final MeterRegistry METER_REGISTRY =
             getValue(FlagsProvider::meterRegistry, "meterRegistry");
 
     /**
@@ -1317,12 +1317,12 @@ public final class Flags {
     }
 
     /**
-     * Returns the {@link CompositeMeterRegistry} where armeria records metrics to by default.
+     * Returns the {@link MeterRegistry} where armeria records metrics to by default.
      *
      * <p>The default value of this flag is {@link Metrics#globalRegistry}.
      */
     @UnstableApi
-    public static CompositeMeterRegistry meterRegistry() {
+    public static MeterRegistry meterRegistry() {
         return METER_REGISTRY;
     }
 

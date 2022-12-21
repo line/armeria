@@ -30,8 +30,8 @@ import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Metrics;
-import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 
 /**
  * Implementation of {@link FlagsProvider} which provides default values to {@link Flags}.
@@ -408,7 +408,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public CompositeMeterRegistry meterRegistry() {
+    public MeterRegistry meterRegistry() {
         return Metrics.globalRegistry;
     }
 }
