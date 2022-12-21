@@ -48,9 +48,6 @@ public abstract class AbstractLogFormatterBuilder<T> {
     @Nullable
     private BiFunction<? super RequestContext, Object, ? extends T> responseContentSanitizer;
 
-    @Nullable
-    private BiFunction<? super RequestContext, ? super Throwable, ? extends T> responseCauseSanitizer;
-
     /**
      * Sets the {@link BiFunction} to use to sanitize request headers before logging. It is common to have the
      * {@link BiFunction} that removes sensitive headers, like {@code Cookie}, before logging. If unset, will
@@ -212,26 +209,5 @@ public abstract class AbstractLogFormatterBuilder<T> {
         requestContentSanitizer(contentSanitizer);
         responseContentSanitizer(contentSanitizer);
         return this;
-    }
-
-    /**
-     * Sets the {@link BiFunction} to use to sanitize a response cause before logging. You can
-     * sanitize the stack trace of the exception to remove sensitive information, or prevent from logging
-     * the stack trace completely by returning {@code null} in the {@link BiFunction}. If unset, will not
-     * sanitize a response cause.
-     */
-    public AbstractLogFormatterBuilder<T> responseCauseSanitizer(
-            BiFunction<? super RequestContext, ? super Throwable, ? extends T> responseCauseSanitizer) {
-        this.responseCauseSanitizer = requireNonNull(responseCauseSanitizer, "responseCauseSanitizer");
-        return this;
-    }
-
-    /**
-     * Returns the {@link BiFunction} to use to sanitize response cause before logging.
-     */
-    @Nullable
-    protected final BiFunction<? super RequestContext, ? super Throwable, ? extends T>
-    responseCauseSanitizer() {
-        return responseCauseSanitizer;
     }
 }

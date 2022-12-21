@@ -162,18 +162,6 @@ public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNod
     }
 
     /**
-     * Sets the {@link BiFunction} to use to sanitize a response cause before logging. You can
-     * sanitize the stack trace of the exception to remove sensitive information, or prevent from logging
-     * the stack trace completely by returning {@code null} in the {@link BiFunction}. If unset, will not
-     * sanitize a response cause.
-     */
-    @Override
-    public JsonLogFormatterBuilder responseCauseSanitizer(
-            BiFunction<? super RequestContext, ? super Throwable, ? extends JsonNode> responseCauseSanitizer) {
-        return (JsonLogFormatterBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
-    }
-
-    /**
      * Returns a newly-created {@link JsonLogFormatter} based on the properties of this builder.
      */
     public JsonLogFormatter build() {
@@ -192,7 +180,6 @@ public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNod
                 responseTrailersSanitizer() != null ? responseTrailersSanitizer() : defaultHeadersSanitizer,
                 requestContentSanitizer() != null ? requestContentSanitizer() : defaultContentSanitizer,
                 responseContentSanitizer() != null ? responseContentSanitizer() : defaultContentSanitizer,
-                responseCauseSanitizer() != null ? responseCauseSanitizer() : defaultCauseSanitizer,
                 objectMapper);
     }
 }

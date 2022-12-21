@@ -48,16 +48,13 @@ public final class TextLogFormatter implements LogFormatter {
 
     private BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer;
 
-    private BiFunction<? super RequestContext, ? super Throwable, ? extends String> responseCauseSanitizer;
-
     TextLogFormatter(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestHeadersSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseHeadersSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestTrailersSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseTrailersSanitizer,
             BiFunction<? super RequestContext, Object, ? extends String> requestContentSanitizer,
-            BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer,
-            BiFunction<? super RequestContext, ? super Throwable, ? extends String> responseCauseSanitizer
+            BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer
     ) {
         this.requestHeadersSanitizer = requestHeadersSanitizer;
         this.responseHeadersSanitizer = responseHeadersSanitizer;
@@ -65,7 +62,6 @@ public final class TextLogFormatter implements LogFormatter {
         this.responseTrailersSanitizer = responseTrailersSanitizer;
         this.requestContentSanitizer = requestContentSanitizer;
         this.responseContentSanitizer = responseContentSanitizer;
-        this.responseCauseSanitizer = responseCauseSanitizer;
     }
 
     @Override

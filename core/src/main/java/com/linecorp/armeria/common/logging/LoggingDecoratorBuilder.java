@@ -490,14 +490,13 @@ public abstract class LoggingDecoratorBuilder {
         } else if (logFormatter != null) {
             return logFormatter;
         } else {
-            return LogFormatter.ofTextBuilder()
+            return LogFormatter.textBuilder()
                                .requestHeadersSanitizer(convertToStringSanitizer(requestHeadersSanitizer))
                                .responseHeadersSanitizer(convertToStringSanitizer(responseHeadersSanitizer))
                                .requestTrailersSanitizer(convertToStringSanitizer(requestTrailersSanitizer))
                                .responseTrailersSanitizer(convertToStringSanitizer(responseTrailersSanitizer))
                                .requestContentSanitizer(convertToStringSanitizer(requestContentSanitizer))
                                .responseContentSanitizer(convertToStringSanitizer(responseContentSanitizer))
-                               .responseCauseSanitizer(convertToStringSanitizer(responseCauseSanitizer))
                                .build();
         }
     }

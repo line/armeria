@@ -64,9 +64,6 @@ public final class JsonLogFormatter implements LogFormatter {
 
     private final BiFunction<? super RequestContext, Object, ? extends JsonNode> responseContentSanitizer;
 
-    private final BiFunction<? super RequestContext, ? super Throwable, ? extends JsonNode>
-            responseCauseSanitizer;
-
     JsonLogFormatter(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode> requestHeadersSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
@@ -77,7 +74,6 @@ public final class JsonLogFormatter implements LogFormatter {
                     responseTrailersSanitizer,
             BiFunction<? super RequestContext, Object, ? extends JsonNode> requestContentSanitizer,
             BiFunction<? super RequestContext, Object, ? extends JsonNode> responseContentSanitizer,
-            BiFunction<? super RequestContext, ? super Throwable, ? extends JsonNode> responseCauseSanitizer,
             ObjectMapper objectMapper
     ) {
         this.requestHeadersSanitizer = requestHeadersSanitizer;
@@ -86,7 +82,6 @@ public final class JsonLogFormatter implements LogFormatter {
         this.responseTrailersSanitizer = responseTrailersSanitizer;
         this.requestContentSanitizer = requestContentSanitizer;
         this.responseContentSanitizer = responseContentSanitizer;
-        this.responseCauseSanitizer = responseCauseSanitizer;
         this.objectMapper = requireNonNull(objectMapper, "objectMapper");
     }
 

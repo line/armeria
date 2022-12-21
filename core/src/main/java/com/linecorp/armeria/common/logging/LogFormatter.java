@@ -36,7 +36,7 @@ public interface LogFormatter {
     /**
      * Returns a newly created {@link TextLogFormatterBuilder}.
      */
-    static TextLogFormatterBuilder ofTextBuilder() {
+    static TextLogFormatterBuilder textBuilder() {
         return new TextLogFormatterBuilder();
     }
 
@@ -60,7 +60,7 @@ public interface LogFormatter {
     /**
      * Returns a newly created {@link JsonLogFormatterBuilder}.
      */
-    static JsonLogFormatterBuilder ofJsonBuilder() {
+    static JsonLogFormatterBuilder jsonBuilder() {
         return new JsonLogFormatterBuilder();
     }
 

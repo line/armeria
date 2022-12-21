@@ -457,40 +457,6 @@ class DefaultRequestLogTest {
     }
 
     @Test
-    void toStringRequestOnlyCache() {
-        final ServiceRequestContext sctx =
-                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-
-        log = new DefaultRequestLog(sctx);
-
-        final String a = log.toStringRequestOnly();
-        assertThat(log.toStringRequestOnly()).isSameAs(a); // The second call must be cached.
-
-        // Cache must be invalidated when request state changes.
-        log.endRequest();
-        final String b = log.toStringRequestOnly();
-        assertThat(b).isNotEqualTo(a);
-        assertThat(log.toStringRequestOnly()).isSameAs(b); // The second call must be cached.
-    }
-
-    @Test
-    void toStringResponseOnlyCache() {
-        final ServiceRequestContext sctx =
-                ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));
-
-        log = new DefaultRequestLog(sctx);
-
-        final String a = log.toStringResponseOnly();
-        assertThat(log.toStringResponseOnly()).isSameAs(a); // The second call must be cached.
-
-        // Cache must be invalidated when request state changes.
-        log.endResponse();
-        final String b = log.toStringResponseOnly();
-        assertThat(b).isNotEqualTo(a);
-        assertThat(log.toStringResponseOnly()).isSameAs(b); // The second call must be cached.
-    }
-
-    @Test
     void toStringWithoutChildren() {
         final ServiceRequestContext sctx =
                 ServiceRequestContext.of(HttpRequest.of(HttpMethod.GET, "/"));

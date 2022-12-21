@@ -32,8 +32,6 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
             defaultSanitizer();
     private static final BiFunction<RequestContext, Object, String> DEFAULT_CONTENT_SANITIZER =
             defaultSanitizer();
-    private static final BiFunction<RequestContext, Throwable, String> DEFAULT_CAUSE_SANITIZER =
-            defaultSanitizer();
 
     private static <T, U> BiFunction<T, U, String> defaultSanitizer() {
         return (first, second) -> second.toString();
@@ -150,18 +148,6 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
     }
 
     /**
-     * Sets the {@link BiFunction} to use to sanitize a response cause before logging. You can
-     * sanitize the stack trace of the exception to remove sensitive information, or prevent from logging
-     * the stack trace completely by returning {@code null} in the {@link BiFunction}. If unset, will not
-     * sanitize a response cause.
-     */
-    @Override
-    public TextLogFormatterBuilder responseCauseSanitizer(
-            BiFunction<? super RequestContext, ? super Throwable, ? extends String> responseCauseSanitizer) {
-        return (TextLogFormatterBuilder) super.responseCauseSanitizer(responseCauseSanitizer);
-    }
-
-    /**
      * Returns a newly-created {@link TextLogFormatter} based on the properties of this builder.
      */
     public TextLogFormatter build() {
@@ -171,7 +157,6 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
                 requestTrailersSanitizer() != null ? requestTrailersSanitizer() : DEFAULT_HEADERS_SANITIZER,
                 responseTrailersSanitizer() != null ? responseTrailersSanitizer() : DEFAULT_HEADERS_SANITIZER,
                 requestContentSanitizer() != null ? requestContentSanitizer() : DEFAULT_CONTENT_SANITIZER,
-                responseContentSanitizer() != null ? responseContentSanitizer() : DEFAULT_CONTENT_SANITIZER,
-                responseCauseSanitizer() != null ? responseCauseSanitizer() : DEFAULT_CAUSE_SANITIZER);
+                responseContentSanitizer() != null ? responseContentSanitizer() : DEFAULT_CONTENT_SANITIZER);
     }
 }

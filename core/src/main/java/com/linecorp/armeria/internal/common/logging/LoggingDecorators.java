@@ -36,7 +36,6 @@ import com.linecorp.armeria.server.TransientServiceOption;
 public final class LoggingDecorators {
     private static final String REQUEST_FORMAT = "{} Request: {}";
     private static final String RESPONSE_FORMAT = "{} Response: {}";
-    private static final String RESPONSE_FORMAT2 = "{} Response: {}, cause: {}";
 
     /**
      * Logs request and response using the specified {@code requestLogger} and {@code responseLogger}.
@@ -121,7 +120,7 @@ public final class LoggingDecorators {
                 if (responseCauseFilter.test(responseCause)) {
                     responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr);
                 } else {
-                    responseLogLevel.log(logger, RESPONSE_FORMAT2, ctx, responseStr, responseCause);
+                    responseLogLevel.log(logger, RESPONSE_FORMAT, ctx, responseStr, responseCause);
                 }
             }
         }
