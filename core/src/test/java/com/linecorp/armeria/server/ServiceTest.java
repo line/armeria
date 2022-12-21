@@ -24,6 +24,7 @@ import org.junit.jupiter.api.Test;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.CommonPools;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -55,14 +56,14 @@ public class ServiceTest {
         assertThat(outer.as(String.class)).isNull();
 
         // Test if FooService.serviceAdded() is invoked.
-        final ServiceConfig cfg = new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(),
-                                                    outer, /* defaultLogName */ null,
-                                                    /* defaultServiceName */ null,
-                                                    ServiceNaming.of("FooService"), 1, 1, true,
-                                                    AccessLogWriter.disabled(),
-                                                    CommonPools.blockingTaskExecutor(),
-                                                    SuccessFunction.always(),
-                                                    Files.newTemporaryFolder().toPath(), ImmutableList.of());
+        final ServiceConfig cfg =
+                new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(),
+                                  outer, /* defaultLogName */ null, /* defaultServiceName */ null,
+                                  ServiceNaming.of("FooService"), 1, 1, true,
+                                  AccessLogWriter.disabled(),
+                                  CommonPools.blockingTaskExecutor(),
+                                  SuccessFunction.always(),
+                                  Files.newTemporaryFolder().toPath(), ImmutableList.of(), HttpHeaders.of());
         outer.serviceAdded(cfg);
         assertThat(inner.cfg).isSameAs(cfg);
     }
