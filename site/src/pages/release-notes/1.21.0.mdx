@@ -48,8 +48,9 @@ date: 2022-12-21
     .path("/foo")
     .setHeader(CUSTOM_HEADER, "service-default-header")
   ```
-- You can now set <type://Endpoint#host()> and `:authority` or `Host` header
-  differently using <type://ClientBuilder#setHeader(CharSequence,Object)>. #4440 #4520
+- You can now set `:authority` or `Host` header whose value is different from <type://Endpoint#host()> using
+  <type://ClientBuilder#setHeader(CharSequence,Object)>. #4440 #4520
+  - This will be useful when you want to send a request through a proxy server.
   ```java 
   WebClient
     // A request is sent to 'reverse-proxy.example.com'.
@@ -60,14 +61,15 @@ date: 2022-12-21
   ```
 - <type://CircuitBreakerClient> can now be used with arbitrary <type://CircuitBreaker> implementations. #4426
 - Added <type://Bytes> that represents binary data. #4505
-- You can now see the description of services in the overview of <type://DocService>. #4480 #4537
+- You can now see the description of services in the overview section of <type://DocService>. #4480 #4537
 - You can now override an authority of a gRPC client using `CallOptions`. #4445 #4520
 
 ## 📈 Improvements
 
 - <type://DecodingClient> and <type://DecodingService> can now limit the maximum length of decompressed
   data. #4469 #4564
-- Replace `synchronized` blocks with <type://ReentrantLock> to make virtual thread friendly. #4551 #4549
+- `synchronized` blocks have been replaced with <type://ReentrantLock> for better virtual thread 
+  compatibility. #4551 #4549
 - <type://ServiceSpecification> for <type://DocService> are lazily loaded so as not to block a <type://Server>
   from starting. #4491
 
@@ -80,17 +82,17 @@ date: 2022-12-21
   - Previously, the <type://HttpHeaders> set via <type://ClientBuilder> were stored in
     <type://ClientRequestContext#additionalRequestHeaders()> which may override the values in
     <type://RequestHeaders> #4440 #4520
-- Fixed a regression that `void` methods returns `200 OK` instead of `204 NoContent` if <type://@Produces> 
+- Fixed a regression where `void` methods returns `200 OK` instead of `204 NoContent` if a <type://@Produces> 
   annotation is added. #4575
 - Deleted uncompressed <type://DocService> assets that were added unintentionally. #4500 #4568
 - An exception raised in <type://Authorizer> is now properly peeled using
   <type://Exceptions#peel(Throwable)>. #4567
-- You can now use the exception, which is raised in the decorator, to make a decision for retrying. #4559
+- You can now use the exception raised in a decorator to make a decision for retrying. #4558 #4559
 - <type://EndpointGroup> is now correctly copied to a newly derived client. #4556
 - <type://RequestContextExportingAppender> can now be used with logback `SocketAppender`. #4546 #4547
-- Reversed HTTP/1.1 responses are now correctly ordered even when HTTP/1.1 pipelining is enabled. #4536 #4470
+- Reversed HTTP/1.1 responses are now correctly ordered when HTTP/1.1 pipelining is enabled. #4536 #4470
 - `414 Request-URI Too Long` is now correctly returned for a long URI in HTTP/1.1. #4478 #4532
-- Fixed to propagate the cause of a decoder failure of an HTTP/1 request to
+- Fixed to propagate the cause of a decoder failure of an HTTP/1.1 request to
   <type://ServerErrorHandler#onProtocolViolation(ServiceConfig,RequestHeaders,HttpStatus,String,Throwable)> #4478 #4532
 - You can use <type://DocService> even when <type://Server#reconfigure(ServerConfigurator)> is called. #4491 #4513
 - Context leak stack trace is more readable now. #4517
