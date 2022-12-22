@@ -70,24 +70,23 @@ date: 2022-12-21
   data. #4469 #4564
 - `synchronized` blocks have been replaced with <type://ReentrantLock> for better virtual thread 
   compatibility. #4551 #4549
-- <type://ServiceSpecification> for <type://DocService> are lazily loaded so as not to block a <type://Server>
+- <type://ServiceSpecification> for <type://DocService> is lazily loaded so as to not block a <type://Server>
   from starting. #4491
 
 ## 🛠️ Bug fixes
 
-- <type://HttpHeaders> set by <type://ClientBuilder#setHeader(CharSequence,Object)>,
-  <type://ClientBuilder#setHeader(CharSequence,Object)> and their variants are now stored in
-  <type://ClientRequestContext#defaultRequestHeaders()> which have the lowest priority and don't override the
+- <type://HttpHeaders> set by <type://ClientBuilder#setHeader(CharSequence,Object)> is now stored in
+  <type://ClientRequestContext#defaultRequestHeaders()> which has the lowest priority and doesn't override
   values in <type://RequestHeaders>.
   - Previously, the <type://HttpHeaders> set via <type://ClientBuilder> were stored in
     <type://ClientRequestContext#additionalRequestHeaders()> which overrode the values in
     <type://RequestHeaders> #4440 #4520
-- Fixed a regression where `void` methods returns `200 OK` instead of `204 NoContent` if a <type://@Produces> 
+- Fixed a regression where `void` methods return `200 OK` instead of `204 NoContent` if a <type://@Produces>
   annotation is added. #4575
 - Deleted uncompressed <type://DocService> assets that were added unintentionally. #4500 #4568
 - An exception raised in <type://Authorizer> is now properly peeled using
   <type://Exceptions#peel(Throwable)>. #4567
-- Exceptions raised in decorators can now be used to determine whether to retry in <type://RetryingClient>. #4558 #4559
+- Exceptions raised in decorators can now be used to determine whether to retry by <type://RetryingClient>. #4558 #4559
 - <type://EndpointGroup> is now correctly copied to a newly derived client. #4556
 - <type://RequestContextExportingAppender> can now be used with logback `SocketAppender`. #4546 #4547
 - Reversed HTTP/1.1 responses are now correctly ordered when HTTP/1.1 pipelining is enabled. #4536 #4470
