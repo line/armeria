@@ -235,10 +235,10 @@ allprojects {
     }
 }
 
-// Require to use JDK 17 when releasing.
+// Require to use JDK 19 when releasing.
 tasks.closeAndReleaseStagingRepository.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_17) {
-        throw new IllegalStateException("You must release using JDK 17.");
+    if (JavaVersion.current() != JavaVersion.VERSION_19) {
+        throw new IllegalStateException("You must release using JDK 19.");
     }
 }
 
