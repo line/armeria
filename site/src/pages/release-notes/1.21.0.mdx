@@ -87,7 +87,7 @@ date: 2022-12-21
 - Deleted uncompressed <type://DocService> assets that were added unintentionally. #4500 #4568
 - An exception raised in <type://Authorizer> is now properly peeled using
   <type://Exceptions#peel(Throwable)>. #4567
-- You can now use the exception raised in a decorator to make a decision for retrying. #4558 #4559
+- Exceptions raised in decorators can now be used to determine whether to retry in <type://RetryingClient>. #4558 #4559
 - <type://EndpointGroup> is now correctly copied to a newly derived client. #4556
 - <type://RequestContextExportingAppender> can now be used with logback `SocketAppender`. #4546 #4547
 - Reversed HTTP/1.1 responses are now correctly ordered when HTTP/1.1 pipelining is enabled. #4536 #4470
