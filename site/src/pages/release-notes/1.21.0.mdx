@@ -80,7 +80,7 @@ date: 2022-12-21
   <type://ClientRequestContext#defaultRequestHeaders()> which have the lowest priority and don't override the
   values in <type://RequestHeaders>.
   - Previously, the <type://HttpHeaders> set via <type://ClientBuilder> were stored in
-    <type://ClientRequestContext#additionalRequestHeaders()> which may override the values in
+    <type://ClientRequestContext#additionalRequestHeaders()> which overrode the values in
     <type://RequestHeaders> #4440 #4520
 - Fixed a regression where `void` methods returns `200 OK` instead of `204 NoContent` if a <type://@Produces> 
   annotation is added. #4575
