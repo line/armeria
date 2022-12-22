@@ -29,21 +29,58 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 
 /**
  * A {@link CircuitBreakerClientHandler} implementation for use with Resilience4j's {@link CircuitBreaker}.
+ *
+ * <pre>{@code
+ * // simple example
+ * CircuitBreakerRule rule = CircuitBreakerRule.onException();
+ * WebClient.builder()
+ *          .decorator(CircuitBreakerClient.newDecorator(Resilience4JCircuitBreakerClientHandler.of(),
+ *                                                       rule))
+ *          ...
+ *
+ *
+ * // using a custom ClientCircuitBreakerGenerator
+ * CircuitBreaker circuitBreaker = CircuitBreaker.ofDefaults("cb");
+ * CircuitBreakerRule rule = CircuitBreakerRule.onException();
+ * CircuitBreakerClientHandler<HttpRequest> handler = Resilience4JCircuitBreakerClientHandler.of(
+ * Resilience4jCircuitBreakerMapping.builder()
+ *                                  .perHost()
+ *                                  .registry(CircuitBreakerRegistry.custom()
+ *                                                                  ...
+ *                                                                  .build())
+ *                                  .build()
+);
+WebClient.builder()
+.decorator(CircuitBreakerClient.newDecorator(handler, rule));
+ * }</pre>
  */
 public final class Resilience4JCircuitBreakerClientHandler implements CircuitBreakerClientHandler<HttpRequest> {
 
     private static final Logger logger =
             LoggerFactory.getLogger(Resilience4JCircuitBreakerClientHandler.class);
 
+    /**
+     * Creates a default {@link CircuitBreakerClientHandler} which uses
+     * {@link Resilience4jCircuitBreakerMapping#ofDefault()} to handle requests.
+     */
     public static CircuitBreakerClientHandler<HttpRequest> of() {
         return new Resilience4JCircuitBreakerClientHandler(Resilience4jCircuitBreakerMapping.ofDefault());
     }
 
+    /**
+     * Creates a default {@link CircuitBreakerClientHandler} which uses
+     * the provided {@link CircuitBreaker} to handle requests.
+     */
     public static CircuitBreakerClientHandler<HttpRequest> of(CircuitBreaker circuitBreaker) {
         return of((ctx, req) -> circuitBreaker);
     }
 
-    public static CircuitBreakerClientHandler<HttpRequest> of(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
+    /**
+     * Creates a {@link CircuitBreakerClientHandler} which uses the provided
+     * {@link ClientCircuitBreakerGenerator} to handle requests.
+     */
+    public static CircuitBreakerClientHandler<HttpRequest> of(
+            ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
         return new Resilience4JCircuitBreakerClientHandler(mapping);
     }
 
