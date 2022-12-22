@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 /**
- * A formatter that convert {@link RequestLog} into json format message.
+ * A formatter that converts {@link RequestLog} into json format message.
  */
 @UnstableApi
 public final class JsonLogFormatter implements LogFormatter {

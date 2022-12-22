@@ -16,9 +16,9 @@
 
 package com.linecorp.armeria.client.logging;
 
-import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.log;
-import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logRequest;
-import static com.linecorp.armeria.internal.common.logging.LoggingDecorators.logResponse;
+import static com.linecorp.armeria.internal.common.logging.LoggingUtils.log;
+import static com.linecorp.armeria.internal.common.logging.LoggingUtils.logRequest;
+import static com.linecorp.armeria.internal.common.logging.LoggingUtils.logResponse;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.Consumer;
@@ -61,7 +61,7 @@ abstract class AbstractLoggingClient<I extends Request, O extends Response>
 
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
-     * {@link LogLevel}s with the specified sanitizers.
+     * {@link LogLevel}s with the specified {@link LogFormatter}.
      */
     AbstractLoggingClient(
             Client<I, O> delegate,

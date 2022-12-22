@@ -394,7 +394,7 @@ class LoggingServiceTest {
         verify(logger, times(1)).isWarnEnabled();
 
         // verify request logs
-        for (int i = 0;i < 2;i++) {
+        for (int i = 0; i < 2; i++) {
             verify(logger).info(eq("{} Request: {}"), eq(ctx),
                                 argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
         }
@@ -445,7 +445,7 @@ class LoggingServiceTest {
         verify(logger, times(1)).isWarnEnabled();
 
         // verify request logs
-        for (int i = 0;i < 2;i++) {
+        for (int i = 0; i < 2; i++) {
             verify(logger).info(eq("{} Request: {}"), eq(ctx),
                                 argThat((String text) -> !(text.contains("trustin") || text.contains("com"))));
         }

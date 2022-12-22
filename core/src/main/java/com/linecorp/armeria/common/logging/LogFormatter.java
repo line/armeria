@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A formatter that convert {@link RequestLog} into {@link String log message}.
+ * A formatter that converts {@link RequestLog} into {@link String log message}.
  */
 @UnstableApi
 public interface LogFormatter {

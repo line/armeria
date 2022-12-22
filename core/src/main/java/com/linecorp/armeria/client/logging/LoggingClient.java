@@ -57,7 +57,7 @@ public final class LoggingClient extends AbstractLoggingClient<HttpRequest, Http
 
     /**
      * Creates a new instance that logs {@link Request}s and {@link Response}s at the specified
-     * {@link LogLevel}s with the specified sanitizers.
+     * {@link LogLevel}s with the {@link LogFormatter}.
      * If the logger is null, it means that the default logger is used.
      */
     LoggingClient(

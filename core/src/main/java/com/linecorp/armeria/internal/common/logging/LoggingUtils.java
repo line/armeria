@@ -33,7 +33,7 @@ import com.linecorp.armeria.server.TransientServiceOption;
 /**
  * Utilities for logging decorators.
  */
-public final class LoggingDecorators {
+public final class LoggingUtils {
     private static final String REQUEST_FORMAT = "{} Request: {}";
     private static final String RESPONSE_FORMAT = "{} Response: {}";
 
@@ -126,7 +126,7 @@ public final class LoggingDecorators {
         }
     }
 
-    private LoggingDecorators() {}
+    private LoggingUtils() {}
 
     private static void logException(Logger logger, RequestContext ctx,
                                      String requestOrResponse, Throwable cause) {
