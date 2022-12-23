@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.resilience4j.circuitbreaker;
 
+import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -83,9 +84,12 @@ class Resilience4jCircuitBreakerMappingTest {
 
         final Map<String, String> tags
                 = HashMap.of("a", "b");
-        final Resilience4jCircuitBreakerMapping mapping1 = Resilience4jCircuitBreakerMapping
-                .builder().factory((reg, name) -> reg.circuitBreaker(name, tags)).perHost().build();
-        final CircuitBreaker cb = mapping1.get(ctx, request);
+        final Resilience4jCircuitBreakerMapping mapping = Resilience4jCircuitBreakerMapping
+                .builder()
+                .factory((reg, host, method, path) -> reg.circuitBreaker(requireNonNull(host), tags))
+                .perHost()
+                .build();
+        final CircuitBreaker cb = mapping.get(ctx, request);
         assertThat(cb.getTags()).containsExactly(Map.entry("a", "b"));
     }
 }

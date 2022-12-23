@@ -22,7 +22,6 @@ import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreaker
 import static java.util.stream.Collectors.joining;
 
 import java.util.Objects;
-import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import com.google.common.base.MoreObjects;
@@ -35,20 +34,26 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 
 final class KeyedResilience4jCircuitBreakerMapping implements Resilience4jCircuitBreakerMapping {
 
+    static final Resilience4jCircuitBreakerFactory FACTORY = (registry, host, method, path) -> {
+        final String key = Stream.of(host, method, path)
+                                 .filter(Objects::nonNull)
+                                 .collect(joining("#"));
+        return registry.circuitBreaker(key);
+    };
+
     static final KeyedResilience4jCircuitBreakerMapping hostMapping =
             new KeyedResilience4jCircuitBreakerMapping(true, false, false,
-                                                       CircuitBreakerRegistry.ofDefaults(),
-                                                       CircuitBreakerRegistry::circuitBreaker);
+                                                       CircuitBreakerRegistry.ofDefaults(), FACTORY);
 
     private final boolean isPerHost;
     private final boolean isPerMethod;
     private final boolean isPerPath;
     private final CircuitBreakerRegistry registry;
-    private final BiFunction<CircuitBreakerRegistry, String, CircuitBreaker> factory;
+    private final Resilience4jCircuitBreakerFactory factory;
 
     KeyedResilience4jCircuitBreakerMapping(
             boolean perHost, boolean perMethod, boolean perPath, CircuitBreakerRegistry registry,
-            BiFunction<CircuitBreakerRegistry, String, CircuitBreaker> factory) {
+            Resilience4jCircuitBreakerFactory factory) {
         isPerHost = perHost;
         isPerMethod = perMethod;
         isPerPath = perPath;
@@ -61,10 +66,7 @@ final class KeyedResilience4jCircuitBreakerMapping implements Resilience4jCircui
         final String host = isPerHost ? host(ctx) : null;
         final String method = isPerMethod ? method(ctx) : null;
         final String path = isPerPath ? path(ctx) : null;
-        final String key = Stream.of(host, method, path)
-                                 .filter(Objects::nonNull)
-                                 .collect(joining("#"));
-        return factory.apply(registry, key);
+        return factory.apply(registry, host, method, path);
     }
 
     @Override

@@ -59,12 +59,13 @@ class CircuitBreakerTest {
     @Test
     void testWebClient() {
         final Resilience4jCircuitBreakerMapping mapping =
-                Resilience4jCircuitBreakerMapping.builder()
-                                                 .perHost()
-                                                 .perPath()
-                                                 .registry(circuitBreakerRegistry)
-                                                 .factory((reg, key) -> reg.circuitBreaker(key, "defaultA"))
-                                                 .build();
+                Resilience4jCircuitBreakerMapping
+                        .builder()
+                        .perHost().perPath()
+                        .registry(circuitBreakerRegistry)
+                        .factory((reg, host, method, path) -> reg.circuitBreaker(host + '#' + path,
+                                                                                 "defaultA"))
+                        .build();
 
         final WebClient client = WebClient.builder("http://localhost:" + server.activeLocalPort())
                 .decorator(CircuitBreakerClient.builder(CircuitBreakerRule.onStatus(HttpStatus.INTERNAL_SERVER_ERROR))
