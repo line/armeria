@@ -254,6 +254,7 @@ public final class RequestScopedMdc {
         }
 
         ReentrantLock reentrantLock = new ReentrantLock();
+        reentrantLock.lock();
         try {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             final Object2ObjectMap<String, String> newMap;

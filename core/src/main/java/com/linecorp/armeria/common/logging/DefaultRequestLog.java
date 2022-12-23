@@ -99,7 +99,6 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
      */
     private volatile int deferredFlags;
 
-    @GuardedBy("reentrantLock")
     private final List<RequestLogFuture> pendingFutures = new ArrayList<>(4);
 
     private final ReentrantLock reentrantLock = new ReentrantLock();
