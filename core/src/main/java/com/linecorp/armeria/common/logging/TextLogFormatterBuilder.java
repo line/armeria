@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A builder implementation for {@link TextLogFormatter}.
  */
 @UnstableApi
-final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<String> {
+public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<String> {
 
     private static final BiFunction<RequestContext, HttpHeaders, String> DEFAULT_HEADERS_SANITIZER =
             defaultSanitizer();
