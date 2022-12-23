@@ -1134,9 +1134,6 @@ version.ref = "resilience4j"
 [libraries.resilience4j-micrometer]
 module = "io.github.resilience4j:resilience4j-micrometer"
 version.ref = "resilience4j"
-[libraries.resilience4j-retrofit]
-module = "io.github.resilience4j:resilience4j-retrofit"
-version.ref = "resilience4j"
 
 [plugins]
 jmh = { id = "me.champeau.jmh", version.ref = "jmh-gradle-plugin" }
