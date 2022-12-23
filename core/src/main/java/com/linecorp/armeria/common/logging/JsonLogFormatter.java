@@ -18,8 +18,6 @@ package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
-import java.io.IOException;
-import java.io.StringWriter;
 import java.util.Set;
 import java.util.function.BiFunction;
 
@@ -37,14 +35,14 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 /**
- * A formatter that converts {@link RequestLog} into json format message.
+ * A formatter that converts a {@link RequestLog} into a JSON format message.
  */
 @UnstableApi
-public final class JsonLogFormatter implements LogFormatter {
-
-    static final JsonLogFormatter DEFAULT_INSTANCE = new JsonLogFormatterBuilder().build();
+final class JsonLogFormatter implements LogFormatter {
 
     private static final Logger logger = LoggerFactory.getLogger(JsonLogFormatter.class);
+
+    static final JsonLogFormatter DEFAULT_INSTANCE = new JsonLogFormatterBuilder().build();
 
     private final ObjectMapper objectMapper;
 
@@ -54,7 +52,7 @@ public final class JsonLogFormatter implements LogFormatter {
     private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
             responseHeadersSanitizer;
 
-    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
+    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
             requestTrailersSanitizer;
 
     private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
@@ -82,12 +80,12 @@ public final class JsonLogFormatter implements LogFormatter {
         this.responseTrailersSanitizer = responseTrailersSanitizer;
         this.requestContentSanitizer = requestContentSanitizer;
         this.responseContentSanitizer = responseContentSanitizer;
-        this.objectMapper = requireNonNull(objectMapper, "objectMapper");
+        this.objectMapper = objectMapper;
     }
 
     @Override
     public String formatRequest(RequestLog log) {
-        requireNonNull(log, "log,");
+        requireNonNull(log, "log");
 
         final Set<RequestLogProperty> availableProperties = log.availableProperties();
         if (!availableProperties.contains(RequestLogProperty.REQUEST_START_TIME)) {
@@ -124,65 +122,65 @@ public final class JsonLogFormatter implements LogFormatter {
             sanitizedTrailers = null;
         }
 
+        final ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("startTime",
+                       TextFormatter.epochMicros(log.requestStartTimeMicros()).toString());
+
+        if (availableProperties.contains(RequestLogProperty.REQUEST_LENGTH)) {
+            objectNode.put("length", TextFormatter.size(log.requestLength()).toString());
+        }
+
+        if (availableProperties.contains(RequestLogProperty.REQUEST_END_TIME)) {
+            objectNode.put("duration",
+                           TextFormatter.elapsed(log.requestDurationNanos()).toString());
+        }
+
+        if (requestCauseString != null) {
+            objectNode.put("cause", requestCauseString);
+        }
+
+        if (availableProperties.contains(RequestLogProperty.SCHEME)) {
+            objectNode.put("scheme", log.scheme().uriText());
+        } else if (availableProperties.contains(RequestLogProperty.SESSION)) {
+            objectNode.put("scheme",
+                           SerializationFormat.UNKNOWN.uriText() + '+' +
+                           log.sessionProtocol());
+        } else {
+            objectNode.put("scheme",
+                           SerializationFormat.UNKNOWN.uriText() + "+unknown");
+        }
+
+        if (availableProperties.contains(RequestLogProperty.NAME)) {
+            objectNode.put("name", log.name());
+        }
+
+        if (sanitizedHeaders != null) {
+            objectNode.set("headers", sanitizedHeaders);
+        }
+
+        if (sanitizedContent != null) {
+            objectNode.set("content", sanitizedContent);
+        } else if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
+                   log.requestContentPreview() != null) {
+            final JsonNode sanitizedContentPreview = requestContentSanitizer.apply(
+                    ctx, log.requestContentPreview());
+            objectNode.set("contentPreview", sanitizedContentPreview);
+        }
+
+        if (sanitizedTrailers != null) {
+            objectNode.set("trailers", sanitizedTrailers);
+        }
         try {
-            final StringWriter writer = new StringWriter(512);
-            final ObjectNode objectNode = objectMapper.createObjectNode();
-            objectNode.put("startTime",
-                           TextFormatter.epochMicros(log.requestStartTimeMicros()).toString());
-
-            if (availableProperties.contains(RequestLogProperty.REQUEST_LENGTH)) {
-                objectNode.put("length", TextFormatter.size(log.requestLength()).toString());
-            }
-
-            if (availableProperties.contains(RequestLogProperty.REQUEST_END_TIME)) {
-                objectNode.put("duration",
-                               TextFormatter.elapsed(log.requestDurationNanos()).toString());
-            }
-
-            if (requestCauseString != null) {
-                objectNode.put("cause", requestCauseString);
-            }
-
-            if (availableProperties.contains(RequestLogProperty.SCHEME)) {
-                objectNode.put("scheme", log.scheme().uriText());
-            } else if (availableProperties.contains(RequestLogProperty.SESSION)) {
-                objectNode.put("scheme",
-                               SerializationFormat.UNKNOWN.uriText() + '+' +
-                               log.sessionProtocol());
-            } else {
-                objectNode.put("scheme",
-                               SerializationFormat.UNKNOWN.uriText() + "+unknown");
-            }
-
-            if (availableProperties.contains(RequestLogProperty.NAME)) {
-                objectNode.put("name", log.name());
-            }
-
-            if (sanitizedHeaders != null) {
-                objectNode.set("headers", sanitizedHeaders);
-            }
-
-            if (sanitizedContent != null) {
-                objectNode.set("content", sanitizedContent);
-            } else if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
-                       log.requestContentPreview() != null) {
-                objectNode.put("contentPreview", log.requestContentPreview());
-            }
-
-            if (sanitizedTrailers != null) {
-                objectNode.set("trailers", sanitizedTrailers);
-            }
-            objectMapper.writeValue(writer, objectNode);
-            return writer.toString();
-        } catch (IOException e) {
-            logger.warn("Unexpected exception while formatting a request log", e);
+            return objectMapper.writeValueAsString(objectNode);
+        } catch (Exception e) {
+            logger.warn("Unexpected exception while formatting a request log: {}", log, e);
             return "";
         }
     }
 
     @Override
     public String formatResponse(RequestLog log) {
-        requireNonNull(log, "log,");
+        requireNonNull(log, "log");
 
         final Set<RequestLogProperty> availableProperties = log.availableProperties();
         if (!availableProperties.contains(RequestLogProperty.RESPONSE_START_TIME)) {
@@ -220,49 +218,49 @@ public final class JsonLogFormatter implements LogFormatter {
             sanitizedTrailers = null;
         }
 
+        final ObjectNode objectNode = objectMapper.createObjectNode();
+        objectNode.put("startTime",
+                       TextFormatter.epochMicros(log.responseStartTimeMicros()).toString());
+
+        if (availableProperties.contains(RequestLogProperty.RESPONSE_LENGTH)) {
+            objectNode.put("length", TextFormatter.size(log.responseLength()).toString());
+        }
+
+        if (availableProperties.contains(RequestLogProperty.RESPONSE_END_TIME)) {
+            objectNode.put("duration", TextFormatter.elapsed(log.responseDurationNanos()).toString());
+            objectNode.put("totalDuration",
+                           TextFormatter.elapsed(log.totalDurationNanos()).toString());
+        }
+
+        if (responseCauseString != null) {
+            objectNode.put("cause", responseCauseString);
+        }
+
+        if (sanitizedHeaders != null) {
+            objectNode.set("headers", sanitizedHeaders);
+        }
+
+        if (sanitizedContent != null) {
+            objectNode.set("content", sanitizedContent);
+        } else if (log.responseContentPreview() != null) {
+            final JsonNode sanitizedContentPreview = responseContentSanitizer.apply(
+                    ctx, log.responseContentPreview());
+            objectNode.set("contentPreview", sanitizedContentPreview);
+        }
+
+        if (sanitizedTrailers != null) {
+            objectNode.set("trailers", sanitizedTrailers);
+        }
+
+        final int numChildren = log.children() != null ? log.children().size() : 0;
+        if (numChildren > 1) {
+            // Append only when there were retries which the numChildren is greater than 1.
+            objectNode.put("totalAttempts", String.valueOf(numChildren));
+        }
         try {
-            final StringWriter writer = new StringWriter(512);
-            final ObjectNode objectNode = objectMapper.createObjectNode();
-            objectNode.put("startTime",
-                           TextFormatter.epochMicros(log.responseStartTimeMicros()).toString());
-
-            if (availableProperties.contains(RequestLogProperty.RESPONSE_LENGTH)) {
-                objectNode.put("length", TextFormatter.size(log.responseLength()).toString());
-            }
-
-            if (availableProperties.contains(RequestLogProperty.RESPONSE_END_TIME)) {
-                objectNode.put("duration", TextFormatter.elapsed(log.responseDurationNanos()).toString());
-                objectNode.put("totalDuration",
-                               TextFormatter.elapsed(log.totalDurationNanos()).toString());
-            }
-
-            if (responseCauseString != null) {
-                objectNode.put("cause", responseCauseString);
-            }
-
-            if (sanitizedHeaders != null) {
-                objectNode.set("headers", sanitizedHeaders);
-            }
-
-            if (sanitizedContent != null) {
-                objectNode.set("content", sanitizedContent);
-            } else if (log.responseContentPreview() != null) {
-                objectNode.put("contentPreview", log.responseContentPreview());
-            }
-
-            if (sanitizedTrailers != null) {
-                objectNode.set("trailers", sanitizedTrailers);
-            }
-
-            final int numChildren = log.children() != null ? log.children().size() : 0;
-            if (numChildren > 1) {
-                // Append only when there were retries which the numChildren is greater than 1.
-                objectNode.put("totalAttempts", String.valueOf(numChildren));
-            }
-            objectMapper.writeValue(writer, objectNode);
-            return writer.toString();
-        } catch (IOException e) {
-            logger.warn("Unexpected exception while formatting a response log", e);
+            return objectMapper.writeValueAsString(objectNode);
+        } catch (Exception e) {
+            logger.warn("Unexpected exception while formatting a request log: {}", log, e);
             return "";
         }
     }

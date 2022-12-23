@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * A builder implementation for {@link TextLogFormatter}.
  */
 @UnstableApi
-public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<String> {
+final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<String> {
 
     private static final BiFunction<RequestContext, HttpHeaders, String> DEFAULT_HEADERS_SANITIZER =
             defaultSanitizer();
@@ -39,22 +39,12 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
 
     TextLogFormatterBuilder() {}
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize request headers before logging. It is common to have the
-     * {@link BiFunction} that removes sensitive headers, like {@code Cookie}, before logging. If unset, will
-     * not sanitize request headers.
-     */
     @Override
     public TextLogFormatterBuilder requestHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestHeadersSanitizer) {
         return (TextLogFormatterBuilder) super.requestHeadersSanitizer(requestHeadersSanitizer);
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize response headers before logging. It is common to have the
-     * {@link BiFunction} that removes sensitive headers, like {@code Set-Cookie}, before logging. If unset,
-     * will not sanitize response headers.
-     */
     @Override
     public TextLogFormatterBuilder responseHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
@@ -62,10 +52,6 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
         return (TextLogFormatterBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize request trailers before logging. If unset,
-     * will not sanitize request trailers.
-     */
     @Override
     public TextLogFormatterBuilder requestTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
@@ -73,10 +59,6 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
         return (TextLogFormatterBuilder) super.requestTrailersSanitizer(requestTrailersSanitizer);
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize response trailers before logging. If unset,
-     * will not sanitize response trailers.
-     */
     @Override
     public TextLogFormatterBuilder responseTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
@@ -84,63 +66,24 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
         return (TextLogFormatterBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize request, response and trailers before logging.
-     * It is common to have the {@link BiFunction} that removes sensitive headers, like {@code "Cookie"} and
-     * {@code "Set-Cookie"}, before logging. This method is a shortcut for:
-     * <pre>{@code
-     * builder.requestHeadersSanitizer(headersSanitizer);
-     * builder.requestTrailersSanitizer(headersSanitizer);
-     * builder.responseHeadersSanitizer(headersSanitizer);
-     * builder.responseTrailersSanitizer(headersSanitizer);
-     * }</pre>
-     *
-     * @see #requestHeadersSanitizer(BiFunction)
-     * @see #requestTrailersSanitizer(BiFunction)
-     * @see #responseHeadersSanitizer(BiFunction)
-     * @see #responseTrailersSanitizer(BiFunction)
-     */
     @Override
     public TextLogFormatterBuilder headersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> headersSanitizer) {
         return (TextLogFormatterBuilder) super.headersSanitizer(headersSanitizer);
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize request content before logging. It is common to have the
-     * {@link BiFunction} that removes sensitive content, such as an GPS location query, before logging.
-     * If unset, will not sanitize request content.
-     */
     @Override
     public TextLogFormatterBuilder requestContentSanitizer(
             BiFunction<? super RequestContext, Object, ? extends String> requestContentSanitizer) {
         return (TextLogFormatterBuilder) super.requestContentSanitizer(requestContentSanitizer);
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize response content before logging. It is common to have the
-     * {@link BiFunction} that removes sensitive content, such as an address, before logging. If unset,
-     * will not sanitize response content.
-     */
     @Override
     public TextLogFormatterBuilder responseContentSanitizer(
             BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer) {
         return (TextLogFormatterBuilder) super.responseContentSanitizer(responseContentSanitizer);
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize request and response content before logging. It is common
-     * to have the {@link BiFunction} that removes sensitive content, such as an GPS location query and
-     * an address, before logging. If unset, will not sanitize content.
-     * This method is a shortcut for:
-     * <pre>{@code
-     * builder.requestContentSanitizer(contentSanitizer);
-     * builder.responseContentSanitizer(contentSanitizer);
-     * }</pre>
-     *
-     * @see #requestContentSanitizer(BiFunction)
-     * @see #responseContentSanitizer(BiFunction)
-     */
     @Override
     public TextLogFormatterBuilder contentSanitizer(
             BiFunction<? super RequestContext, Object, ? extends String> contentSanitizer) {

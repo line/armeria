@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 import java.util.Set;
 import java.util.function.BiFunction;
 
+import com.fasterxml.jackson.databind.JsonNode;
+
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -32,7 +34,7 @@ import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
  * A formatter that converts {@link RequestLog} into text message.
  */
 @UnstableApi
-public final class TextLogFormatter implements LogFormatter {
+final class TextLogFormatter implements LogFormatter {
 
     static final TextLogFormatter DEFAULT_INSTANCE = new TextLogFormatterBuilder().build();
 
@@ -147,7 +149,9 @@ public final class TextLogFormatter implements LogFormatter {
                 buf.append(", content=").append(sanitizedContent);
             } else if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
                        log.requestContentPreview() != null) {
-                buf.append(", contentPreview=").append(log.requestContentPreview());
+                final String sanitizedContentPreview = requestContentSanitizer.apply(
+                        ctx, log.requestContentPreview());
+                buf.append(", contentPreview=").append(sanitizedContentPreview);
             }
 
             if (sanitizedTrailers != null) {
@@ -228,7 +232,9 @@ public final class TextLogFormatter implements LogFormatter {
                 buf.append(", content=").append(sanitizedContent);
             } else if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT_PREVIEW) &&
                        log.responseContentPreview() != null) {
-                buf.append(", contentPreview=").append(log.responseContentPreview());
+                final String sanitizedContentPreview = responseContentSanitizer.apply(
+                        ctx, log.responseContentPreview());
+                buf.append(", contentPreview=").append(sanitizedContentPreview);
             }
 
             if (sanitizedTrailers != null) {
@@ -247,6 +253,4 @@ public final class TextLogFormatter implements LogFormatter {
             return buf.toString();
         }
     }
-
-    private TextLogFormatter() {}
 }

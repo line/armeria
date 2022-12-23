@@ -27,7 +27,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 public interface LogFormatter {
 
     /**
-     * Returns {@link TextLogFormatter}.
+     * Returns the default text {@link LogFormatter}.
      */
     static LogFormatter ofText() {
         return TextLogFormatter.DEFAULT_INSTANCE;
@@ -41,7 +41,8 @@ public interface LogFormatter {
     }
 
     /**
-     * Returns {@link JsonLogFormatter} that convert {@link RequestLog} into json format log message.
+     * Returns the default JSON {@link LogFormatter} that converts a {@link RequestLog}
+     * into a JSON format message.
      */
     static LogFormatter ofJson() {
         return JsonLogFormatter.DEFAULT_INSTANCE;
@@ -65,7 +66,7 @@ public interface LogFormatter {
     }
 
     /**
-     * Returns the formatted request log message that is constructed by {@link RequestLog}.
+     * Returns the formatted request log message of the {@link RequestLog}.
      */
     String formatRequest(RequestLog log);
 

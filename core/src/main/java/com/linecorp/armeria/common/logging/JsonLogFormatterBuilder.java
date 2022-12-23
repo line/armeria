@@ -30,14 +30,10 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
- * A builder implementation for {@link TextLogFormatter}.
+ * A builder implementation for {@link JsonLogFormatter}.
  */
 @UnstableApi
-public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNode> {
-
-    private static <T, U> BiFunction<T, U, JsonNode> defaultSanitizer(ObjectMapper objectMapper) {
-        return (first, second) -> objectMapper.valueToTree(second);
-    }
+public final class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNode> {
 
     @Nullable
     private ObjectMapper objectMapper;
@@ -45,18 +41,13 @@ public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNod
     JsonLogFormatterBuilder() {}
 
     /**
-     * Sets the {@link ObjectMapper} that will be used to convert into a json format message.
+     * Sets the {@link ObjectMapper} that will be used to convert an object into a JSON format message.
      */
     public JsonLogFormatterBuilder objectMapper(ObjectMapper objectMapper) {
         this.objectMapper = requireNonNull(objectMapper, "objectMapper");
         return this;
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize request headers before logging. It is common to have the
-     * {@link BiFunction} that removes sensitive headers, like {@code Cookie}, before logging. If unset, will
-     * not sanitize request headers.
-     */
     @Override
     public JsonLogFormatterBuilder requestHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
@@ -64,11 +55,6 @@ public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNod
         return (JsonLogFormatterBuilder) super.requestHeadersSanitizer(requestHeadersSanitizer);
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize response headers before logging. It is common to have the
-     * {@link BiFunction} that removes sensitive headers, like {@code Set-Cookie}, before logging. If unset,
-     * will not sanitize response headers.
-     */
     @Override
     public JsonLogFormatterBuilder responseHeadersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
@@ -76,10 +62,6 @@ public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNod
         return (JsonLogFormatterBuilder) super.responseHeadersSanitizer(responseHeadersSanitizer);
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize request trailers before logging. If unset,
-     * will not sanitize request trailers.
-     */
     @Override
     public JsonLogFormatterBuilder requestTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
@@ -87,10 +69,6 @@ public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNod
         return (JsonLogFormatterBuilder) super.requestTrailersSanitizer(requestTrailersSanitizer);
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize response trailers before logging. If unset,
-     * will not sanitize response trailers.
-     */
     @Override
     public JsonLogFormatterBuilder responseTrailersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
@@ -98,63 +76,24 @@ public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNod
         return (JsonLogFormatterBuilder) super.responseTrailersSanitizer(responseTrailersSanitizer);
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize request, response and trailers before logging.
-     * It is common to have the {@link BiFunction} that removes sensitive headers, like {@code "Cookie"} and
-     * {@code "Set-Cookie"}, before logging. This method is a shortcut for:
-     * <pre>{@code
-     * builder.requestHeadersSanitizer(headersSanitizer);
-     * builder.requestTrailersSanitizer(headersSanitizer);
-     * builder.responseHeadersSanitizer(headersSanitizer);
-     * builder.responseTrailersSanitizer(headersSanitizer);
-     * }</pre>
-     *
-     * @see #requestHeadersSanitizer(BiFunction)
-     * @see #requestTrailersSanitizer(BiFunction)
-     * @see #responseHeadersSanitizer(BiFunction)
-     * @see #responseTrailersSanitizer(BiFunction)
-     */
     @Override
     public JsonLogFormatterBuilder headersSanitizer(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode> headersSanitizer) {
         return (JsonLogFormatterBuilder) super.headersSanitizer(headersSanitizer);
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize request content before logging. It is common to have the
-     * {@link BiFunction} that removes sensitive content, such as an GPS location query, before logging.
-     * If unset, will not sanitize request content.
-     */
     @Override
     public JsonLogFormatterBuilder requestContentSanitizer(
             BiFunction<? super RequestContext, Object, ? extends JsonNode> requestContentSanitizer) {
         return (JsonLogFormatterBuilder) super.requestContentSanitizer(requestContentSanitizer);
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize response content before logging. It is common to have the
-     * {@link BiFunction} that removes sensitive content, such as an address, before logging. If unset,
-     * will not sanitize response content.
-     */
     @Override
     public JsonLogFormatterBuilder responseContentSanitizer(
             BiFunction<? super RequestContext, Object, ? extends JsonNode> responseContentSanitizer) {
         return (JsonLogFormatterBuilder) super.responseContentSanitizer(responseContentSanitizer);
     }
 
-    /**
-     * Sets the {@link BiFunction} to use to sanitize request and response content before logging. It is common
-     * to have the {@link BiFunction} that removes sensitive content, such as an GPS location query and
-     * an address, before logging. If unset, will not sanitize content.
-     * This method is a shortcut for:
-     * <pre>{@code
-     * builder.requestContentSanitizer(contentSanitizer);
-     * builder.responseContentSanitizer(contentSanitizer);
-     * }</pre>
-     *
-     * @see #requestContentSanitizer(BiFunction)
-     * @see #responseContentSanitizer(BiFunction)
-     */
     @Override
     public JsonLogFormatterBuilder contentSanitizer(
             BiFunction<? super RequestContext, Object, ? extends JsonNode> contentSanitizer) {
@@ -171,8 +110,6 @@ public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNod
                 defaultSanitizer(objectMapper);
         final BiFunction<RequestContext, Object, JsonNode> defaultContentSanitizer =
                 defaultSanitizer(objectMapper);
-        final BiFunction<RequestContext, Throwable, JsonNode> defaultCauseSanitizer =
-                defaultSanitizer(objectMapper);
         return new JsonLogFormatter(
                 requestHeadersSanitizer() != null ? requestHeadersSanitizer() : defaultHeadersSanitizer,
                 responseHeadersSanitizer() != null ? responseHeadersSanitizer() : defaultHeadersSanitizer,
@@ -181,5 +118,9 @@ public class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<JsonNod
                 requestContentSanitizer() != null ? requestContentSanitizer() : defaultContentSanitizer,
                 responseContentSanitizer() != null ? responseContentSanitizer() : defaultContentSanitizer,
                 objectMapper);
+    }
+
+    private static <T, U> BiFunction<T, U, JsonNode> defaultSanitizer(ObjectMapper objectMapper) {
+        return (first, second) -> objectMapper.valueToTree(second);
     }
 }

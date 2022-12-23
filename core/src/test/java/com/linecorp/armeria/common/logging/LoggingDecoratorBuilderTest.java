@@ -295,16 +295,6 @@ class LoggingDecoratorBuilderTest {
     }
 
     @Test
-    void logFormatter() {
-        assertThatThrownBy(() -> builder.logFormatter(null))
-                .isInstanceOf(NullPointerException.class);
-
-        final LogFormatter logFormatter = LogFormatter.ofText();
-        builder.logFormatter(logFormatter);
-        assertThat(builder.logFormatter()).isEqualTo(logFormatter);
-    }
-
-    @Test
     void buildLogFormatter() {
         final LogFormatter logFormatter = LogFormatter.ofJson();
         builder.logFormatter(logFormatter);

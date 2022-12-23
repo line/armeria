@@ -63,8 +63,7 @@ public abstract class AbstractLogFormatterBuilder<T> {
      * Returns the {@link BiFunction} to use to sanitize request headers before logging.
      */
     @Nullable
-    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T>
-    requestHeadersSanitizer() {
+    final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> requestHeadersSanitizer() {
         return requestHeadersSanitizer;
     }
 
@@ -83,8 +82,7 @@ public abstract class AbstractLogFormatterBuilder<T> {
      * Returns the {@link BiFunction} to use to sanitize response headers before logging.
      */
     @Nullable
-    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T>
-    responseHeadersSanitizer() {
+    final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> responseHeadersSanitizer() {
         return responseHeadersSanitizer;
     }
 
@@ -102,8 +100,7 @@ public abstract class AbstractLogFormatterBuilder<T> {
      * Returns the {@link BiFunction} to use to sanitize request trailers before logging.
      */
     @Nullable
-    protected final BiFunction<? super RequestContext, ? super HttpHeaders,
-            ? extends T> requestTrailersSanitizer() {
+    final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> requestTrailersSanitizer() {
         return requestTrailersSanitizer;
     }
 
@@ -121,8 +118,7 @@ public abstract class AbstractLogFormatterBuilder<T> {
      * Returns the {@link Function} to use to sanitize response trailers before logging.
      */
     @Nullable
-    protected final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T>
-    responseTrailersSanitizer() {
+    final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> responseTrailersSanitizer() {
         return responseTrailersSanitizer;
     }
 
@@ -167,7 +163,7 @@ public abstract class AbstractLogFormatterBuilder<T> {
      * Returns the {@link BiFunction} to use to sanitize request content before logging.
      */
     @Nullable
-    protected final BiFunction<? super RequestContext, Object, ? extends T> requestContentSanitizer() {
+    final BiFunction<? super RequestContext, Object, ? extends T> requestContentSanitizer() {
         return requestContentSanitizer;
     }
 
@@ -186,7 +182,7 @@ public abstract class AbstractLogFormatterBuilder<T> {
      * Returns the {@link BiFunction} to use to sanitize response content before logging.
      */
     @Nullable
-    protected final BiFunction<? super RequestContext, Object, ? extends T> responseContentSanitizer() {
+    final BiFunction<? super RequestContext, Object, ? extends T> responseContentSanitizer() {
         return responseContentSanitizer;
     }
 
