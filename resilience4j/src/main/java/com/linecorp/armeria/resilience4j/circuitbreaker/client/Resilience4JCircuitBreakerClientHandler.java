@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.resilience4j.circuitbreaker;
+package com.linecorp.armeria.resilience4j.circuitbreaker.client;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

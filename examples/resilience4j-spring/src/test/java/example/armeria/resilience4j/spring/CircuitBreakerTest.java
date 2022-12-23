@@ -19,8 +19,8 @@ import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.client.retrofit2.ArmeriaRetrofit;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.resilience4j.circuitbreaker.Resilience4JCircuitBreakerClientHandler;
-import com.linecorp.armeria.resilience4j.circuitbreaker.Resilience4jCircuitBreakerMapping;
+import com.linecorp.armeria.resilience4j.circuitbreaker.client.Resilience4JCircuitBreakerClientHandler;
+import com.linecorp.armeria.resilience4j.circuitbreaker.client.Resilience4jCircuitBreakerMapping;
 import com.linecorp.armeria.server.Server;
 
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
@@ -67,8 +67,9 @@ class CircuitBreakerTest {
                                                                                  "defaultA"))
                         .build();
 
+        final CircuitBreakerRule rule = CircuitBreakerRule.onStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         final WebClient client = WebClient.builder("http://localhost:" + server.activeLocalPort())
-                .decorator(CircuitBreakerClient.builder(CircuitBreakerRule.onStatus(HttpStatus.INTERNAL_SERVER_ERROR))
+                                          .decorator(CircuitBreakerClient.builder(rule)
                                                .handler(Resilience4JCircuitBreakerClientHandler.of(mapping))
                                                .newDecorator())
                                           .build();

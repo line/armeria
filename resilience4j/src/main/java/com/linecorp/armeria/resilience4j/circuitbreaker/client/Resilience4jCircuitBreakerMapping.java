@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.resilience4j.circuitbreaker;
+package com.linecorp.armeria.resilience4j.circuitbreaker.client;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.circuitbreaker.ClientCircuitBreakerGenerator;

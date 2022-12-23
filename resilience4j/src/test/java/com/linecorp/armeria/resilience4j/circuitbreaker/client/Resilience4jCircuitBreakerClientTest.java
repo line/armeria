@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.resilience4j.circuitbreaker;
+package com.linecorp.armeria.resilience4j.circuitbreaker.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;

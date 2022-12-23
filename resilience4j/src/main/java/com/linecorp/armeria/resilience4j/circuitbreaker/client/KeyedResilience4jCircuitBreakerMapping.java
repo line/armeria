@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.resilience4j.circuitbreaker;
+package com.linecorp.armeria.resilience4j.circuitbreaker.client;
 
 import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerMappingUtil.host;
 import static com.linecorp.armeria.internal.common.circuitbreaker.CircuitBreakerMappingUtil.method;
@@ -28,6 +28,7 @@ import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.resilience4j.circuitbreaker.Resilience4jCircuitBreakerFactory;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
