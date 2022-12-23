@@ -147,6 +147,10 @@ final class HandlerRegistry {
         return !annotationDecorators.isEmpty() || !additionalDecorators.isEmpty();
     }
 
+    boolean needToUseBlockingTaskExecutor(ServerMethodDefinition<?, ?> methodDef) {
+        return needToUseBlockingMethodDefs.contains(methodDef);
+    }
+
     Map<ServerMethodDefinition<?, ?>, HttpService> applyDecorators(
             HttpService delegate, DependencyInjector dependencyInjector) {
         final Map<ServerMethodDefinition<?, ?>, HttpService> decorated = new HashMap<>();
@@ -168,10 +172,6 @@ final class HandlerRegistry {
         }
 
         return ImmutableMap.copyOf(decorated);
-    }
-
-    boolean needToUseBlockingTaskExecutor(ServerMethodDefinition<?, ?> methodDef) {
-        return needToUseBlockingMethodDefs.contains(methodDef);
     }
 
     private static HttpService applyDecorators(
