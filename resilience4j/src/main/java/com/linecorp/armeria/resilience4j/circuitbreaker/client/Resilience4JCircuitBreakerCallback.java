@@ -26,7 +26,7 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 
-class Resilience4JCircuitBreakerCallback implements CircuitBreakerCallback {
+final class Resilience4JCircuitBreakerCallback implements CircuitBreakerCallback {
 
     private final CircuitBreaker circuitBreaker;
     private final long startTimestamp;

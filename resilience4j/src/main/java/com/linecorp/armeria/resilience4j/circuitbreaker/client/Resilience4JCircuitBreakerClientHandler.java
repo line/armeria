@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.resilience4j.circuitbreaker.client;
 
+import static java.util.Objects.requireNonNull;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,15 +45,15 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
  * CircuitBreaker circuitBreaker = CircuitBreaker.ofDefaults("cb");
  * CircuitBreakerRule rule = CircuitBreakerRule.onException();
  * CircuitBreakerClientHandler<HttpRequest> handler = Resilience4JCircuitBreakerClientHandler.of(
- * Resilience4jCircuitBreakerMapping.builder()
- *                                  .perHost()
- *                                  .registry(CircuitBreakerRegistry.custom()
- *                                                                  ...
- *                                                                  .build())
- *                                  .build()
-);
-WebClient.builder()
-.decorator(CircuitBreakerClient.newDecorator(handler, rule));
+ *     Resilience4jCircuitBreakerMapping.builder()
+ *                                      .perHost()
+ *                                      .registry(CircuitBreakerRegistry.custom()
+ *                                                                      ...
+ *                                                                      .build())
+ *                                      .build());
+ * WebClient.builder()
+ *          .decorator(CircuitBreakerClient.newDecorator(handler, rule))
+ *          ...
  * }</pre>
  */
 public final class Resilience4JCircuitBreakerClientHandler implements CircuitBreakerClientHandler<HttpRequest> {
@@ -94,7 +96,7 @@ public final class Resilience4JCircuitBreakerClientHandler implements CircuitBre
     public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, HttpRequest req) {
         final CircuitBreaker circuitBreaker;
         try {
-            circuitBreaker = mapping.get(ctx, req);
+            circuitBreaker = requireNonNull(mapping.get(ctx, req), "circuitBreaker");;
         } catch (Throwable t) {
             logger.warn("Failed to get a circuit breaker from mapping", t);
             return null;

@@ -19,7 +19,6 @@ package com.linecorp.armeria.resilience4j.circuitbreaker.client;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.client.circuitbreaker.AbstractCircuitBreakerMappingBuilder;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.resilience4j.circuitbreaker.Resilience4jCircuitBreakerFactory;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -31,9 +30,8 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
  */
 public final class Resilience4jCircuitBreakerMappingBuilder extends AbstractCircuitBreakerMappingBuilder {
 
-    @Nullable
     private CircuitBreakerRegistry registry = CircuitBreakerRegistry.ofDefaults();
-    private Resilience4jCircuitBreakerFactory factory = KeyedResilience4jCircuitBreakerMapping.FACTORY;
+    private Resilience4jCircuitBreakerFactory factory = Resilience4jCircuitBreakerFactory.of();
 
     @Override
     public Resilience4jCircuitBreakerMappingBuilder perHost() {
@@ -90,8 +88,6 @@ public final class Resilience4jCircuitBreakerMappingBuilder extends AbstractCirc
             throw new IllegalStateException(
                     "A Resilience4jCircuitBreakerMapping must be per host, method and/or path");
         }
-        final CircuitBreakerRegistry registry = this.registry != null ? this.registry
-                                                                      : CircuitBreakerRegistry.ofDefaults();
         return new KeyedResilience4jCircuitBreakerMapping(isPerHost(), isPerMethod(), isPerPath(),
                                                           registry, factory);
     }

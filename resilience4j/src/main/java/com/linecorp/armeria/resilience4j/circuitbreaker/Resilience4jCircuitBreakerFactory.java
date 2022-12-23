@@ -16,8 +16,12 @@
 
 package com.linecorp.armeria.resilience4j.circuitbreaker;
 
+import static java.util.stream.Collectors.joining;
+
+import java.util.Objects;
+import java.util.stream.Stream;
+
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.resilience4j.circuitbreaker.client.Resilience4JCircuitBreakerClientHandler;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -27,8 +31,11 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
  * A functional interface that represents a mapper factory, mapping a combination of host, method and path
  * to a {@link CircuitBreaker} using a {@link CircuitBreakerRegistry}.
  */
-@UnstableApi
 public interface Resilience4jCircuitBreakerFactory {
+
+    static Resilience4jCircuitBreakerFactory of() {
+        return Resilience4jCircuitBreakerUtils.FACTORY;
+    }
 
     /**
      * Given a combination of registry, host, method and path, creates a {@link CircuitBreaker}.

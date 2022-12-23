@@ -32,7 +32,7 @@ public interface Resilience4jCircuitBreakerMapping extends ClientCircuitBreakerG
      * Returns the default {@link Resilience4jCircuitBreakerMapping}.
      */
     static Resilience4jCircuitBreakerMapping ofDefault() {
-        return KeyedResilience4jCircuitBreakerMapping.hostMapping;
+        return KeyedResilience4jCircuitBreakerMapping.MAPPING;
     }
 
     /**
