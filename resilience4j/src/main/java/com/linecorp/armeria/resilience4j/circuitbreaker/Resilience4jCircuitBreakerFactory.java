@@ -16,11 +16,6 @@
 
 package com.linecorp.armeria.resilience4j.circuitbreaker;
 
-import static java.util.stream.Collectors.joining;
-
-import java.util.Objects;
-import java.util.stream.Stream;
-
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.resilience4j.circuitbreaker.client.Resilience4JCircuitBreakerClientHandler;
 
@@ -33,6 +28,9 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
  */
 public interface Resilience4jCircuitBreakerFactory {
 
+    /**
+     * Returns the default {@link Resilience4jCircuitBreakerFactory}.
+     */
     static Resilience4jCircuitBreakerFactory of() {
         return Resilience4jCircuitBreakerUtils.FACTORY;
     }

@@ -96,7 +96,7 @@ public final class Resilience4JCircuitBreakerClientHandler implements CircuitBre
     public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, HttpRequest req) {
         final CircuitBreaker circuitBreaker;
         try {
-            circuitBreaker = requireNonNull(mapping.get(ctx, req), "circuitBreaker");;
+            circuitBreaker = requireNonNull(mapping.get(ctx, req), "circuitBreaker");
         } catch (Throwable t) {
             logger.warn("Failed to get a circuit breaker from mapping", t);
             return null;
