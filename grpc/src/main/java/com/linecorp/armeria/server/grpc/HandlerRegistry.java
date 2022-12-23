@@ -57,6 +57,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.function.Function;
 
 import com.google.common.annotations.VisibleForTesting;
@@ -64,13 +65,16 @@ import com.google.common.base.CaseFormat;
 import com.google.common.base.Converter;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.server.annotation.AnnotationUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil;
 import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.annotation.Blocking;
 
 import io.grpc.MethodDescriptor;
 import io.grpc.ServerMethodDefinition;
@@ -93,6 +97,7 @@ final class HandlerRegistry {
     private final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> annotationDecorators;
     private final Map<ServerMethodDefinition<?, ?>, List<? extends Function<? super HttpService,
             ? extends HttpService>>> additionalDecorators;
+    private final Set<ServerMethodDefinition<?, ?>> needToUseBlockingMethodDefs;
 
     private HandlerRegistry(List<ServerServiceDefinition> services,
                             Map<String, ServerMethodDefinition<?, ?>> methods,
@@ -100,13 +105,16 @@ final class HandlerRegistry {
                             Map<MethodDescriptor<?, ?>, String> simpleMethodNames,
                             Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> annotationDecorators,
                             Map<ServerMethodDefinition<?, ?>, List<? extends Function<? super HttpService,
-                                    ? extends HttpService>>> additionalDecorators) {
+                                    ? extends HttpService>>> additionalDecorators,
+                            Set<ServerMethodDefinition<?, ?>> needToUseBlockingMethodDefs) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
         this.methodsByRoute = requireNonNull(methodsByRoute, "methodsByRoute");
         this.simpleMethodNames = requireNonNull(simpleMethodNames, "simpleMethodNames");
         this.annotationDecorators = requireNonNull(annotationDecorators, "annotationDecorators");
         this.additionalDecorators = requireNonNull(additionalDecorators, "additionalDecorators");
+        this.needToUseBlockingMethodDefs = requireNonNull(needToUseBlockingMethodDefs,
+                                                          "needToUseBlockingMethodDefs");
     }
 
     @Nullable
@@ -160,6 +168,10 @@ final class HandlerRegistry {
         }
 
         return ImmutableMap.copyOf(decorated);
+    }
+
+    boolean needToUseBlockingTaskExecutor(ServerMethodDefinition<?, ?> methodDef) {
+        return needToUseBlockingMethodDefs.contains(methodDef);
     }
 
     private static HttpService applyDecorators(
@@ -220,6 +232,11 @@ final class HandlerRegistry {
             return path;
         }
 
+        private static boolean needToUseBlockingTaskExecutor(Class<?> clazz, Method method) {
+            return AnnotationUtil.findFirst(method, Blocking.class) != null ||
+                   AnnotationUtil.findFirst(clazz, Blocking.class) != null;
+        }
+
         List<Entry> entries() {
             return entries;
         }
@@ -236,6 +253,8 @@ final class HandlerRegistry {
             final ImmutableMap.Builder<ServerMethodDefinition<?, ?>,
                     List<? extends Function<? super HttpService, ? extends HttpService>>>
                     additionalDecoratorsBuilder = ImmutableMap.builder();
+            final ImmutableSet.Builder<ServerMethodDefinition<?, ?>> needToUseBlockingMethodDefs =
+                    ImmutableSet.builder();
 
             for (Entry entry : entries) {
                 final ServerServiceDefinition service = entry.service();
@@ -278,6 +297,9 @@ final class HandlerRegistry {
                             if (!decoratorAndOrders.isEmpty()) {
                                 annotationDecorators.put(methodDefinition, decoratorAndOrders);
                             }
+                            if (needToUseBlockingTaskExecutor(type, method)) {
+                                needToUseBlockingMethodDefs.add(methodDefinition);
+                            }
                         }
                     }
                 } else {
@@ -303,10 +325,14 @@ final class HandlerRegistry {
                                                        .filter(m -> methodName.equals(m.getName()))
                                                        .findFirst();
                         if (method.isPresent()) {
+                            final Method method0 = method.get();
                             final List<DecoratorAndOrder> decoratorAndOrders =
-                                    DecoratorAnnotationUtil.collectDecorators(type, method.get());
+                                    DecoratorAnnotationUtil.collectDecorators(type, method0);
                             if (!decoratorAndOrders.isEmpty()) {
                                 annotationDecorators.put(methodDefinition, decoratorAndOrders);
+                            }
+                            if (needToUseBlockingTaskExecutor(type, method0)) {
+                                needToUseBlockingMethodDefs.add(methodDefinition);
                             }
                         }
                     }
@@ -318,7 +344,8 @@ final class HandlerRegistry {
                                        methodsByRoute.build(),
                                        bareMethodNames.buildKeepingLast(),
                                        annotationDecorators.build(),
-                                       additionalDecoratorsBuilder.build());
+                                       additionalDecoratorsBuilder.build(),
+                                       needToUseBlockingMethodDefs.build());
         }
     }
 
