@@ -26,12 +26,12 @@ import com.linecorp.armeria.common.logging.RequestLogProperty;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 
-final class Resilience4JCircuitBreakerCallback implements CircuitBreakerCallback {
+final class Resilience4JCircuitBreakerClientCallback implements CircuitBreakerCallback {
 
     private final CircuitBreaker circuitBreaker;
     private final long startTimestamp;
 
-    Resilience4JCircuitBreakerCallback(CircuitBreaker circuitBreaker, long startTimestamp) {
+    Resilience4JCircuitBreakerClientCallback(CircuitBreaker circuitBreaker, long startTimestamp) {
         this.circuitBreaker = requireNonNull(circuitBreaker, "circuitBreaker");
         this.startTimestamp = startTimestamp;
     }

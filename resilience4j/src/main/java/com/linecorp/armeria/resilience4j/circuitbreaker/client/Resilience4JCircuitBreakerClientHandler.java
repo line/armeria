@@ -103,6 +103,6 @@ public final class Resilience4JCircuitBreakerClientHandler implements CircuitBre
         }
         circuitBreaker.acquirePermission();
         final long startTimestamp = circuitBreaker.getCurrentTimestamp();
-        return new Resilience4JCircuitBreakerCallback(circuitBreaker, startTimestamp);
+        return new Resilience4JCircuitBreakerClientCallback(circuitBreaker, startTimestamp);
     }
 }
