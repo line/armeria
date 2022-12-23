@@ -23,6 +23,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
+import com.linecorp.armeria.resilience4j.circuitbreaker.FailedCircuitBreakerDecisionException;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 
@@ -53,7 +54,7 @@ final class Resilience4JCircuitBreakerCallback implements CircuitBreakerCallback
             }
         }
         if (cause == null) {
-            cause = new Throwable();
+            cause = FailedCircuitBreakerDecisionException.of();
         }
         circuitBreaker.onError(duration, circuitBreaker.getTimestampUnit(), cause);
     }

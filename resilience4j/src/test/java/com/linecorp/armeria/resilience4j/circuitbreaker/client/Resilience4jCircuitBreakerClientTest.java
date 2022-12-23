@@ -38,6 +38,9 @@ import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.resilience4j.circuitbreaker.FailedCircuitBreakerDecisionException;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 
@@ -176,6 +179,38 @@ class Resilience4jCircuitBreakerClientTest {
         cb.getEventPublisher().onError(event -> {
             assertThat(event.getElapsedDuration()).isGreaterThan(Duration.ofSeconds(1));
             assertThat(event.getThrowable()).isSameAs(t);
+            ab.set(true);
+        });
+
+        decorator.apply(client).execute(ctx, req);
+
+        await().untilTrue(ab);
+        await().untilAsserted(() -> assertThat(cb.getMetrics().getNumberOfBufferedCalls()).isEqualTo(1));
+        assertThat(cb.getMetrics().getNumberOfFailedCalls()).isEqualTo(1);
+    }
+
+    @Test
+    void testFailureDefaultThrowable() throws Exception {
+        final HttpRequest req = HttpRequest.of(HttpMethod.GET, "/");
+        final ClientRequestContext ctx = ClientRequestContext.of(req);
+
+        final CircuitBreaker cb = CircuitBreaker.ofDefaults("cb");
+        final CircuitBreakerRule rule = CircuitBreakerRule.onStatus(HttpStatus.INTERNAL_SERVER_ERROR);
+        final Function<? super HttpClient, CircuitBreakerClient> decorator =
+                CircuitBreakerClient.newDecorator(Resilience4JCircuitBreakerClientHandler.of(cb), rule);
+
+        final HttpClient client = mock(HttpClient.class);
+        final HttpResponse httpResponse = HttpResponse.of(500);
+        when(client.execute(any(), any())).thenReturn(httpResponse);
+        ctx.eventLoop().schedule(() -> {
+            ctx.logBuilder().responseHeaders(ResponseHeaders.of(500));
+            ctx.logBuilder().endResponse();
+        }, 2, TimeUnit.SECONDS);
+
+        final AtomicBoolean ab = new AtomicBoolean();
+        cb.getEventPublisher().onError(event -> {
+            assertThat(event.getElapsedDuration()).isGreaterThan(Duration.ofSeconds(1));
+            assertThat(event.getThrowable()).isInstanceOf(FailedCircuitBreakerDecisionException.class);
             ab.set(true);
         });
 
