@@ -220,7 +220,7 @@ public final class RequestScopedMdc {
         requireNonNull(ctx, "ctx");
         requireNonNull(key, "key");
 
-        ReentrantLock reentrantLock = new ReentrantLock();
+        final ReentrantLock reentrantLock = new ReentrantLock();
         reentrantLock.lock();
         try {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
@@ -253,7 +253,7 @@ public final class RequestScopedMdc {
             return;
         }
 
-        ReentrantLock reentrantLock = new ReentrantLock();
+        final ReentrantLock reentrantLock = new ReentrantLock();
         reentrantLock.lock();
         try {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
@@ -326,7 +326,7 @@ public final class RequestScopedMdc {
         requireNonNull(ctx, "ctx");
         requireNonNull(key, "key");
 
-        ReentrantLock reentrantLock = new ReentrantLock();
+        final ReentrantLock reentrantLock = new ReentrantLock();
         reentrantLock.lock();
         try {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
@@ -356,7 +356,7 @@ public final class RequestScopedMdc {
     public static void clear(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
 
-        ReentrantLock reentrantLock = new ReentrantLock();
+        final ReentrantLock reentrantLock = new ReentrantLock();
         reentrantLock.lock();
         try {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);

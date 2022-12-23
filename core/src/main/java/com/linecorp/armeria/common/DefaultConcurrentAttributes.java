@@ -109,7 +109,7 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             return null;
         }
 
-        ReentrantLock reentrantLock = new ReentrantLock();
+        final ReentrantLock reentrantLock = new ReentrantLock();
         reentrantLock.lock();
         try {
             DefaultAttribute<?> curr = head;
@@ -176,7 +176,7 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             head = attributes.get(i);
         }
 
-        ReentrantLock reentrantLock = new ReentrantLock();
+        final ReentrantLock reentrantLock = new ReentrantLock();
         reentrantLock.lock();
         try {
             DefaultAttribute<?> curr = head;
@@ -240,7 +240,7 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             return false;
         }
 
-        ReentrantLock reentrantLock = new ReentrantLock();
+        final ReentrantLock reentrantLock = new ReentrantLock();
         reentrantLock.lock();
         try {
             DefaultAttribute<?> curr = head;
