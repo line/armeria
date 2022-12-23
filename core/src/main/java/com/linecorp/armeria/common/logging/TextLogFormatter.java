@@ -21,8 +21,6 @@ import static java.util.Objects.requireNonNull;
 import java.util.Set;
 import java.util.function.BiFunction;
 
-import com.fasterxml.jackson.databind.JsonNode;
-
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.SerializationFormat;

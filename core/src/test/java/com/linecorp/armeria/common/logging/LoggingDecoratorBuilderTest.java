@@ -313,10 +313,8 @@ class LoggingDecoratorBuilderTest {
     @Test
     void buildLogFormatterThrowsException() {
         final LogFormatter logFormatter = LogFormatter.ofText();
-        builder.logFormatter(logFormatter)
-               .responseContentSanitizer(CONTENT_SANITIZER)
-               .requestHeadersSanitizer(HEADER_SANITIZER);
-        assertThatThrownBy(() -> builder.buildLogFormatter())
+        builder.logFormatter(logFormatter);
+        assertThatThrownBy(() -> builder.responseContentSanitizer(CONTENT_SANITIZER))
                 .isInstanceOf(IllegalStateException.class);
     }
 
