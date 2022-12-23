@@ -105,7 +105,7 @@ scala3 = "3.2.0"
 scalafmt-gradle-plugin = "1.16.2"
 scalapb = "0.11.12"
 scalapb-json = "0.12.0"
-shadow-gradle-plugin = "6.1.0"
+shadow-gradle-plugin = "7.1.2"
 shibboleth-utilities = "7.5.2"
 snappy = "1.1.8.4"
 slf4j = "1.7.36"
@@ -958,7 +958,7 @@ module = "com.thesamet.scalapb:scalapb-json4s_3"
 version.ref = "scalapb-json"
 
 [libraries.shadow-gradle-plugin]
-module = "com.github.jengelman.gradle.plugins:shadow"
+module = "gradle.plugin.com.github.johnrengelman:shadow"
 version.ref = "shadow-gradle-plugin"
 
 [libraries.slf4j-api]
