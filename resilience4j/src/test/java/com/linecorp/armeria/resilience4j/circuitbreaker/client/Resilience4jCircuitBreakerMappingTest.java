@@ -20,6 +20,9 @@ import static java.util.Objects.requireNonNull;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.util.Map;
+
+import org.assertj.core.util.Maps;
 import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -27,8 +30,6 @@ import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
-import io.vavr.collection.HashMap;
-import io.vavr.collection.Map;
 
 class Resilience4jCircuitBreakerMappingTest {
 
@@ -82,8 +83,7 @@ class Resilience4jCircuitBreakerMappingTest {
         final HttpRequest request = HttpRequest.of(HttpMethod.GET, "/");
         final ClientRequestContext ctx = ClientRequestContext.of(request);
 
-        final Map<String, String> tags
-                = HashMap.of("a", "b");
+        final Map<String, String> tags = Maps.newHashMap("a", "b");
         final Resilience4jCircuitBreakerMapping mapping = Resilience4jCircuitBreakerMapping
                 .builder()
                 .factory((reg, host, method, path) -> reg.circuitBreaker(requireNonNull(host), tags))
