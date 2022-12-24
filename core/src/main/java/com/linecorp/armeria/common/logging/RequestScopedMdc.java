@@ -253,8 +253,15 @@ public final class RequestScopedMdc {
             return;
         }
 
-        final ReentrantLock reentrantLock = new ReentrantLock();
-        reentrantLock.lock();
+        AttributeKey<ReentrantLock> key = AttributeKey.valueOf("reentrantLock");
+        boolean hasLock = ctx.hasAttr(key);
+        if (!hasLock) {
+            final ReentrantLock reentrantLock = new ReentrantLock();
+            // todo(hun): Do we need to account for cases where the ctx.attr() has setted in the meantime?
+            ctx.setAttr(key, reentrantLock);
+        }
+        ReentrantLock reentrantLockFromAttr = ctx.attr(key);
+        reentrantLockFromAttr.lock();
         try {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             final Object2ObjectMap<String, String> newMap;
@@ -267,7 +274,7 @@ public final class RequestScopedMdc {
             }
             ctx.setAttr(MAP, Object2ObjectMaps.unmodifiable(newMap));
         } finally {
-            reentrantLock.unlock();
+            reentrantLockFromAttr.unlock();
         }
     }
 

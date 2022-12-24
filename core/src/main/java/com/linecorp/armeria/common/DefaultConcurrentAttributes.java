@@ -109,8 +109,7 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             return null;
         }
 
-        final ReentrantLock reentrantLock = new ReentrantLock();
-        reentrantLock.lock();
+        head.lock();
         try {
             DefaultAttribute<?> curr = head;
             for (;;) {
@@ -130,7 +129,7 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
                 curr = next;
             }
         } finally {
-            reentrantLock.unlock();
+            head.unlock();
         }
     }
 
@@ -176,8 +175,7 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             head = attributes.get(i);
         }
 
-        final ReentrantLock reentrantLock = new ReentrantLock();
-        reentrantLock.lock();
+        head.lock();
         try {
             DefaultAttribute<?> curr = head;
             for (;;) {
@@ -198,7 +196,7 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
                 curr = next;
             }
         } finally {
-            reentrantLock.unlock();
+            head.unlock();
         }
     }
 
@@ -240,8 +238,7 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             return false;
         }
 
-        final ReentrantLock reentrantLock = new ReentrantLock();
-        reentrantLock.lock();
+        head.lock();
         try {
             DefaultAttribute<?> curr = head;
             for (;;) {
@@ -257,7 +254,7 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
                 curr = next;
             }
         } finally {
-            reentrantLock.unlock();
+            head.unlock();
         }
     }
 
@@ -392,6 +389,8 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
         @Nullable
         private DefaultAttribute<?> next;
 
+        private final ReentrantLock reentrantLock = new ReentrantLock();
+
         DefaultAttribute(AttributeKey<T> key, @Nullable T value) {
             this.key = key;
             this.value = value;
@@ -421,6 +420,14 @@ final class DefaultConcurrentAttributes implements ConcurrentAttributes {
             final T old = this.value;
             this.value = value;
             return old;
+        }
+
+        public void lock() {
+            reentrantLock.lock();
+        }
+
+        public void unlock() {
+            reentrantLock.unlock();
         }
 
         @Override
