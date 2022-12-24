@@ -688,6 +688,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      */
     default <U> StreamMessage<U> flatMap(
             Function<? super T, ? extends StreamMessage<? extends U>> function, int maxConcurrency) {
+        checkArgument(maxConcurrency > 0, "maxConcurrency: %s (expected: > 0)", maxConcurrency);
         requireNonNull(function, "function");
         return new FlatMapStreamMessage<>(this, function, maxConcurrency);
     }
