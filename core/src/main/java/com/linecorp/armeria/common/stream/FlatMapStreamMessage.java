@@ -32,6 +32,7 @@ import org.reactivestreams.Subscription;
 import com.google.common.math.LongMath;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.EventLoopCheckingFuture;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 import io.netty.util.concurrent.EventExecutor;
@@ -54,7 +55,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         this.source = (StreamMessage<T>) source;
         this.function = (Function<T, StreamMessage<U>>) function;
         this.maxConcurrency = maxConcurrency;
-        completionFuture = new CompletableFuture<>();
+        completionFuture = new EventLoopCheckingFuture<>();
     }
 
     @Override
