@@ -653,13 +653,14 @@ public interface StreamMessage<T> extends Publisher<T> {
      * As per
      * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
      * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
-     * a {@code null} value
+     * a {@code null} value.
      *
      * <p>Example:<pre>{@code
-     * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5);
+     * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3);
      * StreamMessage<Integer> transformed =
      *     streamMessage.flatMap(x -> StreamMessage.of(x, x + 1));
      * }</pre>
+     * {@code transformed} will produce {@code 1, 2, 2, 3, 3, 4} (order is not guaranteed).
      */
     default <U> StreamMessage<U> flatMap(
             Function<? super T, ? extends StreamMessage<? extends U>> function) {
@@ -676,13 +677,14 @@ public interface StreamMessage<T> extends Publisher<T> {
      * As per
      * <a href="https://github.com/reactive-streams/reactive-streams-jvm#2.13">
      * Reactive Streams Specification 2.13</a>, the specified {@link Function} should not return
-     * a {@code null} value
+     * a {@code null} value.
      *
      * <p>Example:<pre>{@code
      * StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5);
      * StreamMessage<Integer> transformed =
      *     streamMessage.flatMap(x -> StreamMessage.of(x, x + 1));
      * }</pre>
+     * {@code transformed} will produce {@code 1, 2, 2, 3, 3, 4} (order is not guaranteed).
      */
     default <U> StreamMessage<U> flatMap(
             Function<? super T, ? extends StreamMessage<? extends U>> function, int maxConcurrency) {
