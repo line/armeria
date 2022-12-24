@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.HashSet;
@@ -86,5 +87,32 @@ class FlatMapStreamMessageTest {
         final Set<Integer> rightSideValues = new HashSet<>(rightSide.collect().get());
 
         assertEquals(leftSideValues, rightSideValues);
+    }
+
+    @Test
+    void completionFutureIsCompleteWhenStreamIsEmpty() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3);
+        final Function<Integer, StreamMessage<Integer>> function = i -> StreamMessage.of(i, i + 1);
+        final StreamMessage<Integer> mappedStream = streamMessage.flatMap(function);
+
+        StepVerifier.create(mappedStream)
+                    .expectNextCount(6)
+                    .verifyComplete();
+
+        assertTrue(mappedStream.whenComplete().isDone());
+    }
+
+    @Test
+    void shouldHandleImmediatelyCompletingStream() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3);
+        final Function<Integer, StreamMessage<Integer>> function = StreamMessage::of;
+        final StreamMessage<Integer> mappedStream = streamMessage.flatMap(function);
+
+        StepVerifier.create(mappedStream)
+                    .thenRequest(100L)
+                    .expectNextCount(3)
+                    .verifyComplete();
+
+        assertTrue(mappedStream.whenComplete().isDone());
     }
 }

@@ -20,11 +20,13 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -158,7 +160,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             }
 
             final StreamMessage<U> newStreamMessage = function.apply(item);
-            newStreamMessage.subscribe(new FlatMapSubscriber<>(this));
+            newStreamMessage.subscribe(new FlatMapSubscriber<>(this), executor);
             pendingSubscriptions++;
         }
 
@@ -264,9 +266,12 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 sourceSubscriptions.forEach(sub -> sub.request(Long.MAX_VALUE));
             }
 
-            sourceSubscriptions.stream()
-                               .filter(sub -> sub.getRequested() == 0)
-                               .limit(available).forEach(sub -> sub.request(1));
+            final List<FlatMapSubscriber<T, U>> toRequest = sourceSubscriptions.stream()
+                                                                               .filter(sub -> sub.getRequested()
+                                                                                              == 0)
+                                                                               .limit(available)
+                                                                               .collect(Collectors.toList());
+            toRequest.forEach(sub -> sub.request(1));
         }
 
         private void flush() {
@@ -291,6 +296,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             if (sourceSubscriptions.isEmpty() && pendingSubscriptions == 0 && completing) {
                 flush();
                 downstream.onComplete();
+                completionFuture.complete(null);
             }
         }
 
