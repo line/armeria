@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
@@ -26,7 +27,6 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -262,7 +262,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                                                                                .filter(sub -> sub.getRequested()
                                                                                               == 0)
                                                                                .limit(available)
-                                                                               .collect(Collectors.toList());
+                                                                               .collect(toImmutableList());
             toRequest.forEach(sub -> sub.request(1));
         }
 
