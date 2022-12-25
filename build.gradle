@@ -185,7 +185,7 @@ configure(projectsWithFlags('java')) {
     }
 
     tasks.withType(JavaCompile) { task ->
-        if (task.path.startsWith(':examples:') || task.path.startsWith(':resilience4j')) {
+        if (task.path.startsWith(':examples:') || task.path.contains(':resilience4j')) {
             // Target Java 17 for examples.
             options.release.set(17)
             // IntelliJ fails to compile example projects with IntelliJ compiler because of a wrong target
@@ -214,7 +214,7 @@ allprojects {
     tasks.all { task ->
         // Disables all tasks in examples when we use a JDK version under 17.
         if (rootProject.ext.testJavaVersion < 17 &&
-                (task.path.startsWith(':examples:') || task.path.startsWith(':resilience4j'))) {
+                (task.path.startsWith(':examples:') || task.path.contains(':it:resilience4j'))) {
             task.enabled = false
         }
     }

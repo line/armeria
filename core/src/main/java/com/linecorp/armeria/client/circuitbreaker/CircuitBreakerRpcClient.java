@@ -46,7 +46,8 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
     newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         requireNonNull(circuitBreaker, "circuitBreaker");
-        return newDecorator((ctx, req) -> circuitBreaker, ruleWithContent);
+        requireNonNull(ruleWithContent, "ruleWithContent");
+        return newDecorator(CircuitBreakerClientHandler.of(circuitBreaker), ruleWithContent);
     }
 
     /**
@@ -60,8 +61,22 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
     newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         requireNonNull(mapping, "mapping");
         requireNonNull(ruleWithContent, "ruleWithContent");
-        return delegate -> new CircuitBreakerRpcClient(
-                delegate, CircuitBreakerClientHandler.of(mapping), ruleWithContent);
+        return newDecorator(CircuitBreakerClientHandler.of(mapping), ruleWithContent);
+    }
+
+    /**
+     * Creates a new decorator with the specified {@link CircuitBreakerClientHandler} and
+     * {@link CircuitBreakerRuleWithContent}.
+     *
+     * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
+     * unrelated services.
+     */
+    public static Function<? super RpcClient, CircuitBreakerRpcClient>
+    newDecorator(CircuitBreakerClientHandler<RpcRequest> handler,
+                 CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
+        requireNonNull(handler, "handler");
+        requireNonNull(ruleWithContent, "ruleWithContent");
+        return delegate -> new CircuitBreakerRpcClient(delegate, handler, ruleWithContent);
     }
 
     /**

@@ -14,40 +14,54 @@
  * under the License.
  */
 
-package com.linecorp.armeria.resilience4j.circuitbreaker.client;
+package resilience4j.thrift;
 
-import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.util.concurrent.CompletionException;
 import java.util.function.Function;
 
+import org.apache.thrift.TException;
+import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
-import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatusClass;
+import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRpcClient;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
+import com.linecorp.armeria.client.thrift.ThriftClients;
+import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.resilience4j.circuitbreaker.client.Resilience4jCircuitBreakerMapping;
+import com.linecorp.armeria.resilience4j.circuitbreaker.client.Resilience4jCircuitBreakerRpcClientHandlerFactory;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.Builder;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
+import resilience4j.thrift.HelloService.Iface;
 
-class Resilience4jCircuitBreakerTest {
+class Resilience4jWithThriftTest {
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.service("/500", (ctx, req) -> HttpResponse.of(500));
+            final THttpService thriftService =
+                    THttpService.builder()
+                                .addService(new HelloServiceImpl())
+                                .build();
+            sb.service("/thrift", thriftService);
         }
     };
+
+    static class HelloServiceImpl implements HelloService.Iface {
+        @Override
+        public HelloReply hello(HelloRequest request) throws TException {
+            throw new NoHelloException();
+        }
+    }
 
     @Test
     void testBasicClientIntegration() throws Exception {
@@ -55,24 +69,32 @@ class Resilience4jCircuitBreakerTest {
         final CircuitBreakerConfig config = new Builder()
                 .minimumNumberOfCalls(minimumNumberOfCalls)
                 .build();
-        final CircuitBreakerRule rule = CircuitBreakerRule.onStatusClass(HttpStatusClass.SERVER_ERROR);
+        final CircuitBreakerRuleWithContent<RpcResponse> rule =
+                CircuitBreakerRuleWithContent.<RpcResponse>builder()
+                                             .onException(NoHelloException.class)
+                                             .thenFailure();
         final CircuitBreakerRegistry registry = CircuitBreakerRegistry.of(config);
         final Resilience4jCircuitBreakerMapping mapping = Resilience4jCircuitBreakerMapping.builder()
                                                                                            .registry(registry)
                                                                                            .perHost()
                                                                                            .build();
-        final Function<? super HttpClient, CircuitBreakerClient> circuitBreakerDecorator =
-                CircuitBreakerClient.newDecorator(Resilience4jCircuitBreakerClientHandlerFactory.of(mapping), rule);
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .decorator(circuitBreakerDecorator)
-                                          .build();
+        final Function<? super RpcClient, CircuitBreakerRpcClient> decorator =
+                CircuitBreakerRpcClient.newDecorator(
+                        Resilience4jCircuitBreakerRpcClientHandlerFactory.of(mapping),
+                        rule);
+        final Iface helloService = ThriftClients.builder(server.httpUri())
+                                                .path("/thrift")
+                                                .rpcDecorator(decorator)
+                                                .build(Iface.class);
+
         for (int i = 0; i < minimumNumberOfCalls; i++) {
-            assertThat(client.get("/500").aggregate().join().status().code()).isEqualTo(500);
+            assertThatThrownBy(() -> helloService.hello(new HelloRequest("hello")))
+                    .isInstanceOf(NoHelloException.class);
             // wait until the callback is fully processed
             Thread.sleep(10);
         }
-        assertThatThrownBy(() -> client.get("/500").aggregate().join())
-                .isInstanceOf(CompletionException.class)
+        assertThatThrownBy(() -> helloService.hello(new HelloRequest("hello")))
+                .isInstanceOf(TTransportException.class)
                 .hasCauseInstanceOf(CallNotPermittedException.class);
     }
 }

@@ -16,8 +16,8 @@
 
 package com.linecorp.armeria.resilience4j.circuitbreaker;
 
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClientHandler;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.resilience4j.circuitbreaker.client.Resilience4JCircuitBreakerClientHandler;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -37,7 +37,7 @@ public interface Resilience4jCircuitBreakerFactory {
 
     /**
      * Given a combination of registry, host, method and path, creates a {@link CircuitBreaker}.
-     * @param registry the registry used by the {@link Resilience4JCircuitBreakerClientHandler}.
+     * @param registry the registry used by the {@link CircuitBreakerClientHandler}.
      * @param host the host of the context endpoint.
      * @param method the method of the context request.
      * @param path the path of the context request.

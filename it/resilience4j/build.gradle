@@ -1,0 +1,4 @@
+dependencies {
+    testImplementation project(':thrift0.17')
+    testImplementation project(':resilience4j2')
+}

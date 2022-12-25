@@ -16,16 +16,9 @@
 
 package com.linecorp.armeria.resilience4j.circuitbreaker.client;
 
-import static java.util.Objects.requireNonNull;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClientHandler;
 import com.linecorp.armeria.client.circuitbreaker.ClientCircuitBreakerGenerator;
 import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 
@@ -33,18 +26,17 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
  * A {@link CircuitBreakerClientHandler} implementation for use with Resilience4j's {@link CircuitBreaker}.
  *
  * <pre>{@code
- * // simple example
+ * // using the default handler
  * CircuitBreakerRule rule = CircuitBreakerRule.onException();
  * WebClient.builder()
- *          .decorator(CircuitBreakerClient.newDecorator(Resilience4JCircuitBreakerClientHandler.of(),
+ *          .decorator(CircuitBreakerClient.newDecorator(Resilience4JCircuitBreakerClientHandlerFactory.of(),
  *                                                       rule))
  *          ...
  *
  *
  * // using a custom ClientCircuitBreakerGenerator
- * CircuitBreaker circuitBreaker = CircuitBreaker.ofDefaults("cb");
  * CircuitBreakerRule rule = CircuitBreakerRule.onException();
- * CircuitBreakerClientHandler<HttpRequest> handler = Resilience4JCircuitBreakerClientHandler.of(
+ * CircuitBreakerClientHandler<HttpRequest> handler = Resilience4JCircuitBreakerClientHandlerFactory.of(
  *     Resilience4jCircuitBreakerMapping.builder()
  *                                      .perHost()
  *                                      .registry(CircuitBreakerRegistry.custom()
@@ -56,24 +48,21 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
  *          ...
  * }</pre>
  */
-public final class Resilience4JCircuitBreakerClientHandler implements CircuitBreakerClientHandler<HttpRequest> {
-
-    private static final Logger logger =
-            LoggerFactory.getLogger(Resilience4JCircuitBreakerClientHandler.class);
+public interface Resilience4jCircuitBreakerClientHandlerFactory {
 
     /**
      * Creates a default {@link CircuitBreakerClientHandler} which uses
      * {@link Resilience4jCircuitBreakerMapping#ofDefault()} to handle requests.
      */
-    public static CircuitBreakerClientHandler<HttpRequest> of() {
-        return new Resilience4JCircuitBreakerClientHandler(Resilience4jCircuitBreakerMapping.ofDefault());
+    static CircuitBreakerClientHandler<HttpRequest> of() {
+        return new DefaultResilience4JCircuitBreakerClientHandler<>(Resilience4jCircuitBreakerMapping.ofDefault());
     }
 
     /**
      * Creates a default {@link CircuitBreakerClientHandler} which uses
      * the provided {@link CircuitBreaker} to handle requests.
      */
-    public static CircuitBreakerClientHandler<HttpRequest> of(CircuitBreaker circuitBreaker) {
+    static CircuitBreakerClientHandler<HttpRequest> of(CircuitBreaker circuitBreaker) {
         return of((ctx, req) -> circuitBreaker);
     }
 
@@ -81,28 +70,8 @@ public final class Resilience4JCircuitBreakerClientHandler implements CircuitBre
      * Creates a {@link CircuitBreakerClientHandler} which uses the provided
      * {@link ClientCircuitBreakerGenerator} to handle requests.
      */
-    public static CircuitBreakerClientHandler<HttpRequest> of(
+    static CircuitBreakerClientHandler<HttpRequest> of(
             ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
-        return new Resilience4JCircuitBreakerClientHandler(mapping);
-    }
-
-    private final ClientCircuitBreakerGenerator<CircuitBreaker> mapping;
-
-    Resilience4JCircuitBreakerClientHandler(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
-        this.mapping = mapping;
-    }
-
-    @Override
-    public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, HttpRequest req) {
-        final CircuitBreaker circuitBreaker;
-        try {
-            circuitBreaker = requireNonNull(mapping.get(ctx, req), "circuitBreaker");
-        } catch (Throwable t) {
-            logger.warn("Failed to get a circuit breaker from mapping", t);
-            return null;
-        }
-        circuitBreaker.acquirePermission();
-        final long startTimestamp = circuitBreaker.getCurrentTimestamp();
-        return new Resilience4JCircuitBreakerCallback(circuitBreaker, startTimestamp);
+        return new DefaultResilience4JCircuitBreakerClientHandler<>(mapping);
     }
 }
