@@ -230,14 +230,6 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         void subscribeChild(FlatMapSubscriber<T, U> child) {
-            if (executor.inEventLoop()) {
-                handleSubscribeChild(child);
-            } else {
-                executor.execute(() -> handleSubscribeChild(child));
-            }
-        }
-
-        private void handleSubscribeChild(FlatMapSubscriber<T, U> child) {
             pendingSubscriptions--;
             sourceSubscriptions.add(child);
 
@@ -283,14 +275,6 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         void completeChild(FlatMapSubscriber<T, U> child) {
-            if (executor.inEventLoop()) {
-                handleCompleteChild(child);
-            } else {
-                executor.execute(() -> handleCompleteChild(child));
-            }
-        }
-
-        private void handleCompleteChild(FlatMapSubscriber<T, U> child) {
             sourceSubscriptions.remove(child);
 
             if (sourceSubscriptions.isEmpty() && pendingSubscriptions == 0 && completing) {
@@ -302,14 +286,6 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
         void onNextChild(U value) {
             requireNonNull(value, "value");
-            if (executor.inEventLoop()) {
-                handleOnNextChild(value);
-            } else {
-                executor.execute(() -> handleOnNextChild(value));
-            }
-        }
-
-        private void handleOnNextChild(U value) {
             if (requestedByDownstream > 0) {
                 publishDownstream(value);
             } else {
