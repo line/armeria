@@ -97,7 +97,7 @@ final class HandlerRegistry {
     private final Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> annotationDecorators;
     private final Map<ServerMethodDefinition<?, ?>, List<? extends Function<? super HttpService,
             ? extends HttpService>>> additionalDecorators;
-    private final Set<ServerMethodDefinition<?, ?>> needToUseBlockingMethodDefs;
+    private final Set<ServerMethodDefinition<?, ?>> blockingMethods;
 
     private HandlerRegistry(List<ServerServiceDefinition> services,
                             Map<String, ServerMethodDefinition<?, ?>> methods,
@@ -106,15 +106,14 @@ final class HandlerRegistry {
                             Map<ServerMethodDefinition<?, ?>, List<DecoratorAndOrder>> annotationDecorators,
                             Map<ServerMethodDefinition<?, ?>, List<? extends Function<? super HttpService,
                                     ? extends HttpService>>> additionalDecorators,
-                            Set<ServerMethodDefinition<?, ?>> needToUseBlockingMethodDefs) {
+                            Set<ServerMethodDefinition<?, ?>> blockingMethods) {
         this.services = requireNonNull(services, "services");
         this.methods = requireNonNull(methods, "methods");
         this.methodsByRoute = requireNonNull(methodsByRoute, "methodsByRoute");
         this.simpleMethodNames = requireNonNull(simpleMethodNames, "simpleMethodNames");
         this.annotationDecorators = requireNonNull(annotationDecorators, "annotationDecorators");
         this.additionalDecorators = requireNonNull(additionalDecorators, "additionalDecorators");
-        this.needToUseBlockingMethodDefs = requireNonNull(needToUseBlockingMethodDefs,
-                                                          "needToUseBlockingMethodDefs");
+        this.blockingMethods = requireNonNull(blockingMethods, "blockingMethods");
     }
 
     @Nullable
@@ -148,7 +147,7 @@ final class HandlerRegistry {
     }
 
     boolean needToUseBlockingTaskExecutor(ServerMethodDefinition<?, ?> methodDef) {
-        return needToUseBlockingMethodDefs.contains(methodDef);
+        return blockingMethods.contains(methodDef);
     }
 
     Map<ServerMethodDefinition<?, ?>, HttpService> applyDecorators(
@@ -253,7 +252,7 @@ final class HandlerRegistry {
             final ImmutableMap.Builder<ServerMethodDefinition<?, ?>,
                     List<? extends Function<? super HttpService, ? extends HttpService>>>
                     additionalDecoratorsBuilder = ImmutableMap.builder();
-            final ImmutableSet.Builder<ServerMethodDefinition<?, ?>> needToUseBlockingMethodDefs =
+            final ImmutableSet.Builder<ServerMethodDefinition<?, ?>> blockingMethods =
                     ImmutableSet.builder();
 
             for (Entry entry : entries) {
@@ -298,7 +297,7 @@ final class HandlerRegistry {
                                 annotationDecorators.put(methodDefinition, decoratorAndOrders);
                             }
                             if (needToUseBlockingTaskExecutor(type, method)) {
-                                needToUseBlockingMethodDefs.add(methodDefinition);
+                                blockingMethods.add(methodDefinition);
                             }
                         }
                     }
@@ -332,7 +331,7 @@ final class HandlerRegistry {
                                 annotationDecorators.put(methodDefinition, decoratorAndOrders);
                             }
                             if (needToUseBlockingTaskExecutor(type, method0)) {
-                                needToUseBlockingMethodDefs.add(methodDefinition);
+                                blockingMethods.add(methodDefinition);
                             }
                         }
                     }
@@ -345,7 +344,7 @@ final class HandlerRegistry {
                                        bareMethodNames.buildKeepingLast(),
                                        annotationDecorators.build(),
                                        additionalDecoratorsBuilder.build(),
-                                       needToUseBlockingMethodDefs.build());
+                                       blockingMethods.build());
         }
     }
 
