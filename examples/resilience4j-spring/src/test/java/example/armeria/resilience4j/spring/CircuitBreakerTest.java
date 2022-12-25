@@ -81,6 +81,7 @@ class CircuitBreakerTest {
         }
         assertThatThrownBy(() -> client.blocking().get("500-2")).isInstanceOf(CallNotPermittedException.class);
     }
+
     @Test
     void testMicrometerIntegration() {
         final CircuitBreaker r4jCircuitBreaker =
