@@ -55,7 +55,7 @@ public interface Resilience4jCircuitBreakerClientHandlerFactory {
      * {@link Resilience4jCircuitBreakerMapping#ofDefault()} to handle requests.
      */
     static CircuitBreakerClientHandler<HttpRequest> of() {
-        return new DefaultResilience4JCircuitBreakerClientHandler<>(Resilience4jCircuitBreakerMapping.ofDefault());
+        return of(Resilience4jCircuitBreakerMapping.ofDefault());
     }
 
     /**
