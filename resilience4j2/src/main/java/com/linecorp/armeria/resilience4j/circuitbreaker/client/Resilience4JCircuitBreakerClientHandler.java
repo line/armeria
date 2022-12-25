@@ -29,15 +29,15 @@ import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 
-final class DefaultResilience4JCircuitBreakerClientHandler<T extends Request>
+final class Resilience4JCircuitBreakerClientHandler<T extends Request>
         implements CircuitBreakerClientHandler<T> {
 
     private static final Logger logger =
-            LoggerFactory.getLogger(DefaultResilience4JCircuitBreakerClientHandler.class);
+            LoggerFactory.getLogger(Resilience4JCircuitBreakerClientHandler.class);
 
     private final ClientCircuitBreakerGenerator<CircuitBreaker> mapping;
 
-    DefaultResilience4JCircuitBreakerClientHandler(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
+    Resilience4JCircuitBreakerClientHandler(ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
         this.mapping = mapping;
     }
 

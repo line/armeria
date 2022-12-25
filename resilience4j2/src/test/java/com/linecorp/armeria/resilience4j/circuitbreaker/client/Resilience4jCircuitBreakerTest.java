@@ -18,6 +18,7 @@ package com.linecorp.armeria.resilience4j.circuitbreaker.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.CompletionException;
 import java.util.function.Function;
@@ -35,6 +36,8 @@ import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreaker.State;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerConfig.Builder;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -69,9 +72,13 @@ class Resilience4jCircuitBreakerTest {
                                           .build();
         for (int i = 0; i < minimumNumberOfCalls; i++) {
             assertThat(client.get("/500").aggregate().join().status().code()).isEqualTo(500);
-            // wait until the callback is fully processed
-            Thread.sleep(100);
         }
+
+        // wait until the circuitbreaker is open
+        assertThat(registry.getAllCircuitBreakers()).hasSize(1);
+        final CircuitBreaker cb = registry.getAllCircuitBreakers().stream().findFirst().orElseThrow();
+        await().untilAsserted(() -> assertThat(cb.getState()).isEqualTo(State.OPEN));
+
         assertThatThrownBy(() -> client.get("/500").aggregate().join())
                 .isInstanceOf(CompletionException.class)
                 .hasCauseInstanceOf(CallNotPermittedException.class);

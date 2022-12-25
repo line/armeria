@@ -71,6 +71,6 @@ public interface Resilience4jCircuitBreakerRpcClientHandlerFactory {
      */
     static CircuitBreakerClientHandler<RpcRequest> of(
             ClientCircuitBreakerGenerator<CircuitBreaker> mapping) {
-        return new DefaultResilience4JCircuitBreakerClientHandler<>(mapping);
+        return new Resilience4JCircuitBreakerClientHandler<>(mapping);
     }
 }
