@@ -25,7 +25,7 @@ includeWithFlags ':logback',                             'java', 'publish', 'rel
 includeWithFlags ':oauth2',                              'java', 'publish', 'relocate'
 includeWithFlags ':protobuf',                            'java', 'publish', 'relocate'
 includeWithFlags ':reactor3',                            'java', 'publish', 'relocate'
-includeWithFlags ':resilience4j',                        'java', 'publish', 'relocate'
+includeWithFlags ':resilience4j2',                       'java', 'publish', 'relocate'
 includeWithFlags ':resteasy',                            'java', 'publish', 'relocate'
 includeWithFlags ':retrofit2',                           'java', 'publish', 'relocate'
 includeWithFlags ':rxjava2',                             'java', 'publish', 'relocate'
