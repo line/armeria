@@ -212,8 +212,9 @@ configure(projectsWithFlags('java')) {
 allprojects {
 
     tasks.all { task ->
-        // Disables all tasks in examples when we use a JDK version under 11.
-        if (rootProject.ext.testJavaVersion < 11 && task.path.startsWith(':examples:')) {
+        // Disables all tasks in examples when we use a JDK version under 17.
+        if (rootProject.ext.testJavaVersion < 17 &&
+                (task.path.startsWith(':examples:') || task.path.startsWith(':resilience4j'))) {
             task.enabled = false
         }
     }
