@@ -23,7 +23,8 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.MethodOrderer.MethodName;
+import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
+import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -47,7 +48,7 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
 
-@TestMethodOrder(MethodName.class)
+@TestMethodOrder(OrderAnnotation.class)
 class GrpcServiceBlockingTest {
     private static final AtomicInteger blockingCount = new AtomicInteger();
 
@@ -83,6 +84,7 @@ class GrpcServiceBlockingTest {
     };
 
     @Test
+    @Order(1)
     void nonBlockingCall() {
         final TestServiceBlockingStub client =
                 GrpcClients.newClient(server.httpUri(), TestServiceBlockingStub.class);
@@ -91,6 +93,7 @@ class GrpcServiceBlockingTest {
     }
 
     @Test
+    @Order(2)
     void blockingOnClass() {
         final UnitTestFooServiceBlockingStub client =
                 GrpcClients.newClient(server.httpUri(), UnitTestFooServiceBlockingStub.class);
@@ -104,6 +107,7 @@ class GrpcServiceBlockingTest {
     }
 
     @Test
+    @Order(3)
     void blockingOnMethod() {
         final UnitTestBarServiceBlockingStub client =
                 GrpcClients.newClient(server.httpUri(), UnitTestBarServiceBlockingStub.class);
@@ -117,6 +121,7 @@ class GrpcServiceBlockingTest {
     }
 
     @Test
+    @Order(4)
     void prefixServiceBlockingOnMethod() {
         final TestServiceBlockingStub client = GrpcClients
                 .builder(server.httpUri())
@@ -137,6 +142,7 @@ class GrpcServiceBlockingTest {
     }
 
     @Test
+    @Order(5)
     void solelyAddedMethodBlockingOnClass() {
         final TestServiceBlockingStub client = GrpcClients
                 .builder(server.httpUri())
