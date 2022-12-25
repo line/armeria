@@ -91,7 +91,7 @@ class Resilience4jWithThriftTest {
             assertThatThrownBy(() -> helloService.hello(new HelloRequest("hello")))
                     .isInstanceOf(NoHelloException.class);
             // wait until the callback is fully processed
-            Thread.sleep(10);
+            Thread.sleep(100);
         }
         assertThatThrownBy(() -> helloService.hello(new HelloRequest("hello")))
                 .isInstanceOf(TTransportException.class)

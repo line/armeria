@@ -70,7 +70,7 @@ class Resilience4jCircuitBreakerTest {
         for (int i = 0; i < minimumNumberOfCalls; i++) {
             assertThat(client.get("/500").aggregate().join().status().code()).isEqualTo(500);
             // wait until the callback is fully processed
-            Thread.sleep(10);
+            Thread.sleep(100);
         }
         assertThatThrownBy(() -> client.get("/500").aggregate().join())
                 .isInstanceOf(CompletionException.class)

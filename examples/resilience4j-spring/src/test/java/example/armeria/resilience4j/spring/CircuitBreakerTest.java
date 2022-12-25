@@ -64,9 +64,10 @@ class CircuitBreakerTest {
         final CircuitBreakerRule rule = CircuitBreakerRule.onStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         final WebClient client = WebClient
                 .builder("http://localhost:" + server.activeLocalPort())
-                .decorator(CircuitBreakerClient.builder(rule)
-                                               .handler(Resilience4jCircuitBreakerClientHandlerFactory.of(mapping))
-                                               .newDecorator())
+                .decorator(CircuitBreakerClient
+                                   .builder(rule)
+                                   .handler(Resilience4jCircuitBreakerClientHandlerFactory.of(mapping))
+                                   .newDecorator())
                 .build();
         final int windowSize = circuitBreakerRegistry.getConfiguration("defaultA")
                                                      .orElseThrow().getSlidingWindowSize();
