@@ -30,6 +30,8 @@ public interface Resilience4jCircuitBreakerFactory {
 
     /**
      * Returns the default {@link Resilience4jCircuitBreakerFactory}.
+     * The host, method, and path will be concatenated with a '#'
+     * and will be used as the name parameter of {@link CircuitBreakerRegistry#circuitBreaker(String)}.
      */
     static Resilience4jCircuitBreakerFactory of() {
         return Resilience4jCircuitBreakerUtils.FACTORY;

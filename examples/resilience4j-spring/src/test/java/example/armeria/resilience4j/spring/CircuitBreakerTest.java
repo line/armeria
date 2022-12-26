@@ -11,6 +11,7 @@ import javax.inject.Inject;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
@@ -62,26 +63,26 @@ class CircuitBreakerTest {
                         .build();
 
         final CircuitBreakerRule rule = CircuitBreakerRule.onStatus(HttpStatus.INTERNAL_SERVER_ERROR);
-        final WebClient client = WebClient
+        final BlockingWebClient client = WebClient
                 .builder("http://localhost:" + server.activeLocalPort())
                 .decorator(CircuitBreakerClient
                                    .builder(rule)
                                    .handler(Resilience4JCircuitBreakerClientHandler.of(mapping))
                                    .newDecorator())
-                .build();
+                .build().blocking();
         final int windowSize = circuitBreakerRegistry.getConfiguration("defaultA")
                                                      .orElseThrow().getSlidingWindowSize();
 
         for (int i = 0; i < windowSize; i++) {
-            assertThat(client.blocking().get("500-1").status().code()).isEqualTo(500);
+            assertThat(client.get("500-1").status().code()).isEqualTo(500);
         }
-        assertThatThrownBy(() -> client.blocking().get("500-1")).isInstanceOf(CallNotPermittedException.class);
+        assertThatThrownBy(() -> client.get("500-1")).isInstanceOf(CallNotPermittedException.class);
 
         // a separate circuitbreaker is instantiated for different paths
         for (int i = 0; i < windowSize; i++) {
-            assertThat(client.blocking().get("500-2").status().code()).isEqualTo(500);
+            assertThat(client.get("500-2").status().code()).isEqualTo(500);
         }
-        assertThatThrownBy(() -> client.blocking().get("500-2")).isInstanceOf(CallNotPermittedException.class);
+        assertThatThrownBy(() -> client.get("500-2")).isInstanceOf(CallNotPermittedException.class);
     }
 
     @Test

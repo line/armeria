@@ -21,6 +21,7 @@ import com.linecorp.armeria.client.circuitbreaker.ClientCircuitBreakerGenerator;
 import com.linecorp.armeria.common.Request;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
+import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 
 /**
  * Returns a {@link CircuitBreaker} instance from remote invocation parameters.
@@ -30,6 +31,8 @@ public interface Resilience4jCircuitBreakerMapping extends ClientCircuitBreakerG
 
     /**
      * Returns the default {@link Resilience4jCircuitBreakerMapping}.
+     * A {@link CircuitBreaker} will be created per host using a {@link CircuitBreakerRegistry}
+     * with default configurations.
      */
     static Resilience4jCircuitBreakerMapping ofDefault() {
         return KeyedResilience4jCircuitBreakerMapping.MAPPING;
