@@ -20,14 +20,13 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.awaitility.Awaitility.await;
 
-import java.util.concurrent.CompletionException;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.HttpClient;
-import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.common.HttpResponse;
@@ -67,11 +66,9 @@ class Resilience4jCircuitBreakerTest {
         final Function<? super HttpClient, CircuitBreakerClient> circuitBreakerDecorator =
                 CircuitBreakerClient.newDecorator(Resilience4JCircuitBreakerClientHandler.of(mapping),
                                                   rule);
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .decorator(circuitBreakerDecorator)
-                                          .build();
+        final BlockingWebClient client = server.blockingWebClient(b -> b.decorator(circuitBreakerDecorator));
         for (int i = 0; i < minimumNumberOfCalls; i++) {
-            assertThat(client.get("/500").aggregate().join().status().code()).isEqualTo(500);
+            assertThat(client.get("/500").status().code()).isEqualTo(500);
         }
 
         // wait until the circuitbreaker is open
@@ -79,8 +76,6 @@ class Resilience4jCircuitBreakerTest {
         final CircuitBreaker cb = registry.getAllCircuitBreakers().stream().findFirst().orElseThrow();
         await().untilAsserted(() -> assertThat(cb.getState()).isEqualTo(State.OPEN));
 
-        assertThatThrownBy(() -> client.get("/500").aggregate().join())
-                .isInstanceOf(CompletionException.class)
-                .hasCauseInstanceOf(CallNotPermittedException.class);
+        assertThatThrownBy(() -> client.get("/500")).isInstanceOf(CallNotPermittedException.class);
     }
 }
