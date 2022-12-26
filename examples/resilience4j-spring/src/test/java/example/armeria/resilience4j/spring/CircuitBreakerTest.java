@@ -16,7 +16,7 @@ import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.metric.MoreMeters;
-import com.linecorp.armeria.resilience4j.circuitbreaker.client.Resilience4jCircuitBreakerClientHandlerFactory;
+import com.linecorp.armeria.resilience4j.circuitbreaker.client.Resilience4JCircuitBreakerClientHandler;
 import com.linecorp.armeria.resilience4j.circuitbreaker.client.Resilience4jCircuitBreakerMapping;
 import com.linecorp.armeria.server.Server;
 
@@ -66,7 +66,7 @@ class CircuitBreakerTest {
                 .builder("http://localhost:" + server.activeLocalPort())
                 .decorator(CircuitBreakerClient
                                    .builder(rule)
-                                   .handler(Resilience4jCircuitBreakerClientHandlerFactory.of(mapping))
+                                   .handler(Resilience4JCircuitBreakerClientHandler.of(mapping))
                                    .newDecorator())
                 .build();
         final int windowSize = circuitBreakerRegistry.getConfiguration("defaultA")

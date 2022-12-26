@@ -25,6 +25,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
 /**
@@ -71,6 +72,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      * <p>Since {@link CircuitBreaker} is a unit of failure detection, don't reuse the same instance for
      * unrelated services.
      */
+    @UnstableApi
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
     newDecorator(CircuitBreakerClientHandler<RpcRequest> handler,
                  CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {

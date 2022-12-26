@@ -23,17 +23,75 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClientHandler;
+import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerMapping;
 import com.linecorp.armeria.client.circuitbreaker.ClientCircuitBreakerGenerator;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 
-final class Resilience4JCircuitBreakerClientHandler<T extends Request>
+/**
+ * A {@link CircuitBreakerClientHandler} implementation for use with Resilience4j's {@link CircuitBreaker}.
+ *
+ * <pre>{@code
+ * // for HttpRequest
+ * CircuitBreakerRule rule = CircuitBreakerRule.onException();
+ * CircuitBreakerClientHandler<HttpRequest> handler = Resilience4JCircuitBreakerClientHandler.of(
+ *     Resilience4jCircuitBreakerMapping.builder()
+ *                                      .perHost()
+ *                                      .registry(CircuitBreakerRegistry.custom()
+ *                                                                      ...
+ *                                                                      .build())
+ *                                      .build());
+ * WebClient.builder()
+ *          .decorator(CircuitBreakerClient.newDecorator(handler, rule))
+ *          ...
+ *
+ * // for RpcRequest
+ * CircuitBreakerRuleWithContent rule = ...;
+ * CircuitBreakerClientHandler<RpcRequest> handler = Resilience4JCircuitBreakerClientHandler.of(
+ *     Resilience4jCircuitBreakerMapping.builder()
+ *                                      .perHost()
+ *                                      .registry(CircuitBreakerRegistry.custom()
+ *                                                                      ...
+ *                                                                      .build())
+ *                                      .build());
+ * ThriftClients.builder("localhost")
+ *              .rpcDecorator(CircuitBreakerRpcClient.newDecorator(decorator, rule))
+ *              ...
+ * }</pre>
+ */
+public final class Resilience4JCircuitBreakerClientHandler<T extends Request>
         implements CircuitBreakerClientHandler<T> {
 
     private static final Logger logger =
             LoggerFactory.getLogger(Resilience4JCircuitBreakerClientHandler.class);
+
+    /**
+     * Creates a default {@link CircuitBreakerClientHandler} which uses
+     * {@link Resilience4jCircuitBreakerMapping#ofDefault()} to handle requests.
+     */
+    public static <I extends Request> CircuitBreakerClientHandler<I> of() {
+        return of(Resilience4jCircuitBreakerMapping.ofDefault());
+    }
+
+    /**
+     * Creates a default {@link CircuitBreakerClientHandler} which uses the provided
+     * {@link com.linecorp.armeria.client.circuitbreaker.CircuitBreaker} to handle requests.
+     */
+    public static <I extends Request> CircuitBreakerClientHandler<I> of(CircuitBreaker circuitBreaker) {
+        requireNonNull(circuitBreaker, "circuitBreaker");
+        return of((ctx, req) -> circuitBreaker);
+    }
+
+    /**
+     * Creates a default {@link CircuitBreakerClientHandler} which uses the provided
+     * {@link CircuitBreakerMapping} to handle requests.
+     */
+    public static <I extends Request> CircuitBreakerClientHandler<I> of(
+            Resilience4jCircuitBreakerMapping mapping) {
+        return new Resilience4JCircuitBreakerClientHandler<>(requireNonNull(mapping, "mapping"));
+    }
 
     private final ClientCircuitBreakerGenerator<CircuitBreaker> mapping;
 

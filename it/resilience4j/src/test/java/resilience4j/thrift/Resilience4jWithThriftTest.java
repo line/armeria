@@ -32,8 +32,8 @@ import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRpcClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
 import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.RpcResponse;
+import com.linecorp.armeria.resilience4j.circuitbreaker.client.Resilience4JCircuitBreakerClientHandler;
 import com.linecorp.armeria.resilience4j.circuitbreaker.client.Resilience4jCircuitBreakerMapping;
-import com.linecorp.armeria.resilience4j.circuitbreaker.client.Resilience4jCircuitBreakerRpcClientHandlerFactory;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.thrift.THttpService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -84,8 +84,7 @@ class Resilience4jWithThriftTest {
                                                                                            .build();
         final Function<? super RpcClient, CircuitBreakerRpcClient> decorator =
                 CircuitBreakerRpcClient.newDecorator(
-                        Resilience4jCircuitBreakerRpcClientHandlerFactory.of(mapping),
-                        rule);
+                        Resilience4JCircuitBreakerClientHandler.of(mapping), rule);
         final Iface helloService = ThriftClients.builder(server.httpUri())
                                                 .path("/thrift")
                                                 .rpcDecorator(decorator)

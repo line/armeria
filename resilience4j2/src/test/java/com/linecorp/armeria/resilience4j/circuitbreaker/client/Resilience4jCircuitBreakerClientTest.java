@@ -54,7 +54,7 @@ class Resilience4jCircuitBreakerClientTest {
         final CircuitBreaker cb = CircuitBreaker.ofDefaults("cb");
         final CircuitBreakerRule rule = CircuitBreakerRule.onException();
         final Function<? super HttpClient, CircuitBreakerClient> decorator =
-                CircuitBreakerClient.newDecorator(Resilience4jCircuitBreakerClientHandlerFactory.of(cb), rule);
+                CircuitBreakerClient.newDecorator(Resilience4JCircuitBreakerClientHandler.of(cb), rule);
 
         final HttpClient client = mock(HttpClient.class);
         final RuntimeException t = new RuntimeException();
@@ -81,7 +81,7 @@ class Resilience4jCircuitBreakerClientTest {
         final CircuitBreaker cb = CircuitBreaker.ofDefaults("cb");
         final CircuitBreakerRule rule = CircuitBreakerRule.onException();
         final Function<? super HttpClient, CircuitBreakerClient> decorator =
-                CircuitBreakerClient.newDecorator(Resilience4jCircuitBreakerClientHandlerFactory.of(cb), rule);
+                CircuitBreakerClient.newDecorator(Resilience4JCircuitBreakerClientHandler.of(cb), rule);
 
         final HttpClient client = mock(HttpClient.class);
         when(client.execute(any(), any())).thenReturn(HttpResponse.of(200));
@@ -108,7 +108,7 @@ class Resilience4jCircuitBreakerClientTest {
         final CircuitBreaker cb = CircuitBreaker.ofDefaults("cb");
         final CircuitBreakerRule rule = CircuitBreakerRule.onException();
         final Function<? super HttpClient, CircuitBreakerClient> decorator =
-                CircuitBreakerClient.newDecorator(Resilience4jCircuitBreakerClientHandlerFactory.of(cb), rule);
+                CircuitBreakerClient.newDecorator(Resilience4JCircuitBreakerClientHandler.of(cb), rule);
 
         final HttpClient client = mock(HttpClient.class);
         when(client.execute(any(), any())).thenReturn(HttpResponse.of(200));
@@ -138,7 +138,7 @@ class Resilience4jCircuitBreakerClientTest {
         final CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent =
                 CircuitBreakerRuleWithContent.<HttpResponse>builder(HttpMethod.GET).thenSuccess();
         final Function<? super HttpClient, CircuitBreakerClient> decorator =
-                CircuitBreakerClient.newDecorator(Resilience4jCircuitBreakerClientHandlerFactory.of(cb),
+                CircuitBreakerClient.newDecorator(Resilience4JCircuitBreakerClientHandler.of(cb),
                                                   ruleWithContent);
 
         final HttpClient client = mock(HttpClient.class);
@@ -167,7 +167,7 @@ class Resilience4jCircuitBreakerClientTest {
         final CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent =
                 CircuitBreakerRuleWithContent.<HttpResponse>builder(HttpMethod.GET).thenFailure();
         final Function<? super HttpClient, CircuitBreakerClient> decorator =
-                CircuitBreakerClient.newDecorator(Resilience4jCircuitBreakerClientHandlerFactory.of(cb),
+                CircuitBreakerClient.newDecorator(Resilience4JCircuitBreakerClientHandler.of(cb),
                                                   ruleWithContent);
 
         final HttpClient client = mock(HttpClient.class);
@@ -197,7 +197,7 @@ class Resilience4jCircuitBreakerClientTest {
         final CircuitBreaker cb = CircuitBreaker.ofDefaults("cb");
         final CircuitBreakerRule rule = CircuitBreakerRule.onStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         final Function<? super HttpClient, CircuitBreakerClient> decorator =
-                CircuitBreakerClient.newDecorator(Resilience4jCircuitBreakerClientHandlerFactory.of(cb), rule);
+                CircuitBreakerClient.newDecorator(Resilience4JCircuitBreakerClientHandler.of(cb), rule);
 
         final HttpClient client = mock(HttpClient.class);
         final HttpResponse httpResponse = HttpResponse.of(500);
