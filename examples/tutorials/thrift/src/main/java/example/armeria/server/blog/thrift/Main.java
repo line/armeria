@@ -1,9 +1,9 @@
 package example.armeria.server.blog.thrift;
 
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocService;
@@ -40,7 +40,7 @@ public final class Main {
                 .setContent("Hello Armeria!");
         final DocService docService = DocService
                 .builder()
-                .exampleRequests(ImmutableList.of(new BlogService.createBlogPost_args(request)))
+                .exampleRequests(List.of(new BlogService.createBlogPost_args(request)))
                 .build();
         return Server.builder()
                      .http(port)
