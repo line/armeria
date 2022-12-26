@@ -1,5 +1,8 @@
 namespace java example.armeria.blog.thrift
 
+/**
+* A request object for creating a blog post!
+**/
 struct CreateBlogPostRequest {
     1: string title;
     2: string content;
@@ -39,7 +42,14 @@ exception BlogNotFoundException {
     1: required string reason
 }
 
+/**
+* My first BlogService in Armeria!
+**/
 service BlogService {
+
+  /**
+  * Creates a blog post.
+  **/
   BlogPost createBlogPost(1:CreateBlogPostRequest request),
   BlogPost getBlogPost(1:GetBlogPostRequest request) throws (1:BlogNotFoundException e),
   ListBlogPostsResponse listBlogPosts(1:ListBlogPostsRequest request),

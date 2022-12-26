@@ -1,19 +1,3 @@
-/*
- * Copyright 2022 LINE Corporation
- *
- * LINE Corporation licenses this file to you under the Apache License,
- * version 2.0 (the "License"); you may not use this file except in compliance
- * with the License. You may obtain a copy of the License at:
- *
- *   https://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations
- * under the License.
- */
-
 package example.armeria.server.blog.thrift;
 
 import java.time.Instant;
@@ -31,7 +15,7 @@ import org.apache.thrift.async.AsyncMethodCallback;
 
 import example.armeria.blog.thrift.BlogNotFoundException;
 import example.armeria.blog.thrift.BlogPost;
-import example.armeria.blog.thrift.BlogService.AsyncIface;
+import example.armeria.blog.thrift.BlogService;
 import example.armeria.blog.thrift.CreateBlogPostRequest;
 import example.armeria.blog.thrift.DeleteBlogPostRequest;
 import example.armeria.blog.thrift.GetBlogPostRequest;
@@ -39,7 +23,7 @@ import example.armeria.blog.thrift.ListBlogPostsRequest;
 import example.armeria.blog.thrift.ListBlogPostsResponse;
 import example.armeria.blog.thrift.UpdateBlogPostRequest;
 
-public class BlogServiceImpl implements AsyncIface {
+public class BlogServiceImpl implements BlogService.AsyncIface {
 
     private final AtomicInteger idGenerator = new AtomicInteger();
     private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
@@ -66,7 +50,8 @@ public class BlogServiceImpl implements AsyncIface {
         final BlogPost blogPost = blogPosts.get(request.getId());
         if (blogPost == null) {
             // throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
-            resultHandler.onError(new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
+            resultHandler.onError(
+                    new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
         } else {
             resultHandler.onComplete(blogPost);
         }
@@ -94,7 +79,8 @@ public class BlogServiceImpl implements AsyncIface {
         if (oldBlogPost == null) {
             // throwing an exception will also have the same effect
             // throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
-            resultHandler.onError(new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
+            resultHandler.onError(
+                    new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
         } else {
             final BlogPost newBlogPost = oldBlogPost.deepCopy()
                                                     .setTitle(request.getTitle())
@@ -112,7 +98,8 @@ public class BlogServiceImpl implements AsyncIface {
         if (removed == null) {
             // throwing an exception will also have the same effect
             // throw new NullPointerException("The blog post does not exist. ID: " + request.getId());
-            resultHandler.onError(new NullPointerException("The blog post does not exist. ID: " + request.getId()));
+            resultHandler.onError(
+                    new NullPointerException("The blog post does not exist. ID: " + request.getId()));
         } else {
             resultHandler.onComplete(null);
         }
