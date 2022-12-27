@@ -187,7 +187,7 @@ class ContributorListTask extends DefaultTask {
     @TaskAction
     def run() {
         def contributors = new TreeMap<String, String>()
-        def accessToken = project.findProperty('githubToken')
+        def accessToken = rootProject.findProperty('githubToken')
         def url = 'https://api.github.com/repos/line/armeria/contributors'
         def nextPattern = Pattern.compile(/<(https:\/\/api\.github\.com\/[^>]+)>; rel="next"/)
         project.logger.lifecycle("[DEBUG] contributorList accessToken: ${accessToken}")
