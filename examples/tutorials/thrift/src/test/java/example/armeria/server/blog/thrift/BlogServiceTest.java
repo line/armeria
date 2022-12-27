@@ -60,6 +60,7 @@ class BlogServiceTest {
                 .setTitle("My first blog")
                 .setContent("Hello Armeria!");
         final BlogPost response = client.createBlogPost(request);
+        assertThat(response.getId()).isGreaterThanOrEqualTo(0);
         assertThat(response.getTitle()).isEqualTo(request.getTitle());
         assertThat(response.getContent()).isEqualTo(request.getContent());
     }

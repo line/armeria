@@ -33,14 +33,15 @@ public final class Main {
         final THttpService tHttpService =
                 THttpService.builder()
                             .addService(new BlogServiceImpl())
+                            .exceptionHandler(new BlogServiceExceptionHandler())
                             .build();
 
-        final CreateBlogPostRequest request = new CreateBlogPostRequest()
+        final CreateBlogPostRequest exampleRequest = new CreateBlogPostRequest()
                 .setTitle("My first blog")
                 .setContent("Hello Armeria!");
         final DocService docService = DocService
                 .builder()
-                .exampleRequests(List.of(new BlogService.createBlogPost_args(request)))
+                .exampleRequests(List.of(new BlogService.createBlogPost_args(exampleRequest)))
                 .build();
         return Server.builder()
                      .http(port)
@@ -51,6 +52,5 @@ public final class Main {
                      .build();
     }
 
-    private Main() {
-    }
+    private Main() {}
 }

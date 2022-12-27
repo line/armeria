@@ -33,14 +33,14 @@ public class BlogServiceImpl implements BlogService.AsyncIface {
             throws TException {
         final int id = idGenerator.getAndIncrement();
         final Instant now = Instant.now();
-        final BlogPost updated = new BlogPost()
+        final BlogPost blogPost = new BlogPost()
                 .setId(id)
                 .setTitle(request.getTitle())
                 .setContent(request.getContent())
                 .setModifiedAt(now.toEpochMilli())
                 .setCreatedAt(now.toEpochMilli());
-        blogPosts.put(id, updated);
-        final BlogPost stored = updated;
+        blogPosts.put(id, blogPost);
+        final BlogPost stored = blogPost;
         resultHandler.onComplete(stored);
     }
 
@@ -49,6 +49,7 @@ public class BlogServiceImpl implements BlogService.AsyncIface {
             throws TException {
         final BlogPost blogPost = blogPosts.get(request.getId());
         if (blogPost == null) {
+            // throwing an exception will also have the same effect
             // throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
             resultHandler.onError(
                     new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
@@ -77,8 +78,6 @@ public class BlogServiceImpl implements BlogService.AsyncIface {
             throws TException {
         final BlogPost oldBlogPost = blogPosts.get(request.getId());
         if (oldBlogPost == null) {
-            // throwing an exception will also have the same effect
-            // throw new BlogNotFoundException("The blog post does not exist. ID: " + request.getId());
             resultHandler.onError(
                     new BlogNotFoundException("The blog post does not exist. ID: " + request.getId()));
         } else {
@@ -96,8 +95,6 @@ public class BlogServiceImpl implements BlogService.AsyncIface {
             throws TException {
         final BlogPost removed = blogPosts.remove(request.getId());
         if (removed == null) {
-            // throwing an exception will also have the same effect
-            // throw new NullPointerException("The blog post does not exist. ID: " + request.getId());
             resultHandler.onError(
                     new NullPointerException("The blog post does not exist. ID: " + request.getId()));
         } else {
