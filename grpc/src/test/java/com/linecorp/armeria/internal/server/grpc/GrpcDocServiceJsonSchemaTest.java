@@ -153,18 +153,21 @@ class GrpcDocServiceJsonSchemaTest {
     @Timeout(10)
     void testRepeated() throws Exception {
         final JsonNode jsonSchema = getJsonSchemas().get(0);
-        final JsonNode properties = jsonSchema.get("properties");
+        final JsonNode stringsField = jsonSchema.get("properties").get("complex_other_message").get(
+                "properties").get("strings");
 
-        assertThat(properties.get("strings").get("type").asText()).isEqualTo("array");
-        assertThat(properties.get("strings").get("items").get("type").asText()).isEqualTo("string");
+        assertThat(stringsField.get("type").asText()).isEqualTo("array");
+        assertThat(stringsField.get("items").get("type").asText()).isEqualTo("string");
 
-        assertThat(properties.get("nesteds").get("type").asText()).isEqualTo("array");
-        // TODO: Fine grained repeated fields
-        assertThat(properties.get("nesteds").get("items").get("type").asText()).isEqualTo("object");
+        final JsonNode nestedsField = jsonSchema.get("properties").get("nesteds");
 
-        assertThat(properties.get("selves").get("type").asText()).isEqualTo("array");
-        // TODO: Fine grained repeated fields
-        assertThat(properties.get("selves").get("items").get("type").asText()).isEqualTo("object");
+        assertThat(nestedsField.get("type").asText()).isEqualTo("array");
+        assertThat(nestedsField.get("items").get("$ref").asText()).isEqualTo("#/properties/nested");
+
+        final JsonNode selvesField = jsonSchema.get("properties").get("selves");
+
+        assertThat(selvesField.get("type").asText()).isEqualTo("array");
+        assertThat(selvesField.get("items").get("$ref").asText()).isEqualTo("#");
     }
 
     @Test
@@ -173,13 +176,26 @@ class GrpcDocServiceJsonSchemaTest {
         final JsonNode jsonSchema = getJsonSchemas().get(0);
         final JsonNode properties = jsonSchema.get("properties");
 
-        // TODO: Use additional properties to define map key - value schema
-        ImmutableList.of("int_to_string_map", "string_to_int_map", "message_map", "self_map").forEach(
-                mapName -> {
-                    assertThat(properties.get(mapName).get("type").asText()).isEqualTo("object");
-                    assertThat(properties.get(mapName).get("additionalProperties").asBoolean()).isTrue();
-                }
-        );
+        assertThat(properties.get("int_to_string_map").get("type").asText()).isEqualTo("object");
+        assertThat(properties.get("int_to_string_map").get("additionalProperties").get("type")
+                             .asText()).isEqualTo("string");
+
+        // "string_to_int_map" references to "#/properties/complex_other_message/properties/map"
+        assertThat(properties.get("string_to_int_map").get("$ref").asText()).isEqualTo(
+                "#/properties/complex_other_message/properties/map");
+        final JsonNode stringToIntMap = properties.get("complex_other_message").get("properties")
+                                                  .get("map");
+        assertThat(stringToIntMap.get("type").asText()).isEqualTo("object");
+        assertThat(stringToIntMap.get("additionalProperties").get("type")
+                                 .asText()).isEqualTo("integer");
+
+        assertThat(properties.get("message_map").get("type").asText()).isEqualTo("object");
+        assertThat(properties.get("message_map").get("additionalProperties").get("$ref")
+                             .asText()).isEqualTo("#/properties/nested");
+
+        assertThat(properties.get("self_map").get("type").asText()).isEqualTo("object");
+        assertThat(properties.get("self_map").get("additionalProperties").get("$ref")
+                             .asText()).isEqualTo("#");
     }
 
     @Test
@@ -209,6 +225,6 @@ class GrpcDocServiceJsonSchemaTest {
 
         assertThat(properties.get("nested_nested_self").get("properties").has("nested_self")).isTrue();
         assertThat(properties.get("nested_nested_self").get("properties").get("nested_self").get("$ref")
-                             .asText()).isEqualTo("#/nested_self");
+                             .asText()).isEqualTo("#/properties/nested_self");
     }
 }

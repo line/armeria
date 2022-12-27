@@ -25,6 +25,7 @@ import java.util.stream.Collectors;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
@@ -35,6 +36,12 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 final class JsonSchemaGenerator {
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
+
+    private static final List<FieldLocation> VALID_FIELD_LOCATIONS = ImmutableList.of(
+            FieldLocation.BODY,
+            FieldLocation.UNSPECIFIED);
+
+    private static final List<String> MEMORIZED_JSON_TYPES = ImmutableList.of("array", "object");
 
     /**
      * Generate an array of json schema specifications for each method inside the service.
@@ -98,15 +105,15 @@ final class JsonSchemaGenerator {
         final List<FieldInfo> methodFields = (isProto) ? typeNameToStructMapping
                 .get(methodInfo.parameters().get(0)
                                .typeSignature()
-                               .name()).fields() : methodInfo.parameters();
+                               .signature()).fields() : methodInfo.parameters();
 
         final Map<String, String> visited = new HashMap<>();
         final String currentPath = "#";
 
         if (isProto) {
-            visited.put(methodInfo.parameters().get(0).typeSignature().name(), currentPath);
+            visited.put(methodInfo.parameters().get(0).typeSignature().signature(), currentPath);
         }
-        generateFields(methodFields, visited, currentPath, root);
+        generateFields(methodFields, visited, currentPath + "/properties", root);
         return root;
     }
 
@@ -122,22 +129,17 @@ final class JsonSchemaGenerator {
     private void generateField(FieldInfo field, Map<String, String> visited, String path, ObjectNode root,
                                ArrayNode required) {
         final ObjectNode fieldNode = mapper.createObjectNode();
-        final String fieldTypeName = field.typeSignature().name();
+        final String fieldTypeSignature = field.typeSignature().signature();
+        final String schemaType = getSchemaType(field.typeSignature());
 
-        // Only Struct types map to custom objects to we need reference to those structs
-        if (field.typeSignature().type() == TypeSignatureType.STRUCT && visited.containsKey(
-                fieldTypeName)) {
+        if (visited.containsKey(fieldTypeSignature)) {
             // If field is already visited, add a reference to the field instead of iterating its children.
-            final String pathName = visited.get(fieldTypeName);
+            final String pathName = visited.get(fieldTypeSignature);
             fieldNode.put("$ref", pathName);
         } else {
             // Field is not visited, create a new type definition for it.
-            fieldNode.put("type", getSchemaType(field.typeSignature()));
+            fieldNode.put("type", schemaType);
             fieldNode.put("description", field.descriptionInfo().docString());
-
-            // TODO: Allow maps to have custom types for keys and values.
-            // Currently they are allowed to take any additional properties.
-            fieldNode.put("additionalProperties", field.typeSignature().type() == TypeSignatureType.MAP);
 
             // Fill required fields for the current object.
             if (field.requirement() == FieldRequirement.REQUIRED) {
@@ -148,23 +150,21 @@ final class JsonSchemaGenerator {
                 fieldNode.set("enum", getEnumType(field.typeSignature()));
             }
 
-            if (field.typeSignature().type() == TypeSignatureType.ITERABLE) {
-                final ObjectNode itemsType = getItemsType(field.typeSignature(), path);
-                if (itemsType != null) {
-                    fieldNode.set("items", itemsType);
-                }
+            // Set the current path to be "PREVIOUS_PATH/field.name".
+            final String currentPath = path + "/" + field.name();
+
+            // Only Struct types map to custom objects to we need reference to those structs.
+            // Having references to primitives do not make sense.
+            if (MEMORIZED_JSON_TYPES.contains(schemaType)) {
+                visited.put(fieldTypeSignature, currentPath);
             }
 
-            final StructInfo fieldStructInfo = typeNameToStructMapping.get(field.typeSignature().name());
-
-            // Set the current path to be "PREVIOUS_PATH/field.name"
-            final String currentPath = path + '/' + field.name();
-            // Mark current field as visited
-            visited.put(fieldTypeName, currentPath);
-
-            // Iterate over each child field, generate their definitions.
-            if (fieldStructInfo != null && !fieldStructInfo.fields().isEmpty()) {
-                generateFields(fieldStructInfo.fields(), visited, currentPath, fieldNode);
+            if (field.typeSignature().type() == TypeSignatureType.MAP) {
+                generateMapFields(fieldNode, field, visited, currentPath + "/properties");
+            } else if (field.typeSignature().type() == TypeSignatureType.ITERABLE) {
+                generateArrayFields(fieldNode, field, visited, currentPath + "/properties");
+            } else {
+                generateStructFields(fieldNode, field, visited, currentPath + "/properties");
             }
         }
 
@@ -184,46 +184,93 @@ final class JsonSchemaGenerator {
         final ObjectNode objectNode = mapper.createObjectNode();
         final ArrayNode required = mapper.createArrayNode();
 
-        // TODO: Consider filtering header & path params.
         for (FieldInfo field : fields) {
-            generateField(field, visited, path, objectNode, required);
+            if (VALID_FIELD_LOCATIONS.contains(field.location())) {
+                generateField(field, visited, path, objectNode, required);
+            }
         }
 
         root.set("properties", objectNode);
         root.set("required", required);
     }
 
+    private void generateMapFields(ObjectNode fieldNode, FieldInfo field, Map<String, String> visited,
+                                   String path) {
+        final ObjectNode additionalProperties = mapper.createObjectNode();
+        final String nextPath = path + '/' + field.name();
+
+        // TODO: How does map<int, ...> serialze to json? I guess it uses string keys.
+        final TypeSignature keyType =
+                ((ContainerTypeSignature) field.typeSignature()).typeParameters().get(1);
+
+        final String innerSchemaType = getSchemaType(keyType);
+
+        if (visited.containsKey(keyType.signature())) {
+            final String pathName = visited.get(keyType.signature());
+            additionalProperties.put("$ref", pathName);
+        } else {
+            additionalProperties.put("type", innerSchemaType);
+
+            if ("object".equals(innerSchemaType)) {
+                final StructInfo fieldStructInfo = typeNameToStructMapping.get(keyType.name());
+
+                visited.put(keyType.signature(), nextPath);
+                generateFields(fieldStructInfo.fields(), visited, nextPath + "/additionalProperties",
+                               additionalProperties);
+            }
+        }
+
+        fieldNode.set("additionalProperties", additionalProperties);
+    }
+
+    private void generateArrayFields(ObjectNode fieldNode, FieldInfo field, Map<String, String> visited,
+                                     String path) {
+        final ObjectNode items = mapper.createObjectNode();
+        final String nextPath = path + '/' + field.name();
+
+        final TypeSignature itemsType =
+                ((ContainerTypeSignature) field.typeSignature()).typeParameters().get(0);
+
+        final String innerSchemaType = getSchemaType(itemsType);
+
+        if (visited.containsKey(itemsType.signature())) {
+            final String pathName = visited.get(itemsType.signature());
+            items.put("$ref", pathName);
+        } else {
+            items.put("type", innerSchemaType);
+
+            if ("object".equals(innerSchemaType)) {
+                final StructInfo fieldStructInfo = typeNameToStructMapping.get(itemsType.name());
+                visited.put(itemsType.signature(), nextPath);
+                generateFields(fieldStructInfo.fields(), visited, nextPath + "/items", items);
+            }
+        }
+
+        fieldNode.set("items", items);
+    }
+
+    private void generateStructFields(ObjectNode fieldNode, FieldInfo field, Map<String, String> visited,
+                                      String path) {
+        fieldNode.put("additionalProperties", true);
+
+        final StructInfo fieldStructInfo = typeNameToStructMapping.get(field.typeSignature().name());
+
+        // Iterate over each child field, generate their definitions.
+        if (fieldStructInfo != null && !fieldStructInfo.fields().isEmpty()) {
+            generateFields(fieldStructInfo.fields(), visited, path, fieldNode);
+        }
+    }
+
     @Nullable
     private ArrayNode getEnumType(TypeSignature type) {
         final ArrayNode enumArray = mapper.createArrayNode();
-        final EnumInfo enumInfo = typeNameToEnumMapping.get(type.name());
+        final EnumInfo enumInfo = typeNameToEnumMapping.get(type.signature());
 
         if (enumInfo != null) {
             enumInfo.values().forEach(x -> enumArray.add(x.name()));
         }
 
         return enumArray;
-    }
-
-    @Nullable
-    private ObjectNode getItemsType(TypeSignature type, String path) {
-        if (type.type() == TypeSignatureType.ITERABLE) {
-            switch (type.name().toLowerCase()) {
-                case "repeated":
-                case "list":
-                case "array":
-                case "set":
-                    // TODO: Support nested types for arrays.
-                    final TypeSignature head = ((ContainerTypeSignature) type).typeParameters().get(0);
-                    final ObjectNode primitiveNode = mapper.createObjectNode();
-                    primitiveNode.put("type", getSchemaType(head));
-                    return primitiveNode;
-                default:
-                    return null;
-            }
-        }
-
-        return null;
     }
 
     private String getSchemaType(TypeSignature typeSignature) {
