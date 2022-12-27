@@ -16,17 +16,25 @@
 
 package com.linecorp.armeria.resilience4j.circuitbreaker;
 
-import static java.util.stream.Collectors.joining;
-
-import java.util.Objects;
-import java.util.stream.Stream;
-
 final class Resilience4jCircuitBreakerUtils {
 
     static final Resilience4jCircuitBreakerFactory FACTORY = (registry, host, method, path) -> {
-        final String key = Stream.of(host, method, path)
-                                 .filter(Objects::nonNull)
-                                 .collect(joining("#"));
+        String key = "";
+        if (host != null) {
+            key = host;
+        }
+        if (method != null) {
+            if (!key.isEmpty()) {
+                key += '#';
+            }
+            key += method;
+        }
+        if (path != null) {
+            if (!key.isEmpty()) {
+                key += '#';
+            }
+            key += path;
+        }
         return registry.circuitBreaker(key);
     };
 

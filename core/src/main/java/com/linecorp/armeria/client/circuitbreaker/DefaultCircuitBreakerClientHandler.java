@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
@@ -45,7 +46,7 @@ final class DefaultCircuitBreakerClientHandler<I extends Request> implements Cir
             return null;
         }
         if (!circuitBreaker.tryRequest()) {
-            throw new FailFastException(circuitBreaker);
+            throw UnprocessedRequestException.of(new FailFastException(circuitBreaker));
         }
         if (circuitBreaker instanceof CircuitBreakerCallback) {
             return (CircuitBreakerCallback) circuitBreaker;

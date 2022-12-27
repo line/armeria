@@ -38,6 +38,7 @@ import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
@@ -388,14 +389,16 @@ class CircuitBreakerClientTest {
 
         await().untilAsserted(() -> assertThat(circuitBreaker.tryRequest()).isFalse());
         // OPEN
-        assertThatThrownBy(() -> client.get("/unavailable")).isInstanceOf(FailFastException.class);
+        assertThatThrownBy(() -> client.get("/unavailable")).isInstanceOf(UnprocessedRequestException.class)
+                                                            .hasRootCauseInstanceOf(FailFastException.class);
     }
 
     private static void failFastInvocation(
             Function<? super HttpClient, CircuitBreakerClient> decorator, HttpMethod method, int count) {
         for (int i = 0; i < count; i++) {
             final HttpRequest req = HttpRequest.of(method, "/");
-            assertThatThrownBy(() -> invoke(decorator, req)).isInstanceOf(FailFastException.class);
+            assertThatThrownBy(() -> invoke(decorator, req)).isInstanceOf(UnprocessedRequestException.class)
+                                                            .hasRootCauseInstanceOf(FailFastException.class);
         }
     }
 

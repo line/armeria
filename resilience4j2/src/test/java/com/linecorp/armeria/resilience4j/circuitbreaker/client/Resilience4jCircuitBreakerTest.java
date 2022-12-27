@@ -27,6 +27,7 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.HttpClient;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
 import com.linecorp.armeria.common.HttpResponse;
@@ -76,6 +77,7 @@ class Resilience4jCircuitBreakerTest {
         final CircuitBreaker cb = registry.getAllCircuitBreakers().stream().findFirst().orElseThrow();
         await().untilAsserted(() -> assertThat(cb.getState()).isEqualTo(State.OPEN));
 
-        assertThatThrownBy(() -> client.get("/500")).isInstanceOf(CallNotPermittedException.class);
+        assertThatThrownBy(() -> client.get("/500")).isInstanceOf(UnprocessedRequestException.class)
+                                                    .hasCauseInstanceOf(CallNotPermittedException.class);
     }
 }

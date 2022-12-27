@@ -22,12 +22,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClientHandler;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerMapping;
 import com.linecorp.armeria.client.circuitbreaker.ClientCircuitBreakerGenerator;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 
 /**
@@ -77,7 +79,7 @@ public final class Resilience4JCircuitBreakerClientHandler<T extends Request>
 
     /**
      * Creates a default {@link CircuitBreakerClientHandler} which uses the provided
-     * {@link com.linecorp.armeria.client.circuitbreaker.CircuitBreaker} to handle requests.
+     * {@link CircuitBreaker} to handle requests.
      */
     public static <I extends Request> CircuitBreakerClientHandler<I> of(CircuitBreaker circuitBreaker) {
         requireNonNull(circuitBreaker, "circuitBreaker");
@@ -108,7 +110,11 @@ public final class Resilience4JCircuitBreakerClientHandler<T extends Request>
             logger.warn("Failed to get a circuit breaker from mapping", t);
             return null;
         }
-        circuitBreaker.acquirePermission();
+        try {
+            circuitBreaker.acquirePermission();
+        } catch (CallNotPermittedException e) {
+            throw UnprocessedRequestException.of(e);
+        }
         final long startTimestamp = circuitBreaker.getCurrentTimestamp();
         return new Resilience4JCircuitBreakerCallback(circuitBreaker, startTimestamp);
     }

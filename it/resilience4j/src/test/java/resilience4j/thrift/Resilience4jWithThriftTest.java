@@ -23,11 +23,11 @@ import static org.awaitility.Awaitility.await;
 import java.util.function.Function;
 
 import org.apache.thrift.TException;
-import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRpcClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRuleWithContent;
 import com.linecorp.armeria.client.thrift.ThriftClients;
@@ -101,7 +101,7 @@ class Resilience4jWithThriftTest {
         await().untilAsserted(() -> assertThat(cb.getState()).isEqualTo(State.OPEN));
 
         assertThatThrownBy(() -> helloService.hello(new HelloRequest("hello")))
-                .isInstanceOf(TTransportException.class)
+                .isInstanceOf(UnprocessedRequestException.class)
                 .hasCauseInstanceOf(CallNotPermittedException.class);
     }
 }

@@ -12,9 +12,11 @@ import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClient;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerRule;
+import com.linecorp.armeria.client.circuitbreaker.FailFastException;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.resilience4j.circuitbreaker.client.Resilience4JCircuitBreakerClientHandler;
@@ -76,13 +78,15 @@ class CircuitBreakerTest {
         for (int i = 0; i < windowSize; i++) {
             assertThat(client.get("500-1").status().code()).isEqualTo(500);
         }
-        assertThatThrownBy(() -> client.get("500-1")).isInstanceOf(CallNotPermittedException.class);
+        assertThatThrownBy(() -> client.get("500-1")).isInstanceOf(UnprocessedRequestException.class)
+                                                     .hasCauseInstanceOf(FailFastException.class);
 
         // a separate circuitbreaker is instantiated for different paths
         for (int i = 0; i < windowSize; i++) {
             assertThat(client.get("500-2").status().code()).isEqualTo(500);
         }
-        assertThatThrownBy(() -> client.get("500-2")).isInstanceOf(CallNotPermittedException.class);
+        assertThatThrownBy(() -> client.get("500-2")).isInstanceOf(UnprocessedRequestException.class)
+                                                     .hasCauseInstanceOf(FailFastException.class);
     }
 
     @Test

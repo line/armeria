@@ -77,11 +77,13 @@ class CircuitBreakerClientIntegrationTest {
                     await().until(() -> !circuitBreaker.tryRequest());
                     assertThatThrownBy(() -> client.execute(req).aggregate().join())
                             .isInstanceOf(CompletionException.class)
-                            .hasCauseInstanceOf(FailFastException.class);
+                            .hasCauseInstanceOf(UnprocessedRequestException.class)
+                            .hasRootCauseInstanceOf(FailFastException.class);
 
                     await().untilAsserted(() -> {
                         assertThat(req.whenComplete()).hasFailedWithThrowableThat()
-                                                      .isInstanceOf(FailFastException.class);
+                                                      .isInstanceOf(UnprocessedRequestException.class)
+                                                      .hasRootCauseInstanceOf(FailFastException.class);
                     });
             }
 

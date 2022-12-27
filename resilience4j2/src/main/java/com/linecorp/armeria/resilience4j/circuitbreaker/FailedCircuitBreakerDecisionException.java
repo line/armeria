@@ -38,5 +38,7 @@ public final class FailedCircuitBreakerDecisionException extends Exception {
         return DEFAULT;
     }
 
-    FailedCircuitBreakerDecisionException() {}
+    private FailedCircuitBreakerDecisionException() {
+        super(null, null, false, false);
+    }
 }
