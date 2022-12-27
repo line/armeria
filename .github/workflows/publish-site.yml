@@ -32,7 +32,7 @@ jobs:
 
       - name: Build the site
         run: |
-          ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel site -PgithubToken="${{ secrets.GITHUB_TOKEN }}"
+          ./gradlew --no-daemon --stacktrace  --max-workers=2 --parallel -PgithubToken="${{ secrets.GITHUB_TOKEN }}" site
 
       - name: Deploy the site
         uses: peaceiris/actions-gh-pages@v3
