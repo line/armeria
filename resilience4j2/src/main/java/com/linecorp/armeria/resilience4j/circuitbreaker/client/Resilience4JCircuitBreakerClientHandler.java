@@ -37,29 +37,29 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
  *
  * <pre>{@code
  * // for HttpRequest
- * CircuitBreakerRule rule = CircuitBreakerRule.onException();
- * CircuitBreakerClientHandler<HttpRequest> handler = Resilience4JCircuitBreakerClientHandler.of(
+ * CircuitBreakerRule rule = CircuitBreakerRule.onStatusClass(HttpStatusClass.SERVER_ERROR);
+ * CircuitBreakerRegistry registry = CircuitBreakerRegistry.ofDefaults();
+ * Resilience4jCircuitBreakerMapping mapping =
  *     Resilience4jCircuitBreakerMapping.builder()
+ *                                      .registry(registry)
  *                                      .perHost()
- *                                      .registry(CircuitBreakerRegistry.custom()
- *                                                                      ...
- *                                                                      .build())
- *                                      .build());
+ *                                      .build();
  * WebClient.builder()
- *          .decorator(CircuitBreakerClient.newDecorator(handler, rule))
+ *          .decorator(CircuitBreakerClient.newDecorator(
+ *              Resilience4JCircuitBreakerClientHandler.of(mapping), rule))
  *          ...
  *
  * // for RpcRequest
  * CircuitBreakerRuleWithContent rule = ...;
- * CircuitBreakerClientHandler<RpcRequest> handler = Resilience4JCircuitBreakerClientHandler.of(
+ * CircuitBreakerRegistry registry = CircuitBreakerRegistry.ofDefaults();
+ * Resilience4jCircuitBreakerMapping mapping =
  *     Resilience4jCircuitBreakerMapping.builder()
+ *                                      .registry(registry)
  *                                      .perHost()
- *                                      .registry(CircuitBreakerRegistry.custom()
- *                                                                      ...
- *                                                                      .build())
- *                                      .build());
+ *                                      .build();
  * ThriftClients.builder("localhost")
- *              .rpcDecorator(CircuitBreakerRpcClient.newDecorator(decorator, rule))
+ *              .rpcDecorator(CircuitBreakerRpcClient.newDecorator(
+ *                  Resilience4JCircuitBreakerClientHandler.of(mapping), rule))
  *              ...
  * }</pre>
  */
