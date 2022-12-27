@@ -193,6 +193,7 @@ class ContributorListTask extends DefaultTask {
         for (def i = 0; i < 10; i++) {
             def req = new URL(url).openConnection()
             if (accessToken?.trim()) {
+                println("[DEBUG] contributorList accessToken: ${accessToken}")
                 req.setRequestProperty('Authorization', "token ${accessToken}")
             }
             def resText = req.getInputStream().getText()
