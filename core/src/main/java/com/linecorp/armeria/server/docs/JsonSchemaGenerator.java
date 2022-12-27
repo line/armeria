@@ -199,7 +199,8 @@ final class JsonSchemaGenerator {
         final ObjectNode additionalProperties = mapper.createObjectNode();
         final String nextPath = path + '/' + field.name();
 
-        // TODO: How does map<int, ...> serialze to json? I guess it uses string keys.
+        // TODO: How does map<int, ...> serialize to json? I guess it uses string keys.
+        //  Same question applies to other types too, how about Map<Object, ...>?
         final TypeSignature keyType =
                 ((ContainerTypeSignature) field.typeSignature()).typeParameters().get(1);
 
