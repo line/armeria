@@ -190,7 +190,6 @@ class ContributorListTask extends DefaultTask {
         def accessToken = project.findProperty('githubToken')
         def url = 'https://api.github.com/repos/line/armeria/contributors'
         def nextPattern = Pattern.compile(/<(https:\/\/api\.github\.com\/[^>]+)>; rel="next"/)
-        project.logger.lifecycle("[DEBUG] contributorList accessToken: ${accessToken}")
         for (def i = 0; i < 10; i++) {
             def req = new URL(url).openConnection()
             if (accessToken?.trim()) {
