@@ -26,7 +26,7 @@ import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
-final class DefaultCircuitBreakerClientHandler<I extends Request> implements CircuitBreakerClientHandler<I> {
+final class DefaultCircuitBreakerClientHandler implements CircuitBreakerClientHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(DefaultCircuitBreakerClientHandler.class);
 
@@ -37,7 +37,7 @@ final class DefaultCircuitBreakerClientHandler<I extends Request> implements Cir
     }
 
     @Override
-    public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, I req) {
+    public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, Request req) {
         final CircuitBreaker circuitBreaker;
         try {
             circuitBreaker = requireNonNull(mapping.get(ctx, req), "circuitBreaker");

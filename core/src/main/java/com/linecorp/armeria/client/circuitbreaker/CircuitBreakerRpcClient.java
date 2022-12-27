@@ -74,7 +74,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
      */
     @UnstableApi
     public static Function<? super RpcClient, CircuitBreakerRpcClient>
-    newDecorator(CircuitBreakerClientHandler<RpcRequest> handler,
+    newDecorator(CircuitBreakerClientHandler handler,
                  CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         requireNonNull(handler, "handler");
         requireNonNull(ruleWithContent, "ruleWithContent");
@@ -142,7 +142,7 @@ public final class CircuitBreakerRpcClient extends AbstractCircuitBreakerClient<
     /**
      * Creates a new instance that decorates the specified {@link RpcClient}.
      */
-    CircuitBreakerRpcClient(RpcClient delegate, CircuitBreakerClientHandler<RpcRequest> handler,
+    CircuitBreakerRpcClient(RpcClient delegate, CircuitBreakerClientHandler handler,
                             CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         super(delegate, handler, requireNonNull(ruleWithContent, "ruleWithContent"));
     }

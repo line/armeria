@@ -82,7 +82,7 @@ public final class CircuitBreakerClientBuilder
 
     @Override
     @UnstableApi
-    public CircuitBreakerClientBuilder handler(CircuitBreakerClientHandler<HttpRequest> handler) {
+    public CircuitBreakerClientBuilder handler(CircuitBreakerClientHandler handler) {
         return (CircuitBreakerClientBuilder) super.handler(handler);
     }
 

@@ -63,8 +63,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
  *              ...
  * }</pre>
  */
-public final class Resilience4JCircuitBreakerClientHandler<T extends Request>
-        implements CircuitBreakerClientHandler<T> {
+public final class Resilience4JCircuitBreakerClientHandler implements CircuitBreakerClientHandler {
 
     private static final Logger logger =
             LoggerFactory.getLogger(Resilience4JCircuitBreakerClientHandler.class);
@@ -73,7 +72,7 @@ public final class Resilience4JCircuitBreakerClientHandler<T extends Request>
      * Creates a default {@link CircuitBreakerClientHandler} which uses
      * {@link Resilience4jCircuitBreakerMapping#ofDefault()} to handle requests.
      */
-    public static <I extends Request> CircuitBreakerClientHandler<I> of() {
+    public static CircuitBreakerClientHandler of() {
         return of(Resilience4jCircuitBreakerMapping.ofDefault());
     }
 
@@ -81,7 +80,7 @@ public final class Resilience4JCircuitBreakerClientHandler<T extends Request>
      * Creates a default {@link CircuitBreakerClientHandler} which uses the provided
      * {@link CircuitBreaker} to handle requests.
      */
-    public static <I extends Request> CircuitBreakerClientHandler<I> of(CircuitBreaker circuitBreaker) {
+    public static CircuitBreakerClientHandler of(CircuitBreaker circuitBreaker) {
         requireNonNull(circuitBreaker, "circuitBreaker");
         return of((ctx, req) -> circuitBreaker);
     }
@@ -90,9 +89,9 @@ public final class Resilience4JCircuitBreakerClientHandler<T extends Request>
      * Creates a default {@link CircuitBreakerClientHandler} which uses the provided
      * {@link CircuitBreakerMapping} to handle requests.
      */
-    public static <I extends Request> CircuitBreakerClientHandler<I> of(
+    public static CircuitBreakerClientHandler of(
             Resilience4jCircuitBreakerMapping mapping) {
-        return new Resilience4JCircuitBreakerClientHandler<>(requireNonNull(mapping, "mapping"));
+        return new Resilience4JCircuitBreakerClientHandler(requireNonNull(mapping, "mapping"));
     }
 
     private final ClientCircuitBreakerGenerator<CircuitBreaker> mapping;
@@ -102,7 +101,7 @@ public final class Resilience4JCircuitBreakerClientHandler<T extends Request>
     }
 
     @Override
-    public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, T req) {
+    public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, Request req) {
         final CircuitBreaker circuitBreaker;
         try {
             circuitBreaker = requireNonNull(mapping.get(ctx, req), "circuitBreaker");
