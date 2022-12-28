@@ -639,6 +639,32 @@ for more information.
    }
    ```
 
+## Setting a target version with the `java(\\d+)` flag.
+
+By default, setting the `java` flag compiles a module targeting a minimum java version of 8.
+However, it is possible that certain modules need to be compiled targeting a higher java version than others.
+
+Assume that `:moduleA` requires at least java 17 to compile, whereas `:moduleB` requires java 8.
+If `./gradlew assemble` is naively invoked on the root project with java 8, `:moduleA` would fail to compile
+since it requires at least java 17. This makes it difficult to test if `:moduleB` runs correctly with java 8.
+
+In such case, users may add a `java17` flag which provides the following functionalities:
+- Ensure that the target module is compiled to target minimum compatibility with java 17.
+- Skip tasks which require a jre version lower than the target version.
+  - Most notably, tests will be skipped if the jre version is lower than 17.
+
+The flag may be added like the following:
+
+   ```groovy
+   // settings.gradle
+   // ...
+   includeWithFlags ':moduleA', 'java', 'java17'
+   includeWithFlags ':moduleB', 'java'
+   ```
+
+Note that if the target java version is greater than the build jdk version,
+an `UnsupportedClassVersionError` may be raised.
+
 ## Tagging conveniently with `release` task
 
 The task called `release` is added at the top level project. It will update the

@@ -184,21 +184,6 @@ configure(projectsWithFlags('java')) {
         testImplementation libs.hamcrest.library
     }
 
-    tasks.withType(JavaCompile) { task ->
-        if (task.path.startsWith(':examples:')) {
-            // Target Java 11 for examples.
-            options.release.set(11)
-            // IntelliJ fails to compile example projects with IntelliJ compiler because of a wrong target
-            // bytecode version which is marked as Java 8 without the following options.
-            // See https://github.com/line/armeria/pull/3712
-            sourceCompatibility = '11'
-            targetCompatibility = '11'
-        } else {
-            // Target Java 8 for the rest of them.
-            options.release.set(8)
-        }
-    }
-
     // Configure the default DuplicatesStrategy for such as:
     // - c.l.armeria.versions.properties
     // - thrift/cassandra.json
@@ -210,13 +195,6 @@ configure(projectsWithFlags('java')) {
 }
 
 allprojects {
-
-    tasks.all { task ->
-        // Disables all tasks in examples when we use a JDK version under 11.
-        if (rootProject.ext.testJavaVersion < 11 && task.path.startsWith(':examples:')) {
-            task.enabled = false
-        }
-    }
 
     // Configure the Javadoc tasks of all projects.
     tasks.withType(Javadoc) {
