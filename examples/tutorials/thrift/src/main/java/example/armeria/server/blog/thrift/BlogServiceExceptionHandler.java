@@ -11,7 +11,7 @@ public class BlogServiceExceptionHandler implements BiFunction<ServiceRequestCon
 
     @Override
     public RpcResponse apply(ServiceRequestContext serviceRequestContext, Throwable cause) {
-        if (cause instanceof NullPointerException) {
+        if (cause instanceof IllegalArgumentException) {
             return RpcResponse.ofFailure(new BlogNotFoundException(cause.getMessage()));
         }
         return RpcResponse.ofFailure(cause);

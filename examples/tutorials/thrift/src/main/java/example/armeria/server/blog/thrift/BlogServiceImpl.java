@@ -96,7 +96,7 @@ public class BlogServiceImpl implements BlogService.AsyncIface {
         final BlogPost removed = blogPosts.remove(request.getId());
         if (removed == null) {
             resultHandler.onError(
-                    new NullPointerException("The blog post does not exist. ID: " + request.getId()));
+                    new IllegalArgumentException("The blog post does not exist. ID: " + request.getId()));
         } else {
             resultHandler.onComplete(null);
         }
