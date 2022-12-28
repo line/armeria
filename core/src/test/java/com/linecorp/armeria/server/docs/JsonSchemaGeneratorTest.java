@@ -144,7 +144,7 @@ class JsonSchemaGeneratorTest {
                              .get("inner-param1")).isNotNull();
         assertThat(jsonSchema.get("properties").get("paramRecursive").get("properties")
                              .get("inner-recurse")).isNotNull();
-        assertThat(jsonSchema.get("properties").get("paramRecursive").get("properties")
-                             .get("inner-recurse").get("$ref").asText()).isEqualTo("#/properties/paramRecursive");
+        assertThat(jsonSchema.get("properties").get("paramRecursive").get("properties").get("inner-recurse")
+                             .get("$ref").asText()).isEqualTo("#/properties/paramRecursive");
     }
 }
