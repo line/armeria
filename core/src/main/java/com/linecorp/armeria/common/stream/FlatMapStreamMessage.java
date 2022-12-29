@@ -199,7 +199,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             if (n <= 0) {
                 onError(new IllegalArgumentException(
                         "n: " + n + " (expected: > 0, see Reactive Streams specification rule 3.9)"));
-                upstream.cancel();
+                cancel();
                 return;
             }
 
