@@ -113,6 +113,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         private final Set<FlatMapSubscriber<T, U>> sourceSubscriptions;
         private final Queue<U> buffer;
         private final CompletableFuture<Void> completionFuture;
+        private final SubscriptionOption[] options;
 
         @Nullable
         private volatile Subscription upstream;
@@ -126,7 +127,8 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                                      Function<T, StreamMessage<U>> function,
                                      EventExecutor executor,
                                      int maxConcurrency,
-                                     CompletableFuture<Void> completionFuture) {
+                                     CompletableFuture<Void> completionFuture,
+                                     SubscriptionOption... options) {
             requireNonNull(downstream, "downstream");
             requireNonNull(function, "function");
             requireNonNull(executor, "executor");
@@ -137,6 +139,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             this.executor = executor;
             this.maxConcurrency = maxConcurrency;
             this.completionFuture = completionFuture;
+            this.options = options;
 
             sourceSubscriptions = new HashSet<>();
             buffer = new ArrayDeque<>();
@@ -160,7 +163,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             }
 
             final StreamMessage<U> newStreamMessage = function.apply(item);
-            newStreamMessage.subscribe(new FlatMapSubscriber<>(this), executor);
+            newStreamMessage.subscribe(new FlatMapSubscriber<>(this), executor, options);
             pendingSubscriptions++;
         }
 
