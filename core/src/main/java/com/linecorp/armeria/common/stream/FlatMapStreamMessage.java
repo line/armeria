@@ -162,9 +162,9 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
+            pendingSubscriptions++;
             final StreamMessage<U> newStreamMessage = function.apply(item);
             newStreamMessage.subscribe(new FlatMapSubscriber<>(this), executor, options);
-            pendingSubscriptions++;
         }
 
         @Override
