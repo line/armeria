@@ -87,7 +87,7 @@ class GrpcDocServiceJsonSchemaTest {
 
     private static List<JsonNode> getJsonSchemas() throws JsonProcessingException {
         final WebClient client = WebClient.of(server.httpUri());
-        final AggregatedHttpResponse res = client.get("/docs/schema.json").aggregate().join();
+        final AggregatedHttpResponse res = client.get("/docs/schemas.json").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
 
         final ObjectMapper mapper = new ObjectMapper();
