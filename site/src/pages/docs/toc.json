@@ -20,6 +20,7 @@
     "server-http-file",
     "server-servlet",
     "server-access-log",
+    "server-timeouts",
     "server-cors",
     "server-sse",
     "server-service-registration",

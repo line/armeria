@@ -266,8 +266,9 @@ public final class DocService extends SimpleDecoratingHttpService {
         CompletableFuture<List<AggregatedHttpFile>> updateServices(List<ServiceConfig> services,
                                                                    Executor executor) {
             this.services = services;
+            final ServiceSpecification serviceSpecification = generateServiceSpecification();
             final List<CompletableFuture<AggregatedHttpFile>> files = TARGET_PATHS.stream().map(
-                    path -> load(path, executor)).collect(Collectors.toList());
+                    path -> load(path, executor, serviceSpecification)).collect(Collectors.toList());
             return CompletableFutures.allAsList(files);
         }
 
@@ -276,13 +277,14 @@ public final class DocService extends SimpleDecoratingHttpService {
             return files.getOrDefault(path, loadFailedFuture);
         }
 
-        private CompletableFuture<AggregatedHttpFile> load(String path, Executor executor) {
+        private CompletableFuture<AggregatedHttpFile> load(String path, Executor executor,
+                                                           ServiceSpecification serviceSpecification) {
             if (VERSIONS_PATH.equals(path)) {
                 return loadVersions(executor);
             } else if (SPECIFICATION_PATH.equals(path)) {
-                return loadSpecifications(executor);
+                return loadSpecifications(executor, serviceSpecification);
             } else if (SCHEMAS_PATH.equals(path)) {
-                return loadSchemas(executor);
+                return loadSchemas(executor, serviceSpecification);
             } else {
                 throw new Error(); // Should never reach here.
             }
@@ -310,10 +312,10 @@ public final class DocService extends SimpleDecoratingHttpService {
             return spec;
         }
 
-        private CompletableFuture<AggregatedHttpFile> loadSpecifications(Executor executor) {
+        private CompletableFuture<AggregatedHttpFile> loadSpecifications(Executor executor,
+                                                                         ServiceSpecification spec) {
             return files.computeIfAbsent(SPECIFICATION_PATH, key -> {
                 return CompletableFuture.supplyAsync(() -> {
-                    final ServiceSpecification spec = generateServiceSpecification();
                     try {
                         final byte[] content = jsonMapper.writerWithDefaultPrettyPrinter()
                                                          .writeValueAsBytes(spec);
@@ -325,10 +327,10 @@ public final class DocService extends SimpleDecoratingHttpService {
             });
         }
 
-        private CompletableFuture<AggregatedHttpFile> loadSchemas(Executor executor) {
+        private CompletableFuture<AggregatedHttpFile> loadSchemas(Executor executor,
+                                                                  ServiceSpecification spec) {
             return files.computeIfAbsent(SCHEMAS_PATH, key -> {
                 return CompletableFuture.supplyAsync(() -> {
-                    final ServiceSpecification spec = generateServiceSpecification();
                     try {
                         final ArrayNode jsonSpec = JsonSchemaGenerator.generate(spec);
 

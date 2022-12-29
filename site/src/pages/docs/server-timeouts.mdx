@@ -1,0 +1,109 @@
+# Overriding client timeouts
+
+Sometimes, the default timeouts used by the Armeria clients do not suit a particular scenario well.
+In these cases, you might want to override the timeout settings.
+
+## Using <type://ClientBuilder>
+
+```java
+import java.time.Duration;
+
+import com.linecorp.armeria.client.Clients;
+
+int responseTimeout = 30;
+int writeTimeout = 10;
+
+HelloService.Iface client =
+    Clients.builder("tbinary+http://example.com/hello")
+           .responseTimeout(Duration.ofSeconds(responseTimeout))
+           .writeTimeout(Duration.ofSeconds(writeTimeout))
+           .build(HelloService.Iface.class);
+```
+
+## Using <type://WebClientRequestPreparation>
+
+You can override the properties defined in <type://RequestOptions> at request level
+using <type://WebClient#prepare()>.
+
+```java
+import com.linecopr.armeria.client.WebClient;
+
+WebClient client = WebClient.of("http://example.com"); 
+client.prepare()
+      .get("/hello")
+      .responseTimeout(Duration.ofSeconds(30))
+      .writeTimeout(Duration.ofSeconds(10)
+      .maxResponseLength(1024)
+      .execute();
+```
+
+## Using <type://RequestOptions>
+
+You can also create a <type://RequestOptions> to override the properties at request level. The
+created <type://RequestOptions> could be passed to <type://WebClient#execute(HttpRequest,RequestOptions)?full>
+with an <type://HttpRequest>.
+
+```java
+import com.linecorp.armeria.client.RequestOptions;
+import com.linecorp.armeria.common.HttpRequest;
+
+HttpRequest req = HttpRequest.of(HttpMethod.GET, "/hello");
+RequestOptions options = 
+    RequestOptions.builder()
+                  .responseTimeout(Duration.ofSeconds(30))
+                  .writeTimeout(Duration.ofSeconds(10)
+                  .maxResponseLength(1024)
+                  .build();
+client.execute(req, options);
+```
+
+<Tip>
+
+See [Response properties](/docs/advanced-structured-logging#response-properties) to understand when the
+response timeout is scheduled.
+
+</Tip>
+
+## Adjusting connection-level timeouts
+
+You need to build a non-default <type://ClientFactory> using <type://ClientFactoryBuilder> to override the default
+connection-level timeouts such as connect timeout and idle timeout programmatically:
+
+```java
+import com.linecorp.armeria.client.ClientFactory;
+
+ClientFactory factory =
+    ClientFactory.builder()
+                 // Increase the connect timeout from 3.2s to 10s.
+                 .connectTimeout(Duration.ofSeconds(10))
+                 // Shorten the idle connection timeout from 10s to 5s.
+                 .idleTimeout(Duration.ofSeconds(5))
+                 // Note that you can also adjust other connection-level
+                 // settings such as enabling HTTP/1 request pipelining.
+                 .useHttp1Pipelining(true)
+                 .build();
+```
+
+Note that <type://ClientFactory> implements `java.lang.AutoCloseable` and thus needs to be closed when you
+terminate your application. On `close()`, <type://ClientFactory> will close all the connections it manages
+and abort any requests in progress.
+
+## Using JVM system properties
+
+You can override the default client timeouts by specifying the following JVM system properties if you do not
+prefer setting it programmatically:
+- `-Dcom.linecorp.armeria.defaultClientIdleTimeoutMillis=<integer>`
+  - the default client-side idle timeout of a connection for keep-alive in milliseconds. Default: `10000`
+- `-Dcom.linecorp.armeria.defaultConnectTimeoutMillis=<integer>`
+  - the default client-side timeout of a socket connection attempt in milliseconds. Default: `3200`
+- `-Dcom.linecorp.armeria.defaultWriteTimeoutMillis=<integer>`
+  - the default client-side timeout of a socket write attempt in milliseconds. Default: `1000`
+- `-Dcom.linecorp.armeria.defaultResponseTimeoutMillis=<integer>`
+  - the default client-side timeout of a response in milliseconds. Default: `15000`
+
+<Warning>
+
+The JVM system properties have effect only when you did not specify them programmatically.
+See <type://Flags> for the complete list of JVM system properties in Armeria.
+
+</Warning>
