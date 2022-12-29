@@ -216,7 +216,11 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
         private void handleRequest(long n) {
             requestedByDownstream = LongMath.saturatedAdd(requestedByDownstream, n);
-            upstream.request(maxConcurrency - sourceSubscriptions.size());
+
+            final long toRequest = maxConcurrency - sourceSubscriptions.size();
+            if (toRequest > 0) {
+                upstream.request(toRequest);
+            }
 
             flush();
             requestAllAvailable();
