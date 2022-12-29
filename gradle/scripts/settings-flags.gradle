@@ -109,7 +109,7 @@ static def addFlags(Set<String> actualFlags, ...flags) {
 
     // 'java(\\d+)' implies 'java'
     if (!actualFlags.contains('java')) {
-        var pattern = Pattern.compile('^java(\\d+)$')
+        def pattern = Pattern.compile('^java(\\d+)$')
         for (String flag: actualFlags) {
             if (pattern.matcher(flag).matches()) {
                 actualFlags.add('java')

@@ -44,14 +44,14 @@ configure(rootProject) {
  * Note that the parsed value must be at least {@code defaultVersion} or an exception will be raised.
  */
 static def extractTargetJavaVersion(Project project, int defaultVersion) {
-    var pattern = Pattern.compile('^java(\\d+)$')
-    var flags = project.ext.flags
-    for (String flag: flags) {
-        var matcher = pattern.matcher(flag)
+    def pattern = Pattern.compile('^java(\\d+)$')
+    def flags = project.ext.flags
+    for (def flag: flags) {
+        def matcher = pattern.matcher(flag)
         if (!matcher.matches()) {
             continue
         }
-        var version = Integer.parseInt(matcher.group(1))
+        def version = Integer.parseInt(matcher.group(1))
         if (version < defaultVersion) {
             throw new IllegalArgumentException("The minimum java version ${version} specified " +
                     "by '${flag}' cannot be smaller than s${defaultVersion}")
@@ -79,7 +79,7 @@ configure(projectsWithFlags('java')) {
 
     // parse flags for the target java version with the default as java 8.
     // an exception will be thrown if a version <8 is specified in the flags.
-    var targetJavaVersion = extractTargetJavaVersion(project, 8)
+    def targetJavaVersion = extractTargetJavaVersion(project, 8)
 
     java {
         toolchain {
