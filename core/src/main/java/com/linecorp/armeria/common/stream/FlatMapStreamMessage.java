@@ -263,6 +263,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
             if (available == Long.MAX_VALUE) {
                 childSubscribers.forEach(sub -> sub.request(Long.MAX_VALUE));
+                return;
             }
 
             final List<FlatMapSubscriber<T, U>> toRequest = childSubscribers.stream()
