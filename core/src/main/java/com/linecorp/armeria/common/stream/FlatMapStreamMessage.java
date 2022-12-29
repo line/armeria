@@ -341,7 +341,9 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void onNext(U value) {
-            requested--;
+            if (requested != Long.MAX_VALUE) {
+                requested--;
+            }
             parent.onNextChild(value);
         }
 
@@ -360,7 +362,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         public void request(long n) {
-            requested += n;
+            requested = LongMath.saturatedAdd(requested, n);
             subscription.request(n);
         }
 
