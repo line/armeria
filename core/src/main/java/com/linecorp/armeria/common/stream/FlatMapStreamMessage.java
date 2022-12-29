@@ -110,7 +110,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         private final Subscriber<? super U> downstream;
         private final Function<T, StreamMessage<U>> function;
         private final EventExecutor executor;
-        private final Set<FlatMapSubscriber<T, U>> sourceSubscriptions;
+        private final Set<FlatMapSubscriber<T, U>> childSubscribers;
         private final Queue<U> buffer;
         private final CompletableFuture<Void> completionFuture;
         private final SubscriptionOption[] options;
@@ -141,7 +141,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             this.completionFuture = completionFuture;
             this.options = options;
 
-            sourceSubscriptions = new HashSet<>();
+            childSubscribers = new HashSet<>();
             buffer = new ArrayDeque<>();
         }
 
@@ -176,7 +176,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             }
             canceled = true;
 
-            cancelSourceSubscriptions();
+            cancelChildSubscribers();
             downstream.onError(cause);
         }
 
@@ -186,7 +186,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
-            if (sourceSubscriptions.isEmpty() && pendingSubscriptions == 0) {
+            if (childSubscribers.isEmpty() && pendingSubscriptions == 0) {
                 downstream.onComplete();
                 completionFuture.complete(null);
             } else {
@@ -218,7 +218,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             requestedByDownstream = LongMath.saturatedAdd(requestedByDownstream, n);
             flush();
 
-            final long toRequest = maxConcurrency - sourceSubscriptions.size();
+            final long toRequest = maxConcurrency - childSubscribers.size();
             if (toRequest > 0) {
                 upstream.request(toRequest);
             }
@@ -229,16 +229,16 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         @Override
         public void cancel() {
             upstream.cancel();
-            cancelSourceSubscriptions();
+            cancelChildSubscribers();
         }
 
-        private void cancelSourceSubscriptions() {
-            sourceSubscriptions.forEach(FlatMapSubscriber::cancel);
+        private void cancelChildSubscribers() {
+            childSubscribers.forEach(FlatMapSubscriber::cancel);
         }
 
-        void subscribeChild(FlatMapSubscriber<T, U> child) {
+        void childSubscribed(FlatMapSubscriber<T, U> child) {
             pendingSubscriptions--;
-            sourceSubscriptions.add(child);
+            childSubscribers.add(child);
 
             requestAllAvailable();
         }
@@ -248,28 +248,28 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 return Long.MAX_VALUE;
             }
 
-            final Optional<Long> requested = sourceSubscriptions.stream().map(FlatMapSubscriber::getRequested)
-                                                                .reduce(LongMath::saturatedAdd);
+            final Optional<Long> requested = childSubscribers.stream().map(FlatMapSubscriber::getRequested)
+                                                             .reduce(LongMath::saturatedAdd);
 
             return maxConcurrency - requested.orElse(0L) - buffer.size();
         }
 
         private void requestAllAvailable() {
-            if (sourceSubscriptions.isEmpty()) {
+            if (childSubscribers.isEmpty()) {
                 return;
             }
 
             final long available = getAvailableBufferSpace();
 
             if (available == Long.MAX_VALUE) {
-                sourceSubscriptions.forEach(sub -> sub.request(Long.MAX_VALUE));
+                childSubscribers.forEach(sub -> sub.request(Long.MAX_VALUE));
             }
 
-            final List<FlatMapSubscriber<T, U>> toRequest = sourceSubscriptions.stream()
-                                                                               .filter(sub -> sub.getRequested()
+            final List<FlatMapSubscriber<T, U>> toRequest = childSubscribers.stream()
+                                                                            .filter(sub -> sub.getRequested()
                                                                                               == 0)
-                                                                               .limit(available)
-                                                                               .collect(toImmutableList());
+                                                                            .limit(available)
+                                                                            .collect(toImmutableList());
             toRequest.forEach(sub -> sub.request(1));
         }
 
@@ -282,9 +282,9 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         void completeChild(FlatMapSubscriber<T, U> child) {
-            sourceSubscriptions.remove(child);
+            childSubscribers.remove(child);
 
-            if (sourceSubscriptions.isEmpty() && pendingSubscriptions == 0 && completing) {
+            if (childSubscribers.isEmpty() && pendingSubscriptions == 0 && completing) {
                 flush();
                 downstream.onComplete();
                 completionFuture.complete(null);
@@ -336,7 +336,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             requireNonNull(subscription, "subscription");
 
             this.subscription = subscription;
-            parent.subscribeChild(this);
+            parent.childSubscribed(this);
         }
 
         @Override
