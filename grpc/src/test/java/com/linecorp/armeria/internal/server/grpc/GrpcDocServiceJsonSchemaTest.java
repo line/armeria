@@ -22,7 +22,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.util.List;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -99,7 +98,6 @@ class GrpcDocServiceJsonSchemaTest {
     }
 
     @Test
-    @Timeout(10)
     void testOk() throws Exception {
         if (TestUtil.isDocServiceDemoMode()) {
             Thread.sleep(Long.MAX_VALUE);
@@ -111,7 +109,6 @@ class GrpcDocServiceJsonSchemaTest {
     }
 
     @Test
-    @Timeout(10)
     void testBaseTypes() throws Exception {
         final JsonNode jsonSchema = getJsonSchemas().get(0);
         final JsonNode properties = jsonSchema.get("properties");
@@ -132,7 +129,6 @@ class GrpcDocServiceJsonSchemaTest {
     }
 
     @Test
-    @Timeout(10)
     void testEnum() throws Exception {
         final JsonNode jsonSchema = getJsonSchemas().get(0);
         final JsonNode properties = jsonSchema.get("properties");
@@ -150,7 +146,6 @@ class GrpcDocServiceJsonSchemaTest {
     }
 
     @Test
-    @Timeout(10)
     void testRepeated() throws Exception {
         final JsonNode jsonSchema = getJsonSchemas().get(0);
         final JsonNode stringsField = jsonSchema.get("properties").get("complex_other_message").get(
@@ -171,7 +166,6 @@ class GrpcDocServiceJsonSchemaTest {
     }
 
     @Test
-    @Timeout(10)
     void testMap() throws Exception {
         final JsonNode jsonSchema = getJsonSchemas().get(0);
         final JsonNode properties = jsonSchema.get("properties");
@@ -199,7 +193,6 @@ class GrpcDocServiceJsonSchemaTest {
     }
 
     @Test
-    @Timeout(10)
     void testMessage() throws Exception {
         final JsonNode jsonSchema = getJsonSchemas().get(0);
         final JsonNode properties = jsonSchema.get("properties");
@@ -211,7 +204,6 @@ class GrpcDocServiceJsonSchemaTest {
     }
 
     @Test
-    @Timeout(10)
     void testRecursiveMessage() throws Exception {
         final JsonNode jsonSchema = getJsonSchemas().get(0);
         final JsonNode properties = jsonSchema.get("properties");

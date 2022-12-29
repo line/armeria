@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.docs;
 
+import static com.google.common.collect.ImmutableSet.toImmutableSet;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -27,7 +29,6 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
@@ -45,28 +46,26 @@ final class JsonSchemaGenerator {
 
     /**
      * Generate an array of json schema specifications for each method inside the service.
+     *
      * @param serviceSpecification the service specification to generate the json schema from.
+     *
      * @return ArrayNode that contains service specifications
      */
-    public static ArrayNode generate(ServiceSpecification serviceSpecification) {
+    static ArrayNode generate(ServiceSpecification serviceSpecification) {
         // TODO: Test for Thrift, GraphQL, and annotated services
         final JsonSchemaGenerator generator = new JsonSchemaGenerator(serviceSpecification);
         return generator.generate();
     }
 
-    private final Set<EnumInfo> enumInfos;
-    private final Set<StructInfo> structInfos;
     private final Set<ServiceInfo> serviceInfos;
-    private final Map<String, StructInfo> typeNameToStructMapping;
+    private final Map<String, StructInfo> typeSignatureToStructMapping;
     private final Map<String, EnumInfo> typeNameToEnumMapping;
 
     private JsonSchemaGenerator(ServiceSpecification serviceSpecification) {
-        this.enumInfos = serviceSpecification.enums();
-        this.structInfos = serviceSpecification.structs();
-        this.serviceInfos = serviceSpecification.services();
-        this.typeNameToStructMapping = structInfos.stream().collect(
+        serviceInfos = serviceSpecification.services();
+        typeSignatureToStructMapping = serviceSpecification.structs().stream().collect(
                 Collectors.toMap(StructInfo::name, Function.identity()));
-        this.typeNameToEnumMapping = enumInfos.stream().collect(
+        typeNameToEnumMapping = serviceSpecification.enums().stream().collect(
                 Collectors.toMap(EnumInfo::name, Function.identity()));
     }
 
@@ -75,19 +74,20 @@ final class JsonSchemaGenerator {
 
         final Set<ObjectNode> methodDefinitions = serviceInfos.stream().flatMap(
                 serviceInfo -> serviceInfo.methods().stream()
-                                          .map(methodInfo -> generate(serviceInfo, methodInfo))).collect(
-                Collectors.toSet());
+                                          .map(this::generate)).collect(
+                toImmutableSet());
 
         return definitions.addAll(methodDefinitions);
     }
 
     /**
-     * Generate the JSON Schema for the given {@link ServiceInfo} and {@link MethodInfo}.
-     * @param serviceInfo service info.
+     * Generate the JSON Schema for the given {@link MethodInfo}.
+     *
      * @param methodInfo the method to generate the JSON Schema for.
+     *
      * @return ObjectNode containing the JSON schema for the parameter type.
      */
-    private ObjectNode generate(ServiceInfo serviceInfo, MethodInfo methodInfo) {
+    private ObjectNode generate(MethodInfo methodInfo) {
         final ObjectNode root = mapper.createObjectNode();
 
         root.put("$id", methodInfo.id())
@@ -102,16 +102,18 @@ final class JsonSchemaGenerator {
         final boolean isProto = methodInfo.endpoints().stream().flatMap(x -> x.availableMimeTypes().stream())
                                           .anyMatch(x -> x.isProtobuf() || x.toString().contains("grpc"));
 
-        final List<FieldInfo> methodFields = (isProto) ? typeNameToStructMapping
-                .get(methodInfo.parameters().get(0)
-                               .typeSignature()
-                               .signature()).fields() : methodInfo.parameters();
-
+        final List<FieldInfo> methodFields;
         final Map<String, String> visited = new HashMap<>();
         final String currentPath = "#";
 
         if (isProto) {
-            visited.put(methodInfo.parameters().get(0).typeSignature().signature(), currentPath);
+            final String signature = methodInfo.parameters().get(0)
+                                               .typeSignature()
+                                               .signature();
+            methodFields = typeSignatureToStructMapping.get(signature).fields();
+            visited.put(signature, currentPath);
+        } else {
+            methodFields = methodInfo.parameters();
         }
         generateFields(methodFields, visited, currentPath + "/properties", root);
         return root;
@@ -120,6 +122,7 @@ final class JsonSchemaGenerator {
     /**
      * Generate the JSON Schema for the given {@link FieldInfo} and add it to the given {@link ObjectNode}
      * and add required fields to the {@link ArrayNode}.
+     *
      * @param field field to generate schema for
      * @param visited map of visited types and their paths
      * @param path current path in tree traversal of fields
@@ -130,13 +133,14 @@ final class JsonSchemaGenerator {
                                ArrayNode required) {
         final ObjectNode fieldNode = mapper.createObjectNode();
         final String fieldTypeSignature = field.typeSignature().signature();
-        final String schemaType = getSchemaType(field.typeSignature());
 
         if (visited.containsKey(fieldTypeSignature)) {
             // If field is already visited, add a reference to the field instead of iterating its children.
             final String pathName = visited.get(fieldTypeSignature);
             fieldNode.put("$ref", pathName);
         } else {
+            final String schemaType = getSchemaType(field.typeSignature());
+
             // Field is not visited, create a new type definition for it.
             fieldNode.put("type", schemaType);
             fieldNode.put("description", field.descriptionInfo().docString());
@@ -151,7 +155,7 @@ final class JsonSchemaGenerator {
             }
 
             // Set the current path to be "PREVIOUS_PATH/field.name".
-            final String currentPath = path + "/" + field.name();
+            final String currentPath = path + '/' + field.name();
 
             // Only Struct types map to custom objects to we need reference to those structs.
             // Having references to primitives do not make sense.
@@ -174,6 +178,7 @@ final class JsonSchemaGenerator {
 
     /**
      * Generate properties for the given fields and writes to the object node.
+     *
      * @param fields list of fields that the child has.
      * @param visited a map of visited fields, required for cycle detection.
      * @param path current path as defined in JSON Schema spec, required for cyclic references.
@@ -200,8 +205,7 @@ final class JsonSchemaGenerator {
         final String nextPath = path + '/' + field.name();
 
         // Keys are always converted to strings.
-        final TypeSignature valueType =
-                ((ContainerTypeSignature) field.typeSignature()).typeParameters().get(1);
+        final TypeSignature valueType = ((MapTypeSignature) field.typeSignature()).valueTypeSignature();
 
         final String innerSchemaType = getSchemaType(valueType);
 
@@ -212,7 +216,7 @@ final class JsonSchemaGenerator {
             additionalProperties.put("type", innerSchemaType);
 
             if ("object".equals(innerSchemaType)) {
-                final StructInfo fieldStructInfo = typeNameToStructMapping.get(valueType.name());
+                final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(valueType.name());
 
                 visited.put(valueType.signature(), nextPath);
                 generateFields(fieldStructInfo.fields(), visited, nextPath + "/additionalProperties",
@@ -240,7 +244,7 @@ final class JsonSchemaGenerator {
             items.put("type", innerSchemaType);
 
             if ("object".equals(innerSchemaType)) {
-                final StructInfo fieldStructInfo = typeNameToStructMapping.get(itemsType.name());
+                final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(itemsType.name());
                 visited.put(itemsType.signature(), nextPath);
                 generateFields(fieldStructInfo.fields(), visited, nextPath + "/items", items);
             }
@@ -253,7 +257,7 @@ final class JsonSchemaGenerator {
                                       String path) {
         fieldNode.put("additionalProperties", true);
 
-        final StructInfo fieldStructInfo = typeNameToStructMapping.get(field.typeSignature().name());
+        final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(field.typeSignature().name());
 
         // Iterate over each child field, generate their definitions.
         if (fieldStructInfo != null && !fieldStructInfo.fields().isEmpty()) {
@@ -261,7 +265,6 @@ final class JsonSchemaGenerator {
         }
     }
 
-    @Nullable
     private ArrayNode getEnumType(TypeSignature type) {
         final ArrayNode enumArray = mapper.createArrayNode();
         final EnumInfo enumInfo = typeNameToEnumMapping.get(type.signature());
@@ -273,7 +276,7 @@ final class JsonSchemaGenerator {
         return enumArray;
     }
 
-    private String getSchemaType(TypeSignature typeSignature) {
+    private static String getSchemaType(TypeSignature typeSignature) {
         if (typeSignature.type() == TypeSignatureType.ENUM) {
             return "string";
         }
