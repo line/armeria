@@ -641,7 +641,7 @@ for more information.
 
 ## Setting a target version with the `java(\\d+)` flag.
 
-By default, setting the `java` flag compiles a module targeting a minimum java version of 8.
+By default, setting the `java` flag compiles a module targeting minimum java compatibility with java 8.
 However, it is possible that certain modules need to be compiled targeting a higher java version than others.
 
 Assume that `:moduleA` requires at least java 17 to compile, whereas `:moduleB` requires java 8.
@@ -658,7 +658,7 @@ The flag may be added like the following:
    ```groovy
    // settings.gradle
    // ...
-   includeWithFlags ':moduleA', 'java', 'java17'
+   includeWithFlags ':moduleA', 'java17'
    includeWithFlags ':moduleB', 'java'
    ```
 

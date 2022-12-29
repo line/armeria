@@ -122,42 +122,42 @@ includeWithFlags ':docs-client'
 includeWithFlags ':site'
 
 // Examples
-includeWithFlags ':examples:annotated-http-service',               'java', 'java11'
-includeWithFlags ':examples:annotated-http-service-kotlin',        'java', 'kotlin', 'java11'
-includeWithFlags ':examples:context-propagation-dagger-example',   'java', 'java11'
+includeWithFlags ':examples:annotated-http-service',               'java11'
+includeWithFlags ':examples:annotated-http-service-kotlin',        'java11', 'kotlin'
+includeWithFlags ':examples:context-propagation-dagger-example',   'java11'
 project(':examples:context-propagation-dagger-example').projectDir = file('examples/context-propagation/dagger')
-includeWithFlags ':examples:context-propagation-kotlin-example',   'java', 'kotlin', 'java11'
+includeWithFlags ':examples:context-propagation-kotlin-example',   'java11', 'kotlin'
 project(':examples:context-propagation-kotlin-example').projectDir = file('examples/context-propagation/kotlin')
-includeWithFlags ':examples:context-propagation-manual-example',   'java', 'java11'
+includeWithFlags ':examples:context-propagation-manual-example',   'java11'
 project(':examples:context-propagation-manual-example').projectDir = file('examples/context-propagation/manual')
-includeWithFlags ':examples:context-propagation-reactor-example',  'java', 'java11'
+includeWithFlags ':examples:context-propagation-reactor-example',  'java11'
 project(':examples:context-propagation-reactor-example').projectDir = file('examples/context-propagation/reactor')
-includeWithFlags ':examples:context-propagation-rxjava-example',   'java', 'java11'
+includeWithFlags ':examples:context-propagation-rxjava-example',   'java11'
 project(':examples:context-propagation-rxjava-example').projectDir = file('examples/context-propagation/rxjava')
 // '*-example' pattern is used intentionally to avoid a cycling dependency issue between project('examples:*')
 // and project(':*'). See https://github.com/gradle/gradle/issues/847 for more information.
-includeWithFlags ':examples:dropwizard-example',                   'java', 'java11'
+includeWithFlags ':examples:dropwizard-example',                   'java11'
 project(':examples:dropwizard-example').projectDir = file('examples/dropwizard')
-includeWithFlags ':examples:graphql-example',                      'java', 'java11'
+includeWithFlags ':examples:graphql-example',                      'java11'
 project(':examples:graphql-example').projectDir = file('examples/graphql')
-includeWithFlags ':examples:graphql-kotlin-example',               'java', 'kotlin', 'java11'
+includeWithFlags ':examples:graphql-kotlin-example',               'java11', 'kotlin'
 project(':examples:graphql-kotlin-example').projectDir = file('examples/graphql-kotlin')
-includeWithFlags ':examples:graphql-sangria-example',              'java', 'scala_2.13', 'java11'
+includeWithFlags ':examples:graphql-sangria-example',              'java11', 'scala_2.13'
 project(':examples:graphql-sangria-example').projectDir = file('examples/graphql-sangria')
-includeWithFlags ':examples:grpc-example',                         'java', 'java11'
+includeWithFlags ':examples:grpc-example',                         'java11'
 project(':examples:grpc-example').projectDir = file('examples/grpc')
-includeWithFlags ':examples:grpc-kotlin',                          'java', 'kotlin-grpc', 'kotlin', 'java11'
-includeWithFlags ':examples:grpc-scala',                           'java', 'scala-grpc_2.13', 'scala_2.13', 'java11'
-includeWithFlags ':examples:grpc-reactor',                         'java', 'reactor-grpc', 'java11'
-includeWithFlags ':examples:proxy-server',                         'java', 'java11'
-includeWithFlags ':examples:saml-service-provider',                'java', 'java11'
-includeWithFlags ':examples:server-sent-events',                   'java', 'java11'
-includeWithFlags ':examples:spring-boot-minimal',                  'java', 'java11'
-includeWithFlags ':examples:spring-boot-minimal-kotlin',           'java', 'kotlin', 'java11'
-includeWithFlags ':examples:spring-boot-tomcat',                   'java', 'java11'
-includeWithFlags ':examples:spring-boot-webflux',                  'java', 'java11'
-includeWithFlags ':examples:static-files',                         'java', 'java11'
-includeWithFlags ':examples:thrift',                               'java', 'java11'
-includeWithFlags ':examples:tutorials:rest-api-annotated-service', 'java', 'java11'
-includeWithFlags ':examples:tutorials:grpc-tutorial',              'java', 'java11'
+includeWithFlags ':examples:grpc-kotlin',                          'java11', 'kotlin-grpc', 'kotlin'
+includeWithFlags ':examples:grpc-scala',                           'java11', 'scala-grpc_2.13', 'scala_2.13'
+includeWithFlags ':examples:grpc-reactor',                         'java11', 'reactor-grpc'
+includeWithFlags ':examples:proxy-server',                         'java11'
+includeWithFlags ':examples:saml-service-provider',                'java11'
+includeWithFlags ':examples:server-sent-events',                   'java11'
+includeWithFlags ':examples:spring-boot-minimal',                  'java11'
+includeWithFlags ':examples:spring-boot-minimal-kotlin',           'java11', 'kotlin'
+includeWithFlags ':examples:spring-boot-tomcat',                   'java11'
+includeWithFlags ':examples:spring-boot-webflux',                  'java11'
+includeWithFlags ':examples:static-files',                         'java11'
+includeWithFlags ':examples:thrift',                               'java11'
+includeWithFlags ':examples:tutorials:rest-api-annotated-service', 'java11'
+includeWithFlags ':examples:tutorials:grpc-tutorial',              'java11'
 project(':examples:tutorials:grpc-tutorial').projectDir = file('examples/tutorials/grpc')
