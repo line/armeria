@@ -30,7 +30,7 @@ import com.linecorp.armeria.common.HttpMethod;
 class MethodInfoTest {
 
     private static MethodInfo newMethodInfo(List<String> examplePaths, List<String> exampleQueries) {
-        return new MethodInfo("foo", TypeSignature.ofBase("T"), ImmutableList.of(), ImmutableList.of(),
+        return new MethodInfo("foo", TypeSignature.ofBase("T"), ImmutableList.of(), false, ImmutableList.of(),
                               ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), examplePaths,
                               exampleQueries, HttpMethod.GET, DescriptionInfo.empty(), "id");
     }

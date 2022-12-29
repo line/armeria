@@ -277,6 +277,7 @@ class GrpcDocServicePluginTest {
                                                          .get(0)
                                                          .typeSignature()).descriptor())
                 .isEqualTo(SimpleRequest.getDescriptor());
+        assertThat(methodInfo.useParameterAsRoot()).isTrue();
         assertThat(methodInfo.exceptionTypeSignatures()).isEmpty();
         assertThat(methodInfo.descriptionInfo()).isSameAs(DescriptionInfo.empty());
         assertThat(methodInfo.endpoints()).containsExactlyInAnyOrder(
@@ -317,6 +318,7 @@ class GrpcDocServicePluginTest {
                                                                           Empty.getDescriptor()))
                                           .requirement(FieldRequirement.REQUIRED)
                                           .build());
+        assertThat(emptyCall.useParameterAsRoot()).isTrue();
         assertThat(emptyCall.returnTypeSignature())
                 .isEqualTo(TypeSignature.ofStruct("armeria.grpc.testing.Empty", Empty.getDescriptor()));
 
@@ -377,6 +379,7 @@ class GrpcDocServicePluginTest {
         assertThat(getMessageV1.parameters()).containsAll(ImmutableList.of(
                 FieldInfo.builder("name", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build()));
+        assertThat(getMessageV1.useParameterAsRoot()).isFalse();
 
         final MethodInfo getMessageV2 = serviceInfo.methods().stream()
                                                    .filter(m -> m.name().equals("GetMessageV2"))
@@ -394,6 +397,7 @@ class GrpcDocServicePluginTest {
                          .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build(),
                 FieldInfo.builder("type", TypeSignature.ofBase(JavaType.ENUM.name()))
                          .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build()));
+        assertThat(getMessageV2.useParameterAsRoot()).isFalse();
 
         final MethodInfo getMessageV3 = serviceInfo.methods().stream()
                                                    .filter(m -> m.name().equals("GetMessageV3"))
@@ -408,6 +412,7 @@ class GrpcDocServicePluginTest {
                 FieldInfo.builder("revision",
                                   TypeSignature.ofList(TypeSignature.ofBase(JavaType.LONG.name())))
                          .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build()));
+        assertThat(getMessageV3.useParameterAsRoot()).isFalse();
 
         // Check HTTP PATCH method.
         final MethodInfo updateMessageV1 = serviceInfo.methods().stream()
@@ -422,6 +427,7 @@ class GrpcDocServicePluginTest {
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
                 FieldInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build()));
+        assertThat(updateMessageV1.useParameterAsRoot()).isFalse();
 
         final MethodInfo updateMessageV2 = serviceInfo.methods().stream()
                                                       .filter(m -> m.name().equals("UpdateMessageV2"))
@@ -435,5 +441,6 @@ class GrpcDocServicePluginTest {
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
                 FieldInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build()));
+        assertThat(updateMessageV2.useParameterAsRoot()).isFalse();
     }
 }
