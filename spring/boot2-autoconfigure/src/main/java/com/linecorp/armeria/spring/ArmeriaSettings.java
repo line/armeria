@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.spring;
 
+import java.net.InetAddress;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,9 +83,17 @@ public class ArmeriaSettings {
     public static class Port {
         /**
          * IP address to bind to. If not set, will bind to all addresses, e.g. {@code 0.0.0.0}.
+         * @deprecated Use {@link #address} instead.
          */
+        @Deprecated
         @Nullable
         private String ip;
+
+        /**
+         * Network address to bind to. If not set, will bind to all addresses, e.g. {@code 0.0.0.0}.
+         */
+        @Nullable
+        private InetAddress address;
 
         /**
          * Network interface to bind to. If not set, will bind to the first detected network interface.
@@ -105,7 +114,9 @@ public class ArmeriaSettings {
 
         /**
          * Returns the IP address that the {@link Server} uses.
+         * @deprecated Use {@link #getAddress()} instead.
          */
+        @Deprecated
         @Nullable
         public String getIp() {
             return ip;
@@ -113,10 +124,27 @@ public class ArmeriaSettings {
 
         /**
          * Registers an IP address that the {@link Server} uses.
+         * @deprecated Use {@link #setAddress(InetAddress)} instead.
          */
+        @Deprecated
         public Port setIp(String ip) {
             this.ip = ip;
             return this;
+        }
+
+        /**
+         * Returns the Network address that the {@link Server} uses.
+         */
+        @Nullable
+        public InetAddress getAddress() {
+            return address;
+        }
+
+        /**
+         * Registers a Network address that the {@link Server} uses.
+         */
+        public void setAddress(InetAddress address) {
+            this.address = address;
         }
 
         /**
