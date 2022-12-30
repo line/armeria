@@ -32,6 +32,7 @@ sensible defaults. By applying them, you can:
 - [Building shaded JARs with `shade` flag](#building-shaded-jars-with-shade-flag)
     - [Trimming a shaded JAR with `trim` flag](#trimming-a-shaded-jar-with-trim-flag)
     - [Shading a multi-module project with `relocate` flag](#shading-a-multi-module-project-with-relocate-flag)
+- [Setting a target version with the `java(\\d+)` flag](#setting-a-target-version-with-the-javad-flag)
 - [Tagging conveniently with `release` task](#tagging-conveniently-with-release-task)
 
 <!-- /MarkdownTOC -->
@@ -641,7 +642,8 @@ for more information.
 
 ## Setting a target version with the `java(\\d+)` flag.
 
-By default, setting the `java` flag compiles a module targeting minimum compatibility with Java 8.
+By default, setting the `java` flag compiles a module targeting minimum compatibility with the Java version
+specified by `javaTargetCompatibility`. `javaTargetCompatibility` is Java 8 by default if unspecified.
 However, it is possible that certain modules need to be compiled targeting a higher Java version than others.
 
 Assume that `:moduleA` requires at least Java 17 to compile, whereas `:moduleB` requires Java 8.

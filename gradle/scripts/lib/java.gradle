@@ -41,7 +41,6 @@ configure(rootProject) {
  * Checks each flag of the specified project for flags of format "java(\\d+)".
  * If such a flag exists, the minimum Java version is extracted and returned.
  * Otherwise, {@code defaultVersion} is returned.
- * Note that the parsed value must be at least {@code defaultVersion} or an exception will be raised.
  */
 static def extractTargetJavaVersion(Project project, int defaultVersion) {
     def pattern = Pattern.compile('^java(\\d+)$')
@@ -51,12 +50,7 @@ static def extractTargetJavaVersion(Project project, int defaultVersion) {
         if (!matcher.matches()) {
             continue
         }
-        def version = Integer.parseInt(matcher.group(1))
-        if (version < defaultVersion) {
-            throw new IllegalArgumentException("The minimum Java version ${version} specified " +
-                    "by '${flag}' cannot be smaller than ${defaultVersion}")
-        }
-        return version
+        return Integer.parseInt(matcher.group(1))
     }
     return defaultVersion
 }
@@ -77,9 +71,17 @@ configure(projectsWithFlags('java')) {
         delete project.ext.genSrcDir
     }
 
-    // parse flags for the target java version with the default as java 8.
-    // an exception will be thrown if a version <8 is specified in the flags.
-    def targetJavaVersion = extractTargetJavaVersion(project, 8)
+    // the default targetJavaVersion is 'javaTargetCompatibility'
+    String defaultTargetJavaVersionStr = project.findProperty('javaTargetCompatibility') ?: '1.8'
+    def defaultTargetJavaVersion = Integer.parseInt(
+            JavaVersion.toVersion(defaultTargetJavaVersionStr).majorVersion)
+
+    // parse flags for the targetJavaVersion or return the default version
+    def targetJavaVersion = extractTargetJavaVersion(project, defaultTargetJavaVersion)
+    if (targetJavaVersion < 8) {
+        throw new IllegalArgumentException("The minimum target Java version ${version} specified " +
+                "for '${project.name}' cannot be smaller than 8")
+    }
 
     java {
         toolchain {
