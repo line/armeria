@@ -82,7 +82,7 @@ public final class ArmeriaConfigurationNetUtil {
         final InetAddress address = p.getAddress();
         final String ip = p.getIp();
         final int port = p.getPort();
-        if (ip != null && p.getAddress() != null) {
+        if (ip != null && address != null) {
             throw new IllegalStateException("A port cannot have both IP and address: " + p);
         }
         final InetSocketAddress targetAddress;
