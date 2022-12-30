@@ -33,7 +33,7 @@ import org.springframework.test.context.junit4.SpringRunner;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerPort;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
-import com.linecorp.armeria.spring.LocalArmeriaPortsTest.TestConfiguration;
+import com.linecorp.armeria.spring.DeprecatedIpTest.TestConfiguration;
 
 /**
  * Tests for keeping the behavior of {@link Port#getIp()}.
