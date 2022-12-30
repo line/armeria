@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.spring;
 
+import static org.assertj.core.api.Assertions.*;
+
 import java.net.InetAddress;
 import java.util.Collection;
 
@@ -54,7 +56,7 @@ public class DeprecatedIpTest {
         final Collection<ServerPort> serverPorts = server.activePorts().values();
         for (ServerPort sp : serverPorts) {
             final InetAddress address = sp.localAddress().getAddress();
-            Assertions.assertThat(address.isAnyLocalAddress() || address.isLoopbackAddress()).isTrue();
+            assertThat(address.isAnyLocalAddress() || address.isLoopbackAddress()).isTrue();
         }
     }
 }

@@ -143,8 +143,9 @@ public class ArmeriaSettings {
         /**
          * Registers a Network address that the {@link Server} uses.
          */
-        public void setAddress(InetAddress address) {
+        public Port setAddress(InetAddress address) {
             this.address = address;
+            return this;
         }
 
         /**
