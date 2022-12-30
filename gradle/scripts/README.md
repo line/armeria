@@ -641,17 +641,17 @@ for more information.
 
 ## Setting a target version with the `java(\\d+)` flag.
 
-By default, setting the `java` flag compiles a module targeting minimum java compatibility with java 8.
-However, it is possible that certain modules need to be compiled targeting a higher java version than others.
+By default, setting the `java` flag compiles a module targeting minimum compatibility with Java 8.
+However, it is possible that certain modules need to be compiled targeting a higher Java version than others.
 
-Assume that `:moduleA` requires at least java 17 to compile, whereas `:moduleB` requires java 8.
-If `./gradlew assemble` is naively invoked on the root project with java 8, `:moduleA` would fail to compile
-since it requires at least java 17. This makes it difficult to test if `:moduleB` runs correctly with java 8.
+Assume that `:moduleA` requires at least Java 17 to compile, whereas `:moduleB` requires Java 8.
+If `./gradlew assemble` is naively invoked on the root project with Java 8, `:moduleA` would fail to compile
+since it requires at least Java 17. This makes it difficult to test if `:moduleB` runs correctly with Java 8.
 
 In such case, users may add a `java17` flag which provides the following functionalities:
-- Ensure that the target module is compiled to target minimum compatibility with java 17.
-- Skip tasks which require a jre version lower than the target version.
-  - Most notably, tests will be skipped if the jre version is lower than 17.
+- Ensure that the target module is compiled to target minimum compatibility with Java 17.
+- Skip tasks which require a JRE version lower than the target version.
+  - Most notably, tests will be skipped if the JRE version is lower than 17.
 
 The flag may be added like the following:
 
@@ -662,7 +662,7 @@ The flag may be added like the following:
    includeWithFlags ':moduleB', 'java'
    ```
 
-Note that if the target java version is greater than the build jdk version,
+Note that if the target Java version is greater than the build JDK version,
 an `UnsupportedClassVersionError` may be raised.
 
 ## Tagging conveniently with `release` task

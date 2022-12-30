@@ -39,7 +39,7 @@ configure(rootProject) {
 
 /**
  * Checks each flag of the specified project for flags of format "java(\\d+)".
- * If such a flag exists, the minimum jre version is extracted and returned.
+ * If such a flag exists, the minimum Java version is extracted and returned.
  * Otherwise, {@code defaultVersion} is returned.
  * Note that the parsed value must be at least {@code defaultVersion} or an exception will be raised.
  */
@@ -53,8 +53,8 @@ static def extractTargetJavaVersion(Project project, int defaultVersion) {
         }
         def version = Integer.parseInt(matcher.group(1))
         if (version < defaultVersion) {
-            throw new IllegalArgumentException("The minimum java version ${version} specified " +
-                    "by '${flag}' cannot be smaller than s${defaultVersion}")
+            throw new IllegalArgumentException("The minimum Java version ${version} specified " +
+                    "by '${flag}' cannot be smaller than ${defaultVersion}")
         }
         return version
     }
@@ -122,8 +122,9 @@ configure(projectsWithFlags('java')) {
 
     // Set the sensible compiler options.
     tasks.withType(JavaCompile) {
-        sourceCompatibility = project.findProperty('javaSourceCompatibility') ?: "${targetJavaVersion}"
-        targetCompatibility = project.findProperty('javaTargetCompatibility') ?: "${targetJavaVersion}"
+        def targetJavaVersionStr = JavaVersion.toVersion(targetJavaVersion).toString()
+        sourceCompatibility = project.findProperty('javaSourceCompatibility') ?: targetJavaVersionStr
+        targetCompatibility = project.findProperty('javaTargetCompatibility') ?: targetJavaVersionStr
         if (buildJdkVersion >= 9) {
             // Supported since java 9 https://openjdk.org/jeps/247
             options.release.set(targetJavaVersion)
@@ -162,7 +163,10 @@ configure(projectsWithFlags('java')) {
         }
 
         // disable tests for projects which target a higher java version
-        if (testJavaVersion < targetJavaVersion) {
+        if (rootProject.ext.testJavaVersion < targetJavaVersion) {
+            project.logger.lifecycle("Skipping tests for ${project.name} since the " +
+                    "testJavaVersion(${testJavaVersion}) is smaller than the " +
+                    "targetJavaVersion(${targetJavaVersion})")
             it.enabled = false
         }
     }
