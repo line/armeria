@@ -17,12 +17,16 @@ package com.linecorp.armeria.server.docs;
 
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -35,6 +39,8 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
  * Generates a JSON Schema from the given service specification.
  */
 final class JsonSchemaGenerator {
+
+    private static final Logger logger = LoggerFactory.getLogger(JsonSchemaGenerator.class);
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
@@ -98,23 +104,26 @@ final class JsonSchemaGenerator {
             //  and most of the REST services.
             .put("type", "object");
 
-        // Workaround for gRPC services because we should unwrap the first "request" parameter.
-        final boolean isProto = methodInfo.endpoints().stream().flatMap(x -> x.availableMimeTypes().stream())
-                                          .anyMatch(x -> x.isProtobuf() || x.toString().contains("grpc"));
-
         final List<FieldInfo> methodFields;
         final Map<String, String> visited = new HashMap<>();
         final String currentPath = "#";
 
-        if (isProto) {
+        if (methodInfo.useParameterAsRoot()) {
             final String signature = methodInfo.parameters().get(0)
                                                .typeSignature()
                                                .signature();
-            methodFields = typeSignatureToStructMapping.get(signature).fields();
+            final StructInfo structInfo = typeSignatureToStructMapping.get(signature);
+            if (structInfo == null) {
+                logger.info("Could not find struct with signature: {}", signature);
+                methodFields = Collections.emptyList();
+            } else {
+                methodFields = structInfo.fields();
+            }
             visited.put(signature, currentPath);
         } else {
             methodFields = methodInfo.parameters();
         }
+
         generateFields(methodFields, visited, currentPath + "/properties", root);
         return root;
     }
@@ -244,9 +253,14 @@ final class JsonSchemaGenerator {
             items.put("type", innerSchemaType);
 
             if ("object".equals(innerSchemaType)) {
-                final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(itemsType.name());
-                visited.put(itemsType.signature(), nextPath);
-                generateFields(fieldStructInfo.fields(), visited, nextPath + "/items", items);
+                final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(itemsType.signature());
+
+                if (fieldStructInfo != null) {
+                    visited.put(itemsType.signature(), nextPath);
+                    generateFields(fieldStructInfo.fields(), visited, nextPath + "/items", items);
+                } else {
+                    logger.info("Could not find struct with signature: {}", itemsType.signature());
+                }
             }
         }
 
@@ -257,7 +271,11 @@ final class JsonSchemaGenerator {
                                       String path) {
         fieldNode.put("additionalProperties", true);
 
-        final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(field.typeSignature().name());
+        final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(field.typeSignature().signature());
+
+        if (fieldStructInfo == null) {
+            logger.info("Could not find struct with signature: {}", field.typeSignature().signature());
+        }
 
         // Iterate over each child field, generate their definitions.
         if (fieldStructInfo != null && !fieldStructInfo.fields().isEmpty()) {
@@ -310,6 +328,8 @@ final class JsonSchemaGenerator {
                 case "double":
                     return "number";
                 case "i":
+                case "i8":
+                case "i16":
                 case "i32":
                 case "i64":
                 case "integer":
