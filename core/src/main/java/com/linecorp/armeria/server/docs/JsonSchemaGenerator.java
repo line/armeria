@@ -225,11 +225,15 @@ final class JsonSchemaGenerator {
             additionalProperties.put("type", innerSchemaType);
 
             if ("object".equals(innerSchemaType)) {
-                final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(valueType.name());
+                final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(valueType.signature());
 
-                visited.put(valueType.signature(), nextPath);
-                generateFields(fieldStructInfo.fields(), visited, nextPath + "/additionalProperties",
-                               additionalProperties);
+                if (fieldStructInfo != null) {
+                    visited.put(valueType.signature(), nextPath);
+                    generateFields(fieldStructInfo.fields(), visited, nextPath + "/additionalProperties",
+                                   additionalProperties);
+                } else {
+                    logger.info("Could not find struct with signature: {}", valueType.signature());
+                }
             }
         }
 
