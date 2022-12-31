@@ -58,7 +58,7 @@ final class JsonSchemaGenerator {
      * @return ArrayNode that contains service specifications
      */
     static ArrayNode generate(ServiceSpecification serviceSpecification) {
-        // TODO: Test for Thrift, GraphQL, and annotated services
+        // TODO: Test for Thrift and annotated services
         final JsonSchemaGenerator generator = new JsonSchemaGenerator(serviceSpecification);
         return generator.generate();
     }
@@ -114,7 +114,7 @@ final class JsonSchemaGenerator {
                                                .signature();
             final StructInfo structInfo = typeSignatureToStructMapping.get(signature);
             if (structInfo == null) {
-                logger.info("Could not find struct with signature: {}", signature);
+                logger.info("Could not find root parameter with signature: {}", signature);
                 methodFields = Collections.emptyList();
             } else {
                 methodFields = structInfo.fields();
@@ -176,7 +176,7 @@ final class JsonSchemaGenerator {
                 generateMapFields(fieldNode, field, visited, currentPath + "/properties");
             } else if (field.typeSignature().type() == TypeSignatureType.ITERABLE) {
                 generateArrayFields(fieldNode, field, visited, currentPath + "/properties");
-            } else {
+            } else if ("object".equals(schemaType)) {
                 generateStructFields(fieldNode, field, visited, currentPath + "/properties");
             }
         }
@@ -232,7 +232,8 @@ final class JsonSchemaGenerator {
                     generateFields(fieldStructInfo.fields(), visited, nextPath + "/additionalProperties",
                                    additionalProperties);
                 } else {
-                    logger.info("Could not find struct with signature: {}", valueType.signature());
+                    logger.info("[generateMapFields] Could not find struct with signature: {}",
+                                valueType.signature());
                 }
             }
         }
@@ -263,7 +264,8 @@ final class JsonSchemaGenerator {
                     visited.put(itemsType.signature(), nextPath);
                     generateFields(fieldStructInfo.fields(), visited, nextPath + "/items", items);
                 } else {
-                    logger.info("Could not find struct with signature: {}", itemsType.signature());
+                    logger.info("[generateArrayFields] Could not find struct with signature: {}",
+                                itemsType.signature());
                 }
             }
         }
@@ -278,7 +280,8 @@ final class JsonSchemaGenerator {
         final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(field.typeSignature().signature());
 
         if (fieldStructInfo == null) {
-            logger.info("Could not find struct with signature: {}", field.typeSignature().signature());
+            logger.info("[generateStructFields] Could not find struct with signature: {}",
+                        field.typeSignature().signature());
         }
 
         // Iterate over each child field, generate their definitions.
