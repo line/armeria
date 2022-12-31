@@ -19,7 +19,6 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -83,8 +82,6 @@ final class JsonSchemaGenerator {
                 serviceInfo -> serviceInfo.methods().stream()
                                           .map(this::generate)).collect(
                 toImmutableSet());
-
-        System.out.println("unique types " + types.stream().reduce((a, b) -> a + ", " + b).orElse("none"));
 
         return definitions.addAll(methodDefinitions);
     }
@@ -301,10 +298,7 @@ final class JsonSchemaGenerator {
         return enumArray;
     }
 
-    private static Set<String> types = new HashSet<>();
-
     private static String getSchemaType(TypeSignature typeSignature) {
-        types.add(typeSignature.name().toLowerCase());
         if (typeSignature.type() == TypeSignatureType.ENUM) {
             return "string";
         }

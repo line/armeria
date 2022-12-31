@@ -24,7 +24,7 @@ public final class TestUtil {
      * Indicates doc service tests should be run on fixed ports to be able to demo or develop DocService.
      */
     public static boolean isDocServiceDemoMode() {
-        return true || isDocServiceDemoMode;
+        return isDocServiceDemoMode;
     }
 
     private TestUtil() {}
