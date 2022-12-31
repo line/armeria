@@ -28,7 +28,6 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.HttpMethod;
-import com.linecorp.armeria.common.MediaType;
 
 class JsonSchemaGeneratorTest {
 
@@ -41,10 +40,6 @@ class JsonSchemaGeneratorTest {
         return new StructInfo(name, parameters);
     }
 
-    private static EndpointInfo newGrpcEndpoint() {
-        return EndpointInfo.builder("", "").defaultMimeType(MediaType.PROTOBUF).build();
-    }
-
     private static FieldInfo newFieldInfo() {
         return FieldInfo.of("request", TypeSignature.ofStruct(methodName, new Object()));
     }
@@ -53,14 +48,18 @@ class JsonSchemaGeneratorTest {
         return new MethodInfo(
                 "test-service",
                 methodName,
-                0,
                 TypeSignature.ofBase("void"),
+                Arrays.asList(parameters),
+                true,
                 ImmutableList.of(),
                 ImmutableList.of(),
-                ImmutableList.of(newGrpcEndpoint()),
+                ImmutableList.of(),
+                ImmutableList.of(),
+                ImmutableList.of(),
+                ImmutableList.of(),
                 HttpMethod.POST,
                 methodDescription
-        ).withParameters(Arrays.asList(parameters));
+        );
     }
 
     private static ServiceSpecification generateServiceSpecification(StructInfo... structInfos) {
