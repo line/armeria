@@ -99,7 +99,7 @@ final class JsonSchemaGenerator {
         root.put("$id", methodInfo.id())
             .put("title", methodInfo.name())
             .put("description", methodInfo.descriptionInfo().docString())
-            .put("additionalProperties", false)
+            .put("additionalProperties", true)
             // TODO: Assumes every method takes an object, which is only valid for RPC based services
             //  and most of the REST services.
             .put("type", "object");

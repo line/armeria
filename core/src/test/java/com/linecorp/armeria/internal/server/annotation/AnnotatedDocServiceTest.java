@@ -41,7 +41,6 @@ import java.util.function.BiFunction;
 import java.util.stream.Stream;
 
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -136,7 +135,6 @@ class AnnotatedDocServiceTest {
     };
 
     @Test
-    @Timeout(1000000)
     void jsonSpecification() throws InterruptedException, JsonProcessingException {
         if (TestUtil.isDocServiceDemoMode()) {
             Thread.sleep(Long.MAX_VALUE);
@@ -150,7 +148,7 @@ class AnnotatedDocServiceTest {
         addRegexMethodInfo(methodInfos);
         addPrefixMethodInfo(methodInfos);
         addConsumesMethodInfo(methodInfos);
-         addBeanMethodInfo(methodInfos);
+        addBeanMethodInfo(methodInfos);
         addMultiMethodInfo(methodInfos);
         addJsonMethodInfo(methodInfos);
         addOverloadMethodInfo(methodInfos);
