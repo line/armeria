@@ -127,7 +127,8 @@ public final class ServiceInfo {
                 final Set<EndpointInfo> endpointInfos =
                         Sets.union(value.endpoints(), methodInfo.endpoints());
                 return new MethodInfo(value.name(), value.returnTypeSignature(), value.parameters(),
-                                      value.exceptionTypeSignatures(), endpointInfos, value.exampleHeaders(),
+                                      value.useParameterAsRoot(), value.exceptionTypeSignatures(),
+                                      endpointInfos, value.exampleHeaders(),
                                       value.exampleRequests(), value.examplePaths(), value.exampleQueries(),
                                       value.httpMethod(), value.descriptionInfo(), value.id());
             });

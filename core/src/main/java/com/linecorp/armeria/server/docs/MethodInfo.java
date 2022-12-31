@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
@@ -48,7 +49,10 @@ public final class MethodInfo {
     private final String id;
     private final String name;
     private final TypeSignature returnTypeSignature;
+
     private final List<FieldInfo> parameters;
+    private final boolean useParameterAsRoot;
+
     private final Set<TypeSignature> exceptionTypeSignatures;
     private final Set<EndpointInfo> endpoints;
     private final List<HttpHeaders> exampleHeaders;
@@ -70,7 +74,8 @@ public final class MethodInfo {
                       Iterable<EndpointInfo> endpoints,
                       HttpMethod httpMethod,
                       DescriptionInfo descriptionInfo) {
-        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints, ImmutableList.of(),
+        this(name, returnTypeSignature, parameters, false, exceptionTypeSignatures,
+             endpoints, ImmutableList.of(),
              ImmutableList.of(), ImmutableList.of(), ImmutableList.of(), httpMethod, descriptionInfo,
              createId(serviceName, name, overloadId, httpMethod)
         );
@@ -87,7 +92,7 @@ public final class MethodInfo {
                       Iterable<String> exampleQueries,
                       HttpMethod httpMethod,
                       DescriptionInfo descriptionInfo) {
-        this(name, returnTypeSignature, parameters, ImmutableList.of(), endpoints, ImmutableList.of(),
+        this(name, returnTypeSignature, parameters, false, ImmutableList.of(), endpoints, ImmutableList.of(),
              ImmutableList.of(), examplePaths, exampleQueries, httpMethod, descriptionInfo,
              createId(serviceName, name, overloadId, httpMethod)
         );
@@ -99,6 +104,7 @@ public final class MethodInfo {
     public MethodInfo(String serviceName, String name,
                       TypeSignature returnTypeSignature,
                       Iterable<FieldInfo> parameters,
+                      boolean useParameterAsRoot,
                       Iterable<TypeSignature> exceptionTypeSignatures,
                       Iterable<EndpointInfo> endpoints,
                       Iterable<HttpHeaders> exampleHeaders,
@@ -107,12 +113,14 @@ public final class MethodInfo {
                       Iterable<String> exampleQueries,
                       HttpMethod httpMethod,
                       DescriptionInfo descriptionInfo) {
-        this(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints, exampleHeaders,
+        this(name, returnTypeSignature, parameters, useParameterAsRoot,
+             exceptionTypeSignatures, endpoints, exampleHeaders,
              exampleRequests, examplePaths, exampleQueries, httpMethod, descriptionInfo,
              createId(serviceName, name, 0, httpMethod));
     }
 
-    MethodInfo(String name, TypeSignature returnTypeSignature, Iterable<FieldInfo> parameters,
+    MethodInfo(String name, TypeSignature returnTypeSignature,
+               Iterable<FieldInfo> parameters, boolean useParameterAsRoot,
                Iterable<TypeSignature> exceptionTypeSignatures, Iterable<EndpointInfo> endpoints,
                Iterable<HttpHeaders> exampleHeaders, Iterable<String> exampleRequests,
                Iterable<String> examplePaths, Iterable<String> exampleQueries, HttpMethod httpMethod,
@@ -122,6 +130,9 @@ public final class MethodInfo {
 
         this.returnTypeSignature = requireNonNull(returnTypeSignature, "returnTypeSignature");
         this.parameters = ImmutableList.copyOf(requireNonNull(parameters, "parameters"));
+        assert !useParameterAsRoot || this.parameters.size() == 1;
+        this.useParameterAsRoot = useParameterAsRoot;
+
         this.exceptionTypeSignatures =
                 ImmutableSortedSet.copyOf(
                         comparing(TypeSignature::signature),
@@ -198,6 +209,16 @@ public final class MethodInfo {
     }
 
     /**
+     * Tells whether the {@link #parameters()} is used as the root when creating
+     * <a href="https://json-schema.org/">JSON schema</a>. The size of the {@link #parameters()} must be one
+     * if this returns {@code true}.
+     */
+    @JsonIgnore
+    public boolean useParameterAsRoot() {
+        return useParameterAsRoot;
+    }
+
+    /**
      * Returns a new {@link MethodInfo} with the specified {@code parameters}.
      * Returns {@code this} if this {@link MethodInfo} has the same {@code parameters}.
      */
@@ -207,7 +228,8 @@ public final class MethodInfo {
             return this;
         }
 
-        return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
+        return new MethodInfo(name, returnTypeSignature, parameters, useParameterAsRoot,
+                              exceptionTypeSignatures, endpoints,
                               exampleHeaders, exampleRequests, examplePaths, exampleQueries, httpMethod,
                               descriptionInfo, id);
     }
@@ -279,7 +301,8 @@ public final class MethodInfo {
             return this;
         }
 
-        return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
+        return new MethodInfo(name, returnTypeSignature, parameters, useParameterAsRoot,
+                              exceptionTypeSignatures, endpoints,
                               exampleHeaders, exampleRequests, examplePaths, exampleQueries, httpMethod,
                               descriptionInfo, id);
     }
@@ -299,6 +322,7 @@ public final class MethodInfo {
                name().equals(that.name()) &&
                returnTypeSignature().equals(that.returnTypeSignature()) &&
                parameters().equals(that.parameters()) &&
+               useParameterAsRoot() == that.useParameterAsRoot() &&
                exceptionTypeSignatures().equals(that.exceptionTypeSignatures()) &&
                endpoints().equals(that.endpoints()) &&
                httpMethod() == that.httpMethod() &&
@@ -307,8 +331,8 @@ public final class MethodInfo {
 
     @Override
     public int hashCode() {
-        return Objects.hash(id(), name(), returnTypeSignature(), parameters(), exceptionTypeSignatures(),
-                            endpoints(), httpMethod(), descriptionInfo());
+        return Objects.hash(id(), name(), returnTypeSignature(), parameters(), useParameterAsRoot(),
+                            exceptionTypeSignatures(), endpoints(), httpMethod(), descriptionInfo());
     }
 
     @Override
@@ -318,6 +342,7 @@ public final class MethodInfo {
                           .add("name", name())
                           .add("returnTypeSignature", returnTypeSignature())
                           .add("parameters", parameters())
+                          .add("useParameterAsRoot", useParameterAsRoot())
                           .add("exceptionTypeSignatures", exceptionTypeSignatures())
                           .add("endpoints", endpoints())
                           .add("httpMethod", httpMethod())

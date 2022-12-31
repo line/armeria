@@ -29,8 +29,11 @@ import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.server.annotation.decorator.CorsDecorator;
@@ -70,6 +73,7 @@ public final class ServiceConfig {
 
     private final Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports;
+    private final HttpHeaders defaultHeaders;
 
     /**
      * Creates a new instance.
@@ -80,12 +84,13 @@ public final class ServiceConfig {
                   boolean verboseResponses, AccessLogWriter accessLogWriter,
                   ScheduledExecutorService blockingTaskExecutor,
                   SuccessFunction successFunction,
-                  Path multipartUploadsLocation, List<ShutdownSupport> shutdownSupports) {
+                  Path multipartUploadsLocation, List<ShutdownSupport> shutdownSupports,
+                  HttpHeaders defaultHeaders) {
         this(null, route, mappedRoute, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              extractTransientServiceOptions(service),
              blockingTaskExecutor, successFunction,
-             multipartUploadsLocation, shutdownSupports);
+             multipartUploadsLocation, shutdownSupports, defaultHeaders);
     }
 
     /**
@@ -100,7 +105,7 @@ public final class ServiceConfig {
                           ScheduledExecutorService blockingTaskExecutor,
                           SuccessFunction successFunction,
                           Path multipartUploadsLocation,
-                          List<ShutdownSupport> shutdownSupports) {
+                          List<ShutdownSupport> shutdownSupports, HttpHeaders defaultHeaders) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
@@ -117,6 +122,7 @@ public final class ServiceConfig {
         this.successFunction = requireNonNull(successFunction, "successFunction");
         this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
+        this.defaultHeaders = defaultHeaders;
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
     }
@@ -154,7 +160,7 @@ public final class ServiceConfig {
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
-                                 multipartUploadsLocation, shutdownSupports);
+                                 multipartUploadsLocation, shutdownSupports, defaultHeaders);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -164,7 +170,7 @@ public final class ServiceConfig {
                                  maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
-                                 multipartUploadsLocation, shutdownSupports);
+                                 multipartUploadsLocation, shutdownSupports, defaultHeaders);
     }
 
     ServiceConfig withRoute(Route route) {
@@ -173,7 +179,7 @@ public final class ServiceConfig {
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
-                                 multipartUploadsLocation, shutdownSupports);
+                                 multipartUploadsLocation, shutdownSupports, defaultHeaders);
     }
 
     /**
@@ -390,12 +396,24 @@ public final class ServiceConfig {
         return shutdownSupports;
     }
 
+    /**
+     * Returns the default headers for an {@link HttpResponse} served by the {@link #service()}.
+     */
+    @UnstableApi
+    public HttpHeaders defaultHeaders() {
+        return defaultHeaders;
+    }
+
     @Override
     public String toString() {
         final ToStringHelper toStringHelper = MoreObjects.toStringHelper(this).omitNullValues();
         if (virtualHost != null) {
             toStringHelper.add("hostnamePattern", virtualHost.hostnamePattern());
         }
+        if (!defaultHeaders.isEmpty()) {
+            toStringHelper.add("defaultHeaders", defaultHeaders);
+        }
+
         return toStringHelper.add("route", route)
                              .add("service", service)
                              .add("defaultServiceNaming", defaultServiceNaming)

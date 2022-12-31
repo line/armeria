@@ -16,13 +16,16 @@
 
 package com.linecorp.armeria.common.encoding;
 
-import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.ContentTooLargeException;
+import com.linecorp.armeria.common.HttpMessage;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
+import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 
 /**
  * An interface that constructs a new {@link StreamDecoder} for a given Content-Encoding header value.
- * A new decoder is valid for the lifetime of an {@link HttpResponse}.
+ * A new decoder is valid for the lifetime of an {@link HttpMessage}.
  */
 public interface StreamDecoderFactory extends com.linecorp.armeria.client.encoding.StreamDecoderFactory {
 
@@ -54,8 +57,25 @@ public interface StreamDecoderFactory extends com.linecorp.armeria.client.encodi
     String encodingHeaderValue();
 
     /**
-     * Construct a new {@link StreamDecoder} to use to decode an {@link HttpResponse}.
+     * Construct a new {@link StreamDecoder} to use to decode an {@link HttpMessage}.
+     *
+     * @param alloc the {@link ByteBufAllocator} to allocate a new {@link ByteBuf} for the decoded
+     *              {@link HttpMessage}.
      */
     @Override
-    StreamDecoder newDecoder(ByteBufAllocator alloc);
+    default StreamDecoder newDecoder(ByteBufAllocator alloc) {
+        return newDecoder(alloc, 0);
+    }
+
+    /**
+     * Construct a new {@link StreamDecoder} to use to decode an {@link HttpMessage}.
+     *
+     * @param alloc the {@link ByteBufAllocator} to allocate a new {@link ByteBuf} for the decoded
+     *              {@link HttpMessage}.
+     * @param maxLength the maximum allowed length of a decoded content. If the total length of the decoded
+     *                  content exceeds {@code maxLength}, a {@link ContentTooLargeException} will be raised.
+     */
+    @UnstableApi
+    @Override
+    StreamDecoder newDecoder(ByteBufAllocator alloc, int maxLength);
 }

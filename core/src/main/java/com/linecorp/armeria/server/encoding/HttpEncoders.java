@@ -41,6 +41,11 @@ final class HttpEncoders {
 
     private static final Encoder.Parameters BROTLI_PARAMETERS = new Encoder.Parameters().setQuality(4);
 
+    static {
+        // Invoke to load Brotli native binary.
+        Brotli.isAvailable();
+    }
+
     @Nullable
     static HttpEncodingType getWrapperForRequest(HttpRequest request) {
         final String acceptEncoding = request.headers().get(HttpHeaderNames.ACCEPT_ENCODING);

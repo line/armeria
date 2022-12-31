@@ -102,18 +102,17 @@ class ContentPreviewingClientTest {
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/",
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
 
-        final ClientRequestContext context;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final AggregatedHttpResponse res = client.execute(headers, "Armeria");
-            assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
-            assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo(
-                    Brotli.isAvailable() ? "br" : "gzip");
-            context = captor.get();
-        }
 
-        final RequestLog requestLog = context.log().whenComplete().join();
-        assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
-        assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
+            final RequestLog requestLog = captor.get().log().whenComplete().join();
+            assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
+            assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
+            assertThat(requestLog.responseHeaders().get(HttpHeaderNames.CONTENT_ENCODING))
+                    .isEqualTo(Brotli.isAvailable() ? "br" : "gzip");
+
+            assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
+        }
     }
 
     /**
@@ -131,18 +130,17 @@ class ContentPreviewingClientTest {
                                                          HttpHeaderNames.CONTENT_TYPE,
                                                          MediaType.PLAIN_TEXT_UTF_8);
 
-        final ClientRequestContext context;
         try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
             final AggregatedHttpResponse res = client.execute(headers, "Armeria");
-            assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
-            assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo(
-                    Brotli.isAvailable() ? "br" : "gzip");
-            context = captor.get();
-        }
 
-        final RequestLog requestLog = context.log().whenComplete().join();
-        assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
-        assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
+            final RequestLog requestLog = captor.get().log().whenComplete().join();
+            assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
+            assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
+            assertThat(requestLog.responseHeaders().get(HttpHeaderNames.CONTENT_ENCODING))
+                    .isEqualTo(Brotli.isAvailable() ? "br" : "gzip");
+
+            assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
+        }
     }
 
     @Test

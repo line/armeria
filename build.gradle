@@ -70,6 +70,13 @@ allprojects {
         jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
         jvmArgs "-XX:HeapDumpPath=${rootProject.buildDir}"
 
+        // `-Pjava.security.manager` was added in Java 17 and the default value was changed to `disallow` in Java 18.
+        // - https://openjdk.org/jeps/411
+        // - https://bugs.openjdk.org/browse/JDK-8270380
+        if (rootProject.ext.testJavaVersion >= 17) {
+            systemProperty "java.security.manager", "allow"
+        }
+
         // Use verbose exception/response reporting for easier debugging.
         systemProperty 'com.linecorp.armeria.verboseExceptions', 'true'
         systemProperty 'com.linecorp.armeria.verboseResponses', 'true'
@@ -228,10 +235,10 @@ allprojects {
     }
 }
 
-// Require to use JDK 17 when releasing.
+// Require to use JDK 19 when releasing.
 tasks.closeAndReleaseStagingRepository.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_17) {
-        throw new IllegalStateException("You must release using JDK 17.");
+    if (JavaVersion.current() != JavaVersion.VERSION_19) {
+        throw new IllegalStateException("You must release using JDK 19.");
     }
 }
 
