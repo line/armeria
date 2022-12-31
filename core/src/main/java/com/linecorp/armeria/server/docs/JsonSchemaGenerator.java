@@ -18,6 +18,7 @@ package com.linecorp.armeria.server.docs;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -76,6 +77,8 @@ final class JsonSchemaGenerator {
                 serviceInfo -> serviceInfo.methods().stream()
                                           .map(this::generate)).collect(
                 toImmutableSet());
+
+        System.out.println("unique types " + types.stream().reduce((a, b) -> a + ", " + b).orElse("none"));
 
         return definitions.addAll(methodDefinitions);
     }
@@ -218,9 +221,13 @@ final class JsonSchemaGenerator {
             if ("object".equals(innerSchemaType)) {
                 final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(valueType.name());
 
-                visited.put(valueType.signature(), nextPath);
-                generateFields(fieldStructInfo.fields(), visited, nextPath + "/additionalProperties",
-                               additionalProperties);
+                if (fieldStructInfo == null) {
+                    // map<key, map<...>>
+                } else {
+                    visited.put(valueType.signature(), nextPath);
+                    generateFields(fieldStructInfo.fields(), visited, nextPath + "/additionalProperties",
+                                   additionalProperties);
+                }
             }
         }
 
@@ -276,7 +283,10 @@ final class JsonSchemaGenerator {
         return enumArray;
     }
 
+    private static Set<String> types = new HashSet<>();
+
     private static String getSchemaType(TypeSignature typeSignature) {
+        types.add(typeSignature.name().toLowerCase());
         if (typeSignature.type() == TypeSignatureType.ENUM) {
             return "string";
         }
@@ -310,6 +320,8 @@ final class JsonSchemaGenerator {
                 case "double":
                     return "number";
                 case "i":
+                case "i8":
+                case "i16":
                 case "i32":
                 case "i64":
                 case "integer":
@@ -333,6 +345,7 @@ final class JsonSchemaGenerator {
                     return "integer";
                 case "binary":
                     // Proto scalar types
+                case "byte":
                 case "bytes":
                 case "string":
                     return "string";
