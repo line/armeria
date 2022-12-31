@@ -14,8 +14,6 @@
  * under the License.
  */
 
-import Alert from '@material-ui/lab/Alert';
-import Button from '@material-ui/core/Button';
 import Grid from '@material-ui/core/Grid';
 import IconButton from '@material-ui/core/IconButton';
 import Snackbar from '@material-ui/core/Snackbar';
@@ -26,6 +24,7 @@ import DeleteSweepIcon from '@material-ui/icons/DeleteSweep';
 import FileCopyIcon from '@material-ui/icons/FileCopy';
 import React, {
   ChangeEvent,
+  Dispatch,
   useCallback,
   useEffect,
   useMemo,
@@ -38,6 +37,14 @@ import json from 'react-syntax-highlighter/dist/esm/languages/hljs/json';
 
 import jsonMinify from 'jsonminify';
 import { RouteComponentProps } from 'react-router';
+import {
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+} from '@material-ui/core';
+import Button from '@material-ui/core/Button';
+import Alert from '@material-ui/lab/Alert';
 import Section from '../../components/Section';
 import { docServiceDebug } from '../../lib/header-provider';
 import jsonPrettify from '../../lib/json-prettify';
@@ -61,6 +68,8 @@ interface OwnProps {
   exampleQueries: SelectOption[];
   exactPathMapping: boolean;
   useRequestBody: boolean;
+  debugFormIsOpen: boolean;
+  setDebugFormIsOpen: Dispatch<boolean>;
 }
 
 type Props = OwnProps & RouteComponentProps;
@@ -125,6 +134,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
   match,
   method,
   useRequestBody,
+  debugFormIsOpen,
+  setDebugFormIsOpen,
 }) => {
   const [requestBodyOpen, toggleRequestBodyOpen] = useReducer(toggle, true);
   const [requestBody, setRequestBody] = useState('');
@@ -527,16 +538,22 @@ const DebugPage: React.FunctionComponent<Props> = ({
     });
   }, [isAnnotatedService, isGraphqlService, transport, method, examplePaths]);
 
+  const [debugAlertIsOpen, setDebugAlertIsOpen] = React.useState(true);
+
   return (
-    <Section>
-      <div id="debug-form">
-        <Typography variant="body2" paragraph />
-        <Grid container spacing={2}>
-          <Grid item xs={12} sm={6}>
-            <Typography variant="h6" paragraph>
-              Debug
-            </Typography>
-            <Alert severity="info">
+    <div>
+      <Dialog
+        onClose={() => setDebugFormIsOpen(false)}
+        open={debugFormIsOpen}
+        fullWidth
+        maxWidth="lg"
+      >
+        <DialogTitle id="customized-dialog-title">
+          <Typography variant="h6" paragraph>
+            Debug
+          </Typography>
+          {debugAlertIsOpen && (
+            <Alert severity="info" onClose={() => setDebugAlertIsOpen(false)}>
               You can set the default values by{' '}
               <a
                 href="https://armeria.dev/docs/server-docservice/#example-requests-and-headers"
@@ -547,110 +564,132 @@ const DebugPage: React.FunctionComponent<Props> = ({
               </a>
               .
             </Alert>
-            <EndpointPath
-              examplePaths={supportedExamplePaths}
-              editable={!exactPathMapping}
-              isAnnotatedService={isAnnotatedService}
-              isGraphqlService={isGraphqlService}
-              endpointPathOpen={endpointPathOpen}
-              additionalPath={additionalPath}
-              onEditEndpointPathClick={toggleEndpointPathOpen}
-              onPathFormChange={onPathFormChange}
-              onSelectedPathChange={onSelectedPathChange}
-            />
-            {isAnnotatedService && (
-              <HttpQueryString
-                exampleQueries={exampleQueries}
-                additionalQueriesOpen={additionalQueriesOpen}
-                additionalQueries={additionalQueries}
-                onEditHttpQueriesClick={toggleAdditionalQueriesOpen}
-                onQueriesFormChange={onQueriesFormChange}
-                onSelectedQueriesChange={onSelectedQueriesChange}
+          )}
+        </DialogTitle>
+        <DialogContent dividers>
+          <Section>
+            <div id="debug-form">
+              <Typography variant="body2" paragraph />
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <EndpointPath
+                    examplePaths={supportedExamplePaths}
+                    editable={!exactPathMapping}
+                    isAnnotatedService={isAnnotatedService}
+                    isGraphqlService={isGraphqlService}
+                    endpointPathOpen={endpointPathOpen}
+                    additionalPath={additionalPath}
+                    onEditEndpointPathClick={toggleEndpointPathOpen}
+                    onPathFormChange={onPathFormChange}
+                    onSelectedPathChange={onSelectedPathChange}
+                  />
+                  {isAnnotatedService && (
+                    <HttpQueryString
+                      exampleQueries={exampleQueries}
+                      additionalQueriesOpen={additionalQueriesOpen}
+                      additionalQueries={additionalQueries}
+                      onEditHttpQueriesClick={toggleAdditionalQueriesOpen}
+                      onQueriesFormChange={onQueriesFormChange}
+                      onSelectedQueriesChange={onSelectedQueriesChange}
+                    />
+                  )}
+                  <HttpHeaders
+                    exampleHeaders={exampleHeaders}
+                    additionalHeadersOpen={additionalHeadersOpen}
+                    additionalHeaders={additionalHeaders}
+                    stickyHeaders={stickyHeaders}
+                    onEditHttpHeadersClick={toggleAdditionalHeadersOpen}
+                    onSelectedHeadersChange={onSelectedHeadersChange}
+                    onHeadersFormChange={onHeadersFormChange}
+                    onStickyHeadersChange={toggleStickyHeaders}
+                  />
+                  {useRequestBody && isGraphqlService ? (
+                    <GraphqlRequestBody
+                      requestBodyOpen={requestBodyOpen}
+                      requestBody={requestBody}
+                      onEditRequestBodyClick={toggleRequestBodyOpen}
+                      onDebugFormChange={onDebugFormChange}
+                      schemaUrlPath={extractUrlPath(method)}
+                    />
+                  ) : (
+                    <RequestBody
+                      requestBodyOpen={requestBodyOpen}
+                      requestBody={requestBody}
+                      onEditRequestBodyClick={toggleRequestBodyOpen}
+                      onDebugFormChange={onDebugFormChange}
+                    />
+                  )}
+                  <Typography variant="body2" paragraph />
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Grid container spacing={1}>
+                    <Grid item xs="auto">
+                      <Tooltip title="Copy response">
+                        <div>
+                          <IconButton
+                            onClick={onCopy}
+                            disabled={debugResponse.length === 0}
+                          >
+                            <FileCopyIcon />
+                          </IconButton>
+                        </div>
+                      </Tooltip>
+                    </Grid>
+                    <Grid item xs="auto">
+                      <Tooltip title="Clear response">
+                        <div>
+                          <IconButton
+                            onClick={onClear}
+                            disabled={debugResponse.length === 0}
+                          >
+                            <DeleteSweepIcon />
+                          </IconButton>
+                        </div>
+                      </Tooltip>
+                    </Grid>
+                  </Grid>
+                  <SyntaxHighlighter
+                    language="json"
+                    style={githubGist}
+                    wrapLines={false}
+                  >
+                    {debugResponse}
+                  </SyntaxHighlighter>
+                </Grid>
+              </Grid>
+              <Snackbar
+                open={snackbarOpen}
+                message={snackbarMessage}
+                autoHideDuration={3000}
+                onClose={dismissSnackbar}
+                action={
+                  <IconButton color="inherit" onClick={dismissSnackbar}>
+                    <CloseIcon />
+                  </IconButton>
+                }
               />
-            )}
-            <HttpHeaders
-              exampleHeaders={exampleHeaders}
-              additionalHeadersOpen={additionalHeadersOpen}
-              additionalHeaders={additionalHeaders}
-              stickyHeaders={stickyHeaders}
-              onEditHttpHeadersClick={toggleAdditionalHeadersOpen}
-              onSelectedHeadersChange={onSelectedHeadersChange}
-              onHeadersFormChange={onHeadersFormChange}
-              onStickyHeadersChange={toggleStickyHeaders}
-            />
-            {useRequestBody && isGraphqlService ? (
-              <GraphqlRequestBody
-                requestBodyOpen={requestBodyOpen}
-                requestBody={requestBody}
-                onEditRequestBodyClick={toggleRequestBodyOpen}
-                onDebugFormChange={onDebugFormChange}
-                schemaUrlPath={extractUrlPath(method)}
-              />
-            ) : (
-              <RequestBody
-                requestBodyOpen={requestBodyOpen}
-                requestBody={requestBody}
-                onEditRequestBodyClick={toggleRequestBodyOpen}
-                onDebugFormChange={onDebugFormChange}
-              />
-            )}
-            <Typography variant="body2" paragraph />
+            </div>
+          </Section>
+        </DialogContent>
+        <DialogActions style={{ justifyContent: 'space-between' }}>
+          <div>
             <Button variant="contained" color="primary" onClick={onSubmit}>
               Submit
             </Button>
             <Button variant="text" color="secondary" onClick={onExport}>
               Copy as a curl command
             </Button>
-          </Grid>
-          <Grid item xs={12} sm={6}>
-            <Grid container spacing={1}>
-              <Grid item xs="auto">
-                <Tooltip title="Copy response">
-                  <div>
-                    <IconButton
-                      onClick={onCopy}
-                      disabled={debugResponse.length === 0}
-                    >
-                      <FileCopyIcon />
-                    </IconButton>
-                  </div>
-                </Tooltip>
-              </Grid>
-              <Grid item xs="auto">
-                <Tooltip title="Clear response">
-                  <div>
-                    <IconButton
-                      onClick={onClear}
-                      disabled={debugResponse.length === 0}
-                    >
-                      <DeleteSweepIcon />
-                    </IconButton>
-                  </div>
-                </Tooltip>
-              </Grid>
-            </Grid>
-            <SyntaxHighlighter
-              language="json"
-              style={githubGist}
-              wrapLines={false}
-            >
-              {debugResponse}
-            </SyntaxHighlighter>
-          </Grid>
-        </Grid>
-        <Snackbar
-          open={snackbarOpen}
-          message={snackbarMessage}
-          autoHideDuration={3000}
-          onClose={dismissSnackbar}
-          action={
-            <IconButton color="inherit" onClick={dismissSnackbar}>
-              <CloseIcon />
-            </IconButton>
-          }
-        />
-      </div>
-    </Section>
+          </div>
+          <Button
+            autoFocus
+            onClick={() => setDebugFormIsOpen(false)}
+            color="primary"
+          >
+            Close
+          </Button>
+        </DialogActions>
+      </Dialog>
+    </div>
   );
 };
 
