@@ -37,12 +37,16 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
  * Generates a JSON Schema from the given service specification.
+ *
+ * @see <a href="https://json-schema.org/">https://json-schema.org/</a>
  */
 final class JsonSchemaGenerator {
 
     private static final Logger logger = LoggerFactory.getLogger(JsonSchemaGenerator.class);
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
+
+    private static final Boolean SUPPORT_ADDITIONAL_FIELDS = false;
 
     private static final List<FieldLocation> VALID_FIELD_LOCATIONS = ImmutableList.of(
             FieldLocation.BODY,
@@ -99,7 +103,7 @@ final class JsonSchemaGenerator {
         root.put("$id", methodInfo.id())
             .put("title", methodInfo.name())
             .put("description", methodInfo.descriptionInfo().docString())
-            .put("additionalProperties", true)
+            .put("additionalProperties", SUPPORT_ADDITIONAL_FIELDS)
             // TODO: Assumes every method takes an object, which is only valid for RPC based services
             //  and most of the REST services.
             .put("type", "object");
@@ -124,7 +128,7 @@ final class JsonSchemaGenerator {
             methodFields = methodInfo.parameters();
         }
 
-        generateFields(methodFields, visited, currentPath + "/properties", root);
+        generateProperties(methodFields, visited, currentPath, root);
         return root;
     }
 
@@ -163,8 +167,12 @@ final class JsonSchemaGenerator {
                 fieldNode.set("enum", getEnumType(field.typeSignature()));
             }
 
-            // Set the current path to be "PREVIOUS_PATH/field.name".
-            final String currentPath = path + '/' + field.name();
+            final String currentPath;
+            if (field.name().isEmpty()) {
+                currentPath = path;
+            } else {
+                currentPath = path + '/' + field.name();
+            }
 
             // Only Struct types map to custom objects to we need reference to those structs.
             // Having references to primitives do not make sense.
@@ -172,17 +180,28 @@ final class JsonSchemaGenerator {
                 visited.put(fieldTypeSignature, currentPath);
             }
 
+            // Based on field type, we need to call the appropriate method to generate the schema.
+            // For example maps have `additionalProperties` field, arrays have `items` field and structs
+            // have `properties` field.
             if (field.typeSignature().type() == TypeSignatureType.MAP) {
-                generateMapFields(fieldNode, field, visited, currentPath + "/properties");
+                generateMapFields(fieldNode, field, visited, currentPath);
             } else if (field.typeSignature().type() == TypeSignatureType.ITERABLE) {
-                generateArrayFields(fieldNode, field, visited, currentPath + "/properties");
+                generateArrayFields(fieldNode, field, visited, currentPath);
             } else if ("object".equals(schemaType)) {
-                generateStructFields(fieldNode, field, visited, currentPath + "/properties");
+                generateStructFields(fieldNode, field, visited, currentPath);
             }
         }
 
         // Set current field inside the returned object.
-        root.set(field.name(), fieldNode);
+        // If field is nameless, unpack it.
+        // Example:
+        // For `list<int> x` we should have `{"x": {"items": {"type": "integer"}}}`
+        // Not `{"x": {"items": {"": {"type": "integer"}}}}`
+        if (field.name().isEmpty()) {
+            root.setAll(fieldNode);
+        } else {
+            root.set(field.name(), fieldNode);
+        }
     }
 
     /**
@@ -193,14 +212,14 @@ final class JsonSchemaGenerator {
      * @param path current path as defined in JSON Schema spec, required for cyclic references.
      * @param root object node that the results will be written to.
      */
-    private void generateFields(List<FieldInfo> fields, Map<String, String> visited, String path,
-                                ObjectNode root) {
+    private void generateProperties(List<FieldInfo> fields, Map<String, String> visited, String path,
+                                    ObjectNode root) {
         final ObjectNode objectNode = mapper.createObjectNode();
         final ArrayNode required = mapper.createArrayNode();
 
         for (FieldInfo field : fields) {
             if (VALID_FIELD_LOCATIONS.contains(field.location())) {
-                generateField(field, visited, path, objectNode, required);
+                generateField(field, visited, path + "/properties", objectNode, required);
             }
         }
 
@@ -208,74 +227,63 @@ final class JsonSchemaGenerator {
         root.set("required", required);
     }
 
+    /**
+     * Create the JSON node for a map field.
+     * Example for `map(string, int)`: {"type": "object", "additionalProperties": {"type": "integer"}}
+     *
+     * @see <a href="https://json-schema.org/understanding-json-schema/reference/object.html#additional-properties">JSON Schema</a>
+     */
     private void generateMapFields(ObjectNode fieldNode, FieldInfo field, Map<String, String> visited,
                                    String path) {
         final ObjectNode additionalProperties = mapper.createObjectNode();
-        final String nextPath = path + '/' + field.name();
 
         // Keys are always converted to strings.
         final TypeSignature valueType = ((MapTypeSignature) field.typeSignature()).valueTypeSignature();
+        // Create a field info with no name. Field infos with no name are considered to be unpacked.
+        final FieldInfo valueFieldInfo = FieldInfo.builder("", valueType)
+                                                  .location(FieldLocation.BODY)
+                                                  .requirement(FieldRequirement.OPTIONAL)
+                                                  .build();
 
-        final String innerSchemaType = getSchemaType(valueType);
-
-        if (visited.containsKey(valueType.signature())) {
-            final String pathName = visited.get(valueType.signature());
-            additionalProperties.put("$ref", pathName);
-        } else {
-            additionalProperties.put("type", innerSchemaType);
-
-            if ("object".equals(innerSchemaType)) {
-                final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(valueType.signature());
-
-                if (fieldStructInfo != null) {
-                    visited.put(valueType.signature(), nextPath);
-                    generateFields(fieldStructInfo.fields(), visited, nextPath + "/additionalProperties",
-                                   additionalProperties);
-                } else {
-                    logger.info("[generateMapFields] Could not find struct with signature: {}",
-                                valueType.signature());
-                }
-            }
-        }
+        // Recursively generate the field.
+        generateField(valueFieldInfo, visited, path + "/additionalProperties", additionalProperties,
+                      mapper.createArrayNode());
 
         fieldNode.set("additionalProperties", additionalProperties);
     }
 
+    /**
+     * Create the JSON node for an array field.
+     * Example for `list(int)`: {"type": "array", "items": {"type": "integer"}}
+     *
+     * @see <a href="https://json-schema.org/understanding-json-schema/reference/array.html">JSON Schema</a>
+     */
     private void generateArrayFields(ObjectNode fieldNode, FieldInfo field, Map<String, String> visited,
                                      String path) {
         final ObjectNode items = mapper.createObjectNode();
-        final String nextPath = path + '/' + field.name();
 
         final TypeSignature itemsType =
                 ((ContainerTypeSignature) field.typeSignature()).typeParameters().get(0);
+        // Create a field info with no name. Field infos with no name are considered to be unpacked.
+        final FieldInfo itemFieldInfo = FieldInfo.builder("", itemsType)
+                                                 .location(FieldLocation.BODY)
+                                                 .requirement(FieldRequirement.OPTIONAL)
+                                                 .build();
 
-        final String innerSchemaType = getSchemaType(itemsType);
-
-        if (visited.containsKey(itemsType.signature())) {
-            final String pathName = visited.get(itemsType.signature());
-            items.put("$ref", pathName);
-        } else {
-            items.put("type", innerSchemaType);
-
-            if ("object".equals(innerSchemaType)) {
-                final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(itemsType.signature());
-
-                if (fieldStructInfo != null) {
-                    visited.put(itemsType.signature(), nextPath);
-                    generateFields(fieldStructInfo.fields(), visited, nextPath + "/items", items);
-                } else {
-                    logger.info("[generateArrayFields] Could not find struct with signature: {}",
-                                itemsType.signature());
-                }
-            }
-        }
+        generateField(itemFieldInfo, visited, path + "/items", items, mapper.createArrayNode());
 
         fieldNode.set("items", items);
     }
 
+    /**
+     * Create the JSON node for a struct (object) field. Most custom classes are serialized as structs.
+     * Example for `Foo(Integer x)`: {"type": "object", "properties": {"x": {"type": "integer"}}}
+     *
+     * @see <a href="https://json-schema.org/understanding-json-schema/reference/object.html#properties">JSON Schema</a>
+     */
     private void generateStructFields(ObjectNode fieldNode, FieldInfo field, Map<String, String> visited,
                                       String path) {
-        fieldNode.put("additionalProperties", true);
+        fieldNode.put("additionalProperties", SUPPORT_ADDITIONAL_FIELDS);
 
         final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(field.typeSignature().signature());
 
@@ -286,10 +294,14 @@ final class JsonSchemaGenerator {
 
         // Iterate over each child field, generate their definitions.
         if (fieldStructInfo != null && !fieldStructInfo.fields().isEmpty()) {
-            generateFields(fieldStructInfo.fields(), visited, path, fieldNode);
+            generateProperties(fieldStructInfo.fields(), visited, path, fieldNode);
         }
     }
 
+    /**
+     * Get the JSON type for the given enum type.
+     * Example: `enum Foo { BAR, BAZ }`: {"type": "string", "enum": ["BAR", "BAZ"]}
+     */
     private ArrayNode getEnumType(TypeSignature type) {
         final ArrayNode enumArray = mapper.createArrayNode();
         final EnumInfo enumInfo = typeNameToEnumMapping.get(type.signature());
@@ -301,6 +313,12 @@ final class JsonSchemaGenerator {
         return enumArray;
     }
 
+    /**
+     * Get the JSON type for the given type. Unknown types are returned as `object`.
+     * This list can be extended to support more types.
+     *
+     * @see <a href="https://json-schema.org/understanding-json-schema/reference/type.html">JSON Schema</a>
+     */
     private static String getSchemaType(TypeSignature typeSignature) {
         if (typeSignature.type() == TypeSignatureType.ENUM) {
             return "string";
@@ -325,12 +343,10 @@ final class JsonSchemaGenerator {
         if (typeSignature.type() == TypeSignatureType.BASE) {
             switch (typeSignature.name().toLowerCase()) {
                 case "boolean":
-                    // Proto scalar types
                 case "bool":
                     return "boolean";
                 case "short":
                 case "number":
-                    // Proto scalar types
                 case "float":
                 case "double":
                     return "number";
@@ -346,7 +362,6 @@ final class JsonSchemaGenerator {
                 case "long":
                 case "long32":
                 case "long64":
-                    // Proto scalar types
                 case "int32":
                 case "int64":
                 case "uint32":
@@ -359,7 +374,6 @@ final class JsonSchemaGenerator {
                 case "sfixed64":
                     return "integer";
                 case "binary":
-                    // Proto scalar types
                 case "byte":
                 case "bytes":
                 case "string":
