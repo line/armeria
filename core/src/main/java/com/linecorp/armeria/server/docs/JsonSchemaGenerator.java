@@ -46,8 +46,6 @@ final class JsonSchemaGenerator {
 
     private static final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
-    private static final Boolean SUPPORT_ADDITIONAL_FIELDS = false;
-
     private static final List<FieldLocation> VALID_FIELD_LOCATIONS = ImmutableList.of(
             FieldLocation.BODY,
             FieldLocation.UNSPECIFIED);
@@ -103,7 +101,7 @@ final class JsonSchemaGenerator {
         root.put("$id", methodInfo.id())
             .put("title", methodInfo.name())
             .put("description", methodInfo.descriptionInfo().docString())
-            .put("additionalProperties", SUPPORT_ADDITIONAL_FIELDS)
+            .put("additionalProperties", false)
             // TODO: Assumes every method takes an object, which is only valid for RPC based services
             //  and most of the REST services.
             .put("type", "object");
@@ -119,6 +117,7 @@ final class JsonSchemaGenerator {
             final StructInfo structInfo = typeSignatureToStructMapping.get(signature);
             if (structInfo == null) {
                 logger.info("Could not find root parameter with signature: {}", signature);
+                root.put("additionalProperties", true);
                 methodFields = Collections.emptyList();
             } else {
                 methodFields = structInfo.fields();
@@ -283,9 +282,9 @@ final class JsonSchemaGenerator {
      */
     private void generateStructFields(ObjectNode fieldNode, FieldInfo field, Map<String, String> visited,
                                       String path) {
-        fieldNode.put("additionalProperties", SUPPORT_ADDITIONAL_FIELDS);
 
         final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(field.typeSignature().signature());
+        fieldNode.put("additionalProperties", fieldStructInfo == null);
 
         if (fieldStructInfo == null) {
             logger.info("[generateStructFields] Could not find struct with signature: {}",
