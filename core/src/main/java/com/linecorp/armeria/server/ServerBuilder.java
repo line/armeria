@@ -83,8 +83,6 @@ import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.SystemInfo;
-import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
-import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
@@ -1783,11 +1781,9 @@ public final class ServerBuilder implements TlsSetters {
     @UnstableApi
     public ServerBuilder dependencyInjector(DependencyInjector dependencyInjector, boolean shutdownOnStop) {
         requireNonNull(dependencyInjector, "dependencyInjector");
-        if (this.dependencyInjector == null) {
-            // Apply BuiltInDependencyInjector at first if a DependencyInjector is set.
-            this.dependencyInjector = BuiltInDependencyInjector.INSTANCE;
-        }
-        this.dependencyInjector = this.dependencyInjector.orElse(dependencyInjector);
+        this.dependencyInjector =
+                this.dependencyInjector == null ? dependencyInjector
+                                                : this.dependencyInjector.orElse(dependencyInjector);
         if (shutdownOnStop) {
             shutdownSupports.add(ShutdownSupport.of(dependencyInjector));
         }
@@ -1822,7 +1818,7 @@ public final class ServerBuilder implements TlsSetters {
         final AnnotatedServiceExtensions extensions =
                 virtualHostTemplate.annotatedServiceExtensions();
         assert extensions != null;
-        final DependencyInjector dependencyInjector = dependencyInjectorOrReflective();
+        final DependencyInjector dependencyInjector = dependencyInjectorOrNoop();
 
         final VirtualHost defaultVirtualHost =
                 defaultVirtualHostBuilder.build(virtualHostTemplate, dependencyInjector);
@@ -1971,13 +1967,21 @@ public final class ServerBuilder implements TlsSetters {
         return Collections.unmodifiableList(distinctPorts);
     }
 
-    private DependencyInjector dependencyInjectorOrReflective() {
+    private DependencyInjector dependencyInjectorOrNoop() {
         if (dependencyInjector != null) {
             return dependencyInjector;
         }
-        final ReflectiveDependencyInjector reflectiveDependencyInjector = new ReflectiveDependencyInjector();
-        shutdownSupports.add(ShutdownSupport.of(reflectiveDependencyInjector));
-        return reflectiveDependencyInjector;
+        return new DependencyInjector() {
+            @Override
+            public <T> @Nullable T getInstance(Class<T> type) {
+                return null;
+            }
+
+            @Override
+            public void close() {
+                // Do nothing.
+            }
+        };
     }
 
     private static VirtualHost setSslContextIfAbsent(VirtualHost h,
