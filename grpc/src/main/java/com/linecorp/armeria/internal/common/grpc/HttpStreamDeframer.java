@@ -117,8 +117,14 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
                 transportStatusListener.transportReportStatus(
                         GrpcStatus.fromThrowable(statusFunction, ctx, t, metadata),
                         metadata);
+                return;
             }
         }
+
+        final Metadata metadata = MetadataUtil.copyFromHeaders(headers);
+        // Note: this implementation slightly differs from upstream in that
+        // we don't check if the content-type is valid before invoking this callback.
+        transportStatusListener.transportReportHeaders(metadata);
     }
 
     @Override

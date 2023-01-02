@@ -24,6 +24,9 @@ import io.grpc.Status;
  * logic through this listener, and for clients the final response {@link Status} is also returned.
  */
 public interface TransportStatusListener {
+
+    default void transportReportHeaders(Metadata metadata) {}
+
     default void transportReportStatus(Status status) {
         transportReportStatus(status, new Metadata());
     }
