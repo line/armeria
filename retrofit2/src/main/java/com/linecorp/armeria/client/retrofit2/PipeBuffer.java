@@ -16,6 +16,9 @@
 package com.linecorp.armeria.client.retrofit2;
 
 import java.io.IOException;
+import java.util.concurrent.locks.ReentrantLock;
+
+import javax.annotation.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 
@@ -24,11 +27,12 @@ import okio.Source;
 import okio.Timeout;
 
 final class PipeBuffer {
-
+    @GuardedBy("reentrantLock")
     private final Buffer buffer = new Buffer();
     private final PipeSource source = new PipeSource();
     private boolean sinkClosed;
     private boolean sourceClosed;
+    private final ReentrantLock reentrantLock = new ReentrantLock();
     @Nullable
     private Throwable sinkClosedException;
 
@@ -36,7 +40,8 @@ final class PipeBuffer {
         if (byteCount == 0) {
             return;
         }
-        synchronized (buffer) {
+        reentrantLock.lock();
+        try {
             if (sourceClosed) {
                 return;
             }
@@ -45,17 +50,22 @@ final class PipeBuffer {
             }
             buffer.write(source, offset, byteCount);
             buffer.notifyAll();
+        } finally{
+            reentrantLock.unlock();
         }
     }
 
     void close(@Nullable Throwable throwable) {
-        synchronized (buffer) {
+        reentrantLock.lock();
+        try {
             if (sinkClosed) {
                 return;
             }
             sinkClosed = true;
             sinkClosedException = throwable;
             buffer.notifyAll();
+        } finally{
+            reentrantLock.unlock();
         }
     }
 
@@ -64,8 +74,11 @@ final class PipeBuffer {
     }
 
     boolean exhausted() {
-        synchronized (buffer) {
+        reentrantLock.lock();
+        try {
             return buffer.exhausted();
+        } finally{
+            reentrantLock.unlock();
         }
     }
 
@@ -74,7 +87,8 @@ final class PipeBuffer {
 
         @Override
         public long read(Buffer sink, long byteCount) throws IOException {
-            synchronized (buffer) {
+            reentrantLock.lock();
+            try {
                 if (sourceClosed) {
                     throw new IllegalStateException("closed");
                 }
@@ -92,14 +106,19 @@ final class PipeBuffer {
                 final long result = buffer.read(sink, byteCount);
                 buffer.notifyAll();
                 return result;
+            } finally{
+                reentrantLock.unlock();
             }
         }
 
         @Override
         public void close() throws IOException {
-            synchronized (buffer) {
+            reentrantLock.lock();
+            try {
                 sourceClosed = true;
                 buffer.notifyAll();
+            } finally{
+                reentrantLock.unlock();
             }
         }
 

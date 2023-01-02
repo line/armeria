@@ -21,6 +21,7 @@ import java.io.IOException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.client.Endpoint;
@@ -113,6 +114,8 @@ final class ArmeriaCallFactory implements Factory {
         @SuppressWarnings("FieldMayBeFinal")
         private volatile ExecutionState executionState = ExecutionState.IDLE;
 
+        private final ReentrantLock reentrantLock = new ReentrantLock();
+
         ArmeriaCall(ArmeriaCallFactory callFactory, Request request) {
             this.callFactory = callFactory;
             this.request = request;
@@ -171,12 +174,17 @@ final class ArmeriaCallFactory implements Factory {
             return request;
         }
 
-        private synchronized void createRequest() {
-            if (httpResponse != null) {
-                throw new IllegalStateException("executed already");
+        private void createRequest() {
+            reentrantLock.lock();
+            try{
+                if (httpResponse != null) {
+                    throw new IllegalStateException("executed already");
+                }
+                executionStateUpdater.compareAndSet(this, ExecutionState.IDLE, ExecutionState.RUNNING);
+                httpResponse = doCall(callFactory, request);
+            } finally {
+                reentrantLock.unlock();
             }
-            executionStateUpdater.compareAndSet(this, ExecutionState.IDLE, ExecutionState.RUNNING);
-            httpResponse = doCall(callFactory, request);
         }
 
         @Override
