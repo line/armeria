@@ -50,12 +50,12 @@ const RequestBody: React.FunctionComponent<Props> = (props) => (
               fullWidth
               displayEmpty
               value=""
-              renderValue={() => 'Select example headers...'}
+              renderValue={() => 'Select example requests...'}
               onChange={props.onSelectedRequestBodyChange}
             >
-              {props.exampleRequests.map((header) => (
-                <MenuItem key={header} value={header}>
-                  {truncate(header, 30)}
+              {props.exampleRequests.map((body) => (
+                <MenuItem key={body} value={body}>
+                  {truncate(body, 30)}
                 </MenuItem>
               ))}
             </Select>
