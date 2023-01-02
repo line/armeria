@@ -253,28 +253,28 @@ public final class RequestScopedMdc {
             return;
         }
 
-        final AttributeKey<ReentrantLock> key = AttributeKey.valueOf("reentrantLock");
-        final boolean hasLock = ctx.hasAttr(key);
-        if (!hasLock) {
+        for(;;) {
+            final AttributeKey<ReentrantLock> key = AttributeKey.valueOf("reentrantLock");
+            ReentrantLock oldLock = ctx.attr(key);
             final ReentrantLock reentrantLock = new ReentrantLock();
-            // todo(hun): Do we need to account for cases where the ctx.attr() has setted in the meantime?
-            ctx.setAttr(key, reentrantLock);
-        }
-        final ReentrantLock reentrantLockFromAttr = ctx.attr(key);
-        reentrantLockFromAttr.lock();
-        try {
-            final Object2ObjectMap<String, String> oldMap = getMap(ctx);
-            final Object2ObjectMap<String, String> newMap;
-            if (oldMap.isEmpty()) {
-                newMap = new Object2ObjectOpenHashMap<>(map);
-            } else {
-                newMap = new Object2ObjectOpenHashMap<>(oldMap.size() + map.size());
-                newMap.putAll(oldMap);
-                newMap.putAll(map);
+            if (ctx.setAttr(key, reentrantLock) == oldLock) {
+                reentrantLock.lock();
+                try {
+                    final Object2ObjectMap<String, String> oldMap = getMap(ctx);
+                    final Object2ObjectMap<String, String> newMap;
+                    if (oldMap.isEmpty()) {
+                        newMap = new Object2ObjectOpenHashMap<>(map);
+                    } else {
+                        newMap = new Object2ObjectOpenHashMap<>(oldMap.size() + map.size());
+                        newMap.putAll(oldMap);
+                        newMap.putAll(map);
+                    }
+                    ctx.setAttr(MAP, Object2ObjectMaps.unmodifiable(newMap));
+                } finally {
+                    reentrantLock.unlock();
+                }
+                break;
             }
-            ctx.setAttr(MAP, Object2ObjectMaps.unmodifiable(newMap));
-        } finally {
-            reentrantLockFromAttr.unlock();
         }
     }
 

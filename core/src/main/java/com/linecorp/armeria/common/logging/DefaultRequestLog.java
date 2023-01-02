@@ -19,6 +19,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -98,6 +99,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
      */
     private volatile int deferredFlags;
 
+    @GuardedBy("reentrantLock")
     private final List<RequestLogFuture> pendingFutures = new ArrayList<>(4);
 
     private final ReentrantLock reentrantLock = new ReentrantLock();
@@ -438,29 +440,39 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Nullable
     private RequestLogFuture[] removeSatisfiedFutures() {
-        if (pendingFutures.isEmpty()) {
-            return null;
+        reentrantLock.lock();
+        try {
+            if (pendingFutures.isEmpty()) {
+                return null;
+            }
+        } finally {
+            reentrantLock.unlock();
         }
 
         final int flags = this.flags;
-        final int maxNumListeners = pendingFutures.size();
-        final Iterator<RequestLogFuture> i = pendingFutures.iterator();
-        RequestLogFuture[] satisfied = null;
-        int numSatisfied = 0;
+        reentrantLock.lock();
+        try {
+            final int maxNumListeners = pendingFutures.size();
+            final Iterator<RequestLogFuture> i = pendingFutures.iterator();
+            RequestLogFuture[] satisfied = null;
+            int numSatisfied = 0;
 
-        do {
-            final RequestLogFuture e = i.next();
-            final int interestedFlags = e.interestedFlags;
-            if ((flags & interestedFlags) == interestedFlags) {
-                i.remove();
-                if (satisfied == null) {
-                    satisfied = new RequestLogFuture[maxNumListeners];
+            do {
+                final RequestLogFuture e = i.next();
+                final int interestedFlags = e.interestedFlags;
+                if ((flags & interestedFlags) == interestedFlags) {
+                    i.remove();
+                    if (satisfied == null) {
+                        satisfied = new RequestLogFuture[maxNumListeners];
+                    }
+                    satisfied[numSatisfied++] = e;
                 }
-                satisfied[numSatisfied++] = e;
-            }
-        } while (i.hasNext());
+            } while (i.hasNext());
 
-        return satisfied;
+            return satisfied;
+        } finally {
+            reentrantLock.unlock();
+        }
     }
 
     // Methods related with deferred properties
