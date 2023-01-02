@@ -60,9 +60,15 @@ final class AnnotatedObjectFactory {
         final Class<? extends T> type = (Class<? extends T>) invokeMethod(annotation, "value");
         final CreationMode mode = (CreationMode) invokeMethod(annotation, "mode");
 
-        final T instance =
-                mode == CreationMode.INJECTION ? dependencyInjector.getInstance(type)
-                                               : (T) instanceCache.get(type);
+        final T instance;
+
+        if (mode == CreationMode.INJECTION) {
+            instance = dependencyInjector.getInstance(type);
+        } else {
+            assert mode == CreationMode.REFLECTION;
+            instance = (T) instanceCache.get(type);
+        }
+
         if (instance != null) {
             if (!expectedType.isInstance(instance)) {
                 throw new IllegalArgumentException(
