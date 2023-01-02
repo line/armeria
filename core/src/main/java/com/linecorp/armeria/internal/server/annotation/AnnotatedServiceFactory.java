@@ -561,7 +561,7 @@ public final class AnnotatedServiceFactory {
                          .filter(annotation -> HTTP_METHOD_MAP.containsKey(annotation.annotationType()))
                          .forEach(annotation -> {
                              final HttpMethod httpMethod = HTTP_METHOD_MAP.get(annotation.annotationType());
-                             final String value = (String) AnnotatedObjectFactory.invokeValueMethod(annotation);
+                             final String value = (String) AnnotationUtil.invokeValueMethod(annotation);
                              final List<String> patterns = httpMethodPatternMap
                                      .computeIfAbsent(httpMethod, ignored -> new ArrayList<>());
                              if (DefaultValues.isSpecified(value)) {

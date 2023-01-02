@@ -16,14 +16,12 @@
 
 package com.linecorp.armeria.internal.server.annotation;
 
+import static com.linecorp.armeria.internal.server.annotation.AnnotationUtil.invokeMethod;
 import static org.reflections.ReflectionUtils.getConstructors;
-import static org.reflections.ReflectionUtils.getMethods;
-import static org.reflections.ReflectionUtils.withName;
 import static org.reflections.ReflectionUtils.withParametersCount;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 
 import com.google.common.collect.Iterables;
 
@@ -36,7 +34,7 @@ import com.linecorp.armeria.server.annotation.CreationMode;
 final class AnnotatedObjectFactory {
 
     /**
-     * An instance map for reusing converters, exception handlers and decorators.
+     * An instance map for reused converters, exception handlers and decorators.
      */
     private static final ClassValue<Object> instanceCache = new ClassValue<Object>() {
         @Override
@@ -81,26 +79,6 @@ final class AnnotatedObjectFactory {
         throw new IllegalArgumentException("cannot resolve the dependency for " + type.getName() +
                                            ". Use " + DependencyInjector.class.getName() +
                                            " or add a default constructor to create the instance.");
-    }
-
-    /**
-     * Returns an object which is returned by {@code value()} method of the specified annotation {@code a}.
-     */
-    static Object invokeValueMethod(Annotation a) {
-        // TODO(ks-yim): Remove this method.
-        return invokeMethod(a, "value");
-    }
-
-    static Object invokeMethod(Annotation a, String methodName) {
-        try {
-            final Method method = Iterables.getFirst(
-                    getMethods(a.annotationType(), withName(methodName)), null);
-            assert method != null : "No '" + methodName + "' method is found from " + a;
-            return method.invoke(a);
-        } catch (Exception e) {
-            throw new IllegalStateException("An annotation @" + a.annotationType().getSimpleName() +
-                                            " must have a '" + methodName + "' method", e);
-        }
     }
 
     private static <T> T getInstance0(Class<? extends T> clazz) throws Exception {
