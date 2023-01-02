@@ -17,13 +17,18 @@
 import Button from '@material-ui/core/Button';
 import TextField from '@material-ui/core/TextField';
 import Typography from '@material-ui/core/Typography';
-import React from 'react';
+import React, { ChangeEvent } from 'react';
 
+import Select from '@material-ui/core/Select';
+import MenuItem from '@material-ui/core/MenuItem';
 import jsonPrettify from '../../lib/json-prettify';
+import { truncate } from '../../lib/strings';
 
 const jsonPlaceHolder = jsonPrettify('{"foo":"bar"}');
 
 interface Props {
+  exampleRequests: string[];
+  onSelectedRequestBodyChange: (e: ChangeEvent<{ value: unknown }>) => void;
   requestBodyOpen: boolean;
   requestBody: string;
   onEditRequestBodyClick: React.Dispatch<unknown>;
@@ -38,6 +43,24 @@ const RequestBody: React.FunctionComponent<Props> = (props) => (
     </Button>
     {props.requestBodyOpen && (
       <>
+        {props.exampleRequests.length > 0 && (
+          <>
+            <Typography variant="body2" paragraph />
+            <Select
+              fullWidth
+              displayEmpty
+              value=""
+              renderValue={() => 'Select example headers...'}
+              onChange={props.onSelectedRequestBodyChange}
+            >
+              {props.exampleRequests.map((header) => (
+                <MenuItem key={header} value={header}>
+                  {truncate(header, 30)}
+                </MenuItem>
+              ))}
+            </Select>
+          </>
+        )}
         <Typography variant="body2" paragraph />
         <TextField
           multiline
