@@ -114,8 +114,6 @@ final class ArmeriaCallFactory implements Factory {
         @SuppressWarnings("FieldMayBeFinal")
         private volatile ExecutionState executionState = ExecutionState.IDLE;
 
-        private final ReentrantLock reentrantLock = new ReentrantLock();
-
         ArmeriaCall(ArmeriaCallFactory callFactory, Request request) {
             this.callFactory = callFactory;
             this.request = request;
@@ -174,17 +172,12 @@ final class ArmeriaCallFactory implements Factory {
             return request;
         }
 
-        private void createRequest() {
-            reentrantLock.lock();
-            try{
-                if (httpResponse != null) {
-                    throw new IllegalStateException("executed already");
-                }
-                executionStateUpdater.compareAndSet(this, ExecutionState.IDLE, ExecutionState.RUNNING);
-                httpResponse = doCall(callFactory, request);
-            } finally {
-                reentrantLock.unlock();
+        private synchronized void createRequest() {
+            if (httpResponse != null) {
+                throw new IllegalStateException("executed already");
             }
+            executionStateUpdater.compareAndSet(this, ExecutionState.IDLE, ExecutionState.RUNNING);
+            httpResponse = doCall(callFactory, request);
         }
 
         @Override
