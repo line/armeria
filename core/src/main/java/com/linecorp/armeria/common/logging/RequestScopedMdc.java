@@ -253,9 +253,9 @@ public final class RequestScopedMdc {
             return;
         }
 
-        for(;;) {
+        for (; ; ) {
             final AttributeKey<ReentrantLock> key = AttributeKey.valueOf("reentrantLock");
-            ReentrantLock oldLock = ctx.attr(key);
+            final ReentrantLock oldLock = ctx.attr(key);
             final ReentrantLock reentrantLock = new ReentrantLock();
             if (ctx.setAttr(key, reentrantLock) == oldLock) {
                 reentrantLock.lock();
