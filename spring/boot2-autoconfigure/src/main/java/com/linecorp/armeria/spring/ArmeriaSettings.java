@@ -49,7 +49,7 @@ import io.netty.channel.EventLoopGroup;
  *   ports:
  *     - port: 8080
  *       protocol: HTTP
- *     - ip: 127.0.0.1
+ *     - address: 127.0.0.1
  *       port: 8081
  *       protocol:HTTP
  *     - port: 8443
