@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.hamcrest.Matchers;
@@ -61,10 +62,10 @@ class GrpcClientListenerTest {
 
     private static final ServerInterceptor interceptor = new ServerInterceptor() {
         @Override
-        public <ReqT, RespT> ServerCall.Listener<ReqT> interceptCall(
-                ServerCall<ReqT, RespT> call, Metadata headers,
-                ServerCallHandler<ReqT, RespT> next) {
-            return next.startCall(new SimpleForwardingServerCall<ReqT, RespT>(call) {
+        public <I, O> ServerCall.Listener<I> interceptCall(
+                ServerCall<I, O> call, Metadata headers,
+                ServerCallHandler<I, O> next) {
+            return next.startCall(new SimpleForwardingServerCall<I, O>(call) {
                                       @Override
                                       public void sendHeaders(Metadata headers) {
                                           headers.put(key, "world");
@@ -78,8 +79,9 @@ class GrpcClientListenerTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
+            final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
             sb.service(GrpcService.builder()
-                                  .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()) {
+                                  .addService(new TestServiceImpl(executor) {
                                       @Override
                                       public void emptyCall(Empty empty,
                                                             StreamObserver<Empty> responseObserver) {
