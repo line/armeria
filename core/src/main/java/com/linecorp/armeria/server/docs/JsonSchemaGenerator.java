@@ -38,7 +38,7 @@ import com.linecorp.armeria.internal.common.JacksonUtil;
 /**
  * Generates a JSON Schema from the given service specification.
  *
- * @see <a href="https://json-schema.org/">https://json-schema.org/</a>
+ * @see <a href="https://json-schema.org/">JSON schema</a>
  */
 final class JsonSchemaGenerator {
 
@@ -107,14 +107,13 @@ final class JsonSchemaGenerator {
             .put("type", "object");
 
         final List<FieldInfo> methodFields;
-        final Map<String, String> visited = new HashMap<>();
+        final Map<TypeSignature, String> visited = new HashMap<>();
         final String currentPath = "#";
 
         if (methodInfo.useParameterAsRoot()) {
-            final String signature = methodInfo.parameters().get(0)
-                                               .typeSignature()
-                                               .signature();
-            final StructInfo structInfo = typeSignatureToStructMapping.get(signature);
+            final TypeSignature signature = methodInfo.parameters().get(0)
+                                                      .typeSignature();
+            final StructInfo structInfo = typeSignatureToStructMapping.get(signature.signature());
             if (structInfo == null) {
                 logger.info("Could not find root parameter with signature: {}", signature);
                 root.put("additionalProperties", true);
@@ -138,13 +137,14 @@ final class JsonSchemaGenerator {
      * @param field field to generate schema for
      * @param visited map of visited types and their paths
      * @param path current path in tree traversal of fields
-     * @param root the root to add schema properties
+     * @param parent the parent to add schema properties
      * @param required the array node to add required field names
      */
-    private void generateField(FieldInfo field, Map<String, String> visited, String path, ObjectNode root,
+    private void generateField(FieldInfo field, Map<TypeSignature, String> visited, String path,
+                               ObjectNode parent,
                                ArrayNode required) {
         final ObjectNode fieldNode = mapper.createObjectNode();
-        final String fieldTypeSignature = field.typeSignature().signature();
+        final TypeSignature fieldTypeSignature = field.typeSignature();
 
         if (visited.containsKey(fieldTypeSignature)) {
             // If field is already visited, add a reference to the field instead of iterating its children.
@@ -197,9 +197,9 @@ final class JsonSchemaGenerator {
         // For `list<int> x` we should have `{"x": {"items": {"type": "integer"}}}`
         // Not `{"x": {"items": {"": {"type": "integer"}}}}`
         if (field.name().isEmpty()) {
-            root.setAll(fieldNode);
+            parent.setAll(fieldNode);
         } else {
-            root.set(field.name(), fieldNode);
+            parent.set(field.name(), fieldNode);
         }
     }
 
@@ -209,10 +209,10 @@ final class JsonSchemaGenerator {
      * @param fields list of fields that the child has.
      * @param visited a map of visited fields, required for cycle detection.
      * @param path current path as defined in JSON Schema spec, required for cyclic references.
-     * @param root object node that the results will be written to.
+     * @param parent object node that the results will be written to.
      */
-    private void generateProperties(List<FieldInfo> fields, Map<String, String> visited, String path,
-                                    ObjectNode root) {
+    private void generateProperties(List<FieldInfo> fields, Map<TypeSignature, String> visited, String path,
+                                    ObjectNode parent) {
         final ObjectNode objectNode = mapper.createObjectNode();
         final ArrayNode required = mapper.createArrayNode();
 
@@ -222,8 +222,8 @@ final class JsonSchemaGenerator {
             }
         }
 
-        root.set("properties", objectNode);
-        root.set("required", required);
+        parent.set("properties", objectNode);
+        parent.set("required", required);
     }
 
     /**
@@ -232,7 +232,7 @@ final class JsonSchemaGenerator {
      *
      * @see <a href="https://json-schema.org/understanding-json-schema/reference/object.html#additional-properties">JSON Schema</a>
      */
-    private void generateMapFields(ObjectNode fieldNode, FieldInfo field, Map<String, String> visited,
+    private void generateMapFields(ObjectNode fieldNode, FieldInfo field, Map<TypeSignature, String> visited,
                                    String path) {
         final ObjectNode additionalProperties = mapper.createObjectNode();
 
@@ -257,7 +257,7 @@ final class JsonSchemaGenerator {
      *
      * @see <a href="https://json-schema.org/understanding-json-schema/reference/array.html">JSON Schema</a>
      */
-    private void generateArrayFields(ObjectNode fieldNode, FieldInfo field, Map<String, String> visited,
+    private void generateArrayFields(ObjectNode fieldNode, FieldInfo field, Map<TypeSignature, String> visited,
                                      String path) {
         final ObjectNode items = mapper.createObjectNode();
 
@@ -280,7 +280,7 @@ final class JsonSchemaGenerator {
      *
      * @see <a href="https://json-schema.org/understanding-json-schema/reference/object.html#properties">JSON Schema</a>
      */
-    private void generateStructFields(ObjectNode fieldNode, FieldInfo field, Map<String, String> visited,
+    private void generateStructFields(ObjectNode fieldNode, FieldInfo field, Map<TypeSignature, String> visited,
                                       String path) {
 
         final StructInfo fieldStructInfo = typeSignatureToStructMapping.get(field.typeSignature().signature());

@@ -337,7 +337,7 @@ public final class DocService extends SimpleDecoratingHttpService {
                         final byte[] content = jsonMapper.writerWithDefaultPrettyPrinter()
                                                          .writeValueAsBytes(jsonSpec);
                         return toFile(content, MediaType.JSON_UTF_8);
-                    } catch (Exception e) {
+                    } catch (JsonProcessingException e) {
                         logger.warn("Failed to generate JSON schemas:", e);
                         return toFile("[]".getBytes(), MediaType.JSON_UTF_8);
                     }
