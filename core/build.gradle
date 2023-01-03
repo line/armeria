@@ -53,8 +53,10 @@ mrJarVersions.each { version->
 }
 
 tasks.withType(JavaCompile) {
-    def version = releaseFlagFromVersion(sourceCompatibility)
-    options.release.set(Integer.parseInt(version))
+    if (project.rootProject.ext.buildJdkVersion >= 9) {
+        def version = releaseFlagFromVersion(sourceCompatibility)
+        options.release.set(Integer.parseInt(version))
+    }
 }
 
 tasks.withType(Jar) {
