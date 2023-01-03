@@ -83,6 +83,7 @@ public class ArmeriaSettings {
     public static class Port {
         /**
          * IP address to bind to. If not set, will bind to all addresses, e.g. {@code 0.0.0.0}.
+         *
          * @deprecated Use {@link #address} instead.
          */
         @Deprecated
@@ -114,6 +115,7 @@ public class ArmeriaSettings {
 
         /**
          * Returns the IP address that the {@link Server} uses.
+         *
          * @deprecated Use {@link #getAddress()} instead.
          */
         @Deprecated
@@ -124,6 +126,7 @@ public class ArmeriaSettings {
 
         /**
          * Registers an IP address that the {@link Server} uses.
+         *
          * @deprecated Use {@link #setAddress(InetAddress)} instead.
          */
         @Deprecated
@@ -133,7 +136,7 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Returns the Network address that the {@link Server} uses.
+         * Returns the network address that the {@link Server} uses.
          */
         @Nullable
         public InetAddress getAddress() {
@@ -141,7 +144,7 @@ public class ArmeriaSettings {
         }
 
         /**
-         * Registers a Network address that the {@link Server} uses.
+         * Registers a network address that the {@link Server} uses.
          */
         public Port setAddress(InetAddress address) {
             this.address = address;
@@ -201,6 +204,17 @@ public class ArmeriaSettings {
         public Port setProtocol(SessionProtocol protocol) {
             protocols = ImmutableList.of(protocol);
             return this;
+        }
+
+        @Override
+        public String toString() {
+            return "Port{" +
+                   "ip='" + ip + '\'' +
+                   ", address=" + address +
+                   ", iface='" + iface + '\'' +
+                   ", port=" + port +
+                   ", protocols=" + protocols +
+                   '}';
         }
     }
 
