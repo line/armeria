@@ -36,7 +36,7 @@ import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.DeprecatedIpTest.TestConfiguration;
 
 /**
- * Tests for keeping the behavior of {@link Port#getIp()}.
+ * Tests for keeping the behavior of deprecated {@link Port#getIp()}.
  */
 @RunWith(SpringRunner.class)
 @SpringBootTest(classes = TestConfiguration.class)
@@ -55,7 +55,12 @@ public class DeprecatedIpTest {
         final Collection<ServerPort> serverPorts = server.activePorts().values();
         for (ServerPort sp : serverPorts) {
             final InetAddress address = sp.localAddress().getAddress();
-            assertThat(address.isAnyLocalAddress() || address.isLoopbackAddress()).isTrue();
+            if ("127.0.0.1".equals(address.getHostAddress())) {
+                assertThat(address.isLoopbackAddress()).isTrue();
+            } else {
+                // Setting 0.0.0.0 at properties
+                assertThat(address.isAnyLocalAddress()).isTrue();
+            }
         }
     }
 }
