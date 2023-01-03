@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.client.Endpoint;
