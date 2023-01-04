@@ -76,7 +76,6 @@ final class AnnotatedObjectFactory {
             }
             return instance;
         }
-
         throw new IllegalArgumentException("Cannot instantiate the dependency for " + type.getName() +
                                            ". Use " + DependencyInjector.class.getName() +
                                            " or add a default constructor to create the instance.");

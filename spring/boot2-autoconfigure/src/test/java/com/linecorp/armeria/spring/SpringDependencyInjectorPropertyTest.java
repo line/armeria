@@ -39,6 +39,7 @@ import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.annotation.CreationMode;
 import com.linecorp.armeria.server.annotation.Decorator;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.spring.SpringDependencyInjectorPropertyTest.TestConfiguration;
@@ -66,7 +67,7 @@ public class SpringDependencyInjectorPropertyTest {
 
         public static final class Foo {
 
-            @Decorator(FooDecorator.class)
+            @Decorator(value = FooDecorator.class, mode = CreationMode.INJECTION)
             @Get("/foo")
             public HttpResponse foo() {
                 return HttpResponse.of(200);
