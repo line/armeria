@@ -34,7 +34,7 @@ class BrotliStreamDecoderTest {
     private static final byte[] PAYLOAD = { -117, 1, -128, 77, 101, 111, 119, 3};
 
     StreamDecoder newDecoder() {
-        return new BrotliStreamDecoder(new BrotliDecoder(), ByteBufAllocator.DEFAULT);
+        return new BrotliStreamDecoder(new BrotliDecoder(), ByteBufAllocator.DEFAULT, 0);
     }
 
     @Test

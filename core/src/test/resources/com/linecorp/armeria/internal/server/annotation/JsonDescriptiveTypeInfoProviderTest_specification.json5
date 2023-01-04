@@ -9,129 +9,10 @@
           "returnTypeSignature": "CompletableFuture<com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$BarResponse>",
           "parameters": [
             {
-              "name": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$FooRequest",
+              "name": "req",
               "location": "UNSPECIFIED",
               "requirement": "REQUIRED",
-              "typeSignature": "object",
-              "childFieldInfos": [
-                {
-                  "name": "intField",
-                  "location": "UNSPECIFIED",
-                  "requirement": "REQUIRED",
-                  "typeSignature": "int", // A primitive type
-                  "childFieldInfos": [ ],
-                  "descriptionInfo": {
-                    "docString": "",
-                    "markup": "NONE"
-                  }
-                }, {
-                  "name": "stringField",
-                  "location": "UNSPECIFIED",
-                  "requirement": "REQUIRED",
-                  "typeSignature": "string",
-                  "childFieldInfos": [ ],
-                  "descriptionInfo": {
-                    "docString": "",
-                    "markup": "NONE"
-                  }
-                }, {
-                  "name": "sameName",
-                  "location": "UNSPECIFIED",
-                  "requirement": "REQUIRED", // Non-null is assumed by default.
-                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
-                  "childFieldInfos": [
-                    {
-                      "name": "innerValue",
-                      "location": "UNSPECIFIED",
-                      "requirement": "REQUIRED",
-                      "typeSignature": "boolean",
-                      "childFieldInfos": [ ],
-                      "descriptionInfo": {
-                        "docString": "",
-                        "markup": "NONE"
-                      }
-                    }
-                  ],
-                  "descriptionInfo": {
-                    "docString": "",
-                    "markup": "NONE"
-                  }
-                }, {
-                  "name": "rename",
-                  "location": "UNSPECIFIED",
-                  "requirement": "REQUIRED",
-                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
-                  "childFieldInfos": [
-                    {
-                      "name": "innerValue",
-                      "location": "UNSPECIFIED",
-                      "requirement": "REQUIRED",
-                      "typeSignature": "boolean",
-                      "childFieldInfos": [ ],
-                      "descriptionInfo": {
-                        "docString": "",
-                        "markup": "NONE"
-                      }
-                    }
-                  ],
-                  "descriptionInfo": {
-                    "docString": "",
-                    "markup": "NONE"
-                  }
-                }, {
-                  "name": "collection",
-                  "location": "UNSPECIFIED",
-                  "requirement": "REQUIRED",
-                  "typeSignature": "list<com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner>",
-                  "childFieldInfos": [ ],
-                  "descriptionInfo": {
-                    "docString": "",
-                    "markup": "NONE"
-                  }
-                }, {
-                  "name": "nullableField",
-                  "location": "UNSPECIFIED",
-                  "requirement": "OPTIONAL", // A `@Nullable` object
-                  "typeSignature": "string",
-                  "childFieldInfos": [ ],
-                  "descriptionInfo": {
-                    "docString": "",
-                    "markup": "NONE"
-                  }
-                }, {
-                  "name": "optionalField",
-                  "location": "UNSPECIFIED",
-                  "requirement": "OPTIONAL", // An `Optional` object
-                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
-                  "childFieldInfos": [
-                    {
-                      "name": "innerValue",
-                      "location": "UNSPECIFIED",
-                      "requirement": "REQUIRED",
-                      "typeSignature": "boolean",
-                      "childFieldInfos": [ ],
-                      "descriptionInfo": {
-                        "docString": "",
-                        "markup": "NONE"
-                      }
-                    }
-                  ],
-                  "descriptionInfo": {
-                    "docString": "",
-                    "markup": "NONE"
-                  }
-                }, {
-                  "name": "circular",
-                  "location": "UNSPECIFIED",
-                  "requirement": "REQUIRED",
-                  "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$FooRequest",
-                  "childFieldInfos": [ ], // Stop traversing if a circular field is detected.
-                  "descriptionInfo": {
-                    "docString": "",
-                    "markup": "NONE"
-                  }
-                }
-              ],
+              "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$FooRequest",
               "descriptionInfo": {
                 "docString": "",
                 "markup": "NONE"
@@ -174,7 +55,6 @@
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
           "typeSignature": "string",
-          "childFieldInfos": [ ],
           "descriptionInfo": {
             "docString": "",
             "markup": "NONE"
@@ -184,7 +64,6 @@
           "location": "UNSPECIFIED",
           "requirement": "OPTIONAL",
           "typeSignature": "string",
-          "childFieldInfos": [ ],
           "descriptionInfo": {
             "docString": "",
             "markup": "NONE"
@@ -194,7 +73,6 @@
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
           "typeSignature": "int",
-          "childFieldInfos": [ ],
           "descriptionInfo": {
             "docString": "",
             "markup": "NONE"
@@ -204,19 +82,6 @@
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
           "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
-          "childFieldInfos": [
-            {
-              "name": "innerValue",
-              "location": "UNSPECIFIED",
-              "requirement": "REQUIRED",
-              "typeSignature": "boolean",
-              "childFieldInfos": [ ],
-              "descriptionInfo": {
-                "docString": "",
-                "markup": "NONE"
-              }
-            }
-          ],
           "descriptionInfo": {
             "docString": "",
             "markup": "NONE"
@@ -226,19 +91,6 @@
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
           "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
-          "childFieldInfos": [
-            {
-              "name": "innerValue",
-              "location": "UNSPECIFIED",
-              "requirement": "REQUIRED",
-              "typeSignature": "boolean",
-              "childFieldInfos": [ ],
-              "descriptionInfo": {
-                "docString": "",
-                "markup": "NONE"
-              }
-            }
-          ],
           "descriptionInfo": {
             "docString": "",
             "markup": "NONE"
@@ -248,7 +100,6 @@
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
           "typeSignature": "list<com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner>",
-          "childFieldInfos": [ ],
           "descriptionInfo": {
             "docString": "",
             "markup": "NONE"
@@ -258,7 +109,6 @@
           "location": "UNSPECIFIED",
           "requirement": "OPTIONAL",
           "typeSignature": "string",
-          "childFieldInfos": [ ],
           "descriptionInfo": {
             "docString": "",
             "markup": "NONE"
@@ -268,7 +118,6 @@
           "location": "UNSPECIFIED",
           "requirement": "OPTIONAL",
           "typeSignature": "string",
-          "childFieldInfos": [ ],
           "descriptionInfo": {
             "docString": "",
             "markup": "NONE"
@@ -278,7 +127,6 @@
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
           "typeSignature": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$BarResponse",
-          "childFieldInfos": [ ],
           "descriptionInfo": {
             "docString": "",
             "markup": "NONE"
@@ -290,6 +138,85 @@
         "markup": "NONE"
       }
     }, {
+      "name" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$FooRequest",
+      "fields" : [ {
+        "name" : "intField",
+        "location" : "UNSPECIFIED",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "int",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "stringField",
+        "location" : "UNSPECIFIED",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "string",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "sameName",
+        "location" : "UNSPECIFIED",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "rename",
+        "location" : "UNSPECIFIED",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "collection",
+        "location" : "UNSPECIFIED",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "list<com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner>",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "nullableField",
+        "location" : "UNSPECIFIED",
+        "requirement" : "OPTIONAL",
+        "typeSignature" : "string",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "optionalField",
+        "location" : "UNSPECIFIED",
+        "requirement" : "OPTIONAL",
+        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      }, {
+        "name" : "circular",
+        "location" : "UNSPECIFIED",
+        "requirement" : "REQUIRED",
+        "typeSignature" : "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$FooRequest",
+        "descriptionInfo" : {
+          "docString" : "",
+          "markup" : "NONE"
+        }
+      } ],
+      "descriptionInfo" : {
+        "docString" : "",
+        "markup" : "NONE"
+      }
+    }, {
       "name": "com.linecorp.armeria.internal.server.annotation.DefaultDescriptiveTypeInfoProviderTest$Inner",
       "fields": [
         {
@@ -297,7 +224,6 @@
           "location": "UNSPECIFIED",
           "requirement": "REQUIRED",
           "typeSignature": "boolean",
-          "childFieldInfos": [ ],
           "descriptionInfo": {
             "docString": "",
             "markup": "NONE"

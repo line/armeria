@@ -28,7 +28,8 @@ import com.linecorp.armeria.common.Request;
  * Returns a {@link CircuitBreaker} instance from remote invocation parameters.
  */
 @FunctionalInterface
-public interface CircuitBreakerMapping {
+public interface CircuitBreakerMapping extends ClientCircuitBreakerGenerator<CircuitBreaker> {
+
     /**
      * Returns the default {@link CircuitBreakerMapping}.
      */
@@ -89,5 +90,6 @@ public interface CircuitBreakerMapping {
     /**
      * Returns the {@link CircuitBreaker} mapped to the given parameters.
      */
+    @Override
     CircuitBreaker get(ClientRequestContext ctx, Request req) throws Exception;
 }

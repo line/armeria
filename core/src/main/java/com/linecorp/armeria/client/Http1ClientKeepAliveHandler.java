@@ -18,8 +18,10 @@ package com.linecorp.armeria.client;
 
 import static java.util.Objects.requireNonNull;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.internal.client.UserAgentUtil;
 import com.linecorp.armeria.internal.common.Http1KeepAliveHandler;
 
 import io.micrometer.core.instrument.Timer;
@@ -29,7 +31,10 @@ import io.netty.channel.ChannelHandlerContext;
 
 final class Http1ClientKeepAliveHandler extends Http1KeepAliveHandler {
 
-    private static final RequestHeaders HTTP1_PING_REQUEST = RequestHeaders.of(HttpMethod.OPTIONS, "*");
+    private static final RequestHeaders HTTP1_PING_REQUEST =
+            RequestHeaders.builder(HttpMethod.OPTIONS, "*")
+                          .set(HttpHeaderNames.USER_AGENT, UserAgentUtil.USER_AGENT.toString())
+                          .build();
 
     private final HttpSession httpSession;
     private final ClientHttp1ObjectEncoder encoder;

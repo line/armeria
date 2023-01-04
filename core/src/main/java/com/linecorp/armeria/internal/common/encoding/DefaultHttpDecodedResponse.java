@@ -20,7 +20,9 @@ import java.io.UnsupportedEncodingException;
 import java.util.Map;
 
 import com.google.common.base.Ascii;
+import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.encoding.StreamDecoder;
 import com.linecorp.armeria.client.encoding.StreamDecoderFactory;
 import com.linecorp.armeria.common.FilteredHttpResponse;
@@ -33,15 +35,13 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 
-import io.netty.buffer.ByteBufAllocator;
-
 /**
  * A {@link FilteredHttpResponse} that applies HTTP decoding to {@link HttpObject}s as they are published.
  */
 public final class DefaultHttpDecodedResponse extends AbstractHttpDecodedResponse {
 
     private final Map<String, StreamDecoderFactory> availableDecoders;
-    private final ByteBufAllocator alloc;
+    private final ClientRequestContext ctx;
     private final boolean strictContentEncoding;
 
     @Nullable
@@ -50,10 +50,10 @@ public final class DefaultHttpDecodedResponse extends AbstractHttpDecodedRespons
 
     public DefaultHttpDecodedResponse(HttpResponse delegate,
                                       Map<String, StreamDecoderFactory> availableDecoders,
-                                      ByteBufAllocator alloc, boolean strictContentEncoding) {
+                                      ClientRequestContext ctx, boolean strictContentEncoding) {
         super(delegate);
         this.availableDecoders = availableDecoders;
-        this.alloc = alloc;
+        this.ctx = ctx;
         this.strictContentEncoding = strictContentEncoding;
     }
 
@@ -85,7 +85,8 @@ public final class DefaultHttpDecodedResponse extends AbstractHttpDecodedRespons
                 final StreamDecoderFactory decoderFactory =
                         availableDecoders.get(Ascii.toLowerCase(contentEncoding));
                 if (decoderFactory != null) {
-                    decoder = decoderFactory.newDecoder(alloc);
+                    decoder = decoderFactory.newDecoder(ctx.alloc(),
+                                                        Ints.saturatedCast(ctx.maxResponseLength()));
                 } else {
                     // The server returned an encoding that this response doesn't support.
                     // This shouldn't happen normally since we set Accept-Encoding.
@@ -97,8 +98,16 @@ public final class DefaultHttpDecodedResponse extends AbstractHttpDecodedRespons
                     }
                 }
             }
-
-            return headers;
+            if (decoder != null) {
+                // As the compressed content should be decoded, Content-Encoding and Content-Length
+                // header are no longer valid.
+                return headers.toBuilder()
+                              .removeAndThen(HttpHeaderNames.CONTENT_ENCODING)
+                              .removeAndThen(HttpHeaderNames.CONTENT_LENGTH)
+                              .build();
+            } else {
+                return headers;
+            }
         }
 
         assert obj instanceof HttpData;

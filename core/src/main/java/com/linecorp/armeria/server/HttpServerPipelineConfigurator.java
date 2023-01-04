@@ -216,11 +216,12 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                 config.hasWebSocketService(), config.isDateHeaderEnabled(),
                 config.isServerHeaderEnabled(), config.http1HeaderNaming());
         p.addLast(TrafficLoggingHandler.SERVER);
-        p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder));
-        p.addLast(new HttpServerHandler(config,
-                                        gracefulShutdownSupport,
-                                        responseEncoder,
-                                        H1C, proxiedAddresses));
+        final HttpServerHandler httpServerHandler = new HttpServerHandler(config,
+                                                                          gracefulShutdownSupport,
+                                                                          responseEncoder,
+                                                                          H1C, proxiedAddresses);
+        p.addLast(new Http2PrefaceOrHttpHandler(responseEncoder, httpServerHandler));
+        p.addLast(httpServerHandler);
     }
 
     private Timer newKeepAliveTimer(SessionProtocol protocol) {
@@ -527,10 +528,11 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                                           config.http1MaxChunkSize(),
                                           encoder.webSocketUpgradeContext()));
 
-            p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, encoder));
-            p.addLast(new HttpServerHandler(config,
-                                            gracefulShutdownSupport,
-                                            encoder, H1, proxiedAddresses));
+            final HttpServerHandler httpServerHandler = new HttpServerHandler(config,
+                                                                              gracefulShutdownSupport,
+                                                                              encoder, H1, proxiedAddresses);
+            p.addLast(new Http1RequestDecoder(config, ch, SCHEME_HTTPS, encoder, httpServerHandler));
+            p.addLast(httpServerHandler);
         }
 
         @Override
@@ -633,12 +635,14 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
 
         private final ServerHttp1ObjectEncoder responseEncoder;
         private final KeepAliveHandler keepAliveHandler;
+        private final HttpServer httpServer;
         @Nullable
         private String name;
 
-        Http2PrefaceOrHttpHandler(ServerHttp1ObjectEncoder responseEncoder) {
+        Http2PrefaceOrHttpHandler(ServerHttp1ObjectEncoder responseEncoder, HttpServer httpServer) {
             this.responseEncoder = responseEncoder;
             keepAliveHandler = responseEncoder.keepAliveHandler();
+            this.httpServer = httpServer;
         }
 
         @Override
@@ -688,7 +692,7 @@ final class HttpServerPipelineConfigurator extends ChannelInitializer<Channel> {
                     () -> new Http2ServerUpgradeCodec(newHttp2ConnectionHandler(p, SCHEME_HTTP))));
 
             final Http1RequestDecoder handler =
-                    new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTP, responseEncoder);
+                    new Http1RequestDecoder(config, ctx.channel(), SCHEME_HTTP, responseEncoder, httpServer);
             addAfter(p, baseName, handler);
         }
 

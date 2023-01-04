@@ -84,6 +84,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
     private final InboundTrafficController inboundTrafficController;
     private ServerHttpObjectEncoder encoder;
     private WebSocketUpgradeContext webSocketUpgradeContext;
+    private final HttpServer httpServer;
 
     /** The request being decoded currently. */
     @Nullable
@@ -92,13 +93,14 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
     private boolean discarding;
 
     Http1RequestDecoder(ServerConfig cfg, Channel channel, AsciiString scheme,
-                        ServerHttp1ObjectEncoder encoder) {
+                        ServerHttp1ObjectEncoder encoder, HttpServer httpServer) {
         this.cfg = cfg;
         this.scheme = scheme;
         inboundTrafficController = InboundTrafficController.ofHttp1(channel);
         this.encoder = encoder;
         webSocketUpgradeContext = encoder.webSocketUpgradeContext();
         webSocketUpgradeContext.setWebSocketUpgradeListener(this);
+        this.httpServer = httpServer;
     }
 
     @Override
@@ -249,6 +251,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler implements WebSocke
                             if (serviceConfig.service().as(WebSocketService.class) != null &&
                                 isHttp1WebSocketUpgradeRequest(headers)) {
                                 logger.trace("Received WebSocket upgrade headers: {}", headers);
+                                if (httpServer.unfinishedRequests() > 0) {
+                                    fail(id, headers, HttpStatus.BAD_REQUEST,
+                                         "WebSocket session cannot share the connection.", null);
+                                    return;
+                                }
+
                                 this.req = req = DecodedHttpRequest.of(false, eventLoop, id, 1, headers,
                                                                        keepAlive, inboundTrafficController,
                                                                        routingCtx);

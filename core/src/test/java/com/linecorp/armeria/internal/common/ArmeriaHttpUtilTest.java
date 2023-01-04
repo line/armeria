@@ -17,7 +17,6 @@
 package com.linecorp.armeria.internal.common;
 
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
-import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.decodePath;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.parseDirectives;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toArmeria;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.toNettyHttp1ClientHeaders;
@@ -384,7 +383,8 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void stripTEHeadersAccountsForOWS() {
-        final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders();
+        // Disable headers validation to allow optional whitespace.
+        final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders(false);
         in.add(HttpHeaderNames.TE, " " + HttpHeaderValues.TRAILERS + ' ');
         final HttpHeadersBuilder out = HttpHeaders.builder();
         toArmeria(in, out);

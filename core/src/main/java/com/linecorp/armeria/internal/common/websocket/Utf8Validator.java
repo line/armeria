@@ -80,10 +80,8 @@ final class Utf8Validator implements ByteProcessor {
 
     private int state = UTF8_ACCEPT;
     private int codep;
-    private boolean checking;
 
     void check(ByteBuf buffer, int index, int length) {
-        checking = true;
         buffer.forEachByte(index, length, this);
     }
 
@@ -96,7 +94,6 @@ final class Utf8Validator implements ByteProcessor {
         state = STATES[state + type];
 
         if (state == UTF8_REJECT) {
-            checking = false;
             throw new IllegalArgumentException();
         }
         return true;

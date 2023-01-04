@@ -87,6 +87,7 @@ final class HttpServerCodec extends CombinedChannelDuplexHandler<HttpRequestDeco
         ctx.pipeline().remove(this);
     }
 
+    // TODO(minwoox): override createMessage() to use Armeria headers.
     private final class HttpServerRequestDecoder extends HttpRequestDecoder {
 
         private final int maxChunkSize;

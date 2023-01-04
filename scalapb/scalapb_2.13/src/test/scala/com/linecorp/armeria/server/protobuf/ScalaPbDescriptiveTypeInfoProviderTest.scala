@@ -76,13 +76,6 @@ class ScalaPbDescriptiveTypeInfoProviderTest extends FunSuite with ServerSuite {
     val nested = structInfo.fields.get(14)
     assertEquals(nested.name, "nested")
     assertEquals(nested.typeSignature.signature, "armeria.protobuf.testing.TestMessage.Nested")
-    assertEquals(nested.childFieldInfos.size(), 1)
-    assert(
-      nested.childFieldInfos.contains(
-        FieldInfo
-          .builder("string", STRING)
-          .requirement(FieldRequirement.OPTIONAL)
-          .build()))
 
     assertEquals(structInfo.fields.get(15).name, "strings")
     val repeatedTypeSignature = structInfo.fields.get(15).typeSignature
@@ -97,15 +90,11 @@ class ScalaPbDescriptiveTypeInfoProviderTest extends FunSuite with ServerSuite {
     assertEquals(mapTypeSignature.asInstanceOf[MapTypeSignature].valueTypeSignature(), INT32)
     val self = structInfo.fields.get(17)
     assertEquals(self.name, "self")
-    // Don't visit the field infos of a circular type
-    assertEquals(self.childFieldInfos.size(), 0)
     assertEquals(self.typeSignature.signature, "armeria.protobuf.testing.TestMessage")
 
     val oneof = structInfo.fields.get(18)
     assertEquals(oneof.name(), "oneof")
-    assertEquals(oneof.childFieldInfos().size(), 2)
-    assertEquals(oneof.childFieldInfos().get(0).typeSignature().signature(), "armeria.protobuf.testing.Literal")
-    assertEquals(oneof.childFieldInfos().get(1).typeSignature().signature(), "armeria.protobuf.testing.Add")
+    assertEquals(oneof.typeSignature.signature, "armeria.protobuf.testing.SimpleOneof")
   }
 
   test("should not handle com.google.protobuf.Message with ScalaPbDescriptiveTypeInfoProvider") {

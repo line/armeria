@@ -137,6 +137,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                                 " (service: " + service() + ')'), true);
                         return;
                     }
+                    // TODO(minwoox): Add an implementation of AbstractHttpResponseHandler for WebSocket.
                     // Only HTTP/1.x uses informational status for the WebSocket response.
                     if (!(reqCtx.sessionProtocol().isHttp1() && isHttp1WebSocketUpgradeResponse(headers))) {
                         responseEncoder.writeHeaders(req.id(), req.streamId(), headers, false, false)
@@ -164,8 +165,12 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                 if (endOfStream) {
                     setDone(false);
                 }
+                final ServerConfig config = reqCtx.config().server().config();
                 final ResponseHeaders merged =
-                        mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders());
+                        mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders(),
+                                             reqCtx.config().defaultHeaders(),
+                                             config.isServerHeaderEnabled(),
+                                             config.isDateHeaderEnabled());
                 logBuilder().responseHeaders(merged);
 
                 responseEncoder.writeHeaders(req.id(), req.streamId(), merged, endOfStream,

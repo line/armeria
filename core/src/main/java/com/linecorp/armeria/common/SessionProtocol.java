@@ -84,7 +84,7 @@ public enum SessionProtocol {
     public static SessionProtocol of(String uriText) {
         uriText = Ascii.toLowerCase(requireNonNull(uriText, "uriText"));
         final SessionProtocol value = uriTextToProtocols.get(uriText);
-        checkArgument(value != null, "unknown session protocol: ", uriText);
+        checkArgument(value != null, "unknown session protocol: %s", uriText);
         return value;
     }
 

@@ -1276,9 +1276,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             if (!rpcResponse.isDone()) {
                 throw new IllegalArgumentException("responseContent must be complete: " + responseContent);
             }
-            if (responseCause == null && rpcResponse.cause() != null) {
-                responseCause = rpcResponse.cause();
-                updateFlags(RequestLogProperty.RESPONSE_CAUSE);
+            final Throwable cause = rpcResponse.cause();
+            if (cause != null) {
+                responseCause(cause);
             }
         }
 

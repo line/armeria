@@ -23,7 +23,6 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.internal.client.HttpHeaderUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
@@ -64,10 +63,6 @@ final class ClientHttp1ObjectEncoder extends Http1ObjectEncoder implements Clien
                                                        headers.path(), false);
         final io.netty.handler.codec.http.HttpHeaders nettyHeaders = req.headers();
         ArmeriaHttpUtil.toNettyHttp1ClientHeaders(headers, nettyHeaders, http1HeaderNaming);
-
-        if (!nettyHeaders.contains(HttpHeaderNames.USER_AGENT)) {
-            nettyHeaders.add(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT.toString());
-        }
 
         if (!nettyHeaders.contains(HttpHeaderNames.HOST)) {
             final InetSocketAddress remoteAddress = (InetSocketAddress) channel().remoteAddress();
