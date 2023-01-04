@@ -17,6 +17,7 @@
 package com.linecorp.armeria.internal.server.annotation;
 
 import static com.linecorp.armeria.internal.server.annotation.AnnotationUtil.invokeMethod;
+import static com.linecorp.armeria.internal.server.annotation.AnnotationUtil.invokeValueMethod;
 import static org.reflections.ReflectionUtils.getConstructors;
 import static org.reflections.ReflectionUtils.withParametersCount;
 
@@ -55,7 +56,7 @@ final class AnnotatedObjectFactory {
     @SuppressWarnings("unchecked")
     static <T> T getInstance(Annotation annotation, Class<T> expectedType,
                              DependencyInjector dependencyInjector) {
-        final Class<? extends T> type = (Class<? extends T>) invokeMethod(annotation, "value");
+        final Class<? extends T> type = (Class<? extends T>) invokeValueMethod(annotation);
         final CreationMode mode = (CreationMode) invokeMethod(annotation, "mode");
 
         final T instance;
@@ -76,7 +77,7 @@ final class AnnotatedObjectFactory {
             return instance;
         }
 
-        throw new IllegalArgumentException("cannot resolve the dependency for " + type.getName() +
+        throw new IllegalArgumentException("Cannot instantiate the dependency for " + type.getName() +
                                            ". Use " + DependencyInjector.class.getName() +
                                            " or add a default constructor to create the instance.");
     }
@@ -85,8 +86,10 @@ final class AnnotatedObjectFactory {
         @SuppressWarnings("unchecked")
         final Constructor<? extends T> constructor =
                 Iterables.getFirst(getConstructors(clazz, withParametersCount(0)), null);
-        // TODO(ks-yim): Is assert enough for warning..?
-        assert constructor != null : "No default constructor is found from " + clazz.getName();
+
+        if (constructor == null) {
+            throw new NullPointerException("No default constructor is found from " + clazz.getName());
+        }
         constructor.setAccessible(true);
         return constructor.newInstance();
     }

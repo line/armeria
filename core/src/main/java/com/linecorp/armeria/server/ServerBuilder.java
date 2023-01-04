@@ -1971,6 +1971,7 @@ public final class ServerBuilder implements TlsSetters {
         if (dependencyInjector != null) {
             return dependencyInjector;
         }
+        // no-op dependency injector.
         return new DependencyInjector() {
             @Override
             public <T> @Nullable T getInstance(Class<T> type) {
