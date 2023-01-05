@@ -47,7 +47,6 @@ class DecoderLengthLimitTest {
         encodingStream.write(originalMessage.getBytes());
         encodingStream.flush();
         final HttpData httpData = HttpData.wrap(encodedStream.toByteArray());
-
         final StreamDecoder lenientStreamDecoder = newStreamDecoder(encodingType, 10001);
         final HttpData decode0 = lenientStreamDecoder.decode(httpData);
         final HttpData decode1 = lenientStreamDecoder.finish();
@@ -58,6 +57,42 @@ class DecoderLengthLimitTest {
         final StreamDecoder strictStreamDecoder = newStreamDecoder(encodingType, 9999);
         assertThatThrownBy(() -> {
             strictStreamDecoder.decode(httpData);
+        }).isInstanceOf(ContentTooLargeException.class)
+          .satisfies(cause -> {
+              final ContentTooLargeException tooLargeException = (ContentTooLargeException) cause;
+              assertThat(tooLargeException.maxContentLength()).isEqualTo(9999);
+          });
+    }
+
+    @EnumSource(HttpEncodingType.class)
+    @ParameterizedTest
+    void chunkedDataShouldNotExceedLengthLimit(HttpEncodingType encodingType) throws IOException {
+        final String originalMessage = Strings.repeat("1", 10000);
+        final ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
+        final OutputStream encodingStream =
+                HttpEncoders.getEncodingOutputStream(encodingType, encodedStream);
+        encodingStream.write(originalMessage.getBytes());
+        encodingStream.flush();
+        final byte[] compressed = encodedStream.toByteArray();
+        final int middle = compressed.length / 2;
+        final HttpData first = HttpData.copyOf(compressed, 0, middle);
+        final HttpData second = HttpData.copyOf(compressed, middle, compressed.length - middle);
+
+        final StreamDecoder lenientStreamDecoder = newStreamDecoder(encodingType, 10000);
+        final HttpData decode0 = lenientStreamDecoder.decode(first);
+        final HttpData decode1 = lenientStreamDecoder.decode(second);
+        final HttpData decode2 = lenientStreamDecoder.finish();
+        assertThat(decode0.toStringUtf8() + decode1.toStringUtf8() + decode2.toStringUtf8())
+                .isEqualTo(originalMessage);
+        decode0.close();
+        decode1.close();
+        decode2.close();
+
+        final StreamDecoder strictStreamDecoder = newStreamDecoder(encodingType, 9999);
+        strictStreamDecoder.decode(first).close();
+        assertThatThrownBy(() -> {
+            strictStreamDecoder.decode(second).close();
+            strictStreamDecoder.finish().close();
         }).isInstanceOf(ContentTooLargeException.class)
           .satisfies(cause -> {
               final ContentTooLargeException tooLargeException = (ContentTooLargeException) cause;
