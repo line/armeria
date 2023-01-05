@@ -121,16 +121,18 @@ class JsonSchemaGeneratorTest {
 
     @Test
     void testMethodWithRecursivePath() {
+        final Object commonTypeObjectForRecursion = new Object();
         final List<FieldInfo> parameters = ImmutableList.of(
                 FieldInfo.of("param1", TypeSignature.ofBase("int"), DescriptionInfo.of("param1 description")),
-                FieldInfo.builder("paramRecursive", TypeSignature.ofStruct("rec", new Object())).build()
+                FieldInfo.builder("paramRecursive", TypeSignature.ofStruct("rec", commonTypeObjectForRecursion))
+                         .build()
         );
 
         final StructInfo structInfo = newStructInfo(methodName, parameters);
 
         final List<FieldInfo> parametersOfRec = ImmutableList.of(
                 FieldInfo.of("inner-param1", TypeSignature.ofBase("int32")),
-                FieldInfo.of("inner-recurse", TypeSignature.ofStruct("rec", new Object()))
+                FieldInfo.of("inner-recurse", TypeSignature.ofStruct("rec", commonTypeObjectForRecursion))
         );
         final StructInfo rec = newStructInfo("rec", parametersOfRec);
 
