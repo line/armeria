@@ -20,13 +20,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.MethodOrderer.OrderAnnotation;
-import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestMethodOrder;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.grpc.GrpcClients;
@@ -48,21 +45,22 @@ import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
 
-@TestMethodOrder(OrderAnnotation.class)
 class GrpcServiceBlockingTest {
-    private static final AtomicInteger blockingCount = new AtomicInteger();
+
+    private static final AtomicBoolean blocking = new AtomicBoolean();
 
     private static final ScheduledExecutorService executor =
-            new ScheduledThreadPoolExecutor(1, ThreadFactories.newThreadFactory("blocking-test", true)) {
-                @Override
-                protected void beforeExecute(Thread t, Runnable r) {
-                    blockingCount.incrementAndGet();
-                }
-            };
+            new ScheduledThreadPoolExecutor(1, ThreadFactories.newThreadFactory("blocking-test", true));
+
+    private static void checkCurrentThread() {
+        if (Thread.currentThread().getName().contains("blocking-test")) {
+            blocking.set(true);
+        }
+    }
 
     @BeforeEach
     void clear() {
-        blockingCount.set(0);
+        blocking.set(false);
     }
 
     @RegisterExtension
@@ -84,44 +82,40 @@ class GrpcServiceBlockingTest {
     };
 
     @Test
-    @Order(1)
     void nonBlockingCall() {
         final TestServiceBlockingStub client =
                 GrpcClients.newClient(server.httpUri(), TestServiceBlockingStub.class);
         assertThat(client.unaryCall(SimpleRequest.getDefaultInstance())).isNotNull();
-        assertThat(blockingCount).hasValue(0);
+        assertThat(blocking).isFalse();
     }
 
     @Test
-    @Order(2)
     void blockingOnClass() {
         final UnitTestFooServiceBlockingStub client =
                 GrpcClients.newClient(server.httpUri(), UnitTestFooServiceBlockingStub.class);
         assertThat(client.staticUnaryCall(SimpleRequest.getDefaultInstance())).isNotNull();
-        assertThat(blockingCount).hasPositiveValue();
+        assertThat(blocking).isTrue();
 
-        blockingCount.set(0);
+        blocking.set(false);
 
         assertThat(client.staticUnaryCall2(SimpleRequest.getDefaultInstance())).isNotNull();
-        assertThat(blockingCount).hasPositiveValue();
+        assertThat(blocking).isTrue();
     }
 
     @Test
-    @Order(3)
     void blockingOnMethod() {
         final UnitTestBarServiceBlockingStub client =
                 GrpcClients.newClient(server.httpUri(), UnitTestBarServiceBlockingStub.class);
         assertThat(client.staticUnaryCall(SimpleRequest.getDefaultInstance())).isNotNull();
-        assertThat(blockingCount).hasPositiveValue();
+        assertThat(blocking).isTrue();
 
-        blockingCount.set(0);
+        blocking.set(false);
 
         assertThat(client.staticUnaryCall2(SimpleRequest.getDefaultInstance())).isNotNull();
-        assertThat(blockingCount).hasValue(0);
+        assertThat(blocking).isFalse();
     }
 
     @Test
-    @Order(4)
     void prefixServiceBlockingOnMethod() {
         final TestServiceBlockingStub client = GrpcClients
                 .builder(server.httpUri())
@@ -138,11 +132,10 @@ class GrpcServiceBlockingTest {
                 })
                 .build(TestServiceBlockingStub.class);
         assertThat(client.unaryCall(SimpleRequest.getDefaultInstance())).isNotNull();
-        assertThat(blockingCount).hasPositiveValue();
+        assertThat(blocking).isTrue();
     }
 
     @Test
-    @Order(5)
     void solelyAddedMethodBlockingOnClass() {
         final TestServiceBlockingStub client = GrpcClients
                 .builder(server.httpUri())
@@ -154,7 +147,7 @@ class GrpcServiceBlockingTest {
                 })
                 .build(TestServiceBlockingStub.class);
         assertThat(client.unaryCall(SimpleRequest.getDefaultInstance())).isNotNull();
-        assertThat(blockingCount).hasPositiveValue();
+        assertThat(blocking).isTrue();
     }
 
     private static class TestServiceImpl extends TestServiceImplBase {
@@ -172,12 +165,14 @@ class GrpcServiceBlockingTest {
     private static class UnitTestFooServiceImpl extends UnitTestFooServiceImplBase {
         @Override
         public void staticUnaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            checkCurrentThread();
             responseObserver.onNext(SimpleResponse.getDefaultInstance());
             responseObserver.onCompleted();
         }
 
         @Override
         public void staticUnaryCall2(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            checkCurrentThread();
             responseObserver.onNext(SimpleResponse.getDefaultInstance());
             responseObserver.onCompleted();
         }
@@ -188,12 +183,14 @@ class GrpcServiceBlockingTest {
         @Override
         @Blocking
         public void staticUnaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            checkCurrentThread();
             responseObserver.onNext(SimpleResponse.getDefaultInstance());
             responseObserver.onCompleted();
         }
 
         @Override
         public void staticUnaryCall2(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            checkCurrentThread();
             responseObserver.onNext(SimpleResponse.getDefaultInstance());
             responseObserver.onCompleted();
         }
@@ -204,6 +201,7 @@ class GrpcServiceBlockingTest {
         @Override
         @Blocking
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            checkCurrentThread();
             responseObserver.onNext(SimpleResponse.newBuilder()
                                                   .setUsername("foo user")
                                                   .build());
@@ -216,6 +214,7 @@ class GrpcServiceBlockingTest {
 
         @Override
         public void unaryCall(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            checkCurrentThread();
             responseObserver.onNext(SimpleResponse.newBuilder()
                                                   .setUsername("bar user")
                                                   .build());
@@ -224,6 +223,7 @@ class GrpcServiceBlockingTest {
 
         @Override
         public void unaryCall2(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
+            checkCurrentThread();
             responseObserver.onNext(SimpleResponse.newBuilder()
                                                   .setUsername("not registered")
                                                   .build());
