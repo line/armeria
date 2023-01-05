@@ -15,15 +15,14 @@
  */
 package com.linecorp.armeria.server.docs;
 
+import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,18 +71,18 @@ final class JsonSchemaGenerator {
     private JsonSchemaGenerator(ServiceSpecification serviceSpecification) {
         serviceInfos = serviceSpecification.services();
         typeSignatureToStructMapping = serviceSpecification.structs().stream().collect(
-                Collectors.toMap(StructInfo::name, Function.identity()));
+                toImmutableMap(StructInfo::name, Function.identity()));
         typeNameToEnumMapping = serviceSpecification.enums().stream().collect(
-                Collectors.toMap(EnumInfo::name, Function.identity()));
+                toImmutableMap(EnumInfo::name, Function.identity()));
     }
 
     private ArrayNode generate() {
         final ArrayNode definitions = mapper.createArrayNode();
 
-        final Set<ObjectNode> methodDefinitions = serviceInfos.stream().flatMap(
-                serviceInfo -> serviceInfo.methods().stream()
-                                          .map(this::generate)).collect(
-                toImmutableSet());
+        final Set<ObjectNode> methodDefinitions =
+                serviceInfos.stream()
+                            .flatMap(serviceInfo -> serviceInfo.methods().stream().map(this::generate))
+                            .collect(toImmutableSet());
 
         return definitions.addAll(methodDefinitions);
     }
@@ -115,9 +114,9 @@ final class JsonSchemaGenerator {
                                                       .typeSignature();
             final StructInfo structInfo = typeSignatureToStructMapping.get(signature.signature());
             if (structInfo == null) {
-                logger.info("Could not find root parameter with signature: {}", signature);
+                logger.debug("Could not find root parameter with signature: {}", signature);
                 root.put("additionalProperties", true);
-                methodFields = Collections.emptyList();
+                methodFields = ImmutableList.of();
             } else {
                 methodFields = structInfo.fields();
             }
@@ -146,6 +145,13 @@ final class JsonSchemaGenerator {
         final ObjectNode fieldNode = mapper.createObjectNode();
         final TypeSignature fieldTypeSignature = field.typeSignature();
 
+        fieldNode.put("description", field.descriptionInfo().docString());
+
+        // Fill required fields for the current object.
+        if (field.requirement() == FieldRequirement.REQUIRED) {
+            required.add(field.name());
+        }
+
         if (visited.containsKey(fieldTypeSignature)) {
             // If field is already visited, add a reference to the field instead of iterating its children.
             final String pathName = visited.get(fieldTypeSignature);
@@ -155,12 +161,6 @@ final class JsonSchemaGenerator {
 
             // Field is not visited, create a new type definition for it.
             fieldNode.put("type", schemaType);
-            fieldNode.put("description", field.descriptionInfo().docString());
-
-            // Fill required fields for the current object.
-            if (field.requirement() == FieldRequirement.REQUIRED) {
-                required.add(field.name());
-            }
 
             if (field.typeSignature().type() == TypeSignatureType.ENUM) {
                 fieldNode.set("enum", getEnumType(field.typeSignature()));
@@ -287,8 +287,8 @@ final class JsonSchemaGenerator {
         fieldNode.put("additionalProperties", fieldStructInfo == null);
 
         if (fieldStructInfo == null) {
-            logger.info("[generateStructFields] Could not find struct with signature: {}",
-                        field.typeSignature().signature());
+            logger.debug("Could not find struct with signature: {}",
+                         field.typeSignature().signature());
         }
 
         // Iterate over each child field, generate their definitions.

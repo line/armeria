@@ -266,10 +266,16 @@ public final class DocService extends SimpleDecoratingHttpService {
         CompletableFuture<List<AggregatedHttpFile>> updateServices(List<ServiceConfig> services,
                                                                    Executor executor) {
             this.services = services;
-            final ServiceSpecification serviceSpecification = generateServiceSpecification();
-            final List<CompletableFuture<AggregatedHttpFile>> files = TARGET_PATHS.stream().map(
-                    path -> load(path, executor, serviceSpecification)).collect(Collectors.toList());
-            return CompletableFutures.allAsList(files);
+
+            return generateServiceSpecification().thenCompose(
+                    serviceSpecification -> {
+                        final List<CompletableFuture<AggregatedHttpFile>> files =
+                                TARGET_PATHS.stream()
+                                            .map(path -> load(path, executor, serviceSpecification))
+                                            .collect(toImmutableList());
+                        return CompletableFutures.allAsList(files);
+                    }
+            );
         }
 
         CompletableFuture<AggregatedHttpFile> get(String path) {
@@ -304,12 +310,14 @@ public final class DocService extends SimpleDecoratingHttpService {
             }, executor));
         }
 
-        private ServiceSpecification generateServiceSpecification() {
-            final DocStringSupport docStringSupport = new DocStringSupport(services);
-            ServiceSpecification spec = generate(services);
-            spec = docStringSupport.addDocStrings(spec);
-            spec = exampleSupport.addExamples(spec);
-            return spec;
+        private CompletableFuture<ServiceSpecification> generateServiceSpecification() {
+            return CompletableFuture.supplyAsync(() -> {
+                final DocStringSupport docStringSupport = new DocStringSupport(services);
+                ServiceSpecification spec = generate(services);
+                spec = docStringSupport.addDocStrings(spec);
+                spec = exampleSupport.addExamples(spec);
+                return spec;
+            });
         }
 
         private CompletableFuture<AggregatedHttpFile> loadSpecifications(Executor executor,

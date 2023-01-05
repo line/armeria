@@ -20,6 +20,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
@@ -92,6 +93,7 @@ class JsonSchemaGeneratorTest {
 
         // Method specific properties
         assertThat(jsonSchema.get("properties").isEmpty()).isTrue();
+        assertThat(jsonSchema.get("additionalProperties").asBoolean()).isFalse();
     }
 
     @Test
@@ -115,8 +117,14 @@ class JsonSchemaGeneratorTest {
         assertThat(jsonSchema.get("type").asText()).isEqualTo("object");
 
         // Method specific properties
-        final List<JsonNode> properties = ImmutableList.copyOf(jsonSchema.get("properties").elements());
+        final List<Entry<String, JsonNode>> properties =
+                ImmutableList.copyOf(jsonSchema.get("properties").fields());
         assertThat(properties).hasSize(4);
+
+        assertThat(jsonSchema.get("properties").get("param1").get("type").asText()).isEqualTo("integer");
+        assertThat(jsonSchema.get("properties").get("param2").get("type").asText()).isEqualTo("number");
+        assertThat(jsonSchema.get("properties").get("param3").get("type").asText()).isEqualTo("string");
+        assertThat(jsonSchema.get("properties").get("param4").get("type").asText()).isEqualTo("boolean");
     }
 
     @Test
