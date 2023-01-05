@@ -44,6 +44,8 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.retry.RetryRule;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -121,18 +123,19 @@ class GrpcDocServiceTest {
             sb.serviceUnder("/docs/",
                             DocService.builder()
                                       .exampleRequests(
-                                            TestServiceGrpc.SERVICE_NAME,
-                                            "UnaryCall",
-                                            SimpleRequest.newBuilder()
-                                                         .setPayload(
-                                                             Payload.newBuilder()
-                                                                    .setBody(ByteString.copyFromUtf8("world")))
-                                                         .build())
+                                              TestServiceGrpc.SERVICE_NAME,
+                                              "UnaryCall",
+                                              SimpleRequest.newBuilder()
+                                                           .setPayload(
+                                                                   Payload.newBuilder()
+                                                                          .setBody(ByteString.copyFromUtf8(
+                                                                                  "world")))
+                                                           .build())
                                       .injectedScripts(INJECTED_HEADER_PROVIDER1, INJECTED_HEADER_PROVIDER2)
                                       .injectedScriptSupplier((ctx, req) -> INJECTED_HEADER_PROVIDER3)
                                       .exclude(DocServiceFilter.ofMethodName(
-                                                        TestServiceGrpc.SERVICE_NAME,
-                                                        "EmptyCall"))
+                                              TestServiceGrpc.SERVICE_NAME,
+                                              "EmptyCall"))
                                       .build()
                                       .decorate(LoggingService.newDecorator()));
             sb.serviceUnder("/excludeAll/",
@@ -196,7 +199,7 @@ class GrpcDocServiceTest {
         // when building a DocService, so we add them manually here.
         addExamples(expectedJson);
 
-        final WebClient client = WebClient.of(server.httpUri());
+        final WebClient client = getWebClient();
         final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
 
@@ -219,7 +222,7 @@ class GrpcDocServiceTest {
 
     @Test
     void excludeAllServices() throws IOException {
-        final WebClient client = WebClient.of(server.httpUri());
+        final WebClient client = getWebClient();
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());
@@ -245,21 +248,21 @@ class GrpcDocServiceTest {
     private static void addExamples(JsonNode json) {
         final Map<String, Multimap<String, String>> examplesToAdd =
                 ImmutableMap.<String, Multimap<String, String>>builder()
-                        .put(TestServiceGrpc.SERVICE_NAME,
-                             ImmutableMultimap.<String, String>builder()
-                                     .put("UnaryCall", "{\n" +
-                                                       "  \"responseType\": \"COMPRESSABLE\",\n" +
-                                                       "  \"responseSize\": 0,\n" +
-                                                       "  \"payload\": {\n" +
-                                                       "    \"type\": \"COMPRESSABLE\",\n" +
-                                                       "    \"body\": \"d29ybGQ=\"\n" +
-                                                       "  },\n" +
-                                                       "  \"fillUsername\": false,\n" +
-                                                       "  \"fillOauthScope\": false,\n" +
-                                                       "  \"responseCompression\": \"NONE\"\n" +
-                                                       '}')
-                                     .build())
-                        .build();
+                            .put(TestServiceGrpc.SERVICE_NAME,
+                                 ImmutableMultimap.<String, String>builder()
+                                                  .put("UnaryCall", "{\n" +
+                                                                    "  \"responseType\": \"COMPRESSABLE\",\n" +
+                                                                    "  \"responseSize\": 0,\n" +
+                                                                    "  \"payload\": {\n" +
+                                                                    "    \"type\": \"COMPRESSABLE\",\n" +
+                                                                    "    \"body\": \"d29ybGQ=\"\n" +
+                                                                    "  },\n" +
+                                                                    "  \"fillUsername\": false,\n" +
+                                                                    "  \"fillOauthScope\": false,\n" +
+                                                                    "  \"responseCompression\": \"NONE\"\n" +
+                                                                    '}')
+                                                  .build())
+                            .build();
 
         json.get("services").forEach(service -> {
             final String serviceName = service.get("name").textValue();
@@ -285,5 +288,13 @@ class GrpcDocServiceTest {
         if (json.isObject() || json.isArray()) {
             json.forEach(GrpcDocServiceTest::removeDescriptionInfos);
         }
+    }
+
+    private static WebClient getWebClient() {
+        // Because specifications are lazy loaded, we need retry rule.
+        final RetryRule retryRule = RetryRule.onServerErrorStatus();
+        return WebClient.builder(server.httpUri())
+                        .decorator(RetryingClient.newDecorator(retryRule))
+                        .build();
     }
 }

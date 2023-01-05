@@ -31,6 +31,9 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.retry.RetryConfig;
+import com.linecorp.armeria.client.retry.RetryRule;
+import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.grpc.testing.Messages.ExtendedTestMessage;
@@ -86,8 +89,13 @@ class GrpcDocServiceJsonSchemaTest {
     };
 
     private static List<JsonNode> getJsonSchemas() throws JsonProcessingException {
-        final WebClient client = WebClient.of(server.httpUri());
+        // Because specifications are lazy loaded, we need retry rule.
+        final RetryRule retryRule = RetryRule.onServerErrorStatus();
+        final WebClient client = WebClient.builder(server.httpUri())
+                                          .decorator(RetryingClient.newDecorator(retryRule))
+                                          .build();
         final AggregatedHttpResponse res = client.get("/docs/schemas.json").aggregate().join();
+
         assertThat(res.status()).isSameAs(HttpStatus.OK);
 
         final ObjectMapper mapper = new ObjectMapper();
