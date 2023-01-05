@@ -35,6 +35,7 @@ import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.server.HttpService;
@@ -116,9 +117,9 @@ public final class LoggingService extends SimpleDecoratingHttpService {
         return unwrap().serve(ctx, req);
     }
 
-    private class RequestLogger implements Consumer<RequestLog> {
+    private class RequestLogger implements Consumer<RequestOnlyLog> {
         @Override
-        public void accept(RequestLog log) {
+        public void accept(RequestOnlyLog log) {
             logRequest(logger, log,
                        requestLogLevelMapper,
                        logFormatter);

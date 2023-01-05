@@ -29,24 +29,28 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
 /**
- * A formatter that converts {@link RequestLog} into text message.
+ * A formatter that converts {@link RequestOnlyLog} or {@link RequestLog} into text message.
  */
 @UnstableApi
 final class TextLogFormatter implements LogFormatter {
 
     static final TextLogFormatter DEFAULT_INSTANCE = new TextLogFormatterBuilder().build();
 
-    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestHeadersSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
+            requestHeadersSanitizer;
 
-    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseHeadersSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
+            responseHeadersSanitizer;
 
-    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestTrailersSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
+            requestTrailersSanitizer;
 
-    private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> responseTrailersSanitizer;
+    private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String>
+            responseTrailersSanitizer;
 
-    private BiFunction<? super RequestContext, Object, ? extends String> requestContentSanitizer;
+    private final BiFunction<? super RequestContext, Object, ? extends String> requestContentSanitizer;
 
-    private BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer;
+    private final BiFunction<? super RequestContext, Object, ? extends String> responseContentSanitizer;
 
     TextLogFormatter(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends String> requestHeadersSanitizer,
@@ -65,7 +69,7 @@ final class TextLogFormatter implements LogFormatter {
     }
 
     @Override
-    public String formatRequest(RequestLog log) {
+    public String formatRequest(RequestOnlyLog log) {
         requireNonNull(log, "log");
 
         final Set<RequestLogProperty> availableProperties = log.availableProperties();
@@ -91,6 +95,9 @@ final class TextLogFormatter implements LogFormatter {
         final String sanitizedContent;
         if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT) && log.requestContent() != null) {
             sanitizedContent = requestContentSanitizer.apply(ctx, log.requestContent());
+        } else if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
+                   log.requestContentPreview() != null) {
+            sanitizedContent = requestContentSanitizer.apply(ctx, log.requestContentPreview());
         } else {
             sanitizedContent = null;
         }
@@ -145,11 +152,6 @@ final class TextLogFormatter implements LogFormatter {
 
             if (sanitizedContent != null) {
                 buf.append(", content=").append(sanitizedContent);
-            } else if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
-                       log.requestContentPreview() != null) {
-                final String sanitizedContentPreview = requestContentSanitizer.apply(
-                        ctx, log.requestContentPreview());
-                buf.append(", contentPreview=").append(sanitizedContentPreview);
             }
 
             if (sanitizedTrailers != null) {
@@ -189,6 +191,9 @@ final class TextLogFormatter implements LogFormatter {
         if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT) &&
             log.responseContent() != null) {
             sanitizedContent = responseContentSanitizer.apply(ctx, log.responseContent());
+        } else if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT_PREVIEW) &&
+                   log.responseContentPreview() != null) {
+            sanitizedContent = responseContentSanitizer.apply(ctx, log.responseContentPreview());
         } else {
             sanitizedContent = null;
         }
@@ -228,11 +233,6 @@ final class TextLogFormatter implements LogFormatter {
 
             if (sanitizedContent != null) {
                 buf.append(", content=").append(sanitizedContent);
-            } else if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT_PREVIEW) &&
-                       log.responseContentPreview() != null) {
-                final String sanitizedContentPreview = responseContentSanitizer.apply(
-                        ctx, log.responseContentPreview());
-                buf.append(", contentPreview=").append(sanitizedContentPreview);
             }
 
             if (sanitizedTrailers != null) {

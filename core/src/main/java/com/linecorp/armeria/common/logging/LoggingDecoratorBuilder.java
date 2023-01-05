@@ -488,24 +488,27 @@ public abstract class LoggingDecoratorBuilder {
      * You can prevent from logging the response cause by returning {@code true}
      * in the {@link Predicate}. If unset, will log a response cause.
      */
+    @UnstableApi
     public LoggingDecoratorBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
-        this.responseCauseFilter = responseCauseFilter;
+        this.responseCauseFilter = requireNonNull(responseCauseFilter, "responseCauseFilter");
         return this;
     }
 
     /**
      * Returns the {@link Predicate} to evaluate if logging response cause or not.
      */
+    @UnstableApi
     protected final Predicate<Throwable> responseCauseFilter() {
         return responseCauseFilter;
     }
 
     /**
-     * Sets the {@link LogFormatter} to convert {@link RequestLog} into log message.
-     * If unset, will use {@link TextLogFormatter}.
+     * Sets the {@link LogFormatter} to converts a {@link RequestOnlyLog} or {@link RequestLog}
+     * into log message. If unset, will use {@link TextLogFormatter}.
      *
      * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
      */
+    @UnstableApi
     public LoggingDecoratorBuilder logFormatter(LogFormatter logFormatter) {
         this.logFormatter = requireNonNull(logFormatter, "logFormatter");
         if (useSanitizers) {
@@ -516,11 +519,12 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Builds the {@link LogFormatter} to convert {@link RequestLog} into log message.
-     * If {@link LogFormatter} is set, returns it.
+     * Builds the {@link LogFormatter} to converts a {@link RequestOnlyLog} or {@link RequestLog}
+     * into log message. If {@link LogFormatter} is set, returns it.
      * If not set, returns {@link TextLogFormatter} that is built with the sanitizers in this builder.
      */
-    protected LogFormatter buildLogFormatter() {
+    @UnstableApi
+    protected LogFormatter logFormatter() {
         if (logFormatter != null) {
             return logFormatter;
         } else {

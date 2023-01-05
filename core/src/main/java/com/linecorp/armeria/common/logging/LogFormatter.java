@@ -21,7 +21,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
- * A formatter that converts {@link RequestLog} into {@link String log message}.
+ * A formatter that converts {@link RequestOnlyLog} or {@link RequestLog} into {@link String log message}.
  */
 @UnstableApi
 public interface LogFormatter {
@@ -41,16 +41,16 @@ public interface LogFormatter {
     }
 
     /**
-     * Returns the default JSON {@link LogFormatter} that converts a {@link RequestLog}
-     * into a JSON format message.
+     * Returns the default JSON {@link LogFormatter} that converts a
+     * {@link RequestOnlyLog} or {@link RequestLog} into a JSON format message.
      */
     static LogFormatter ofJson() {
         return JsonLogFormatter.DEFAULT_INSTANCE;
     }
 
     /**
-     * Returns a newly created {@link JsonLogFormatter} that convert {@link RequestLog} into
-     * json format log message by using specified {@link ObjectMapper}.
+     * Returns a newly created {@link JsonLogFormatter} that converts a {@link RequestOnlyLog} or
+     * {@link RequestLog} into JSON format log message by using the specified {@link ObjectMapper}.
      */
     static LogFormatter ofJson(ObjectMapper objectMapper) {
         return new JsonLogFormatterBuilder()
@@ -66,9 +66,9 @@ public interface LogFormatter {
     }
 
     /**
-     * Returns the formatted request log message of the {@link RequestLog}.
+     * Returns the formatted request log message of the {@link RequestOnlyLog}.
      */
-    String formatRequest(RequestLog log);
+    String formatRequest(RequestOnlyLog log);
 
     /**
      * Returns the formatted response log message that is constructed by {@link RequestLog}.

@@ -58,7 +58,7 @@ public final class LoggingRpcClientBuilder extends AbstractLoggingClientBuilder 
                                     responseCauseFilter(),
                                     successSampler(),
                                     failureSampler(),
-                                    buildLogFormatter());
+                                    logFormatter());
     }
 
     /**

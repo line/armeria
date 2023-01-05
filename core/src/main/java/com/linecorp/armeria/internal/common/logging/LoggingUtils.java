@@ -25,6 +25,7 @@ import com.linecorp.armeria.common.logging.LogFormatter;
 import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogLevelMapper;
+import com.linecorp.armeria.common.logging.RequestOnlyLog;
 import com.linecorp.armeria.common.logging.ResponseLogLevelMapper;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -42,7 +43,7 @@ public final class LoggingUtils {
      */
     public static void log(
             Logger logger, RequestContext ctx, RequestLog requestLog,
-            Consumer<RequestLog> requestLogger, Consumer<RequestLog> responseLogger) {
+            Consumer<RequestOnlyLog> requestLogger, Consumer<RequestLog> responseLogger) {
         try {
             requestLogger.accept(requestLog);
         } catch (Throwable t) {
@@ -56,10 +57,10 @@ public final class LoggingUtils {
     }
 
     /**
-     * Logs a stringified request of {@link RequestLog}.
+     * Logs a stringified request of {@link RequestOnlyLog}.
      */
     public static void logRequest(
-            Logger logger, RequestLog log,
+            Logger logger, RequestOnlyLog log,
             RequestLogLevelMapper requestLogLevelMapper,
             LogFormatter logFormatter) {
 

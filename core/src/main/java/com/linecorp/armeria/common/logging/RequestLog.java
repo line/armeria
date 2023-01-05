@@ -208,8 +208,7 @@ public interface RequestLog extends RequestOnlyLog {
      * <pre>{@code
      * toStringResponseOnly((ctx, headers) -> headers,
      *                      (ctx, content) -> content,
-     *                      (ctx, trailers) -> trailers,
-     *                      LogFormatter.ofText();
+     *                      (ctx, trailers) -> trailers);
      * }</pre>
      * @deprecated Use {@link LogFormatter#formatResponse(RequestLog)} instead.
      */

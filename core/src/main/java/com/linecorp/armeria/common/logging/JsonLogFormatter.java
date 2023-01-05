@@ -35,7 +35,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.TextFormatter;
 
 /**
- * A formatter that converts a {@link RequestLog} into a JSON format message.
+ * A formatter that converts a {@link RequestOnlyLog} or {@link RequestLog} into a JSON format message.
  */
 @UnstableApi
 public final class JsonLogFormatter implements LogFormatter {
@@ -84,7 +84,7 @@ public final class JsonLogFormatter implements LogFormatter {
     }
 
     @Override
-    public String formatRequest(RequestLog log) {
+    public String formatRequest(RequestOnlyLog log) {
         requireNonNull(log, "log");
 
         final Set<RequestLogProperty> availableProperties = log.availableProperties();
@@ -110,6 +110,9 @@ public final class JsonLogFormatter implements LogFormatter {
         final JsonNode sanitizedContent;
         if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT) && log.requestContent() != null) {
             sanitizedContent = requestContentSanitizer.apply(ctx, log.requestContent());
+        } else if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
+                   log.requestContentPreview() != null) {
+            sanitizedContent = requestContentSanitizer.apply(ctx, log.requestContentPreview());
         } else {
             sanitizedContent = null;
         }
@@ -160,11 +163,6 @@ public final class JsonLogFormatter implements LogFormatter {
 
         if (sanitizedContent != null) {
             objectNode.set("content", sanitizedContent);
-        } else if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
-                   log.requestContentPreview() != null) {
-            final JsonNode sanitizedContentPreview = requestContentSanitizer.apply(
-                    ctx, log.requestContentPreview());
-            objectNode.set("contentPreview", sanitizedContentPreview);
         }
 
         if (sanitizedTrailers != null) {
@@ -206,6 +204,9 @@ public final class JsonLogFormatter implements LogFormatter {
         if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT) &&
             log.responseContent() != null) {
             sanitizedContent = responseContentSanitizer.apply(ctx, log.responseContent());
+        } else if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT_PREVIEW) &&
+                   log.responseContentPreview() != null) {
+            sanitizedContent = responseContentSanitizer.apply(ctx, log.responseContentPreview());
         } else {
             sanitizedContent = null;
         }
@@ -242,10 +243,6 @@ public final class JsonLogFormatter implements LogFormatter {
 
         if (sanitizedContent != null) {
             objectNode.set("content", sanitizedContent);
-        } else if (log.responseContentPreview() != null) {
-            final JsonNode sanitizedContentPreview = responseContentSanitizer.apply(
-                    ctx, log.responseContentPreview());
-            objectNode.set("contentPreview", sanitizedContentPreview);
         }
 
         if (sanitizedTrailers != null) {

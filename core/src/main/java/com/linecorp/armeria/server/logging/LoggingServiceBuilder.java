@@ -130,7 +130,7 @@ public final class LoggingServiceBuilder extends LoggingDecoratorBuilder {
                                   responseCauseFilter(),
                                   successSampler,
                                   failureSampler,
-                                  buildLogFormatter());
+                                  logFormatter());
     }
 
     /**

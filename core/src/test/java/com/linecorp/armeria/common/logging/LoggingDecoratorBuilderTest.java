@@ -298,14 +298,14 @@ class LoggingDecoratorBuilderTest {
     void buildLogFormatter() {
         final LogFormatter logFormatter = LogFormatter.ofJson();
         builder.logFormatter(logFormatter);
-        assertThat(builder.buildLogFormatter()).isEqualTo(logFormatter);
+        assertThat(builder.logFormatter()).isEqualTo(logFormatter);
     }
 
     @Test
     void buildLogFormatterWithoutLogFormatter() {
         builder.responseContentSanitizer(CONTENT_SANITIZER)
                .requestHeadersSanitizer(HEADER_SANITIZER);
-        final LogFormatter logFormatter = builder.buildLogFormatter();
+        final LogFormatter logFormatter = builder.logFormatter();
         assertThat(logFormatter).isNotNull();
         assertThat(logFormatter).isInstanceOf(TextLogFormatter.class);
     }
