@@ -22,6 +22,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -67,7 +69,11 @@ class DecoderLengthLimitTest {
     @EnumSource(HttpEncodingType.class)
     @ParameterizedTest
     void chunkedDataShouldNotExceedLengthLimit(HttpEncodingType encodingType) throws IOException {
-        final String originalMessage = Strings.repeat("1", 10000);
+        // Use non-repeated texts to avoid high compression ratio and each chunk can have a complete text.
+        final String originalMessage =
+                IntStream.range(0, 5000)
+                         .mapToObj(x -> String.valueOf(x))
+                         .collect(Collectors.joining());
         final ByteArrayOutputStream encodedStream = new ByteArrayOutputStream();
         final OutputStream encodingStream =
                 HttpEncoders.getEncodingOutputStream(encodingType, encodedStream);
@@ -78,7 +84,7 @@ class DecoderLengthLimitTest {
         final HttpData first = HttpData.copyOf(compressed, 0, middle);
         final HttpData second = HttpData.copyOf(compressed, middle, compressed.length - middle);
 
-        final StreamDecoder lenientStreamDecoder = newStreamDecoder(encodingType, 10000);
+        final StreamDecoder lenientStreamDecoder = newStreamDecoder(encodingType, originalMessage.length());
         final HttpData decode0 = lenientStreamDecoder.decode(first);
         final HttpData decode1 = lenientStreamDecoder.decode(second);
         final HttpData decode2 = lenientStreamDecoder.finish();
@@ -88,7 +94,8 @@ class DecoderLengthLimitTest {
         decode1.close();
         decode2.close();
 
-        final StreamDecoder strictStreamDecoder = newStreamDecoder(encodingType, 9999);
+        final int maxLength = originalMessage.length() - 1;
+        final StreamDecoder strictStreamDecoder = newStreamDecoder(encodingType, maxLength);
         strictStreamDecoder.decode(first).close();
         assertThatThrownBy(() -> {
             strictStreamDecoder.decode(second).close();
@@ -96,7 +103,9 @@ class DecoderLengthLimitTest {
         }).isInstanceOf(ContentTooLargeException.class)
           .satisfies(cause -> {
               final ContentTooLargeException tooLargeException = (ContentTooLargeException) cause;
-              assertThat(tooLargeException.maxContentLength()).isEqualTo(9999);
+              // Make sure the ContentTooLargeException was raised by the custom overflow checker.
+              assertThat(tooLargeException.getCause()).isNull();
+              assertThat(tooLargeException.maxContentLength()).isEqualTo(maxLength);
           });
     }
 
