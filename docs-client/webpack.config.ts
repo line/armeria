@@ -15,6 +15,8 @@ declare module 'webpack' {
 import { docServiceDebug } from './src/lib/header-provider';
 
 const armeriaPort = process.env.ARMERIA_PORT || '8080';
+const compression = process.env.COMPRESSION === 'brotli' ? 'brotliCompress' : 'gzip'
+const fileExtension = compression === 'brotliCompress' ? 'br' : 'gz'
 
 const isDev = !!process.env.WEBPACK_DEV;
 const isWindows = process.platform === 'win32';
@@ -141,8 +143,8 @@ plugins.push(new DefinePlugin({
 if (!isDev) {
   plugins.push(new CompressionWebpackPlugin({
     test: /\.(js|css|html|svg)$/,
-    algorithm: 'brotliCompress',
-    filename: '[path][base].br',
+    algorithm: compression,
+    filename: `[path][base].${fileExtension}`,
     // If a `Accept-Encoding` is not specified, `DocService` decompresses the compressed content on the fly.
     deleteOriginalAssets: true
   }) as any);
