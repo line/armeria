@@ -121,10 +121,13 @@ public final class HttpStreamDeframer extends ArmeriaMessageDeframer {
             }
         }
 
-        final Metadata metadata = MetadataUtil.copyFromHeaders(headers);
-        // Note: this implementation slightly differs from upstream in that
-        // we don't check if the content-type is valid before invoking this callback.
-        transportStatusListener.transportReportHeaders(metadata);
+        if (grpcStatus == null) {
+            // exclude trailers-only responses from triggering the callback
+            final Metadata metadata = MetadataUtil.copyFromHeaders(headers);
+            // Note: this implementation slightly differs from upstream in that
+            // we don't check if the content-type is valid before invoking this callback.
+            transportStatusListener.transportReportHeaders(metadata);
+        }
     }
 
     @Override

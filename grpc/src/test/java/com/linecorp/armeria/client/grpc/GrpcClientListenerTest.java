@@ -21,16 +21,15 @@ import static org.awaitility.Awaitility.await;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.atomic.AtomicReference;
 
 import org.hamcrest.Matchers;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
@@ -40,6 +39,7 @@ import com.linecorp.armeria.internal.common.grpc.TestServiceImpl;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.grpc.GrpcService;
+import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.CallOptions;
@@ -80,6 +80,7 @@ class GrpcClientListenerTest {
         @Override
         protected void configure(ServerBuilder sb) {
             final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+            sb.decorator(LoggingService.newDecorator());
             sb.service(GrpcService.builder()
                                   .addService(new TestServiceImpl(executor) {
                                       @Override
@@ -92,46 +93,50 @@ class GrpcClientListenerTest {
                                   .build());
             sb.service("/fail/armeria.grpc.testing.TestService/UnaryCall",
                        (ctx, req) -> HttpResponse.of(HttpStatus.NO_CONTENT));
+            sb.service("/trailers-only/armeria.grpc.testing.TestService/UnaryCall", (ctx, req) -> {
+                return HttpResponse.builder()
+                                   .header(GrpcHeaderNames.GRPC_STATUS.toString(),
+                                           Status.UNKNOWN.getCode().value())
+                                   .ok()
+                                   .build();
+            });
         }
     };
 
-    private final AtomicReference<Metadata> trailersRef = new AtomicReference<>();
-    private final AtomicReference<Metadata> headersRef = new AtomicReference<>();
-    private final AtomicReference<Status> statusRef = new AtomicReference<>();
-    private final AtomicReference<SimpleResponse> responseRef = new AtomicReference<>();
+    static class TestClientCallListener extends Listener<SimpleResponse> {
+        @Nullable
+        Metadata headers;
+        @Nullable
+        Metadata trailers;
+        @Nullable
+        Status status;
+        @Nullable
+        SimpleResponse response;
 
-    private final Listener<SimpleResponse> listener = new Listener<SimpleResponse>() {
         @Override
         public void onHeaders(Metadata headers) {
-            headersRef.set(headers);
+            this.headers = headers;
         }
 
         @Override
-        public void onMessage(SimpleResponse message) {
-            responseRef.set(message);
+        public void onMessage(SimpleResponse response) {
+            this.response = response;
         }
 
         @Override
         public void onClose(Status status, Metadata trailers) {
-            statusRef.set(status);
-            trailersRef.set(trailers);
+            this.status = status;
+            this.trailers = trailers;
         }
-    };
-
-    @BeforeEach
-    void beforeEach() {
-        trailersRef.set(null);
-        headersRef.set(null);
-        statusRef.set(null);
-        responseRef.set(null);
     }
 
     @Test
-    void failedProtocolResponse() {
-        final TestServiceStub client = GrpcClients.builder(server.httpUri().resolve("/fail/"))
+    void tailersOnly() {
+        final TestServiceStub client = GrpcClients.builder(server.httpUri().resolve("/trailers-only/"))
                                                   .build(TestServiceStub.class);
         final ClientCall<SimpleRequest, SimpleResponse> unaryCall =
                 client.getChannel().newCall(TestServiceGrpc.getUnaryCallMethod(), CallOptions.DEFAULT);
+        final TestClientCallListener listener = new TestClientCallListener();
 
         unaryCall.start(listener, new Metadata());
 
@@ -141,20 +146,21 @@ class GrpcClientListenerTest {
         unaryCall.request(1);
 
         // both headers/response is not set
-        await().untilAtomic(trailersRef, Matchers.notNullValue());
-        assertThat(trailersRef.get().keys()).isEmpty();
-        assertThat(headersRef.get()).isNull();
-        assertThat(responseRef.get()).isNull();
-        assertThat(statusRef.get().getCode()).isEqualTo(Code.UNKNOWN);
-        assertThat(statusRef.get().getDescription()).isEqualTo("HTTP status code 204");
+        await().until(() -> listener.trailers, Matchers.notNullValue());
+        assertThat(listener.trailers.keys()).contains("date", "server", "content-length");
+        assertThat(listener.headers).isNull();
+        assertThat(listener.response).isNull();
+        assertThat(listener.status.getCode()).isEqualTo(Code.UNKNOWN);
+        assertThat(listener.status.getDescription()).isNull();
     }
 
     @Test
-    void requestOneAndReceiveMessageAndTrailers() {
-        final TestServiceStub client = GrpcClients.builder(server.httpUri())
+    void failedProtocolResponse() {
+        final TestServiceStub client = GrpcClients.builder(server.httpUri().resolve("/fail/"))
                                                   .build(TestServiceStub.class);
         final ClientCall<SimpleRequest, SimpleResponse> unaryCall =
                 client.getChannel().newCall(TestServiceGrpc.getUnaryCallMethod(), CallOptions.DEFAULT);
+        final TestClientCallListener listener = new TestClientCallListener();
 
         unaryCall.start(listener, new Metadata());
 
@@ -163,19 +169,40 @@ class GrpcClientListenerTest {
         // Send 1 request and expect to receive a message and trailers
         unaryCall.request(1);
 
-        await().untilAtomic(trailersRef, Matchers.notNullValue());
-        assertThat(headersRef.get()).isNotNull();
-        assertHeaders(headersRef.get());
-        assertThat(responseRef.get()).isNotNull();
-        assertThat(statusRef.get().getCode()).isEqualTo(Code.OK);
+        // both headers/response is not set
+        await().until(() -> listener.trailers, Matchers.notNullValue());
+        assertThat(listener.trailers.keys()).isEmpty();
+        assertThat(listener.headers).isNull();
+        assertThat(listener.response).isNull();
+        assertThat(listener.status.getCode()).isEqualTo(Code.UNKNOWN);
+        assertThat(listener.status.getDescription()).isEqualTo("HTTP status code 204");
     }
 
-    private static void assertHeaders(Metadata metadata) {
-        assertThat(metadata.keys()).doesNotContain(
+    @Test
+    void requestOneAndReceiveMessageAndTrailers() {
+        final TestServiceStub client = GrpcClients.builder(server.httpUri())
+                                                  .build(TestServiceStub.class);
+        final ClientCall<SimpleRequest, SimpleResponse> unaryCall =
+                client.getChannel().newCall(TestServiceGrpc.getUnaryCallMethod(), CallOptions.DEFAULT);
+        final TestClientCallListener listener = new TestClientCallListener();
+
+        unaryCall.start(listener, new Metadata());
+
+        unaryCall.sendMessage(SimpleRequest.getDefaultInstance());
+        unaryCall.halfClose();
+        // Send 1 request and expect to receive a message and trailers
+        unaryCall.request(1);
+
+        await().until(() -> listener.trailers, Matchers.notNullValue());
+        assertThat(listener.headers).isNotNull();
+        assertThat(listener.headers.keys()).doesNotContain(
                 HttpHeaderNames.STATUS.toString(),
                 GrpcHeaderNames.GRPC_MESSAGE.toString(),
                 GrpcHeaderNames.GRPC_STATUS.toString());
-        assertThat(metadata.keys()).contains(key.name());
-        assertThat(metadata.get(key)).isEqualTo("world");
+        assertThat(listener.headers.keys()).contains(key.name());
+        assertThat(listener.headers.get(key)).isEqualTo("world");
+
+        assertThat(listener.response).isNotNull();
+        assertThat(listener.status.getCode()).isEqualTo(Code.OK);
     }
 }
