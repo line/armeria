@@ -21,6 +21,7 @@ import React, { ChangeEvent } from 'react';
 
 import Select from '@material-ui/core/Select';
 import MenuItem from '@material-ui/core/MenuItem';
+import { Tooltip } from '@material-ui/core';
 import jsonPrettify from '../../lib/json-prettify';
 import { truncate } from '../../lib/strings';
 
@@ -54,9 +55,11 @@ const RequestBody: React.FunctionComponent<Props> = (props) => (
               onChange={props.onSelectedRequestBodyChange}
             >
               {props.exampleRequests.map((body) => (
-                <MenuItem key={body} value={body}>
-                  {truncate(body, 30)}
-                </MenuItem>
+                <Tooltip title={body} placement="right">
+                  <MenuItem key={body} value={body}>
+                    {truncate(body, 30)}
+                  </MenuItem>
+                </Tooltip>
               ))}
             </Select>
           </>
