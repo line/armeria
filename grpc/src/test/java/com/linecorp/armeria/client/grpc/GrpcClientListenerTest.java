@@ -131,7 +131,7 @@ class GrpcClientListenerTest {
     }
 
     @Test
-    void tailersOnly() {
+    void trailersOnly() {
         final TestServiceStub client = GrpcClients.builder(server.httpUri().resolve("/trailers-only/"))
                                                   .build(TestServiceStub.class);
         final ClientCall<SimpleRequest, SimpleResponse> unaryCall =
