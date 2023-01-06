@@ -1392,6 +1392,9 @@ public final class ServerBuilder implements TlsSetters {
      * with the specified {@code port}. The returned virtual host will have a catch-all (wildcard host) name
      * pattern that allows all host names.
      *
+     * <p>Note that you cannot configure TLS to the port-based virtual host. Configure it to the
+     * {@link ServerBuilder} or a {@linkplain #virtualHost(String) name-based virtual host}.
+     *
      * @param port the port number that this virtual host binds to
      * @return {@link VirtualHostBuilder} for building the virtual host
      */
