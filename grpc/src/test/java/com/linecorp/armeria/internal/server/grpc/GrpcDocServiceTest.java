@@ -44,8 +44,6 @@ import com.google.protobuf.ByteString;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.retry.RetryRule;
-import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
@@ -199,7 +197,7 @@ class GrpcDocServiceTest {
         // when building a DocService, so we add them manually here.
         addExamples(expectedJson);
 
-        final WebClient client = getWebClient();
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/docs/specification.json").aggregate().join();
         assertThat(res.status()).isSameAs(HttpStatus.OK);
 
@@ -222,7 +220,7 @@ class GrpcDocServiceTest {
 
     @Test
     void excludeAllServices() throws IOException {
-        final WebClient client = getWebClient();
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/excludeAll/specification.json").aggregate().join();
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         final JsonNode actualJson = mapper.readTree(res.contentUtf8());
@@ -288,13 +286,5 @@ class GrpcDocServiceTest {
         if (json.isObject() || json.isArray()) {
             json.forEach(GrpcDocServiceTest::removeDescriptionInfos);
         }
-    }
-
-    private static WebClient getWebClient() {
-        // Because specifications are lazy loaded, we need retry rule.
-        final RetryRule retryRule = RetryRule.onServerErrorStatus();
-        return WebClient.builder(server.httpUri())
-                        .decorator(RetryingClient.newDecorator(retryRule))
-                        .build();
     }
 }

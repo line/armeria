@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.internal.server.grpc;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.List;
@@ -31,9 +31,6 @@ import com.google.common.collect.ImmutableList;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.client.retry.RetryConfig;
-import com.linecorp.armeria.client.retry.RetryRule;
-import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.grpc.testing.Messages.ExtendedTestMessage;
@@ -89,11 +86,7 @@ class GrpcDocServiceJsonSchemaTest {
     };
 
     private static List<JsonNode> getJsonSchemas() throws JsonProcessingException {
-        // Because specifications are lazy loaded, we need retry rule.
-        final RetryRule retryRule = RetryRule.onServerErrorStatus();
-        final WebClient client = WebClient.builder(server.httpUri())
-                                          .decorator(RetryingClient.newDecorator(retryRule))
-                                          .build();
+        final WebClient client = WebClient.of(server.httpUri());
         final AggregatedHttpResponse res = client.get("/docs/schemas.json").aggregate().join();
 
         assertThat(res.status()).isSameAs(HttpStatus.OK);
@@ -119,58 +112,47 @@ class GrpcDocServiceJsonSchemaTest {
     @Test
     void testBaseTypes() throws Exception {
         final JsonNode jsonSchema = getJsonSchemas().get(0);
-        final JsonNode properties = jsonSchema.get("properties");
 
-        assertThat(properties.get("bool").get("type").asText()).isEqualTo("boolean");
-        assertThat(properties.get("int32").get("type").asText()).isEqualTo("integer");
-        assertThat(properties.get("int64").get("type").asText()).isEqualTo("integer");
-        assertThat(properties.get("uint32").get("type").asText()).isEqualTo("integer");
-        assertThat(properties.get("uint64").get("type").asText()).isEqualTo("integer");
-        assertThat(properties.get("sint32").get("type").asText()).isEqualTo("integer");
-        assertThat(properties.get("sint64").get("type").asText()).isEqualTo("integer");
-        assertThat(properties.get("fixed32").get("type").asText()).isEqualTo("integer");
-        assertThat(properties.get("fixed64").get("type").asText()).isEqualTo("integer");
-        assertThat(properties.get("float").get("type").asText()).isEqualTo("number");
-        assertThat(properties.get("double").get("type").asText()).isEqualTo("number");
-        assertThat(properties.get("string").get("type").asText()).isEqualTo("string");
-        assertThat(properties.get("bytes").get("type").asText()).isEqualTo("string");
+        assertThatJson(jsonSchema).node("properties.bool.type").isEqualTo("boolean");
+        assertThatJson(jsonSchema).node("properties.int32.type").isEqualTo("integer");
+        assertThatJson(jsonSchema).node("properties.int64.type").isEqualTo("integer");
+        assertThatJson(jsonSchema).node("properties.uint32.type").isEqualTo("integer");
+        assertThatJson(jsonSchema).node("properties.uint64.type").isEqualTo("integer");
+        assertThatJson(jsonSchema).node("properties.sint32.type").isEqualTo("integer");
+        assertThatJson(jsonSchema).node("properties.sint64.type").isEqualTo("integer");
+        assertThatJson(jsonSchema).node("properties.fixed32.type").isEqualTo("integer");
+        assertThatJson(jsonSchema).node("properties.fixed64.type").isEqualTo("integer");
+        assertThatJson(jsonSchema).node("properties.float.type").isEqualTo("number");
+        assertThatJson(jsonSchema).node("properties.double.type").isEqualTo("number");
+        assertThatJson(jsonSchema).node("properties.string.type").isEqualTo("string");
+        assertThatJson(jsonSchema).node("properties.bytes.type").isEqualTo("string");
     }
 
     @Test
     void testEnum() throws Exception {
         final JsonNode jsonSchema = getJsonSchemas().get(0);
-        final JsonNode properties = jsonSchema.get("properties");
 
-        final JsonNode enumField = properties.get("test_enum");
-        assertThat(enumField.get("type").asText()).isEqualTo("string");
-        assertThat(enumField.has("enum")).isTrue();
-
-        final List<String> enumValues = ImmutableList.copyOf(enumField.get("enum")::elements).stream()
-                                                     .map(JsonNode::asText)
-                                                     .collect(toImmutableList());
-
-        assertThat(enumValues.size()).isEqualTo(3);
-        assertThat(enumValues).containsExactlyInAnyOrder("ZERO", "ONE", "TWO");
+        assertThatJson(jsonSchema).node("properties.test_enum.type").isEqualTo("string");
+        assertThatJson(jsonSchema).node("properties.test_enum.enum").isEqualTo(
+                ImmutableList.of("ZERO", "ONE", "TWO"));
     }
 
     @Test
     void testRepeated() throws Exception {
         final JsonNode jsonSchema = getJsonSchemas().get(0);
+
         final JsonNode stringsField = jsonSchema.get("properties").get("complex_other_message").get(
                 "properties").get("strings");
-
-        assertThat(stringsField.get("type").asText()).isEqualTo("array");
-        assertThat(stringsField.get("items").get("type").asText()).isEqualTo("string");
+        assertThatJson(stringsField).node("type").isEqualTo("array");
+        assertThatJson(stringsField).node("items.type").isEqualTo("string");
 
         final JsonNode nestedsField = jsonSchema.get("properties").get("nesteds");
-
-        assertThat(nestedsField.get("type").asText()).isEqualTo("array");
-        assertThat(nestedsField.get("items").get("$ref").asText()).isEqualTo("#/properties/nested");
+        assertThatJson(nestedsField).node("type").isEqualTo("array");
+        assertThatJson(nestedsField).node("items.$ref").isEqualTo("#/properties/nested");
 
         final JsonNode selvesField = jsonSchema.get("properties").get("selves");
-
-        assertThat(selvesField.get("type").asText()).isEqualTo("array");
-        assertThat(selvesField.get("items").get("$ref").asText()).isEqualTo("#");
+        assertThatJson(selvesField).node("type").isEqualTo("array");
+        assertThatJson(selvesField).node("items.$ref").isEqualTo("#");
     }
 
     @Test
@@ -178,53 +160,40 @@ class GrpcDocServiceJsonSchemaTest {
         final JsonNode jsonSchema = getJsonSchemas().get(0);
         final JsonNode properties = jsonSchema.get("properties");
 
-        assertThat(properties.get("int_to_string_map").get("type").asText()).isEqualTo("object");
-        assertThat(properties.get("int_to_string_map").get("additionalProperties").get("type")
-                             .asText()).isEqualTo("string");
+        assertThatJson(properties).node("int_to_string_map.type").isEqualTo("object");
+        assertThatJson(properties).node("int_to_string_map.additionalProperties.type").isEqualTo("string");
 
         // "string_to_int_map" references to "#/properties/complex_other_message/properties/map"
-        assertThat(properties.get("string_to_int_map").get("$ref").asText()).isEqualTo(
+        assertThatJson(properties).node("string_to_int_map.$ref").isEqualTo(
                 "#/properties/complex_other_message/properties/map");
         final JsonNode stringToIntMap = properties.get("complex_other_message").get("properties")
                                                   .get("map");
-        assertThat(stringToIntMap.get("type").asText()).isEqualTo("object");
-        assertThat(stringToIntMap.get("additionalProperties").get("type")
-                                 .asText()).isEqualTo("integer");
+        assertThatJson(stringToIntMap).node("type").isEqualTo("object");
+        assertThatJson(stringToIntMap).node("additionalProperties.type").isEqualTo("integer");
 
-        assertThat(properties.get("message_map").get("type").asText()).isEqualTo("object");
-        assertThat(properties.get("message_map").get("additionalProperties").get("$ref")
-                             .asText()).isEqualTo("#/properties/nested");
+        assertThatJson(properties).node("message_map.type").isEqualTo("object");
+        assertThatJson(properties).node("message_map.additionalProperties.$ref").isEqualTo(
+                "#/properties/nested");
 
-        assertThat(properties.get("self_map").get("type").asText()).isEqualTo("object");
-        assertThat(properties.get("self_map").get("additionalProperties").get("$ref")
-                             .asText()).isEqualTo("#");
+        assertThatJson(properties).node("self_map.additionalProperties.$ref").isEqualTo("#");
+        assertThatJson(properties).node("self_map.type").isEqualTo("object");
     }
 
     @Test
     void testMessage() throws Exception {
         final JsonNode jsonSchema = getJsonSchemas().get(0);
-        final JsonNode properties = jsonSchema.get("properties");
 
-        assertThat(properties.get("nested").get("type").asText()).isEqualTo("object");
-        assertThat(properties.get("nested").get("properties").has("string")).isTrue();
-        assertThat(properties.get("nested").get("properties").get("string").get("type").asText()).isEqualTo(
-                "string");
+        assertThatJson(jsonSchema).node("properties.nested.type").isEqualTo("object");
+        assertThatJson(jsonSchema).node("properties.nested.properties.string.type").isEqualTo("string");
     }
 
     @Test
     void testRecursiveMessage() throws Exception {
         final JsonNode jsonSchema = getJsonSchemas().get(0);
-        final JsonNode properties = jsonSchema.get("properties");
 
-        assertThat(properties.get("self").has("type")).isFalse();
-        assertThat(properties.get("self").get("$ref").asText()).isEqualTo("#");
-
-        assertThat(properties.get("nested_self").get("properties").has("self")).isTrue();
-        assertThat(properties.get("nested_self").get("properties").get("self").get("$ref").asText()).isEqualTo(
-                "#");
-
-        assertThat(properties.get("nested_nested_self").get("properties").has("nested_self")).isTrue();
-        assertThat(properties.get("nested_nested_self").get("properties").get("nested_self").get("$ref")
-                             .asText()).isEqualTo("#/properties/nested_self");
+        assertThatJson(jsonSchema).node("properties.self.$ref").isEqualTo("#");
+        assertThatJson(jsonSchema).node("properties.nested_self.properties.self.$ref").isEqualTo("#");
+        assertThatJson(jsonSchema).node("properties.nested_nested_self.properties.nested_self.$ref").isEqualTo(
+                "#/properties/nested_self");
     }
 }

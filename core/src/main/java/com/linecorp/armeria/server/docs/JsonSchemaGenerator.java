@@ -32,6 +32,7 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.JacksonUtil;
 
 /**
@@ -137,18 +138,18 @@ final class JsonSchemaGenerator {
      * @param visited map of visited types and their paths
      * @param path current path in tree traversal of fields
      * @param parent the parent to add schema properties
-     * @param required the array node to add required field names
+     * @param required the array node to add required field names, if parent doesn't support, it is null.
      */
     private void generateField(FieldInfo field, Map<TypeSignature, String> visited, String path,
                                ObjectNode parent,
-                               ArrayNode required) {
+                               @Nullable ArrayNode required) {
         final ObjectNode fieldNode = mapper.createObjectNode();
         final TypeSignature fieldTypeSignature = field.typeSignature();
 
         fieldNode.put("description", field.descriptionInfo().docString());
 
         // Fill required fields for the current object.
-        if (field.requirement() == FieldRequirement.REQUIRED) {
+        if (required != null && field.requirement() == FieldRequirement.REQUIRED) {
             required.add(field.name());
         }
 
@@ -245,8 +246,7 @@ final class JsonSchemaGenerator {
                                                   .build();
 
         // Recursively generate the field.
-        generateField(valueFieldInfo, visited, path + "/additionalProperties", additionalProperties,
-                      mapper.createArrayNode());
+        generateField(valueFieldInfo, visited, path + "/additionalProperties", additionalProperties, null);
 
         fieldNode.set("additionalProperties", additionalProperties);
     }
@@ -269,7 +269,7 @@ final class JsonSchemaGenerator {
                                                  .requirement(FieldRequirement.OPTIONAL)
                                                  .build();
 
-        generateField(itemFieldInfo, visited, path + "/items", items, mapper.createArrayNode());
+        generateField(itemFieldInfo, visited, path + "/items", items, null);
 
         fieldNode.set("items", items);
     }
