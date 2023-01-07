@@ -2,11 +2,11 @@ import path from 'path';
 
 import FaviconsWebpackPlugin from 'favicons-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
-import {LicenseWebpackPlugin} from 'license-webpack-plugin';
+import { LicenseWebpackPlugin } from 'license-webpack-plugin';
 import CompressionWebpackPlugin from 'compression-webpack-plugin';
-import {Configuration, DefinePlugin} from 'webpack';
+import { Configuration, DefinePlugin } from 'webpack';
 import WebpackDevServer from 'webpack-dev-server';
-import {docServiceDebug} from './src/lib/header-provider';
+import { docServiceDebug } from './src/lib/header-provider';
 
 declare module 'webpack' {
   interface Configuration {
