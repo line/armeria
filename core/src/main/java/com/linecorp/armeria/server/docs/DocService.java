@@ -88,13 +88,6 @@ import com.linecorp.armeria.server.file.MediaTypeResolver;
  * using Java SPI (Service Provider Interface). The {@link DocServicePlugin} implementations will
  * generate {@link ServiceSpecification}s for the {@link Service}s they support.
  *
- * <p>Front-end assets are compressed via <a href="https://www.gnu.org/software/gzip/">Gzip</a>by default.
- * If you want to compress them using <a href="https://datatracker.ietf.org/doc/html/rfc7932">Brotli</a>,
- * pass the {@code docServiceCompression} Gradle property when building:
- * <pre>{@code
- * $./gradlew build -PdocServiceCompression=brotli
- * }</pre>
- *
  * @see DocServiceBuilder#include(DocServiceFilter)
  * @see DocServiceBuilder#exclude(DocServiceFilter)
  */

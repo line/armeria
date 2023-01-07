@@ -32,8 +32,6 @@ class DocServiceAssetCompressionTest {
         // they should exist in the classpath of the core module.
         // If Gradle build task is executed with `-PnoWeb`, this test may be broken.
         assertThat(DocService.class.getResource(file)).isNull();
-        assertThat(DocService.class.getResource(file + ".gz") != null ||
-                   // brotily is used if `-PdocServiceCompression=brotli` is specified.
-                   DocService.class.getResource(file + ".br") != null).isTrue();
+        assertThat(DocService.class.getResource(file + ".gz")).isNotNull();
     }
 }

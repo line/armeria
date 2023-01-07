@@ -2,21 +2,19 @@ import path from 'path';
 
 import FaviconsWebpackPlugin from 'favicons-webpack-plugin';
 import HtmlWebpackPlugin from 'html-webpack-plugin';
-import { LicenseWebpackPlugin } from 'license-webpack-plugin';
+import {LicenseWebpackPlugin} from 'license-webpack-plugin';
 import CompressionWebpackPlugin from 'compression-webpack-plugin';
-import { Configuration, DefinePlugin } from 'webpack';
+import {Configuration, DefinePlugin} from 'webpack';
 import WebpackDevServer from 'webpack-dev-server';
+import {docServiceDebug} from './src/lib/header-provider';
+
 declare module 'webpack' {
   interface Configuration {
     devServer?: WebpackDevServer.Configuration;
   }
 }
 
-import { docServiceDebug } from './src/lib/header-provider';
-
 const armeriaPort = process.env.ARMERIA_PORT || '8080';
-const compression = process.env.COMPRESSION === 'brotli' ? 'brotliCompress' : 'gzip'
-const fileExtension = compression === 'brotliCompress' ? 'br' : 'gz'
 
 const isDev = !!process.env.WEBPACK_DEV;
 const isWindows = process.platform === 'win32';
@@ -143,8 +141,8 @@ plugins.push(new DefinePlugin({
 if (!isDev) {
   plugins.push(new CompressionWebpackPlugin({
     test: /\.(js|css|html|svg)$/,
-    algorithm: compression,
-    filename: `[path][base].${fileExtension}`,
+    algorithm: 'gzip',
+    filename: '[path][base].gz',
     // If a `Accept-Encoding` is not specified, `DocService` decompresses the compressed content on the fly.
     deleteOriginalAssets: true
   }) as any);

@@ -25,7 +25,6 @@ task buildWeb(type: NpmTask) {
     dependsOn tasks.npmInstall
 
     args = ['run', 'build']
-    environment = [COMPRESSION: rootProject.findProperty('docServiceCompression') ?: 'gzip']
 
     inputs.dir('src')
     inputs.files('package.json', 'package-lock.json')
