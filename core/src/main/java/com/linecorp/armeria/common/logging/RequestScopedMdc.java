@@ -253,26 +253,18 @@ public final class RequestScopedMdc {
             return;
         }
 
-        for (; ; ) {
-            final AttributeKey<ReentrantLock> key = AttributeKey.valueOf("reentrantLock");
-            final ReentrantLock oldLock = ctx.attr(key);
-            final ReentrantLock reentrantLock = new ReentrantLock();
-            if (ctx.setAttr(key, reentrantLock) == oldLock) {
-                reentrantLock.lock();
-                try {
-                    final Object2ObjectMap<String, String> oldMap = getMap(ctx);
-                    final Object2ObjectMap<String, String> newMap;
-                    if (oldMap.isEmpty()) {
-                        newMap = new Object2ObjectOpenHashMap<>(map);
-                    } else {
-                        newMap = new Object2ObjectOpenHashMap<>(oldMap.size() + map.size());
-                        newMap.putAll(oldMap);
-                        newMap.putAll(map);
-                    }
-                    ctx.setAttr(MAP, Object2ObjectMaps.unmodifiable(newMap));
-                } finally {
-                    reentrantLock.unlock();
-                }
+        for (;;) {
+            final Object2ObjectMap<String, String> oldMap = getMap(ctx);
+            final Object2ObjectMap<String, String> newMap;
+
+            if (oldMap.isEmpty()) {
+                newMap = new Object2ObjectOpenHashMap<>(map);
+            } else {
+                newMap = new Object2ObjectOpenHashMap<>(oldMap.size() + map.size());
+                newMap.putAll(oldMap);
+                newMap.putAll(map);
+            }
+            if (ctx.setAttr(MAP, Object2ObjectMaps.unmodifiable(newMap)) == oldMap) {
                 break;
             }
         }
