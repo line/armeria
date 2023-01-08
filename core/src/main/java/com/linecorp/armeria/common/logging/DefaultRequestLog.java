@@ -19,8 +19,6 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
-import com.google.errorprone.annotations.concurrent.GuardedBy;
-
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -35,6 +33,7 @@ import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -371,7 +370,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             reentrantLock.lock();
             try {
                 pendingFutures.add(newFuture);
-                satisfiedFutures = removeSatisfiedFutures();
+                satisfiedFutures = removeSatisfiedFutures(pendingFutures);
             } finally {
                 reentrantLock.unlock();
             }
@@ -406,7 +405,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void updateFlags(int flags) {
-        for (; ; ) {
+        for (;;) {
             final int oldFlags = this.flags;
             final int newFlags = oldFlags | flags;
             if (oldFlags == newFlags) {
@@ -417,7 +416,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
                 final RequestLogFuture[] satisfiedFutures;
                 reentrantLock.lock();
                 try {
-                    satisfiedFutures = removeSatisfiedFutures();
+                    satisfiedFutures = removeSatisfiedFutures(pendingFutures);
                 } finally {
                     reentrantLock.unlock();
                 }
@@ -440,40 +439,29 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     @Nullable
-    private RequestLogFuture[] removeSatisfiedFutures() {
-        reentrantLock.lock();
-        try {
-            if (pendingFutures.isEmpty()) {
-                return null;
-            }
-        } finally {
-            reentrantLock.unlock();
+    private RequestLogFuture[] removeSatisfiedFutures(List<RequestLogFuture> pendingFutures) {
+        if (pendingFutures.isEmpty()) {
+            return null;
         }
 
-        final int flags = this.flags;
-        reentrantLock.lock();
-        try {
-            final int maxNumListeners = pendingFutures.size();
-            final Iterator<RequestLogFuture> i = pendingFutures.iterator();
-            RequestLogFuture[] satisfied = null;
-            int numSatisfied = 0;
+        final int maxNumListeners = pendingFutures.size();
+        final Iterator<RequestLogFuture> i = pendingFutures.iterator();
+        RequestLogFuture[] satisfied = null;
+        int numSatisfied = 0;
 
-            do {
-                final RequestLogFuture e = i.next();
-                final int interestedFlags = e.interestedFlags;
-                if ((flags & interestedFlags) == interestedFlags) {
-                    i.remove();
-                    if (satisfied == null) {
-                        satisfied = new RequestLogFuture[maxNumListeners];
-                    }
-                    satisfied[numSatisfied++] = e;
+        do {
+            final RequestLogFuture e = i.next();
+            final int interestedFlags = e.interestedFlags;
+            if ((flags & interestedFlags) == interestedFlags) {
+                i.remove();
+                if (satisfied == null) {
+                    satisfied = new RequestLogFuture[maxNumListeners];
                 }
-            } while (i.hasNext());
+                satisfied[numSatisfied++] = e;
+            }
+        } while (i.hasNext());
 
-            return satisfied;
-        } finally {
-            reentrantLock.unlock();
-        }
+        return satisfied;
     }
 
     // Methods related with deferred properties
@@ -527,7 +515,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             flag |= RequestLogProperty.NAME.flag();
         }
 
-        for (; ; ) {
+        for (;;) {
             final int oldFlags = deferredFlags;
             final int newFlags = oldFlags | flag;
             if (oldFlags == newFlags) {
