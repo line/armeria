@@ -26,11 +26,14 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.ResponseHeaders;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.internal.common.CancellationScheduler.CancellationTask;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
@@ -46,19 +49,39 @@ abstract class AbstractHttpResponseHandler {
     final DefaultServiceRequestContext reqCtx;
     final DecodedHttpRequest req;
 
+    private final CompletableFuture<Void> completionFuture;
+    private boolean isComplete;
+
     AbstractHttpResponseHandler(ChannelHandlerContext ctx,
                                 ServerHttpObjectEncoder responseEncoder,
-                                DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
+                                DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
+                                CompletableFuture<Void> completionFuture) {
         this.ctx = ctx;
         this.responseEncoder = responseEncoder;
         this.reqCtx = reqCtx;
         this.req = req;
+        this.completionFuture = completionFuture;
     }
 
     /**
      * Returns whether a response has been finished.
      */
-    abstract boolean isDone();
+    boolean isDone() {
+        return isComplete;
+    }
+
+    final boolean tryComplete(@Nullable Throwable cause) {
+        if (isComplete) {
+            return false;
+        }
+        isComplete = true;
+        if (cause == null) {
+            completionFuture.complete(null);
+        } else {
+            completionFuture.completeExceptionally(cause);
+        }
+        return true;
+    }
 
     /**
      * Fails a request and a response with the specified {@link Throwable}.
@@ -77,9 +100,9 @@ abstract class AbstractHttpResponseHandler {
             Throwable cause = CapturedServiceException.get(reqCtx);
             if (cause == null) {
                 if (reqCtx.sessionProtocol().isMultiplex()) {
-                    cause = ClosedSessionException.get();
-                } else {
                     cause = ClosedStreamException.get();
+                } else {
+                    cause = ClosedSessionException.get();
                 }
             }
             fail(cause);
@@ -100,9 +123,25 @@ abstract class AbstractHttpResponseHandler {
         final int id = req.id();
         final int streamId = req.streamId();
 
-        ResponseHeaders headers = mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders());
+        final ServerConfig config = reqCtx.config().server().config();
+        ResponseHeaders headers = mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders(),
+                                                       reqCtx.config().defaultHeaders(),
+                                                       config.isServerHeaderEnabled(),
+                                                       config.isDateHeaderEnabled());
         final HttpData content = res.content();
-        final boolean contentEmpty = content.isEmpty();
+        // An aggregated response always has empty content if its status.isContentAlwaysEmpty() is true.
+        assert !res.status().isContentAlwaysEmpty() || content.isEmpty();
+        final boolean contentEmpty;
+        if (content.isEmpty()) {
+            contentEmpty = true;
+        } else if (req.method() == HttpMethod.HEAD) {
+            contentEmpty = true;
+            // Need to release the body because we're not passing it over to the encoder.
+            content.close();
+        } else {
+            contentEmpty = false;
+        }
+
         final HttpHeaders trailers = mergeTrailers(res.trailers(), reqCtx.additionalResponseTrailers());
         final boolean trailersEmpty = trailers.isEmpty();
 

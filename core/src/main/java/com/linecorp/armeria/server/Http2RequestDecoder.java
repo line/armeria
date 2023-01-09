@@ -159,37 +159,42 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             }
 
             final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
-            final Routed<ServiceConfig> routed;
             if (routingCtx.status().routeMustExist()) {
                 try {
                     // Find the service that matches the path.
-                    routed = routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                    final Routed<ServiceConfig> routed =
+                            routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                    assert routed.isPresent();
                 } catch (Throwable cause) {
                     logger.warn("{} Unexpected exception: {}", ctx.channel(), headers, cause);
                     writeErrorResponse(streamId, headers, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
                     return;
                 }
-                assert routed.isPresent();
-            } else {
-                routed = null;
             }
 
             final int id = ++nextId;
             final EventLoop eventLoop = ctx.channel().eventLoop();
             req = DecodedHttpRequest.of(endOfStream, eventLoop, id, streamId, headers, true,
-                                        inboundTrafficController, routingCtx, routed);
+                                        inboundTrafficController, routingCtx);
             requests.put(streamId, req);
             // An aggregating request will be fired later after all objects are collected.
-            if (!req.isAggregated()) {
+            if (!req.needsAggregation()) {
                 ctx.fireChannelRead(req);
             }
         } else {
+            if (!(req instanceof DecodedHttpRequestWriter)) {
+                // Silently ignore the following HEADERS Frames of non-DecodedHttpRequestWriter. The request
+                // stream is closed when receiving the first HEADERS Frame and some responses might be sent
+                // already.
+                logger.debug("{} received a HEADERS Frame for an invalid stream: {}", ctx.channel(), streamId);
+                return;
+            }
             final HttpHeaders trailers = ArmeriaHttpUtil.toArmeria(nettyHeaders, true, endOfStream);
             final DecodedHttpRequestWriter decodedReq = (DecodedHttpRequestWriter) req;
             try {
                 // Trailers is received. The decodedReq will be automatically closed.
                 decodedReq.write(trailers);
-                if (req.isAggregated()) {
+                if (req.needsAggregation()) {
                     // An aggregated request can be fired now.
                     ctx.fireChannelRead(req);
                 }
@@ -253,11 +258,19 @@ final class Http2RequestDecoder extends Http2EventAdapter {
         }
 
         final int dataLength = data.readableBytes();
+        if (!(req instanceof DecodedHttpRequestWriter)) {
+            // Silently ignore the following DATA Frames of non-DecodedHttpRequestWriter. The request stream is
+            // closed when receiving the HEADERS Frame and some responses might be sent already.
+            logger.debug("{} received a DATA Frame for an invalid stream: {}. headers: {}",
+                         ctx.channel(), streamId, req.headers());
+            return dataLength + padding;
+        }
+
         if (dataLength == 0) {
             // Received an empty DATA frame
             if (endOfStream) {
                 req.close();
-                if (req.isAggregated()) {
+                if (req.needsAggregation()) {
                     ctx.fireChannelRead(req);
                 }
             }
@@ -293,7 +306,7 @@ final class Http2RequestDecoder extends Http2EventAdapter {
             try {
                 // The decodedReq will be automatically closed if endOfStream is true.
                 decodedReq.write(HttpData.wrap(data.retain()).withEndOfStream(endOfStream));
-                if (endOfStream && decodedReq.isAggregated()) {
+                if (endOfStream && decodedReq.needsAggregation()) {
                     // An aggregated request is now ready to be fired.
                     ctx.fireChannelRead(req);
                 }

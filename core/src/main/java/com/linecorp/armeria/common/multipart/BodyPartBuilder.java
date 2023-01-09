@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 
 /**
@@ -118,7 +119,7 @@ public final class BodyPartBuilder {
      */
     public BodyPartBuilder content(Path path, int bufferSize) {
         requireNonNull(path, "path");
-        return content(StreamMessage.of(path, bufferSize));
+        return content(StreamMessage.builder(path).bufferSize(bufferSize).build());
     }
 
     /**
@@ -158,6 +159,6 @@ public final class BodyPartBuilder {
             headers = this.headers;
         }
 
-        return new DefaultBodyPart(headers, StreamMessage.concat(contents));
+        return new DefaultBodyPart(headers, ByteStreamMessage.of(StreamMessage.concat(contents)));
     }
 }

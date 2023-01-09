@@ -19,12 +19,12 @@ import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.function.Function;
 
 import org.slf4j.MDC;
-import org.slf4j.Marker;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Splitter;
@@ -34,13 +34,12 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.BuiltInProperty;
 import com.linecorp.armeria.common.logging.RequestContextExporter;
 import com.linecorp.armeria.common.logging.RequestContextExporterBuilder;
+import com.linecorp.armeria.internal.common.FlagsLoaded;
 
-import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
-import ch.qos.logback.classic.spi.IThrowableProxy;
-import ch.qos.logback.classic.spi.LoggerContextVO;
 import ch.qos.logback.core.Appender;
 import ch.qos.logback.core.UnsynchronizedAppenderBase;
+import ch.qos.logback.core.net.AbstractSocketAppender;
 import ch.qos.logback.core.spi.AppenderAttachable;
 import ch.qos.logback.core.spi.AppenderAttachableImpl;
 import io.netty.util.AttributeKey;
@@ -71,6 +70,7 @@ public final class RequestContextExportingAppender
     private final RequestContextExporterBuilder builder = RequestContextExporter.builder();
     @Nullable
     private RequestContextExporter exporter;
+    private boolean needsHashMap;
 
     @VisibleForTesting
     RequestContextExporter exporter() {
@@ -184,21 +184,36 @@ public final class RequestContextExportingAppender
     @Override
     protected void append(ILoggingEvent eventObject) {
         if (exporter == null) {
+            if (!FlagsLoaded.get()) {
+                // It is possible that requestContextStorageProvider hasn't been initialized yet
+                // due to static variable circular dependency.
+                // Most notably, this can happen when logs are appended while trying to initialize
+                // Flags#requestContextStorageProvider.
+                aai.appendLoopOnAppenders(eventObject);
+                return;
+            }
             exporter = builder.build();
         }
         final Map<String, String> contextMap = exporter.export();
         if (!contextMap.isEmpty()) {
             final Map<String, String> originalMdcMap = eventObject.getMDCPropertyMap();
-            final Map<String, String> mdcMap;
-
-            if (!originalMdcMap.isEmpty()) {
-                mdcMap = new UnionMap<>(contextMap, originalMdcMap);
-            } else {
-                mdcMap = contextMap;
-            }
+            final Map<String, String> mdcMap = prepareMdcMap(contextMap, originalMdcMap);
             eventObject = new LoggingEventWrapper(eventObject, mdcMap);
         }
         aai.appendLoopOnAppenders(eventObject);
+    }
+
+    private Map<String, String> prepareMdcMap(Map<String, String> contextMap,
+                                              Map<String, String> originalMdcMap) {
+        if (needsHashMap) {
+            final Map<String, String> mdcMap = new HashMap<>(contextMap);
+            mdcMap.putAll(originalMdcMap);
+            return mdcMap;
+        }
+        if (!originalMdcMap.isEmpty()) {
+            return new UnionMap<>(contextMap, originalMdcMap);
+        }
+        return contextMap;
     }
 
     @Override
@@ -220,7 +235,27 @@ public final class RequestContextExportingAppender
 
     @Override
     public void addAppender(Appender<ILoggingEvent> newAppender) {
+        // When SocketAppender is used and event object contains classes
+        // that are not on whitelist, HardenedObjectInputStream raises
+        // InvalidClassException: Unauthorized deserialization attempt.
+        needsHashMap = isSocketAppender(newAppender);
         aai.addAppender(newAppender);
+    }
+
+    @SuppressWarnings("unchecked")
+    private boolean isSocketAppender(Appender<ILoggingEvent> appender) {
+        if (appender instanceof AbstractSocketAppender) {
+            return true;
+        }
+        if (appender instanceof AppenderAttachable) {
+            for (final Iterator<Appender<ILoggingEvent>> i = ((AppenderAttachable<ILoggingEvent>) appender)
+                    .iteratorForAppenders(); i.hasNext();) {
+                if (isSocketAppender(i.next())) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     @Override
@@ -251,110 +286,5 @@ public final class RequestContextExportingAppender
     @Override
     public boolean detachAppender(String name) {
         return aai.detachAppender(name);
-    }
-
-    private static final class LoggingEventWrapper implements ILoggingEvent {
-        private final ILoggingEvent event;
-        private final Map<String, String> mdcPropertyMap;
-        @Nullable
-        private final LoggerContextVO vo;
-
-        LoggingEventWrapper(ILoggingEvent event, Map<String, String> mdcPropertyMap) {
-            this.event = event;
-            this.mdcPropertyMap = mdcPropertyMap;
-
-            final LoggerContextVO oldVo = event.getLoggerContextVO();
-            if (oldVo != null) {
-                vo = new LoggerContextVO(oldVo.getName(), mdcPropertyMap, oldVo.getBirthTime());
-            } else {
-                vo = null;
-            }
-        }
-
-        @Override
-        public Object[] getArgumentArray() {
-            return event.getArgumentArray();
-        }
-
-        @Override
-        public Level getLevel() {
-            return event.getLevel();
-        }
-
-        @Override
-        public String getLoggerName() {
-            return event.getLoggerName();
-        }
-
-        @Override
-        public String getThreadName() {
-            return event.getThreadName();
-        }
-
-        @Override
-        public IThrowableProxy getThrowableProxy() {
-            return event.getThrowableProxy();
-        }
-
-        @Override
-        public void prepareForDeferredProcessing() {
-            event.prepareForDeferredProcessing();
-        }
-
-        @Override
-        @Nullable
-        public LoggerContextVO getLoggerContextVO() {
-            return vo;
-        }
-
-        @Override
-        public String getMessage() {
-            return event.getMessage();
-        }
-
-        @Override
-        public long getTimeStamp() {
-            return event.getTimeStamp();
-        }
-
-        @Override
-        public StackTraceElement[] getCallerData() {
-            return event.getCallerData();
-        }
-
-        @Override
-        public boolean hasCallerData() {
-            return event.hasCallerData();
-        }
-
-        @Override
-        public Marker getMarker() {
-            return event.getMarker();
-        }
-
-        @Override
-        public String getFormattedMessage() {
-            return event.getFormattedMessage();
-        }
-
-        @Override
-        public Map<String, String> getMDCPropertyMap() {
-            return mdcPropertyMap;
-        }
-
-        /**
-         * A synonym for {@link #getMDCPropertyMap}.
-         * @deprecated Use {@link #getMDCPropertyMap()}.
-         */
-        @Override
-        @Deprecated
-        public Map<String, String> getMdc() {
-            return event.getMDCPropertyMap();
-        }
-
-        @Override
-        public String toString() {
-            return event.toString();
-        }
     }
 }

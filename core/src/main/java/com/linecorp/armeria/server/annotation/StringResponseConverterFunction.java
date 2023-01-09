@@ -16,7 +16,10 @@
 package com.linecorp.armeria.server.annotation;
 
 import static com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapUnaryAsyncType;
 
+import java.lang.reflect.Type;
 import java.nio.charset.Charset;
 import java.util.stream.Stream;
 
@@ -41,6 +44,23 @@ import com.linecorp.armeria.server.ServiceRequestContext;
  * so you don't have to specify this converter explicitly.
  */
 public final class StringResponseConverterFunction implements ResponseConverterFunction {
+
+    @Override
+    public Boolean isResponseStreaming(Type resultType, @Nullable MediaType contentType) {
+        if (contentType != null && contentType.is(MediaType.ANY_TEXT_TYPE)) {
+            return false;
+        }
+        final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(resultType));
+        if (clazz == null) {
+            return null;
+        }
+
+        if (CharSequence.class.isAssignableFrom(clazz)) {
+            return false;
+        }
+
+        return null;
+    }
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,

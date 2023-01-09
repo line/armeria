@@ -18,12 +18,17 @@ package com.linecorp.armeria.common.logback;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
+import static org.assertj.core.api.InstanceOfAssertFactories.STRING;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
@@ -38,6 +43,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.mockito.ArgumentCaptor;
 import org.slf4j.LoggerFactory;
 import org.slf4j.MDC;
 
@@ -63,10 +69,12 @@ import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.ProxiedAddresses;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
+import ch.qos.logback.classic.AsyncAppender;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.LoggerContext;
 import ch.qos.logback.classic.joran.JoranConfigurator;
+import ch.qos.logback.classic.net.SocketAppender;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.read.ListAppender;
 import ch.qos.logback.core.status.Status;
@@ -76,6 +84,7 @@ import io.netty.util.internal.logging.InternalLoggerFactory;
 
 class RequestContextExportingAppenderTest {
 
+    public static final int ASYNC_LOG_WAIT_TIMEOUT = 5000;
     private static final RpcRequest RPC_REQ = RpcRequest.of(Object.class, "hello", "world");
     private static final RpcResponse RPC_RES = RpcResponse.of("Hello, world!");
     private static final ThriftCall THRIFT_CALL =
@@ -570,6 +579,95 @@ class RequestContextExportingAppenderTest {
         }
     }
 
+    @Test
+    void testResponseCause() throws Exception {
+        final List<ILoggingEvent> events = prepare(a -> {
+            a.addBuiltIn(BuiltInProperty.REQ_CAUSE);
+            a.addBuiltIn(BuiltInProperty.RES_CAUSE);
+        });
+
+        final ClientRequestContext ctx = newClientContext("/bar", null);
+        try (SafeCloseable ignored = ctx.push()) {
+            ctx.logBuilder().endRequest(new Throwable("request"));
+            ctx.logBuilder().endResponse(new Throwable("response"));
+            final ILoggingEvent e = log(events);
+            final Map<String, String> mdc = e.getMDCPropertyMap();
+            assertThat(mdc).containsOnlyKeys("req.cause", "res.cause");
+            assertThat(mdc).extracting(key -> mdc.get("req.cause"), STRING)
+                           .contains("java.lang.Throwable: request");
+            assertThat(mdc).extracting(key -> mdc.get("res.cause"), STRING)
+                           .contains("java.lang.Throwable: response");
+        }
+    }
+
+    @Test
+    void testMdcPropsType() throws Exception {
+        final List<ILoggingEvent> events = prepare(a -> a.addBuiltIn(BuiltInProperty.REQ_DIRECTION));
+
+        final ServiceRequestContext ctx = newServiceContext("/foo", null);
+        try (SafeCloseable ignored = ctx.push()) {
+            final ILoggingEvent e = log(events);
+            final Map<String, String> mdc = e.getMDCPropertyMap();
+            assertThat(mdc.getClass().getName())
+                    .isEqualTo("com.linecorp.armeria.common.logging.RequestContextExporter$State");
+        }
+    }
+
+    @Test
+    void testMdcPropsTypeForSocketAppenderWithoutProps() throws Exception {
+        final SocketAppender sa = prepareSocketAppender();
+        final ClientRequestContext ctx = newClientContext("/bar", null);
+        try (SafeCloseable ignored = ctx.push()) {
+            final Integer value = ThreadLocalRandom.current().nextInt();
+            testLogger.trace("{}", value);
+
+            final ArgumentCaptor<ILoggingEvent> eventCaptor = ArgumentCaptor.forClass(ILoggingEvent.class);
+            verify(sa, timeout(ASYNC_LOG_WAIT_TIMEOUT)).doAppend(eventCaptor.capture());
+
+            final Map<String, String> mdc = eventCaptor.getValue().getMDCPropertyMap();
+            assertThat(mdc).isInstanceOf(Collections.EMPTY_MAP.getClass());
+        }
+    }
+
+    @Test
+    void testMdcPropsTypeForSocketAppenderWithProps() throws Exception {
+        final SocketAppender sa = prepareSocketAppender(a -> a.setExport("test-prop=req.headers.user-agent"));
+        final ClientRequestContext ctx = newClientContext("/bar", null);
+        try (SafeCloseable ignored = ctx.push()) {
+            final Integer value = ThreadLocalRandom.current().nextInt();
+            testLogger.trace("{}", value);
+
+            final ArgumentCaptor<ILoggingEvent> eventCaptor = ArgumentCaptor.forClass(ILoggingEvent.class);
+            verify(sa, timeout(ASYNC_LOG_WAIT_TIMEOUT)).doAppend(eventCaptor.capture());
+
+            final Map<String, String> mdc = eventCaptor.getValue().getMDCPropertyMap();
+            assertThat(mdc).isInstanceOf(HashMap.class);
+            assertThat(mdc).containsOnlyKeys("test-prop");
+            assertThat(mdc).extracting(key -> mdc.get("test-prop"), STRING).isEqualTo("some-client");
+        }
+    }
+
+    @Test
+    void testMdcPropsTypeForSocketAppenderWithPropsAndContext() throws Exception {
+        final SocketAppender sa = prepareSocketAppender(a -> a.setExport("test-prop=req.headers.user-agent"));
+        final ClientRequestContext ctx = newClientContext("/bar", null);
+        try (SafeCloseable ignored = ctx.push()) {
+            final Integer value = ThreadLocalRandom.current().nextInt();
+            MDC.put("test-prop", "override-test");
+            MDC.put("another-prop", "another-value");
+            testLogger.trace("{}", value);
+
+            final ArgumentCaptor<ILoggingEvent> eventCaptor = ArgumentCaptor.forClass(ILoggingEvent.class);
+            verify(sa, timeout(ASYNC_LOG_WAIT_TIMEOUT)).doAppend(eventCaptor.capture());
+
+            final Map<String, String> mdc = eventCaptor.getValue().getMDCPropertyMap();
+            assertThat(mdc).isInstanceOf(HashMap.class);
+            assertThat(mdc).containsOnlyKeys("test-prop", "another-prop");
+            assertThat(mdc).extracting(key -> mdc.get("test-prop"), STRING).isEqualTo("override-test");
+            assertThat(mdc).extracting(key -> mdc.get("another-prop"), STRING).isEqualTo("another-value");
+        }
+    }
+
     private static ClientRequestContext newClientContext(
             String path, @Nullable String query) throws Exception {
 
@@ -616,5 +714,24 @@ class RequestContextExportingAppenderTest {
         la.start();
         testLogger.addAppender(a);
         return la.list;
+    }
+
+    @SafeVarargs
+    private final SocketAppender prepareSocketAppender(
+            Consumer<RequestContextExportingAppender>... configurators) {
+        final RequestContextExportingAppender rcea = new RequestContextExportingAppender();
+        for (Consumer<RequestContextExportingAppender> c : configurators) {
+            c.accept(rcea);
+        }
+
+        final SocketAppender sa = mock(SocketAppender.class);
+        final AsyncAppender aa = new AsyncAppender();
+        aa.addAppender(sa);
+        rcea.addAppender(aa);
+        sa.start();
+        aa.start();
+        rcea.start();
+        testLogger.addAppender(rcea);
+        return sa;
     }
 }

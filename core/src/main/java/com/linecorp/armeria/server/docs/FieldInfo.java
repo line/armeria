@@ -16,14 +16,12 @@
 
 package com.linecorp.armeria.server.docs;
 
-import java.util.List;
+import static java.util.Objects.requireNonNull;
+
 import java.util.Objects;
 
-import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.MoreObjects;
-import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
@@ -43,7 +41,17 @@ public final class FieldInfo {
      */
     public static FieldInfo of(String name, TypeSignature typeSignature) {
         return new FieldInfo(name, FieldLocation.UNSPECIFIED, FieldRequirement.UNSPECIFIED, typeSignature,
-                             ImmutableList.of(), null);
+                             DescriptionInfo.empty());
+    }
+
+    /**
+     * Creates a new {@link FieldInfo} with the specified {@code name}, {@link TypeSignature} and description.
+     * The {@link FieldLocation} and {@link FieldRequirement} of the {@link FieldInfo} will be
+     * {@code UNSPECIFIED}.
+     */
+    public static FieldInfo of(String name, TypeSignature typeSignature, DescriptionInfo descriptionInfo) {
+        return new FieldInfo(name, FieldLocation.UNSPECIFIED, FieldRequirement.UNSPECIFIED, typeSignature,
+                             descriptionInfo);
     }
 
     /**
@@ -53,42 +61,22 @@ public final class FieldInfo {
         return new FieldInfoBuilder(name, typeSignature);
     }
 
-    /**
-     * Returns a newly created {@link FieldInfoBuilder}.
-     */
-    public static FieldInfoBuilder builder(String name, TypeSignature typeSignature,
-                                           FieldInfo... childFieldInfos) {
-        return new FieldInfoBuilder(name, typeSignature, childFieldInfos);
-    }
-
-    /**
-     * Returns a newly created {@link FieldInfoBuilder}.
-     */
-    public static FieldInfoBuilder builder(String name, TypeSignature typeSignature,
-                                           Iterable<FieldInfo> childFieldInfos) {
-        return new FieldInfoBuilder(name, typeSignature, childFieldInfos);
-    }
-
     private final String name;
     private final FieldLocation location;
     private final FieldRequirement requirement;
     private final TypeSignature typeSignature;
-    private final List<FieldInfo> childFieldInfos;
-
-    @Nullable
-    private final String docString;
+    private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
      */
     FieldInfo(String name, FieldLocation location, FieldRequirement requirement,
-              TypeSignature typeSignature, List<FieldInfo> childFieldInfos, @Nullable String docString) {
-        this.name = name;
-        this.location = location;
-        this.requirement = requirement;
-        this.typeSignature = typeSignature;
-        this.childFieldInfos = childFieldInfos;
-        this.docString = docString;
+              TypeSignature typeSignature, DescriptionInfo descriptionInfo) {
+        this.name = requireNonNull(name, "name");
+        this.location = requireNonNull(location, "name");
+        this.requirement = requireNonNull(requirement, "requirement");
+        this.typeSignature = requireNonNull(typeSignature, "typeSignature");
+        this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
     }
 
     /**
@@ -124,21 +112,23 @@ public final class FieldInfo {
     }
 
     /**
-     * Returns the child field infos of the field.
+     * Returns the description information object of the field.
      */
     @JsonProperty
-    public List<FieldInfo> childFieldInfos() {
-        return childFieldInfos;
+    public DescriptionInfo descriptionInfo() {
+        return descriptionInfo;
     }
 
     /**
-     * Returns the documentation string of the field.
+     * Returns a new {@link FieldInfo} with the specified {@link DescriptionInfo}.
+     * Returns {@code this} if this {@link FieldInfo} has the same {@link DescriptionInfo}.
      */
-    @JsonProperty
-    @JsonInclude(Include.NON_NULL)
-    @Nullable
-    public String docString() {
-        return docString;
+    public FieldInfo withDescriptionInfo(DescriptionInfo descriptionInfo) {
+        requireNonNull(descriptionInfo, "descriptionInfo");
+        if (descriptionInfo.equals(this.descriptionInfo)) {
+            return this;
+        }
+        return new FieldInfo(name, location, requirement, typeSignature, descriptionInfo);
     }
 
     @Override
@@ -156,12 +146,12 @@ public final class FieldInfo {
                location == that.location &&
                requirement == that.requirement &&
                typeSignature.equals(that.typeSignature) &&
-               childFieldInfos.equals(that.childFieldInfos);
+               descriptionInfo.equals(that.descriptionInfo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, location, requirement, typeSignature, childFieldInfos);
+        return Objects.hash(name, location, requirement, typeSignature, descriptionInfo);
     }
 
     @Override
@@ -171,8 +161,7 @@ public final class FieldInfo {
                           .add("location", location)
                           .add("requirement", requirement)
                           .add("typeSignature", typeSignature)
-                          .add("childFieldInfos", childFieldInfos)
-                          .add("docString", docString)
+                          .add("descriptionInfo", descriptionInfo)
                           .toString();
     }
 }

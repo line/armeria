@@ -204,7 +204,7 @@ public final class ArmeriaHttpUtil {
     }
 
     static final Set<AsciiString> ADDITIONAL_REQUEST_HEADER_DISALLOWED_LIST = ImmutableSet.of(
-            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD, HttpHeaderNames.AUTHORITY);
+            HttpHeaderNames.SCHEME, HttpHeaderNames.STATUS, HttpHeaderNames.METHOD);
 
     private static final Set<AsciiString> REQUEST_PSEUDO_HEADERS = ImmutableSet.of(
             HttpHeaderNames.METHOD, HttpHeaderNames.SCHEME, HttpHeaderNames.AUTHORITY,
@@ -1076,6 +1076,32 @@ public final class ArmeriaHttpUtil {
     public static boolean isRequestTimeoutResponse(HttpResponse httpResponse) {
         return httpResponse.status().code() == HttpResponseStatus.REQUEST_TIMEOUT.code() &&
                "close".equalsIgnoreCase(httpResponse.headers().get(HttpHeaderNames.CONNECTION));
+    }
+
+    /**
+     * Copies header value pairs of the specified {@linkplain HttpHeaders Armeria headers} to the
+     * {@link TriConsumer} excluding HTTP/2 pseudo headers that starts with ':'. This also converts
+     * {@link HttpHeaderNames#AUTHORITY} header to {@link HttpHeaderNames#HOST} header if
+     * the {@linkplain HttpHeaders Armeria headers} does not have one.
+     */
+    public static <T> void toHttp1Headers(HttpHeaders armeriaHeaders, T output,
+                                          TriConsumer<T, AsciiString, String> writer) {
+        for (Entry<AsciiString, String> e : armeriaHeaders) {
+            final AsciiString k = e.getKey();
+            final String v = e.getValue();
+            if (k.charAt(0) != ':') {
+                writer.accept(output, k, v);
+            } else if (HttpHeaderNames.AUTHORITY.equals(k) && !armeriaHeaders.contains(HttpHeaderNames.HOST)) {
+                // Convert `:authority` to `host`.
+                writer.accept(output, HttpHeaderNames.HOST, v);
+            }
+        }
+    }
+
+    // TODO(minwoox): Will provide this interface to public API
+    @FunctionalInterface
+    public interface TriConsumer<T, U, V> {
+        void accept(T t, U u, V v);
     }
 
     private ArmeriaHttpUtil() {}

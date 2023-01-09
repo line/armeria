@@ -43,6 +43,9 @@ import org.apache.http.protocol.HTTP;
 import org.apache.http.util.EntityUtils;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.reactivestreams.Publisher;
 
 import com.google.common.collect.ImmutableList;
 
@@ -75,6 +78,7 @@ import com.linecorp.armeria.server.TestConverters.TypedStringConverterFunction;
 import com.linecorp.armeria.server.TestConverters.UnformattedStringConverterFunction;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Default;
+import com.linecorp.armeria.server.annotation.Delimiter;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.server.annotation.Header;
 import com.linecorp.armeria.server.annotation.Order;
@@ -82,10 +86,14 @@ import com.linecorp.armeria.server.annotation.Param;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.Post;
 import com.linecorp.armeria.server.annotation.Produces;
+import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
+import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+
+import reactor.core.publisher.Mono;
 
 class AnnotatedServiceTest {
 
@@ -136,6 +144,21 @@ class AnnotatedServiceTest {
 
             sb.annotatedService("/13", new MyAnnotatedService13(),
                                 LoggingService.newDecorator());
+
+            sb.annotatedService("/14", new MyAnnotatedService14(),
+                                LoggingService.newDecorator());
+
+            sb.annotatedService()
+              .pathPrefix("/15")
+              .queryDelimiter(",")
+              .decorator(LoggingService.newDecorator())
+              .build(new MyAnnotatedService14());
+
+            sb.annotatedService()
+              .pathPrefix("/16")
+              .queryDelimiter(":")
+              .decorator(LoggingService.newDecorator())
+              .build(new MyAnnotatedService14());
         }
     };
 
@@ -235,6 +258,60 @@ class AnnotatedServiceTest {
         @Get("/void/200")
         @ResponseConverter(VoidTo200ResponseConverter.class)
         public void void200() {}
+
+        @Get("/void/produces/204")
+        @ProducesJson
+        public void voidProduces204() {}
+
+        @Get("/void/json/204")
+        @StatusCode(204)
+        public void voidJson204() {}
+
+        @Get("/voidPublisher/204")
+        public Publisher<Void> voidPublisher204() {
+            return Mono.empty();
+        }
+
+        @Get("/voidPublisher/200")
+        @ResponseConverter(VoidTo200ResponseConverter.class)
+        public Publisher<Void> voidPublisher200() {
+            return Mono.empty();
+        }
+
+        @Get("/voidPublisher/produces/204")
+        @ProducesJson
+        public Publisher<Void> voidPublisherProduces204() {
+            return Mono.empty();
+        }
+
+        @Get("/voidPublisher/json/204")
+        @StatusCode(204)
+        public Publisher<Void> voidPublisherJson204() {
+            return Mono.empty();
+        }
+
+        @Get("/voidFuture/204")
+        public CompletionStage<Void> voidFuture204() {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+
+        @Get("/voidFuture/200")
+        @ResponseConverter(VoidTo200ResponseConverter.class)
+        public CompletionStage<Void> voidFuture200() {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+
+        @Get("/voidFuture/produces/204")
+        @ProducesJson
+        public CompletionStage<Void> voidFutureProduces204() {
+            return UnmodifiableFuture.completedFuture(null);
+        }
+
+        @Get("/voidFuture/json/204")
+        @StatusCode(204)
+        public CompletionStage<Void> voidFutureJson204() {
+            return UnmodifiableFuture.completedFuture(null);
+        }
     }
 
     static class VoidTo200ResponseConverter implements ResponseConverterFunction {
@@ -735,6 +812,23 @@ class AnnotatedServiceTest {
         }
     }
 
+    @ResponseConverter(UnformattedStringConverterFunction.class)
+    public static class MyAnnotatedService14 {
+
+        @Get("/param/multi")
+        public String multiParams(RequestContext ctx, @Param("params") List<String> params) {
+            validateContext(ctx);
+            return String.join("/", params);
+        }
+
+        @Get("/param/multiWithDelimiter")
+        public String multiParamsWithDelimiter(RequestContext ctx,
+                                               @Param("params") @Delimiter("$") List<String> params) {
+            validateContext(ctx);
+            return String.join("/", params);
+        }
+    }
+
     @Test
     void testAnnotatedService() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -1043,11 +1137,15 @@ class AnnotatedServiceTest {
         }
     }
 
-    @Test
-    void testReturnVoid() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = { "void", "voidPublisher", "voidFuture" })
+    void testReturnVoid(String returnType) throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
-            testStatusCode(hc, get("/1/void/204"), 204);
-            testBodyAndContentType(hc, get("/1/void/200"), "200 OK", MediaType.PLAIN_TEXT_UTF_8.toString());
+            testStatusCode(hc, get("/1/" + returnType + "/204"), 204);
+            testBodyAndContentType(hc, get("/1/" + returnType + "/200"),
+                                   "200 OK", MediaType.PLAIN_TEXT_UTF_8.toString());
+            testStatusCode(hc, get("/1/" + returnType + "/produces/204"), 204);
+            testStatusCode(hc, get("/1/" + returnType + "/json/204"), 204);
         }
     }
 
@@ -1087,6 +1185,48 @@ class AnnotatedServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             testBody(hc, get("/13/wildcard1?param=Hello&param=World"), "Hello:World");
             testBody(hc, get("/13/wildcard2?param=Hello&param=World"), "Hello:World");
+        }
+    }
+
+    @Test
+    void testMultiParams() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            testBody(hc, get("/14/param/multi?params=a&params=b&params=c"), "a/b/c");
+            testBody(hc, get("/15/param/multi?params=a&params=b&params=c"), "a/b/c");
+            testBody(hc, get("/16/param/multi?params=a&params=b&params=c"), "a/b/c");
+
+            testBody(hc, get("/14/param/multi?params=a,b,c"), "a,b,c");
+            testBody(hc, get("/15/param/multi?params=a,b,c"), "a/b/c");
+            testBody(hc, get("/16/param/multi?params=a:b:c"), "a/b/c");
+
+            testBody(hc, get("/14/param/multi?params=a"), "a");
+            testBody(hc, get("/15/param/multi?params=a"), "a");
+            testBody(hc, get("/16/param/multi?params=a"), "a");
+
+            testBody(hc, get("/14/param/multi?params=a,b,c&params=d,e,f"), "a,b,c/d,e,f");
+            testBody(hc, get("/15/param/multi?params=a,b,c&params=d,e,f"), "a,b,c/d,e,f");
+            testBody(hc, get("/16/param/multi?params=a:b:c&params=d:e:f"), "a:b:c/d:e:f");
+        }
+    }
+
+    @Test
+    void testMultiParamsWithDelimiter() throws Exception {
+        try (CloseableHttpClient hc = HttpClients.createMinimal()) {
+            testBody(hc, get("/14/param/multiWithDelimiter?params=a&params=b&params=c"), "a/b/c");
+            testBody(hc, get("/15/param/multiWithDelimiter?params=a&params=b&params=c"), "a/b/c");
+
+            testBody(hc, get("/14/param/multiWithDelimiter?params=a,b,c"), "a,b,c");
+            testBody(hc, get("/14/param/multiWithDelimiter?params=a$b$c"), "a/b/c");
+            testBody(hc, get("/15/param/multiWithDelimiter?params=a,b,c"), "a,b,c");
+            testBody(hc, get("/15/param/multiWithDelimiter?params=a$b$c"), "a/b/c");
+
+            testBody(hc, get("/14/param/multiWithDelimiter?params=a"), "a");
+            testBody(hc, get("/15/param/multiWithDelimiter?params=a"), "a");
+
+            testBody(hc, get("/14/param/multiWithDelimiter?params=a,b,c&params=d,e,f"), "a,b,c/d,e,f");
+            testBody(hc, get("/14/param/multiWithDelimiter?params=a$b$c&params=d$e$f"), "a$b$c/d$e$f");
+            testBody(hc, get("/15/param/multiWithDelimiter?params=a,b,c&params=d,e,f"), "a,b,c/d,e,f");
+            testBody(hc, get("/15/param/multiWithDelimiter?params=a$b$c&params=d$e$f"), "a$b$c/d$e$f");
         }
     }
 

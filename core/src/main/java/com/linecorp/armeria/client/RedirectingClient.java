@@ -38,6 +38,8 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.client.redirect.TooManyRedirectsException;
 import com.linecorp.armeria.client.redirect.UnexpectedDomainRedirectException;
 import com.linecorp.armeria.client.redirect.UnexpectedProtocolRedirectException;
+import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -53,6 +55,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.internal.client.AggregatedHttpRequestDuplicator;
 import com.linecorp.armeria.internal.client.ClientUtil;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
@@ -131,9 +134,22 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
     public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) throws Exception {
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
         final HttpResponse res = HttpResponse.from(responseFuture, ctx.eventLoop());
-        final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
         final RedirectContext redirectCtx = new RedirectContext(ctx, req, res, responseFuture);
-        execute0(ctx, redirectCtx, reqDuplicator, true);
+        if (ctx.exchangeType().isRequestStreaming()) {
+            final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
+            execute0(ctx, redirectCtx, reqDuplicator, true);
+        } else {
+            req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
+               .handle((agg, cause) -> {
+                   if (cause != null) {
+                       handleException(ctx, null, responseFuture, cause, true);
+                   } else {
+                       final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
+                       execute0(ctx, redirectCtx, reqDuplicator, true);
+                   }
+                   return null;
+               });
+        }
         return res;
     }
 
@@ -221,7 +237,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             }
 
             final HttpRequestDuplicator newReqDuplicator =
-                    newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders, redirectUri.toString());
+                    newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders, redirectUri);
 
             final String redirectFullUri;
             try {
@@ -253,9 +269,15 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
     private static HttpRequestDuplicator newReqDuplicator(HttpRequestDuplicator reqDuplicator,
                                                           ResponseHeaders responseHeaders,
-                                                          RequestHeaders requestHeaders, String newUriString) {
+                                                          RequestHeaders requestHeaders, URI newUri) {
         final RequestHeadersBuilder builder = requestHeaders.toBuilder();
-        builder.path(newUriString);
+        builder.path(newUri.toString());
+        final String newAuthority = newUri.getAuthority();
+        if (newAuthority != null) {
+            // Update the old authority with the new one because the request is redirected to a different
+            // domain.
+            builder.authority(newAuthority);
+        }
         final HttpMethod method = requestHeaders.method();
         if (responseHeaders.status() == HttpStatus.SEE_OTHER &&
             !(method == HttpMethod.GET || method == HttpMethod.HEAD)) {
@@ -265,7 +287,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             builder.method(HttpMethod.GET);
             reqDuplicator.abort();
             // TODO(minwoox): implement https://github.com/line/armeria/issues/1409
-            return HttpRequest.of(builder.build()).toDuplicator();
+            return new AggregatedHttpRequestDuplicator(AggregatedHttpRequest.of(builder.build()));
         } else {
             return new HttpRequestDuplicatorWrapper(reqDuplicator, builder.build());
         }
@@ -287,11 +309,13 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
         handleException(ctx, reqDuplicator, future, cause, false);
     }
 
-    private static void handleException(ClientRequestContext ctx, HttpRequestDuplicator reqDuplicator,
+    private static void handleException(ClientRequestContext ctx, @Nullable HttpRequestDuplicator reqDuplicator,
                                         CompletableFuture<HttpResponse> future, Throwable cause,
                                         boolean initialAttempt) {
         future.completeExceptionally(cause);
-        reqDuplicator.abort(cause);
+        if (reqDuplicator != null) {
+            reqDuplicator.abort(cause);
+        }
         if (initialAttempt) {
             ctx.logBuilder().endRequest(cause);
         }

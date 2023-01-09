@@ -56,7 +56,7 @@ configure(projectsWithFlags('java')) {
                     }
                     if (project.ext.hasFlag('kotlin-grpc')) {
                         kotlinGrpc {
-                            artifact = "io.grpc:protoc-gen-grpc-kotlin:${managedVersions['io.grpc:protoc-gen-grpc-kotlin']}:jdk7@jar"
+                            artifact = "io.grpc:protoc-gen-grpc-kotlin:${managedVersions['io.grpc:protoc-gen-grpc-kotlin']}:jdk8@jar"
                         }
                     }
 
@@ -112,11 +112,6 @@ configure(projectsWithFlags('java')) {
                     }
                 }
             }
-        }
-
-        // Add the generated 'grpc' directories to the source sets.
-        project.sourceSets.all { sourceSet ->
-            sourceSet.java.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/grpc")
         }
 
         // Make sure protoc runs before the resources are copied so that .dsc files are included.

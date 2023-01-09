@@ -45,7 +45,7 @@ import com.google.common.primitives.Bytes;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.internal.common.stream.ByteBufDecoderInput;
+import com.linecorp.armeria.internal.common.stream.ByteBufsDecoderInput;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.Unpooled;
@@ -71,23 +71,6 @@ class MimeParserTest {
 
         final AggregatedBodyPart part1 = parts.get(0);
         assertThat(part1.headers().get("Content-Id")).isEqualTo("part1");
-        assertThat(part1.contentUtf8()).isEqualTo("1");
-    }
-
-    @Test
-    void testNoPreambule() {
-        final String boundary = "boundary";
-        final byte[] chunk1 = ("--" + boundary +
-                               "Content-Id: part1\n" +
-                               '\n' +
-                               "1\n" +
-                               "--" + boundary + "--").getBytes();
-
-        final List<AggregatedBodyPart> parts = parse("boundary", chunk1);
-        assertThat(parts).hasSize(1);
-
-        final AggregatedBodyPart part1 = parts.get(0);
-        assertThat(part1.headers().get('-' + boundary + "Content-Id")).isEqualTo("part1");
         assertThat(part1.contentUtf8()).isEqualTo("1");
     }
 
@@ -133,6 +116,44 @@ class MimeParserTest {
         final AggregatedBodyPart part2 = parts.get(1);
         assertThat(part2.headers().get("Content-Id")).isEqualTo("part2");
         assertThat(part2.contentUtf8()).isEqualTo("2");
+    }
+
+    @Test
+    void ignoreAfterClosingBoundary() {
+        final String boundary = "boundary";
+        final byte[] chunk1 = ("--" + boundary + "--foobarbaz").getBytes();
+
+        List<AggregatedBodyPart> parts = parse("boundary", chunk1);
+        assertThat(parts).isEmpty();
+
+        final byte[] chunk2 = ("--" + boundary + '-').getBytes();
+        final byte[] chunk3 = ("--" + boundary + "-foobarbaz").getBytes();
+        parts = parse("boundary", ImmutableList.of(chunk2, chunk3));
+        assertThat(parts).isEmpty();
+    }
+
+    @Test
+    void invalidBoundary() {
+        final String boundary = "boundary";
+        final byte[] data1 = ("--" + boundary + "foo").getBytes();
+        assertThatThrownBy(() -> parse("boundary", data1))
+                .isInstanceOf(MimeParsingException.class)
+                .hasMessage("Invalid boundary: --boundaryf");
+
+        final byte[] data2 = ("--" + boundary + "\rfoo\n").getBytes();
+        assertThatThrownBy(() -> parse("boundary", data2))
+                .isInstanceOf(MimeParsingException.class)
+                .hasMessage("Invalid boundary: --boundary\rf");
+
+        final byte[] data3 = ("--" + boundary + "-foo-").getBytes();
+        assertThatThrownBy(() -> parse("boundary", data3))
+                .isInstanceOf(MimeParsingException.class)
+                .hasMessage("Invalid boundary: --boundary-f");
+
+        final byte[] data4 = ("--" + boundary + " --").getBytes();
+        assertThatThrownBy(() -> parse("boundary", data4))
+                .isInstanceOf(MimeParsingException.class)
+                .hasMessage("Invalid boundary: --boundary -");
     }
 
     @Test
@@ -606,6 +627,23 @@ class MimeParserTest {
     }
 
     @Test
+    void testBodyIsEmpty() {
+        final String boundary = "boundary";
+        final byte[] chunk1 = ("--" + boundary + '\n' +
+                               "Content-Id:    \t  \t\t \n" +
+                               '\n' +
+                               "--" + boundary + "--").getBytes();
+        final List<AggregatedBodyPart> parts = parse(boundary, chunk1);
+        assertThat(parts).hasSize(1);
+
+        final AggregatedBodyPart part1 = parts.get(0);
+        assertThat(part1.headers()).hasSize(2);
+        assertThat(part1.headers().get("Content-Id")).isEqualTo("");
+        assertThat(part1.headers().contentType()).isEqualTo(MediaType.PLAIN_TEXT);
+        assertThat(part1.contentUtf8()).isEmpty();
+    }
+
+    @Test
     void testParserClosed() {
         assertThatThrownBy(() -> {
             final MimeParser parser = new MimeParser(null, null, "boundary", null);
@@ -654,7 +692,7 @@ class MimeParserTest {
      * @return test parser event processor
      */
     private static List<AggregatedBodyPart> parse(String boundary, List<byte[]> data) {
-        final ByteBufDecoderInput input = new ByteBufDecoderInput(ByteBufAllocator.DEFAULT);
+        final ByteBufsDecoderInput input = new ByteBufsDecoderInput(ByteBufAllocator.DEFAULT);
         final List<BodyPart> output = new ArrayList<>();
         final MimeParser parser = new MimeParser(input, output::add, boundary,
                                                  // Use onBodyPartBegin and requestUpstreamForBodyPartData

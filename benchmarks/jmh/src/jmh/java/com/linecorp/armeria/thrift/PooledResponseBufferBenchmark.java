@@ -26,7 +26,7 @@ import org.reactivestreams.Subscription;
 
 import com.google.common.base.Strings;
 
-import com.linecorp.armeria.client.Clients;
+import com.linecorp.armeria.client.thrift.ThriftClients;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
@@ -147,10 +147,10 @@ public class PooledResponseBufferBenchmark {
         server.start().join();
 
         final int httpPort = server.activeLocalPort(SessionProtocol.HTTP);
-        pooledClient = Clients.newClient("tbinary+http://127.0.0.1:" + httpPort + "/a",
-                                         HelloService.Iface.class);
-        unpooledClient = Clients.newClient("tbinary+http://127.0.0.1:" + httpPort + "/b",
-                                           HelloService.Iface.class);
+        pooledClient = ThriftClients.newClient("http://127.0.0.1:" + httpPort + "/a",
+                                               HelloService.Iface.class);
+        unpooledClient = ThriftClients.newClient("http://127.0.0.1:" + httpPort + "/b",
+                                                 HelloService.Iface.class);
     }
 
     @TearDown

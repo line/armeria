@@ -15,13 +15,15 @@
  */
 package com.linecorp.armeria.internal.server.rxjava2;
 
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
+
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.server.annotation.DelegatingResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
-import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 import com.linecorp.armeria.server.rxjava2.ObservableResponseConverterFunction;
 
 import io.reactivex.Completable;
@@ -33,7 +35,8 @@ import io.reactivex.Single;
  * Provides an {@link ObservableResponseConverterFunction} to annotated services.
  */
 @UnstableApi
-public final class ObservableResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
+public final class ObservableResponseConverterFunctionProvider
+        implements DelegatingResponseConverterFunctionProvider {
 
     @Nullable
     @Override
@@ -72,20 +75,6 @@ public final class ObservableResponseConverterFunctionProvider implements Respon
                Maybe.class.isAssignableFrom(clazz) ||
                Single.class.isAssignableFrom(clazz) ||
                Completable.class.isAssignableFrom(clazz);
-    }
-
-    /**
-     * Converts the specified {@link Type} to a {@link Class} instance.
-     */
-    @Nullable
-    private static Class<?> typeToClass(Type type) {
-        if (type instanceof Class) {
-            return (Class<?>) type;
-        }
-        if (type instanceof ParameterizedType) {
-            return (Class<?>) ((ParameterizedType) type).getRawType();
-        }
-        return null;
     }
 
     @Override

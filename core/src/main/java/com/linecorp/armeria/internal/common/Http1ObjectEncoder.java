@@ -28,7 +28,6 @@ import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
-import com.linecorp.armeria.common.stream.ClosedStreamException;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -40,6 +39,8 @@ import io.netty.handler.codec.http.DefaultHttpContent;
 import io.netty.handler.codec.http.DefaultLastHttpContent;
 import io.netty.handler.codec.http.HttpContent;
 import io.netty.handler.codec.http.HttpObject;
+import io.netty.handler.codec.http.HttpResponse;
+import io.netty.handler.codec.http.HttpStatusClass;
 import io.netty.handler.codec.http.LastHttpContent;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.util.ReferenceCountUtil;
@@ -92,6 +93,11 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
     private int maxIdWithPendingWrites = Integer.MIN_VALUE;
 
     /**
+     * The ID of the last request whose response headers is written.
+     */
+    private int lastResponseHeadersId;
+
+    /**
      * The map which maps a request ID to its related pending response.
      */
     private final IntObjectMap<PendingWrites> pendingWritesMap = new IntObjectHashMap<>();
@@ -106,14 +112,14 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         return ch;
     }
 
-    protected final ChannelFuture writeNonInformationalHeaders(int id, HttpObject converted,
-                                                               boolean endStream) {
+    protected final ChannelFuture writeNonInformationalHeaders(
+            int id, HttpObject converted, boolean endStream, ChannelPromise promise) {
         ChannelFuture f;
         if (converted instanceof LastHttpContent) {
             assert endStream;
-            f = write(id, converted, true);
+            f = write(id, converted, true, promise);
         } else {
-            f = write(id, converted, false);
+            f = write(id, converted, false, promise);
             if (endStream) {
                 final ChannelFuture lastFuture = write(id, LastHttpContent.EMPTY_LAST_CONTENT, true);
                 if (Flags.verboseExceptionSampler().isSampled(Http1VerboseWriteException.class)) {
@@ -243,11 +249,16 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
     }
 
     protected final ChannelFuture write(int id, HttpObject obj, boolean endStream) {
+        return write(id, obj, endStream, ch.newPromise());
+    }
+
+    final ChannelFuture write(int id, HttpObject obj, boolean endStream, ChannelPromise promise) {
         if (id < currentId) {
             // Attempted to write something on a finished request/response; discard.
             // e.g. the request already timed out.
             ReferenceCountUtil.release(obj);
-            return newFailedFuture(ClosedStreamException.get());
+            promise.setFailure(ClosedSessionException.get());
+            return promise;
         }
 
         final PendingWrites currentPendingWrites = pendingWritesMap.get(id);
@@ -257,7 +268,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 flushPendingWrites(currentPendingWrites);
             }
 
-            final ChannelFuture future = ch.write(obj);
+            final ChannelFuture future = write(obj, promise);
             if (!isPing(id)) {
                 keepAliveHandler().onReadOrWrite();
             }
@@ -283,7 +294,6 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
             return future;
         } else {
-            final ChannelPromise promise = ch.newPromise();
             final Entry<HttpObject, ChannelPromise> entry = new SimpleImmutableEntry<>(obj, promise);
             final PendingWrites pendingWrites;
             if (currentPendingWrites == null) {
@@ -304,6 +314,25 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
         }
     }
 
+    private ChannelFuture write(HttpObject obj, ChannelPromise promise) {
+        // Use FQCN for Netty HttpResponse to avoid confusion with Armeria HttpResponse
+        // We check if obj is an HttpResponse here because server-side writes both headers
+        // and errors as an HttpResponse.
+        //noinspection UnnecessaryFullyQualifiedName
+        if (obj instanceof io.netty.handler.codec.http.HttpResponse) {
+            if (lastResponseHeadersId >= currentId) {
+                // Response headers were written already. This may occur Http1RequestDecoder sends an error
+                // response while HttpResponseSubscriber writes a response headers and then waits for bodies.
+                ReferenceCountUtil.release(obj);
+                return writeReset(currentId, 1, Http2Error.PROTOCOL_ERROR);
+            } else if (((HttpResponse) obj).status().codeClass() != HttpStatusClass.INFORMATIONAL) {
+                lastResponseHeadersId = currentId;
+            }
+        }
+
+        return ch.write(obj, promise);
+    }
+
     private void flushPendingWrites(PendingWrites pendingWrites) {
         for (;;) {
             final Entry<HttpObject, ChannelPromise> e = pendingWrites.poll();
@@ -311,7 +340,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
                 break;
             }
 
-            ch.write(e.getKey(), e.getValue());
+            write(e.getKey(), e.getValue());
         }
     }
 
@@ -347,7 +376,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
         if (minClosedId <= maxIdWithPendingWrites) {
             final ClosedSessionException cause =
-                    new ClosedSessionException("An HTTP/1 stream has been reset: " + error);
+                    new ClosedSessionException("An HTTP/1 connection has been reset: " + error);
             for (int i = minClosedId; i <= maxIdWithPendingWrites; i++) {
                 final PendingWrites pendingWrites = pendingWritesMap.remove(i);
                 for (;;) {
@@ -413,7 +442,11 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
 
     @Override
     public final boolean isClosed() {
-        return closed;
+        return closed || !channel().isActive();
+    }
+
+    protected final int lastResponseHeadersId() {
+        return lastResponseHeadersId;
     }
 
     private static final class PendingWrites extends ArrayDeque<Entry<HttpObject, ChannelPromise>> {

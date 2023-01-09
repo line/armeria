@@ -28,7 +28,6 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
-import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -51,8 +50,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     private boolean shouldSendConnectionCloseHeader;
     private boolean sentConnectionCloseHeader;
-
-    private int lastResponseHeadersId;
 
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, KeepAliveHandler keepAliveHandler,
                              boolean enableDateHeader, boolean enableServerHeader,
@@ -86,13 +83,12 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         if (headers.status().isInformational()) {
             return write(id, converted, false);
         }
-        lastResponseHeadersId = id;
 
         if (shouldSendConnectionCloseHeader || keepAliveHandler.needToCloseConnection()) {
             converted.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
             sentConnectionCloseHeader = true;
         }
-        return writeNonInformationalHeaders(id, converted, endStream);
+        return writeNonInformationalHeaders(id, converted, endStream, channel().newPromise());
     }
 
     private HttpResponse convertHeaders(ResponseHeaders headers, boolean endStream, boolean isTrailersEmpty) {
@@ -109,12 +105,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             convertHeaders(headers, outHeaders, isTrailersEmpty);
 
             if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
-                if (statusCode == 304) {
-                    // 304 response can have the "content-length" header when it is a response to a conditional
-                    // GET request. See https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
-                } else {
-                    outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
-                }
+                maybeRemoveContentLength(statusCode, outHeaders);
             } else if (!headers.contains(HttpHeaderNames.CONTENT_LENGTH)) {
                 // NB: Set the 'content-length' only when not set rather than always setting to 0.
                 //     It's because a response to a HEAD request can have empty content while having
@@ -126,7 +117,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         } else {
             res = new DefaultHttpResponse(HttpVersion.HTTP_1_1, nettyStatus, false);
             convertHeaders(headers, res.headers(), isTrailersEmpty);
-            maybeSetTransferEncoding(res);
+            maybeSetTransferEncoding(res, statusCode);
         }
 
         return res;
@@ -142,23 +133,29 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             // force chunked encoding.
             outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
         }
+    }
 
-        if (enableServerHeader && !outHeaders.contains(HttpHeaderNames.SERVER)) {
-            outHeaders.add(HttpHeaderNames.SERVER, ArmeriaHttpUtil.SERVER_HEADER);
-        }
-
-        if (enableDateHeader && !outHeaders.contains(HttpHeaderNames.DATE)) {
-            outHeaders.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
+    private static void maybeRemoveContentLength(int statusCode,
+                                                 io.netty.handler.codec.http.HttpHeaders outHeaders) {
+        if (statusCode == 304) {
+            // 304 response can have the "content-length" header when it is a response to a conditional
+            // GET request. See https://datatracker.ietf.org/doc/html/rfc7230#section-3.3.2
+        } else {
+            outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
         }
     }
 
-    private static void maybeSetTransferEncoding(HttpMessage out) {
+    private static void maybeSetTransferEncoding(HttpMessage out, int statusCode) {
         final io.netty.handler.codec.http.HttpHeaders outHeaders = out.headers();
-        final long contentLength = HttpUtil.getContentLength(out, -1L);
-        if (contentLength < 0) {
-            // Use chunked encoding.
-            outHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
-            outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+        if (HttpStatus.isContentAlwaysEmpty(statusCode)) {
+            maybeRemoveContentLength(statusCode, outHeaders);
+        } else {
+            final long contentLength = HttpUtil.getContentLength(out, -1L);
+            if (contentLength < 0) {
+                // Use chunked encoding.
+                outHeaders.set(HttpHeaderNames.TRANSFER_ENCODING, HttpHeaderValues.CHUNKED);
+                outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
+            }
         }
     }
 
@@ -179,7 +176,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     @Override
     public boolean isResponseHeadersSent(int id, int streamId) {
-        return id <= lastResponseHeadersId;
+        return id <= lastResponseHeadersId();
     }
 
     @Override

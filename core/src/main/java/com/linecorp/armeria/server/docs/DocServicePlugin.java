@@ -53,8 +53,11 @@ public interface DocServicePlugin {
      *                       {@link #supportedServiceTypes()}
      * @param filter the {@link DocServiceFilter} that checks whether a method will be included while
      *               building {@link DocService}
+     * @param descriptiveTypeInfoProvider the {@link DescriptiveTypeInfoProvider} to create a
+     *                                    {@link DescriptiveTypeInfo} from a type descriptor.
      */
-    ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs, DocServiceFilter filter);
+    ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs, DocServiceFilter filter,
+                                               DescriptiveTypeInfoProvider descriptiveTypeInfoProvider);
 
     // Methods related with extracting documentation strings.
     // TODO(trustin): Define the docstring format.
@@ -62,7 +65,8 @@ public interface DocServicePlugin {
     // TODO(trustin): How do we specify the docstring of a method return value?
 
     /**
-     * Loads the documentation strings that describes services and their methods, enums and their values and
+     * Loads the {@link DescriptionInfo} that describes services and their methods, enums and their values and
+     * that describes services and their methods, enums and their values and
      * structs/exceptions and their fields. The {@link Map} returned by this method will contain the
      * documentation strings identified by the key strings that conforms to one of the following formats:
      * <ul>
@@ -75,7 +79,7 @@ public interface DocServicePlugin {
      *       an exception</li>
      * </ul>
      */
-    default Map<String, String> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
+    default Map<String, DescriptionInfo> loadDocStrings(Set<ServiceConfig> serviceConfigs) {
         return ImmutableMap.of();
     }
 

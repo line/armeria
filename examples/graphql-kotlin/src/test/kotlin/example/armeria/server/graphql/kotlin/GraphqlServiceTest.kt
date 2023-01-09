@@ -26,16 +26,17 @@ class GraphqlServiceTest {
 
         private fun client(): GraphqlArmeriaClient {
             return GraphqlArmeriaClient(
-                    uri = server.httpUri().resolve("/graphql"),
-                    serializer = GraphQLClientJacksonSerializer())
+                uri = server.httpUri().resolve("/graphql"),
+                serializer = GraphQLClientJacksonSerializer()
+            )
         }
     }
 
     @ParameterizedTest
     @CsvSource(
-            "1,hero",
-            "2,human",
-            "3,droid"
+        "1,hero",
+        "2,human",
+        "3,droid"
     )
     fun testUserDataFetch(id: String, expected: String) {
         runBlocking {

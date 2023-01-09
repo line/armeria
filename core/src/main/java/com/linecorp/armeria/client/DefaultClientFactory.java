@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseableSupport;
 import com.linecorp.armeria.common.util.ReleasableHolder;
+import com.linecorp.armeria.common.util.ShutdownHooks;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.EventLoop;
@@ -99,12 +100,14 @@ final class DefaultClientFactory implements ClientFactory {
         this.httpClientFactory = httpClientFactory;
 
         final List<ClientFactory> availableClientFactories = new ArrayList<>();
-        availableClientFactories.add(httpClientFactory);
 
+        // Give priority to custom client factories.
         Streams.stream(ServiceLoader.load(ClientFactoryProvider.class,
                                           DefaultClientFactory.class.getClassLoader()))
                .map(provider -> provider.newFactory(httpClientFactory))
                .forEach(availableClientFactories::add);
+
+        availableClientFactories.add(httpClientFactory);
 
         final ImmutableListMultimap.Builder<Scheme, ClientFactory> builder = ImmutableListMultimap.builder();
         for (ClientFactory f : availableClientFactories) {
@@ -268,6 +271,12 @@ final class DefaultClientFactory implements ClientFactory {
             return;
         }
         closeable.close();
+    }
+
+    @Override
+    public CompletableFuture<Void> closeOnJvmShutdown(Runnable whenClosing) {
+        requireNonNull(whenClosing, "whenClosing");
+        return ShutdownHooks.addClosingTask(this, whenClosing);
     }
 
     private boolean checkDefault() {

@@ -42,6 +42,8 @@ import org.reactivestreams.Subscription;
 import com.aayushatharva.brotli4j.decoder.BrotliInputStream;
 import com.google.common.io.ByteStreams;
 
+import com.linecorp.armeria.client.ClientRequestContextCaptor;
+import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.encoding.DecodingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -85,6 +87,11 @@ class ContentPreviewingServiceTest {
                 assertThat(ctx).isNotNull();
                 assertThat(content).isNotNull();
                 return "dummy content sanitizer";
+            };
+
+    private static final BiFunction<? super RequestContext, String, ?> FAILING_CONTENT_SANITIZER =
+            (ctx, content) -> {
+                throw new RuntimeException();
             };
 
     @RegisterExtension
@@ -133,14 +140,26 @@ class ContentPreviewingServiceTest {
 
             sb.service("/deferred", httpService);
             sb.decorator("/deferred", ContentPreviewingService.newDecorator(100));
-            sb.decorator("/deferred", ((delegate, ctx, req) -> HttpResponse.from(
+            sb.decorator("/deferred", (delegate, ctx, req) -> HttpResponse.from(
                     completedFuture(null).handleAsync((ignored, cause) -> {
                         try {
                             return delegate.serve(ctx, req);
                         } catch (Exception e) {
                             return Exceptions.throwUnsafely(e);
                         }
-                    }, ctx.eventLoop()))));
+                    }, ctx.eventLoop())));
+
+            sb.service("/failingRequestPreviewSanitizer", httpService);
+            sb.decorator("/failingRequestPreviewSanitizer",
+                         ContentPreviewingService.builder(ContentPreviewerFactory.text(100))
+                                                 .requestPreviewSanitizer(FAILING_CONTENT_SANITIZER)
+                                                 .newDecorator());
+
+            sb.service("/failingResponsePreviewSanitizer", httpService);
+            sb.decorator("/failingResponsePreviewSanitizer",
+                         ContentPreviewingService.builder(ContentPreviewerFactory.text(100))
+                                                 .responsePreviewSanitizer(FAILING_CONTENT_SANITIZER)
+                                                 .newDecorator());
 
             sb.decoratorUnder("/", (delegate, ctx, req) -> {
                 contextCaptor.set(ctx);
@@ -209,10 +228,13 @@ class ContentPreviewingServiceTest {
                                           .build();
         final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/encoded",
                                                          HttpHeaderNames.CONTENT_TYPE, "text/plain");
-        final AggregatedHttpResponse res = client.execute(headers, "Armeria").aggregate().join();
-        assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
-        assertThat(res.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo(
-                Brotli.isAvailable() ? "br" : "gzip");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final AggregatedHttpResponse res = client.execute(headers, "Armeria").aggregate().join();
+            assertThat(res.contentUtf8()).isEqualTo("Hello Armeria!");
+            final RequestLog requestLog = captor.get().log().whenComplete().join();
+            assertThat(requestLog.responseHeaders().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo(
+                    Brotli.isAvailable() ? "br" : "gzip");
+        }
 
         final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
         assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
@@ -308,6 +330,30 @@ class ContentPreviewingServiceTest {
         final RequestLog log = ctx.log().whenComplete().join();
         assertThat(log.requestContentPreview()).isEqualTo("Armeria");
         assertThat(log.responseContentPreview()).isEqualTo("Hello Armeria!");
+    }
+
+    @Test
+    void failingRequestContentSanitizer() {
+        final WebClient client = WebClient.of(server.httpUri());
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/failingRequestPreviewSanitizer",
+                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+        assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
+                .isEqualTo("Hello Armeria!");
+        final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
+        assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
+        assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
+    }
+
+    @Test
+    void failingResponseContentSanitizer() {
+        final WebClient client = WebClient.of(server.httpUri());
+        final RequestHeaders headers = RequestHeaders.of(HttpMethod.POST, "/failingResponsePreviewSanitizer",
+                                                         HttpHeaderNames.CONTENT_TYPE, "text/plain");
+        assertThat(client.execute(headers, "Armeria").aggregate().join().contentUtf8())
+                .isEqualTo("Hello Armeria!");
+        final RequestLog requestLog = contextCaptor.get().log().whenComplete().join();
+        assertThat(requestLog.requestContentPreview()).isEqualTo("Armeria");
+        assertThat(requestLog.responseContentPreview()).isEqualTo("Hello Armeria!");
     }
 
     private static ContentPreviewer contentPreviewer() {

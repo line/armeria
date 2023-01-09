@@ -25,6 +25,7 @@ import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
@@ -32,6 +33,7 @@ import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.Unwrappable;
+import com.linecorp.armeria.internal.client.ClientThreadLocalState;
 
 /**
  * Creates a new client that connects to a specified {@link URI}.
@@ -302,7 +304,7 @@ public final class Clients {
     public static <T> T newDerivedClient(
             T client, Function<? super ClientOptions, ClientOptions> configurator) {
         final ClientBuilderParams params = builderParams(client);
-        final ClientBuilder builder = builder(params.uri());
+        final ClientBuilder builder = newDerivedBuilder(params);
         builder.options(configurator.apply(params.options()));
 
         return newDerivedClient(builder, params.clientType());
@@ -387,6 +389,10 @@ public final class Clients {
      * }
      * }</pre>
      *
+     * <p>Note that the specified header will be stored into
+     * {@link ClientRequestContext#additionalRequestHeaders()} which takes precedence over
+     * {@link HttpRequest#headers()}.
+     *
      * @see #withHeaders(Consumer)
      */
     @MustBeClosed
@@ -425,6 +431,10 @@ public final class Clients {
      *     }
      * }
      * }</pre>
+     *
+     * <p>Note that the specified header will be stored into
+     * {@link ClientRequestContext#additionalRequestHeaders()} which takes precedence over
+     * {@link HttpRequest#headers()}.
      *
      * @see #withHeaders(Consumer)
      */
@@ -471,6 +481,10 @@ public final class Clients {
      *     }
      * }
      * }</pre>
+     *
+     * <p>Note that the mutated headers will be stored into
+     * {@link ClientRequestContext#additionalRequestHeaders()} which takes precedence over
+     * {@link HttpRequest#headers()}.
      *
      * @see #withHeader(CharSequence, String)
      */

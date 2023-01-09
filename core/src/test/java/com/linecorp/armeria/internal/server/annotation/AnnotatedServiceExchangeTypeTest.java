@@ -65,26 +65,19 @@ class AnnotatedServiceExchangeTypeTest {
         @Post
         @Path("/response-streaming")
         public HttpResponse responseStreaming(AggregatedHttpRequest request, ServiceRequestContext ctx) {
-            final ExchangeType exchangeType = exchangeType(ctx);
-            return HttpResponse.of(exchangeType.toString());
+            return HttpResponse.of(ctx.exchangeType().toString());
         }
 
         @Post
         @Path("/bidi-streaming")
         public HttpResponse bidiStreaming(ServiceRequestContext ctx) {
-            final ExchangeType exchangeType = exchangeType(ctx);
-            return HttpResponse.of(exchangeType.toString());
+            return HttpResponse.of(ctx.exchangeType().toString());
         }
 
         @Post
         @Path("/multipart-bidi-streaming")
         public HttpResponse multipartBidiStreaming(ServiceRequestContext ctx, @Param File file1) {
-            final ExchangeType exchangeType = exchangeType(ctx);
-            return HttpResponse.of(exchangeType.toString());
-        }
-
-        private static ExchangeType exchangeType(ServiceRequestContext ctx) {
-            return ctx.config().service().exchangeType(ctx.request().headers(), ctx.config().route());
+            return HttpResponse.of(ctx.exchangeType().toString());
         }
     }
 }

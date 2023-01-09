@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.server.ServerSslContextUtil.validateSslContext;
 import static java.util.Objects.requireNonNull;
@@ -23,13 +25,11 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.security.cert.X509Certificate;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -49,15 +49,9 @@ import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import javax.net.ssl.SSLSession;
 
-import org.bouncycastle.asn1.x500.RDN;
-import org.bouncycastle.asn1.x500.X500Name;
-import org.bouncycastle.asn1.x500.style.BCStyle;
-import org.bouncycastle.asn1.x500.style.IETFUtils;
-import org.bouncycastle.cert.jcajce.JcaX509CertificateHolder;
 import org.jctools.maps.NonBlockingHashSet;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -66,8 +60,8 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.ImmutableSet.Builder;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.common.Flags;
@@ -77,11 +71,11 @@ import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.EventLoopGroups;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.ListenableAsyncCloseable;
+import com.linecorp.armeria.common.util.ShutdownHooks;
 import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
-import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -108,7 +102,7 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
  */
 public final class Server implements ListenableAsyncCloseable {
 
-    private static final Logger logger = LoggerFactory.getLogger(Server.class);
+    static final Logger logger = LoggerFactory.getLogger(Server.class);
 
     /**
      * Creates a new {@link ServerBuilder}.
@@ -145,7 +139,7 @@ public final class Server implements ListenableAsyncCloseable {
 
         for (VirtualHost virtualHost : config().virtualHosts()) {
             if (virtualHost.sslContext() != null) {
-                setupTlsMetrics(virtualHost.sslContext(), virtualHost.defaultHostname());
+                setupTlsMetrics(virtualHost.sslContext(), virtualHost.hostnamePattern());
             }
         }
 
@@ -412,7 +406,7 @@ public final class Server implements ListenableAsyncCloseable {
     /**
      * Sets up gauge metric for each server certificate.
      */
-    private void setupTlsMetrics(SslContext sslContext, String hostname) {
+    private void setupTlsMetrics(SslContext sslContext, String hostnamePattern) {
         final MeterRegistry meterRegistry = config().meterRegistry();
 
         final SSLSession sslSession = validateSslContext(sslContext);
@@ -423,9 +417,9 @@ public final class Server implements ListenableAsyncCloseable {
 
             try {
                 final X509Certificate x509Certificate = (X509Certificate) certificate;
-                final String commonName = getCommonName(x509Certificate);
+                final String commonName = firstNonNull(CertificateUtil.getCommonName(x509Certificate), "");
 
-                Gauge.builder("armeria.server.certificate.validity", x509Certificate, x509Cert -> {
+                Gauge.builder("armeria.server.tls.certificate.validity", x509Certificate, x509Cert -> {
                          try {
                              x509Cert.checkValidity();
                          } catch (CertificateExpiredException | CertificateNotYetValidException e) {
@@ -433,30 +427,24 @@ public final class Server implements ListenableAsyncCloseable {
                          }
                          return 1;
                      })
-                     .description("1 if certificate is in validity period, 0 if certificate is not in " +
+                     .description("1 if TLS certificate is in validity period, 0 if certificate is not in " +
                                   "validity period")
-                     .tags("common.name", commonName, "hostname", hostname)
+                     .tags("common.name", commonName, "hostname.pattern", hostnamePattern)
                      .register(meterRegistry);
 
-                Gauge.builder("armeria.server.certificate.validity.days", x509Certificate, x509Cert -> {
+                Gauge.builder("armeria.server.tls.certificate.validity.days", x509Certificate, x509Cert -> {
                          final Duration diff = Duration.between(Instant.now(),
                                                                 x509Cert.getNotAfter().toInstant());
                          return diff.isNegative() ? -1 : diff.toDays();
                      })
-                     .description("Duration in day before certificate expires which becomes -1 " +
+                     .description("Duration in days before TLS certificate expires, which becomes -1 " +
                                   "if certificate is expired")
-                     .tags("common.name", commonName, "hostname", hostname)
+                     .tags("common.name", commonName, "hostname.pattern", hostnamePattern)
                      .register(meterRegistry);
             } catch (Exception ex) {
-                logger.warn("Failed to set up TLS certificate metrics for a host: {}", hostname, ex);
+                logger.warn("Failed to set up TLS certificate metrics for a host: {}", hostnamePattern, ex);
             }
         }
-    }
-
-    private static String getCommonName(X509Certificate certificate) throws CertificateEncodingException {
-        final X500Name x500Name = new JcaX509CertificateHolder(certificate).getSubject();
-        final RDN cn = x500Name.getRDNs(BCStyle.CN)[0];
-        return IETFUtils.valueToString(cn.getFirst().getValue());
     }
 
     @Override
@@ -482,6 +470,23 @@ public final class Server implements ListenableAsyncCloseable {
         // Invoke the serviceAdded() method in Service so that it can keep the reference to this Server or
         // add a listener to it.
         config.serviceConfigs().forEach(cfg -> ServiceCallbackInvoker.invokeServiceAdded(cfg, cfg.service()));
+    }
+
+    /**
+     * Registers a JVM shutdown hook that closes this {@link Server} when the current JVM terminates.
+     */
+    public CompletableFuture<Void> closeOnJvmShutdown() {
+        return ShutdownHooks.addClosingTask(this);
+    }
+
+    /**
+     * Registers a JVM shutdown hook that closes this {@link Server} when the current JVM terminates.
+     *
+     * @param whenClosing the {@link Runnable} will be run before closing this {@link Server}
+     */
+    public CompletableFuture<Void> closeOnJvmShutdown(Runnable whenClosing) {
+        requireNonNull(whenClosing, "whenClosing");
+        return ShutdownHooks.addClosingTask(this, whenClosing);
     }
 
     private final class ServerStartStopSupport extends StartStopSupport<Void, Void, Void, ServerListener> {
@@ -668,45 +673,19 @@ public final class Server implements ListenableAsyncCloseable {
         private void finishDoStop(CompletableFuture<Void> future) {
             serverChannels.clear();
 
-            final Set<ScheduledExecutorService> executors =
-                    Stream.concat(config.virtualHosts()
-                                        .stream()
-                                        .filter(VirtualHost::shutdownBlockingTaskExecutorOnStop)
-                                        .map(VirtualHost::blockingTaskExecutor),
-                                  config.serviceConfigs()
-                                        .stream()
-                                        .filter(ServiceConfig::shutdownBlockingTaskExecutorOnStop)
-                                        .map(ServiceConfig::blockingTaskExecutor))
-                          .collect(Collectors.toSet());
-
-            if (config.shutdownBlockingTaskExecutorOnStop()) {
-                executors.add(config.blockingTaskExecutor());
+            final Builder<ShutdownSupport> builder = ImmutableList.builder();
+            builder.addAll(config.delegate().shutdownSupports());
+            for (VirtualHost virtualHost : config.virtualHosts()) {
+                builder.addAll(virtualHost.shutdownSupports());
+            }
+            for (ServiceConfig serviceConfig : config.serviceConfigs()) {
+                builder.addAll(serviceConfig.shutdownSupports());
             }
 
-            shutdownExecutor(executors);
-
-            final Builder<AccessLogWriter> builder = ImmutableSet.builder();
-            config.virtualHosts()
-                  .stream()
-                  .filter(VirtualHost::shutdownAccessLogWriterOnStop)
-                  .forEach(virtualHost -> builder.add(virtualHost.accessLogWriter()));
-            config.serviceConfigs()
-                  .stream()
-                  .filter(ServiceConfig::shutdownAccessLogWriterOnStop)
-                  .forEach(serviceConfig -> builder.add(serviceConfig.accessLogWriter()));
-
-            final Set<AccessLogWriter> writers = builder.build();
-            final List<CompletableFuture<Void>> completionFutures = new ArrayList<>(writers.size());
-            writers.forEach(accessLogWriter -> {
-                final CompletableFuture<Void> shutdownFuture = accessLogWriter.shutdown();
-                shutdownFuture.exceptionally(cause -> {
-                    logger.warn("Failed to close the {}:", AccessLogWriter.class.getSimpleName(), cause);
-                    return null;
-                });
-                completionFutures.add(shutdownFuture);
-            });
-
-            CompletableFutures.successfulAsList(completionFutures, cause -> null)
+            CompletableFutures.successfulAsList(builder.build()
+                                                       .stream()
+                                                       .map(ShutdownSupport::shutdown)
+                                                       .collect(toImmutableList()), cause -> null)
                               .thenRunAsync(() -> future.complete(null), config.startStopExecutor());
         }
 
@@ -748,38 +727,6 @@ public final class Server implements ListenableAsyncCloseable {
 
         private void logStopFailure(Throwable cause) {
             logger.warn("Failed to stop a server: {}", cause.getMessage(), cause);
-        }
-
-        private void shutdownExecutor(Iterable<ScheduledExecutorService> executors) {
-            for (ScheduledExecutorService executor : executors) {
-                if (executor instanceof UnstoppableScheduledExecutorService) {
-                    executor = ((UnstoppableScheduledExecutorService) executor).getExecutorService();
-                }
-
-                executor.shutdown();
-            }
-
-            boolean interrupted = false;
-            for (ScheduledExecutorService executor : executors) {
-                if (executor instanceof UnstoppableScheduledExecutorService) {
-                    executor = ((UnstoppableScheduledExecutorService) executor).getExecutorService();
-                }
-
-                try {
-                    while (!executor.isTerminated()) {
-                        try {
-                            executor.awaitTermination(1, TimeUnit.DAYS);
-                        } catch (InterruptedException ignore) {
-                            interrupted = true;
-                        }
-                    }
-                } catch (Exception e) {
-                    logger.warn("Failed to shutdown the blockingTaskExecutor: {}", executor, e);
-                }
-            }
-            if (interrupted) {
-                Thread.currentThread().interrupt();
-            }
         }
     }
 

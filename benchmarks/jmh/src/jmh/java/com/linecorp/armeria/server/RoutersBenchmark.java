@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -50,25 +51,31 @@ public class RoutersBenchmark {
         final String defaultLogName = null;
         final String defaultServiceName = null;
         final ServiceNaming defaultServiceNaming = ServiceNaming.of("Service");
+        final Route route1 = Route.builder().exact("/grpc.package.Service/Method1").build();
+        final Route route2 = Route.builder().exact("/grpc.package.Service/Method2").build();
         final Path multipartUploadsLocation = Flags.defaultMultipartUploadsLocation();
         SERVICES = ImmutableList.of(
-                new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method1").build(),
+                new ServiceConfig(route1, route1,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
-                                  false, AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(),
-                                  true, SuccessFunction.always(), multipartUploadsLocation),
-                new ServiceConfig(Route.builder().exact("/grpc.package.Service/Method2").build(),
+                                  false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
+                                  SuccessFunction.always(), multipartUploadsLocation, ImmutableList.of(),
+                                  HttpHeaders.of()),
+                new ServiceConfig(route2, route2,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
-                                  false, AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(),
-                                  true, SuccessFunction.always(), multipartUploadsLocation)
+                                  false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
+                                  SuccessFunction.always(), multipartUploadsLocation, ImmutableList.of(),
+                                  HttpHeaders.of())
         );
-        FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), SERVICE, defaultLogName, defaultServiceName,
+        FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), SERVICE,
+                                             defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
-                                             false, CommonPools.blockingTaskExecutor(), true,
-                                             SuccessFunction.always(), multipartUploadsLocation);
+                                             CommonPools.blockingTaskExecutor(),
+                                             SuccessFunction.always(), multipartUploadsLocation,
+                                             ImmutableList.of(), HttpHeaders.of());
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,
-                AccessLogWriter.disabled(), false, CommonPools.blockingTaskExecutor(), true);
+                AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(), ImmutableList.of());
         ROUTER = Routers.ofVirtualHost(HOST, SERVICES, RejectedRouteHandler.DISABLED);
     }
 

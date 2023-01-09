@@ -40,6 +40,8 @@ public final class DnsUtil {
 
     private static final List<String> DEFAULT_SEARCH_DOMAINS;
     private static final int DEFAULT_NDOTS;
+    // Leave it public to inline the value with Javadoc {@value ..} tag.
+    public static final int DEFAULT_DNS_QUERY_TIMEOUT_MILLIS = 5000; // 5 seconds
 
     private static final Logger logger = LoggerFactory.getLogger(DnsUtil.class);
 
@@ -77,8 +79,7 @@ public final class DnsUtil {
         DEFAULT_NDOTS = ndots;
     }
 
-    @Nullable
-    public static byte[] extractAddressBytes(DnsRecord record, Logger logger, String logPrefix) {
+    public static byte @Nullable [] extractAddressBytes(DnsRecord record, Logger logger, String logPrefix) {
         final DnsRecordType type = record.type();
         assert record instanceof ByteArrayDnsRecord;
         final byte[] content = ((ByteArrayDnsRecord) record).content();
@@ -119,6 +120,10 @@ public final class DnsUtil {
 
     public static int defaultNdots() {
         return DEFAULT_NDOTS;
+    }
+
+    public static long defaultDnsQueryTimeoutMillis() {
+        return DEFAULT_DNS_QUERY_TIMEOUT_MILLIS;
     }
 
     private DnsUtil() {}

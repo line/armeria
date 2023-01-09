@@ -33,6 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
+import com.linecorp.armeria.common.stream.AggregationSupport;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
@@ -45,7 +46,8 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 /**
  * A {@link StreamMessage} which only publishes a fixed number of objects known at construction time.
  */
-public abstract class FixedStreamMessage<T> implements StreamMessage<T>, Subscription {
+public abstract class FixedStreamMessage<T> extends AggregationSupport
+        implements StreamMessage<T>, Subscription {
 
     private static final Logger logger = LoggerFactory.getLogger(FixedStreamMessage.class);
 

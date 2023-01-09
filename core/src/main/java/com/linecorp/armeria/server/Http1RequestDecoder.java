@@ -59,6 +59,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.TooLongHttpLineException;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.codec.http2.Http2Settings;
@@ -147,7 +148,12 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     keepAliveHandler.increaseNumRequests();
                     final HttpRequest nettyReq = (HttpRequest) msg;
                     if (!nettyReq.decoderResult().isSuccess()) {
-                        fail(id, null, HttpStatus.BAD_REQUEST, "Decoder failure", null);
+                        final Throwable cause = nettyReq.decoderResult().cause();
+                        if (cause instanceof TooLongHttpLineException) {
+                            fail(id, null, HttpStatus.REQUEST_URI_TOO_LONG, "Too Long URI", cause);
+                        } else {
+                            fail(id, null, HttpStatus.BAD_REQUEST, "Decoder failure", cause);
+                        }
                         return;
                     }
 
@@ -203,30 +209,27 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     // Close the request early when it is certain there will be neither content nor trailers.
                     final RoutingContext routingCtx = newRoutingContext(cfg, ctx.channel(), headers);
-                    final Routed<ServiceConfig> routed;
                     if (routingCtx.status().routeMustExist()) {
                         try {
                             // Find the service that matches the path.
-                            routed = routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                            final Routed<ServiceConfig> routed =
+                                    routingCtx.virtualHost().findServiceConfig(routingCtx, true);
+                            assert routed.isPresent();
                         } catch (Throwable cause) {
                             logger.warn("{} Unexpected exception: {}", ctx.channel(), headers, cause);
                             fail(id, headers, HttpStatus.INTERNAL_SERVER_ERROR, null, cause);
                             return;
                         }
-                        assert routed.isPresent();
-                    } else {
-                        routed = null;
                     }
 
                     final boolean keepAlive = HttpUtil.isKeepAlive(nettyReq);
                     final boolean endOfStream = contentEmpty && !HttpUtil.isTransferEncodingChunked(nettyReq);
                     final EventLoop eventLoop = ctx.channel().eventLoop();
                     this.req = req = DecodedHttpRequest.of(endOfStream, eventLoop, id, 1, headers,
-                                                           keepAlive, inboundTrafficController, routingCtx,
-                                                           routed);
+                                                           keepAlive, inboundTrafficController, routingCtx);
 
                     // An aggregating request will be fired after all objects are collected.
-                    if (!req.isAggregated()) {
+                    if (!req.needsAggregation()) {
                         ctx.fireChannelRead(req);
                     }
                 } else {
@@ -289,7 +292,7 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                     }
 
                     decodedReq.close();
-                    if (decodedReq.isAggregated()) {
+                    if (decodedReq.needsAggregation()) {
                         // An aggregated request is now ready to be fired.
                         ctx.fireChannelRead(decodedReq);
                     }

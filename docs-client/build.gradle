@@ -1,19 +1,12 @@
-buildscript {
-    repositories {
-        gradlePluginPortal()
-    }
-    dependencies {
-        classpath "com.github.node-gradle:gradle-node-plugin:${managedVersions['com.github.node-gradle:gradle-node-plugin']}"
-    }
+plugins {
+    id 'base'
+    alias(libs.plugins.node.gradle)
 }
 
 // Do not build if 'noWeb' property exists.
 if (rootProject.hasProperty('noWeb')) {
     return
 }
-
-apply plugin: 'base'
-apply plugin: 'com.github.node-gradle.node'
 
 node {
     version = '16.14.0'

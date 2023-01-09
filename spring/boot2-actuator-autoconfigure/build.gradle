@@ -1,28 +1,41 @@
 dependencies {
-    api 'org.springframework.boot:spring-boot-actuator-autoconfigure'
-    api 'javax.inject:javax.inject'
-    compileOnly 'javax.validation:validation-api'
+    api libs.spring.boot2.actuator.autoconfigure
+    api libs.javax.inject
+    compileOnly libs.javax.validation
 
     // TODO(anuraaga): Consider removing these since this module does not have related functionality.
-    optionalApi 'io.micrometer:micrometer-registry-prometheus'
-    optionalApi 'io.dropwizard.metrics:metrics-json'
+    optionalApi libs.micrometer.prometheus
+    optionalApi libs.dropwizard.metrics.json
 
-    implementation 'org.springframework.boot:spring-boot-autoconfigure'
+    implementation libs.spring.boot2.autoconfigure
+    optionalImplementation libs.reactor.core
 
-    testImplementation 'org.springframework.boot:spring-boot-starter-actuator'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'io.micrometer:micrometer-registry-prometheus'
+    testImplementation libs.spring.boot2.starter.actuator
+    testImplementation libs.spring.boot2.starter.test
+    testImplementation libs.micrometer.prometheus
     testImplementation project(':spring:boot2-starter')
 }
 
-// Copy common files from boot2-autoconfigure module to gen-src directory in order to use them as a source set.
+// Copy common files from boot2-autoconfigure module to gen-src directory in order to use them as
+// a source/test set.
+task generateTestSources(type: Copy) {
+    from "${rootProject.projectDir}/spring/boot2-autoconfigure/src/test"
+    into "${project.ext.genSrcDir}/test"
+    include '**/RetryableArmeriaServerGracefulShutdownLifecycle.java'
+    include '**/RetryableArmeriaServerGracefulShutdownLifecycleConfiguration.java'
+    include '**/META-INF/spring.factories'
+}
+
 task generateSources(type: Copy) {
+    dependsOn(generateTestSources)
+
     from "${rootProject.projectDir}/spring/boot2-autoconfigure/src/main/java"
     into "${project.ext.genSrcDir}/main/java"
     include '**/ArmeriaConfigurationNetUtil.java'
     include '**/ArmeriaServerConfigurator.java'
     include '**/ArmeriaSettings.java'
     include '**/InternalServiceId.java'
+    include '**/SpringDependencyInjector.java'
     include '**/Ssl.java'
 }
 

@@ -29,6 +29,7 @@ import org.junit.jupiter.api.io.TempDir;
 
 import com.linecorp.armeria.common.AggregatedHttpObject;
 import com.linecorp.armeria.common.ContentDisposition;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 
 public class MultipartTest {
@@ -135,4 +136,36 @@ public class MultipartTest {
                     .hasMessageContaining("foo");
         });
     }
+
+    @Test
+    void collectContentIsEmpty() {
+        final CompletableFuture<List<Object>> collect =
+                Multipart.of(
+                        BodyPart.of(ContentDisposition.of("form-data", "name1"),
+                                    ""),
+                        BodyPart.of(ContentDisposition.of("form-data", "name2", "hello.txt"),
+                                    "")
+                ).collect(bodyPart -> {
+                    if (bodyPart.filename() != null) {
+                        final Path path = tempDir.resolve(bodyPart.name());
+                        return bodyPart.writeTo(path).thenApply(ignore -> path);
+                    }
+                    return bodyPart.aggregate().thenApply(AggregatedHttpObject::contentUtf8);
+                });
+
+        final List<Object> bodyParts = collect.join();
+        assertThat(bodyParts.get(0)).isEqualTo("");
+        final Path path = (Path) bodyParts.get(1);
+        assertThat(path).isEqualTo(tempDir.resolve("name2"));
+        assertThat(path).content().isEqualTo("");
+    }
+
+    @Test
+    void emptyMultipart() {
+        final Multipart multipart = Multipart.of();
+        final HttpRequest request = multipart.toHttpRequest("/foo");
+        assertThat(request.isEmpty()).isFalse();
+        assertThat(request.aggregate().join().contentUtf8()).isNotEmpty();
+    }
 }
+

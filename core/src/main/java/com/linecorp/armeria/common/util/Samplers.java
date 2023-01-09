@@ -46,7 +46,7 @@ final class Samplers {
 
         @Override
         public String toString() {
-            return "AlwaysSample";
+            return "always";
         }
     };
 
@@ -62,7 +62,7 @@ final class Samplers {
 
         @Override
         public String toString() {
-            return "NeverSample";
+            return "never";
         }
     };
 
@@ -70,8 +70,10 @@ final class Samplers {
         requireNonNull(specification, "specification");
         switch (specification.trim()) {
             case "always":
+            case "true":
                 return Sampler.always();
             case "never":
+            case "false":
                 return Sampler.never();
         }
 

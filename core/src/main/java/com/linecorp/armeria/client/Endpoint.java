@@ -42,6 +42,8 @@ import com.google.common.net.InternetDomainName;
 
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
+import com.linecorp.armeria.common.Attributes;
+import com.linecorp.armeria.common.AttributesBuilder;
 import com.linecorp.armeria.common.Scheme;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -50,6 +52,7 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
 
+import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 
 /**
@@ -135,7 +138,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
 
     private static Endpoint create(String host, int port, boolean validateHost) {
         if (NetUtil.isValidIpV4Address(host)) {
-            return new Endpoint(host, host, port, DEFAULT_WEIGHT, HostType.IPv4_ONLY);
+            return new Endpoint(host, host, port, DEFAULT_WEIGHT, HostType.IPv4_ONLY, null);
         }
 
         if (NetUtil.isValidIpV6Address(host)) {
@@ -146,13 +149,13 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             } else {
                 ipV6Addr = host;
             }
-            return new Endpoint(ipV6Addr, ipV6Addr, port, DEFAULT_WEIGHT, HostType.IPv6_ONLY);
+            return new Endpoint(ipV6Addr, ipV6Addr, port, DEFAULT_WEIGHT, HostType.IPv6_ONLY, null);
         }
 
         if (validateHost) {
             host = InternetDomainName.from(host).toString();
         }
-        return new Endpoint(host, null, port, DEFAULT_WEIGHT, HostType.HOSTNAME_ONLY);
+        return new Endpoint(host, null, port, DEFAULT_WEIGHT, HostType.HOSTNAME_ONLY, null);
     }
 
     private static String removeUserInfo(String authority) {
@@ -182,12 +185,16 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     private final String strVal;
 
     @Nullable
+    private final Attributes attributes;
+
+    @Nullable
     private CompletableFuture<Endpoint> selectFuture;
     @Nullable
     private CompletableFuture<List<Endpoint>> whenReadyFuture;
     private int hashCode;
 
-    private Endpoint(String host, @Nullable String ipAddr, int port, int weight, HostType hostType) {
+    private Endpoint(String host, @Nullable String ipAddr, int port, int weight, HostType hostType,
+                     @Nullable Attributes attributes) {
         this.host = host;
         this.ipAddr = ipAddr;
         this.port = port;
@@ -204,6 +211,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         authority = generateAuthority(host, port, hostType);
         // Pre-generate toString() value.
         strVal = generateToString(authority, ipAddr, weight, hostType);
+        this.attributes = attributes;
     }
 
     private static String generateAuthority(String host, int port, HostType hostType) {
@@ -218,7 +226,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (hostType == HostType.IPv6_ONLY) {
             return '[' + host + ']';
         } else {
-            return  host;
+            return host;
         }
     }
 
@@ -258,14 +266,25 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         return this;
     }
 
+    @Deprecated
     @Override
     public CompletableFuture<Endpoint> select(ClientRequestContext ctx,
                                               ScheduledExecutorService executor,
                                               long timeoutMillis) {
+        return select(ctx, executor);
+    }
+
+    @Override
+    public CompletableFuture<Endpoint> select(ClientRequestContext ctx, ScheduledExecutorService executor) {
         if (selectFuture == null) {
             selectFuture = UnmodifiableFuture.completedFuture(this);
         }
         return selectFuture;
+    }
+
+    @Override
+    public long selectionTimeoutMillis() {
+        return 0;
     }
 
     @Override
@@ -281,6 +300,18 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public String host() {
         return host;
+    }
+
+    /**
+     * Returns a new endpoint with the specified host.
+     */
+    @UnstableApi
+    public Endpoint withHost(String host) {
+        requireNonNull(host, "host");
+        if (host.equals(this.host)) {
+            return this;
+        }
+        return new Endpoint(host, ipAddr, port, weight, hostType, attributes);
     }
 
     /**
@@ -375,7 +406,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (this.port == port) {
             return this;
         }
-        return new Endpoint(host, ipAddr, port, weight, hostType);
+        return new Endpoint(host, ipAddr, port, weight, hostType, attributes);
     }
 
     /**
@@ -390,7 +421,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (port == 0) {
             return this;
         }
-        return new Endpoint(host, ipAddr, 0, weight, hostType);
+        return new Endpoint(host, ipAddr, 0, weight, hostType, attributes);
     }
 
     /**
@@ -409,7 +440,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             return this;
         }
 
-        return new Endpoint(host, ipAddr, defaultPort, weight, hostType);
+        return new Endpoint(host, ipAddr, defaultPort, weight, hostType, attributes);
     }
 
     /**
@@ -426,7 +457,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
     public Endpoint withoutDefaultPort(int defaultPort) {
         validatePort("defaultPort", defaultPort);
         if (port == defaultPort) {
-            return new Endpoint(host, ipAddr, 0, weight, hostType);
+            return new Endpoint(host, ipAddr, 0, weight, hostType, attributes);
         }
         return this;
     }
@@ -477,12 +508,12 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (isIpAddrOnly()) {
             return new Endpoint(ipAddr, ipAddr, port, weight,
                                 ipFamily == StandardProtocolFamily.INET ? HostType.IPv4_ONLY
-                                                                        : HostType.IPv6_ONLY);
+                                                                        : HostType.IPv6_ONLY, attributes);
         }
 
         return new Endpoint(host(), ipAddr, port, weight,
                             ipFamily == StandardProtocolFamily.INET ? HostType.HOSTNAME_AND_IPv4
-                                                                    : HostType.HOSTNAME_AND_IPv6);
+                                                                    : HostType.HOSTNAME_AND_IPv6, attributes);
     }
 
     /**
@@ -512,7 +543,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
             throw new IllegalStateException("can't clear the IP address if host name is an IP address: " +
                                             this);
         }
-        return new Endpoint(host(), null, port, weight, HostType.HOSTNAME_ONLY);
+        return new Endpoint(host(), null, port, weight, HostType.HOSTNAME_ONLY, attributes);
     }
 
     /**
@@ -527,7 +558,7 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
         if (this.weight == weight) {
             return this;
         }
-        return new Endpoint(host(), ipAddr(), port, weight, hostType);
+        return new Endpoint(host(), ipAddr(), port, weight, hostType, attributes);
     }
 
     /**
@@ -544,6 +575,73 @@ public final class Endpoint implements Comparable<Endpoint>, EndpointGroup {
      */
     public String authority() {
         return authority;
+    }
+
+    /**
+     * Returns the attribute value associated with the given {@link AttributeKey} of this endpoint, or
+     * {@code null} if there's no value associated with this key.
+     */
+    @UnstableApi
+    @Nullable
+    public <T> T attr(AttributeKey<T> key) {
+        requireNonNull(key, "key");
+        if (attributes == null) {
+            return null;
+        }
+        return attributes.attr(key);
+    }
+
+    /**
+     * Returns a new host endpoint with the specified {@link AttributeKey} and value.
+     *
+     * @return the new endpoint with the specified {@link AttributeKey} and value. {@code this} if this
+     *         endpoint has the same value with the specified {@link AttributeKey}.
+     *
+     */
+    @UnstableApi
+    public <T> Endpoint withAttr(AttributeKey<T> key, @Nullable T value) {
+        requireNonNull(key, "key");
+        if (attributes == null) {
+            if (value == null) {
+                return this;
+            }
+            return withAttrs(Attributes.of(key, value));
+        }
+
+        if (attributes.attr(key) == value) {
+            return this;
+        } else {
+            final AttributesBuilder attributesBuilder = attributes.toBuilder();
+            attributesBuilder.set(key, value);
+            return withAttrs(attributesBuilder.build());
+        }
+    }
+
+    /**
+     * Returns a new {@link Endpoint} with the specified {@link Attributes}.
+     * Note that the {@link #attrs()} of this {@link Endpoint} is replaced with the specified
+     * {@link Attributes}.
+     */
+    @UnstableApi
+    public Endpoint withAttrs(Attributes newAttributes) {
+        requireNonNull(newAttributes, "newAttributes");
+        if (attrs().isEmpty() && newAttributes.isEmpty()) {
+            return this;
+        }
+
+        return new Endpoint(host, ipAddr, port, weight, hostType, newAttributes);
+    }
+
+    /**
+     * Returns the {@link Attributes} of this endpoint, or an empty {@link Attributes} if this endpoint does not
+     * have any attributes.
+     */
+    @UnstableApi
+    public Attributes attrs() {
+        if (attributes == null) {
+            return Attributes.of();
+        }
+        return attributes;
     }
 
     /**

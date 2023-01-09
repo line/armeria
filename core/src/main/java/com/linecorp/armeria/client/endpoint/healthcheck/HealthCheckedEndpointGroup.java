@@ -15,11 +15,12 @@
  */
 package com.linecorp.armeria.client.endpoint.healthcheck;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.linecorp.armeria.internal.common.util.CollectionUtil.truncate;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -27,6 +28,7 @@ import java.util.Queue;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Function;
 
 import org.slf4j.Logger;
@@ -35,6 +37,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 import com.spotify.futures.CompletableFutures;
 
 import com.linecorp.armeria.client.ClientOptions;
@@ -97,6 +100,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     final EndpointGroup delegate;
+    private final long initialSelectionTimeoutMillis;
+    private final long selectionTimeoutMillis;
     private final SessionProtocol protocol;
     private final int port;
     private final Backoff retryBackoff;
@@ -105,7 +110,9 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     @VisibleForTesting
     final HealthCheckStrategy healthCheckStrategy;
 
-    private final Queue<HealthCheckContextGroup> contextGroupChain = new ArrayDeque<>(4);
+    private final ReentrantLock lock = new ReentrantLock();
+    @GuardedBy("lock")
+    private final Deque<HealthCheckContextGroup> contextGroupChain = new ArrayDeque<>(4);
 
     // Should not use NonBlockingHashSet whose remove operation does not clear the reference of the value
     // from the internal array. The remaining value is revived if a new value having the same hash code is
@@ -118,7 +125,9 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
      * Creates a new instance.
      */
     HealthCheckedEndpointGroup(
-            EndpointGroup delegate, boolean allowEmptyEndpoints, SessionProtocol protocol, int port,
+            EndpointGroup delegate, boolean allowEmptyEndpoints,
+            long initialSelectionTimeoutMillis, long selectionTimeoutMillis,
+            SessionProtocol protocol, int port,
             Backoff retryBackoff, ClientOptions clientOptions,
             Function<? super HealthCheckerContext, ? extends AsyncCloseable> checkerFactory,
             HealthCheckStrategy healthCheckStrategy) {
@@ -126,6 +135,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         super(requireNonNull(delegate, "delegate").selectionStrategy(), allowEmptyEndpoints);
 
         this.delegate = delegate;
+        this.initialSelectionTimeoutMillis = initialSelectionTimeoutMillis;
+        this.selectionTimeoutMillis = selectionTimeoutMillis;
         this.protocol = requireNonNull(protocol, "protocol");
         this.port = port;
         this.retryBackoff = requireNonNull(retryBackoff, "retryBackoff");
@@ -141,7 +152,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         final List<Endpoint> endpoints = healthCheckStrategy.select(candidates);
         final HashMap<Endpoint, DefaultHealthCheckerContext> contexts = new HashMap<>(endpoints.size());
 
-        synchronized (contextGroupChain) {
+        lock.lock();
+        try {
             for (Endpoint endpoint : endpoints) {
                 final DefaultHealthCheckerContext context = findContext(endpoint);
                 if (context != null) {
@@ -161,31 +173,76 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
 
             // Remove old contexts when the newly created contexts are fully initialized to smoothly transition
             // to new endpoints.
-            contextGroup.whenInitialized().thenRun(() -> {
+            contextGroup.whenInitialized().handle((unused, cause) -> {
+                if (cause != null && !initialized) {
+                    if (logger.isWarnEnabled()) {
+                        logger.warn("The first health check failed for all endpoints. " +
+                                    "numCandidates: {} candidates: {}",
+                                    candidates.size(), truncate(candidates, 10), cause);
+                    }
+                }
                 initialized = true;
                 destroyOldContexts(contextGroup);
                 setEndpoints(allHealthyEndpoints());
+                return null;
             });
+        } finally {
+            lock.unlock();
         }
     }
 
-    private List<Endpoint> allHealthyEndpoints() {
-        synchronized (contextGroupChain) {
-            return contextGroupChain.stream().flatMap(group -> group.candidates().stream())
-                                    .filter(healthyEndpoints::contains)
-                                    .collect(toImmutableList());
+    @SuppressWarnings("GuardedBy")
+    @VisibleForTesting
+    Queue<HealthCheckContextGroup> contextGroupChain() {
+        return contextGroupChain;
+    }
+
+    @VisibleForTesting
+    List<Endpoint> allHealthyEndpoints() {
+        lock.lock();
+        try {
+            final HealthCheckContextGroup newGroup = contextGroupChain.peekLast();
+            if (newGroup == null) {
+                return ImmutableList.of();
+            }
+
+            final List<Endpoint> allHealthyEndpoints = new ArrayList<>();
+            for (Endpoint candidate : newGroup.candidates()) {
+                if (healthyEndpoints.contains(candidate)) {
+                    allHealthyEndpoints.add(candidate);
+                }
+            }
+
+            for (HealthCheckContextGroup oldGroup : contextGroupChain) {
+                if (oldGroup == newGroup) {
+                    break;
+                }
+                for (Endpoint candidate : oldGroup.candidates()) {
+                    if (!allHealthyEndpoints.contains(candidate) && healthyEndpoints.contains(candidate)) {
+                        // Add old Endpoints that do not exist in newGroup. When the first check for newGroup is
+                        // completed, the old Endpoints will be removed.
+                        allHealthyEndpoints.add(candidate);
+                    }
+                }
+            }
+            return allHealthyEndpoints;
+        } finally {
+            lock.unlock();
         }
     }
 
     @Nullable
     private DefaultHealthCheckerContext findContext(Endpoint endpoint) {
-        synchronized (contextGroupChain) {
+        lock.lock();
+        try {
             for (HealthCheckContextGroup contextGroup : contextGroupChain) {
                 final DefaultHealthCheckerContext context = contextGroup.contexts().get(endpoint);
                 if (context != null) {
                     return context;
                 }
             }
+        } finally {
+            lock.unlock();
         }
         return null;
     }
@@ -196,7 +253,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     private void destroyOldContexts(HealthCheckContextGroup contextGroup) {
-        synchronized (contextGroupChain) {
+        lock.lock();
+        try {
             final Iterator<HealthCheckContextGroup> it = contextGroupChain.iterator();
             while (it.hasNext()) {
                 final HealthCheckContextGroup maybeOldGroup = it.next();
@@ -208,6 +266,8 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
                 it.remove();
             }
+        } finally {
+            lock.unlock();
         }
     }
 
@@ -227,10 +287,16 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
     }
 
     @Override
+    public long selectionTimeoutMillis() {
+        return initialized ? selectionTimeoutMillis : initialSelectionTimeoutMillis;
+    }
+
+    @Override
     protected void doCloseAsync(CompletableFuture<?> future) {
         // Stop the health checkers in parallel.
         final CompletableFuture<?> stopFutures;
-        synchronized (contextGroupChain) {
+        lock.lock();
+        try {
             final ImmutableList.Builder<CompletableFuture<?>> completionFutures = ImmutableList.builder();
             for (HealthCheckContextGroup group : contextGroupChain) {
                 for (DefaultHealthCheckerContext context : group.contexts().values()) {
@@ -250,11 +316,19 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                 }
             }
             stopFutures = CompletableFutures.allAsList(completionFutures.build());
-            contextGroupChain.clear();
+        } finally {
+            lock.unlock();
         }
 
-        stopFutures.handle((unused1, unused2) -> delegate.closeAsync())
-                   .handle((unused1, unused2) -> future.complete(null));
+        stopFutures.handle((unused1, unused2) -> {
+            lock.lock();
+            try {
+                contextGroupChain.clear();
+            } finally {
+                lock.unlock();
+            }
+            return delegate.closeAsync();
+        }).handle((unused1, unused2) -> future.complete(null));
     }
 
     /**
@@ -273,6 +347,7 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
         return new HealthCheckedEndpointGroupMetrics(this, idPrefix);
     }
 
+    @SuppressWarnings("GuardedBy")
     @Override
     public String toString() {
         final List<Endpoint> endpoints = endpoints();
@@ -284,6 +359,9 @@ public final class HealthCheckedEndpointGroup extends DynamicEndpointGroup {
                           .add("numCandidates", delegateEndpoints.size())
                           .add("selectionStrategy", selectionStrategy().getClass())
                           .add("initialized", whenReady().isDone())
+                          .add("initialSelectionTimeoutMillis", initialSelectionTimeoutMillis)
+                          .add("selectionTimeoutMillis", selectionTimeoutMillis)
+                          .add("contextGroupChain", contextGroupChain)
                           .toString();
     }
 }

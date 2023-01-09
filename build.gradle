@@ -1,15 +1,24 @@
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
+import org.jsoup.select.Elements
+
 import java.util.concurrent.atomic.AtomicBoolean
 
-plugins {
-    id 'com.google.osdetector' version '1.6.2' apply false
-    id 'cz.alenkacz.gradle.scalafmt' version '1.16.2' apply false
-    id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
-    // If you want to change `org.jetbrains.kotlin.jvm` version,
-    // you also need to change `org.jetbrains.kotlin:kotlin-allopen` version in `dependencies.yml`.
-    id 'org.jetbrains.kotlin.jvm' version '1.6.10' apply false
-    id 'org.jlleitschuh.gradle.ktlint' version '10.1.0' apply false
+import static java.lang.Math.min
 
-    id 'net.ltgt.errorprone' version '2.0.2' apply false
+buildscript {
+    dependencies {
+        classpath libs.jsoup
+    }
+}
+
+plugins {
+    alias libs.plugins.osdetector apply false
+    alias libs.plugins.scalafmt apply false
+    alias libs.plugins.nexus.publish
+    alias libs.plugins.kotlin apply false
+    alias libs.plugins.ktlint apply false
+    alias libs.plugins.errorprone apply false
 }
 
 allprojects {
@@ -28,6 +37,7 @@ apply from: "${rootDir}/gradle/scripts/build-flags.gradle"
 // Fail the build if the console contains 'LEAK:'.
 def hasLeak = new AtomicBoolean()
 gradle.buildFinished({ result ->
+
     if (hasLeak.get()) {
         throw new TestExecutionException('Found a leak while testing. ' +
                 "Specify '-Pleak' option to record the detail and " +
@@ -59,6 +69,13 @@ allprojects {
         jvmArgs '-XX:+ExitOnOutOfMemoryError'
         jvmArgs '-XX:+HeapDumpOnOutOfMemoryError'
         jvmArgs "-XX:HeapDumpPath=${rootProject.buildDir}"
+
+        // `-Pjava.security.manager` was added in Java 17 and the default value was changed to `disallow` in Java 18.
+        // - https://openjdk.org/jeps/411
+        // - https://bugs.openjdk.org/browse/JDK-8270380
+        if (rootProject.ext.testJavaVersion >= 17) {
+            systemProperty "java.security.manager", "allow"
+        }
 
         // Use verbose exception/response reporting for easier debugging.
         systemProperty 'com.linecorp.armeria.verboseExceptions', 'true'
@@ -94,7 +111,7 @@ configure(projectsWithFlags('java')) {
         apply plugin: 'net.ltgt.errorprone'
 
         dependencies {
-            errorprone 'com.google.errorprone:error_prone_core'
+            errorprone libs.errorprone.core
         }
 
         tasks.withType(JavaCompile) {
@@ -113,74 +130,58 @@ configure(projectsWithFlags('java')) {
         testImplementation project(':testing-internal')
 
         // completable-futures
-        implementation 'com.spotify:completable-futures'
+        implementation libs.futures.completable
 
         // Errorprone
-        compileOnly 'com.google.errorprone:error_prone_annotations'
-        testImplementation 'com.google.errorprone:error_prone_annotations'
+        compileOnly libs.errorprone.annotations
+        testImplementation libs.errorprone.annotations
 
         // FastUtil
-        implementation 'it.unimi.dsi:fastutil'
+        implementation libs.fastutil
 
         // Guava
-        implementation 'com.google.guava:guava'
+        implementation libs.guava
 
         // J2ObjC annotations
-        compileOnly 'com.google.j2objc:j2objc-annotations'
+        compileOnly libs.j2objc
 
         // JSR305
-        implementation 'com.google.code.findbugs:jsr305'
+        implementation libs.findbugs
 
         // JCTools
-        implementation 'org.jctools:jctools-core'
+        implementation libs.jctools
 
         // Jetty ALPN support
-        compileOnly 'org.eclipse.jetty.alpn:alpn-api'
+        compileOnly libs.jetty.alpn.api
 
         // Logging
-        implementation 'org.slf4j:slf4j-api'
-        testImplementation 'org.slf4j:jul-to-slf4j'
-        testImplementation 'ch.qos.logback:logback-classic'
-        ['jcl-over-slf4j', 'log4j-over-slf4j'].each {
-            testRuntimeOnly "org.slf4j:$it"
-        }
+        implementation libs.slf4j.api
+        testImplementation libs.slf4j.jul.to.slf4j
+        testImplementation libs.logback
+        testRuntimeOnly libs.slf4j.jcl.over.slf4j
+        testRuntimeOnly libs.slf4j.log4j.over.slf4j
 
         // Reflections
-        implementation 'org.reflections:reflections'
+        implementation libs.reflections
 
         // Test-time dependencies
-        testImplementation 'com.google.guava:guava-testlib'
-        testImplementation 'junit:junit'
-        testImplementation 'org.junit.jupiter:junit-jupiter-api'
-        testImplementation 'org.junit.jupiter:junit-jupiter-params'
-        testRuntimeOnly 'org.junit.platform:junit-platform-commons'
-        testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-        testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
-        testRuntimeOnly 'org.junit.vintage:junit-vintage-engine'
-        testImplementation 'net.javacrumbs.json-unit:json-unit'
-        testImplementation 'net.javacrumbs.json-unit:json-unit-fluent'
-        testImplementation 'org.awaitility:awaitility'
-        testRuntimeOnly 'org.checkerframework:checker-compat-qual' // Required by guava-testlib
-        testImplementation 'org.assertj:assertj-core'
-        testImplementation 'org.mockito:mockito-core'
-        testImplementation 'org.apache.httpcomponents:httpclient'
-        testImplementation 'org.hamcrest:hamcrest'
-        testImplementation 'org.hamcrest:hamcrest-library'
-    }
-
-    tasks.withType(JavaCompile) { task ->
-        if (task.path.startsWith(':examples:')) {
-            // Target Java 11 for examples.
-            options.release.set(11)
-            // IntelliJ fails to compile example projects with IntelliJ compiler because of a wrong target
-            // bytecode version which is marked as Java 8 without the following options.
-            // See https://github.com/line/armeria/pull/3712
-            sourceCompatibility = '11'
-            targetCompatibility = '11'
-        } else {
-            // Target Java 8 for the rest of them.
-            options.release.set(8)
-        }
+        testImplementation libs.guava.testlib
+        testImplementation libs.junit4
+        testImplementation libs.junit5.jupiter.api
+        testImplementation libs.junit5.jupiter.params
+        testRuntimeOnly libs.junit5.platform.commons
+        testRuntimeOnly libs.junit5.platform.launcher
+        testRuntimeOnly libs.junit5.jupiter.engine
+        testRuntimeOnly libs.junit5.vintage.engine
+        testImplementation libs.json.unit
+        testImplementation libs.json.unit.fluent
+        testImplementation libs.awaitility
+        testRuntimeOnly libs.checkerframework // Required by guava-testlib
+        testImplementation libs.assertj
+        testImplementation libs.mockito
+        testImplementation libs.apache.httpclient
+        testImplementation libs.hamcrest
+        testImplementation libs.hamcrest.library
     }
 
     // Configure the default DuplicatesStrategy for such as:
@@ -194,13 +195,6 @@ configure(projectsWithFlags('java')) {
 }
 
 allprojects {
-
-    tasks.all { task ->
-        // Disables all tasks in examples when we use a JDK version under 11.
-        if (rootProject.ext.testJavaVersion < 11 && task.path.startsWith(':examples:')) {
-            task.enabled = false
-        }
-    }
 
     // Configure the Javadoc tasks of all projects.
     tasks.withType(Javadoc) {
@@ -219,9 +213,88 @@ allprojects {
     }
 }
 
-// Require to use JDK 17 when releasing.
+// Require to use JDK 19 when releasing.
 tasks.closeAndReleaseStagingRepository.doFirst {
-    if (JavaVersion.current() != JavaVersion.VERSION_17) {
-        throw new IllegalStateException("You must release using JDK 17.");
+    if (JavaVersion.current() != JavaVersion.VERSION_19) {
+        throw new IllegalStateException("You must release using JDK 19.");
+    }
+}
+
+task reportFailedTests(type: TestsReportTask)
+
+/**
+ * Summarizes the failed tests and reports as a file with the Markdown syntax.
+ */
+class TestsReportTask extends DefaultTask {
+    @OutputFile
+    final def reportFile = project.file("${project.buildDir}/failed-tests-result.txt")
+
+    @TaskAction
+    def run() {
+        // Collect up to 20 error results
+        int maxErrorSize = 20
+        List<Map> failedTests = []
+        Set<String> handledFiles = []
+
+        project.allprojects {
+            tasks.withType(Test) { testTask ->
+
+                def xmlFiles = testTask.reports.junitXml.outputLocation.asFileTree.files
+                if (xmlFiles.isEmpty()) {
+                    return
+                }
+                xmlFiles.each { file ->
+                    if (!handledFiles.add(file.name)) {
+                        return
+                    }
+
+                    Elements failures = Jsoup.parse(file, 'UTF-8').select("testsuite failure")
+                    if (failures.isEmpty() || failedTests.size() > maxErrorSize) {
+                        return
+                    }
+                    failures.each { failure ->
+                        Element parent = failure.parent()
+                        String fullMethodName = "${parent.attr("classname")}.${parent.attr("name")}"
+                        String detail = failure.wholeText()
+                        failedTests += [method: fullMethodName, detail: detail]
+                    }
+                }
+            }
+        }
+
+        if (failedTests.isEmpty()) {
+            return
+        }
+
+        reportFile.withPrintWriter('UTF-8') { writer ->
+            failedTests.each { it ->
+                String method = it.method
+                String detail = it.detail
+
+                // Create an link to directly create an issue from the error message
+                String ghIssueTitle = URLEncoder.encode("Test failure: `$method`", "UTF-8")
+                // 8k is the maximum allowed URL length for GitHub
+                String ghIssueBody = URLEncoder.encode(
+                        "```\n${detail.substring(0, min(6000, detail.length()))}\n```\n", "UTF-8")
+                String ghIssueLink =
+                        "https://github.com/line/armeria/issues/new?title=$ghIssueTitle&body=$ghIssueBody"
+                String ghSearchQuery = URLEncoder.encode("is:issue $method", "UTF-8")
+                String ghSearchLink = "https://github.com/line/armeria/issues?q=$ghSearchQuery"
+                writer.print("- $it.method - [Search similar issues]($ghSearchLink) | ")
+                writer.println("[Create an issue?]($ghIssueLink)")
+
+                writer.println("  ```")
+                List<String> lines = detail.split("\n") as List
+                def summary = lines.take(8)
+                summary.each { line -> writer.println("  $line") }
+                writer.println("  ```")
+                if (lines.size() > 8) {
+                    writer.println("  <details><summary>Full error messages</summary>")
+                    writer.println("  <pre>")
+                    lines.each { line -> writer.println("  $line") }
+                    writer.println("  </pre></details>\n")
+                }
+            }
+        }
     }
 }

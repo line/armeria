@@ -7,7 +7,7 @@ A webapp that shows the Armeria Docs page.
 To develop, start the dev server using 
 
 ```console
-$ npm install
+$ npm install --legacy-peer-deps
 $ npm run develop
 ```
 

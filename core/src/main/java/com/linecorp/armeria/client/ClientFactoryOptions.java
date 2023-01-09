@@ -20,6 +20,7 @@ import static com.linecorp.armeria.client.ClientFactoryBuilder.MIN_MAX_CONNECTIO
 import static java.util.Objects.requireNonNull;
 
 import java.net.InetSocketAddress;
+import java.net.SocketAddress;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -33,12 +34,13 @@ import com.linecorp.armeria.client.proxy.ProxyConfigSelector;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.AbstractOptions;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoop;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContextBuilder;
@@ -218,7 +220,7 @@ public final class ClientFactoryOptions
      * The {@link MeterRegistry} which collects various stats.
      */
     public static final ClientFactoryOption<MeterRegistry> METER_REGISTRY =
-            ClientFactoryOption.define("METER_REGISTRY", Metrics.globalRegistry);
+            ClientFactoryOption.define("METER_REGISTRY", Flags.meterRegistry());
 
     /**
      * The {@link ProxyConfigSelector} which determines the {@link ProxyConfig} to be used.
@@ -262,6 +264,20 @@ public final class ClientFactoryOptions
                 builder.putAll(newOptions);
                 return newValue.option().newValue(builder.build());
             });
+
+    /**
+     * The {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
+     * This customizer is run right before {@link ChannelPipeline#connect(SocketAddress)}
+     * is invoked by Armeria. This customizer is no-op by default.
+     *
+     * <p>Note that usage of this customizer is an advanced
+     * feature and may produce unintended side effects, including complete
+     * breakdown. It is not recommended if you are not familiar with
+     * Armeria and Netty internals.
+     */
+    @UnstableApi
+    public static final ClientFactoryOption<Consumer<? super ChannelPipeline>> CHANNEL_PIPELINE_CUSTOMIZER =
+            ClientFactoryOption.define("CHANNEL_PIPELINE_CUSTOMIZER", v -> { /* no-op */ });
 
     private static final ClientFactoryOptions EMPTY = new ClientFactoryOptions(ImmutableList.of());
 
@@ -525,5 +541,20 @@ public final class ClientFactoryOptions
      */
     public boolean tlsAllowUnsafeCiphers() {
         return get(TLS_ALLOW_UNSAFE_CIPHERS);
+    }
+
+    /**
+     * The {@link Consumer} that customizes the Netty {@link ChannelPipeline}.
+     * This customizer is run right before {@link ChannelPipeline#connect(SocketAddress)}
+     * is invoked by Armeria. This customizer is no-op by default.
+     *
+     * <p>Note that usage of this customizer is an advanced
+     * feature and may produce unintended side effects, including complete
+     * breakdown. It is not recommended if you are not familiar with
+     * Armeria and Netty internals.
+     */
+    @UnstableApi
+    public Consumer<? super ChannelPipeline> channelPipelineCustomizer() {
+        return get(CHANNEL_PIPELINE_CUSTOMIZER);
     }
 }

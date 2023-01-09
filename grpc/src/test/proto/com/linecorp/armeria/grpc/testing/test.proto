@@ -167,3 +167,13 @@ service ReconnectService {
   rpc Start(armeria.grpc.testing.Empty) returns (armeria.grpc.testing.Empty);
   rpc Stop(armeria.grpc.testing.Empty) returns (armeria.grpc.testing.ReconnectInfo);
 }
+
+service UnitTestFooService {
+  rpc StaticUnaryCall(SimpleRequest) returns (SimpleResponse);
+  rpc StaticUnaryCall2(SimpleRequest) returns (SimpleResponse);
+}
+
+service UnitTestBarService {
+  rpc StaticUnaryCall(SimpleRequest) returns (SimpleResponse);
+  rpc StaticUnaryCall2(SimpleRequest) returns (SimpleResponse);
+}

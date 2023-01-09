@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.docs;
 
+import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.util.EnumSet;
@@ -24,7 +25,7 @@ import java.util.Objects;
 import java.util.Set;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Strings;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -34,12 +35,11 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  * Metadata about an enum type.
  */
 @UnstableApi
-public final class EnumInfo implements NamedTypeInfo {
+public final class EnumInfo implements DescriptiveTypeInfo {
 
     private final String name;
     private final List<EnumValueInfo> values;
-    @Nullable
-    private final String docString;
+    private final DescriptionInfo descriptionInfo;
 
     /**
      * Creates a new instance.
@@ -51,38 +51,38 @@ public final class EnumInfo implements NamedTypeInfo {
     /**
      * Creates a new instance.
      */
-    public EnumInfo(Class<? extends Enum<?>> enumType, String docString) {
-        this(enumType.getName(), enumType, requireNonNull(docString, "docString"));
+    public EnumInfo(Class<? extends Enum<?>> enumType, DescriptionInfo descriptionInfo) {
+        this(enumType.getName(), enumType, descriptionInfo);
     }
 
     /**
      * Creates a new instance.
      */
     public EnumInfo(String name, Class<? extends Enum<?>> enumType) {
-        this(name, enumType, null);
+        this(name, enumType, DescriptionInfo.empty());
     }
 
     /**
      * Creates a new instance.
      */
-    public EnumInfo(String name, Class<? extends Enum<?>> enumType, @Nullable String docString) {
-        this(name, toEnumValues(enumType), docString);
+    public EnumInfo(String name, Class<? extends Enum<?>> enumType, DescriptionInfo descriptionInfo) {
+        this(name, toEnumValues(enumType), descriptionInfo);
     }
 
     /**
      * Creates a new instance.
      */
     public EnumInfo(String name, Iterable<EnumValueInfo> values) {
-        this(name, values, null);
+        this(name, values, DescriptionInfo.empty());
     }
 
     /**
      * Creates a new instance.
      */
-    public EnumInfo(String name, Iterable<EnumValueInfo> values, @Nullable String docString) {
+    public EnumInfo(String name, Iterable<EnumValueInfo> values, DescriptionInfo descriptionInfo) {
         this.name = requireNonNull(name, "name");
         this.values = ImmutableList.copyOf(requireNonNull(values, "values"));
-        this.docString = Strings.emptyToNull(docString);
+        this.descriptionInfo = requireNonNull(descriptionInfo, "descriptionInfo");
     }
 
     @Override
@@ -98,9 +98,45 @@ public final class EnumInfo implements NamedTypeInfo {
         return values;
     }
 
+    /**
+     * Returns a new {@link EnumInfo} with the specified {@link DescriptionInfo}.
+     * Returns {@code this} if this {@link EnumInfo} has the same {@link DescriptionInfo}.
+     */
+    public EnumInfo withValues(Iterable<EnumValueInfo> values) {
+        requireNonNull(values, "values");
+        if (values.equals(this.values)) {
+            return this;
+        }
+
+        return new EnumInfo(name, values, descriptionInfo);
+    }
+
+    /**
+     * Returns the description information of the enum.
+     */
     @Override
-    public String docString() {
-        return docString;
+    public DescriptionInfo descriptionInfo() {
+        return descriptionInfo;
+    }
+
+    /**
+     * Returns a new {@link EnumInfo} with the specified {@link DescriptionInfo}.
+     * Returns {@code this} if this {@link EnumInfo} has the same {@link DescriptionInfo}.
+     */
+    public EnumInfo withDescriptionInfo(DescriptionInfo descriptionInfo) {
+        requireNonNull(descriptionInfo, "descriptionInfo");
+        if (descriptionInfo.equals(this.descriptionInfo)) {
+            return this;
+        }
+
+        return new EnumInfo(name, values, descriptionInfo);
+    }
+
+    private static List<EnumValueInfo> toEnumValues(Class<? extends Enum<?>> enumType) {
+        final Class<?> rawEnumType = requireNonNull(enumType, "enumType");
+        @SuppressWarnings({ "unchecked", "rawtypes" })
+        final Set<Enum> values = EnumSet.allOf((Class<Enum>) rawEnumType);
+        return values.stream().map(e -> new EnumValueInfo(e.name())).collect(toImmutableList());
     }
 
     @Override
@@ -114,23 +150,22 @@ public final class EnumInfo implements NamedTypeInfo {
         }
 
         final EnumInfo that = (EnumInfo) o;
-        return name.equals(that.name) && values.equals(that.values);
+        return name.equals(that.name) &&
+               values.equals(that.values) &&
+               descriptionInfo.equals(that.descriptionInfo);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, values);
+        return Objects.hash(name, values, descriptionInfo);
     }
 
     @Override
     public String toString() {
-        return name;
-    }
-
-    private static Iterable<EnumValueInfo> toEnumValues(Class<? extends Enum<?>> enumType) {
-        final Class<?> rawEnumType = requireNonNull(enumType, "enumType");
-        @SuppressWarnings({ "unchecked", "rawtypes" })
-        final Set<Enum> values = EnumSet.allOf((Class<Enum>) rawEnumType);
-        return values.stream().map(e -> new EnumValueInfo(e.name()))::iterator;
+        return MoreObjects.toStringHelper(this)
+                          .add("name", name)
+                          .add("values", values)
+                          .add("descriptionInfo", descriptionInfo)
+                          .toString();
     }
 }

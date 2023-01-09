@@ -18,7 +18,9 @@ package com.linecorp.armeria.spring.actuate;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
+import static com.linecorp.armeria.internal.common.util.ObjectCollectingUtil.MONO_CLASS;
 import static com.linecorp.armeria.spring.actuate.OperationArgumentResolverUtil.acceptHeadersResolver;
+import static com.linecorp.armeria.spring.actuate.ReactiveHealthEndpointWebExtensionUtil.handleMaybeReactorResult;
 import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.namespaceResolver;
 
 import java.io.Closeable;
@@ -62,13 +64,12 @@ import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.QueryParams;
-import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.server.HttpService;
-import com.linecorp.armeria.server.Route;
+import com.linecorp.armeria.server.RoutingContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBuf;
@@ -144,7 +145,7 @@ final class WebOperationService implements HttpService {
     }
 
     @Override
-    public ExchangeType exchangeType(RequestHeaders headers, Route route) {
+    public ExchangeType exchangeType(RoutingContext routingContext) {
         return ExchangeType.UNARY;
     }
 
@@ -153,7 +154,11 @@ final class WebOperationService implements HttpService {
             final Map<String, Object> arguments = getArguments(ctx, req);
             try {
                 final Object result = operation.invoke(newInvocationContext(req, arguments));
-                return handleResult(ctx, result, req.method());
+                if (MONO_CLASS != null) {
+                    return handleMaybeReactorResult(statusMapper, ctx, result, req.method());
+                }
+
+                return handleResult(statusMapper, ctx, result, req.method());
             } catch (Throwable throwable) {
                 logger.warn("Unexpected exception while invoking {} with {}.",
                             WebOperationService.class.getSimpleName(), arguments, throwable);
@@ -186,8 +191,7 @@ final class WebOperationService implements HttpService {
         return ImmutableMap.copyOf(arguments);
     }
 
-    private InvocationContext newInvocationContext(AggregatedHttpRequest req,
-                                                   Map<String, Object> arguments) {
+    private InvocationContext newInvocationContext(AggregatedHttpRequest req, Map<String, Object> arguments) {
         if (HAS_PRODUCIBLE_OPERATION_ARGUMENT_RESOLVER) {
             final OperationArgumentResolver acceptHeadersResolver = acceptHeadersResolver(req.headers());
             if (!HAS_WEB_SERVER_NAMESPACE) {
@@ -200,12 +204,17 @@ final class WebOperationService implements HttpService {
         return new InvocationContext(SecurityContext.NONE, arguments);
     }
 
-    private HttpResponse handleResult(ServiceRequestContext ctx,
-                                      @Nullable Object result, HttpMethod method) throws Throwable {
+    static HttpResponse handleResult(SimpleHttpCodeStatusMapper statusMapper, ServiceRequestContext ctx,
+                                     @Nullable Object result, HttpMethod method) throws Throwable {
         if (result == null) {
             return HttpResponse.of(method != HttpMethod.GET ? HttpStatus.NO_CONTENT : HttpStatus.NOT_FOUND);
         }
 
+        return handleResult0(statusMapper, ctx, result);
+    }
+
+    static HttpResponse handleResult0(SimpleHttpCodeStatusMapper statusMapper,
+                                      ServiceRequestContext ctx, Object result) throws Throwable {
         final HttpStatus status;
         final Object body;
         MediaType contentType = null;

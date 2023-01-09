@@ -16,8 +16,12 @@
 
 package com.linecorp.armeria.common.stream;
 
+import static java.util.Objects.requireNonNull;
+
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
+
+import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
 /**
  * A {@link Subscriber} that discards all elements silently.
@@ -40,7 +44,10 @@ public final class NoopSubscriber<T> implements Subscriber<T> {
     }
 
     @Override
-    public void onNext(T t) {}
+    public void onNext(T item) {
+        requireNonNull(item, "item");
+        StreamMessageUtil.closeOrAbort(item);
+    }
 
     @Override
     public void onError(Throwable t) {}

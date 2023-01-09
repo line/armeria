@@ -321,8 +321,9 @@ private Configuration configureShadedTestRuntimeConfiguration(
                     // Skip the excluded dependencies.
                     return
                 }
-
-                project.dependencies.add(shadedTestRuntime.name, dep)
+                // Do not use `project.dependencies.add(name, dep)` that discards the classifier of
+                // a dependency. See https://github.com/gradle/gradle/issues/23096
+                project.configurations.getByName(shadedTestRuntime.name).dependencies.add(dep)
             }
         }
     }
