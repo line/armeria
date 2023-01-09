@@ -227,10 +227,44 @@ for JSON POST body.
 ## Blocking service implementation
 
 Unlike upstream gRPC-Java, Armeria does not run service logic in a separate thread pool by default. If your
-service implementation requires blocking, either run the individual blocking logic in a thread pool, wrap the
-entire service implementation in `RequestContext.current().blockingTaskExecutor().submit`, or set
+service implementation requires blocking, either run the individual blocking logic in a thread pool,
+specify the `@Blocking` annotation to gRPC services or methods, wrap the entire service implementation in
+`RequestContext.current().blockingTaskExecutor().submit`, or set
 <type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)> so the above happens automatically for
 all service methods and lifecycle callbacks.
+
+```java
+// You can apply the @Blocking annotation at the class level
+// so all methods are executed by the blocking task executor.
+@Blocking // 👈
+class MyBlockingGrpcServiceImpl extends MyGrpcServiceImplBase {
+
+    public void blockingCall1(...) {
+        // Perform a long-running task.
+        ...
+    }
+
+    public void blockingCall2(...) {
+        // Perform a long-running task.
+        ...
+    }
+}
+
+class MyGrpcServiceImpl extends MyGrpcServiceImplBase {
+
+    // method will be executed by the blocking task executor that is returned
+    // by ServiceRequestContext.blockingTaskExecutor():
+    @Blocking // 👈
+    public void blockingCall(...) {
+        // Perform a long-running task.
+        ...
+    }
+
+    public void nonBlockingCall(...) {
+        ...
+    }
+}
+```
 
 ```java
 import com.linecorp.armeria.common.RequestContext;
