@@ -104,7 +104,7 @@ class AbstractStreamDecoder implements StreamDecoder {
     }
 
     private void maybeCheckOverflow(@Nullable ByteBuf decoded, ByteBuf newBuf) {
-        if (maxLength <= 0) {
+        if (maxLength <= 0 || maxLength == Integer.MAX_VALUE) {
             return;
         }
 
