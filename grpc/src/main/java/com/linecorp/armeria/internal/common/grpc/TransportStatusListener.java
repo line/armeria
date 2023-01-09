@@ -20,9 +20,10 @@ import io.grpc.Metadata;
 import io.grpc.Status;
 
 /**
- * A listener of gRPC {@link Status}s. Any errors occurring within the armeria will be returned to gRPC business
- * logic through this listener, and for clients the final response {@link Status} is also returned.
+ * A listener of gRPC {@link Status}s. Error or header events will be returned to gRPC business
+ * logic through this listener. For clients the final response {@link Status} is also returned.
  */
+@FunctionalInterface
 public interface TransportStatusListener {
 
     default void transportReportHeaders(Metadata metadata) {}
