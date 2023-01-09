@@ -55,11 +55,11 @@ const RequestBody: React.FunctionComponent<Props> = (props) => (
               onChange={props.onSelectedRequestBodyChange}
             >
               {props.exampleRequests.map((body) => (
-                <Tooltip title={body} placement="right">
-                  <MenuItem key={body} value={body}>
-                    {truncate(body, 30)}
-                  </MenuItem>
-                </Tooltip>
+                <MenuItem key={body} value={body}>
+                  <Tooltip title={body} placement="right">
+                    <span>{truncate(body, 30)}</span>
+                  </Tooltip>
+                </MenuItem>
               ))}
             </Select>
           </>
