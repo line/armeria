@@ -38,7 +38,7 @@ import com.linecorp.armeria.common.util.TextFormatter;
  * A formatter that converts a {@link RequestOnlyLog} or {@link RequestLog} into a JSON format message.
  */
 @UnstableApi
-public final class JsonLogFormatter implements LogFormatter {
+final class JsonLogFormatter implements LogFormatter {
 
     private static final Logger logger = LoggerFactory.getLogger(JsonLogFormatter.class);
 

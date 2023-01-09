@@ -33,7 +33,6 @@ import javax.net.ssl.SSLSession;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
-import com.google.common.collect.Sets;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -328,9 +327,10 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public Set<RequestLogProperty> availableProperties() {
         final int flags = this.flags;
-        return Arrays.stream(RequestLogProperty.values())
-                     .filter(requestLogProperty -> hasInterestedFlags(flags, requestLogProperty))
-                     .collect(toImmutableSet());
+        return RequestLogProperty.allProperties()
+                                 .stream()
+                                 .filter(requestLogProperty -> hasInterestedFlags(flags, requestLogProperty))
+                                 .collect(toImmutableSet());
     }
 
     // Methods required for updating availability and notifying listeners.
@@ -384,7 +384,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void updateFlags(int flags) {
-        for (;;) {
+        for (; ; ) {
             final int oldFlags = this.flags;
             final int newFlags = oldFlags | flags;
             if (oldFlags == newFlags) {
@@ -492,7 +492,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             flag |= RequestLogProperty.NAME.flag();
         }
 
-        for (;;) {
+        for (; ; ) {
             final int oldFlags = deferredFlags;
             final int newFlags = oldFlags | flag;
             if (oldFlags == newFlags) {
@@ -1567,9 +1567,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public Set<RequestLogProperty> availableProperties() {
-            return Sets.immutableEnumSet(Arrays.stream(RequestLogProperty.values())
-                                               .filter(this::isAvailable)
-                                               .collect(toImmutableSet()));
+            return RequestLogProperty.allProperties();
         }
 
         @Override
