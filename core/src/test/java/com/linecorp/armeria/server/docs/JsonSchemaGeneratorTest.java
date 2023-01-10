@@ -16,14 +16,16 @@
 
 package com.linecorp.armeria.server.docs;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static net.javacrumbs.jsonunit.fluent.JsonFluentAssert.assertThatJson;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
+import org.hamcrest.CustomTypeSafeMatcher;
 import org.junit.jupiter.api.Test;
+
+import net.javacrumbs.jsonunit.core.internal.Node.JsonMap;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.common.collect.ImmutableList;
@@ -87,13 +89,19 @@ class JsonSchemaGeneratorTest {
         final JsonNode jsonSchema = JsonSchemaGenerator.generate(serviceSpecification).get(0);
 
         // Base properties
-        assertThat(jsonSchema.get("title").asText()).isEqualTo(methodName);
-        assertThat(jsonSchema.get("description").asText()).isEqualTo(methodDescription.docString());
-        assertThat(jsonSchema.get("type").asText()).isEqualTo("object");
+        assertThatJson(jsonSchema).node("title").isEqualTo(methodName);
+        assertThatJson(jsonSchema).node("description").isEqualTo(methodDescription.docString());
+        assertThatJson(jsonSchema).node("type").isEqualTo("object");
 
         // Method specific properties
-        assertThat(jsonSchema.get("properties").isEmpty()).isTrue();
-        assertThat(jsonSchema.get("additionalProperties").asBoolean()).isFalse();
+        assertThatJson(jsonSchema).node("properties").matches(
+                new CustomTypeSafeMatcher<JsonMap>("has no key") {
+                    @Override
+                    protected boolean matchesSafely(JsonMap item) {
+                        return item.keySet().size() == 0;
+                    }
+                });
+        assertThatJson(jsonSchema).node("additionalProperties").isEqualTo(false);
     }
 
     @Test
@@ -112,19 +120,22 @@ class JsonSchemaGeneratorTest {
         final JsonNode jsonSchema = JsonSchemaGenerator.generate(serviceSpecification).get(0);
 
         // Base properties
-        assertThat(jsonSchema.get("title").asText()).isEqualTo(methodName);
-        assertThat(jsonSchema.get("description").asText()).isEqualTo(methodDescription.docString());
-        assertThat(jsonSchema.get("type").asText()).isEqualTo("object");
+        assertThatJson(jsonSchema).node("title").isEqualTo(methodName);
+        assertThatJson(jsonSchema).node("description").isEqualTo(methodDescription.docString());
+        assertThatJson(jsonSchema).node("type").isEqualTo("object");
 
         // Method specific properties
-        final List<Entry<String, JsonNode>> properties =
-                ImmutableList.copyOf(jsonSchema.get("properties").fields());
-        assertThat(properties).hasSize(4);
-
-        assertThat(jsonSchema.get("properties").get("param1").get("type").asText()).isEqualTo("integer");
-        assertThat(jsonSchema.get("properties").get("param2").get("type").asText()).isEqualTo("number");
-        assertThat(jsonSchema.get("properties").get("param3").get("type").asText()).isEqualTo("string");
-        assertThat(jsonSchema.get("properties").get("param4").get("type").asText()).isEqualTo("boolean");
+        assertThatJson(jsonSchema).node("properties").matches(
+                new CustomTypeSafeMatcher<JsonMap>("has 4 keys") {
+                    @Override
+                    protected boolean matchesSafely(JsonMap item) {
+                        return item.keySet().size() == 4;
+                    }
+                });
+        assertThatJson(jsonSchema).node("properties.param1.type").isEqualTo("integer");
+        assertThatJson(jsonSchema).node("properties.param2.type").isEqualTo("number");
+        assertThatJson(jsonSchema).node("properties.param3.type").isEqualTo("string");
+        assertThatJson(jsonSchema).node("properties.param4.type").isEqualTo("boolean");
     }
 
     @Test
@@ -147,13 +158,8 @@ class JsonSchemaGeneratorTest {
         final ServiceSpecification serviceSpecification = generateServiceSpecification(structInfo, rec);
         final JsonNode jsonSchema = JsonSchemaGenerator.generate(serviceSpecification).get(0);
 
-        assertThat(jsonSchema.get("properties").isNull()).isFalse();
-        assertThat(jsonSchema.get("properties").get("paramRecursive")).isNotNull();
-        assertThat(jsonSchema.get("properties").get("paramRecursive").get("properties")
-                             .get("inner-param1")).isNotNull();
-        assertThat(jsonSchema.get("properties").get("paramRecursive").get("properties")
-                             .get("inner-recurse")).isNotNull();
-        assertThat(jsonSchema.get("properties").get("paramRecursive").get("properties").get("inner-recurse")
-                             .get("$ref").asText()).isEqualTo("#/properties/paramRecursive");
+        assertThatJson(jsonSchema).node("properties.paramRecursive.properties.inner-param1").isPresent();
+        assertThatJson(jsonSchema).node("properties.paramRecursive.properties.inner-recurse.$ref").isEqualTo(
+                "#/properties/paramRecursive");
     }
 }

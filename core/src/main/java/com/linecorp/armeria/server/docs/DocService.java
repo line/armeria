@@ -199,6 +199,9 @@ public final class DocService extends SimpleDecoratingHttpService {
         final ExecutorService executorService = Executors.newSingleThreadExecutor(
                 ThreadFactories.newThreadFactory("docservice-loader", true));
         vfs().specificationLoader.updateServices(services, executorService).handle((res, e) -> {
+            if (e != null) {
+                logger.warn("Failed to load specifications completely: ", e);
+            }
             executorService.shutdown();
             return null;
         });
@@ -322,7 +325,7 @@ public final class DocService extends SimpleDecoratingHttpService {
 
         private CompletableFuture<AggregatedHttpFile> loadSpecifications(
                 CompletableFuture<ServiceSpecification> specificationFuture) {
-            return files.computeIfAbsent(SPECIFICATION_PATH, key -> specificationFuture.thenApply((spec) -> {
+            return files.computeIfAbsent(SPECIFICATION_PATH, key -> specificationFuture.thenApply(spec -> {
                 try {
                     final byte[] content = jsonMapper.writerWithDefaultPrettyPrinter()
                                                      .writeValueAsBytes(spec);
@@ -335,7 +338,7 @@ public final class DocService extends SimpleDecoratingHttpService {
 
         private CompletableFuture<AggregatedHttpFile> loadSchemas(
                 CompletableFuture<ServiceSpecification> specificationFuture) {
-            return files.computeIfAbsent(SCHEMAS_PATH, key -> specificationFuture.thenApply((spec) -> {
+            return files.computeIfAbsent(SCHEMAS_PATH, key -> specificationFuture.thenApply(spec -> {
                 try {
                     final ArrayNode jsonSpec = JsonSchemaGenerator.generate(spec);
 
