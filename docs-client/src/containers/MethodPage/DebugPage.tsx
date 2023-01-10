@@ -179,7 +179,6 @@ const DebugPage: React.FunctionComponent<Props> = ({
     if (useRequestBody) {
       if (urlParams.has('request_body')) {
         urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
-        setDebugFormIsOpen(true);
       }
     }
 
@@ -208,6 +207,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setRequestBody(urlRequestBody || method.exampleRequests[0] || '');
     setAdditionalPath(urlPath || '');
     setAdditionalQueries(urlQueries || '');
+    setDebugFormIsOpen(
+      urlRequestBody !== undefined || urlPath !== '' || urlQueries !== null,
+    );
   }, [
     exactPathMapping,
     exampleQueries.length,
