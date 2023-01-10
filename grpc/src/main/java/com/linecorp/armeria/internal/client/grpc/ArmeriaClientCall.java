@@ -445,6 +445,12 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         close(status, metadata);
     }
 
+    @Override
+    public void transportReportHeaders(Metadata metadata) {
+        assert listener != null;
+        listener.onHeaders(metadata);
+    }
+
     private void prepareHeaders(Compressor compressor, Metadata metadata, long remainingNanos) {
         final RequestHeadersBuilder newHeaders = req.headers().toBuilder();
         if (compressor != Identity.NONE) {

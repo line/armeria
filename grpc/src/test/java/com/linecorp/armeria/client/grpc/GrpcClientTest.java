@@ -867,7 +867,9 @@ class GrpcClientTest {
         assertThat(CLIENT_HEADERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
         assertThat(SERVER_TRAILERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
 
-        assertThat(headers.get()).isNull();
+        assertThat(headers.get().keys()).contains(HttpHeaderNames.CONTENT_TYPE.toString(),
+                                                  GrpcHeaderNames.GRPC_ENCODING.toString(),
+                                                  GrpcHeaderNames.GRPC_ACCEPT_ENCODING.toString());
         assertThat(trailers.get().get(TestServiceImpl.EXTRA_HEADER_KEY)).isEqualTo("dog");
         assertThat(trailers.get().getAll(TestServiceImpl.STRING_VALUE_KEY)).containsExactly(
                 StringValue.newBuilder().setValue("hello").build(),
@@ -900,7 +902,9 @@ class GrpcClientTest {
         assertThat(clientHeaders.get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
         assertThat(SERVER_TRAILERS_CAPTURE.get().get(TestServiceImpl.EXTRA_HEADER_NAME)).isEqualTo("dog");
 
-        assertThat(headers.get()).isNull();
+        assertThat(headers.get().keys()).contains(HttpHeaderNames.CONTENT_TYPE.toString(),
+                                                  GrpcHeaderNames.GRPC_ENCODING.toString(),
+                                                  GrpcHeaderNames.GRPC_ACCEPT_ENCODING.toString());
         assertThat(trailers.get().get(TestServiceImpl.EXTRA_HEADER_KEY)).isEqualTo("dog");
         assertThat(trailers.get().getAll(TestServiceImpl.STRING_VALUE_KEY)).containsExactly(
                 StringValue.newBuilder().setValue("hello").build(),
