@@ -63,7 +63,7 @@ class TransientHttpServiceTest {
             sb.service("/", noResponseService.decorate(TransientHttpService.newDecorator()));
             sb.decorator(LoggingService.builder()
                                        .failureResponseLogLevel(LogLevel.DEBUG)
-                                       .logFormatter(LogFormatter.textBuilder()
+                                       .logFormatter(LogFormatter.builderForText()
                                                                  .responseHeadersSanitizer(sanitizer)
                                                                  .build())
                                        .newDecorator());

@@ -318,7 +318,7 @@ public interface RequestOnlyLog extends RequestLogAccess {
                     ? extends @Nullable Object> contentSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> trailersSanitizer) {
-        return LogFormatter.textBuilder()
+        return LogFormatter.builderForText()
                            .requestHeadersSanitizer((ctx, headers) -> {
                                final RequestHeaders requestHeaders = (RequestHeaders) headers;
                                final Object sanitized = headersSanitizer.apply(ctx, requestHeaders);
@@ -342,6 +342,6 @@ public interface RequestOnlyLog extends RequestLogAccess {
                                return sanitized.toString();
                            })
                            .build()
-                           .formatRequest((RequestLog) this);
+                           .formatRequest(this);
     }
 }

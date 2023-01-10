@@ -17,7 +17,6 @@
 package com.linecorp.armeria.common.logging;
 
 import static com.google.common.base.Preconditions.checkState;
-import static com.google.common.collect.ImmutableSet.toImmutableSet;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -153,6 +152,9 @@ public enum RequestLogProperty {
                   .filter(p -> !p.isRequestProperty)
                   .collect(Sets.toImmutableEnumSet());
 
+    private static final Set<RequestLogProperty> ALL_PROPERTIES =
+            Arrays.stream(RequestLogProperty.values()).collect(Sets.toImmutableEnumSet());
+
     static final int FLAGS_REQUEST_COMPLETE;
     static final int FLAGS_RESPONSE_COMPLETE;
     static final int FLAGS_ALL_COMPLETE;
@@ -177,6 +179,13 @@ public enum RequestLogProperty {
         return RESPONSE_PROPERTIES;
     }
 
+    /**
+     * Returns all of the {@link RequestLogProperty}s.
+     */
+    public static Set<RequestLogProperty> allProperties() {
+        return ALL_PROPERTIES;
+    }
+
     static int flags(RequestLogProperty... properties) {
         int flags = 0;
         for (RequestLogProperty property : properties) {
@@ -191,11 +200,6 @@ public enum RequestLogProperty {
             flags |= property.flag();
         }
         return flags;
-    }
-
-    static Set<RequestLogProperty> allProperties() {
-        return Arrays.stream(RequestLogProperty.values())
-                     .collect(toImmutableSet());
     }
 
     private final int flag;

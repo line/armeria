@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
+
 import java.util.function.BiFunction;
 
 import com.linecorp.armeria.common.HttpHeaders;
@@ -27,15 +29,6 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
  */
 @UnstableApi
 public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<String> {
-
-    private static final BiFunction<RequestContext, HttpHeaders, String> DEFAULT_HEADERS_SANITIZER =
-            defaultSanitizer();
-    private static final BiFunction<RequestContext, Object, String> DEFAULT_CONTENT_SANITIZER =
-            defaultSanitizer();
-
-    private static <T, U> BiFunction<T, U, String> defaultSanitizer() {
-        return (first, second) -> second.toString();
-    }
 
     TextLogFormatterBuilder() {}
 
@@ -95,11 +88,15 @@ public final class TextLogFormatterBuilder extends AbstractLogFormatterBuilder<S
      */
     public TextLogFormatter build() {
         return new TextLogFormatter(
-                requestHeadersSanitizer() != null ? requestHeadersSanitizer() : DEFAULT_HEADERS_SANITIZER,
-                responseHeadersSanitizer() != null ? responseHeadersSanitizer() : DEFAULT_HEADERS_SANITIZER,
-                requestTrailersSanitizer() != null ? requestTrailersSanitizer() : DEFAULT_HEADERS_SANITIZER,
-                responseTrailersSanitizer() != null ? responseTrailersSanitizer() : DEFAULT_HEADERS_SANITIZER,
-                requestContentSanitizer() != null ? requestContentSanitizer() : DEFAULT_CONTENT_SANITIZER,
-                responseContentSanitizer() != null ? responseContentSanitizer() : DEFAULT_CONTENT_SANITIZER);
+                firstNonNull(requestHeadersSanitizer(), defaultSanitizer()),
+                firstNonNull(responseHeadersSanitizer(), defaultSanitizer()),
+                firstNonNull(requestTrailersSanitizer(), defaultSanitizer()),
+                firstNonNull(responseTrailersSanitizer(), defaultSanitizer()),
+                firstNonNull(requestContentSanitizer(), defaultSanitizer()),
+                firstNonNull(responseContentSanitizer(), defaultSanitizer()));
+    }
+
+    private static <T> BiFunction<? super RequestContext, T, String> defaultSanitizer() {
+        return (requestContext, object) -> object.toString();
     }
 }

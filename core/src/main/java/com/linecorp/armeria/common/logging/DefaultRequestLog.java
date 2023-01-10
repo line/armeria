@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.logging;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
+import static com.linecorp.armeria.common.logging.RequestLogProperty.FLAGS_ALL_COMPLETE;
 import static java.util.Objects.requireNonNull;
 
 import java.util.ArrayList;
@@ -171,7 +172,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private static boolean isComplete(int flags) {
-        return flags == RequestLogProperty.FLAGS_ALL_COMPLETE;
+        return flags == FLAGS_ALL_COMPLETE;
     }
 
     @Override
@@ -241,7 +242,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
     @Override
     public CompletableFuture<RequestLog> whenComplete() {
-        return future(RequestLogProperty.FLAGS_ALL_COMPLETE);
+        return future(FLAGS_ALL_COMPLETE);
     }
 
     @Override
@@ -328,6 +329,9 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     @Override
     public Set<RequestLogProperty> availableProperties() {
         final int flags = this.flags;
+        if (flags == FLAGS_ALL_COMPLETE) {
+            return RequestLogProperty.allProperties();
+        }
         return RequestLogProperty.allProperties()
                                  .stream()
                                  .filter(requestLogProperty -> hasInterestedFlags(flags, requestLogProperty))
@@ -385,7 +389,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void updateFlags(int flags) {
-        for (;;) {
+        for (; ; ) {
             final int oldFlags = this.flags;
             final int newFlags = oldFlags | flags;
             if (oldFlags == newFlags) {
@@ -493,7 +497,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             flag |= RequestLogProperty.NAME.flag();
         }
 
-        for (;;) {
+        for (; ; ) {
             final int oldFlags = deferredFlags;
             final int newFlags = oldFlags | flag;
             if (oldFlags == newFlags) {
@@ -1547,7 +1551,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
 
         @Override
         public int availabilityStamp() {
-            return RequestLogProperty.FLAGS_ALL_COMPLETE;
+            return FLAGS_ALL_COMPLETE;
         }
 
         @Override

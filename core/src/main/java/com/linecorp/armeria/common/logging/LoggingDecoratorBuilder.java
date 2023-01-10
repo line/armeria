@@ -547,7 +547,7 @@ public abstract class LoggingDecoratorBuilder {
         if (logFormatter != null) {
             return logFormatter;
         } else {
-            return LogFormatter.textBuilder()
+            return LogFormatter.builderForText()
                                .requestHeadersSanitizer(convertToStringSanitizer(requestHeadersSanitizer))
                                .responseHeadersSanitizer(convertToStringSanitizer(responseHeadersSanitizer))
                                .requestTrailersSanitizer(convertToStringSanitizer(requestTrailersSanitizer))
@@ -563,7 +563,7 @@ public abstract class LoggingDecoratorBuilder {
         return toString(this, logger, requestLogLevelMapper(), responseLogLevelMapper(),
                         requestHeadersSanitizer, requestContentSanitizer, requestTrailersSanitizer,
                         responseHeadersSanitizer, responseContentSanitizer, responseTrailersSanitizer,
-                        responseCauseSanitizer);
+                        responseCauseSanitizer, logFormatter);
     }
 
     private static String toString(
@@ -584,11 +584,13 @@ public abstract class LoggingDecoratorBuilder {
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> responseTrailersSanitizer,
             BiFunction<? super RequestContext, ? super Throwable,
-                    ? extends @Nullable Object> responseCauseSanitizer) {
+                    ? extends @Nullable Object> responseCauseSanitizer,
+            @Nullable LogFormatter logFormatter) {
 
         final ToStringHelper helper = MoreObjects.toStringHelper(self)
                                                  .omitNullValues()
-                                                 .add("logger", logger);
+                                                 .add("logger", logger)
+                                                 .add("logFormatter", logFormatter);
 
         helper.add("requestLogLevelMapper", requestLogLevelMapper);
         helper.add("responseLogLevelMapper", responseLogLevelMapper);

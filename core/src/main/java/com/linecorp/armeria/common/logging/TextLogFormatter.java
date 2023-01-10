@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Set;
 import java.util.function.BiFunction;
 
@@ -77,11 +78,12 @@ final class TextLogFormatter implements LogFormatter {
             return "{}";
         }
 
-        final String requestCauseString;
-        if (availableProperties.contains(RequestLogProperty.REQUEST_CAUSE) && log.requestCause() != null) {
-            requestCauseString = String.valueOf(log.requestCause());
-        } else {
-            requestCauseString = null;
+        String requestCauseString = null;
+        if (availableProperties.contains(RequestLogProperty.REQUEST_CAUSE)) {
+            final Throwable cause = log.requestCause();
+            if (cause != null) {
+                requestCauseString = cause.toString();
+            }
         }
 
         final RequestContext ctx = log.context();
@@ -92,14 +94,17 @@ final class TextLogFormatter implements LogFormatter {
             sanitizedHeaders = null;
         }
 
-        final String sanitizedContent;
-        if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT) && log.requestContent() != null) {
-            sanitizedContent = requestContentSanitizer.apply(ctx, log.requestContent());
-        } else if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
-                   log.requestContentPreview() != null) {
-            sanitizedContent = requestContentSanitizer.apply(ctx, log.requestContentPreview());
-        } else {
-            sanitizedContent = null;
+        String sanitizedContent = null;
+        if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT)) {
+            final Object content = log.requestContent();
+            if (content != null) {
+                sanitizedContent = requestContentSanitizer.apply(ctx, content);
+            }
+        } else if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
+            final String contentPreview = log.requestContentPreview();
+            if (contentPreview != null) {
+                sanitizedContent = requestContentSanitizer.apply(ctx, contentPreview);
+            }
         }
 
         final String sanitizedTrailers;
@@ -172,11 +177,12 @@ final class TextLogFormatter implements LogFormatter {
             return "{}";
         }
 
-        final String responseCauseString;
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_CAUSE) && log.responseCause() != null) {
-            responseCauseString = String.valueOf(log.responseCause());
-        } else {
-            responseCauseString = null;
+        String responseCauseString = null;
+        if (availableProperties.contains(RequestLogProperty.RESPONSE_CAUSE)) {
+            final Throwable cause = log.responseCause();
+            if (cause != null) {
+                responseCauseString = cause.toString();
+            }
         }
 
         final RequestContext ctx = log.context();
@@ -187,15 +193,17 @@ final class TextLogFormatter implements LogFormatter {
             sanitizedHeaders = null;
         }
 
-        final String sanitizedContent;
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT) &&
-            log.responseContent() != null) {
-            sanitizedContent = responseContentSanitizer.apply(ctx, log.responseContent());
-        } else if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT_PREVIEW) &&
-                   log.responseContentPreview() != null) {
-            sanitizedContent = responseContentSanitizer.apply(ctx, log.responseContentPreview());
-        } else {
-            sanitizedContent = null;
+        String sanitizedContent = null;
+        if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT)) {
+            final Object content = log.responseContent();
+            if (content != null) {
+                sanitizedContent = responseContentSanitizer.apply(ctx, content);
+            }
+        } else if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
+            final String contentPreview = log.responseContentPreview();
+            if (contentPreview != null) {
+                sanitizedContent = responseContentSanitizer.apply(ctx, contentPreview);
+            }
         }
 
         final String sanitizedTrailers;
@@ -240,7 +248,8 @@ final class TextLogFormatter implements LogFormatter {
             }
             buf.append('}');
 
-            final int numChildren = log.children() != null ? log.children().size() : 0;
+            final List<RequestLogAccess> children = log.children();
+            final int numChildren = children != null ? children.size() : 0;
             if (numChildren > 1) {
                 // Append only when there were retries which the numChildren is greater than 1.
                 buf.append(", {totalAttempts=");

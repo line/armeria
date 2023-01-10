@@ -22,6 +22,7 @@ import java.util.concurrent.CompletableFuture;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 /**
  * Provides the access to a {@link RequestLog} or {@link RequestOnlyLog}, while ensuring the interested
@@ -266,5 +267,6 @@ public interface RequestLogAccess {
     /**
      * Returns all available {@link RequestLogProperty}s.
      */
+    @UnstableApi
     Set<RequestLogProperty> availableProperties();
 }

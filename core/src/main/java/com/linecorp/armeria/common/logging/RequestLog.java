@@ -257,7 +257,7 @@ public interface RequestLog extends RequestOnlyLog {
                     ? extends @Nullable Object> contentSanitizer,
             BiFunction<? super RequestContext, ? super HttpHeaders,
                     ? extends @Nullable Object> trailersSanitizer) {
-        return LogFormatter.textBuilder()
+        return LogFormatter.builderForText()
                            .responseHeadersSanitizer((ctx, headers) -> {
                                final ResponseHeaders responseHeaders = (ResponseHeaders) headers;
                                final Object sanitized = headersSanitizer.apply(ctx, responseHeaders);

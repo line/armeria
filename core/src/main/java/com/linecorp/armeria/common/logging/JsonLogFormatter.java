@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.logging;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.List;
 import java.util.Set;
 import java.util.function.BiFunction;
 
@@ -44,8 +45,6 @@ final class JsonLogFormatter implements LogFormatter {
 
     static final JsonLogFormatter DEFAULT_INSTANCE = new JsonLogFormatterBuilder().build();
 
-    private final ObjectMapper objectMapper;
-
     private final BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode>
             requestHeadersSanitizer;
 
@@ -61,6 +60,8 @@ final class JsonLogFormatter implements LogFormatter {
     private final BiFunction<? super RequestContext, Object, ? extends JsonNode> requestContentSanitizer;
 
     private final BiFunction<? super RequestContext, Object, ? extends JsonNode> responseContentSanitizer;
+
+    private final ObjectMapper objectMapper;
 
     JsonLogFormatter(
             BiFunction<? super RequestContext, ? super HttpHeaders, ? extends JsonNode> requestHeadersSanitizer,
@@ -92,87 +93,91 @@ final class JsonLogFormatter implements LogFormatter {
             return "{}";
         }
 
-        final String requestCauseString;
-        if (availableProperties.contains(RequestLogProperty.REQUEST_CAUSE) && log.requestCause() != null) {
-            requestCauseString = String.valueOf(log.requestCause());
-        } else {
-            requestCauseString = null;
-        }
-
-        final RequestContext ctx = log.context();
-        final JsonNode sanitizedHeaders;
-        if (availableProperties.contains(RequestLogProperty.REQUEST_HEADERS)) {
-            sanitizedHeaders = requestHeadersSanitizer.apply(ctx, log.requestHeaders());
-        } else {
-            sanitizedHeaders = null;
-        }
-
-        final JsonNode sanitizedContent;
-        if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT) && log.requestContent() != null) {
-            sanitizedContent = requestContentSanitizer.apply(ctx, log.requestContent());
-        } else if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT_PREVIEW) &&
-                   log.requestContentPreview() != null) {
-            sanitizedContent = requestContentSanitizer.apply(ctx, log.requestContentPreview());
-        } else {
-            sanitizedContent = null;
-        }
-
-        final JsonNode sanitizedTrailers;
-        if (availableProperties.contains(RequestLogProperty.REQUEST_TRAILERS) &&
-            !log.requestTrailers().isEmpty()) {
-            sanitizedTrailers = requestTrailersSanitizer.apply(ctx, log.requestTrailers());
-        } else {
-            sanitizedTrailers = null;
-        }
-
-        final ObjectNode objectNode = objectMapper.createObjectNode();
-        objectNode.put("startTime",
-                       TextFormatter.epochMicros(log.requestStartTimeMicros()).toString());
-
-        if (availableProperties.contains(RequestLogProperty.REQUEST_LENGTH)) {
-            objectNode.put("length", TextFormatter.size(log.requestLength()).toString());
-        }
-
-        if (availableProperties.contains(RequestLogProperty.REQUEST_END_TIME)) {
-            objectNode.put("duration",
-                           TextFormatter.elapsed(log.requestDurationNanos()).toString());
-        }
-
-        if (requestCauseString != null) {
-            objectNode.put("cause", requestCauseString);
-        }
-
-        if (availableProperties.contains(RequestLogProperty.SCHEME)) {
-            objectNode.put("scheme", log.scheme().uriText());
-        } else if (availableProperties.contains(RequestLogProperty.SESSION)) {
-            objectNode.put("scheme",
-                           SerializationFormat.UNKNOWN.uriText() + '+' +
-                           log.sessionProtocol());
-        } else {
-            objectNode.put("scheme",
-                           SerializationFormat.UNKNOWN.uriText() + "+unknown");
-        }
-
-        if (availableProperties.contains(RequestLogProperty.NAME)) {
-            objectNode.put("name", log.name());
-        }
-
-        if (sanitizedHeaders != null) {
-            objectNode.set("headers", sanitizedHeaders);
-        }
-
-        if (sanitizedContent != null) {
-            objectNode.set("content", sanitizedContent);
-        }
-
-        if (sanitizedTrailers != null) {
-            objectNode.set("trailers", sanitizedTrailers);
-        }
         try {
+            String requestCauseString = null;
+            if (availableProperties.contains(RequestLogProperty.REQUEST_CAUSE)) {
+                final Throwable cause = log.requestCause();
+                if (cause != null) {
+                    requestCauseString = cause.toString();
+                }
+            }
+
+            final RequestContext ctx = log.context();
+            final JsonNode sanitizedHeaders;
+            if (availableProperties.contains(RequestLogProperty.REQUEST_HEADERS)) {
+                sanitizedHeaders = requestHeadersSanitizer.apply(ctx, log.requestHeaders());
+            } else {
+                sanitizedHeaders = null;
+            }
+
+            JsonNode sanitizedContent = null;
+            if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT)) {
+                final Object content = log.requestContent();
+                if (content != null) {
+                    sanitizedContent = requestContentSanitizer.apply(ctx, content);
+                }
+            } else if (availableProperties.contains(RequestLogProperty.REQUEST_CONTENT_PREVIEW)) {
+                final String contentPreview = log.requestContentPreview();
+                if (contentPreview != null) {
+                    sanitizedContent = requestContentSanitizer.apply(ctx, contentPreview);
+                }
+            }
+
+            final JsonNode sanitizedTrailers;
+            if (availableProperties.contains(RequestLogProperty.REQUEST_TRAILERS) &&
+                !log.requestTrailers().isEmpty()) {
+                sanitizedTrailers = requestTrailersSanitizer.apply(ctx, log.requestTrailers());
+            } else {
+                sanitizedTrailers = null;
+            }
+
+            final ObjectNode objectNode = objectMapper.createObjectNode();
+            objectNode.put("startTime",
+                           TextFormatter.epochMicros(log.requestStartTimeMicros()).toString());
+
+            if (availableProperties.contains(RequestLogProperty.REQUEST_LENGTH)) {
+                objectNode.put("length", TextFormatter.size(log.requestLength()).toString());
+            }
+
+            if (availableProperties.contains(RequestLogProperty.REQUEST_END_TIME)) {
+                objectNode.put("duration",
+                               TextFormatter.elapsed(log.requestDurationNanos()).toString());
+            }
+
+            if (requestCauseString != null) {
+                objectNode.put("cause", requestCauseString);
+            }
+
+            if (availableProperties.contains(RequestLogProperty.SCHEME)) {
+                objectNode.put("scheme", log.scheme().uriText());
+            } else if (availableProperties.contains(RequestLogProperty.SESSION)) {
+                objectNode.put("scheme",
+                               SerializationFormat.UNKNOWN.uriText() + '+' +
+                               log.sessionProtocol());
+            } else {
+                objectNode.put("scheme",
+                               SerializationFormat.UNKNOWN.uriText() + "+unknown");
+            }
+
+            if (availableProperties.contains(RequestLogProperty.NAME)) {
+                objectNode.put("name", log.name());
+            }
+
+            if (sanitizedHeaders != null) {
+                objectNode.set("headers", sanitizedHeaders);
+            }
+
+            if (sanitizedContent != null) {
+                objectNode.set("content", sanitizedContent);
+            }
+
+            if (sanitizedTrailers != null) {
+                objectNode.set("trailers", sanitizedTrailers);
+            }
             return objectMapper.writeValueAsString(objectNode);
         } catch (Exception e) {
             logger.warn("Unexpected exception while formatting a request log: {}", log, e);
-            return "";
+            return "{}";
         }
     }
 
@@ -185,80 +190,84 @@ final class JsonLogFormatter implements LogFormatter {
             return "{}";
         }
 
-        final String responseCauseString;
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_CAUSE) && log.responseCause() != null) {
-            responseCauseString = String.valueOf(log.responseCause());
-        } else {
-            responseCauseString = null;
-        }
-
-        final RequestContext ctx = log.context();
-        final JsonNode sanitizedHeaders;
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_HEADERS)) {
-            sanitizedHeaders = responseHeadersSanitizer.apply(ctx, log.responseHeaders());
-        } else {
-            sanitizedHeaders = null;
-        }
-
-        final JsonNode sanitizedContent;
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT) &&
-            log.responseContent() != null) {
-            sanitizedContent = responseContentSanitizer.apply(ctx, log.responseContent());
-        } else if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT_PREVIEW) &&
-                   log.responseContentPreview() != null) {
-            sanitizedContent = responseContentSanitizer.apply(ctx, log.responseContentPreview());
-        } else {
-            sanitizedContent = null;
-        }
-
-        final JsonNode sanitizedTrailers;
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_TRAILERS) &&
-            !log.responseTrailers().isEmpty()) {
-            sanitizedTrailers = responseTrailersSanitizer.apply(ctx, log.responseTrailers());
-        } else {
-            sanitizedTrailers = null;
-        }
-
-        final ObjectNode objectNode = objectMapper.createObjectNode();
-        objectNode.put("startTime",
-                       TextFormatter.epochMicros(log.responseStartTimeMicros()).toString());
-
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_LENGTH)) {
-            objectNode.put("length", TextFormatter.size(log.responseLength()).toString());
-        }
-
-        if (availableProperties.contains(RequestLogProperty.RESPONSE_END_TIME)) {
-            objectNode.put("duration", TextFormatter.elapsed(log.responseDurationNanos()).toString());
-            objectNode.put("totalDuration",
-                           TextFormatter.elapsed(log.totalDurationNanos()).toString());
-        }
-
-        if (responseCauseString != null) {
-            objectNode.put("cause", responseCauseString);
-        }
-
-        if (sanitizedHeaders != null) {
-            objectNode.set("headers", sanitizedHeaders);
-        }
-
-        if (sanitizedContent != null) {
-            objectNode.set("content", sanitizedContent);
-        }
-
-        if (sanitizedTrailers != null) {
-            objectNode.set("trailers", sanitizedTrailers);
-        }
-
-        final int numChildren = log.children() != null ? log.children().size() : 0;
-        if (numChildren > 1) {
-            // Append only when there were retries which the numChildren is greater than 1.
-            objectNode.put("totalAttempts", String.valueOf(numChildren));
-        }
         try {
+            String responseCauseString = null;
+            if (availableProperties.contains(RequestLogProperty.RESPONSE_CAUSE)) {
+                final Throwable cause = log.responseCause();
+                if (cause != null) {
+                    responseCauseString = cause.toString();
+                }
+            }
+
+            final RequestContext ctx = log.context();
+            final JsonNode sanitizedHeaders;
+            if (availableProperties.contains(RequestLogProperty.RESPONSE_HEADERS)) {
+                sanitizedHeaders = responseHeadersSanitizer.apply(ctx, log.responseHeaders());
+            } else {
+                sanitizedHeaders = null;
+            }
+
+            JsonNode sanitizedContent = null;
+            if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT)) {
+                final Object content = log.responseContent();
+                if (content != null) {
+                    sanitizedContent = responseContentSanitizer.apply(ctx, content);
+                }
+            } else if (availableProperties.contains(RequestLogProperty.RESPONSE_CONTENT_PREVIEW)) {
+                final String contentPreview = log.responseContentPreview();
+                if (contentPreview != null) {
+                    sanitizedContent = responseContentSanitizer.apply(ctx, contentPreview);
+                }
+            }
+
+            final JsonNode sanitizedTrailers;
+            if (availableProperties.contains(RequestLogProperty.RESPONSE_TRAILERS) &&
+                !log.responseTrailers().isEmpty()) {
+                sanitizedTrailers = responseTrailersSanitizer.apply(ctx, log.responseTrailers());
+            } else {
+                sanitizedTrailers = null;
+            }
+
+            final ObjectNode objectNode = objectMapper.createObjectNode();
+            objectNode.put("startTime",
+                           TextFormatter.epochMicros(log.responseStartTimeMicros()).toString());
+
+            if (availableProperties.contains(RequestLogProperty.RESPONSE_LENGTH)) {
+                objectNode.put("length", TextFormatter.size(log.responseLength()).toString());
+            }
+
+            if (availableProperties.contains(RequestLogProperty.RESPONSE_END_TIME)) {
+                objectNode.put("duration", TextFormatter.elapsed(log.responseDurationNanos()).toString());
+                objectNode.put("totalDuration",
+                               TextFormatter.elapsed(log.totalDurationNanos()).toString());
+            }
+
+            if (responseCauseString != null) {
+                objectNode.put("cause", responseCauseString);
+            }
+
+            if (sanitizedHeaders != null) {
+                objectNode.set("headers", sanitizedHeaders);
+            }
+
+            if (sanitizedContent != null) {
+                objectNode.set("content", sanitizedContent);
+            }
+
+            if (sanitizedTrailers != null) {
+                objectNode.set("trailers", sanitizedTrailers);
+            }
+
+            final List<RequestLogAccess> children = log.children();
+            final int numChildren = children != null ? children.size() : 0;
+            if (numChildren > 1) {
+                // Append only when there were retries which the numChildren is greater than 1.
+                objectNode.put("totalAttempts", String.valueOf(numChildren));
+            }
             return objectMapper.writeValueAsString(objectNode);
         } catch (Exception e) {
-            logger.warn("Unexpected exception while formatting a request log: {}", log, e);
-            return "";
+            logger.warn("Unexpected exception while formatting a response log: {}", log, e);
+            return "{}";
         }
     }
 }

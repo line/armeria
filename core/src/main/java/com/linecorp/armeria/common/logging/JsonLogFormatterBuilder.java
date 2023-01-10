@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.common.logging;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
 import java.util.function.BiFunction;
@@ -106,21 +107,22 @@ public final class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<J
     public JsonLogFormatter build() {
         final ObjectMapper objectMapper = this.objectMapper != null ?
                                           this.objectMapper : JacksonUtil.newDefaultObjectMapper();
-        final BiFunction<RequestContext, HttpHeaders, JsonNode> defaultHeadersSanitizer =
+        final BiFunction<? super RequestContext, HttpHeaders, JsonNode> defaultHeadersSanitizer =
                 defaultSanitizer(objectMapper);
-        final BiFunction<RequestContext, Object, JsonNode> defaultContentSanitizer =
+        final BiFunction<? super RequestContext, Object, JsonNode> defaultContentSanitizer =
                 defaultSanitizer(objectMapper);
         return new JsonLogFormatter(
-                requestHeadersSanitizer() != null ? requestHeadersSanitizer() : defaultHeadersSanitizer,
-                responseHeadersSanitizer() != null ? responseHeadersSanitizer() : defaultHeadersSanitizer,
-                requestTrailersSanitizer() != null ? requestTrailersSanitizer() : defaultHeadersSanitizer,
-                responseTrailersSanitizer() != null ? responseTrailersSanitizer() : defaultHeadersSanitizer,
-                requestContentSanitizer() != null ? requestContentSanitizer() : defaultContentSanitizer,
-                responseContentSanitizer() != null ? responseContentSanitizer() : defaultContentSanitizer,
+                firstNonNull(requestHeadersSanitizer(), defaultHeadersSanitizer),
+                firstNonNull(responseHeadersSanitizer(), defaultHeadersSanitizer),
+                firstNonNull(requestTrailersSanitizer(), defaultHeadersSanitizer),
+                firstNonNull(responseTrailersSanitizer(), defaultHeadersSanitizer),
+                firstNonNull(requestContentSanitizer(), defaultContentSanitizer),
+                firstNonNull(responseContentSanitizer(), defaultContentSanitizer),
                 objectMapper);
     }
 
-    private static <T, U> BiFunction<T, U, JsonNode> defaultSanitizer(ObjectMapper objectMapper) {
-        return (first, second) -> objectMapper.valueToTree(second);
+    private static <T> BiFunction<? super RequestContext, T, JsonNode>
+    defaultSanitizer(ObjectMapper objectMapper) {
+        return (requestContext, obj) -> objectMapper.valueToTree(obj);
     }
 }

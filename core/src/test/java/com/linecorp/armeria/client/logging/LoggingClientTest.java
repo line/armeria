@@ -167,7 +167,7 @@ class LoggingClientTest {
                              .logger(logger)
                              .requestLogLevel(LogLevel.INFO)
                              .successfulResponseLogLevel(LogLevel.INFO)
-                             .logFormatter(LogFormatter.textBuilder()
+                             .logFormatter(LogFormatter.builderForText()
                                                        .requestHeadersSanitizer(RegexBasedSanitizer.of(
                                                                Pattern.compile("trustin"),
                                                                Pattern.compile("com")))
@@ -250,7 +250,7 @@ class LoggingClientTest {
                              .logger(logger)
                              .requestLogLevel(LogLevel.INFO)
                              .successfulResponseLogLevel(LogLevel.INFO)
-                             .logFormatter(LogFormatter.textBuilder()
+                             .logFormatter(LogFormatter.builderForText()
                                                        .requestContentSanitizer(RegexBasedSanitizer.of(
                                                                Pattern.compile(
                                                                        "\\d{3}[-.\\s]\\d{3}[-.\\s]\\d{4}")))
@@ -419,7 +419,7 @@ class LoggingClientTest {
                         Pattern.compile("trustin"),
                         Pattern.compile("com")))
                 .logFormatter(
-                        LogFormatter.textBuilder()
+                        LogFormatter.builderForText()
                                     .requestHeadersSanitizer(RegexBasedSanitizer.of(
                                             Pattern.compile("trustin"),
                                             Pattern.compile("com")))

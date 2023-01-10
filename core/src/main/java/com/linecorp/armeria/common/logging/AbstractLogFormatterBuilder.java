@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 /**
  * A skeletal builder implementation for {@link LogFormatter}.
  */
-public abstract class AbstractLogFormatterBuilder<T> {
+abstract class AbstractLogFormatterBuilder<T> {
 
     @Nullable
     private BiFunction<? super RequestContext, ? super HttpHeaders, ? extends T> requestHeadersSanitizer;
