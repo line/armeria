@@ -102,7 +102,7 @@ public final class JsonLogFormatterBuilder extends AbstractLogFormatterBuilder<J
     }
 
     /**
-     * Returns a newly-created {@link JsonLogFormatter} based on the properties of this builder.
+     * Returns a newly-created {@link LogFormatter} based on the properties of this builder.
      */
     public JsonLogFormatter build() {
         final ObjectMapper objectMapper = this.objectMapper != null ?
