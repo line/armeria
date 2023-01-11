@@ -49,7 +49,7 @@ public interface LogFormatter {
     }
 
     /**
-     * Returns a newly created {@link JsonLogFormatter} that converts a {@link RequestOnlyLog} or
+     * Returns a newly created {@link LogFormatter} that converts a {@link RequestOnlyLog} or
      * {@link RequestLog} into JSON format log message by using the specified {@link ObjectMapper}.
      */
     static LogFormatter ofJson(ObjectMapper objectMapper) {
