@@ -28,6 +28,6 @@ final class BrotliStreamDecoder extends AbstractStreamDecoder {
         // BrotliDecoder does not limit the max output size. If the output buffer exceeds 4MiB, it is
         // chunked into pieces of 4MiB. As a workaround, the max length is checked at the `StreamDecoder`
         // level after decoding.
-        super(brotliDecoder, alloc, maxLength, true);
+        super(brotliDecoder, alloc, maxLength);
     }
 }
