@@ -57,7 +57,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
  *                                      .registry(registry)
  *                                      .perHost()
  *                                      .build();
- * ThriftClients.builder("localhost")
+ * ThriftClients.builder("http://thrift.api.com")
  *              .rpcDecorator(CircuitBreakerRpcClient.newDecorator(
  *                  Resilience4JCircuitBreakerClientHandler.of(mapping), rule))
  *              ...

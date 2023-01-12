@@ -26,6 +26,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
  * A functional interface that represents a mapper factory, mapping a combination of host, method and path
  * to a {@link CircuitBreaker} using a {@link CircuitBreakerRegistry}.
  */
+@FunctionalInterface
 public interface Resilience4jCircuitBreakerFactory {
 
     /**

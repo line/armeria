@@ -110,7 +110,7 @@ class CircuitBreakerTest {
         r4jCircuitBreaker.onError(1, TimeUnit.SECONDS, new RuntimeException());
         r4jCircuitBreaker.onError(1, TimeUnit.SECONDS, new RuntimeException());
 
-        final WebClient client = WebClient.of("http://localhost:" + server.activeLocalPort());
+        final WebClient client = WebClient.of("http://127.0.0.1:" + server.activeLocalPort());
 
         // check metrics for circuitbreaker is registered
         String contentUtf8 = client.blocking().get("/internal/metrics").contentUtf8();
