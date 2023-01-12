@@ -25,6 +25,7 @@ import org.springframework.boot.context.properties.NestedConfigurationProperty;
 import org.springframework.validation.annotation.Validated;
 
 import com.codahale.metrics.json.MetricsModule;
+import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.common.SessionProtocol;
@@ -208,13 +209,13 @@ public class ArmeriaSettings {
 
         @Override
         public String toString() {
-            return "Port{" +
-                   "ip='" + ip + '\'' +
-                   ", address=" + address +
-                   ", iface='" + iface + '\'' +
-                   ", port=" + port +
-                   ", protocols=" + protocols +
-                   '}';
+            return MoreObjects.toStringHelper(this).omitNullValues()
+                              .add("ip", ip)
+                              .add("address", address)
+                              .add("iface", iface)
+                              .add("port", port)
+                              .add("protocols", protocols)
+                              .toString();
         }
     }
 
