@@ -539,9 +539,9 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Builds the {@link LogFormatter} to converts a {@link RequestOnlyLog} or {@link RequestLog}
-     * into log message. If {@link LogFormatter} is set, returns it.
-     * If not set, returns {@link TextLogFormatter} that is built with the sanitizers in this builder.
+     * Returns a {@link LogFormatter} which converts a {@link RequestOnlyLog} or {@link RequestLog}
+     * into a log message. If a {@link LogFormatter} has been set using {@link #logFormatter}, it is returned.
+     * Otherwise, a text based {@link LogFormatter} built using the set sanitizers is returned.
      */
     @UnstableApi
     protected LogFormatter logFormatter() {
