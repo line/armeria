@@ -451,7 +451,7 @@ When a project has a `java` flag:
 ## Overriding JDK version
 
 The scripts use [Toolchains](https://docs.gradle.org/current/userguide/toolchains.html) to build a Java
-project. It uses [AdoptOpenJDK](https://adoptopenjdk.net/) 15 by default. If you want to use a
+project. It uses [Adoptium OpenJDK](https://adoptium.net/) 19 by default. If you want to use a
 different JDK version, you can specify `buildJdkVersion` gradle property:
 
 ```
