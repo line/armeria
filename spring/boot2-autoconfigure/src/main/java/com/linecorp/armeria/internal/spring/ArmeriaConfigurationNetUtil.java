@@ -50,13 +50,12 @@ public final class ArmeriaConfigurationNetUtil {
         requireNonNull(server, "server");
         requireNonNull(ports, "ports");
         ports.forEach(p -> {
-            final String ip = p.getIp();
             final String iface = p.getIface();
             final int port = p.getPort();
             final List<SessionProtocol> protocols = firstNonNull(p.getProtocols(),
                                                                  ImmutableList.of(SessionProtocol.HTTP));
-
-            if (ip == null) {
+            final InetSocketAddress socketAddress = createSocketAddress(p);
+            if (socketAddress == null) {
                 if (iface == null) {
                     server.port(new ServerPort(port, protocols));
                 } else {
@@ -71,22 +70,40 @@ public final class ArmeriaConfigurationNetUtil {
                     }
                 }
             } else if (iface == null) {
-                if (NetUtil.isValidIpV4Address(ip) || NetUtil.isValidIpV6Address(ip)) {
-                    final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(ip);
-                    try {
-                        server.port(new ServerPort(new InetSocketAddress(
-                                InetAddress.getByAddress(bytes), port), protocols));
-                    } catch (UnknownHostException e) {
-                        // Should never happen.
-                        throw new Error(e);
-                    }
-                } else {
-                    throw new IllegalStateException("invalid IP address: " + ip);
-                }
+                server.port(new ServerPort(socketAddress, protocols));
             } else {
                 throw new IllegalStateException("A port cannot have both IP and iface: " + p);
             }
         });
+    }
+
+    @Nullable
+    private static InetSocketAddress createSocketAddress(Port p) {
+        final InetAddress address = p.getAddress();
+        final String ip = p.getIp();
+        final int port = p.getPort();
+        if (ip != null && address != null) {
+            throw new IllegalStateException("A port cannot have both IP and address: " + p);
+        }
+        final InetSocketAddress targetAddress;
+        if (ip != null) {
+            if (NetUtil.isValidIpV4Address(ip) || NetUtil.isValidIpV6Address(ip)) {
+                final byte[] bytes = NetUtil.createByteArrayFromIpAddressString(ip);
+                try {
+                    targetAddress = new InetSocketAddress(InetAddress.getByAddress(bytes), port);
+                } catch (UnknownHostException e) {
+                    // Should never happen.
+                    throw new Error(e);
+                }
+            } else {
+                throw new IllegalStateException("invalid IP address: " + ip);
+            }
+        } else if (address != null) {
+            targetAddress = new InetSocketAddress(address, port);
+        } else {
+            targetAddress = null;
+        }
+        return targetAddress;
     }
 
     /**
