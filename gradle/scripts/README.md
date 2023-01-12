@@ -653,7 +653,7 @@ since it requires at least Java 17. This makes it difficult to test if `:moduleB
 In such case, users may add a `java17` flag which provides the following functionalities:
 - Ensure that the target module is compiled to target minimum compatibility with Java 17.
 - Skip tasks which require a JRE version lower than the target version.
-  - Most notably, tests will be skipped if the JRE version is lower than 17.
+    - Most notably, tests will be skipped if the JRE version is lower than 17.
 
 The flag may be added like the following:
 
