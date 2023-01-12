@@ -35,7 +35,6 @@ import org.junit.jupiter.api.Test;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.RpcClient;
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 import com.linecorp.armeria.common.util.Exceptions;
@@ -174,8 +173,7 @@ class CircuitBreakerRpcClientTest {
         }
 
         // OPEN
-        assertThatThrownBy(() -> stub.execute(ctxA, reqA)).isInstanceOf(UnprocessedRequestException.class)
-                                                          .hasRootCauseInstanceOf(FailFastException.class);
+        assertThatThrownBy(() -> stub.execute(ctxA, reqA)).isInstanceOf(FailFastException.class);
 
         ticker.addAndGet(circuitOpenWindow.toNanos());
 
@@ -211,12 +209,10 @@ class CircuitBreakerRpcClientTest {
         }
 
         // OPEN (methodA)
-        assertThatThrownBy(() -> stub.execute(ctxA, reqA)).isInstanceOf(UnprocessedRequestException.class)
-                                                          .hasRootCauseInstanceOf(FailFastException.class);
+        assertThatThrownBy(() -> stub.execute(ctxA, reqA)).isInstanceOf(FailFastException.class);
 
         // OPEN (methodB)
-        assertThatThrownBy(() -> stub.execute(ctxB, reqB)).isInstanceOf(UnprocessedRequestException.class)
-                                                          .hasRootCauseInstanceOf(FailFastException.class);
+        assertThatThrownBy(() -> stub.execute(ctxB, reqB)).isInstanceOf(FailFastException.class);
 
         // methodB must not be invoked.
         verify(delegate, never()).execute(ctxB, reqB);
@@ -246,8 +242,7 @@ class CircuitBreakerRpcClientTest {
         }
 
         // OPEN (methodA)
-        assertThatThrownBy(() -> stub.execute(ctxA, reqA)).isInstanceOf(UnprocessedRequestException.class)
-                                                          .hasRootCauseInstanceOf(FailFastException.class);
+        assertThatThrownBy(() -> stub.execute(ctxA, reqA)).isInstanceOf(FailFastException.class);
 
         // CLOSED (methodB)
         assertThat(stub.execute(ctxB, reqB).join()).isNull();
@@ -266,8 +261,7 @@ class CircuitBreakerRpcClientTest {
     private static void failFastInvocation(Function<? super RpcClient, CircuitBreakerRpcClient> decorator,
                                            int count) {
         for (int i = 0; i < count; i++) {
-            assertThatThrownBy(() -> invoke(decorator)).isInstanceOf(UnprocessedRequestException.class)
-                                                       .hasRootCauseInstanceOf(FailFastException.class);
+            assertThatThrownBy(() -> invoke(decorator)).isInstanceOf(FailFastException.class);
         }
     }
 

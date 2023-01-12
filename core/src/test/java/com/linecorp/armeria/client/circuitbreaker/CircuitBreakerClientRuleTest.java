@@ -29,7 +29,6 @@ import com.google.common.collect.Maps;
 
 import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ResponseTimeoutException;
-import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -75,8 +74,7 @@ class CircuitBreakerClientRuleTest {
         assertThat(client.get("/").contentUtf8()).isEqualTo("Hello, Armeria!");
         await().untilAsserted(() -> {
             assertThatThrownBy(() -> client.get("/"))
-                    .isInstanceOf(UnprocessedRequestException.class)
-                    .hasRootCauseInstanceOf(FailFastException.class);
+                    .isInstanceOf(FailFastException.class);
         });
     }
 
@@ -93,8 +91,7 @@ class CircuitBreakerClientRuleTest {
         await().untilAsserted(() -> {
             assertThatThrownBy(() -> client.get("/503").aggregate().join())
                     .isInstanceOf(CompletionException.class)
-                    .hasCauseInstanceOf(UnprocessedRequestException.class)
-                    .hasRootCauseInstanceOf(FailFastException.class);
+                    .hasCauseInstanceOf(FailFastException.class);
         });
     }
 
@@ -115,8 +112,7 @@ class CircuitBreakerClientRuleTest {
         await().untilAsserted(() -> {
             assertThatThrownBy(() -> client.get("/trailers").aggregate().join())
                     .isInstanceOf(CompletionException.class)
-                    .hasCauseInstanceOf(UnprocessedRequestException.class)
-                    .hasRootCauseInstanceOf(FailFastException.class);
+                    .hasCauseInstanceOf(FailFastException.class);
         });
     }
 
@@ -139,8 +135,7 @@ class CircuitBreakerClientRuleTest {
         await().untilAsserted(() -> {
             assertThatThrownBy(() -> client.get("/slow").aggregate().join())
                     .isInstanceOf(CompletionException.class)
-                    .hasCauseInstanceOf(UnprocessedRequestException.class)
-                    .hasRootCauseInstanceOf(FailFastException.class);
+                    .hasCauseInstanceOf(FailFastException.class);
         });
     }
 }
