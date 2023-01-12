@@ -503,9 +503,9 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link Predicate} for evaluating to log response cause or not.
-     * You can prevent from logging the response cause by returning {@code true}
-     * in the {@link Predicate}. If unset, will log a response cause.
+     * Sets the {@link Predicate} used for evaluating whether to log the response cause or not.
+     * You can prevent logging the response cause by returning {@code true}
+     * in the {@link Predicate}. By default, the response cause will always be logged.
      */
     @UnstableApi
     public LoggingDecoratorBuilder responseCauseFilter(Predicate<Throwable> responseCauseFilter) {
