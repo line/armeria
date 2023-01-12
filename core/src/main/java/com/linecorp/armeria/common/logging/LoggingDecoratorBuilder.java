@@ -514,7 +514,7 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Returns the {@link Predicate} to evaluate if logging response cause or not.
+     * Returns the {@link Predicate} used to evaluate whether to log the response cause.
      */
     @UnstableApi
     protected final Predicate<Throwable> responseCauseFilter() {
