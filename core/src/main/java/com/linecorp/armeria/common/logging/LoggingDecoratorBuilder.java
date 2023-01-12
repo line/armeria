@@ -522,8 +522,9 @@ public abstract class LoggingDecoratorBuilder {
     }
 
     /**
-     * Sets the {@link LogFormatter} to converts a {@link RequestOnlyLog} or {@link RequestLog}
-     * into log message. If unset, will use {@link TextLogFormatter}.
+     * Sets the {@link LogFormatter} which converts a {@link RequestOnlyLog} or {@link RequestLog}
+     * into a log message. By default {@link LogFormatter#ofText()} will be used.
+     *
      *
      * @throws IllegalStateException If both the log sanitizers and the {@link LogFormatter} are specified.
      */
