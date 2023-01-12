@@ -389,7 +389,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     }
 
     private void updateFlags(int flags) {
-        for (; ; ) {
+        for (;;) {
             final int oldFlags = this.flags;
             final int newFlags = oldFlags | flags;
             if (oldFlags == newFlags) {
@@ -497,7 +497,7 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
             flag |= RequestLogProperty.NAME.flag();
         }
 
-        for (; ; ) {
+        for (;;) {
             final int oldFlags = deferredFlags;
             final int newFlags = oldFlags | flag;
             if (oldFlags == newFlags) {
