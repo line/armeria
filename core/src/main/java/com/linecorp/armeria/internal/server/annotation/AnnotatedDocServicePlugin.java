@@ -35,6 +35,7 @@ import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.lang.reflect.TypeVariable;
 import java.lang.reflect.WildcardType;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -81,6 +82,8 @@ import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.docs.TypeSignatureType;
+
+import io.netty.buffer.ByteBuf;
 
 /**
  * A {@link DocServicePlugin} implementation that supports the {@link AnnotatedService}.
@@ -350,7 +353,8 @@ public final class AnnotatedDocServicePlugin implements DocServicePlugin {
         if (type == String.class) {
             return STRING;
         }
-        if (type == byte[].class || type == Byte[].class) {
+        if (type == byte[].class || type == Byte[].class ||
+            type == ByteBuffer.class || type == ByteBuf.class) {
             return BINARY;
         }
         // End of data types defined by the OpenAPI Specification.
