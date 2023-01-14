@@ -31,13 +31,16 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.json.JsonReadFeature;
 import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.TransformingResponsePreparationTest.MyMessage;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.HttpStatusClass;
 import com.linecorp.armeria.common.ResponseEntity;
 import com.linecorp.armeria.server.HttpStatusException;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -56,6 +59,9 @@ class BlockingWebClientTest {
             sb.service("/json", (ctx, req) -> HttpResponse.ofJson(new MyMessage("hello")));
             sb.service("/json_list",
                        (ctx, req) -> HttpResponse.ofJson(ImmutableList.of(new MyMessage("hello"))));
+            sb.service("/json_500", (ctx, req) -> {
+                return HttpResponse.ofJson(HttpStatus.INTERNAL_SERVER_ERROR, new MyMessage("error"));
+            });
         }
     };
 
@@ -126,6 +132,147 @@ class BlockingWebClientTest {
                   .execute();
         });
         assertThat(throwable.response().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Test
+    void prepare_asJson_withHttpStatus() {
+        final ResponseEntity<MyMessage> response = client.prepare()
+                                                         .get("/json")
+                                                         .asJson(MyMessage.class, HttpStatus.valueOf(200))
+                                                         .execute();
+        assertThat(response.content()).isEqualTo(new MyMessage("hello"));
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+
+        final ResponseEntity<MyMessage> errorResponse = client.prepare()
+                                                              .get("/json_500")
+                                                              .asJson(MyMessage.class, HttpStatus.valueOf(500))
+                                                              .execute();
+        assertThat(errorResponse.content()).isEqualTo(new MyMessage("error"));
+        assertThat(errorResponse.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+
+        final ResponseEntity<MyMessage> response_mapper = client.prepare()
+                                                                .get("/json")
+                                                                .asJson(MyMessage.class, mapper,
+                                                                        HttpStatus.valueOf(200))
+                                                                .execute();
+        assertThat(response_mapper.content()).isEqualTo(new MyMessage("hello"));
+        assertThat(response_mapper.headers().status()).isEqualTo(HttpStatus.OK);
+
+        final ResponseEntity<MyMessage> errorResponse_mapper = client.prepare()
+                                                                     .get("/json_500")
+                                                                     .asJson(MyMessage.class, mapper,
+                                                                             HttpStatus.valueOf(500))
+                                                                     .execute();
+        assertThat(errorResponse_mapper.content()).isEqualTo(new MyMessage("error"));
+        assertThat(errorResponse_mapper.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        final ResponseEntity<MyMessage> responseGeneric = client.prepare()
+                                                         .get("/json")
+                                                         .asJson(new TypeReference<MyMessage>() {},
+                                                                 HttpStatus.valueOf(200))
+                                                         .execute();
+        assertThat(responseGeneric.content()).isEqualTo(new MyMessage("hello"));
+        assertThat(responseGeneric.headers().status()).isEqualTo(HttpStatus.OK);
+
+        final ResponseEntity<MyMessage> errorResponseGeneric = client.prepare()
+                                                              .get("/json_500")
+                                                              .asJson(new TypeReference<MyMessage>() {},
+                                                                      HttpStatus.valueOf(500))
+                                                              .execute();
+        assertThat(errorResponseGeneric.content()).isEqualTo(new MyMessage("error"));
+        assertThat(errorResponseGeneric.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        final ResponseEntity<MyMessage> responseGeneric_mapper = client.prepare()
+                                                                .get("/json")
+                                                                .asJson(new TypeReference<MyMessage>() {},
+                                                                        mapper, HttpStatus.valueOf(200))
+                                                                .execute();
+        assertThat(responseGeneric_mapper.content()).isEqualTo(new MyMessage("hello"));
+        assertThat(responseGeneric_mapper.headers().status()).isEqualTo(HttpStatus.OK);
+
+        final ResponseEntity<MyMessage> errorResponseGeneric_mapper = client.prepare()
+                                                                     .get("/json_500")
+                                                                     .asJson(new TypeReference<MyMessage>() {},
+                                                                             mapper, HttpStatus.valueOf(500))
+                                                                     .execute();
+        assertThat(errorResponseGeneric_mapper.content()).isEqualTo(new MyMessage("error"));
+        assertThat(errorResponseGeneric_mapper.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Test
+    void prepare_asJson_withHttpStatusClass() {
+        final ResponseEntity<MyMessage> response = client.prepare()
+                                                         .get("/json")
+                                                         .asJson(MyMessage.class,
+                                                                 HttpStatusClass.valueOf(200))
+                                                         .execute();
+        assertThat(response.content()).isEqualTo(new MyMessage("hello"));
+        assertThat(response.headers().status()).isEqualTo(HttpStatus.OK);
+
+        final ResponseEntity<MyMessage> errorResponse = client.prepare()
+                                                              .get("/json_500")
+                                                              .asJson(MyMessage.class,
+                                                                      HttpStatusClass.valueOf(500))
+                                                              .execute();
+        assertThat(errorResponse.content()).isEqualTo(new MyMessage("error"));
+        assertThat(errorResponse.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+
+        final ResponseEntity<MyMessage> response_mapper = client.prepare()
+                                                                .get("/json")
+                                                                .asJson(MyMessage.class, mapper,
+                                                                        HttpStatusClass.valueOf(200))
+                                                                .execute();
+        assertThat(response_mapper.content()).isEqualTo(new MyMessage("hello"));
+        assertThat(response_mapper.headers().status()).isEqualTo(HttpStatus.OK);
+
+        final ResponseEntity<MyMessage> errorResponse_mapper = client.prepare()
+                                                                     .get("/json_500")
+                                                                     .asJson(MyMessage.class, mapper,
+                                                                             HttpStatusClass.valueOf(500))
+                                                                     .execute();
+        assertThat(errorResponse_mapper.content()).isEqualTo(new MyMessage("error"));
+        assertThat(errorResponse_mapper.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        final ResponseEntity<MyMessage> responseGeneric = client.prepare()
+                                                                .get("/json")
+                                                                .asJson(new TypeReference<MyMessage>() {},
+                                                                        HttpStatusClass.valueOf(200))
+                                                                .execute();
+        assertThat(responseGeneric.content()).isEqualTo(new MyMessage("hello"));
+        assertThat(responseGeneric.headers().status()).isEqualTo(HttpStatus.OK);
+
+        final ResponseEntity<MyMessage> errorResponseGeneric = client.prepare()
+                                                                     .get("/json_500")
+                                                                     .asJson(new TypeReference<MyMessage>() {},
+                                                                             HttpStatusClass.valueOf(500))
+                                                                     .execute();
+        assertThat(errorResponseGeneric.content()).isEqualTo(new MyMessage("error"));
+        assertThat(errorResponseGeneric.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+
+        final ResponseEntity<MyMessage> responseGeneric_mapper = client.prepare()
+                                                                   .get("/json")
+                                                                   .asJson(new TypeReference<MyMessage>() {},
+                                                                           mapper, HttpStatusClass.valueOf(200))
+                                                                   .execute();
+        assertThat(responseGeneric_mapper.content()).isEqualTo(new MyMessage("hello"));
+        assertThat(responseGeneric_mapper.headers().status()).isEqualTo(HttpStatus.OK);
+
+        final ResponseEntity<MyMessage> errorResponseGeneric_mapper =
+                client.prepare()
+                    .get("/json_500")
+                    .asJson(new TypeReference<MyMessage>() {},
+                            mapper, HttpStatusClass.valueOf(500))
+                    .execute();
+        assertThat(errorResponseGeneric_mapper.content()).isEqualTo(new MyMessage("error"));
+        assertThat(errorResponseGeneric_mapper.headers().status()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     @Test

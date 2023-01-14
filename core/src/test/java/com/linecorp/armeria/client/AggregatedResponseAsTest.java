@@ -201,21 +201,6 @@ class AggregatedResponseAsTest {
         assertThat(entity.content()).isEqualTo(myObject);
     }
 
-    @Test
-    void jsonObject_customMapper_withHttpStatusPredicate_status200() {
-        final AggregatedHttpResponse response =
-                AggregatedHttpResponse.of(headers, HttpData.ofUtf8("{ 'id': 10 }"));
-
-        final JsonMapper mapper = JsonMapper.builder()
-                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
-                                            .build();
-        final ResponseEntity<MyObject> entity = AggregatedResponseAs.json(
-                MyObject.class, mapper, HttpStatusPredicate.of(HttpStatus.OK)).as(response);
-        final MyObject myObject = new MyObject();
-        myObject.setId(10);
-        assertThat(entity.content()).isEqualTo(myObject);
-    }
-
     @CsvSource({ "200", "500" })
     @ParameterizedTest
     void jsonObject_customMapper_withHttpStatusPredicate(int statusCode) {
