@@ -33,6 +33,9 @@ import org.reflections.ReflectionUtils;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.core.json.JsonReadFeature;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.json.JsonMapper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 
@@ -129,7 +132,90 @@ class RestClientTest {
             assertThat(response.getCookie()).isEqualTo("cookie-value");
             assertThat(response.getContent()).isEqualTo("content");
 
-            final RestResponse response_executeWithHttpStatus =
+            final JsonMapper mapper = JsonMapper.builder()
+                                                .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                                .build();
+
+            final RestResponse responseMapper =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(RestResponse.class, mapper)
+                               .join()
+                               .content();
+
+            assertThat(responseMapper.getId()).isEqualTo("1");
+            assertThat(responseMapper.getMethod()).isEqualTo(method.toString());
+            assertThat(responseMapper.getQuery()).isEqualTo("query-value");
+            assertThat(responseMapper.getHeader()).isEqualTo("header-value");
+            assertThat(responseMapper.getCookie()).isEqualTo("cookie-value");
+            assertThat(responseMapper.getContent()).isEqualTo("content");
+
+            final RestResponse responseGeneric =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(new TypeReference<RestResponse>() {})
+                               .join()
+                               .content();
+
+            assertThat(responseGeneric.getId()).isEqualTo("1");
+            assertThat(responseGeneric.getMethod()).isEqualTo(method.toString());
+            assertThat(responseGeneric.getQuery()).isEqualTo("query-value");
+            assertThat(responseGeneric.getHeader()).isEqualTo("header-value");
+            assertThat(responseGeneric.getCookie()).isEqualTo("cookie-value");
+            assertThat(responseGeneric.getContent()).isEqualTo("content");
+
+            final RestResponse responseGenericMapper =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(new TypeReference<RestResponse>() {}, mapper)
+                               .join()
+                               .content();
+
+            assertThat(responseGenericMapper.getId()).isEqualTo("1");
+            assertThat(responseGenericMapper.getMethod()).isEqualTo(method.toString());
+            assertThat(responseGenericMapper.getQuery()).isEqualTo("query-value");
+            assertThat(responseGenericMapper.getHeader()).isEqualTo("header-value");
+            assertThat(responseGenericMapper.getCookie()).isEqualTo("cookie-value");
+            assertThat(responseGenericMapper.getContent()).isEqualTo("content");
+        }
+    }
+
+    @ArgumentsSource(RestClientProvider.class)
+    @ParameterizedTest
+    void restApi_executeWithHttpStatus(RestClient restClient) {
+        RestClientPreparation preparation = null;
+        // HTTP methods used for REST APIs
+        // See: https://restfulapi.net/http-methods/
+        for (HttpMethod method : ImmutableList.of(HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT,
+                                                  HttpMethod.DELETE, HttpMethod.PATCH)) {
+            switch (method) {
+                case GET:
+                    preparation = restClient.get("/rest/{id}");
+                    break;
+                case POST:
+                    preparation = restClient.post("/rest/{id}");
+                    break;
+                case PUT:
+                    preparation = restClient.put("/rest/{id}");
+                    break;
+                case PATCH:
+                    preparation = restClient.patch("/rest/{id}");
+                    break;
+                case DELETE:
+                    preparation = restClient.delete("/rest/{id}");
+                    break;
+            }
+            assert preparation != null;
+            final RestResponse response =
                     preparation.content("content")
                                .header("x-header", "header-value")
                                .cookie(Cookie.ofSecure("cookie", "cookie-value"))
@@ -139,14 +225,99 @@ class RestClientTest {
                                .join()
                                .content();
 
-            assertThat(response_executeWithHttpStatus.getId()).isEqualTo("1");
-            assertThat(response_executeWithHttpStatus.getMethod()).isEqualTo(method.toString());
-            assertThat(response_executeWithHttpStatus.getQuery()).isEqualTo("query-value");
-            assertThat(response_executeWithHttpStatus.getHeader()).isEqualTo("header-value");
-            assertThat(response_executeWithHttpStatus.getCookie()).isEqualTo("cookie-value");
-            assertThat(response_executeWithHttpStatus.getContent()).isEqualTo("content");
+            assertThat(response.getId()).isEqualTo("1");
+            assertThat(response.getMethod()).isEqualTo(method.toString());
+            assertThat(response.getQuery()).isEqualTo("query-value");
+            assertThat(response.getHeader()).isEqualTo("header-value");
+            assertThat(response.getCookie()).isEqualTo("cookie-value");
+            assertThat(response.getContent()).isEqualTo("content");
 
-            final RestResponse response_executeWithHttpStatusClass =
+            final JsonMapper mapper = JsonMapper.builder()
+                                                .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                                .build();
+
+            final RestResponse responseMapper =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(RestResponse.class, mapper, HttpStatus.OK)
+                               .join()
+                               .content();
+
+            assertThat(responseMapper.getId()).isEqualTo("1");
+            assertThat(responseMapper.getMethod()).isEqualTo(method.toString());
+            assertThat(responseMapper.getQuery()).isEqualTo("query-value");
+            assertThat(responseMapper.getHeader()).isEqualTo("header-value");
+            assertThat(responseMapper.getCookie()).isEqualTo("cookie-value");
+            assertThat(responseMapper.getContent()).isEqualTo("content");
+
+            final RestResponse responseGeneric =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(new TypeReference<RestResponse>() {}, HttpStatus.OK)
+                               .join()
+                               .content();
+
+            assertThat(responseGeneric.getId()).isEqualTo("1");
+            assertThat(responseGeneric.getMethod()).isEqualTo(method.toString());
+            assertThat(responseGeneric.getQuery()).isEqualTo("query-value");
+            assertThat(responseGeneric.getHeader()).isEqualTo("header-value");
+            assertThat(responseGeneric.getCookie()).isEqualTo("cookie-value");
+            assertThat(responseGeneric.getContent()).isEqualTo("content");
+
+            final RestResponse responseGenericMapper =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(new TypeReference<RestResponse>() {}, mapper, HttpStatus.OK)
+                               .join()
+                               .content();
+
+            assertThat(responseGenericMapper.getId()).isEqualTo("1");
+            assertThat(responseGenericMapper.getMethod()).isEqualTo(method.toString());
+            assertThat(responseGenericMapper.getQuery()).isEqualTo("query-value");
+            assertThat(responseGenericMapper.getHeader()).isEqualTo("header-value");
+            assertThat(responseGenericMapper.getCookie()).isEqualTo("cookie-value");
+            assertThat(responseGenericMapper.getContent()).isEqualTo("content");
+
+
+        }
+    }
+
+    @ArgumentsSource(RestClientProvider.class)
+    @ParameterizedTest
+    void restApi_executeWithHttpStatusClass(RestClient restClient) {
+        RestClientPreparation preparation = null;
+        // HTTP methods used for REST APIs
+        // See: https://restfulapi.net/http-methods/
+        for (HttpMethod method : ImmutableList.of(HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT,
+                                                  HttpMethod.DELETE, HttpMethod.PATCH)) {
+            switch (method) {
+                case GET:
+                    preparation = restClient.get("/rest/{id}");
+                    break;
+                case POST:
+                    preparation = restClient.post("/rest/{id}");
+                    break;
+                case PUT:
+                    preparation = restClient.put("/rest/{id}");
+                    break;
+                case PATCH:
+                    preparation = restClient.patch("/rest/{id}");
+                    break;
+                case DELETE:
+                    preparation = restClient.delete("/rest/{id}");
+                    break;
+            }
+            assert preparation != null;
+            final RestResponse response =
                     preparation.content("content")
                                .header("x-header", "header-value")
                                .cookie(Cookie.ofSecure("cookie", "cookie-value"))
@@ -156,14 +327,97 @@ class RestClientTest {
                                .join()
                                .content();
 
-            assertThat(response_executeWithHttpStatusClass.getId()).isEqualTo("1");
-            assertThat(response_executeWithHttpStatusClass.getMethod()).isEqualTo(method.toString());
-            assertThat(response_executeWithHttpStatusClass.getQuery()).isEqualTo("query-value");
-            assertThat(response_executeWithHttpStatusClass.getHeader()).isEqualTo("header-value");
-            assertThat(response_executeWithHttpStatusClass.getCookie()).isEqualTo("cookie-value");
-            assertThat(response_executeWithHttpStatusClass.getContent()).isEqualTo("content");
+            assertThat(response.getId()).isEqualTo("1");
+            assertThat(response.getMethod()).isEqualTo(method.toString());
+            assertThat(response.getQuery()).isEqualTo("query-value");
+            assertThat(response.getHeader()).isEqualTo("header-value");
+            assertThat(response.getCookie()).isEqualTo("cookie-value");
+            assertThat(response.getContent()).isEqualTo("content");
 
-            final RestResponse response_executeWithPredicate =
+            final JsonMapper mapper = JsonMapper.builder()
+                                                .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                                .build();
+
+            final RestResponse responseMapper =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(RestResponse.class, mapper, HttpStatusClass.SUCCESS)
+                               .join()
+                               .content();
+
+            assertThat(responseMapper.getId()).isEqualTo("1");
+            assertThat(responseMapper.getMethod()).isEqualTo(method.toString());
+            assertThat(responseMapper.getQuery()).isEqualTo("query-value");
+            assertThat(responseMapper.getHeader()).isEqualTo("header-value");
+            assertThat(responseMapper.getCookie()).isEqualTo("cookie-value");
+            assertThat(responseMapper.getContent()).isEqualTo("content");
+
+            final RestResponse responseGeneric =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(new TypeReference<RestResponse>() {}, HttpStatusClass.SUCCESS)
+                               .join()
+                               .content();
+
+            assertThat(responseGeneric.getId()).isEqualTo("1");
+            assertThat(responseGeneric.getMethod()).isEqualTo(method.toString());
+            assertThat(responseGeneric.getQuery()).isEqualTo("query-value");
+            assertThat(responseGeneric.getHeader()).isEqualTo("header-value");
+            assertThat(responseGeneric.getCookie()).isEqualTo("cookie-value");
+            assertThat(responseGeneric.getContent()).isEqualTo("content");
+
+            final RestResponse responseGenericMapper =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(new TypeReference<RestResponse>() {}, mapper, HttpStatusClass.SUCCESS)
+                               .join()
+                               .content();
+
+            assertThat(responseGenericMapper.getId()).isEqualTo("1");
+            assertThat(responseGenericMapper.getMethod()).isEqualTo(method.toString());
+            assertThat(responseGenericMapper.getQuery()).isEqualTo("query-value");
+            assertThat(responseGenericMapper.getHeader()).isEqualTo("header-value");
+            assertThat(responseGenericMapper.getCookie()).isEqualTo("cookie-value");
+            assertThat(responseGenericMapper.getContent()).isEqualTo("content");
+        }
+    }
+
+    @ArgumentsSource(RestClientProvider.class)
+    @ParameterizedTest
+    void restApi_executeWithPredicate(RestClient restClient) {
+        RestClientPreparation preparation = null;
+        // HTTP methods used for REST APIs
+        // See: https://restfulapi.net/http-methods/
+        for (HttpMethod method : ImmutableList.of(HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT,
+                                                  HttpMethod.DELETE, HttpMethod.PATCH)) {
+            switch (method) {
+                case GET:
+                    preparation = restClient.get("/rest/{id}");
+                    break;
+                case POST:
+                    preparation = restClient.post("/rest/{id}");
+                    break;
+                case PUT:
+                    preparation = restClient.put("/rest/{id}");
+                    break;
+                case PATCH:
+                    preparation = restClient.patch("/rest/{id}");
+                    break;
+                case DELETE:
+                    preparation = restClient.delete("/rest/{id}");
+                    break;
+            }
+            assert preparation != null;
+            final RestResponse response =
                     preparation.content("content")
                                .header("x-header", "header-value")
                                .cookie(Cookie.ofSecure("cookie", "cookie-value"))
@@ -174,12 +428,70 @@ class RestClientTest {
                                .join()
                                .content();
 
-            assertThat(response_executeWithPredicate.getId()).isEqualTo("1");
-            assertThat(response_executeWithPredicate.getMethod()).isEqualTo(method.toString());
-            assertThat(response_executeWithPredicate.getQuery()).isEqualTo("query-value");
-            assertThat(response_executeWithPredicate.getHeader()).isEqualTo("header-value");
-            assertThat(response_executeWithPredicate.getCookie()).isEqualTo("cookie-value");
-            assertThat(response_executeWithPredicate.getContent()).isEqualTo("content");
+            assertThat(response.getId()).isEqualTo("1");
+            assertThat(response.getMethod()).isEqualTo(method.toString());
+            assertThat(response.getQuery()).isEqualTo("query-value");
+            assertThat(response.getHeader()).isEqualTo("header-value");
+            assertThat(response.getCookie()).isEqualTo("cookie-value");
+            assertThat(response.getContent()).isEqualTo("content");
+
+            final JsonMapper mapper = JsonMapper.builder()
+                                                .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                                .build();
+
+            final RestResponse responseMapper =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(RestResponse.class, mapper,
+                                        httpStatus -> httpStatus.equals(HttpStatus.OK))
+                               .join()
+                               .content();
+
+            assertThat(responseMapper.getId()).isEqualTo("1");
+            assertThat(responseMapper.getMethod()).isEqualTo(method.toString());
+            assertThat(responseMapper.getQuery()).isEqualTo("query-value");
+            assertThat(responseMapper.getHeader()).isEqualTo("header-value");
+            assertThat(responseMapper.getCookie()).isEqualTo("cookie-value");
+            assertThat(responseMapper.getContent()).isEqualTo("content");
+
+            final RestResponse responseGeneric =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(new TypeReference<RestResponse>() {},
+                                        httpStatus -> httpStatus.equals(HttpStatus.OK))
+                               .join()
+                               .content();
+
+            assertThat(responseGeneric.getId()).isEqualTo("1");
+            assertThat(responseGeneric.getMethod()).isEqualTo(method.toString());
+            assertThat(responseGeneric.getQuery()).isEqualTo("query-value");
+            assertThat(responseGeneric.getHeader()).isEqualTo("header-value");
+            assertThat(responseGeneric.getCookie()).isEqualTo("cookie-value");
+            assertThat(responseGeneric.getContent()).isEqualTo("content");
+
+            final RestResponse responseGenericMapper =
+                    preparation.content("content")
+                               .header("x-header", "header-value")
+                               .cookie(Cookie.ofSecure("cookie", "cookie-value"))
+                               .pathParam("id", "1")
+                               .queryParam("query", "query-value")
+                               .execute(new TypeReference<RestResponse>() {}, mapper,
+                                        httpStatus -> httpStatus.equals(HttpStatus.OK))
+                               .join()
+                               .content();
+
+            assertThat(responseGenericMapper.getId()).isEqualTo("1");
+            assertThat(responseGenericMapper.getMethod()).isEqualTo(method.toString());
+            assertThat(responseGenericMapper.getQuery()).isEqualTo("query-value");
+            assertThat(responseGenericMapper.getHeader()).isEqualTo("header-value");
+            assertThat(responseGenericMapper.getCookie()).isEqualTo("cookie-value");
+            assertThat(responseGenericMapper.getContent()).isEqualTo("content");
         }
     }
 
