@@ -27,6 +27,10 @@ import org.junit.jupiter.api.io.TempDir;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.fasterxml.jackson.core.json.JsonReadFeature;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.json.JsonMapper;
+
 import com.linecorp.armeria.common.ExchangeType;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
@@ -112,6 +116,33 @@ class WebClientPreparationExchangeTypeTest {
                   .asJson(String.class)
                   .execute();
         }).isEqualTo(ExchangeType.UNARY);
+
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(String.class, mapper)
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
+
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(new TypeReference<String>() {})
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
+
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(new TypeReference<String>() {}, mapper)
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
     }
 
     @Test
@@ -121,6 +152,33 @@ class WebClientPreparationExchangeTypeTest {
                   .post("/json")
                   .content("foo")
                   .asJson(String.class, HttpStatus.OK)
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
+
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(String.class, mapper, HttpStatus.OK)
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
+
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(new TypeReference<String>() {}, HttpStatus.OK)
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
+
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(new TypeReference<String>() {}, mapper, HttpStatus.OK)
                   .execute();
         }).isEqualTo(ExchangeType.UNARY);
     }
@@ -134,6 +192,33 @@ class WebClientPreparationExchangeTypeTest {
                   .asJson(String.class, HttpStatusClass.SUCCESS)
                   .execute();
         }).isEqualTo(ExchangeType.UNARY);
+
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(String.class, mapper, HttpStatusClass.SUCCESS)
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
+
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(new TypeReference<String>() {}, HttpStatusClass.SUCCESS)
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
+
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(new TypeReference<String>() {}, mapper, HttpStatusClass.SUCCESS)
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
     }
 
     @Test
@@ -143,6 +228,36 @@ class WebClientPreparationExchangeTypeTest {
                   .post("/json")
                   .content("foo")
                   .asJson(String.class,
+                          httpStatus -> httpStatus.equals(HttpStatus.OK))
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
+
+        final JsonMapper mapper = JsonMapper.builder()
+                                            .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                                            .build();
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(String.class, mapper,
+                          httpStatus -> httpStatus.equals(HttpStatus.OK))
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
+
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(new TypeReference<String>() {},
+                          httpStatus -> httpStatus.equals(HttpStatus.OK))
+                  .execute();
+        }).isEqualTo(ExchangeType.UNARY);
+
+        assertExchangeType(() -> {
+            client.prepare()
+                  .post("/json")
+                  .content("foo")
+                  .asJson(new TypeReference<String>() {}, mapper,
                           httpStatus -> httpStatus.equals(HttpStatus.OK))
                   .execute();
         }).isEqualTo(ExchangeType.UNARY);
