@@ -404,7 +404,7 @@ public abstract class Http1ObjectEncoder implements HttpObjectEncoder {
     }
 
     protected final boolean isWritable(int id) {
-        return id < minClosedId;
+        return id < minClosedId && !isClosed();
     }
 
     protected final void updateClosedId(int id) {
