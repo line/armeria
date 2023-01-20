@@ -272,7 +272,7 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
             SerializationFormat serializationFormat) {
         final MethodDescriptor<I, O> methodDescriptor = methodDef.getMethodDescriptor();
         final Executor blockingExecutor;
-        if (useBlockingTaskExecutor) {
+        if (useBlockingTaskExecutor || registry.needToUseBlockingTaskExecutor(methodDef)) {
             blockingExecutor = MoreExecutors.newSequentialExecutor(ctx.blockingTaskExecutor());
         } else {
             blockingExecutor = null;

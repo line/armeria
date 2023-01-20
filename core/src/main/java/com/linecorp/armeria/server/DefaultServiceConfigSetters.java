@@ -19,17 +19,21 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.linecorp.armeria.server.ServiceConfig.validateMaxRequestLength;
 import static com.linecorp.armeria.server.ServiceConfig.validateRequestTimeoutMillis;
+import static com.linecorp.armeria.server.VirtualHostBuilder.ensureNoPseudoHeader;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -66,6 +70,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     @Nullable
     private Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
+    private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
 
     @Override
     public ServiceConfigSetters requestTimeout(Duration requestTimeout) {
@@ -198,6 +203,42 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         return this;
     }
 
+    @Override
+    public ServiceConfigSetters addHeader(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        ensureNoPseudoHeader(name);
+        defaultHeaders.addObject(name, value);
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        requireNonNull(defaultHeaders, "defaultHeaders");
+        ensureNoPseudoHeader(defaultHeaders);
+        this.defaultHeaders.addObject(defaultHeaders);
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters setHeader(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        ensureNoPseudoHeader(name);
+        defaultHeaders.setObject(name, value);
+        return this;
+    }
+
+    @Override
+    public ServiceConfigSetters setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        requireNonNull(defaultHeaders, "defaultHeaders");
+        ensureNoPseudoHeader(defaultHeaders);
+        this.defaultHeaders.setObject(defaultHeaders);
+        return this;
+    }
+
     /**
      * Note: {@link ServiceConfigBuilder} built by this method is not decorated with the decorator function
      * which can be configured using {@link DefaultServiceConfigSetters#decorator()} because
@@ -258,6 +299,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
             serviceConfigBuilder.multipartUploadsLocation(multipartUploadsLocation);
         }
         serviceConfigBuilder.shutdownSupports(shutdownSupports);
+        if (!defaultHeaders.isEmpty()) {
+            serviceConfigBuilder.defaultHeaders(defaultHeaders.build());
+        }
         return serviceConfigBuilder;
     }
 }

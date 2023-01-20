@@ -69,7 +69,7 @@ public final class BlockingTaskExecutorBuilder {
      */
     public BlockingTaskExecutorBuilder keepAliveTime(Duration keepAliveTime) {
         checkArgument(!requireNonNull(keepAliveTime, "keepAliveTime").isNegative(),
-                      "keepAliveTime: %s (expected: >= 0)");
+                      "keepAliveTime: %s (expected: >= 0)", keepAliveTime);
         return keepAliveTimeMillis(keepAliveTime.toMillis());
     }
 

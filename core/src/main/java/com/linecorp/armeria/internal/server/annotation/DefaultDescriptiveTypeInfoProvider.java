@@ -27,9 +27,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Stream;
 
@@ -125,35 +123,27 @@ public final class DefaultDescriptiveTypeInfoProvider implements DescriptiveType
         if (!mapper.canDeserialize(javaType)) {
             return newReflectiveStructInfo(type);
         }
-        final Set<JavaType> visiting = new HashSet<>();
-        return new StructInfo(type.getName(), requestFieldInfos(javaType, visiting, true),
+        return new StructInfo(type.getName(), requestFieldInfos(javaType),
                               classDescriptionInfo(javaType.getRawClass()));
     }
 
-    private List<FieldInfo> requestFieldInfos(JavaType javaType, Set<JavaType> visiting, boolean root) {
+    private List<FieldInfo> requestFieldInfos(JavaType javaType) {
         if (!mapper.canDeserialize(javaType)) {
-            return ImmutableList.of();
-        }
-
-        if (!visiting.add(javaType)) {
             return ImmutableList.of();
         }
 
         final BeanDescription description = mapper.getDeserializationConfig().introspect(javaType);
         final List<BeanPropertyDefinition> properties = description.findProperties();
-        if (root && properties.isEmpty()) {
+        if (properties.isEmpty()) {
             return newReflectiveStructInfo(javaType.getRawClass()).fields();
         }
 
-        final List<FieldInfo> fieldInfos = properties.stream().map(property -> {
-            return fieldInfos(javaType,
-                              property.getName(),
-                              property.getInternalName(),
-                              property.getPrimaryType(),
-                              childType -> requestFieldInfos(childType, visiting, false));
-        }).collect(toImmutableList());
-        visiting.remove(javaType);
-        return fieldInfos;
+        return properties.stream()
+                         .map(property -> fieldInfos(javaType,
+                                                     property.getName(),
+                                                     property.getInternalName(),
+                                                     property.getPrimaryType()))
+                         .collect(toImmutableList());
     }
 
     private StructInfo responseStructInfo(Class<?> type) {
@@ -161,39 +151,29 @@ public final class DefaultDescriptiveTypeInfoProvider implements DescriptiveType
             return newReflectiveStructInfo(type);
         }
         final JavaType javaType = mapper.constructType(type);
-        final Set<JavaType> visiting = new HashSet<>();
-        return new StructInfo(type.getName(), responseFieldInfos(javaType, visiting, true),
-                              classDescriptionInfo(type));
+        return new StructInfo(type.getName(), responseFieldInfos(javaType), classDescriptionInfo(type));
     }
 
-    private List<FieldInfo> responseFieldInfos(JavaType javaType, Set<JavaType> visiting, boolean root) {
+    private List<FieldInfo> responseFieldInfos(JavaType javaType) {
         if (!mapper.canSerialize(javaType.getRawClass())) {
-            return ImmutableList.of();
-        }
-
-        if (!visiting.add(javaType)) {
             return ImmutableList.of();
         }
 
         final BeanDescription description = mapper.getSerializationConfig().introspect(javaType);
         final List<BeanPropertyDefinition> properties = description.findProperties();
-        if (root && properties.isEmpty()) {
+        if (properties.isEmpty()) {
             return newReflectiveStructInfo(javaType.getRawClass()).fields();
         }
 
-        final List<FieldInfo> fieldInfos = properties.stream().map(property -> {
-            return fieldInfos(javaType,
-                              property.getName(),
-                              property.getInternalName(),
-                              property.getPrimaryType(),
-                              childType -> responseFieldInfos(childType, visiting, false));
-        }).collect(toImmutableList());
-        visiting.remove(javaType);
-        return fieldInfos;
+        return properties.stream()
+                         .map(property -> fieldInfos(javaType,
+                                                     property.getName(),
+                                                     property.getInternalName(),
+                                                     property.getPrimaryType()))
+                         .collect(toImmutableList());
     }
 
-    private FieldInfo fieldInfos(JavaType javaType, String name, String internalName, JavaType fieldType,
-                                 Function<JavaType, List<FieldInfo>> childFieldsResolver) {
+    private FieldInfo fieldInfos(JavaType javaType, String name, String internalName, JavaType fieldType) {
         TypeSignature typeSignature = toTypeSignature(fieldType);
         final FieldRequirement fieldRequirement;
         if (typeSignature.type() == TypeSignatureType.OPTIONAL) {
@@ -211,26 +191,10 @@ public final class DefaultDescriptiveTypeInfoProvider implements DescriptiveType
         }
 
         final DescriptionInfo descriptionInfo = fieldDescriptionInfo(javaType, fieldType, internalName);
-        final TypeSignatureType type = typeSignature.type();
-        if (type == TypeSignatureType.BASE || type.hasParameter()) {
-            return FieldInfo.builder(name, typeSignature)
-                            .requirement(fieldRequirement)
-                            .descriptionInfo(descriptionInfo)
-                            .build();
-        } else {
-            final List<FieldInfo> fieldInfos = childFieldsResolver.apply(fieldType);
-            if (fieldInfos.isEmpty()) {
-                return FieldInfo.builder(name, typeSignature)
-                                .requirement(fieldRequirement)
-                                .descriptionInfo(descriptionInfo)
-                                .build();
-            } else {
-                return FieldInfo.builder(name, typeSignature, fieldInfos)
-                                .requirement(fieldRequirement)
-                                .descriptionInfo(descriptionInfo)
-                                .build();
-            }
-        }
+        return FieldInfo.builder(name, typeSignature)
+                        .requirement(fieldRequirement)
+                        .descriptionInfo(descriptionInfo)
+                        .build();
     }
 
     private FieldRequirement fieldRequirement(JavaType classType, JavaType fieldType, String fieldName) {

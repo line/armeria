@@ -21,6 +21,7 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 
+import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
 
 public final class BaseFlagsProvider implements FlagsProvider {
@@ -86,7 +87,7 @@ public final class BaseFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public CompositeMeterRegistry meterRegistry() {
+    public MeterRegistry meterRegistry() {
         return new CompositeMeterRegistry();
     }
 }

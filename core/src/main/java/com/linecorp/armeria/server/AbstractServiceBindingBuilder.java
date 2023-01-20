@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
@@ -75,6 +76,13 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
                                                          boolean shutdownOnStop) {
         defaultServiceConfigSetters.accessLogWriter(accessLogWriter, shutdownOnStop);
         return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder decorator(
+            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        return (AbstractServiceBindingBuilder) ServiceConfigSetters.super.decorator(
+                decoratingHttpServiceFunction);
     }
 
     @Override
@@ -138,6 +146,32 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     @Override
     public AbstractServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder addHeader(CharSequence name, Object value) {
+        defaultServiceConfigSetters.addHeader(name, value);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        defaultServiceConfigSetters.addHeaders(defaultHeaders);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder setHeader(CharSequence name, Object value) {
+        defaultServiceConfigSetters.setHeader(name, value);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        defaultServiceConfigSetters.setHeaders(defaultHeaders);
         return this;
     }
 

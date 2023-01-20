@@ -119,7 +119,8 @@ class AnnotatedDocServiceTest {
                                       .exampleQueries(MyService.class, "foo", "query=10", "query=20")
                                       .exampleRequests(MyService.class, "pathParams",
                                                        ImmutableList.of(
-                                                               mapper.readTree("{\"hello\":\"armeria\"}")))
+                                                               mapper.readTree("{\"hello\":\"armeria\"}"),
+                                                               mapper.readTree("{\"hello\":\"armeria2\"}")))
                                       .examplePaths(MyService.class, "pathParamsWithQueries",
                                                     "/service/hello1/foo", "/service/hello1/bar")
                                       .exampleQueries(MyService.class, "pathParamsWithQueries", "hello3=hello4")
@@ -135,7 +136,7 @@ class AnnotatedDocServiceTest {
     };
 
     @Test
-    void jsonSpecification() throws InterruptedException {
+    void jsonSpecification() throws Exception {
         if (TestUtil.isDocServiceDemoMode()) {
             Thread.sleep(Long.MAX_VALUE);
         }
@@ -167,7 +168,8 @@ class AnnotatedDocServiceTest {
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
         assertThat(res.headers().get(HttpHeaderNames.CACHE_CONTROL))
                 .isEqualTo("no-cache, max-age=0, must-revalidate");
-        assertThatJson(res.contentUtf8()).when(IGNORING_ARRAY_ORDER).isEqualTo(expectedJson);
+        assertThatJson(res.contentUtf8()).when(IGNORING_ARRAY_ORDER)
+                                         .whenIgnoringPaths("structs").isEqualTo(expectedJson);
     }
 
     private static void addFooMethodInfo(Map<Class<?>, Set<MethodInfo>> methodInfos) {
@@ -316,13 +318,7 @@ class AnnotatedDocServiceTest {
                                                    .availableMimeTypes(MediaType.JSON_UTF_8)
                                                    .build();
         final FieldInfo jsonRequest =
-                FieldInfo.builder(JsonRequest.class.getName(), AnnotatedDocServicePlugin.OBJECT,
-                                  ImmutableList.of(FieldInfo.builder("foo", INT)
-                                                            .requirement(REQUIRED)
-                                                            .build(),
-                                                   FieldInfo.builder("bar", STRING)
-                                                            .requirement(REQUIRED)
-                                                            .build()))
+                FieldInfo.builder("request", TypeSignature.ofStruct(JsonRequest.class))
                          .requirement(REQUIRED)
                          .build();
         final MethodInfo methodInfo1 = new MethodInfo(
@@ -422,6 +418,9 @@ class AnnotatedDocServiceTest {
                     final ArrayNode exampleRequests = (ArrayNode) method.get("exampleRequests");
                     exampleRequests.add('{' + System.lineSeparator() +
                                         "  \"hello\" : \"armeria\"" + System.lineSeparator() +
+                                        '}');
+                    exampleRequests.add('{' + System.lineSeparator() +
+                                        "  \"hello\" : \"armeria2\"" + System.lineSeparator() +
                                         '}');
                     final ArrayNode examplePaths = (ArrayNode) method.get("examplePaths");
                     examplePaths.add(TextNode.valueOf("/service/hello1/foo/hello3/bar"));

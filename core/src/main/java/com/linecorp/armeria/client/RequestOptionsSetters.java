@@ -28,7 +28,11 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AttributeKey;
 
-interface RequestOptionsSetters {
+/**
+ * Provides the setters for building {@link RequestOptions}.
+ */
+@UnstableApi
+public interface RequestOptionsSetters {
 
     /**
      * Schedules the response timeout that is triggered when the {@link Response} is not fully received within

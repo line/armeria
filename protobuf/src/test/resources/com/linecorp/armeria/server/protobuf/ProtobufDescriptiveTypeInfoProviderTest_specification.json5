@@ -6,211 +6,10 @@
       "id" : "com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProviderTest$ProtobufService/json/POST",
       "returnTypeSignature" : "CompletableFuture<com.linecorp.armeria.protobuf.testing.Messages$TestMessage>",
       "parameters" : [ {
-        "name" : "armeria.protobuf.testing.TestMessage",
+        "name" : "req",
         "location" : "UNSPECIFIED",
         "requirement" : "REQUIRED",
-        "typeSignature" : "object",
-        "childFieldInfos" : [ {
-          "name" : "bool",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "bool",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "int32",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "int32",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "int64",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "int64",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "uint32",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "uint32",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "uint64",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "uint64",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "sint32",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "sint32",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "sint64",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "sint64",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "fixed32",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "fixed32",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "fixed64",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "fixed64",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "float",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "float",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "double",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "double",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "string",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "string",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "bytes",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "bytes",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "test_enum",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "armeria.protobuf.testing.TestEnum",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "nested",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "armeria.protobuf.testing.TestMessage.Nested",
-          "childFieldInfos" : [ {
-            "name" : "string",
-            "location" : "UNSPECIFIED",
-            "requirement" : "OPTIONAL",
-            "typeSignature" : "string",
-            "childFieldInfos" : [ ],
-            "descriptionInfo" : {
-              "docString" : "",
-              "markup" : "NONE"
-            }
-          } ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "strings",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "repeated<string>",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "map",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "map<string, int32>",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "self",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "armeria.protobuf.testing.TestMessage",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        }, {
-          "name" : "empty_nested",
-          "location" : "UNSPECIFIED",
-          "requirement" : "OPTIONAL",
-          "typeSignature" : "armeria.protobuf.testing.TestMessage.EmptyNested",
-          "childFieldInfos" : [ ],
-          "descriptionInfo" : {
-            "docString" : "",
-            "markup" : "NONE"
-          }
-        } ],
+        "typeSignature" : "com.linecorp.armeria.protobuf.testing.Messages$TestMessage",
         "descriptionInfo" : {
           "docString" : "",
           "markup" : "NONE"
@@ -275,7 +74,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "bool",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -285,7 +83,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "int32",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -295,7 +92,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "int64",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -305,7 +101,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "uint32",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -315,7 +110,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "uint64",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -325,7 +119,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "sint32",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -335,7 +128,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "sint64",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -345,7 +137,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "fixed32",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -355,7 +146,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "fixed64",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -365,7 +155,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "float",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -375,7 +164,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "double",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -385,7 +173,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "string",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -395,7 +182,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "bytes",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -405,7 +191,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "armeria.protobuf.testing.TestEnum",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -415,17 +200,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "armeria.protobuf.testing.TestMessage.Nested",
-      "childFieldInfos" : [ {
-        "name" : "string",
-        "location" : "UNSPECIFIED",
-        "requirement" : "OPTIONAL",
-        "typeSignature" : "string",
-        "childFieldInfos" : [ ],
-        "descriptionInfo" : {
-          "docString" : "",
-          "markup" : "NONE"
-        }
-      } ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -435,7 +209,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "repeated<string>",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -445,7 +218,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "map<string, int32>",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -455,7 +227,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "armeria.protobuf.testing.TestMessage",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -465,7 +236,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "armeria.protobuf.testing.TestMessage.EmptyNested",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"
@@ -489,7 +259,6 @@
       "location" : "UNSPECIFIED",
       "requirement" : "OPTIONAL",
       "typeSignature" : "string",
-      "childFieldInfos" : [ ],
       "descriptionInfo" : {
         "docString" : "",
         "markup" : "NONE"

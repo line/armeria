@@ -65,7 +65,6 @@ import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.docs.EnumInfo;
 import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
-import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MapTypeSignature;
 import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
@@ -135,9 +134,6 @@ class ProtobufDescriptiveTypeInfoProviderTest {
         assertThat(nested.name()).isEqualTo("nested");
         assertThat(nested.typeSignature().signature())
                 .isEqualTo("armeria.protobuf.testing.TestMessage.Nested");
-        assertThat(nested.childFieldInfos())
-                .containsExactly(FieldInfo.builder("string", STRING).requirement(FieldRequirement.OPTIONAL)
-                                          .build());
 
         assertThat(structInfo.fields().get(15).name()).isEqualTo("strings");
         final TypeSignature repeatedTpeSignature = structInfo.fields().get(15).typeSignature();
@@ -153,11 +149,8 @@ class ProtobufDescriptiveTypeInfoProviderTest {
         assertThat(((MapTypeSignature) mapTypeSignature).valueTypeSignature()).isSameAs(INT32);
         final FieldInfo self = structInfo.fields().get(17);
         assertThat(self.name()).isEqualTo("self");
-        // Don't visit the field infos of a circular type
-        assertThat(self.childFieldInfos()).isEmpty();
         final FieldInfo emptyNested = structInfo.fields().get(18);
         assertThat(emptyNested.name()).isEqualTo("empty_nested");
-        assertThat(emptyNested.childFieldInfos()).isEmpty();
 
         assertThat(self.typeSignature().signature())
                 .isEqualTo("armeria.protobuf.testing.TestMessage");
@@ -225,14 +218,18 @@ class ProtobufDescriptiveTypeInfoProviderTest {
                                         .content();
         final JsonNode param = response.get("services").get(0).get("methods").get(0)
                                        .get("parameters").get(0);
-        assertThat(param.get("name").textValue()).isEqualTo("CustomSimpleRequest");
-        final JsonNode fieldInfos = param.get("childFieldInfos");
-        assertThat(fieldInfos.size()).isEqualTo(1);
-        assertThat(fieldInfos.get(0).get("name").textValue()).isEqualTo("foo");
-        assertThat(fieldInfos.get(0).get("typeSignature").textValue()).isEqualTo("foo");
+        assertThat(param.get("name").textValue()).isEqualTo("req");
+        assertThat(param.get("typeSignature").textValue()).isEqualTo(
+                "com.linecorp.armeria.protobuf.testing.Messages$SimpleRequest");
+        final JsonNode struct = response.get("structs").get(0);
+        assertThat(struct.get("name").textValue()).isEqualTo("CustomSimpleRequest");
+        final JsonNode fields = struct.get("fields");
+        assertThat(fields.size()).isEqualTo(1);
+        assertThat(fields.get(0).get("name").textValue()).isEqualTo("foo");
+        assertThat(fields.get(0).get("typeSignature").textValue()).isEqualTo("foo");
         // Make sure that the default `DescriptiveTypeInfoProvider`s are set as the fallback of
         // the custom provider.
-        assertThat(response.get("structs").get(0).get("name").textValue())
+        assertThat(response.get("structs").get(1).get("name").textValue())
                 .isEqualTo("armeria.protobuf.testing.SimpleResponse");
     }
 

@@ -42,6 +42,7 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableListMultimap;
 import com.google.common.collect.ImmutableMap;
@@ -198,6 +199,9 @@ public final class DocService extends SimpleDecoratingHttpService {
         final ExecutorService executorService = Executors.newSingleThreadExecutor(
                 ThreadFactories.newThreadFactory("docservice-loader", true));
         vfs().specificationLoader.updateServices(services, executorService).handle((res, e) -> {
+            if (e != null) {
+                logger.warn("Failed to load specifications completely: ", e);
+            }
             executorService.shutdown();
             return null;
         });
@@ -234,9 +238,11 @@ public final class DocService extends SimpleDecoratingHttpService {
 
     static final class SpecificationLoader {
 
-        private static final String versionsPath = "/versions.json";
-        private static final String specificationPath = "/specification.json";
-        private static final Set<String> targetPaths = ImmutableSet.of(versionsPath, specificationPath);
+        private static final String VERSIONS_PATH = "/versions.json";
+        private static final String SPECIFICATION_PATH = "/specification.json";
+        private static final String SCHEMAS_PATH = "/schemas.json";
+        private static final Set<String> TARGET_PATHS = ImmutableSet.of(VERSIONS_PATH, SPECIFICATION_PATH,
+                                                                        SCHEMAS_PATH);
         private static final CompletableFuture<AggregatedHttpFile> loadFailedFuture =
                 UnmodifiableFuture.exceptionallyCompletedFuture(
                         new IllegalStateException("File load not triggered"));
@@ -257,34 +263,44 @@ public final class DocService extends SimpleDecoratingHttpService {
         }
 
         boolean contains(String path) {
-            return targetPaths.contains(path);
+            return TARGET_PATHS.contains(path);
         }
 
         CompletableFuture<List<AggregatedHttpFile>> updateServices(List<ServiceConfig> services,
                                                                    Executor executor) {
             this.services = services;
-            final List<CompletableFuture<AggregatedHttpFile>> files = targetPaths.stream().map(
-                    path -> load(path, executor)).collect(Collectors.toList());
+
+            final CompletableFuture<ServiceSpecification> serviceSpecificationFuture =
+                    generateServiceSpecification(executor);
+
+            final List<CompletableFuture<AggregatedHttpFile>> files =
+                    TARGET_PATHS.stream()
+                                .map(path -> load(path, executor, serviceSpecificationFuture))
+                                .collect(toImmutableList());
             return CompletableFutures.allAsList(files);
         }
 
         CompletableFuture<AggregatedHttpFile> get(String path) {
-            assert targetPaths.contains(path);
+            assert TARGET_PATHS.contains(path);
             return files.getOrDefault(path, loadFailedFuture);
         }
 
-        private CompletableFuture<AggregatedHttpFile> load(String path, Executor executor) {
-            if (versionsPath.equals(path)) {
+        private CompletableFuture<AggregatedHttpFile> load(
+                String path, Executor executor,
+                CompletableFuture<ServiceSpecification> serviceSpecificationFuture) {
+            if (VERSIONS_PATH.equals(path)) {
                 return loadVersions(executor);
-            } else if (specificationPath.equals(path)) {
-                return loadSpecifications(executor);
+            } else if (SPECIFICATION_PATH.equals(path)) {
+                return loadSpecifications(serviceSpecificationFuture);
+            } else if (SCHEMAS_PATH.equals(path)) {
+                return loadSchemas(serviceSpecificationFuture);
             } else {
                 throw new Error(); // Should never reach here.
             }
         }
 
         private CompletableFuture<AggregatedHttpFile> loadVersions(Executor executor) {
-            return files.computeIfAbsent(versionsPath, key -> CompletableFuture.supplyAsync(() -> {
+            return files.computeIfAbsent(VERSIONS_PATH, key -> CompletableFuture.supplyAsync(() -> {
                 final List<Version> versions = ImmutableList.copyOf(
                         Version.getAll(DocService.class.getClassLoader()).values());
                 try {
@@ -297,22 +313,43 @@ public final class DocService extends SimpleDecoratingHttpService {
             }, executor));
         }
 
-        private CompletableFuture<AggregatedHttpFile> loadSpecifications(Executor executor) {
-            return files.computeIfAbsent(specificationPath, key -> {
-                return CompletableFuture.supplyAsync(() -> {
-                    final DocStringSupport docStringSupport = new DocStringSupport(services);
-                    ServiceSpecification spec = generate(services);
-                    spec = docStringSupport.addDocStrings(spec);
-                    spec = exampleSupport.addExamples(spec);
-                    try {
-                        final byte[] content = jsonMapper.writerWithDefaultPrettyPrinter()
-                                                         .writeValueAsBytes(spec);
-                        return toFile(content, MediaType.JSON_UTF_8);
-                    } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
-                    }
-                }, executor);
-            });
+        private CompletableFuture<ServiceSpecification> generateServiceSpecification(Executor executor) {
+            return CompletableFuture.supplyAsync(() -> {
+                final DocStringSupport docStringSupport = new DocStringSupport(services);
+                ServiceSpecification spec = generate(services);
+                spec = docStringSupport.addDocStrings(spec);
+                spec = exampleSupport.addExamples(spec);
+                return spec;
+            }, executor);
+        }
+
+        private CompletableFuture<AggregatedHttpFile> loadSpecifications(
+                CompletableFuture<ServiceSpecification> specificationFuture) {
+            return files.computeIfAbsent(SPECIFICATION_PATH, key -> specificationFuture.thenApply(spec -> {
+                try {
+                    final byte[] content = jsonMapper.writerWithDefaultPrettyPrinter()
+                                                     .writeValueAsBytes(spec);
+                    return toFile(content, MediaType.JSON_UTF_8);
+                } catch (JsonProcessingException e) {
+                    throw new RuntimeException(e);
+                }
+            }));
+        }
+
+        private CompletableFuture<AggregatedHttpFile> loadSchemas(
+                CompletableFuture<ServiceSpecification> specificationFuture) {
+            return files.computeIfAbsent(SCHEMAS_PATH, key -> specificationFuture.thenApply(spec -> {
+                try {
+                    final ArrayNode jsonSpec = JsonSchemaGenerator.generate(spec);
+
+                    final byte[] content = jsonMapper.writerWithDefaultPrettyPrinter()
+                                                     .writeValueAsBytes(jsonSpec);
+                    return toFile(content, MediaType.JSON_UTF_8);
+                } catch (JsonProcessingException e) {
+                    logger.warn("Failed to generate JSON schemas:", e);
+                    return toFile("[]".getBytes(), MediaType.JSON_UTF_8);
+                }
+            }));
         }
 
         private static AggregatedHttpFile toFile(byte[] content, MediaType mediaType) {

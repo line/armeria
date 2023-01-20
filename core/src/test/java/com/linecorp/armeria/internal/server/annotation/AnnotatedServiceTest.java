@@ -259,13 +259,12 @@ class AnnotatedServiceTest {
         @ResponseConverter(VoidTo200ResponseConverter.class)
         public void void200() {}
 
-        @Get("/void/json/200")
+        @Get("/void/produces/204")
         @ProducesJson
-        public void voidJson200() {}
+        public void voidProduces204() {}
 
         @Get("/void/json/204")
         @StatusCode(204)
-        @ProducesJson
         public void voidJson204() {}
 
         @Get("/voidPublisher/204")
@@ -279,15 +278,14 @@ class AnnotatedServiceTest {
             return Mono.empty();
         }
 
-        @Get("/voidPublisher/json/200")
+        @Get("/voidPublisher/produces/204")
         @ProducesJson
-        public Publisher<Void> voidPublisherJson200() {
+        public Publisher<Void> voidPublisherProduces204() {
             return Mono.empty();
         }
 
         @Get("/voidPublisher/json/204")
         @StatusCode(204)
-        @ProducesJson
         public Publisher<Void> voidPublisherJson204() {
             return Mono.empty();
         }
@@ -303,15 +301,14 @@ class AnnotatedServiceTest {
             return UnmodifiableFuture.completedFuture(null);
         }
 
-        @Get("/voidFuture/json/200")
+        @Get("/voidFuture/produces/204")
         @ProducesJson
-        public CompletionStage<Void> voidFutureJson200() {
+        public CompletionStage<Void> voidFutureProduces204() {
             return UnmodifiableFuture.completedFuture(null);
         }
 
         @Get("/voidFuture/json/204")
         @StatusCode(204)
-        @ProducesJson
         public CompletionStage<Void> voidFutureJson204() {
             return UnmodifiableFuture.completedFuture(null);
         }
@@ -1147,9 +1144,8 @@ class AnnotatedServiceTest {
             testStatusCode(hc, get("/1/" + returnType + "/204"), 204);
             testBodyAndContentType(hc, get("/1/" + returnType + "/200"),
                                    "200 OK", MediaType.PLAIN_TEXT_UTF_8.toString());
+            testStatusCode(hc, get("/1/" + returnType + "/produces/204"), 204);
             testStatusCode(hc, get("/1/" + returnType + "/json/204"), 204);
-            testBodyAndContentType(hc, get("/1/" + returnType + "/json/200"),
-                                   "null", MediaType.JSON_UTF_8.toString());
         }
     }
 

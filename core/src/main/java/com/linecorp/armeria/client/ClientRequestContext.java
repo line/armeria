@@ -33,6 +33,7 @@ import com.google.errorprone.annotations.MustBeClosed;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.ExchangeType;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.HttpRequest;
@@ -498,6 +499,19 @@ public interface ClientRequestContext extends RequestContext {
      * @see ContentTooLargeException
      */
     void setMaxResponseLength(long maxResponseLength);
+
+    /**
+     * Returns the default {@link HttpHeaders} which will be included when a {@link Client} sends an
+     * {@link HttpRequest}.
+     *
+     * <p>Note that the values of the default {@link HttpHeaders} could be overridden if the same
+     * {@link HttpHeaderNames} are defined in {@link HttpRequest#headers()} or
+     * {@link #additionalRequestHeaders()}.
+     *
+     * @see AbstractClientOptionsBuilder#addHeader(CharSequence, Object)
+     */
+    @UnstableApi
+    HttpHeaders defaultRequestHeaders();
 
     /**
      * Returns an {@link HttpHeaders} which will be included when a {@link Client} sends an {@link HttpRequest}.

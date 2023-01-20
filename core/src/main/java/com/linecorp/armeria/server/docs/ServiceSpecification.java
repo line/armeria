@@ -111,7 +111,7 @@ public final class ServiceSpecification {
             }
 
             generateDescriptiveTypeInfos(descriptiveTypeInfoFactory, enums, structs, exceptions,
-                                   newInfo.findDescriptiveTypes());
+                                         newInfo.findDescriptiveTypes());
         });
     }
 
