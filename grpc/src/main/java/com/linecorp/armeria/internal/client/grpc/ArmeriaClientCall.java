@@ -490,7 +490,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         }
 
         final RequestLogBuilder logBuilder = ctx.logBuilder();
-        logBuilder.responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
+        logBuilder.responseContent(GrpcLogUtil.rpcResponse(status, firstResponse, metadata), null);
         if (status.isOk()) {
             req.abort();
         } else {

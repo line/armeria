@@ -211,7 +211,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
         }
 
         // Set responseContent before closing stream to use responseCause in error handling
-        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
+        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse, metadata), null);
         try {
             if (res.tryWrite(responseTrailers(ctx, status, metadata, trailersOnly))) {
                 res.close();

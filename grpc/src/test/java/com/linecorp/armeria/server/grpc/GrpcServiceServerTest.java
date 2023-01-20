@@ -613,6 +613,13 @@ class GrpcServiceServerTest {
             assertThat(grpcStatus).isNotNull();
             assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
             assertThat(grpcStatus.getDescription()).isEqualTo("aborted call");
+            final StatusException ex = (StatusException)rpcRes.cause();
+            assertThat(ex.getStatus().getCode()).isEqualTo(Code.ABORTED);
+            assertThat(ex.getStatus().getDescription()).isEqualTo("aborted call");
+            assertThat(ex.getTrailers().getAll(STRING_VALUE_KEY))
+                    .containsExactly(StringValue.newBuilder().setValue("custom metadata").build());
+            // INT_32_VALUE_KEY is not included here, since the key is directly injected to response header.
+            assertThat(ex.getTrailers().get(CUSTOM_VALUE_KEY)).isEqualTo("custom value");
         });
     }
 

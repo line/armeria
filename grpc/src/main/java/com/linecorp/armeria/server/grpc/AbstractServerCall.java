@@ -266,7 +266,8 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName), null);
             }
             if (setResponseContent) {
-                ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse()), null);
+                ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse(), null),
+                                                 null);
             }
 
             if (!clientStreamClosed) {
