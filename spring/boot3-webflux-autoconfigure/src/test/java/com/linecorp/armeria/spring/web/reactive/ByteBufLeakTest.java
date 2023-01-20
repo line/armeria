@@ -26,10 +26,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.locks.ReentrantLock;
 
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.DisableOnDebug;
@@ -61,7 +58,6 @@ import reactor.core.publisher.Mono;
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 public class ByteBufLeakTest {
 
-    private static final ReentrantLock executionLock = new ReentrantLock();
     private static final AtomicInteger completed = new AtomicInteger();
     private static final Queue<NettyDataBuffer> allocatedBuffers = new ConcurrentLinkedQueue<>();
 
@@ -119,17 +115,6 @@ public class ByteBufLeakTest {
 
     @LocalServerPort
     int port;
-
-    @BeforeClass
-    public static void beforeClass() throws Exception {
-        // This test suite might be executed in parallel in boot2 and boot3 modules.
-        executionLock.lock();
-    }
-
-    @AfterClass
-    public static void afterClass() throws Exception {
-        executionLock.unlock();
-    }
 
     @Test
     public void confirmNoBufferLeak() throws Exception {

@@ -33,9 +33,16 @@ tasks.compileTestJava.dependsOn(project(":spring:$boot3WebFlux").tasks.compileTe
 tasks.compileJava.source "${boot3WebFluxProjectDir}/src/main/java",
         "${boot3WebFluxProjectDir}/gen-src/main/java"
 tasks.processResources.from "${boot3WebFluxProjectDir}/src/main/resources"
-tasks.compileTestJava.source "${boot3WebFluxProjectDir}/src/test/java",
-        "${boot3WebFluxProjectDir}/gen-src/test/java"
-tasks.processTestResources.from "${boot3WebFluxProjectDir}/src/test/resources"
+
 tasks.sourcesJar.from "${boot3WebFluxProjectDir}/src/main/java", "${boot3WebFluxProjectDir}/gen-src/main/java"
 tasks.sourcesJar.from "${boot3WebFluxProjectDir}/src/main/resources"
 tasks.javadoc.source "${boot3WebFluxProjectDir}/src/main/java", "${boot3WebFluxProjectDir}/gen-src/main/java"
+
+// Copy test files from boot3-autoconfigure module to gen-src directory in order to use them as
+// a test set.
+task generateSources(type: Copy) {
+    from "${boot3WebFluxProjectDir}/src/test"
+    into "${project.ext.genSrcDir}/test"
+    // ByteBufLeakTest could be flaky if run in parallel.
+    exclude '**/ByteBufLeakTest.java'
+}
