@@ -67,7 +67,6 @@ class Http1ServerEarlyDisconnectionTest {
         }
     };
 
-
     @Test
     void closeConnectionWhenAllContentAreReceived() throws InterruptedException {
         final ClientFactory clientFactory = ClientFactory.builder().build();
@@ -91,7 +90,7 @@ class Http1ServerEarlyDisconnectionTest {
             public void onNext(HttpData httpData) {
                 received += httpData.length();
                 if (received >= contentLength) {
-                    // All data is received. It should be safe to close the connection.
+                    // All data is received, so it should be safe to close the connection.
                     clientFactory.close();
                 }
             }
