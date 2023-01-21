@@ -42,6 +42,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.NettyDataBuffer;
 import org.springframework.core.io.buffer.NettyDataBufferFactory;
+import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.junit4.SpringJUnit4ClassRunner;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -56,6 +57,7 @@ import reactor.core.publisher.Mono;
 
 @RunWith(SpringJUnit4ClassRunner.class)
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
+@DirtiesContext
 public class ByteBufLeakTest {
 
     private static final AtomicInteger completed = new AtomicInteger();

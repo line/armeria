@@ -51,12 +51,12 @@ project(':scalapb_3').projectDir = file('scalapb/scalapb_3')
 includeWithFlags ':spring:boot1-autoconfigure',          'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':spring:boot1-starter',                'java', 'publish', 'relocate', 'no_aggregation'
 
-includeWithFlags ':spring:boot2-actuator-autoconfigure', 'java', 'publish', 'relocate'
-includeWithFlags ':spring:boot2-actuator-starter',       'java', 'publish', 'relocate'
-includeWithFlags ':spring:boot2-autoconfigure',          'java', 'publish', 'relocate'
-includeWithFlags ':spring:boot2-starter',                'java', 'publish', 'relocate'
-includeWithFlags ':spring:boot2-webflux-autoconfigure',  'java', 'publish', 'relocate'
-includeWithFlags ':spring:boot2-webflux-starter',        'java', 'publish', 'relocate'
+includeWithFlags ':spring:boot2-actuator-autoconfigure', 'java', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:boot2-actuator-starter',       'java', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:boot2-autoconfigure',          'java', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:boot2-starter',                'java', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:boot2-webflux-autoconfigure',  'java', 'publish', 'relocate', 'no_aggregation'
+includeWithFlags ':spring:boot2-webflux-starter',        'java', 'publish', 'relocate', 'no_aggregation'
 
 includeWithFlags ':spring:boot3-actuator-autoconfigure', 'java17', 'relocate'
 includeWithFlags ':spring:boot3-actuator-starter',       'java17', 'relocate'
@@ -80,7 +80,7 @@ project(':thrift0.16').projectDir = file('thrift/thrift0.16')
 includeWithFlags ':thrift0.17',                          'java', 'publish', 'relocate', 'no_aggregation'
 project(':thrift0.17').projectDir = file('thrift/thrift0.17')
 includeWithFlags ':tomcat8',                             'java', 'publish', 'relocate', 'no_aggregation'
-includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate'
+includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat10',                            'java', 'publish', 'relocate'
 includeWithFlags ':zookeeper3',                          'java', 'publish', 'relocate'
 includeWithFlags ':saml',                                'java', 'publish', 'relocate'
