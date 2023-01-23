@@ -24,7 +24,6 @@ import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.reflect.Field;
 import java.util.Map;
-import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -220,9 +219,7 @@ public final class RequestScopedMdc {
         requireNonNull(ctx, "ctx");
         requireNonNull(key, "key");
 
-        final ReentrantLock reentrantLock = new ReentrantLock();
-        reentrantLock.lock();
-        try {
+        for(;;) {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             final Object2ObjectMap<String, String> newMap;
             if (oldMap.isEmpty()) {
@@ -234,9 +231,9 @@ public final class RequestScopedMdc {
                 tmp.put(key, value);
                 newMap = Object2ObjectMaps.unmodifiable(tmp);
             }
-            ctx.setAttr(MAP, newMap);
-        } finally {
-            reentrantLock.unlock();
+            if (ctx.setAttr(MAP, newMap) == oldMap) {
+                break;
+            }
         }
     }
 
@@ -325,12 +322,10 @@ public final class RequestScopedMdc {
         requireNonNull(ctx, "ctx");
         requireNonNull(key, "key");
 
-        final ReentrantLock reentrantLock = new ReentrantLock();
-        reentrantLock.lock();
-        try {
+        for(;;) {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             if (!oldMap.containsKey(key)) {
-                return;
+                break;
             }
 
             final Object2ObjectMap<String, String> newMap;
@@ -341,9 +336,9 @@ public final class RequestScopedMdc {
                 tmp.remove(key);
                 newMap = Object2ObjectMaps.unmodifiable(tmp);
             }
-            ctx.setAttr(MAP, newMap);
-        } finally {
-            reentrantLock.unlock();
+            if (ctx.setAttr(MAP, newMap) == oldMap) {
+                break;
+            }
         }
     }
 
@@ -355,15 +350,14 @@ public final class RequestScopedMdc {
     public static void clear(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
 
-        final ReentrantLock reentrantLock = new ReentrantLock();
-        reentrantLock.lock();
-        try {
+        for(;;) {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
-            if (!oldMap.isEmpty()) {
-                ctx.setAttr(MAP, Object2ObjectMaps.emptyMap());
+            if (oldMap.isEmpty()) {
+                break;
             }
-        } finally {
-            reentrantLock.unlock();
+            if (ctx.setAttr(MAP, Object2ObjectMaps.emptyMap()) == oldMap) {
+                break;
+            }
         }
     }
 
