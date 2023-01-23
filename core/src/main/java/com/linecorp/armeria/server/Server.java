@@ -546,8 +546,7 @@ public final class Server implements ListenableAsyncCloseable {
             b.group(bossGroup, config.workerGroup());
             b.channel(Flags.transportType().serverChannelType());
             b.handler(connectionLimitingHandler);
-            b.childHandler(new HttpServerPipelineConfigurator(config, port,
-                                                              sslContexts, gracefulShutdownSupport));
+            b.childHandler(new HttpServerPipelineConfigurator(config, port, gracefulShutdownSupport));
             return b.bind(port.localAddress());
         }
 
