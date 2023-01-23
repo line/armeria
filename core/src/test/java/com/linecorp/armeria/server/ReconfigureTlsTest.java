@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria;
+package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -34,7 +34,6 @@ import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.internal.common.util.SelfSignedCertificate;
-import com.linecorp.armeria.server.Server;
 
 class ReconfigureTlsTest {
 
