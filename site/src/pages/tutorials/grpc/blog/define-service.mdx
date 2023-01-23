@@ -106,6 +106,12 @@ Compile the `blog.proto` file to generate Java code.
 ./gradlew generateProto
 ```
 
+<Tip>
+
+  If you cannot execute the command with message `Task 'generateProto' not found in root project 'armeria-grpc-practice'`, you need to configure the build.gradle by referring to [examples of google/protobuf-gradle-plugin README](https://github.com/google/protobuf-gradle-plugin/blob/master/examples/exampleProject/build.gradle) or [grpc/grpc-java README](https://github.com/grpc/grpc-java#getting-started).
+
+</Tip>
+
 Find the Java code output in the directory, `{project_root}/build/generated/source/proto/main`.
 
 ## Next step
