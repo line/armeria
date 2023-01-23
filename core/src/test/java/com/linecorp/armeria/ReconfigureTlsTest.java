@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Date;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -41,7 +42,7 @@ class ReconfigureTlsTest {
     void shouldUpdateTlsSettings() throws CertificateException {
         final SelfSignedCertificate oldCert =
                 new SelfSignedCertificate(Date.from(Instant.parse("2022-01-01T00:00:00.00Z")),
-                                          Date.from(Instant.parse("2024-01-01T00:00:00.00Z")));
+                                          Date.from(Instant.now().plus(10, ChronoUnit.DAYS)));
         final AtomicReference<X509Certificate> sslContextRef = new AtomicReference<>();
         final Server server =
                 Server.builder()
@@ -71,7 +72,7 @@ class ReconfigureTlsTest {
 
         final SelfSignedCertificate newCert =
                 new SelfSignedCertificate(Date.from(Instant.parse("2023-01-01T00:00:00.00Z")),
-                                          Date.from(Instant.parse("2024-01-01T00:00:00.00Z")));
+                                          Date.from(Instant.now().plus(10, ChronoUnit.DAYS)));
         server.reconfigure(sb -> {
             sb.tls(newCert.certificate(), newCert.privateKey())
               .service("/", (ctx, req) -> {
