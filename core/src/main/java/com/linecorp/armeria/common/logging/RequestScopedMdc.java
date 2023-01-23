@@ -218,8 +218,7 @@ public final class RequestScopedMdc {
     public static void put(RequestContext ctx, String key, @Nullable String value) {
         requireNonNull(ctx, "ctx");
         requireNonNull(key, "key");
-
-        for(;;) {
+        for (;;) {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             final Object2ObjectMap<String, String> newMap;
             if (oldMap.isEmpty()) {
@@ -321,8 +320,7 @@ public final class RequestScopedMdc {
     public static void remove(RequestContext ctx, String key) {
         requireNonNull(ctx, "ctx");
         requireNonNull(key, "key");
-
-        for(;;) {
+        for (;;) {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             if (!oldMap.containsKey(key)) {
                 break;
@@ -349,8 +347,7 @@ public final class RequestScopedMdc {
      */
     public static void clear(RequestContext ctx) {
         requireNonNull(ctx, "ctx");
-
-        for(;;) {
+        for (;;) {
             final Object2ObjectMap<String, String> oldMap = getMap(ctx);
             if (oldMap.isEmpty()) {
                 break;
