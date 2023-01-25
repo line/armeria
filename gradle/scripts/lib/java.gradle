@@ -128,7 +128,7 @@ configure(projectsWithFlags('java')) {
         targetCompatibility = targetJavaVersionStr ?: project.findProperty('javaTargetCompatibility') ?: '1.8'
         if (buildJdkVersion >= 9) {
             // Supported since java 9 https://openjdk.org/jeps/247
-            options.release.set(targetJavaVersion)
+            options.release.set(Integer.valueOf(JavaVersion.toVersion(targetCompatibility).majorVersion))
         }
         options.encoding = 'UTF-8'
         options.warnings = false
