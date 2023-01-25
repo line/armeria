@@ -88,6 +88,8 @@ abstract class AbstractHttpResponseHandler {
             completionFuture.completeExceptionally(cause);
         }
 
+        // Force shutdown mode: If a user explicitly sets `Connection: close` in the response headers, it is
+        // assumed that the connection should be closed after sending the response.
         if (needsDisconnection) {
             ctx.channel().close();
         }

@@ -440,6 +440,10 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                             ctx.channel().isActive() &&
                             (handledLastRequest || responseEncoder.keepAliveHandler().needsDisconnection());
                     if (needsDisconnection) {
+                        // Graceful shutdown mode: If a connection needs to be closed by `KeepAliveHandler`
+                        // such as a max connection age or `ServiceRequestContext.initiateConnectionShutdown()`,
+                        // new requests will be ignored and the connection is closed after completing all
+                        // unfinished requests.
                         if (protocol.isMultiplex()) {
                             // Initiates channel close, connection will be closed after all streams are closed.
                             ctx.channel().close();

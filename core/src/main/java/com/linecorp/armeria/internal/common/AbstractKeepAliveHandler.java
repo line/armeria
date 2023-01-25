@@ -456,11 +456,4 @@ public abstract class AbstractKeepAliveHandler implements KeepAliveHandler {
             }
         }
     }
-
-    enum KeepAliveType {
-        HTTP2_SERVER,
-        HTTP1_SERVER,
-        HTTP2_CLIENT,
-        HTTP1_CLIENT
-    }
 }
