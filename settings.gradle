@@ -81,7 +81,7 @@ includeWithFlags ':thrift0.17',                          'java', 'publish', 'rel
 project(':thrift0.17').projectDir = file('thrift/thrift0.17')
 includeWithFlags ':tomcat8',                             'java', 'publish', 'relocate', 'no_aggregation'
 includeWithFlags ':tomcat9',                             'java', 'publish', 'relocate', 'no_aggregation'
-includeWithFlags ':tomcat10',                            'java', 'publish', 'relocate'
+includeWithFlags ':tomcat10',                            'java11', 'publish', 'relocate'
 includeWithFlags ':zookeeper3',                          'java', 'publish', 'relocate'
 includeWithFlags ':saml',                                'java', 'publish', 'relocate'
 includeWithFlags ':bucket4j',                            'java', 'publish', 'relocate'
