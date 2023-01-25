@@ -39,6 +39,7 @@ import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -159,13 +160,24 @@ public final class AnnotatedServiceFactory {
             List<ExceptionHandlerFunction> exceptionHandlerFunctions,
             DependencyInjector dependencyInjector, @Nullable String queryDelimiter) {
         final List<Method> methods = requestMappingMethods(object);
-        return methods.stream()
-                      .flatMap((Method method) ->
-                                       create(pathPrefix, object, method, useBlockingTaskExecutor,
-                                              requestConverterFunctions, responseConverterFunctions,
-                                              exceptionHandlerFunctions, dependencyInjector, queryDelimiter
-                                       ).stream())
-                      .collect(toImmutableList());
+        final Builder<AnnotatedServiceElement> builder = ImmutableList.builder();
+
+        final Map<String, Integer> overloadIds = new HashMap<>();
+        // Can't sort methods to find the overloaded methods because methods are ordered using @Order.
+        for (Method method : methods) {
+            final String methodName = method.getName();
+            final int overloadId;
+            if (overloadIds.containsKey(methodName)) {
+                overloadId = overloadIds.get(methodName) + 1;
+            } else {
+                overloadId = 0;
+            }
+            overloadIds.put(methodName, overloadId);
+            builder.addAll(create(pathPrefix, object, method, overloadId, useBlockingTaskExecutor,
+                                  requestConverterFunctions, responseConverterFunctions,
+                                  exceptionHandlerFunctions, dependencyInjector, queryDelimiter));
+        }
+        return builder.build();
     }
 
     private static HttpStatus defaultResponseStatus(Method method, Class<?> clazz) {
@@ -174,15 +186,23 @@ public final class AnnotatedServiceFactory {
             return HttpStatus.valueOf(statusCodeAnnotation.value());
         }
 
-        if (!producibleMediaTypes(method, clazz).isEmpty()) {
-            return HttpStatus.OK;
-        }
         // Set a default HTTP status code for a response depending on the return type of the method.
         final Class<?> returnType = typeToClass(unwrapAsyncType(method.getGenericReturnType()));
 
-        return returnType == Void.class ||
-               returnType == void.class ||
-               KotlinUtil.isSuspendingAndReturnTypeUnit(method) ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+        final boolean isVoidReturnType = returnType == Void.class ||
+                                         returnType == void.class ||
+                                         KotlinUtil.isSuspendingAndReturnTypeUnit(method);
+
+        if (isVoidReturnType) {
+            final List<Produces> producesAnnotations = AnnotationUtil.findAll(method, Produces.class);
+            if (!producesAnnotations.isEmpty()) {
+                logger.warn("The following @Produces annotations '{}' for '{}.{}' will be ignored " +
+                            "because the return type is void.",
+                            producesAnnotations, clazz.getSimpleName(), method.getName());
+            }
+        }
+
+        return isVoidReturnType ? HttpStatus.NO_CONTENT : HttpStatus.OK;
     }
 
     private static <T extends Annotation> void setAdditionalHeader(HttpHeadersBuilder headers,
@@ -219,7 +239,7 @@ public final class AnnotatedServiceFactory {
      */
     @VisibleForTesting
     static List<AnnotatedServiceElement> create(String pathPrefix, Object object, Method method,
-                                                boolean useBlockingTaskExecutor,
+                                                int overloadId, boolean useBlockingTaskExecutor,
                                                 List<RequestConverterFunction> baseRequestConverters,
                                                 List<ResponseConverterFunction> baseResponseConverters,
                                                 List<ExceptionHandlerFunction> baseExceptionHandlers,
@@ -271,7 +291,7 @@ public final class AnnotatedServiceFactory {
                                                queryDelimiter);
             return new AnnotatedServiceElement(
                     route,
-                    new AnnotatedService(object, method, resolvers, eh, res, route, defaultStatus,
+                    new AnnotatedService(object, method, overloadId, resolvers, eh, res, route, defaultStatus,
                                          responseHeaders, responseTrailers, needToUseBlockingTaskExecutor),
                     decorator(method, clazz, dependencyInjector));
         }).collect(toImmutableList());

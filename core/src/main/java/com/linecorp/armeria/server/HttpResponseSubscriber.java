@@ -157,7 +157,11 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                     if (endOfStream) {
                         setDone(false);
                     }
-                    merged = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders());
+                    final ServerConfig config = reqCtx.config().server().config();
+                    merged = mergeResponseHeaders(headers, reqCtx.additionalResponseHeaders(),
+                                                  reqCtx.config().defaultHeaders(),
+                                                  config.isServerHeaderEnabled(),
+                                                  config.isDateHeaderEnabled());
                     if (merged.contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE.toString())) {
                         disconnectWhenFinished();
                     }

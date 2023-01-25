@@ -383,7 +383,8 @@ class ArmeriaHttpUtilTest {
 
     @Test
     void stripTEHeadersAccountsForOWS() {
-        final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders();
+        // Disable headers validation to allow optional whitespace.
+        final io.netty.handler.codec.http.HttpHeaders in = new DefaultHttpHeaders(false);
         in.add(HttpHeaderNames.TE, " " + HttpHeaderValues.TRAILERS + ' ');
         final HttpHeadersBuilder out = HttpHeaders.builder();
         toArmeria(in, out);

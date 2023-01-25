@@ -23,6 +23,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpResponse;
@@ -79,6 +80,11 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
             // Use HttpStatusException or HttpResponseException itself because it already contains a status
             // or response.
             return HttpResponse.ofFailure(cause);
+        }
+
+        if (cause instanceof ContentTooLargeException) {
+            return internalRenderStatus(serviceConfig, ctx.request().headers(),
+                                        HttpStatus.REQUEST_ENTITY_TOO_LARGE, cause);
         }
 
         if (cause instanceof RequestCancellationException) {

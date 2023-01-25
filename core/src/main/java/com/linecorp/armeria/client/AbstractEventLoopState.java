@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import java.util.List;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
 
@@ -34,6 +35,7 @@ abstract class AbstractEventLoopState {
         return new HeapBasedEventLoopState(eventLoops, maxNumEventLoops, scheduler);
     }
 
+    private final ReentrantLock lock = new ReentrantLock();
     private final List<EventLoop> eventLoops;
     private final DefaultEventLoopScheduler scheduler;
 
@@ -61,6 +63,14 @@ abstract class AbstractEventLoopState {
 
     final void setLastActivityTimeNanos() {
         lastActivityTimeNanos = System.nanoTime();
+    }
+
+    protected final void lock() {
+        lock.lock();
+    }
+
+    protected final void unlock() {
+        lock.unlock();
     }
 
     abstract AbstractEventLoopEntry acquire();

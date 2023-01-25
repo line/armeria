@@ -18,8 +18,8 @@ package com.linecorp.armeria.internal.server.thrift;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
-import static com.linecorp.armeria.internal.server.thrift.ThriftNamedTypeInfoProvider.VOID;
-import static com.linecorp.armeria.internal.server.thrift.ThriftNamedTypeInfoProvider.newFieldInfo;
+import static com.linecorp.armeria.internal.server.thrift.ThriftDescriptiveTypeInfoProvider.VOID;
+import static com.linecorp.armeria.internal.server.thrift.ThriftDescriptiveTypeInfoProvider.newFieldInfo;
 import static java.util.Objects.requireNonNull;
 
 import java.lang.invoke.MethodHandle;
@@ -55,13 +55,14 @@ import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
 import com.linecorp.armeria.server.ServiceConfig;
 import com.linecorp.armeria.server.docs.DescriptionInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
+import com.linecorp.armeria.server.docs.DescriptiveTypeSignature;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.DocServicePlugin;
 import com.linecorp.armeria.server.docs.EndpointInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.MethodInfo;
-import com.linecorp.armeria.server.docs.NamedTypeInfo;
-import com.linecorp.armeria.server.docs.NamedTypeInfoProvider;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
 import com.linecorp.armeria.server.docs.TypeSignature;
@@ -107,10 +108,10 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     @Override
     public ServiceSpecification generateSpecification(Set<ServiceConfig> serviceConfigs,
                                                       DocServiceFilter filter,
-                                                      NamedTypeInfoProvider namedTypeInfoProvider) {
+                                                      DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
         requireNonNull(serviceConfigs, "serviceConfigs");
         requireNonNull(filter, "filter");
-        requireNonNull(namedTypeInfoProvider, "namedTypeInfoProvider");
+        requireNonNull(descriptiveTypeInfoProvider, "descriptiveTypeInfoProvider");
 
         final Map<Class<?>, EntryBuilder> map = new LinkedHashMap<>();
 
@@ -143,12 +144,12 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         final List<Entry> entries = map.values().stream()
                                        .map(EntryBuilder::build)
                                        .collect(Collectors.toList());
-        return generate(entries, filter, namedTypeInfoProvider);
+        return generate(entries, filter, descriptiveTypeInfoProvider);
     }
 
     @VisibleForTesting
     public ServiceSpecification generate(List<Entry> entries, DocServiceFilter filter,
-                                         NamedTypeInfoProvider namedTypeInfoProvider) {
+                                         DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
         final List<ServiceInfo> services =
                 entries.stream()
                        .map(e -> newServiceInfo(e.serviceType, e.endpointInfos, filter))
@@ -156,7 +157,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                        .collect(toImmutableList());
 
         return ServiceSpecification.generate(
-                services, typeSignature -> newNamedTypeInfo(typeSignature, namedTypeInfoProvider));
+                services, typeSignature -> newDescriptiveTypeInfo(typeSignature, descriptiveTypeInfoProvider));
     }
 
     @VisibleForTesting
@@ -219,7 +220,7 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
         @SuppressWarnings("unchecked")
         final MethodInfo methodInfo =
-                newMethodInfo(methodName, argsClass,
+                newMethodInfo(serviceName, methodName, argsClass,
                               (Class<? extends TBase<?, ?>>) resultClass,
                               (Class<? extends TException>[]) method.getExceptionTypes(),
                               endpoints);
@@ -227,11 +228,12 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
     }
 
     private static <T extends TBase<T, F>, F extends TFieldIdEnum> MethodInfo newMethodInfo(
-            String name,
+            String serviceName, String name,
             Class<? extends TBase<?, ?>> argsClass,
             @Nullable Class<? extends TBase<?, ?>> resultClass,
             Class<? extends TException>[] exceptionClasses,
             Iterable<EndpointInfo> endpoints) {
+        requireNonNull(serviceName, "serviceName");
         requireNonNull(name, "name");
         requireNonNull(argsClass, "argsClass");
         requireNonNull(exceptionClasses, "exceptionClasses");
@@ -268,30 +270,30 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
         final List<TypeSignature> exceptionTypeSignatures =
                 Arrays.stream(exceptionClasses)
                       .filter(e -> e != TException.class)
-                      .map(TypeSignature::ofNamed)
+                      .map(TypeSignature::ofStruct)
                       .collect(toImmutableList());
 
-        return new MethodInfo(name, returnTypeSignature, parameters, exceptionTypeSignatures, endpoints,
+        return new MethodInfo(serviceName, name, returnTypeSignature, parameters, false,
+                              exceptionTypeSignatures,
+                              endpoints,
                               ImmutableList.of(),
                               ImmutableList.of(),
                               ImmutableList.of(),
-                              ImmutableList.of(),
-                              HttpMethod.POST, DescriptionInfo.empty());
+                              ImmutableList.of(), HttpMethod.POST, DescriptionInfo.empty());
     }
 
-    private static NamedTypeInfo newNamedTypeInfo(TypeSignature typeSignature,
-                                                  NamedTypeInfoProvider namedTypeInfoProvider) {
-        final Class<?> type = (Class<?>) typeSignature.namedTypeDescriptor();
-        if (type == null) {
-            throw new IllegalArgumentException("cannot create a named type from: " + typeSignature);
-        }
-
+    private static DescriptiveTypeInfo newDescriptiveTypeInfo(
+            DescriptiveTypeSignature typeSignature,
+            DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
+        final Class<?> type = (Class<?>) typeSignature.descriptor();
         assert TBase.class.isAssignableFrom(type) ||
                TEnum.class.isAssignableFrom(type) ||
                TException.class.isAssignableFrom(type);
 
-        final NamedTypeInfo namedTypeInfo = namedTypeInfoProvider.newNamedTypeInfo(type);
-        return requireNonNull(namedTypeInfo, "namedTypeInfoProvider.newNamedTypeInfo() returned null");
+        final DescriptiveTypeInfo descriptiveTypeInfo =
+                descriptiveTypeInfoProvider.newDescriptiveTypeInfo(type);
+        return requireNonNull(descriptiveTypeInfo,
+                              "descriptiveTypeInfoProvider.newDescriptiveTypeInfo() returned null");
     }
 
     @VisibleForTesting

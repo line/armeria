@@ -129,7 +129,6 @@ public final class ClientOptions
             ClientOption.define("ENDPOINT_REMAPPER", Function.identity());
 
     private static final List<AsciiString> PROHIBITED_HEADER_NAMES = ImmutableList.of(
-            HttpHeaderNames.HOST,
             HttpHeaderNames.HTTP2_SETTINGS,
             HttpHeaderNames.METHOD,
             HttpHeaderNames.PATH,

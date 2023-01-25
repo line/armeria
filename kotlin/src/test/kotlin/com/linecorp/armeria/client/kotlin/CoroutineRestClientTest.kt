@@ -67,15 +67,17 @@ class RestClientTest {
         var server: ServerExtension = object : ServerExtension() {
             override fun configure(sb: ServerBuilder) {
                 sb.service("/rest/{id}") { ctx: ServiceRequestContext, req: HttpRequest ->
-                    HttpResponse.from(req.aggregate().thenApply { agg: AggregatedHttpRequest ->
-                        val restResponse =
-                            RestResponse(
-                                ctx.pathParam("id")!!,
-                                req.method().toString(),
-                                agg.contentUtf8()
-                            )
-                        HttpResponse.ofJson(restResponse)
-                    })
+                    HttpResponse.from(
+                        req.aggregate().thenApply { agg: AggregatedHttpRequest ->
+                            val restResponse =
+                                RestResponse(
+                                    ctx.pathParam("id")!!,
+                                    req.method().toString(),
+                                    agg.contentUtf8()
+                                )
+                            HttpResponse.ofJson(restResponse)
+                        }
+                    )
                 }
             }
         }

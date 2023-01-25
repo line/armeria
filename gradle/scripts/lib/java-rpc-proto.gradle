@@ -114,11 +114,6 @@ configure(projectsWithFlags('java')) {
             }
         }
 
-        // Add the generated 'grpc' directories to the source sets.
-        project.sourceSets.all { sourceSet ->
-            sourceSet.java.srcDir file("${project.ext.genSrcDir}/${sourceSet.name}/grpc")
-        }
-
         // Make sure protoc runs before the resources are copied so that .dsc files are included.
         project.afterEvaluate {
             project.sourceSets.each { sourceSet ->

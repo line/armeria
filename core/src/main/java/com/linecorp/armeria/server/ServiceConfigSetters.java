@@ -16,11 +16,17 @@
 
 package com.linecorp.armeria.server;
 
+import static java.util.Objects.requireNonNull;
+
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
@@ -76,6 +82,18 @@ interface ServiceConfigSetters {
      */
     ServiceConfigSetters accessLogWriter(AccessLogWriter accessLogWriter,
                                          boolean shutdownOnStop);
+
+    /**
+     * Decorates an {@link HttpService} with the specified {@code decorator}.
+     *
+     * @param decoratingHttpServiceFunction the {@link DecoratingHttpServiceFunction} that decorates
+     *                                      {@link HttpService}s
+     */
+    default ServiceConfigSetters decorator(DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        requireNonNull(decoratingHttpServiceFunction, "decoratingHttpServiceFunction");
+        return decorator(
+                delegate -> new FunctionalDecoratingHttpService(delegate, decoratingHttpServiceFunction));
+    }
 
     /**
      * Decorates an {@link HttpService} with the specified {@code decorator}.
@@ -157,4 +175,46 @@ interface ServiceConfigSetters {
      */
     @UnstableApi
     ServiceConfigSetters multipartUploadsLocation(Path multipartUploadsLocation);
+
+    /**
+     * Adds the default HTTP header for an {@link HttpResponse} served by this {@link Service}.
+     *
+     * <p>Note that the value could be overridden if the same {@link HttpHeaderNames} are defined in
+     * the {@link ResponseHeaders} of the {@link HttpResponse} or
+     * {@link ServiceRequestContext#additionalResponseHeaders()}.
+     */
+    @UnstableApi
+    ServiceConfigSetters addHeader(CharSequence name, Object value);
+
+    /**
+     * Adds the default HTTP headers for an {@link HttpResponse} served by this {@link Service}.
+     *
+     * <p>Note that the value could be overridden if the same {@link HttpHeaderNames} are defined in
+     * the {@link ResponseHeaders} of the {@link HttpResponse} or
+     * {@link ServiceRequestContext#additionalResponseHeaders()}.
+     */
+    @UnstableApi
+    ServiceConfigSetters addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders);
+
+    /**
+     * Sets the default HTTP header for an {@link HttpResponse} served by this {@link Service}.
+     *
+     * <p>Note that the value could be overridden if the same {@link HttpHeaderNames} are defined in
+     * the {@link ResponseHeaders} of the {@link HttpResponse} or
+     * {@link ServiceRequestContext#additionalResponseHeaders()}.
+     */
+    @UnstableApi
+    ServiceConfigSetters setHeader(CharSequence name, Object value);
+
+    /**
+     * Sets the default HTTP headers for an {@link HttpResponse} served by this {@link Service}.
+     *
+     * <p>Note that the value could be overridden if the same {@link HttpHeaderNames} are defined in
+     * the {@link ResponseHeaders} of the {@link HttpResponse} or
+     * {@link ServiceRequestContext#additionalResponseHeaders()}.
+     */
+    @UnstableApi
+    ServiceConfigSetters setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders);
 }

@@ -21,6 +21,9 @@ import java.util.function.Predicate;
 
 import com.linecorp.armeria.common.util.InetAddressPredicates;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.composite.CompositeMeterRegistry;
+
 public final class BaseFlagsProvider implements FlagsProvider {
 
     @Override
@@ -81,5 +84,10 @@ public final class BaseFlagsProvider implements FlagsProvider {
     @Override
     public Predicate<InetAddress> preferredIpV4Addresses() {
         return InetAddressPredicates.ofCidr("211.111.111.111");
+    }
+
+    @Override
+    public MeterRegistry meterRegistry() {
+        return new CompositeMeterRegistry();
     }
 }

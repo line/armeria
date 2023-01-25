@@ -32,6 +32,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
@@ -200,7 +201,8 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             state = State.NEEDS_DATA_OR_TRAILERS;
         }
 
-        final RequestHeaders merged = mergeRequestHeaders(headers, ctx.additionalRequestHeaders());
+        final RequestHeaders merged = mergeRequestHeaders(
+                headers, ctx.defaultRequestHeaders(), ctx.additionalRequestHeaders());
         logBuilder.requestHeaders(merged);
 
         if (headers.contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE.toString())) {
@@ -314,8 +316,9 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     }
 
     final void failAndReset(Throwable cause) {
-        if (cause instanceof ProxyConnectException) {
-            // ProxyConnectException is handled by HttpSessionHandler.exceptionCaught().
+        if (cause instanceof ProxyConnectException || cause instanceof ResponseCompleteException) {
+            // - ProxyConnectException is handled by HttpSessionHandler.exceptionCaught().
+            // - ResponseCompleteException means the response is successfully received.
             return;
         }
 

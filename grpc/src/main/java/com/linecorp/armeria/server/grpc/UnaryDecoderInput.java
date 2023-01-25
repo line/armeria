@@ -44,12 +44,22 @@ final class UnaryDecoderInput implements StreamDecoderInput {
     }
 
     @Override
+    public long readLong() {
+        return buf.readLong();
+    }
+
+    @Override
     public ByteBuf readBytes(int length) {
         if (length == readableBytes()) {
             return buf.retainedDuplicate();
         } else {
             return buf.readBytes(length);
         }
+    }
+
+    @Override
+    public void readBytes(byte[] dst) {
+        buf.readBytes(dst);
     }
 
     @Override

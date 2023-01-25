@@ -36,7 +36,7 @@ task generateSources(type: Copy) {
         exclude '**/ThriftOverHttp2Test.java'
         exclude '**/ThriftClientLengthLimitTest.java'
         exclude '**/ThriftServiceLengthLimitTest.java'
-        exclude '**/ThriftNamedTypeInfoProviderTest.java'
+        exclude '**/ThriftDescriptiveTypeInfoProviderTest.java'
         exclude '**/ThriftOverHttpClientTest.java'
         exclude '**/META-INF/services/'
         exclude '**/*.thrift'

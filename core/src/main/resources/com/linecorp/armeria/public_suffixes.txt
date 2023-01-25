@@ -253,10 +253,10 @@ achi.nagano.jp
 aco
 act.au
 act.edu.au
+activetrail.biz
 actor
 ad
 ad.jp
-adac
 adachi.tokyo.jp
 adimo.co.uk
 adm.br
@@ -1312,6 +1312,7 @@ certmgr.org
 cesena-forli.it
 cesenaforli.it
 cf
+cf-ipfs.com
 cfa
 cfd
 cg
@@ -1450,6 +1451,7 @@ cloudapp.net
 cloudapps.digital
 cloudcontrolapp.com
 cloudcontrolled.com
+cloudflare-ipfs.com
 cloudfront.net
 cloudfunctions.net
 cloudjiffy.net
@@ -5471,6 +5473,8 @@ myspreadshop.nl
 myspreadshop.no
 myspreadshop.pl
 myspreadshop.se
+mytabit.co.il
+mytabit.com
 mytis.ru
 mytuleap.com
 myvnc.com
@@ -6788,6 +6792,7 @@ quicksytes.com
 r.bg
 r.cdn77.net
 r.se
+r2.dev
 ra.it
 racing
 rackmaze.com
@@ -7915,7 +7920,6 @@ tawaramoto.nara.jp
 tax
 taxi
 taxi.br
-tbits.me
 tc
 tc.br
 tci
@@ -9024,7 +9028,6 @@ xn--j1ael8b.xn--p1acf
 xn--j1amh
 xn--j6w193g
 xn--jlq480n2rg
-xn--jlq61u9w7b
 xn--jlster-bya.no
 xn--jrpeland-54a.no
 xn--jvr189m

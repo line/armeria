@@ -134,7 +134,11 @@ abstract class AbstractHttpResponseHandler {
         final int id = req.id();
         final int streamId = req.streamId();
 
-        ResponseHeaders headers = mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders());
+        final ServerConfig config = reqCtx.config().server().config();
+        ResponseHeaders headers = mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders(),
+                                                       reqCtx.config().defaultHeaders(),
+                                                       config.isServerHeaderEnabled(),
+                                                       config.isDateHeaderEnabled());
         if (headers.contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE.toString())) {
             disconnectWhenFinished();
         }

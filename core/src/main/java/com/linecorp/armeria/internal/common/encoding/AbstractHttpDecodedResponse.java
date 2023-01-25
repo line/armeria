@@ -17,15 +17,21 @@
 package com.linecorp.armeria.internal.common.encoding;
 
 import org.reactivestreams.Subscriber;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.client.encoding.StreamDecoder;
+import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.FilteredHttpResponse;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.CompositeException;
 
-abstract class AbstractHttpDecodedResponse extends FilteredHttpResponse  {
+abstract class AbstractHttpDecodedResponse extends FilteredHttpResponse {
+
+    private static final Logger logger = LoggerFactory.getLogger(AbstractHttpDecodedResponse.class);
 
     private boolean decoderClosed;
 
@@ -51,18 +57,27 @@ abstract class AbstractHttpDecodedResponse extends FilteredHttpResponse  {
 
     @Override
     protected Throwable beforeError(Subscriber<? super HttpObject> subscriber, Throwable cause) {
-        final HttpData lastData = closeResponseDecoder();
-        if (lastData != null) {
-            lastData.close();
+        try {
+            final HttpData lastData = closeResponseDecoder();
+            if (lastData != null) {
+                lastData.close();
+            }
+            return cause;
+        } catch (Exception decoderException) {
+            return new CompositeException(cause, decoderException);
         }
-        return cause;
     }
 
     @Override
     protected void onCancellation(Subscriber<? super HttpObject> subscriber) {
-        final HttpData lastData = closeResponseDecoder();
-        if (lastData != null) {
-            lastData.close();
+        try {
+            final HttpData lastData = closeResponseDecoder();
+            if (lastData != null) {
+                lastData.close();
+            }
+        } catch (ContentTooLargeException cause) {
+            // Just warn the cause since a stream is being cancelled.
+            logger.warn("A response content exceeds the maximum allowed response length.", cause);
         }
     }
 

@@ -85,10 +85,7 @@ public final class EncodingService extends SimpleDecoratingHttpService {
         if (encodingType == null || !encodableRequestHeadersPredicate.test(req.headers())) {
             return delegateResponse;
         }
-        return new HttpEncodedResponse(
-                delegateResponse,
-                encodingType,
-                encodableContentTypePredicate,
-                minBytesToForceChunkedAndEncoding);
+        return new HttpEncodedResponse(delegateResponse, encodingType, encodableContentTypePredicate,
+                                       ctx.alloc(), minBytesToForceChunkedAndEncoding);
     }
 }
