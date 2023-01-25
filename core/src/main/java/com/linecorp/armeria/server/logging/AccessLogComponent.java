@@ -290,7 +290,7 @@ interface AccessLogComponent {
                     // We do not support this log type now.
                     return null;
                 case AUTHENTICATED_USER:
-                    return firstNonNull(log.authenticatedUser(), "-");
+                    return log.authenticatedUser();
                 case REQUEST_LINE:
                     final String httpMethodName = log.requestHeaders().method().name();
                     final String path = log.requestHeaders().path();
