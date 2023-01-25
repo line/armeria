@@ -25,7 +25,7 @@ task generateTestSources(type: Copy) {
     into "${project.ext.genSrcDir}/test"
     include '**/RetryableArmeriaServerGracefulShutdownLifecycle.java'
     include '**/RetryableArmeriaServerGracefulShutdownLifecycleConfiguration.java'
-    include '**/META-INF/spring'
+    include '**/META-INF/spring/**'
 }
 
 task generateSources(type: Copy) {
