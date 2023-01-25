@@ -55,7 +55,7 @@ class ReconfigureTlsTest {
 
         server.start().join();
 
-        final BlockingWebClient client =
+        final BlockingWebClient client0 =
                 WebClient.builder("https://127.0.0.1:" + server.activeLocalPort())
                          .factory(ClientFactory.builder()
                                                .tlsCustomizer(sslContextBuilder -> {
@@ -65,7 +65,7 @@ class ReconfigureTlsTest {
                                                .build())
                          .build()
                          .blocking();
-        final AggregatedHttpResponse response = client.get("/");
+        final AggregatedHttpResponse response = client0.get("/");
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(sslContextRef.get().getNotBefore()).isEqualTo(oldCert.cert().getNotBefore());
 
@@ -81,7 +81,7 @@ class ReconfigureTlsTest {
         });
 
         // Create a new client with a new ClientFactory to establish a new connection with the new certificate.
-        final BlockingWebClient client2 =
+        final BlockingWebClient client1 =
                 WebClient.builder("https://127.0.0.1:" + server.activeLocalPort())
                           .factory(ClientFactory.builder()
                                                 .tlsCustomizer(sslContextBuilder -> {
@@ -91,8 +91,11 @@ class ReconfigureTlsTest {
                                                 .build())
                           .build()
                           .blocking();
-        final AggregatedHttpResponse response2 = client2.get("/");
+        final AggregatedHttpResponse response2 = client1.get("/");
         assertThat(response2.status()).isEqualTo(HttpStatus.OK);
         assertThat(sslContextRef.get().getNotBefore()).isEqualTo(newCert.cert().getNotBefore());
+
+        client0.options().factory().closeAsync();
+        client1.options().factory().closeAsync();
     }
 }
