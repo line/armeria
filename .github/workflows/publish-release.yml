@@ -16,23 +16,15 @@ jobs:
     steps:
       - uses: actions/checkout@v2
 
-      - id: setup-jdk-17
-        name: Set up JDK 17
+      - id: setup-jdk-19
+        name: Set up JDK 19
         uses: actions/setup-java@v2
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '19'
 
-      - name: Restore the cache
-        uses: actions/cache@v2
-        with:
-          path: |
-            ~/.gradle/wrapper
-            ~/.gradle/caches
-          key: build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-${{ hashFiles('gradle.properties', 'gradle/wrapper/gradle-wrapper.properties', '**/build.gradle', 'dependencies.yml', '*/package-lock.json') }}
-          restore-keys: |
-            build-${{ matrix.java }}-${{ runner.os }}-${{ secrets.CACHE_VERSION }}-
-            build-${{ matrix.java }}-${{ runner.os }}-
+      - name: Setup Gradle
+        uses: gradle/gradle-build-action@v2
 
       - name: Build with Gradle
         run: |
@@ -50,10 +42,4 @@ jobs:
           ORG_GRADLE_PROJECT_signingKeyId: ${{ secrets.GPG_KEY_ID }}
           ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_PRIVATE_KEY }}
           ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PASSWORD }}
-        shell: bash
-
-      - name: Clean up Gradle cache
-        run: |
-          rm -f ~/.gradle/caches/modules-2/modules-2.lock
-          rm -f ~/.gradle/caches/modules-2/gc.properties
         shell: bash

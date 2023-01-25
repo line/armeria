@@ -66,14 +66,6 @@ class ClientOptionsTest {
     }
 
     @Test
-    void testSetDisallowedHeader() {
-        assertThatThrownBy(() -> {
-            ClientOptions.of(HEADERS.newValue(
-                    HttpHeaders.of(HttpHeaderNames.HOST, "localhost")));
-        }).isInstanceOf(IllegalArgumentException.class);
-    }
-
-    @Test
     void testInvalidWriteTimeoutMillis() {
         assertThatThrownBy(() -> {
             ClientOptions.of(WRITE_TIMEOUT_MILLIS.newValue(null));

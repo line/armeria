@@ -28,7 +28,6 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
-import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -133,14 +132,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             // prevent the trailers from being sent so we go ahead and remove content-length to
             // force chunked encoding.
             outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
-        }
-
-        if (enableServerHeader && !outHeaders.contains(HttpHeaderNames.SERVER)) {
-            outHeaders.add(HttpHeaderNames.SERVER, ArmeriaHttpUtil.SERVER_HEADER);
-        }
-
-        if (enableDateHeader && !outHeaders.contains(HttpHeaderNames.DATE)) {
-            outHeaders.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
         }
     }
 

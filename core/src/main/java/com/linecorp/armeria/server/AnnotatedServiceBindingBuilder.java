@@ -23,6 +23,7 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
@@ -156,8 +157,15 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
      */
     @UnstableApi
     public AnnotatedServiceBindingBuilder queryDelimiter(String delimiter) {
-        this.queryDelimiter = requireNonNull(delimiter, "delimiter");
+        queryDelimiter = requireNonNull(delimiter, "delimiter");
         return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder decorator(
+            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        return (AnnotatedServiceBindingBuilder) AnnotatedServiceConfigSetters.super.decorator(
+                decoratingHttpServiceFunction);
     }
 
     @Override
@@ -262,6 +270,32 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
     @Override
     public AnnotatedServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         defaultServiceConfigSetters.multipartUploadsLocation(multipartUploadsLocation);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder addHeader(CharSequence name, Object value) {
+        defaultServiceConfigSetters.addHeader(name, value);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        defaultServiceConfigSetters.addHeaders(defaultHeaders);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder setHeader(CharSequence name, Object value) {
+        defaultServiceConfigSetters.setHeader(name, value);
+        return this;
+    }
+
+    @Override
+    public AnnotatedServiceBindingBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        defaultServiceConfigSetters.setHeaders(defaultHeaders);
         return this;
     }
 

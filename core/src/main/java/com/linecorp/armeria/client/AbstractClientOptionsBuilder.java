@@ -32,6 +32,7 @@ import com.linecorp.armeria.client.redirect.RedirectConfig;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.SuccessFunction;
@@ -284,7 +285,11 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
-     * Adds the specified HTTP header.
+     * Adds the default HTTP header for an {@link HttpRequest} that will be sent by this {@link Client}.
+     *
+     * <p>Note that the values of the default HTTP headers could be overridden if the same
+     * {@link HttpHeaderNames} are defined in the {@link HttpRequest#headers()} or
+     * {@link ClientRequestContext#additionalRequestHeaders()}.
      */
     public AbstractClientOptionsBuilder addHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
@@ -294,7 +299,11 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
-     * Adds the specified HTTP headers.
+     * Adds the default HTTP headers for an {@link HttpRequest} that will be sent by this {@link Client}.
+     *
+     * <p>Note that the values of the default HTTP headers could be overridden if the same
+     * {@link HttpHeaderNames} are defined in the {@link HttpRequest#headers()} or
+     * {@link ClientRequestContext#additionalRequestHeaders()}.
      */
     public AbstractClientOptionsBuilder addHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
@@ -304,7 +313,10 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
-     * Sets the specified HTTP header.
+     * Sets the default HTTP header for an {@link HttpRequest} that will be sent by this {@link Client}.
+     *
+     * <p>Note that the default HTTP header could be overridden if the same {@link HttpHeaderNames} are
+     * defined in {@link HttpRequest#headers()} or {@link ClientRequestContext#additionalRequestHeaders()}.
      */
     public AbstractClientOptionsBuilder setHeader(CharSequence name, Object value) {
         requireNonNull(name, "name");
@@ -314,7 +326,11 @@ public class AbstractClientOptionsBuilder {
     }
 
     /**
-     * Sets the specified HTTP headers.
+     * Sets the default HTTP headers for an {@link HttpRequest} that will be sent by this {@link Client}.
+     *
+     * <p>Note that the values of the default HTTP headers could be overridden if the same
+     * {@link HttpHeaderNames} are defined in {@link HttpRequest#headers()} or
+     * {@link ClientRequestContext#additionalRequestHeaders()}.
      */
     public AbstractClientOptionsBuilder setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> headers) {

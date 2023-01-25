@@ -406,7 +406,7 @@ public final class GrpcDocServicePlugin implements DocServicePlugin {
                 ImmutableList.of(FieldInfo.builder("request",
                                                    descriptiveMessageSignature(method.getInputType()))
                                           .requirement(FieldRequirement.REQUIRED).build()),
-                ImmutableList.of(),
+                true, ImmutableList.of(),
                 endpointInfos,
                 ImmutableList.of(),
                 defaultExamples(method),

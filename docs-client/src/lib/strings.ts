@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -13,14 +13,10 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package com.linecorp.armeria.client.encoding;
 
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.handler.codec.compression.ZlibWrapper;
-
-class ZlibStreamDecoderTest extends AbstractStreamDecoderTest {
-    @Override
-    StreamDecoder newDecoder() {
-        return new ZlibStreamDecoder(ZlibWrapper.NONE, ByteBufAllocator.DEFAULT);
-    }
+export function truncate(input: string, len: number): string {
+  if (input.length > len) {
+    return `${input.substring(0, len)}...`;
+  }
+  return input;
 }

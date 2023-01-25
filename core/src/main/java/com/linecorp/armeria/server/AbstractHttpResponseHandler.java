@@ -123,7 +123,11 @@ abstract class AbstractHttpResponseHandler {
         final int id = req.id();
         final int streamId = req.streamId();
 
-        ResponseHeaders headers = mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders());
+        final ServerConfig config = reqCtx.config().server().config();
+        ResponseHeaders headers = mergeResponseHeaders(res.headers(), reqCtx.additionalResponseHeaders(),
+                                                       reqCtx.config().defaultHeaders(),
+                                                       config.isServerHeaderEnabled(),
+                                                       config.isDateHeaderEnabled());
         final HttpData content = res.content();
         // An aggregated response always has empty content if its status.isContentAlwaysEmpty() is true.
         assert !res.status().isContentAlwaysEmpty() || content.isEmpty();

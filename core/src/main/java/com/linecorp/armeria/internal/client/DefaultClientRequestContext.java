@@ -35,7 +35,8 @@ import java.util.function.Function;
 
 import javax.net.ssl.SSLSession;
 
-import com.linecorp.armeria.client.Client;
+import com.google.common.net.HostAndPort;
+
 import com.linecorp.armeria.client.ClientOptions;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.Endpoint;
@@ -45,7 +46,6 @@ import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.AttributesGetters;
 import com.linecorp.armeria.common.ContextAwareEventLoop;
 import com.linecorp.armeria.common.ExchangeType;
-import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -80,9 +80,9 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
-import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoop;
 import io.netty.util.AttributeKey;
+import io.netty.util.NetUtil;
 
 /**
  * Default {@link ClientRequestContext} implementation.
@@ -117,13 +117,13 @@ public final class DefaultClientRequestContext
     @Nullable
     private final ServiceRequestContext root;
 
-    private final boolean hasBaseUri;
     private final ClientOptions options;
     private final RequestLogBuilder log;
     private final CancellationScheduler responseCancellationScheduler;
     private long writeTimeoutMillis;
     private long maxResponseLength;
 
+    private final HttpHeaders defaultRequestHeaders;
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalRequestHeadersUpdater`
     private volatile HttpHeaders additionalRequestHeaders;
 
@@ -161,7 +161,7 @@ public final class DefaultClientRequestContext
             long requestStartTimeNanos, long requestStartTimeMicros) {
         this(eventLoop, meterRegistry, sessionProtocol,
              id, method, path, query, fragment, options, req, rpcReq, requestOptions, serviceRequestContext(),
-             responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros, false);
+             responseCancellationScheduler, requestStartTimeNanos, requestStartTimeMicros);
     }
 
     /**
@@ -176,19 +176,17 @@ public final class DefaultClientRequestContext
      * @param requestStartTimeNanos {@link System#nanoTime()} value when the request started.
      * @param requestStartTimeMicros the number of microseconds since the epoch,
      *                               e.g. {@code System.currentTimeMillis() * 1000}.
-     * @param hasBaseUri whether a {@link Client} which initiates this {@link ClientRequestContext} was
-     *                   created with a base {@link URI}.
      */
     public DefaultClientRequestContext(
             MeterRegistry meterRegistry, SessionProtocol sessionProtocol,
             RequestId id, HttpMethod method, String path, @Nullable String query, @Nullable String fragment,
             ClientOptions options, @Nullable HttpRequest req, @Nullable RpcRequest rpcReq,
             RequestOptions requestOptions,
-            long requestStartTimeNanos, long requestStartTimeMicros, boolean hasBaseUri) {
+            long requestStartTimeNanos, long requestStartTimeMicros) {
         this(null, meterRegistry, sessionProtocol,
              id, method, path, query, fragment, options, req, rpcReq, requestOptions,
              serviceRequestContext(), /* responseCancellationScheduler */ null,
-             requestStartTimeNanos, requestStartTimeMicros, hasBaseUri);
+             requestStartTimeNanos, requestStartTimeMicros);
     }
 
     private DefaultClientRequestContext(
@@ -197,13 +195,12 @@ public final class DefaultClientRequestContext
             @Nullable String query, @Nullable String fragment, ClientOptions options,
             @Nullable HttpRequest req, @Nullable RpcRequest rpcReq, RequestOptions requestOptions,
             @Nullable ServiceRequestContext root, @Nullable CancellationScheduler responseCancellationScheduler,
-            long requestStartTimeNanos, long requestStartTimeMicros, boolean hasBaseUri) {
+            long requestStartTimeNanos, long requestStartTimeMicros) {
         super(meterRegistry, sessionProtocol, id, method, path, query,
               firstNonNull(requestOptions.exchangeType(), ExchangeType.BIDI_STREAMING), req, rpcReq,
               getAttributes(root));
 
         this.eventLoop = eventLoop;
-        this.hasBaseUri = hasBaseUri;
         this.options = requireNonNull(options, "options");
         this.fragment = fragment;
         this.root = root;
@@ -238,7 +235,8 @@ public final class DefaultClientRequestContext
             setAttr((AttributeKey<Object>) attr.getKey(), attr.getValue());
         }
 
-        additionalRequestHeaders = options.get(ClientOptions.HEADERS);
+        defaultRequestHeaders = options.get(ClientOptions.HEADERS);
+        additionalRequestHeaders = HttpHeaders.of();
 
         final Consumer<ClientRequestContext> customizer = options.contextCustomizer();
         final Consumer<ClientRequestContext> threadLocalCustomizer = copyThreadLocalCustomizer();
@@ -283,7 +281,7 @@ public final class DefaultClientRequestContext
             //         an additional authority.
             runContextCustomizer();
 
-            endpointGroup = mapEndpoint(endpointGroup, hasBaseUri);
+            endpointGroup = mapEndpoint(endpointGroup);
             if (endpointGroup instanceof Endpoint) {
                 return initEndpoint((Endpoint) endpointGroup);
             } else {
@@ -296,18 +294,9 @@ public final class DefaultClientRequestContext
         }
     }
 
-    private EndpointGroup mapEndpoint(EndpointGroup endpointGroup, boolean hasBaseUri) {
+    private EndpointGroup mapEndpoint(EndpointGroup endpointGroup) {
         if (endpointGroup instanceof Endpoint) {
-            Endpoint endpoint = (Endpoint) endpointGroup;
-            if (!hasBaseUri) {
-                // If a WebClient was created without a base URI, an authority header could be
-                // the host of an Endpoint.
-                final String authority = additionalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
-                if (authority != null) {
-                    endpoint = Endpoint.parse(authority);
-                }
-            }
-            return requireNonNull(options().endpointRemapper().apply(endpoint),
+            return requireNonNull(options().endpointRemapper().apply((Endpoint) endpointGroup),
                                   "endpointRemapper returned null.");
         } else {
             return endpointGroup;
@@ -414,14 +403,6 @@ public final class DefaultClientRequestContext
         }
     }
 
-    private long connectTimeoutMillis() {
-        final Integer boxedConnectTimeoutMillis =
-                (Integer) options.factory().options().channelOptions().get(
-                        ChannelOption.CONNECT_TIMEOUT_MILLIS);
-        return boxedConnectTimeoutMillis != null ? boxedConnectTimeoutMillis.longValue()
-                                                 : Flags.defaultConnectTimeoutMillis();
-    }
-
     private void failEarly(Throwable cause) {
         final UnprocessedRequestException wrapped = UnprocessedRequestException.of(cause);
         final HttpRequest req = request();
@@ -435,6 +416,7 @@ public final class DefaultClientRequestContext
         logBuilder.endResponse(wrapped);
     }
 
+    // TODO(ikhoon): Consider moving the logic for filling authority to `HttpClientDelegate.exceute()`.
     private void autoFillSchemeAndAuthority() {
         final HttpRequest req = request();
         if (req == null) {
@@ -442,20 +424,55 @@ public final class DefaultClientRequestContext
         }
 
         final RequestHeaders headers = req.headers();
-        final String authority = endpoint != null ? endpoint.authority() : "UNKNOWN";
-        if (headers.scheme() == null || !authority.equals(headers.authority())) {
-            final RequestHeadersBuilder headersBuilder =
-                    headers.toBuilder();
+        final String authority = getAuthority(headers);
+        if (authority != null && endpoint != null && endpoint.isIpAddrOnly()) {
+            // The connection will be established with the IP address but `host` set to the `Endpoint`
+            // could be used for SNI. It would make users send HTTPS requests with CSLB or configure a reverse
+            // proxy based on an authority.
+            final String host = HostAndPort.fromString(removeUserInfo(authority)).getHost();
+            if (!NetUtil.isValidIpV4Address(host) && !NetUtil.isValidIpV6Address(host)) {
+                endpoint = endpoint.withHost(host);
+            }
+        }
+
+        if (authority == null || headers.scheme() == null) {
+            final RequestHeadersBuilder headersBuilder = headers.toBuilder();
             if (headers.scheme() == null) {
                 headersBuilder.scheme(sessionProtocol());
             }
-            if (headersBuilder.get(HttpHeaderNames.HOST) != null) {
-                headersBuilder.set(HttpHeaderNames.HOST, authority);
-            } else {
-                headersBuilder.authority(authority);
+            if (authority == null) {
+                final String authority0 = endpoint != null ? endpoint.authority() : "UNKNOWN";
+                headersBuilder.authority(authority0);
             }
             unsafeUpdateRequest(req.withHeaders(headersBuilder));
         }
+    }
+
+    @Nullable
+    private String getAuthority(RequestHeaders headers) {
+        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
+        String authority = additionalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
+        if (authority == null) {
+            authority = additionalRequestHeaders.get(HttpHeaderNames.HOST);
+        }
+        if (authority == null) {
+            authority = headers.authority();
+        }
+        if (authority == null) {
+            authority = defaultRequestHeaders.get(HttpHeaderNames.AUTHORITY);
+        }
+        if (authority == null) {
+            authority = defaultRequestHeaders.get(HttpHeaderNames.HOST);
+        }
+        return authority;
+    }
+
+    private static String removeUserInfo(String authority) {
+        final int indexOfDelimiter = authority.lastIndexOf('@');
+        if (indexOfDelimiter == -1) {
+            return authority;
+        }
+        return authority.substring(indexOfDelimiter + 1);
     }
 
     /**
@@ -481,10 +498,7 @@ public final class DefaultClientRequestContext
         // See https://github.com/line/armeria/pull/3251 and https://github.com/line/armeria/issues/3248.
 
         eventLoop = ctx.eventLoop().withoutContext();
-        hasBaseUri = ctx.hasBaseUri;
         options = ctx.options();
-        this.endpointGroup = endpointGroup;
-        updateEndpoint(endpoint);
         this.fragment = fragment;
         root = ctx.root();
 
@@ -494,11 +508,15 @@ public final class DefaultClientRequestContext
                 new CancellationScheduler(TimeUnit.MILLISECONDS.toNanos(ctx.responseTimeoutMillis()));
         writeTimeoutMillis = ctx.writeTimeoutMillis();
         maxResponseLength = ctx.maxResponseLength();
+        defaultRequestHeaders = ctx.defaultRequestHeaders();
         additionalRequestHeaders = ctx.additionalRequestHeaders();
 
         for (final Iterator<Entry<AttributeKey<?>, Object>> i = ctx.ownAttrs(); i.hasNext();) {
             addAttr(i.next());
         }
+
+        this.endpointGroup = endpointGroup;
+        updateEndpoint(endpoint);
     }
 
     @Nullable
@@ -690,6 +708,11 @@ public final class DefaultClientRequestContext
     public void setMaxResponseLength(long maxResponseLength) {
         checkArgument(maxResponseLength >= 0, "maxResponseLength: %s (expected: >= 0)", maxResponseLength);
         this.maxResponseLength = maxResponseLength;
+    }
+
+    @Override
+    public HttpHeaders defaultRequestHeaders() {
+        return defaultRequestHeaders;
     }
 
     @Override

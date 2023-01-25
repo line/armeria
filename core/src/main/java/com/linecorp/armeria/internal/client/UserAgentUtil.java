@@ -20,19 +20,16 @@ import com.linecorp.armeria.common.util.Version;
 
 import io.netty.util.AsciiString;
 
-/**
- * Provides utility functions for internal use related with HTTP headers.
- */
-public final class HttpHeaderUtil {
+public final class UserAgentUtil {
 
     private static final String CLIENT_ARTIFACT_ID = "armeria";
 
     public static final AsciiString USER_AGENT = AsciiString.cached(createUserAgentName());
 
     private static String createUserAgentName() {
-        final Version version = Version.get(CLIENT_ARTIFACT_ID, HttpHeaderUtil.class.getClassLoader());
+        final Version version = Version.get(CLIENT_ARTIFACT_ID, UserAgentUtil.class.getClassLoader());
         return CLIENT_ARTIFACT_ID + '/' + version.artifactVersion();
     }
 
-    private HttpHeaderUtil() {}
+    private UserAgentUtil() {}
 }

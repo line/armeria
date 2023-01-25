@@ -21,6 +21,6 @@ import io.netty.handler.codec.compression.ZlibWrapper;
 class ZlibStreamDecoderTest extends AbstractStreamDecoderTest {
     @Override
     StreamDecoder newDecoder() {
-        return new ZlibStreamDecoder(ZlibWrapper.NONE, ByteBufAllocator.DEFAULT);
+        return new ZlibStreamDecoder(ZlibWrapper.NONE, ByteBufAllocator.DEFAULT, 0);
     }
 }

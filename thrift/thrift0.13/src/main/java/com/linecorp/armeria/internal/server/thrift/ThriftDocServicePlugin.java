@@ -273,7 +273,8 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
                       .map(TypeSignature::ofStruct)
                       .collect(toImmutableList());
 
-        return new MethodInfo(serviceName, name, returnTypeSignature, parameters, exceptionTypeSignatures,
+        return new MethodInfo(serviceName, name, returnTypeSignature, parameters, false,
+                              exceptionTypeSignatures,
                               endpoints,
                               ImmutableList.of(),
                               ImmutableList.of(),

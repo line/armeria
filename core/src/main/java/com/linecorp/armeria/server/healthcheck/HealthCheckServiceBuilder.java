@@ -214,7 +214,7 @@ public final class HealthCheckServiceBuilder implements TransientServiceBuilder 
                       "maxLongPollingTimeoutMillis: %s (expected: >= 0)",
                       maxLongPollingTimeoutMillis);
         checkArgument(pingIntervalMillis >= 0,
-                      "pingIntervalMillis: %s (expected: >= 0)");
+                      "pingIntervalMillis: %s (expected: >= 0)", pingIntervalMillis);
         checkArgument(longPollingTimeoutJitterRate >= 0 && longPollingTimeoutJitterRate <= 1,
                       "longPollingTimeoutJitterRate: %s (expected: >= 0 && <= 1)",
                       longPollingTimeoutJitterRate);

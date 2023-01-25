@@ -199,7 +199,8 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             state = State.NEEDS_DATA_OR_TRAILERS;
         }
 
-        final RequestHeaders merged = mergeRequestHeaders(headers, ctx.additionalRequestHeaders());
+        final RequestHeaders merged = mergeRequestHeaders(
+                headers, ctx.defaultRequestHeaders(), ctx.additionalRequestHeaders());
         logBuilder.requestHeaders(merged);
         final ChannelPromise promise = ch.newPromise();
         // Attach a listener first to make the listener early handle a cause raised while writing headers

@@ -20,6 +20,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -268,6 +269,34 @@ public final class ServiceBindingBuilder extends AbstractServiceBindingBuilder {
     @Override
     public ServiceBindingBuilder multipartUploadsLocation(Path multipartUploadsLocation) {
         return (ServiceBindingBuilder) super.multipartUploadsLocation(multipartUploadsLocation);
+    }
+
+    @Override
+    public ServiceBindingBuilder addHeader(CharSequence name, Object value) {
+        return (ServiceBindingBuilder) super.addHeader(name, value);
+    }
+
+    @Override
+    public ServiceBindingBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        return (ServiceBindingBuilder) super.addHeaders(defaultHeaders);
+    }
+
+    @Override
+    public ServiceBindingBuilder setHeader(CharSequence name, Object value) {
+        return (ServiceBindingBuilder) super.setHeader(name, value);
+    }
+
+    @Override
+    public ServiceBindingBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        return (ServiceBindingBuilder) super.setHeaders(defaultHeaders);
+    }
+
+    @Override
+    public ServiceBindingBuilder decorator(
+            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        return (ServiceBindingBuilder) super.decorator(decoratingHttpServiceFunction);
     }
 
     @Override
