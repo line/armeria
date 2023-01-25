@@ -348,7 +348,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                 .findFirst().orElse(null);
                     if (typeDesc == null) {
                         // From the proto file.
-                        typeDesc = findTypeDescriptor(desc.getFile(), field);
+                        typeDesc = field.getMessageType();
                     }
                     if (typeDesc == null) {
                         // According to the Language guide, the public import functionality is not available
