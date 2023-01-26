@@ -31,7 +31,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.Objects;
 import java.util.Set;
 import java.util.StringJoiner;
 import java.util.concurrent.CompletableFuture;
@@ -63,7 +62,6 @@ import com.google.protobuf.Descriptors;
 import com.google.protobuf.Descriptors.Descriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor;
 import com.google.protobuf.Descriptors.FieldDescriptor.JavaType;
-import com.google.protobuf.Descriptors.FileDescriptor;
 import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 import com.google.protobuf.DoubleValue;
@@ -347,16 +345,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                                 .filter(d -> d.getFullName().equals(field.getMessageType().getFullName()))
                                 .findFirst().orElse(null);
                     if (typeDesc == null) {
-                        // From the proto file.
                         typeDesc = field.getMessageType();
-                    }
-                    if (typeDesc == null) {
-                        // According to the Language guide, the public import functionality is not available
-                        // in Java. We will try to find dependencies only with "import" keyword.
-                        // https://developers.google.com/protocol-buffers/docs/proto3#importing_definitions
-                        typeDesc = desc.getFile().getDependencies().stream()
-                                       .map(fd -> findTypeDescriptor(fd, field))
-                                       .filter(Objects::nonNull).findFirst().orElse(null);
                     }
                     checkState(typeDesc != null,
                                "Descriptor for the type '%s' does not exist.",
@@ -434,15 +423,6 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         }
 
         return null;
-    }
-
-    @Nullable
-    private static Descriptor findTypeDescriptor(FileDescriptor file, FieldDescriptor field) {
-        final Descriptor messageType = field.getMessageType();
-        if (!file.getPackage().equals(messageType.getFile().getPackage())) {
-            return null;
-        }
-        return file.findMessageTypeByName(messageType.getName());
     }
 
     // to make it more efficient, we calculate whether extract response body one time
