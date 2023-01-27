@@ -124,7 +124,7 @@ public final class ArmeriaConfigurationNetUtil {
 
         final Port port = new Port().setPort(portNumber);
         if (managementServerAddress != null) {
-            port.setIp(managementServerAddress.getHostAddress());
+            port.setAddress(managementServerAddress);
         }
         return port.setProtocol(enableManagementServerSsl ? SessionProtocol.HTTPS : SessionProtocol.HTTP);
     }

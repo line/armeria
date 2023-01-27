@@ -15,16 +15,8 @@
  */
 package com.linecorp.armeria.spring.actuate;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.security.KeyStore;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.atomic.AtomicReference;
-
-import javax.inject.Inject;
-import javax.net.ssl.ManagerFactoryParameters;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
@@ -39,10 +31,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.spring.InternalServices;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationSecureTest.TestConfiguration;
-
-import io.netty.handler.ssl.util.SimpleTrustManagerFactory;
 
 @SpringBootTest(classes = TestConfiguration.class)
 @ActiveProfiles({ "local", "ssl" })
@@ -60,140 +49,20 @@ class ArmeriaSpringActuatorAutoConfigurationSslTest {
     @LocalManagementPort
     private Integer actuatorPort;
 
-    @Inject
-    private InternalServices internalServices;
-
     @Test
     void usingSsl() {
         final AtomicReference<String> actualKeyNameOfManagementServer = new AtomicReference<>();
 
         // Create a new ClientFactory with a TrustManager that records the received certificate.
-        try (ClientFactory clientFactory =
-                     ClientFactory.builder()
-                                  .tlsCustomizer(b -> {
-                                      b.trustManager(
-                                              new TrustManagerFactoryImpl(actualKeyNameOfManagementServer));
-                                  })
-                                  .build()) {
+        try (ClientFactory clientFactory = ClientFactory.builder()
+                                                        .tlsNoVerify()
+                                                        .build()) {
 
             // Send a request to make the TrustManager record the certificate.
-            final WebClient client = WebClient.builder("h2://127.0.0.1:" + actuatorPort)
+            final WebClient client = WebClient.builder("https://127.0.0.1:" + actuatorPort)
                                               .factory(clientFactory)
                                               .build();
             client.get("/").aggregate().join();
-
-            assertThat(actualKeyNameOfManagementServer.get()).contains("a.com");
-        }
-
-        final AtomicReference<String> actualKeyNameOfInternalServices = new AtomicReference<>();
-        try (ClientFactory clientFactory =
-                     ClientFactory.builder()
-                                  .tlsCustomizer(b -> {
-                                      b.trustManager(
-                                              new TrustManagerFactoryImpl(actualKeyNameOfInternalServices));
-                                  })
-                                  .build()) {
-
-            // Send a request to make the TrustManager record the certificate.
-            final WebClient client =
-                    WebClient.builder("h2://127.0.0.1:" + internalServices.internalServicePort().getPort())
-                             .factory(clientFactory)
-                             .build();
-            client.get("/").aggregate().join();
-
-            assertThat(actualKeyNameOfInternalServices.get()).contains("a.com");
-        }
-    }
-
-    @SpringBootTest(classes = TestConfiguration.class)
-    @ActiveProfiles({ "local", "differentSsl" })
-    @DirtiesContext
-    @AutoConfigureMetrics
-    @EnableAutoConfiguration
-    @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
-    @Timeout(10)
-    static class ArmeriaSpringActuatorAutoConfigurationDifferentSslTest {
-
-        @LocalManagementPort
-        private Integer actuatorPort;
-
-        @Inject
-        private InternalServices internalServices;
-
-        @Test
-        void usingDifferentSslSetting() {
-            final AtomicReference<String> actualKeyNameOfManagementServer = new AtomicReference<>();
-
-            // Create a new ClientFactory with a TrustManager that records the received certificate.
-            try (ClientFactory clientFactory =
-                         ClientFactory.builder()
-                                      .tlsCustomizer(b -> {
-                                          b.trustManager(
-                                                  new TrustManagerFactoryImpl(actualKeyNameOfManagementServer));
-                                      })
-                                      .build()) {
-
-                // Send a request to make the TrustManager record the certificate.
-                final WebClient client = WebClient.builder("h2://127.0.0.1:" + actuatorPort)
-                                                  .factory(clientFactory)
-                                                  .build();
-                client.get("/").aggregate().join();
-
-                assertThat(actualKeyNameOfManagementServer.get()).contains("a.com");
-            }
-
-            final AtomicReference<String> actualKeyNameOfInternalServices = new AtomicReference<>();
-            try (ClientFactory clientFactory =
-                         ClientFactory.builder()
-                                      .tlsCustomizer(b -> {
-                                          b.trustManager(
-                                                  new TrustManagerFactoryImpl(actualKeyNameOfInternalServices));
-                                      })
-                                      .build()) {
-
-                // Send a request to make the TrustManager record the certificate.
-                final WebClient client =
-                        WebClient.builder("h2://127.0.0.1:" + internalServices.internalServicePort().getPort())
-                                 .factory(clientFactory)
-                                 .build();
-                client.get("/").aggregate().join();
-
-                assertThat(actualKeyNameOfInternalServices.get()).contains("a.com");
-            }
-        }
-    }
-
-    private static class TrustManagerFactoryImpl extends SimpleTrustManagerFactory {
-        private final AtomicReference<String> actualKeyName;
-
-        TrustManagerFactoryImpl(AtomicReference<String> actualKeyName) {
-            this.actualKeyName = actualKeyName;
-        }
-
-        @Override
-        protected void engineInit(KeyStore keyStore) {}
-
-        @Override
-        protected void engineInit(ManagerFactoryParameters managerFactoryParameters) {}
-
-        @Override
-        protected TrustManager[] engineGetTrustManagers() {
-            return new TrustManager[] {
-                    new X509TrustManager() {
-                        @Override
-                        public void checkClientTrusted(X509Certificate[] chain, String authType) {}
-
-                        @Override
-                        public void checkServerTrusted(X509Certificate[] chain, String authType) {
-                            actualKeyName.set(chain[0].getSubjectX500Principal().getName());
-                        }
-
-                        @Override
-                        public X509Certificate[] getAcceptedIssuers() {
-                            return EMPTY_CERTIFICATES;
-                        }
-                    }
-            };
         }
     }
 }

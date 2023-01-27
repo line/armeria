@@ -20,7 +20,6 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.configurePorts;
 import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationNetUtil.maybeNewPort;
-import static com.linecorp.armeria.internal.spring.ArmeriaConfigurationTlsUtil.configureTls;
 import static com.linecorp.armeria.spring.actuate.WebOperationService.HAS_WEB_SERVER_NAMESPACE;
 import static com.linecorp.armeria.spring.actuate.WebOperationService.toMediaType;
 import static com.linecorp.armeria.spring.actuate.WebOperationServiceUtil.addAdditionalPath;
@@ -64,7 +63,6 @@ import org.springframework.boot.actuate.health.HealthEndpointGroups;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.web.server.Ssl;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -83,7 +81,6 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.internal.spring.ArmeriaConfigurationTlsUtil;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -94,8 +91,6 @@ import com.linecorp.armeria.spring.ArmeriaSettings;
 import com.linecorp.armeria.spring.ArmeriaSettings.InternalServiceProperties;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 import com.linecorp.armeria.spring.InternalServiceId;
-
-import io.netty.handler.ssl.ClientAuth;
 
 /**
  * A {@link Configuration} to enable actuator endpoints on an Armeria server. Corresponds to
@@ -192,10 +187,6 @@ public class ArmeriaSpringActuatorAutoConfiguration {
             final Integer managementPort = obtainManagementServerPort(sb, beanFactory, serverProperties);
             if (managementPort != null) {
                 addLocalManagementPortPropertyAlias(environment, managementPort);
-                if (serverProperties.getSsl() != null && serverProperties.getSsl().isEnabled()) {
-                    configureTls(sb.virtualHost(managementPort),
-                                 toArmeriaSslConfiguration(serverProperties.getSsl()));
-                }
             }
 
             final Integer internalServicePort = getExposedInternalServicePort(beanFactory, armeriaSettings);
@@ -424,39 +415,5 @@ public class ArmeriaSpringActuatorAutoConfiguration {
 
     private static Set<MediaType> convertMediaTypes(Iterable<String> mediaTypes) {
         return Streams.stream(mediaTypes).map(MediaType::parse).collect(toImmutableSet());
-    }
-
-    private static com.linecorp.armeria.spring.Ssl toArmeriaSslConfiguration(Ssl ssl) {
-        if (!ssl.isEnabled()) {
-            return new com.linecorp.armeria.spring.Ssl();
-        }
-
-        ClientAuth clientAuth = null;
-        if (ssl.getClientAuth() != null) {
-            switch (ssl.getClientAuth()) {
-                case NEED:
-                    clientAuth = ClientAuth.REQUIRE;
-                    break;
-                case WANT:
-                    clientAuth = ClientAuth.OPTIONAL;
-                    break;
-            }
-        }
-        return new com.linecorp.armeria.spring.Ssl()
-                .setEnabled(ssl.isEnabled())
-                .setClientAuth(clientAuth)
-                .setCiphers(ssl.getCiphers() != null ? ImmutableList.copyOf(ssl.getCiphers()) : null)
-                .setEnabledProtocols(ssl.getEnabledProtocols() != null ? ImmutableList.copyOf(
-                        ssl.getEnabledProtocols()) : null)
-                .setKeyAlias(ssl.getKeyAlias())
-                .setKeyPassword(ssl.getKeyPassword())
-                .setKeyStore(ssl.getKeyStore())
-                .setKeyStorePassword(ssl.getKeyStorePassword())
-                .setKeyStoreType(ssl.getKeyStoreType())
-                .setKeyStoreProvider(ssl.getKeyStoreProvider())
-                .setTrustStore(ssl.getTrustStore())
-                .setTrustStorePassword(ssl.getTrustStorePassword())
-                .setTrustStoreType(ssl.getTrustStoreType())
-                .setTrustStoreProvider(ssl.getTrustStoreProvider());
     }
 }
