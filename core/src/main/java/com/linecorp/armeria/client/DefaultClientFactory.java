@@ -100,12 +100,14 @@ final class DefaultClientFactory implements ClientFactory {
         this.httpClientFactory = httpClientFactory;
 
         final List<ClientFactory> availableClientFactories = new ArrayList<>();
-        availableClientFactories.add(httpClientFactory);
 
+        // Give priority to custom client factories.
         Streams.stream(ServiceLoader.load(ClientFactoryProvider.class,
                                           DefaultClientFactory.class.getClassLoader()))
                .map(provider -> provider.newFactory(httpClientFactory))
                .forEach(availableClientFactories::add);
+
+        availableClientFactories.add(httpClientFactory);
 
         final ImmutableListMultimap.Builder<Scheme, ClientFactory> builder = ImmutableListMultimap.builder();
         for (ClientFactory f : availableClientFactories) {

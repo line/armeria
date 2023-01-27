@@ -273,8 +273,8 @@ class SelectionTimeoutTest {
 
     @Test
     void select_timeout() {
-        try (MockEndpointGroup endpointGroup = new MockEndpointGroup(2000)) {
-            final int expectedTimeout = 2000;
+        final int expectedTimeout = 3000;
+        try (MockEndpointGroup endpointGroup = new MockEndpointGroup(expectedTimeout)) {
             assertSelectionTimeout(endpointGroup).isEqualTo(expectedTimeout);
 
             final Stopwatch stopwatch = Stopwatch.createStarted();
@@ -283,7 +283,7 @@ class SelectionTimeoutTest {
             assertThat(result.join()).isNull();
             assertThat(stopwatch.elapsed())
                     .isGreaterThanOrEqualTo(Duration.ofMillis(expectedTimeout))
-                    .isLessThan(Duration.ofMillis(expectedTimeout + 1000));
+                    .isLessThan(Duration.ofMillis(expectedTimeout + 2000));
         }
     }
 

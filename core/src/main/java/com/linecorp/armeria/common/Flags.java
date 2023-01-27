@@ -49,6 +49,7 @@ import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.client.retry.RetryingClient;
 import com.linecorp.armeria.client.retry.RetryingRpcClient;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.SystemInfo;
@@ -70,6 +71,8 @@ import com.linecorp.armeria.server.file.FileServiceBuilder;
 import com.linecorp.armeria.server.file.HttpFile;
 import com.linecorp.armeria.server.logging.LoggingService;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
@@ -113,10 +116,6 @@ public final class Flags {
     static {
         final String strSpec = getNormalized("verboseExceptions",
                                              DefaultFlagsProvider.VERBOSE_EXCEPTION_SAMPLER_SPEC, val -> {
-                    if ("true".equals(val) || "false".equals(val)) {
-                        return true;
-                    }
-
                     try {
                         Sampler.of(val);
                         return true;
@@ -376,6 +375,12 @@ public final class Flags {
 
     private static final Path DEFAULT_MULTIPART_UPLOADS_LOCATION =
             getValue(FlagsProvider::defaultMultipartUploadsLocation, "defaultMultipartUploadsLocation");
+
+    private static final Sampler<? super RequestContext> REQUEST_CONTEXT_LEAK_DETECTION_SAMPLER =
+            getValue(FlagsProvider::requestContextLeakDetectionSampler, "requestContextLeakDetectionSampler");
+
+    private static final MeterRegistry METER_REGISTRY =
+            getValue(FlagsProvider::meterRegistry, "meterRegistry");
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -1294,6 +1299,31 @@ public final class Flags {
      */
     public static boolean allowDoubleDotsInQueryString() {
         return ALLOW_DOUBLE_DOTS_IN_QUERY_STRING;
+    }
+
+    /**
+     * Returns the {@link Sampler} that determines whether to trace the stack trace of request contexts leaks
+     * and how frequently to keeps stack trace. A sampled exception will have the stack trace while the others
+     * will have an empty stack trace to eliminate the cost of capturing the stack trace.
+     *
+     * <p>The default value of this flag is {@link Sampler#never()}.
+     * Specify the {@code -Dcom.linecorp.armeria.requestContextLeakDetectionSampler=<specification>} JVM option
+     * to override the default. This feature is disabled if {@link Sampler#never()} is specified.
+     * See {@link Sampler#of(String)} for the specification string format.</p>
+     */
+    @UnstableApi
+    public static Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
+        return REQUEST_CONTEXT_LEAK_DETECTION_SAMPLER;
+    }
+
+    /**
+     * Returns the {@link MeterRegistry} where armeria records metrics to by default.
+     *
+     * <p>The default value of this flag is {@link Metrics#globalRegistry}.
+     */
+    @UnstableApi
+    public static MeterRegistry meterRegistry() {
+        return METER_REGISTRY;
     }
 
     @Nullable

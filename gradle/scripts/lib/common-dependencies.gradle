@@ -1,3 +1,5 @@
+import com.github.benmanes.gradle.versions.reporter.*
+import com.github.benmanes.gradle.versions.reporter.result.*
 import org.yaml.snakeyaml.Yaml
 
 buildscript {
@@ -8,8 +10,8 @@ buildscript {
 
     dependencies {
         // These should be the only dependencies that need hard-coded versions.
-        classpath 'com.github.ben-manes:gradle-versions-plugin:0.39.0'
-        classpath 'org.yaml:snakeyaml:1.29'
+        classpath 'com.github.ben-manes:gradle-versions-plugin:0.42.0'
+        classpath 'org.yaml:snakeyaml:1.33'
     }
 }
 
@@ -30,7 +32,6 @@ def dependencyManagementProject = dependencyManagementProjects[0]
 
 configure(dependencyManagementProject) {
     apply plugin: 'java-platform'
-    apply plugin: com.github.benmanes.gradle.versions.VersionsPlugin
 
     repositories {
         google()
@@ -51,6 +52,10 @@ configure(dependencyManagementProject) {
             }
         }
     }
+}
+
+configure(rootProject) {
+    apply plugin: com.github.benmanes.gradle.versions.VersionsPlugin
 
     tasks {
         dependencyUpdates {
@@ -59,7 +64,8 @@ configure(dependencyManagementProject) {
             resolutionStrategy {
                 componentSelection { rules ->
                     rules.all { ComponentSelection selection ->
-                        boolean rejected = ['alpha', 'beta', 'rc', 'cr', 'm', 'preview'].any { qualifier ->
+                        boolean rejected = ['alpha', 'beta', 'ea', 'rc',
+                                            'cr', 'm', 'preview'].any { qualifier ->
                             selection.candidate.version ==~ /(?i).*[.-]${qualifier}[.\d-]*/
                         }
                         if (rejected) {
@@ -70,19 +76,16 @@ configure(dependencyManagementProject) {
             }
 
             checkConstraints = true
-
-            // We have downgraded versions for legacy artifacts which versions plugin has no way of handling.
-            // But we can provide a reminder to manually check for updates.
-            doLast {
-                logger.quiet "Don't forget to check the following for updates to legacy version downgrades"
-                managedDependencyOverrides.each { override ->
-                    def (group, artifact, version) = override.split(':')
-                    def parts = version.split('\\.')
-                    if (parts.length >= 2) {
-                        logger.quiet "${artifact} is currently version ${version}"
-                        logger.quiet "https://search.maven.org/search?q=g:${group}%20a:${artifact}%20v:${parts[0]}.${parts[1]}.*\n"
-                    }
+            outputFormatter = result -> {
+                File filename = new File(outputDir, 'report.txt')
+                project.file(outputDir).mkdirs()
+                File outputFile = project.file(filename)
+                def reporter = new GentlePlainTextReporter(project, "release", "release-candidate")
+                reporter.write(System.out, result)
+                outputFile.withPrintWriter { PrintWriter pw ->
+                    reporter.write(pw, result)
                 }
+                logger.lifecycle '\nGenerated report file ' + filename
             }
         }
     }
@@ -207,34 +210,34 @@ configure(rootProject) {
             group: 'Build',
             description: 'Generates the file that contains dependency versions.') {
 
-        inputs.property("catalog", project.extensions.getByType(VersionCatalogsExtension))
         def f = file("${project.buildDir}/managed_versions.yml")
         outputs.file(f)
 
         doLast {
             f.parentFile.mkdir()
-            managedVersions = [:]
-            inputs.properties["catalog"].catalogNames.forEach { name ->
+            def managedVersions = [:]
+            def catalogs = project.extensions.getByType(VersionCatalogsExtension)
+            catalogs.catalogNames.forEach { name ->
                 def catalog = catalogs.named(name)
-                versions = [:] withDefault { [] }
+                def versions = [:].withDefault { [] }
                 catalog.libraryAliases.forEach { alias ->
                     def library = catalog.findLibrary(alias).get().get()
-                    versions["libraries"].add([alias: alias, module: library.toString])
+                    versions["libraries"].add([alias: alias, module: library.toString()])
                 }
 
                 catalog.pluginAliases.forEach { alias ->
                     def plugin = catalog.findPlugin(alias).get().get()
-                    versions["plugins"].add([alias: alias, plugin: plugin.toString])
+                    versions["plugins"].add([alias: alias, plugin: plugin.toString()])
                 }
 
                 catalog.versionAliases.forEach { alias ->
                     def version = catalog.findVersion(alias).get()
-                    versions["versions"].add([alias: alias, version: version])
+                    versions["versions"].add([alias: alias, version: version.toString()])
                 }
 
                 catalog.bundleAliases.forEach { alias ->
                     def bundle = catalog.findBundle(alias).get().get()
-                    versions["bundles"].add([alias: alias, bundle: bundle.toString])
+                    versions["bundles"].add([alias: alias, bundle: bundle.toString()])
                 }
                 managedVersions[name] = versions
             }
@@ -251,10 +254,10 @@ static def findLibrary(Project rootProject, String alias) {
     def catalog = catalogs.named("libs")
 
     def library = catalog.findLibrary(alias)
-    if (library.isEmpty()) {
-        return null
-    } else {
+    if (library.isPresent()) {
         return library.get()
+    } else {
+        return null
     }
 }
 
@@ -263,10 +266,10 @@ static def findPlugin(Project rootProject, String alias) {
     def catalog = catalogs.named("libs")
 
     def plugin = catalog.findPlugin(alias)
-    if (plugin.isEmpty()) {
-        return null
-    } else {
+    if (plugin.isPresent()) {
         return plugin.get()
+    } else {
+        return null
     }
 }
 
@@ -289,4 +292,48 @@ static def getManagedVersions(Project rootProject) {
         }
     }
     return managedVersions
+}
+
+final class GentlePlainTextReporter implements Reporter {
+
+    private final Reporter delegate
+
+    GentlePlainTextReporter(Project project, String revision, String gradleReleaseChannel) {
+        delegate = new PlainTextReporter(project, revision, gradleReleaseChannel)
+    }
+
+    def write(Object printStream, Result result) {
+        delegate.write(printStream, updateProjectUrl(result))
+    }
+
+    private static Result updateProjectUrl(Result result) {
+        DependenciesGroup<DependencyOutdated> outdated = result.outdated
+        def updated = outdated.dependencies.collect { old ->
+            List versionParts = []
+            if (old.version != null) {
+                versionParts = old.version.split('\\.').toList()
+            }
+            if (versionParts.size() < 2) {
+                return old
+            }
+
+            String quickSearchLink = "https://search.maven.org/search?q=g:${old.group}%20a:${old.name}%20v:" +
+                                     "${versionParts[0]}.${versionParts[1]}.*\n"
+            String projectUrl
+            if (old.projectUrl == null) {
+                projectUrl = quickSearchLink
+            } else {
+                projectUrl = "${old.projectUrl}\n     $quickSearchLink"
+            }
+            return new DependencyOutdated(old.group, old.name, old.version, projectUrl, old.userReason, old.available)
+        } as SortedSet
+
+        DependenciesGroup<DependencyOutdated> outdatedWithNote = new DependenciesGroup<>(outdated.count, updated)
+        return new Result(result.count, result.current, outdatedWithNote, result.exceeded, result.undeclared,
+                          result.unresolved, result.gradle)
+    }
+
+    String getFileExtension() {
+        return delegate.getFileExtension()
+    }
 }

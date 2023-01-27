@@ -26,6 +26,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.IdentityHashMap;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -34,6 +35,7 @@ import javax.net.ssl.SSLSession;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -46,6 +48,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ProtocolViolationException;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.ResponseHeadersBuilder;
 import com.linecorp.armeria.common.SessionProtocol;
@@ -169,6 +172,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private final IdentityHashMap<DecodedHttpRequest, HttpResponse> unfinishedRequests;
     private boolean isReading;
+    private boolean isCleaning;
     private boolean handledLastRequest;
 
     HttpServerHandler(ServerConfig config,
@@ -200,6 +204,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+        if (responseEncoder != null) {
+            // Immediately close responseEncoder so that a late response is completed with
+            // a ClosedSessionException.
+            responseEncoder.close();
+        }
+
         // Give the unfinished streaming responses a chance to close themselves before we abort them,
         // so that successful responses are not aborted due to a race condition like the following:
         //
@@ -225,11 +235,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private void cleanup() {
-        if (responseEncoder != null) {
-            responseEncoder.close();
-        }
-
         if (!unfinishedRequests.isEmpty()) {
+            isCleaning = true;
             final ClosedSessionException cause = ClosedSessionException.get();
             unfinishedRequests.forEach((req, res) -> {
                 // An HTTP2 request is cancelled by Http2RequestDecoder.onRstStreamRead()
@@ -237,6 +244,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 // Mark the request stream as closed due to disconnection.
                 req.abortResponse(cause, cancel);
             });
+            unfinishedRequests.clear();
         }
     }
 
@@ -358,9 +366,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             } catch (Throwable cause) {
                 // No need to consume further since the response is ready.
                 if (cause instanceof HttpResponseException || cause instanceof HttpStatusException) {
-                    req.close();
+                    req.abort(ResponseCompleteException.get());
                 } else {
-                    req.close(cause);
+                    req.abort(cause);
                 }
                 serviceResponse = HttpResponse.ofFailure(cause);
             }
@@ -408,10 +416,14 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 return null;
             });
 
-            res.whenComplete().handleAsync((ret, cause) -> {
+            // A future which is completed when the all response objects are written to channel and
+            // the returned promises are done.
+            final CompletableFuture<Void> resWriteFuture = new CompletableFuture<>();
+            resWriteFuture.handle((ret, cause) -> {
                 try {
-                    if (cause == null) {
-                        req.abort();
+                    assert eventLoop.inEventLoop();
+                    if (cause == null || !req.isOpen()) {
+                        req.abort(ResponseCompleteException.get());
                     } else {
                         req.abort(cause);
                     }
@@ -419,7 +431,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     if (!isTransientService) {
                         gracefulShutdownSupport.dec();
                     }
-                    unfinishedRequests.remove(req);
+
+                    // This callback could be called by `req.abortResponse(cause, cancel)` in `cleanup()`.
+                    // As `unfinishedRequests` is being iterated, `unfinishedRequests` should not be removed.
+                    if (!isCleaning) {
+                        unfinishedRequests.remove(req);
+                    }
+
                     if (unfinishedRequests.isEmpty() && handledLastRequest) {
                         ctx.writeAndFlush(Unpooled.EMPTY_BUFFER).addListener(CLOSE);
                     }
@@ -427,7 +445,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                     logger.warn("Unexpected exception:", t);
                 }
                 return null;
-            }, eventLoop);
+            });
 
             // Set the response to the request in order to be able to immediately abort the response
             // when the peer cancels the stream.
@@ -436,12 +454,13 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
             assert responseEncoder != null;
             if (reqCtx.exchangeType().isResponseStreaming()) {
                 final HttpResponseSubscriber resSubscriber =
-                        new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req);
+                        new HttpResponseSubscriber(ctx, responseEncoder, reqCtx, req, resWriteFuture);
                 res.subscribe(resSubscriber, eventLoop, SubscriptionOption.WITH_POOLED_OBJECTS);
             } else {
                 final AggregatedHttpResponseHandler resHandler =
-                        new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req);
-                res.aggregateWithPooledObjects(eventLoop, ctx.alloc()).handle(resHandler);
+                        new AggregatedHttpResponseHandler(ctx, responseEncoder, reqCtx, req, resWriteFuture);
+                res.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), eventLoop))
+                   .handle(resHandler);
             }
         }
     }

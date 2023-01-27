@@ -45,8 +45,10 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.TreeNode;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -80,6 +82,7 @@ import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV1;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV2;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV2.SubMessage;
 import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV3;
+import com.linecorp.armeria.grpc.testing.Transcoding.GetMessageRequestV4;
 import com.linecorp.armeria.grpc.testing.Transcoding.Message;
 import com.linecorp.armeria.grpc.testing.Transcoding.MessageType;
 import com.linecorp.armeria.grpc.testing.Transcoding.Recursive;
@@ -91,6 +94,8 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.docs.DocService;
 import com.linecorp.armeria.server.grpc.GrpcService;
 import com.linecorp.armeria.server.grpc.GrpcServiceBuilder;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingOptions;
+import com.linecorp.armeria.server.grpc.HttpJsonTranscodingQueryParamMatchRule;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
 import io.grpc.stub.StreamObserver;
@@ -123,6 +128,16 @@ public class HttpJsonTranscodingTest {
             final String text = request.getMessageId() + ':' +
                                 request.getRevisionList().stream().map(String::valueOf)
                                        .collect(Collectors.joining(":"));
+            responseObserver.onNext(Message.newBuilder().setText(text).build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void getMessageV4(GetMessageRequestV4 request, StreamObserver<Message> responseObserver) {
+            final String text = request.getMessageId() + ':' +
+                                request.getQueryParameter() + ':' +
+                                request.getParentField().getChildField() + ':' +
+                                request.getParentField().getChildField2();
             responseObserver.onNext(Message.newBuilder().setText(text).build());
             responseObserver.onCompleted();
         }
@@ -271,26 +286,51 @@ public class HttpJsonTranscodingTest {
     }
 
     @RegisterExtension
-    static final ServerExtension server = createServer(false);
+    static final ServerExtension server = createServer(false, false, true);
 
     @RegisterExtension
-    static final ServerExtension serverPreservingProtoFieldNames = createServer(true);
+    static final ServerExtension serverPreservingProtoFieldNames = createServer(true, false, true);
+
+    @RegisterExtension
+    static final ServerExtension serverCamelCaseQueryOnlyParameters = createServer(false, true, false);
+
+    @RegisterExtension
+    static final ServerExtension serverCamelCaseQueryAndOriginalParameters = createServer(false, true, true);
 
     private final ObjectMapper mapper = JacksonUtil.newDefaultObjectMapper();
 
     private final WebClient webClient = WebClient.builder(server.httpUri()).build();
 
-    final WebClient webClientPreservingProtoFieldNames =
+    private final WebClient webClientPreservingProtoFieldNames =
             WebClient.builder(serverPreservingProtoFieldNames.httpUri()).build();
 
-    static ServerExtension createServer(boolean preservingProtoFieldNames) {
+    private final BlockingWebClient webClientCamelCaseQueryOnlyParameters =
+            serverCamelCaseQueryOnlyParameters.blockingWebClient();
+
+    private final BlockingWebClient webClientCamelCaseQueryAndOriginalParameters =
+            serverCamelCaseQueryAndOriginalParameters.blockingWebClient();
+
+    static ServerExtension createServer(boolean preservingProtoFieldNames, boolean camelCaseQueryParams,
+                                        boolean protoFieldNameQueryParams) {
+        final ImmutableList.Builder<HttpJsonTranscodingQueryParamMatchRule> queryParamMatchRules =
+                ImmutableList.builder();
+        if (camelCaseQueryParams) {
+            queryParamMatchRules.add(HttpJsonTranscodingQueryParamMatchRule.LOWER_CAMEL_CASE);
+        }
+        if (protoFieldNameQueryParams) {
+            queryParamMatchRules.add(HttpJsonTranscodingQueryParamMatchRule.ORIGINAL_FIELD);
+        }
+        final HttpJsonTranscodingOptions options =
+                HttpJsonTranscodingOptions.builder()
+                                          .queryParamMatchRules(queryParamMatchRules.build())
+                                          .build();
         return new ServerExtension() {
             @Override
             protected void configure(ServerBuilder sb) throws Exception {
                 final GrpcServiceBuilder grpcServiceBuilder =
                         GrpcService.builder()
                                    .addService(new HttpJsonTranscodingTestService())
-                                   .enableHttpJsonTranscoding(true);
+                                   .enableHttpJsonTranscoding(options);
                 if (preservingProtoFieldNames) {
                     grpcServiceBuilder.jsonMarshallerFactory(service -> GrpcJsonMarshaller
                             .builder()
@@ -319,6 +359,7 @@ public class HttpJsonTranscodingTest {
     void shouldGetMessageV1ByWebClient(String prefix) throws JsonProcessingException {
         final AggregatedHttpResponse response = webClient.get(prefix + "v1/messages/1").aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("text").asText()).isEqualTo("messages/1");
     }
 
@@ -342,6 +383,7 @@ public class HttpJsonTranscodingTest {
                 webClient.get(prefix + "v2/messages/1?revision=999&sub.subfield=sub&type=DETAIL")
                          .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("text").asText()).isEqualTo("1:999:sub:DETAIL");
     }
 
@@ -353,6 +395,7 @@ public class HttpJsonTranscodingTest {
                 webClient.get("/v2/messages/1?revision=999&sub.subfield=sub&type=UNKNOWN")
                          .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         // Return a default enum(value 0).
         assertThat(root.get("text").asText()).isEqualTo("1:999:sub:SIMPLE");
     }
@@ -374,6 +417,7 @@ public class HttpJsonTranscodingTest {
                 webClient.get("/v3/messages/1?revision=2&revision=3&revision=4")
                          .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("text").asText()).isEqualTo("1:2:3:4");
     }
 
@@ -383,6 +427,7 @@ public class HttpJsonTranscodingTest {
                 webClient.get("/v3/messages/1?revision=4&revision=3&revision=2")
                          .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("text").asText()).isEqualTo("1:4:3:2");
     }
 
@@ -408,6 +453,7 @@ public class HttpJsonTranscodingTest {
                                   HttpData.ofUtf8("{\"text\": \"v1\"}"))
                          .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("text").asText()).isEqualTo("1:v1");
     }
 
@@ -430,6 +476,7 @@ public class HttpJsonTranscodingTest {
                                   HttpData.ofUtf8("{\"text\": \"v2\"}"))
                          .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("text").asText()).isEqualTo("1:v2");
     }
 
@@ -441,6 +488,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response =
                 webClient.get("/v1/echo/" + timestamp + '/' + duration).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
         assertThat(root.get("duration").asText()).isEqualTo(duration);
     }
@@ -464,6 +512,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response =
                 webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("doubleVal").asDouble()).isEqualTo(123.456d, withPrecision(0.001d));
         assertThat(root.get("floatVal").asDouble()).isEqualTo(123.456f, withPrecision(0.001d));
         assertThat(root.get("int64Val").asLong()).isEqualTo(Long.MAX_VALUE);
@@ -486,6 +535,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response =
                 webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("doubleVal").asDouble()).isEqualTo(123.456d, withPrecision(0.001d));
         assertThat(root.get("floatVal")).isNull();
         assertThat(root.get("int64Val").asLong()).isEqualTo(Long.MAX_VALUE);
@@ -503,6 +553,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         final JsonNode value = root.get("value");
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(value).isNotNull().matches(v -> ((TreeNode) v).isObject());
         assertThat(value.get("intVal").asInt()).isOne();
         assertThat(value.get("stringVal").asText()).isEqualTo("1");
@@ -514,6 +565,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/list_value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         final JsonNode value = root.get("value");
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(value.isArray()).isTrue();
         assertThat(value.get(0).asText()).isEqualTo("1");
         assertThat(value.get(1).asText()).isEqualTo("2");
@@ -525,6 +577,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/list_value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         final JsonNode value = root.get("value");
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(value.isArray()).isTrue();
         assertThat(value.get(0).asInt()).isEqualTo(1);
         assertThat(value.get(1).asInt()).isEqualTo(2);
@@ -535,6 +588,7 @@ public class HttpJsonTranscodingTest {
         final String jsonContent = "\"1\"";
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("value").asText()).isEqualTo("1");
     }
 
@@ -543,6 +597,7 @@ public class HttpJsonTranscodingTest {
         final String jsonContent = "1";
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/value", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("value").asInt()).isEqualTo(1);
     }
 
@@ -556,6 +611,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/any", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         final JsonNode value = root.get("value");
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(value).isNotNull().matches(v -> ((TreeNode) v).isObject());
         assertThat(value.get("@type").asText()).isEqualTo("type.googleapis.com/google.protobuf.Duration");
         assertThat(value.get("value").asText()).isEqualTo("1.212s");
@@ -585,6 +641,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/recursive", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
         final JsonNode value = root.get("value");
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(value).isNotNull().matches(v -> ((TreeNode) v).isObject());
         assertThat(value.get("value").asText()).isEqualTo("a");
         final JsonNode nested = value.get("nested");
@@ -603,6 +660,7 @@ public class HttpJsonTranscodingTest {
                 '}';
         final AggregatedHttpResponse response = jsonPostRequest(webClient, "/v1/echo/recursive2", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("value").asText()).isEqualTo("a");
         final JsonNode nested = root.get("nested");
         assertThat(nested).isNotNull().matches(v -> ((TreeNode) v).isObject());
@@ -630,6 +688,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response =
                 webClient.get("/v1/echo/wrappers?" + query.toQueryString()).aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("doubleVal").asDouble()).isNaN();
         assertThat(root.get("floatVal").asDouble()).isInfinite();
     }
@@ -641,6 +700,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = webClient.get("/v1/echo/response_body/value?" +
                 query.toQueryString())
                 .aggregate().join();
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(response.contentUtf8()).isEqualTo("\"value\"");
     }
 
@@ -650,6 +710,7 @@ public class HttpJsonTranscodingTest {
                 "/v1/echo/response_body/repeated?array_field=value1&array_field=value2")
                 .aggregate().join();
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.isArray()).isTrue();
         assertThatJson(root).isEqualTo("[\"value1\",\"value2\"]");
     }
@@ -661,6 +722,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
                 "/v1/echo/response_body/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.has("structBody")).isTrue();
         assertThat(root.get("structBody").asText()).isEqualTo("struct_value");
     }
@@ -672,6 +734,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
                 "/v1/echo/response_body/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.isEmpty()).isTrue();
     }
 
@@ -682,6 +745,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
                 "/v1/echo/response_body/nomatch", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThatJson(root).isEqualTo("{\"value\":\"value\"," +
                                        "\"structBody\":{\"structBody\":\"struct_value\"}," +
                                        "\"arrayField\":[\"value1\",\"value2\"]}");
@@ -692,6 +756,7 @@ public class HttpJsonTranscodingTest {
         final String jsonContent = "{\"value\":\"value\",\"structBody\":{\"structBody\":\"struct_value\"}";
         final AggregatedHttpResponse response = jsonPostRequest(webClient,
                                                                 "/v1/echo/response_body/repeated", jsonContent);
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(response.contentUtf8()).isEqualTo("null");
     }
 
@@ -702,6 +767,7 @@ public class HttpJsonTranscodingTest {
         final AggregatedHttpResponse response = jsonPostRequest(webClientPreservingProtoFieldNames,
                                                                 "/v1/echo/response_body/struct", jsonContent);
         final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.has("struct_body")).isTrue();
         assertThat(root.get("struct_body").asText()).isEqualTo("struct_value");
     }
@@ -741,6 +807,77 @@ public class HttpJsonTranscodingTest {
         assertThat(updateMessageV2.get("httpMethod").asText()).isEqualTo("PATCH");
         assertThat(pathMapping(updateMessageV2)).containsExactlyInAnyOrder("/v2/messages/:message_id",
                                                                            "/foo/v2/messages/:message_id");
+    }
+
+    @Test
+    void shouldAcceptOnlyCamelCaseQueryParams() throws JsonProcessingException {
+        final QueryParams query =
+                QueryParams.builder()
+                           .add("queryParameter", "testQuery")
+                           .add("parentField.childField", "testChildField")
+                           .add("parentField.childField2", "testChildField2")
+                           .build();
+
+        final JsonNode response =
+                webClientCamelCaseQueryOnlyParameters.prepare()
+                                                     .get("/v4/messages/1")
+                                                     .queryParams(query)
+                                                     .asJson(JsonNode.class)
+                                                     .execute()
+                                                     .content();
+        assertThat(response.get("text").asText()).isEqualTo("1:testQuery:testChildField:testChildField2");
+
+        final QueryParams query2 =
+                QueryParams.builder()
+                           .add("query_parameter", "testQuery")
+                           .add("parent_field.child_field", "testChildField")
+                           .add("parent_field.child_field_2", "testChildField2")
+                           .build();
+
+        final JsonNode response2 =
+                webClientCamelCaseQueryOnlyParameters.prepare()
+                                                     .get("/v4/messages/1")
+                                                     .queryParams(query2)
+                                                     .asJson(JsonNode.class)
+                                                     .execute()
+                                                     .content();
+        // Disallow snake_case parameters.
+        assertThat(response2.get("text").asText()).isEqualTo("1:::");
+    }
+
+    @Test
+    void shouldAcceptBothCamelCaseAndSnakeCaseQueryParams() throws JsonProcessingException {
+        final QueryParams query =
+                QueryParams.builder()
+                           .add("queryParameter", "testQuery")
+                           .add("parentField.childField", "testChildField")
+                           .add("parentField.childField2", "testChildField2")
+                           .build();
+
+        final JsonNode response =
+                webClientCamelCaseQueryAndOriginalParameters.prepare()
+                                                            .get("/v4/messages/1")
+                                                            .queryParams(query)
+                                                            .asJson(JsonNode.class)
+                                                            .execute()
+                                                            .content();
+        assertThat(response.get("text").asText()).isEqualTo("1:testQuery:testChildField:testChildField2");
+
+        final QueryParams query2 =
+                QueryParams.builder()
+                           .add("query_parameter", "testQuery")
+                           .add("parent_field.child_field", "testChildField")
+                           .add("parent_field.child_field_2", "testChildField2")
+                           .build();
+
+        final JsonNode response2 =
+                webClientCamelCaseQueryAndOriginalParameters.prepare()
+                                                            .get("/v4/messages/1")
+                                                            .queryParams(query2)
+                                                            .asJson(JsonNode.class)
+                                                            .execute()
+                                                            .content();
+        assertThat(response2.get("text").asText()).isEqualTo("1:testQuery:testChildField:testChildField2");
     }
 
     public static JsonNode findMethod(JsonNode methods, String name) {

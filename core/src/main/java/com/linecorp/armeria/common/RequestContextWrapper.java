@@ -222,7 +222,7 @@ public abstract class RequestContextWrapper<T extends RequestContext>
 
     @Override
     public ExchangeType exchangeType() {
-        return delegate().exchangeType();
+        return unwrap().exchangeType();
     }
 
     @Override

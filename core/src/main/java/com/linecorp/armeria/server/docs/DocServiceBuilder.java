@@ -31,6 +31,8 @@ import com.google.common.collect.ListMultimap;
 
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpRequest;
+import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
@@ -59,6 +61,9 @@ public final class DocServiceBuilder {
     private final Map<String, ListMultimap<String, String>> exampleQueries = new HashMap<>();
     private final List<BiFunction<ServiceRequestContext, HttpRequest, String>> injectedScriptSuppliers =
             new ArrayList<>();
+
+    @Nullable
+    private DescriptiveTypeInfoProvider descriptiveTypeInfoProvider;
 
     DocServiceBuilder() {}
 
@@ -448,6 +453,36 @@ public final class DocServiceBuilder {
         return this;
     }
 
+    /**
+     * Adds the specified {@link DescriptiveTypeInfoProvider}s used to create a {@link DescriptiveTypeInfo} from
+     * a type descriptor.
+     */
+    @UnstableApi
+    public DocServiceBuilder descriptiveTypeInfoProvider(
+            Iterable<? extends DescriptiveTypeInfoProvider> descriptiveTypeInfoProviders) {
+        requireNonNull(descriptiveTypeInfoProviders, "descriptiveTypeInfoProviders");
+        for (DescriptiveTypeInfoProvider typeInfoProvider : descriptiveTypeInfoProviders) {
+            descriptiveTypeInfoProvider(typeInfoProvider);
+        }
+        return this;
+    }
+
+    /**
+     * Adds the specified {@link DescriptiveTypeInfoProvider} used to create a {@link DescriptiveTypeInfo} from
+     * a type descriptor.
+     */
+    @UnstableApi
+    public DocServiceBuilder descriptiveTypeInfoProvider(
+            DescriptiveTypeInfoProvider descriptiveTypeInfoProvider) {
+        requireNonNull(descriptiveTypeInfoProvider, "descriptiveTypeInfoProvider");
+        if (this.descriptiveTypeInfoProvider == null) {
+            this.descriptiveTypeInfoProvider = descriptiveTypeInfoProvider;
+        } else {
+            this.descriptiveTypeInfoProvider.orElse(descriptiveTypeInfoProvider);
+        }
+        return this;
+    }
+
     private void putExampleRequest(String serviceName, String methodName, String serializedExampleRequest) {
         exampleRequests.computeIfAbsent(serviceName, unused -> ArrayListMultimap.create())
                        .put(methodName, serializedExampleRequest);
@@ -481,7 +516,7 @@ public final class DocServiceBuilder {
      */
     private static String[] guessAndSerializeExampleRequest(Object exampleRequest) {
         checkArgument(!(exampleRequest instanceof CharSequence),
-                      "can't guess service or method name from a string: ", exampleRequest);
+                      "can't guess service or method name from a string: %s", exampleRequest);
 
         boolean guessed = false;
         for (DocServicePlugin plugin : DocService.plugins) {
@@ -521,6 +556,7 @@ public final class DocServiceBuilder {
      */
     public DocService build() {
         return new DocService(exampleHeaders, exampleRequests, examplePaths, exampleQueries,
-                              injectedScriptSuppliers, unifyFilter(includeFilter, excludeFilter));
+                              injectedScriptSuppliers, unifyFilter(includeFilter, excludeFilter),
+                              descriptiveTypeInfoProvider);
     }
 }

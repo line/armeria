@@ -24,12 +24,16 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.base.MoreObjects.ToStringHelper;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Iterables;
 import com.google.common.collect.Lists;
@@ -64,7 +68,7 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
     private volatile List<Endpoint> endpoints = UNINITIALIZED_ENDPOINTS;
     private final Lock endpointsLock = new ReentrantLock();
 
-    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new EventLoopCheckingFuture<>();
+    private final CompletableFuture<List<Endpoint>> initialEndpointsFuture = new InitialEndpointsFuture();
     private final AsyncCloseableSupport closeable = AsyncCloseableSupport.of(this::closeAsync);
     private final boolean allowEmptyEndpoints;
     private final long selectionTimeoutMillis;
@@ -336,12 +340,36 @@ public class DynamicEndpointGroup extends AbstractEndpointGroup implements Liste
 
     @Override
     public String toString() {
+        return toStringHelper().toString();
+    }
+
+    /**
+     * Returns {@link ToStringHelper} that contains fields information.
+     */
+    protected ToStringHelper toStringHelper() {
         return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
                           .add("selectionStrategy", selectionStrategy.getClass())
                           .add("allowsEmptyEndpoints", allowEmptyEndpoints)
                           .add("endpoints", truncate(endpoints, 10))
                           .add("numEndpoints", endpoints.size())
-                          .add("initialized", initialEndpointsFuture.isDone())
-                          .toString();
+                          .add("initialized", initialEndpointsFuture.isDone());
+    }
+
+    private class InitialEndpointsFuture extends EventLoopCheckingFuture<List<Endpoint>> {
+
+        @Override
+        public List<Endpoint> get(long timeout, TimeUnit unit)
+                throws InterruptedException, ExecutionException, TimeoutException {
+            try {
+                return super.get(timeout, unit);
+            } catch (TimeoutException e) {
+                final TimeoutException timeoutException = new TimeoutException(
+                        InitialEndpointsFuture.class.getSimpleName() + " is timed out after " +
+                        unit.toMillis(timeout) + " milliseconds. endpoint group: " + DynamicEndpointGroup.this);
+                timeoutException.initCause(e);
+                throw timeoutException;
+            }
+        }
     }
 }

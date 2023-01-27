@@ -18,9 +18,16 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Queue;
+import java.util.concurrent.LinkedTransferQueue;
+
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.logging.LoggingClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -35,13 +42,39 @@ import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.netty.buffer.ByteBuf;
+import io.netty.buffer.Unpooled;
+
 class AggregatedHttpResponseHandlerTest {
 
+    static final Queue<ByteBuf> responseBufs = new LinkedTransferQueue<>();
+
     @RegisterExtension
-    static ServerExtension server = new ServerExtension() {
+    static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             sb.decorator(LoggingService.newDecorator());
+
+            sb.service("/hello", new HttpService() {
+                @Override
+                public ExchangeType exchangeType(RoutingContext routingContext) {
+                    return ExchangeType.UNARY;
+                }
+
+                @Override
+                public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
+                    assertThat(req).isInstanceOf(EmptyContentDecodedHttpRequest.class);
+                    // Make sure that the stream was closed already.
+                    assertThat(req.isOpen()).isFalse();
+
+                    // Use a direct buffer body, so we can ensure there's no leak in the test.
+                    final ByteBuf contentBuf =
+                            Unpooled.directBuffer()
+                                    .writeBytes("Hello".getBytes(StandardCharsets.UTF_8));
+                    responseBufs.add(contentBuf);
+                    return HttpResponse.of(ResponseHeaders.of(200), HttpData.wrap(contentBuf));
+                }
+            });
 
             sb.service("/echo", new HttpService() {
                 @Override
@@ -129,6 +162,26 @@ class AggregatedHttpResponseHandlerTest {
             });
         }
     };
+
+    @BeforeAll
+    static void cleanResponseBufs() {
+        responseBufs.clear();
+    }
+
+    @AfterAll
+    static void verifyResponseBufs() {
+        responseBufs.forEach(buf -> {
+            assertThat(buf.refCnt()).isZero();
+        });
+    }
+
+    @Test
+    void shouldReturnEmptyBodyOnHead() throws Exception {
+        final BlockingWebClient client = server.blockingWebClient();
+        final AggregatedHttpResponse res = client.head("/hello");
+        assertThat(res.headers().contentLength()).isEqualTo(5);
+        assertThat(res.contentUtf8()).isEmpty();
+    }
 
     @Test
     void echo() throws InterruptedException {

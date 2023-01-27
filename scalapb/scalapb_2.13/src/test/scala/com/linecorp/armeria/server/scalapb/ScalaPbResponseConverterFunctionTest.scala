@@ -19,10 +19,11 @@ package com.linecorp.armeria.server.scalapb
 import com.linecorp.armeria.common.{MediaType, MediaTypeNames}
 import com.linecorp.armeria.scalapb.testing.messages.SimpleResponse
 import com.linecorp.armeria.server.annotation.Produces
-import java.lang
+
 import java.lang.reflect.Type
 import munit.FunSuite
 import org.reactivestreams.Publisher
+
 import scala.concurrent.Future
 
 class ScalaPbResponseConverterFunctionTest extends FunSuite {
@@ -50,6 +51,20 @@ class ScalaPbResponseConverterFunctionTest extends FunSuite {
       )
     }
   }
+
+  test("shouldn't throw on nested parameterized types") {
+    val provider = new ScalaPbResponseConverterFunctionProvider
+    val converter = new ScalaPbResponseConverterFunction
+    for (method <- classOf[NestedService].getDeclaredMethods) {
+      val fn = provider.createResponseConverterFunction(method.getGenericReturnType, converter)
+      assert(fn == null)
+    }
+  }
+}
+
+final private class NestedService {
+  def nestedList: List[List[SimpleResponse]] = ???
+  def nestedMap: Map[String, List[SimpleResponse]] = ???
 }
 
 final private class ProtobufService {

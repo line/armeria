@@ -39,7 +39,12 @@ class DataClassDocServiceTest {
             .asJson(JsonNode::class.java)
             .execute()
             .content()
-        val fields = jsonNode.get("services")[0]["methods"][0]["parameters"][0]["childFieldInfos"] as ArrayNode
+
+        assertThat(jsonNode.get("services")[0]["methods"][0]["parameters"][0]["typeSignature"].asText())
+            .isEqualTo("com.linecorp.armeria.server.kotlin.ExampleQueries")
+        assertThat(jsonNode.get("structs")[0]["name"].asText())
+            .isEqualTo("com.linecorp.armeria.server.kotlin.ExampleQueries")
+        val fields = jsonNode.get("structs")[0]["fields"] as ArrayNode
         assertThat(fields).hasSize(2)
         assertThat(fields[0]["name"].asText()).isEqualTo("name")
         assertThat(fields[1]["name"].asText()).isEqualTo("limit")

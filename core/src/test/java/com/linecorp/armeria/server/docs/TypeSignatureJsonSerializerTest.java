@@ -36,7 +36,7 @@ public class TypeSignatureJsonSerializerTest {
 
     @Test
     public void named() {
-        assertThat((Object) mapper.valueToTree(TypeSignature.ofNamed(URI.class)))
+        assertThat((Object) mapper.valueToTree(TypeSignature.ofStruct(URI.class)))
                 .isEqualTo(JsonNodeFactory.instance.textNode("java.net.URI"));
     }
 

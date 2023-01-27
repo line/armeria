@@ -2,23 +2,27 @@ configure(projectsWithFlags('kotlin')) {
 
     apply plugin: 'kotlin'
 
-    def target = "1.8"
-    def compilerArgs = ['-java-parameters', '-Xjsr305=strict', '-Xskip-prerelease-check']
-    compileKotlin {
-        kotlinOptions.jvmTarget = target
-        kotlinOptions.freeCompilerArgs = compilerArgs
-    }
-    compileTestKotlin {
-        kotlinOptions.jvmTarget = target
-        kotlinOptions.freeCompilerArgs = compilerArgs
+    // compileJmhKotlin is injected by 'jmh' plugin while a benchmark module is being initialized.
+    afterEvaluate {
+        def target = project.tasks.findByName('compileJava')?.targetCompatibility ?:
+                project.findProperty('javaTargetCompatibility') ?: '1.8'
+        def compilerArgs = ['-java-parameters', '-Xjsr305=strict', '-Xskip-prerelease-check']
+        // A workaround to find all Kotlin compilation tasks.
+        // The standard way, `tasks.withType(KotlinCompile)`, does not work here.
+        tasks.matching {
+            def name = it.name
+            // Expected task names: "compile<Name>Kotlin" or "kaptGenerateStubs<Name>Kotlin"
+            (name.startsWith("compile") || name.startsWith("kaptGenerateStubs")) && name.endsWith("Kotlin")
+        }.each { task ->
+            task.kotlinOptions.jvmTarget = target
+            task.kotlinOptions.freeCompilerArgs = compilerArgs
+        }
     }
 
     if (!rootProject.hasProperty('noLint')) {
         apply plugin: "org.jlleitschuh.gradle.ktlint"
 
         ktlint {
-            // https://github.com/pinterest/ktlint/issues/764
-            version.set("0.36.0")
             verbose.set(true)
             reporters {
                 reporter "html"
@@ -27,7 +31,7 @@ configure(projectsWithFlags('kotlin')) {
             disabledRules = ["import-ordering"]
 
             filter {
-                exclude("**/gen-src/**")
+                exclude { it.file.path.contains("gen-src/") }
             }
         }
 

@@ -1,5 +1,6 @@
 dependencies {
     implementation project(':grpc-protocol')
+    implementation project(':protobuf')
 
     api libs.protobuf.java
     implementation libs.protobuf.java.util
@@ -16,7 +17,9 @@ dependencies {
 
     api libs.protobuf.jackson
 
-    testImplementation libs.gax.grpc
+    testImplementation(libs.gax.grpc) {
+        exclude group: 'com.google.protobuf', module: 'protobuf-java'
+    }
     testImplementation libs.grpc.okhttp
     testImplementation libs.grpc.testing
     testImplementation libs.micrometer.prometheus

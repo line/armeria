@@ -102,6 +102,10 @@ class FramedGrpcServiceTest {
                 .containsExactlyInAnyOrder(
                         Route.builder().exact("/armeria.grpc.testing.TestService/EmptyCall").build(),
                         Route.builder().exact("/armeria.grpc.testing.TestService/UnaryCall").build(),
+                        Route.builder()
+                             .exact(
+                                     "/armeria.grpc.testing.TestService/UnaryCallWithAllDifferentParameterTypes"
+                             ).build(),
                         Route.builder().exact("/armeria.grpc.testing.TestService/UnaryCall2").build(),
                         Route.builder().exact("/armeria.grpc.testing.TestService/StreamingOutputCall").build(),
                         Route.builder().exact("/armeria.grpc.testing.TestService/StreamingInputCall").build(),

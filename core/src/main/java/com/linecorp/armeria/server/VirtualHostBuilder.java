@@ -28,6 +28,7 @@ import static com.linecorp.armeria.server.VirtualHost.HOSTNAME_WITH_NO_PORT_PATT
 import static com.linecorp.armeria.server.VirtualHost.ensureHostnamePatternMatchesDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeDefaultHostname;
 import static com.linecorp.armeria.server.VirtualHost.normalizeHostnamePattern;
+import static io.netty.handler.codec.http2.Http2Headers.PseudoHeaderName.isPseudoHeader;
 import static java.util.Objects.requireNonNull;
 
 import java.io.ByteArrayInputStream;
@@ -43,6 +44,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -56,15 +58,19 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
-import com.google.common.collect.Iterables;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.HostAndPort;
 
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
+import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -81,6 +87,7 @@ import com.linecorp.armeria.server.metric.MetricCollectingService;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
+import io.netty.util.AsciiString;
 import io.netty.util.ReferenceCountUtil;
 
 /**
@@ -94,12 +101,14 @@ import io.netty.util.ReferenceCountUtil;
  * @see ServerBuilder
  * @see Route
  */
-public final class VirtualHostBuilder {
+public final class VirtualHostBuilder implements TlsSetters {
 
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
+    private final boolean portBased;
     private final List<ServiceConfigSetters> serviceConfigSetters = new ArrayList<>();
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
+    private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
 
     @Nullable
     private String defaultHostname;
@@ -149,6 +158,7 @@ public final class VirtualHostBuilder {
     VirtualHostBuilder(ServerBuilder serverBuilder, boolean defaultVirtualHost) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
         this.defaultVirtualHost = defaultVirtualHost;
+        portBased = false;
     }
 
     /**
@@ -160,6 +170,7 @@ public final class VirtualHostBuilder {
     VirtualHostBuilder(ServerBuilder serverBuilder, int port) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
         this.port = port;
+        portBased = true;
         defaultVirtualHost = true;
     }
 
@@ -219,44 +230,24 @@ public final class VirtualHostBuilder {
         return this;
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile}
-     * and cleartext {@code keyFile}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(File keyCertChainFile, File keyFile) {
-        return tls(keyCertChainFile, keyFile, null);
+        return (VirtualHostBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile);
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainFile},
-     * {@code keyFile} and {@code keyPassword}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
         requireNonNull(keyCertChainFile, "keyCertChainFile");
         requireNonNull(keyFile, "keyFile");
         return tls(() -> SslContextBuilder.forServer(keyCertChainFile, keyFile, keyPassword));
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainInputStream} and
-     * cleartext {@code keyInputStream}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream) {
-        return tls(keyCertChainInputStream, keyInputStream, null);
+        return (VirtualHostBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream);
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@code keyCertChainInputStream},
-     * {@code keyInputStream} and {@code keyPassword}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream,
                                   @Nullable String keyPassword) {
         requireNonNull(keyCertChainInputStream, "keyCertChainInputStream");
@@ -277,43 +268,23 @@ public final class VirtualHostBuilder {
                                                      keyPassword));
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified cleartext {@link PrivateKey} and
-     * {@link X509Certificate} chain.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(PrivateKey key, X509Certificate... keyCertChain) {
-        return tls(key, null, keyCertChain);
+        return (VirtualHostBuilder) TlsSetters.super.tls(key, keyCertChain);
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified cleartext {@link PrivateKey} and
-     * {@link X509Certificate} chain.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
-        return tls(key, null, keyCertChain);
+        return (VirtualHostBuilder) TlsSetters.super.tls(key, keyCertChain);
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified cleartext {@link PrivateKey},
-     * {@code keyPassword} and {@link X509Certificate} chain.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(PrivateKey key, @Nullable String keyPassword,
                                   X509Certificate... keyCertChain) {
-        return tls(key, keyPassword, ImmutableList.copyOf(requireNonNull(keyCertChain, "keyCertChain")));
+        return (VirtualHostBuilder) TlsSetters.super.tls(key, keyPassword, keyCertChain);
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified cleartext {@link PrivateKey},
-     * {@code keyPassword} and {@link X509Certificate} chain.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(PrivateKey key, @Nullable String keyPassword,
                                   Iterable<? extends X509Certificate> keyCertChain) {
         requireNonNull(key, "key");
@@ -322,15 +293,10 @@ public final class VirtualHostBuilder {
             requireNonNull(keyCert, "keyCertChain contains null.");
         }
 
-        final X509Certificate[] keyCertChainArray = Iterables.toArray(keyCertChain, X509Certificate.class);
-        return tls(() -> SslContextBuilder.forServer(key, keyPassword, keyCertChainArray));
+        return tls(() -> SslContextBuilder.forServer(key, keyPassword, keyCertChain));
     }
 
-    /**
-     * Configures SSL or TLS of this {@link VirtualHost} with the specified {@link KeyManagerFactory}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public VirtualHostBuilder tls(KeyManagerFactory keyManagerFactory) {
         requireNonNull(keyManagerFactory, "keyManagerFactory");
         return tls(() -> SslContextBuilder.forServer(keyManagerFactory));
@@ -339,6 +305,9 @@ public final class VirtualHostBuilder {
     private VirtualHostBuilder tls(Supplier<SslContextBuilder> sslContextBuilderSupplier) {
         requireNonNull(sslContextBuilderSupplier, "sslContextBuilderSupplier");
         checkState(this.sslContextBuilderSupplier == null, "TLS has been configured already.");
+        checkState(!portBased,
+                   "Cannot configure TLS to a port-based virtual host. Please configure to %s.tls()",
+                   ServerBuilder.class.getSimpleName());
         this.sslContextBuilderSupplier = sslContextBuilderSupplier;
         return this;
     }
@@ -350,8 +319,7 @@ public final class VirtualHostBuilder {
      * @see #tlsCustomizer(Consumer)
      */
     public VirtualHostBuilder tlsSelfSigned() {
-        tlsSelfSigned = true;
-        return this;
+        return tlsSelfSigned(true);
     }
 
     /**
@@ -361,16 +329,18 @@ public final class VirtualHostBuilder {
      * @see #tlsCustomizer(Consumer)
      */
     public VirtualHostBuilder tlsSelfSigned(boolean tlsSelfSigned) {
+        checkState(!portBased, "Cannot configure self-signed to a port-based virtual host." +
+                               " Please configure to %s.tlsSelfSigned()", ServerBuilder.class.getSimpleName());
         this.tlsSelfSigned = tlsSelfSigned;
         return this;
     }
 
-    /**
-     * Adds the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
-     * applied to the SSL session.
-     */
+    @Override
     public VirtualHostBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         requireNonNull(tlsCustomizer, "tlsCustomizer");
+        checkState(!portBased,
+                   "Cannot configure TLS to a port-based virtual host. Please configure to %s.tlsCustomizer()",
+                   ServerBuilder.class.getSimpleName());
         tlsCustomizers.add(tlsCustomizer);
         return this;
     }
@@ -858,6 +828,100 @@ public final class VirtualHostBuilder {
     }
 
     /**
+     * Adds the default HTTP header for an {@link HttpResponse} served by this {@link VirtualHost}.
+     *
+     * <p>Note that the default header could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#addHeader(CharSequence, Object)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#addHeader(CharSequence, Object)}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public VirtualHostBuilder addHeader(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        ensureNoPseudoHeader(name);
+        defaultHeaders.addObject(name, value);
+        return this;
+    }
+
+    /**
+     * Adds the default HTTP headers for an {@link HttpResponse} served by this {@link VirtualHost}.
+     *
+     * <p>Note that the default headers could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#addHeaders(Iterable)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#addHeaders(Iterable)}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public VirtualHostBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        requireNonNull(defaultHeaders, "headers");
+        ensureNoPseudoHeader(defaultHeaders);
+        this.defaultHeaders.addObject(defaultHeaders);
+        return this;
+    }
+
+    /**
+     * Sets the default HTTP header for an {@link HttpResponse} served by this {@link VirtualHost}.
+     *
+     * <p>Note that the default header could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#setHeader(CharSequence, Object)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#setHeader(CharSequence, Object)}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public VirtualHostBuilder setHeader(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        ensureNoPseudoHeader(name);
+        defaultHeaders.setObject(name, value);
+        return this;
+    }
+
+    /**
+     * Sets the default HTTP headers for an {@link HttpResponse} served by this {@link VirtualHost}.
+     *
+     * <p>Note that the default headers could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#setHeaders(Iterable)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#setHeaders(Iterable)}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public VirtualHostBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        requireNonNull(defaultHeaders, "headers");
+        ensureNoPseudoHeader(defaultHeaders);
+        this.defaultHeaders.setObject(defaultHeaders);
+        return this;
+    }
+
+    static void ensureNoPseudoHeader(CharSequence name) {
+        checkArgument(!isPseudoHeader(name), "Can't set a pseudo-header: %s", name);
+    }
+
+    static void ensureNoPseudoHeader(Iterable<? extends Entry<? extends CharSequence, ?>> headers) {
+        for (Entry<? extends CharSequence, ?> header : headers) {
+            ensureNoPseudoHeader(header.getKey());
+        }
+    }
+
+    /**
      * Sets the timeout of a request. If not set, the value set via
      * {@link ServerBuilder#requestTimeoutMillis(long)} is used.
      *
@@ -1081,6 +1145,10 @@ public final class VirtualHostBuilder {
                 this.multipartUploadsLocation != null ?
                 this.multipartUploadsLocation : template.multipartUploadsLocation;
 
+        final HttpHeaders defaultHeaders =
+                mergeDefaultHeaders(template.defaultHeaders, this.defaultHeaders.build());
+
+        assert defaultServiceNaming != null;
         assert rejectedRouteHandler != null;
         assert accessLoggerMapper != null;
         assert extensions != null;
@@ -1107,15 +1175,55 @@ public final class VirtualHostBuilder {
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, blockingTaskExecutor,
-                                            successFunction, multipartUploadsLocation);
+                                            successFunction, multipartUploadsLocation, defaultHeaders);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
-                               multipartUploadsLocation);
+                               multipartUploadsLocation, defaultHeaders);
 
+        final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
+        builder.addAll(shutdownSupports);
+        builder.addAll(template.shutdownSupports);
+
+        final VirtualHost virtualHost =
+                new VirtualHost(defaultHostname, hostnamePattern, port, sslContext(template),
+                                serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
+                                accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
+                                maxRequestLength, verboseResponses, accessLogWriter,
+                                blockingTaskExecutor, builder.build());
+
+        final Function<? super HttpService, ? extends HttpService> decorator =
+                getRouteDecoratingService(template);
+        return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
+    }
+
+    static HttpHeaders mergeDefaultHeaders(HttpHeadersBuilder lowPriorityHeaders,
+                                           HttpHeaders highPriorityHeaders) {
+        if (lowPriorityHeaders.isEmpty()) {
+            return highPriorityHeaders;
+        }
+
+        if (highPriorityHeaders.isEmpty()) {
+            return lowPriorityHeaders.build();
+        }
+
+        final HttpHeadersBuilder headersBuilder = highPriorityHeaders.toBuilder();
+        for (final AsciiString name : lowPriorityHeaders.names()) {
+            if (!headersBuilder.contains(name)) {
+                headersBuilder.add(name, lowPriorityHeaders.getAll(name));
+            }
+        }
+        return headersBuilder.build();
+    }
+
+    @Nullable
+    private SslContext sslContext(VirtualHostBuilder template) {
+        if (portBased) {
+            return null;
+        }
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;
         try {
@@ -1176,29 +1284,13 @@ public final class VirtualHostBuilder {
                 validateSslContext(sslContext);
                 checkState(sslContext.isServer(), "sslContextBuilder built a client SSL context.");
             }
-
-            final Builder<ShutdownSupport> builder = ImmutableList.builder();
-            builder.addAll(shutdownSupports);
-            builder.addAll(template.shutdownSupports);
-
-            final VirtualHost virtualHost =
-                    new VirtualHost(defaultHostname, hostnamePattern, port, sslContext,
-                                    serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
-                                    accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
-                                    maxRequestLength, verboseResponses, accessLogWriter,
-                                    blockingTaskExecutor, builder.build());
-
-            final Function<? super HttpService, ? extends HttpService> decorator =
-                    getRouteDecoratingService(template);
-            final VirtualHost decoratedVirtualHost = decorator != null ? virtualHost.decorate(decorator)
-                                                                       : virtualHost;
             releaseSslContextOnFailure = false;
-            return decoratedVirtualHost;
         } finally {
             if (releaseSslContextOnFailure) {
                 ReferenceCountUtil.release(sslContext);
             }
         }
+        return sslContext;
     }
 
     private SelfSignedCertificate selfSignedCertificate() throws CertificateException {

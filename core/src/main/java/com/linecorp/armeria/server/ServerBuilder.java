@@ -44,6 +44,7 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
@@ -67,11 +68,15 @@ import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.Http1HeaderNaming;
+import com.linecorp.armeria.common.HttpHeaderNames;
+import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.SuccessFunction;
+import com.linecorp.armeria.common.TlsSetters;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestOnlyLog;
@@ -89,7 +94,6 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.ChannelOption;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
@@ -148,7 +152,7 @@ import it.unimi.dsi.fastutil.objects.Object2ObjectArrayMap;
  *
  * @see VirtualHostBuilder
  */
-public final class ServerBuilder {
+public final class ServerBuilder implements TlsSetters {
     private static final Logger logger = LoggerFactory.getLogger(ServerBuilder.class);
 
     // Defaults to no graceful shutdown.
@@ -194,7 +198,7 @@ public final class ServerBuilder {
     private int proxyProtocolMaxTlvSize = PROXY_PROTOCOL_DEFAULT_MAX_TLV_SIZE;
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
-    private MeterRegistry meterRegistry = Metrics.globalRegistry;
+    private MeterRegistry meterRegistry = Flags.meterRegistry();
     private ServerErrorHandler errorHandler = ServerErrorHandler.ofDefault();
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
@@ -898,102 +902,53 @@ public final class ServerBuilder {
         return this;
     }
 
-    /**
-     * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile}
-     * and cleartext {@code keyFile}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public ServerBuilder tls(File keyCertChainFile, File keyFile) {
-        virtualHostTemplate.tls(keyCertChainFile, keyFile);
-        return this;
+        return (ServerBuilder) TlsSetters.super.tls(keyCertChainFile, keyFile);
     }
 
-    /**
-     * Configures SSL or TLS of the {@link Server} from the specified {@code keyCertChainFile},
-     * {@code keyFile} and {@code keyPassword}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public ServerBuilder tls(
             File keyCertChainFile, File keyFile, @Nullable String keyPassword) {
         virtualHostTemplate.tls(keyCertChainFile, keyFile, keyPassword);
         return this;
     }
 
-    /**
-     * Configures SSL or TLS of this {@link Server} with the specified {@code keyCertChainInputStream} and
-     * cleartext {@code keyInputStream}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public ServerBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream) {
-        virtualHostTemplate.tls(keyCertChainInputStream, keyInputStream);
-        return this;
+        return (ServerBuilder) TlsSetters.super.tls(keyCertChainInputStream, keyInputStream);
     }
 
-    /**
-     * Configures SSL or TLS of this {@link Server} with the specified {@code keyCertChainInputStream},
-     * {@code keyInputStream} and {@code keyPassword}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public ServerBuilder tls(InputStream keyCertChainInputStream, InputStream keyInputStream,
                              @Nullable String keyPassword) {
         virtualHostTemplate.tls(keyCertChainInputStream, keyInputStream, keyPassword);
         return this;
     }
 
-    /**
-     * Configures SSL or TLS of this {@link Server} with the specified cleartext {@link PrivateKey} and
-     * {@link X509Certificate} chain.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public ServerBuilder tls(PrivateKey key, X509Certificate... keyCertChain) {
-        virtualHostTemplate.tls(key, keyCertChain);
-        return this;
+        return (ServerBuilder) TlsSetters.super.tls(key, keyCertChain);
     }
 
-    /**
-     * Configures SSL or TLS of this {@link Server} with the specified cleartext {@link PrivateKey} and
-     * {@link X509Certificate} chain.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public ServerBuilder tls(PrivateKey key, Iterable<? extends X509Certificate> keyCertChain) {
-        virtualHostTemplate.tls(key, keyCertChain);
-        return this;
+        return (ServerBuilder) TlsSetters.super.tls(key, keyCertChain);
     }
 
-    /**
-     * Configures SSL or TLS of this {@link Server} with the specified {@link PrivateKey}, {@code keyPassword}
-     * and {@link X509Certificate} chain.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public ServerBuilder tls(PrivateKey key, @Nullable String keyPassword, X509Certificate... keyCertChain) {
-        virtualHostTemplate.tls(key, keyPassword, keyCertChain);
-        return this;
+        return (ServerBuilder) TlsSetters.super.tls(key, keyPassword, keyCertChain);
     }
 
-    /**
-     * Configures SSL or TLS of this {@link Server} with the specified {@link PrivateKey}, {@code keyPassword}
-     * and {@link X509Certificate} chain.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public ServerBuilder tls(PrivateKey key, @Nullable String keyPassword,
                              Iterable<? extends X509Certificate> keyCertChain) {
         virtualHostTemplate.tls(key, keyPassword, keyCertChain);
         return this;
     }
 
-    /**
-     * Configures SSL or TLS of this {@link Server} with the specified {@link KeyManagerFactory}.
-     *
-     * @see #tlsCustomizer(Consumer)
-     */
+    @Override
     public ServerBuilder tls(KeyManagerFactory keyManagerFactory) {
         virtualHostTemplate.tls(keyManagerFactory);
         return this;
@@ -1021,10 +976,7 @@ public final class ServerBuilder {
         return this;
     }
 
-    /**
-     * Adds the {@link Consumer} which can arbitrarily configure the {@link SslContextBuilder} that will be
-     * applied to the SSL session.
-     */
+    @Override
     public ServerBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         virtualHostTemplate.tlsCustomizer(tlsCustomizer);
         return this;
@@ -1440,6 +1392,9 @@ public final class ServerBuilder {
      * with the specified {@code port}. The returned virtual host will have a catch-all (wildcard host) name
      * pattern that allows all host names.
      *
+     * <p>Note that you cannot configure TLS to the port-based virtual host. Configure it to the
+     * {@link ServerBuilder} or a {@linkplain #virtualHost(String) name-based virtual host}.
+     *
      * @param port the port number that this virtual host binds to
      * @return {@link VirtualHostBuilder} for building the virtual host
      */
@@ -1671,6 +1626,84 @@ public final class ServerBuilder {
      */
     public ServerBuilder disableDateHeader() {
         enableDateHeader = false;
+        return this;
+    }
+
+    /**
+     * Adds the default HTTP header for an {@link HttpResponse} served by the default {@link VirtualHost}.
+     *
+     * <p>Note that the default header could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostBuilder#addHeader(CharSequence, Object)}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#addHeader(CharSequence, Object)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#addHeader(CharSequence, Object)}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public ServerBuilder addHeader(CharSequence name, Object value) {
+        virtualHostTemplate.addHeader(name, value);
+        return this;
+    }
+
+    /**
+     * Adds the default HTTP headers for an {@link HttpResponse} served by the default {@link VirtualHost}.
+     *
+     * <p>Note that the default headers could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostBuilder#addHeaders(Iterable)}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#addHeaders(Iterable)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#addHeaders(Iterable)}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public ServerBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        virtualHostTemplate.addHeaders(defaultHeaders);
+        return this;
+    }
+
+    /**
+     * Adds the default HTTP header for an {@link HttpResponse} served by the default {@link VirtualHost}.
+     *
+     * <p>Note that the default header could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostBuilder#setHeader(CharSequence, Object)}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#setHeader(CharSequence, Object)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#setHeader(CharSequence, Object)}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public ServerBuilder setHeader(CharSequence name, Object value) {
+        virtualHostTemplate.setHeader(name, value);
+        return this;
+    }
+
+    /**
+     * Sets the default HTTP headers for an {@link HttpResponse} served by the default {@link VirtualHost}.
+     *
+     * <p>Note that the default headers could be overridden if the same {@link HttpHeaderNames} are defined in
+     * one of the followings:
+     * <ul>
+     *   <li>{@link ServiceRequestContext#additionalResponseHeaders()}</li>
+     *   <li>The {@link ResponseHeaders} of the {@link HttpResponse}</li>
+     *   <li>{@link VirtualHostBuilder#setHeaders(Iterable)}</li>
+     *   <li>{@link VirtualHostServiceBindingBuilder#setHeaders(Iterable)} or
+     *       {@link VirtualHostAnnotatedServiceBindingBuilder#setHeaders(Iterable)}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public ServerBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        virtualHostTemplate.setHeaders(defaultHeaders);
         return this;
     }
 

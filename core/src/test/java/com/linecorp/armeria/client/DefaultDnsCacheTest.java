@@ -24,6 +24,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 import org.hamcrest.Matchers;
@@ -33,12 +34,14 @@ import org.junit.jupiter.api.Test;
 import com.google.common.base.Stopwatch;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.dns.ByteArrayDnsRecord;
 import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
 import io.netty.handler.codec.dns.DefaultDnsRawRecord;
+import io.netty.handler.codec.dns.DnsQuestion;
 import io.netty.handler.codec.dns.DnsRawRecord;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.handler.codec.dns.DnsRecordType;
@@ -77,10 +80,18 @@ class DefaultDnsCacheTest {
         dnsCache.cache(query, records);
         assertThat(dnsCache.get(query)).isEqualTo(records);
         final AtomicReference<List<DnsRecord>> removed = new AtomicReference<>();
-        dnsCache.addListener((key, result, cause) -> {
-            assertThat(key).isEqualTo(query);
-            assertThat(cause).isNull();
-            removed.set(result);
+        dnsCache.addListener(new DnsCacheListener() {
+            @Override
+            public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                  @Nullable UnknownHostException cause) {
+                assertThat(question).isEqualTo(query);
+                assertThat(cause).isNull();
+                removed.set(records);
+            }
+
+            @Override
+            public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                   @Nullable UnknownHostException cause) {}
         });
 
         await().untilAtomic(removed, Matchers.is(records));
@@ -92,10 +103,19 @@ class DefaultDnsCacheTest {
         dnsCache.cache(query, records);
         assertThat(dnsCache.get(query)).isEqualTo(records);
         removed.set(null);
-        dnsCache.addListener((key, result, cause) -> {
-            assertThat(key.name()).isEqualTo("foo.com.");
-            assertThat(cause).isNull();
-            removed.set(result);
+        dnsCache.addListener(new DnsCacheListener() {
+            @Override
+            public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                  @Nullable UnknownHostException cause) {
+                assertThat(question.name()).isEqualTo("foo.com.");
+                assertThat(cause).isNull();
+                removed.set(records);
+            }
+
+            @Override
+            public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                   @Nullable UnknownHostException cause) {
+            }
         });
         await().untilAtomic(removed, Matchers.is(records));
         assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS)).isBetween(1000L, 4000L);
@@ -113,10 +133,19 @@ class DefaultDnsCacheTest {
         dnsCache.cache(query, records);
         assertThat(dnsCache.get(query)).isEqualTo(records);
         final AtomicReference<List<DnsRecord>> removed = new AtomicReference<>();
-        dnsCache.addListener((key, result, cause) -> {
-            assertThat(key).isEqualTo(query);
-            assertThat(cause).isNull();
-            removed.set(result);
+        dnsCache.addListener(new DnsCacheListener() {
+            @Override
+            public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                  @Nullable UnknownHostException cause) {
+                assertThat(question).isEqualTo(query);
+                assertThat(cause).isNull();
+                removed.set(records);
+            }
+
+            @Override
+            public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                   @Nullable UnknownHostException cause) {
+            }
         });
 
         await().untilAtomic(removed, Matchers.is(records));
@@ -133,10 +162,19 @@ class DefaultDnsCacheTest {
         dnsCache.cache(query, unknownHostException);
         assertThatThrownBy(() -> dnsCache.get(query)).isSameAs(unknownHostException);
         final AtomicReference<UnknownHostException> removed = new AtomicReference<>();
-        dnsCache.addListener((key, result, cause) -> {
-            assertThat(key.name()).isEqualTo("foo.com.");
-            assertThat(result).isNull();
-            removed.set(cause);
+        dnsCache.addListener(new DnsCacheListener() {
+            @Override
+            public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                  @Nullable UnknownHostException cause) {
+                assertThat(question.name()).isEqualTo("foo.com.");
+                assertThat(records).isNull();
+                removed.set(cause);
+            }
+
+            @Override
+            public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                   @Nullable UnknownHostException cause) {
+            }
         });
         await().untilAtomic(removed, Matchers.is(unknownHostException));
         assertThat(stopwatch.elapsed(TimeUnit.MILLISECONDS)).isBetween(2000L, 4000L);
@@ -152,10 +190,19 @@ class DefaultDnsCacheTest {
         dnsCache.cache(query, records);
         assertThat(dnsCache.get(query)).isEqualTo(records);
         final AtomicReference<List<DnsRecord>> removed = new AtomicReference<>();
-        dnsCache.addListener((key, result, cause) -> {
-            assertThat(key).isEqualTo(query);
-            assertThat(cause).isNull();
-            removed.set(result);
+        dnsCache.addListener(new DnsCacheListener() {
+            @Override
+            public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                  @Nullable UnknownHostException cause) {
+                assertThat(question).isEqualTo(query);
+                assertThat(cause).isNull();
+                removed.set(records);
+            }
+
+            @Override
+            public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                   @Nullable UnknownHostException cause) {
+            }
         });
         dnsCache.remove(query);
         await().untilAsserted(() -> {
@@ -208,5 +255,42 @@ class DefaultDnsCacheTest {
 
         dnsCache.remove(query);
         assertThat(dnsCache.get(query)).isNull();
+    }
+
+    @Test
+    void eviction() throws Exception {
+        final DnsCache dnsCache = DnsCache.builder()
+                                          .cacheSpec("maximumSize=1")
+                                          .build();
+
+        final DnsQuestionWithoutTrailingDot query0 =
+                DnsQuestionWithoutTrailingDot.of("foo.com.", DnsRecordType.A);
+        final DnsRecord record0 = newRecord("foo.com.", "1.1.1.0", 20);
+
+        final DnsQuestionWithoutTrailingDot query1 =
+                DnsQuestionWithoutTrailingDot.of("bar.com.", DnsRecordType.A);
+        final DnsRecord record1 = newRecord("bar.com.", "1.1.1.1", 40);
+        final AtomicBoolean removed = new AtomicBoolean();
+        final AtomicBoolean evicted = new AtomicBoolean();
+        dnsCache.addListener(new DnsCacheListener() {
+            @Override
+            public void onRemoval(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                  @Nullable UnknownHostException cause) {
+                removed.set(true);
+            }
+
+            @Override
+            public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                                   @Nullable UnknownHostException cause) {
+                assertThat(question).isEqualTo(query0);
+                evicted.set(true);
+            }
+        });
+
+        dnsCache.cache(query0, ImmutableList.of(record0));
+        // Exceeds the maximum size. The old cache, query0, should be removed.
+        dnsCache.cache(query1, ImmutableList.of(record1));
+        await().untilTrue(evicted);
+        assertThat(removed).isFalse();
     }
 }

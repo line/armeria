@@ -39,9 +39,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.locks.ReentrantLock;
 
+import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Strings;
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
@@ -57,24 +61,33 @@ import com.linecorp.armeria.common.annotation.Nullable;
  *
  * <p>If you invoke {@link #getCause()}, it will lazily create the causal chain but will stop if it finds any
  * Throwable in the chain that it has already seen.
+ *
+ * <p>If the inner exception is sampled by {@link Flags#verboseExceptionSampler()},
+ * full stack traces are captured. Otherwise, only {@value DEFAULT_MAX_NUM_STACK_TRACES}
+ * stack frames are preserved by default.
  */
 public final class CompositeException extends RuntimeException {
 
     // Forked from RxJava 3.0.0 at e793bc1d1a29dca18be795cf4a7628e2d44a4234
 
     private static final long serialVersionUID = 3026362227162912146L;
+    @VisibleForTesting
+    static final int DEFAULT_MAX_NUM_STACK_TRACES = 20;
 
     private final List<Throwable> exceptions;
     private final String message;
+    private boolean isVerboseException;
 
     @Nullable
     private Throwable cause;
 
+    private final ReentrantLock reentrantLock = new ReentrantLock();
+
     /**
      * Constructs a CompositeException with the given array of Throwables as the
      * list of suppressed exceptions.
-     * @param exceptions the Throwables to have as initially suppressed exceptions
      *
+     * @param exceptions the Throwables to have as initially suppressed exceptions
      * @throws IllegalArgumentException if {@code exceptions} is empty.
      */
     public CompositeException(Throwable... exceptions) {
@@ -84,13 +97,21 @@ public final class CompositeException extends RuntimeException {
     /**
      * Constructs a CompositeException with the given array of Throwables as the
      * list of suppressed exceptions.
-     * @param errors the Throwables to have as initially suppressed exceptions
      *
+     * @param errors the Throwables to have as initially suppressed exceptions
      * @throws IllegalArgumentException if {@code errors} is empty.
      */
     public CompositeException(Iterable<? extends Throwable> errors) {
+        this(errors, Flags.verboseExceptionSampler());
+    }
+
+    @VisibleForTesting
+    CompositeException(Iterable<? extends Throwable> errors,
+                       Sampler<Class<? extends Throwable>> verboseExceptionSampler) {
         requireNonNull(errors, "errors");
+        requireNonNull(verboseExceptionSampler, "verboseExceptionSampler");
         final Set<Throwable> deDupedExceptions = new LinkedHashSet<>();
+
         for (Throwable ex : errors) {
             if (ex instanceof CompositeException) {
                 deDupedExceptions.addAll(((CompositeException) ex).getExceptions());
@@ -105,6 +126,7 @@ public final class CompositeException extends RuntimeException {
         }
         exceptions = ImmutableList.copyOf(deDupedExceptions);
         message = exceptions.size() + " exceptions occurred. ";
+        isVerboseException = verboseExceptionSampler.isSampled(getClass());
     }
 
     /**
@@ -123,74 +145,79 @@ public final class CompositeException extends RuntimeException {
     }
 
     @Override
-    public synchronized Throwable getCause() { // NOPMD
-        if (cause == null) {
-            final String separator = System.getProperty("line.separator");
-            if (exceptions.size() > 1) {
-                final Map<Throwable, Boolean> seenCauses = new IdentityHashMap<>();
+    public Throwable getCause() { // NOPMD
+        lock();
+        try {
+            if (cause == null) {
+                final String separator = System.getProperty("line.separator");
+                if (exceptions.size() > 1) {
+                    final Map<Throwable, Boolean> seenCauses = new IdentityHashMap<>();
 
-                final StringBuilder aggregateMessage = new StringBuilder();
-                aggregateMessage.append("Multiple exceptions (").append(exceptions.size()).append(')').append(
-                        separator);
+                    final StringBuilder aggregateMessage = new StringBuilder();
+                    aggregateMessage.append("Multiple exceptions (").append(exceptions.size())
+                                    .append(')').append(separator);
 
-                for (Throwable inner : exceptions) {
-                    int depth = 0;
-                    while (inner != null) {
-                        for (int i = 0; i < depth; i++) {
-                            aggregateMessage.append("  ");
-                        }
-                        aggregateMessage.append("|-- ");
-                        aggregateMessage.append(inner.getClass().getCanonicalName()).append(": ");
-                        final String innerMessage = inner.getMessage();
-                        if (innerMessage != null && innerMessage.contains(separator)) {
-                            aggregateMessage.append(separator);
-                            for (String line : innerMessage.split(separator)) {
-                                for (int i = 0; i < depth + 2; i++) {
-                                    aggregateMessage.append("  ");
-                                }
-                                aggregateMessage.append(line).append(separator);
+                    for (Throwable inner : exceptions) {
+                        int depth = 0;
+                        while (inner != null) {
+                            final Class<? extends Throwable> innerClass = inner.getClass();
+                            for (int i = 0; i < depth; i++) {
+                                aggregateMessage.append("  ");
                             }
-                        } else {
-                            aggregateMessage.append(innerMessage);
-                            aggregateMessage.append(separator);
-                        }
-
-                        for (int i = 0; i < depth + 2; i++) {
-                            aggregateMessage.append("  ");
-                        }
-                        final StackTraceElement[] st = inner.getStackTrace();
-                        if (st.length > 0) {
-                            aggregateMessage.append("at ").append(st[0]).append(separator);
-                        }
-
-                        if (!seenCauses.containsKey(inner)) {
-                            seenCauses.put(inner, true);
-
-                            inner = inner.getCause();
-                            depth++;
-                        } else {
-                            inner = inner.getCause();
-                            if (inner != null) {
-                                for (int i = 0; i < depth + 2; i++) {
-                                    aggregateMessage.append("  ");
+                            aggregateMessage.append("|-- ");
+                            aggregateMessage.append(innerClass.getCanonicalName()).append(": ");
+                            final String innerMessage = inner.getMessage();
+                            final String messagePadding = Strings.repeat("  ", depth + 2);
+                            if (innerMessage != null && innerMessage.contains(separator)) {
+                                aggregateMessage.append(separator);
+                                for (String line : innerMessage.split(separator)) {
+                                    aggregateMessage.append(messagePadding).append(line).append(separator);
                                 }
-                                aggregateMessage.append("|-- ");
-                                aggregateMessage.append("(cause not expanded again) ");
-                                aggregateMessage.append(inner.getClass().getCanonicalName()).append(": ");
-                                aggregateMessage.append(inner.getMessage());
+                            } else {
+                                aggregateMessage.append(innerMessage);
                                 aggregateMessage.append(separator);
                             }
-                            break;
+
+                            final StackTraceElement[] st = inner.getStackTrace();
+                            if (st.length > 0) {
+                                final int maxStackTraceSize =
+                                        isVerboseException ? st.length
+                                                           : Math.min(DEFAULT_MAX_NUM_STACK_TRACES, st.length);
+                                for (int i = 0; i < maxStackTraceSize; i++) {
+                                    aggregateMessage.append(messagePadding).append("at ")
+                                                    .append(st[i]).append(separator);
+                                }
+                            }
+
+                            if (!seenCauses.containsKey(inner)) {
+                                seenCauses.put(inner, true);
+
+                                inner = inner.getCause();
+                                depth++;
+                            } else {
+                                inner = inner.getCause();
+                                if (inner != null) {
+                                    aggregateMessage.append(messagePadding);
+                                    aggregateMessage.append("|-- ");
+                                    aggregateMessage.append("(cause not expanded again) ");
+                                    aggregateMessage.append(inner.getClass().getCanonicalName()).append(": ");
+                                    aggregateMessage.append(inner.getMessage());
+                                    aggregateMessage.append(separator);
+                                }
+                                break;
+                            }
                         }
                     }
-                }
 
-                cause = new ExceptionOverview(aggregateMessage.toString().trim());
-            } else {
-                cause = exceptions.get(0);
+                    cause = new ExceptionOverview(aggregateMessage.toString().trim());
+                } else {
+                    cause = exceptions.get(0);
+                }
             }
+            return cause;
+        } finally {
+            unlock();
         }
-        return cause;
     }
 
     /**
@@ -251,7 +278,9 @@ public final class CompositeException extends RuntimeException {
     }
 
     abstract static class PrintStreamOrWriter {
-        /** Prints the specified string as a line on this StreamOrWriter. */
+        /**
+         * Prints the specified string as a line on this StreamOrWriter.
+         */
         abstract void println(Object o);
     }
 
@@ -298,16 +327,25 @@ public final class CompositeException extends RuntimeException {
         }
 
         @Override
-        public synchronized Throwable fillInStackTrace() {
+        public Throwable fillInStackTrace() {
             return this;
         }
     }
 
     /**
      * Returns the number of suppressed exceptions.
+     *
      * @return the number of suppressed exceptions
      */
     public int size() {
         return exceptions.size();
+    }
+
+    void lock() {
+        reentrantLock.lock();
+    }
+
+    void unlock() {
+        reentrantLock.unlock();
     }
 }

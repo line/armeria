@@ -64,6 +64,11 @@ class GrpcDecoratingServiceTest {
         protected void configure(ServerBuilder sb) {
             sb.requestTimeoutMillis(5000);
             sb.decorator(LoggingService.newDecorator());
+            sb.decorator((delegate, ctx, req) -> {
+                // We can aggregate request if it's not a streaming request.
+                req.aggregate();
+                return delegate.serve(ctx, req);
+            });
             sb.service(GrpcService.builder()
                                   .addService(new TestServiceImpl())
                                   .addService(new MetricsServiceImpl())

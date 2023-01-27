@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableMap.toImmutableMap;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.findName;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getName;
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedElementNameUtil.getNameOrDefault;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory.findDescription;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedServiceTypeUtil.stringToType;
 import static com.linecorp.armeria.internal.server.annotation.DefaultValues.getSpecifiedValue;
@@ -80,6 +81,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.multipart.Multipart;
 import com.linecorp.armeria.common.multipart.MultipartFile;
 import com.linecorp.armeria.common.util.Exceptions;
+import com.linecorp.armeria.internal.server.FileAggregatedMultipart;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistry.BeanFactoryId;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.ByteArrayRequestConverterFunction;
@@ -461,12 +463,13 @@ final class AnnotatedValueResolver {
             return ofHeader(name, annotatedElement, typeElement, type, description);
         }
 
+        final String name = getNameOrDefault(typeElement, type.getName());
         final RequestObject requestObject = annotatedElement.getAnnotation(RequestObject.class);
         if (requestObject != null) {
             // Find more request converters from a field or parameter.
             final List<RequestConverter> converters =
                     AnnotationUtil.findDeclared(typeElement, RequestConverter.class);
-            return ofRequestObject(annotatedElement, type, pathParams,
+            return ofRequestObject(name, annotatedElement, type, pathParams,
                                    addToFirstIfExists(objectResolvers, converters, dependencyInjector),
                                    dependencyInjector, description);
         }
@@ -478,7 +481,7 @@ final class AnnotatedValueResolver {
         //
         // void method1(@Default("a") ServiceRequestContext ctx) { ... }
         //
-        final AnnotatedValueResolver resolver = ofInjectableTypes(typeElement, type, useBlockingExecutor);
+        final AnnotatedValueResolver resolver = ofInjectableTypes(name, typeElement, type, useBlockingExecutor);
         if (resolver != null) {
             return resolver;
         }
@@ -487,13 +490,13 @@ final class AnnotatedValueResolver {
                 AnnotationUtil.findDeclared(typeElement, RequestConverter.class);
         if (!converters.isEmpty()) {
             // Apply @RequestObject implicitly when a @RequestConverter is specified.
-            return ofRequestObject(annotatedElement, type, pathParams,
+            return ofRequestObject(name, annotatedElement, type, pathParams,
                                    addToFirstIfExists(objectResolvers, converters, dependencyInjector),
                                    dependencyInjector, description);
         }
 
         if (implicitRequestObjectAnnotation) {
-            return ofRequestObject(annotatedElement, type, pathParams, objectResolvers,
+            return ofRequestObject(name, annotatedElement, type, pathParams, objectResolvers,
                                    dependencyInjector, description);
         }
 
@@ -535,10 +538,9 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofPathVariable(String name,
                                                          AnnotatedElement annotatedElement,
                                                          AnnotatedElement typeElement, Class<?> type,
-                                                         @Nullable DescriptionInfo description) {
-        return new Builder(annotatedElement, type)
+                                                         DescriptionInfo description) {
+        return new Builder(annotatedElement, type, name)
                 .annotationType(Param.class)
-                .httpElementName(name)
                 .typeElement(typeElement)
                 .pathVariable(true)
                 .description(description)
@@ -549,7 +551,7 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofQueryParam(String name,
                                                        AnnotatedElement annotatedElement,
                                                        AnnotatedElement typeElement, Class<?> type,
-                                                       @Nullable DescriptionInfo description,
+                                                       DescriptionInfo description,
                                                        @Nullable String serviceQueryDelimiter) {
         String queryDelimiter = serviceQueryDelimiter;
         final Delimiter delimiter = annotatedElement.getAnnotation(Delimiter.class);
@@ -558,9 +560,8 @@ final class AnnotatedValueResolver {
                 queryDelimiter = delimiter.value();
             }
         }
-        return new Builder(annotatedElement, type)
+        return new Builder(annotatedElement, type, name)
                 .annotationType(Param.class)
-                .httpElementName(name)
                 .typeElement(typeElement)
                 .supportDefault(true)
                 .supportContainer(true)
@@ -575,10 +576,9 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofFileParam(String name,
                                                       AnnotatedElement annotatedElement,
                                                       AnnotatedElement typeElement, Class<?> type,
-                                                      @Nullable DescriptionInfo description) {
-        return new Builder(annotatedElement, type)
+                                                      DescriptionInfo description) {
+        return new Builder(annotatedElement, type, name)
                 .annotationType(Param.class)
-                .httpElementName(name)
                 .typeElement(typeElement)
                 .supportContainer(true)
                 .description(description)
@@ -590,10 +590,9 @@ final class AnnotatedValueResolver {
     private static AnnotatedValueResolver ofHeader(String name,
                                                    AnnotatedElement annotatedElement,
                                                    AnnotatedElement typeElement, Class<?> type,
-                                                   @Nullable DescriptionInfo description) {
-        return new Builder(annotatedElement, type)
+                                                   DescriptionInfo description) {
+        return new Builder(annotatedElement, type, name)
                 .annotationType(Header.class)
-                .httpElementName(name)
                 .typeElement(typeElement)
                 .supportDefault(true)
                 .supportContainer(true)
@@ -604,16 +603,16 @@ final class AnnotatedValueResolver {
                 .build();
     }
 
-    private static AnnotatedValueResolver ofRequestObject(AnnotatedElement annotatedElement,
+    private static AnnotatedValueResolver ofRequestObject(String name, AnnotatedElement annotatedElement,
                                                           Class<?> type, Set<String> pathParams,
                                                           List<RequestObjectResolver> objectResolvers,
                                                           DependencyInjector dependencyInjector,
-                                                          @Nullable DescriptionInfo description) {
+                                                          DescriptionInfo description) {
         // To do recursive resolution like a bean inside another bean, the original object resolvers should
         // be passed into the AnnotatedBeanFactoryRegistry#register.
         final BeanFactoryId beanFactoryId = AnnotatedBeanFactoryRegistry.register(
                 type, pathParams, objectResolvers, dependencyInjector);
-        return new Builder(annotatedElement, type)
+        return new Builder(annotatedElement, type, name)
                 .annotationType(RequestObject.class)
                 .description(description)
                 .aggregation(AggregationStrategy.ALWAYS)
@@ -623,18 +622,18 @@ final class AnnotatedValueResolver {
     }
 
     @Nullable
-    private static AnnotatedValueResolver ofInjectableTypes(AnnotatedElement annotatedElement,
+    private static AnnotatedValueResolver ofInjectableTypes(String name, AnnotatedElement annotatedElement,
                                                             Class<?> type, boolean useBlockingExecutor) {
         // Unwrap Optional type to support a parameter like 'Optional<RequestContext> ctx'
         // which is always non-empty.
         if (type != Optional.class) {
-            return ofInjectableTypes0(annotatedElement, type, type, useBlockingExecutor);
+            return ofInjectableTypes0(name, annotatedElement, type, type, useBlockingExecutor);
         }
 
         final Type actual =
                 ((ParameterizedType) parameterizedTypeOf(annotatedElement)).getActualTypeArguments()[0];
         final AnnotatedValueResolver resolver =
-                ofInjectableTypes0(annotatedElement, type, actual, useBlockingExecutor);
+                ofInjectableTypes0(name, annotatedElement, type, actual, useBlockingExecutor);
         if (resolver != null) {
             logger.warn("Unnecessary Optional is used at '{}'", annotatedElement);
         }
@@ -642,49 +641,49 @@ final class AnnotatedValueResolver {
     }
 
     @Nullable
-    private static AnnotatedValueResolver ofInjectableTypes0(AnnotatedElement annotatedElement,
+    private static AnnotatedValueResolver ofInjectableTypes0(String name, AnnotatedElement annotatedElement,
                                                              Class<?> type, Type actual,
                                                              boolean useBlockingExecutor) {
         if (actual == RequestContext.class || actual == ServiceRequestContext.class) {
-            return new Builder(annotatedElement, type)
+            return new Builder(annotatedElement, type, name)
                     .resolver((unused, ctx) -> ctx.context())
                     .build();
         }
 
         if (actual == Request.class || actual == HttpRequest.class) {
-            return new Builder(annotatedElement, type)
+            return new Builder(annotatedElement, type, name)
                     .resolver((unused, ctx) -> ctx.request())
                     .build();
         }
 
         if (actual == HttpHeaders.class || actual == RequestHeaders.class) {
-            return new Builder(annotatedElement, type)
+            return new Builder(annotatedElement, type, name)
                     .resolver((unused, ctx) -> ctx.request().headers())
                     .build();
         }
 
         if (actual == AggregatedHttpRequest.class) {
-            return new Builder(annotatedElement, type)
+            return new Builder(annotatedElement, type, name)
                     .resolver((unused, ctx) -> ctx.aggregatedRequest())
                     .aggregation(AggregationStrategy.ALWAYS)
                     .build();
         }
 
         if (actual == QueryParams.class) {
-            return new Builder(annotatedElement, type)
+            return new Builder(annotatedElement, type, name)
                     .resolver((unused, ctx) -> ctx.queryParams())
                     .aggregation(AggregationStrategy.FOR_FORM_DATA)
                     .build();
         }
 
         if (actual == Multipart.class) {
-            return new Builder(annotatedElement, type)
+            return new Builder(annotatedElement, type, name)
                     .resolver((unused, ctx) -> Multipart.from(ctx.request()))
                     .build();
         }
 
         if (actual == MultipartFile.class) {
-            return new Builder(annotatedElement, type)
+            return new Builder(annotatedElement, type, name)
                     .resolver((unused, ctx) -> {
                         final String filename = getName(annotatedElement);
                         return Iterables.getFirst(ctx.aggregatedMultipart().files().get(filename), null);
@@ -694,7 +693,7 @@ final class AnnotatedValueResolver {
         }
 
         if (actual == Cookies.class) {
-            return new Builder(annotatedElement, type)
+            return new Builder(annotatedElement, type, name)
                     .resolver((unused, ctx) -> {
                         final String value = ctx.request().headers().get(HttpHeaderNames.COOKIE);
                         if (value == null) {
@@ -706,7 +705,7 @@ final class AnnotatedValueResolver {
         }
 
         if (actual instanceof Class && ScalaUtil.isExecutionContext((Class<?>) actual)) {
-            return new Builder(annotatedElement, type)
+            return new Builder(annotatedElement, type, name)
                     .resolver((unused, ctx) -> {
                         if (useBlockingExecutor) {
                             return ExecutionContext.fromExecutorService(ctx.context().blockingTaskExecutor());
@@ -873,10 +872,19 @@ final class AnnotatedValueResolver {
                                            element.getClass().getSimpleName());
     }
 
+    static boolean isAnnotatedNullable(AnnotatedElement annotatedElement) {
+        for (Annotation a : annotatedElement.getAnnotations()) {
+            final String annotationTypeName = a.annotationType().getName();
+            if (annotationTypeName.endsWith(".Nullable")) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Nullable
     private final Class<? extends Annotation> annotationType;
 
-    @Nullable
     private final String httpElementName;
 
     private final boolean isPathVariable;
@@ -892,7 +900,6 @@ final class AnnotatedValueResolver {
     @Nullable
     private final Object defaultValue;
 
-    @Nullable
     private final DescriptionInfo description;
 
     private final BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver;
@@ -906,13 +913,13 @@ final class AnnotatedValueResolver {
     private final AggregationStrategy aggregationStrategy;
 
     private AnnotatedValueResolver(@Nullable Class<? extends Annotation> annotationType,
-                                   @Nullable String httpElementName,
+                                   String httpElementName,
                                    boolean isPathVariable, boolean shouldExist,
                                    boolean shouldWrapValueAsOptional,
                                    @Nullable Class<?> containerType, Class<?> elementType,
                                    @Nullable ParameterizedType parameterizedElementType,
                                    @Nullable String defaultValue,
-                                   @Nullable DescriptionInfo description,
+                                   DescriptionInfo description,
                                    BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver,
                                    @Nullable BeanFactoryId beanFactoryId,
                                    AggregationStrategy aggregationStrategy) {
@@ -923,7 +930,7 @@ final class AnnotatedValueResolver {
         this.shouldWrapValueAsOptional = shouldWrapValueAsOptional;
         this.elementType = requireNonNull(elementType, "elementType");
         this.parameterizedElementType = parameterizedElementType;
-        this.description = description;
+        this.description = requireNonNull(description, "description");
         this.containerType = containerType;
         this.resolver = requireNonNull(resolver, "resolver");
         this.beanFactoryId = beanFactoryId;
@@ -948,10 +955,7 @@ final class AnnotatedValueResolver {
         return annotationType;
     }
 
-    @Nullable
     String httpElementName() {
-        // Currently, this is non-null only if the element is one of the HTTP path variable,
-        // parameter or header.
         return httpElementName;
     }
 
@@ -987,7 +991,6 @@ final class AnnotatedValueResolver {
         return defaultValue;
     }
 
-    @Nullable
     DescriptionInfo description() {
         return description;
     }
@@ -1059,16 +1062,14 @@ final class AnnotatedValueResolver {
     private static final class Builder {
         private final AnnotatedElement annotatedElement;
         private final Type type;
+        private final String httpElementName;
         private AnnotatedElement typeElement;
         @Nullable
         private Class<? extends Annotation> annotationType;
-        @Nullable
-        private String httpElementName;
         private boolean pathVariable;
         private boolean supportContainer;
         private boolean supportDefault;
-        @Nullable
-        private DescriptionInfo description;
+        private DescriptionInfo description = DescriptionInfo.empty();
         @Nullable
         private BiFunction<AnnotatedValueResolver, ResolverContext, Object> resolver;
         @Nullable
@@ -1076,9 +1077,10 @@ final class AnnotatedValueResolver {
         private AggregationStrategy aggregation = AggregationStrategy.NONE;
         private boolean warnedRedundantUse;
 
-        private Builder(AnnotatedElement annotatedElement, Type type) {
+        private Builder(AnnotatedElement annotatedElement, Type type, String name) {
             this.annotatedElement = requireNonNull(annotatedElement, "annotatedElement");
             this.type = requireNonNull(type, "type");
+            httpElementName = requireNonNull(name, "name");
             typeElement = annotatedElement;
         }
 
@@ -1090,14 +1092,6 @@ final class AnnotatedValueResolver {
                    annotationType == Header.class ||
                    annotationType == RequestObject.class : annotationType.getSimpleName();
             this.annotationType = annotationType;
-            return this;
-        }
-
-        /**
-         * Sets a name of the element.
-         */
-        private Builder httpElementName(String httpElementName) {
-            this.httpElementName = httpElementName;
             return this;
         }
 
@@ -1136,7 +1130,7 @@ final class AnnotatedValueResolver {
         /**
          * Sets the description of the {@link AnnotatedElement}.
          */
-        private Builder description(@Nullable DescriptionInfo description) {
+        private Builder description(DescriptionInfo description) {
             this.description = description;
             return this;
         }
@@ -1352,16 +1346,6 @@ final class AnnotatedValueResolver {
                         "Unsupported or invalid parameter type: " + parameterizedType, cause);
             }
             return toRawType(elementType);
-        }
-
-        private static boolean isAnnotatedNullable(AnnotatedElement annotatedElement) {
-            for (Annotation a : annotatedElement.getAnnotations()) {
-                final String annotationTypeName = a.annotationType().getName();
-                if (annotationTypeName.endsWith(".Nullable")) {
-                    return true;
-                }
-            }
-            return false;
         }
 
         @Nullable

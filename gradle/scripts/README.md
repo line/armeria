@@ -32,6 +32,7 @@ sensible defaults. By applying them, you can:
 - [Building shaded JARs with `shade` flag](#building-shaded-jars-with-shade-flag)
     - [Trimming a shaded JAR with `trim` flag](#trimming-a-shaded-jar-with-trim-flag)
     - [Shading a multi-module project with `relocate` flag](#shading-a-multi-module-project-with-relocate-flag)
+- [Setting a target version with the `java(\\d+)` flag](#setting-a-target-version-with-the-javad-flag)
 - [Tagging conveniently with `release` task](#tagging-conveniently-with-release-task)
 
 <!-- /MarkdownTOC -->
@@ -112,6 +113,7 @@ sensible defaults. By applying them, you can:
    publishUrlForSnapshot=https://oss.sonatype.org/content/repositories/snapshots/
    publishUsernameProperty=ossrhUsername
    publishPasswordProperty=ossrhPassword
+   publishSignatureRequired=true
    googleAnalyticsId=UA-XXXXXXXX
    javaSourceCompatibility=1.8
    javaTargetCompatibility=1.8
@@ -317,7 +319,7 @@ automatically:
 - `publish` - Makes a project publish its artifact to a Maven repository
 - `bom` - Makes a project publish Maven BOM based on `dependencies.toml`
 - `shade`, `relocate` and `trim` - Makes a Java project produce an additional 'shaded' JAR
-- `reactor-grpc` or `rxgrpc` - Enables [`reactor-grpc`](https://github.com/salesforce/reactive-grpc/tree/master/reactor) or [`rxgrpc`](https://github.com/salesforce/reactive-grpc/tree/master/rx-java) support to the project
+- `reactor-grpc`, `rxgrpc` or `kotlin-grpc` - Enables [`reactor-grpc`](https://github.com/salesforce/reactive-grpc/tree/master/reactor), [`rxgrpc`](https://github.com/salesforce/reactive-grpc/tree/master/rx-java) or [`kotlin-grpc`](https://github.com/grpc/grpc-kotlin) support to the project
 
 We will learn what these flags exactly do in the following sections.
 
@@ -449,7 +451,7 @@ When a project has a `java` flag:
 ## Overriding JDK version
 
 The scripts use [Toolchains](https://docs.gradle.org/current/userguide/toolchains.html) to build a Java
-project. It uses [AdoptOpenJDK](https://adoptopenjdk.net/) 15 by default. If you want to use a
+project. It uses [Adoptium OpenJDK](https://adoptium.net/) 19 by default. If you want to use a
 different JDK version, you can specify `buildJdkVersion` gradle property:
 
 ```
@@ -502,6 +504,18 @@ $ ./gradlew test -PbuildJdkVersion=15 -PtestJavaVersion=8
     myproject-foo.version=0.0.1-SNAPSHOT
     ```
 
+- If [Gradle Nexus Publish Plugin](https://github.com/gradle-nexus/publish-plugin) is enabled in 
+ `<project_root>/build.gradle`, [staging function](https://help.sonatype.com/repomanager3/nexus-repository-administration/staging)
+  is used to publish the artifacts. It is great for publishing your open source to Sonatype, and then to Maven 
+  Central, in a fully automated fashion. 
+
+  ```groovy
+  // in build.gradle
+  plugins {
+    id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
+  }
+  ```
+
 ## Generating Maven BOM with `bom` flag
 
 If you configure a project with `bom` flag, the project will be configured to
@@ -514,6 +528,18 @@ Maven repository by `./gradlew publish`.
 // settings.gradle
 includeWithFlags ':bom', 'bom'
 ```
+
+If you want to publish multiple boms with different subprojects, you can use the `bomGroups` extension property.
+Specify each bom's name with the subprojects:
+```groovy
+ext {
+    bomGroups = [
+            ':module1': [':module1:submodule1', ':module1:submodule2'],
+            ':module2': [':module2:submodule1', ':module2:submodule2']
+    ]
+}
+```
+
 ## Sharing [dependency versions](https://docs.gradle.org/current/userguide/platforms.html#sec:version-catalog-plugin) with `version-catalog` flag
 
 If you configure a project with the `version-catalog` flag, the project will be configured to
@@ -613,6 +639,33 @@ for more information.
        }
    }
    ```
+
+## Setting a target version with the `java(\\d+)` flag.
+
+By default, setting the `java` flag compiles a module targeting minimum compatibility with the Java version
+specified by `javaTargetCompatibility`. `javaTargetCompatibility` is Java 8 by default if unspecified.
+However, it is possible that certain modules need to be compiled targeting a higher Java version than others.
+
+Assume that `:moduleA` requires at least Java 17 to compile, whereas `:moduleB` requires Java 8.
+If `./gradlew assemble` is naively invoked on the root project with Java 8, `:moduleA` would fail to compile
+since it requires at least Java 17. This makes it difficult to test if `:moduleB` runs correctly with Java 8.
+
+In such case, users may add a `java17` flag which provides the following functionalities:
+- Ensure that the target module is compiled to target minimum compatibility with Java 17.
+- Skip tasks which require a JRE version lower than the target version.
+    - Most notably, tests will be skipped if the JRE version is lower than 17.
+
+The flag may be added like the following:
+
+   ```groovy
+   // settings.gradle
+   // ...
+   includeWithFlags ':moduleA', 'java17'
+   includeWithFlags ':moduleB', 'java'
+   ```
+
+Note that if the target Java version is greater than the build JDK version,
+an `UnsupportedClassVersionError` may be raised.
 
 ## Tagging conveniently with `release` task
 
