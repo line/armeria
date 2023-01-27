@@ -286,8 +286,6 @@ class RestClientTest {
             assertThat(responseGenericMapper.getHeader()).isEqualTo("header-value");
             assertThat(responseGenericMapper.getCookie()).isEqualTo("cookie-value");
             assertThat(responseGenericMapper.getContent()).isEqualTo("content");
-
-
         }
     }
 
