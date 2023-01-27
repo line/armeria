@@ -36,6 +36,7 @@ import org.springframework.core.env.Environment;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.docs.DocService;
@@ -48,7 +49,6 @@ import com.linecorp.armeria.spring.HealthCheckServiceConfigurator;
 import com.linecorp.armeria.spring.InternalServices;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 
 /**
  * An {@linkplain EnableAutoConfiguration auto-configuration} for a reactive web server.
@@ -93,7 +93,7 @@ public class ArmeriaReactiveWebServerFactoryAutoConfiguration {
             @Value("${management.server.port:#{null}}") @Nullable Integer managementServerPort,
             @Value("${management.server.address:#{null}}") @Nullable InetAddress managementServerAddress,
             @Value("${management.server.ssl.enabled:#{false}}") boolean enableManagementServerSsl) {
-        return InternalServices.of(settings, meterRegistry.orElse(Metrics.globalRegistry),
+        return InternalServices.of(settings, meterRegistry.orElse(Flags.meterRegistry()),
                                    healthCheckers.orElse(ImmutableList.of()),
                                    healthCheckServiceConfigurators.orElse(ImmutableList.of()),
                                    docServiceConfigurators.orElse(ImmutableList.of()),
