@@ -30,6 +30,9 @@ import com.linecorp.armeria.common.util.Sampler;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.server.TransientServiceOption;
 
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Metrics;
+
 /**
  * Implementation of {@link FlagsProvider} which provides default values to {@link Flags}.
  */
@@ -397,5 +400,15 @@ final class DefaultFlagsProvider implements FlagsProvider {
         return Paths.get(System.getProperty("java.io.tmpdir") +
                          File.separatorChar + "armeria" +
                          File.separatorChar + "multipart-uploads");
+    }
+
+    @Override
+    public Sampler<? super RequestContext> requestContextLeakDetectionSampler() {
+        return Sampler.never();
+    }
+
+    @Override
+    public MeterRegistry meterRegistry() {
+        return Metrics.globalRegistry;
     }
 }

@@ -19,13 +19,16 @@ package com.linecorp.armeria.client;
 import static com.google.common.base.Preconditions.checkArgument;
 import static java.util.Objects.requireNonNull;
 
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+
 import com.github.benmanes.caffeine.cache.CaffeineSpec;
 
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.ThreadFactories;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 
 /**
  * A builder for {@link DnsCache}.
@@ -33,10 +36,14 @@ import io.micrometer.core.instrument.Metrics;
 @UnstableApi
 public final class DnsCacheBuilder {
 
+    private static final ScheduledExecutorService DEFAULT_EXECUTOR = Executors.newSingleThreadScheduledExecutor(
+            ThreadFactories.newThreadFactory("armeria-dns-cache-executor", true));
+
     static final DnsCache DEFAULT_CACHE = DnsCache.builder().build();
 
     private String cacheSpec = Flags.dnsCacheSpec();
-    private MeterRegistry meterRegistry = Metrics.globalRegistry;
+    private MeterRegistry meterRegistry = Flags.meterRegistry();
+    private ScheduledExecutorService executor = DEFAULT_EXECUTOR;
     private int minTtl = 1;
     private int maxTtl = Integer.MAX_VALUE;
     private int negativeTtl;
@@ -54,10 +61,20 @@ public final class DnsCacheBuilder {
 
     /**
      * Sets the {@link MeterRegistry} that collects cache stats.
-     * If unspecified, {@link Metrics#globalRegistry} is used.
+     * If unspecified, {@link Flags#meterRegistry()} is used.
      */
     public DnsCacheBuilder meterRegistry(MeterRegistry meterRegistry) {
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
+        return this;
+    }
+
+    /**
+     * Sets the specified {@link ScheduledExecutorService} to use when scheduling DNS expiration and sending
+     * removal notification.
+     */
+    public DnsCacheBuilder executor(ScheduledExecutorService executor) {
+        requireNonNull(executor, "executor");
+        this.executor = executor;
         return this;
     }
 
@@ -91,6 +108,6 @@ public final class DnsCacheBuilder {
      * Returns a newly created {@link DnsCache}.
      */
     public DnsCache build() {
-        return new DefaultDnsCache(cacheSpec, meterRegistry, minTtl, maxTtl, negativeTtl);
+        return new DefaultDnsCache(cacheSpec, meterRegistry, executor, minTtl, maxTtl, negativeTtl);
     }
 }

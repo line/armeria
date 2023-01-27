@@ -126,6 +126,12 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
         }
     }
 
+    @Override
+    public void onEviction(DnsQuestion question, @Nullable List<DnsRecord> records,
+                           @Nullable UnknownHostException cause) {
+        // Don't refresh the old Endpoints on eviction. The original scheduler may update them.
+    }
+
     private void sendQueries(List<DnsQuestionWithoutTrailingDot> questions) {
         if (isClosing()) {
             return;
@@ -207,5 +213,14 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
                                ttl);
             }
         }
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper()
+                .add("questions", questions)
+                .add("logPrefix", logPrefix)
+                .add("attemptsSoFar", attemptsSoFar)
+                .toString();
     }
 }

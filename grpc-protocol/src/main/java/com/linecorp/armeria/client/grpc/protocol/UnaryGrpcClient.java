@@ -33,6 +33,7 @@ import com.linecorp.armeria.client.HttpClient;
 import com.linecorp.armeria.client.SimpleDecoratingHttpClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -129,7 +130,10 @@ public final class UnaryGrpcClient {
                 RequestHeaders.builder(HttpMethod.POST, uri).contentType(serializationFormat.mediaType())
                               .add(HttpHeaderNames.TE, HttpHeaderValues.TRAILERS.toString()).build(),
                 HttpData.wrap(payload));
-        return webClient.execute(request).aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT)
+        return webClient.execute(request).aggregate(
+                                AggregationOptions.builder()
+                                                  .usePooledObjects(PooledByteBufAllocator.DEFAULT)
+                                                  .build())
                         .thenApply(msg -> {
                             try (HttpData content = msg.content()) {
                                 if (msg.status() != HttpStatus.OK) {
@@ -174,8 +178,10 @@ public final class UnaryGrpcClient {
 
         @Override
         public HttpResponse execute(ClientRequestContext ctx, HttpRequest req) {
+            final AggregationOptions aggregationOptions =
+                    AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop());
             return HttpResponse.from(
-                    req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc())
+                    req.aggregate(aggregationOptions)
                        .thenCompose(
                                msg -> {
                                    try (HttpData content = msg.content()) {
@@ -188,8 +194,7 @@ public final class UnaryGrpcClient {
 
                                        try {
                                            return unwrap().execute(ctx, HttpRequest.of(req.headers(), framed))
-                                                          .aggregateWithPooledObjects(ctx.eventLoop(),
-                                                                                      ctx.alloc());
+                                                          .aggregate(aggregationOptions);
                                        } catch (Exception e) {
                                            throw new ArmeriaStatusException(StatusCodes.INTERNAL,
                                                                             "Error executing request.");

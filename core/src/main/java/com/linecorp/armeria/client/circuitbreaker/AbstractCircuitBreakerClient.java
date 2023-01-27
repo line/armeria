@@ -22,8 +22,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.concurrent.CompletionStage;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.google.common.base.MoreObjects;
 
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
@@ -31,6 +30,7 @@ import com.linecorp.armeria.client.SimpleDecoratingClient;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.Response;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 import com.linecorp.armeria.common.util.CompletionActions;
 
 /**
@@ -42,8 +42,6 @@ import com.linecorp.armeria.common.util.CompletionActions;
 public abstract class AbstractCircuitBreakerClient<I extends Request, O extends Response>
         extends SimpleDecoratingClient<I, O> {
 
-    private static final Logger logger = LoggerFactory.getLogger(AbstractCircuitBreakerClient.class);
-
     @Nullable
     private final CircuitBreakerRule rule;
 
@@ -52,33 +50,32 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
 
     @Nullable
     private final CircuitBreakerRuleWithContent<O> ruleWithContent;
-
-    private final CircuitBreakerMapping mapping;
+    private final CircuitBreakerClientHandler<I> handler;
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
+    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler<I> handler,
                                  CircuitBreakerRule rule) {
-        this(delegate, mapping, requireNonNull(rule, "rule"), null);
+        this(delegate, handler, requireNonNull(rule, "rule"), null);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
+    AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler<I> handler,
                                  CircuitBreakerRuleWithContent<O> ruleWithContent) {
-        this(delegate, mapping, null, requireNonNull(ruleWithContent, "ruleWithContent"));
+        this(delegate, handler, null, requireNonNull(ruleWithContent, "ruleWithContent"));
     }
 
     /**
      * Creates a new instance that decorates the specified {@link Client}.
      */
-    private AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerMapping mapping,
+    private AbstractCircuitBreakerClient(Client<I, O> delegate, CircuitBreakerClientHandler<I> handler,
                                          @Nullable CircuitBreakerRule rule,
                                          @Nullable CircuitBreakerRuleWithContent<O> ruleWithContent) {
         super(delegate);
-        this.mapping = requireNonNull(mapping, "mapping");
+        this.handler = requireNonNull(handler, "handler");
         this.rule = rule;
         this.ruleWithContent = ruleWithContent;
         if (ruleWithContent != null) {
@@ -114,52 +111,55 @@ public abstract class AbstractCircuitBreakerClient<I extends Request, O extends 
      * @throws IllegalStateException if the {@link CircuitBreakerRuleWithContent} is not set
      */
     final CircuitBreakerRule fromRuleWithContent() {
-        checkState(ruleWithContent != null, "ruleWithContent is not set.");
+        checkState(fromRuleWithContent != null, "fromRuleWithContent is not set.");
         return fromRuleWithContent;
     }
 
     @Override
     public final O execute(ClientRequestContext ctx, I req) throws Exception {
-        final CircuitBreaker circuitBreaker;
-        try {
-            circuitBreaker = mapping.get(ctx, req);
-        } catch (Throwable t) {
-            logger.warn("Failed to get a circuit breaker from mapping", t);
+        final CircuitBreakerCallback callback = handler.tryRequest(ctx, req);
+        if (callback == null) {
             return unwrap().execute(ctx, req);
         }
-
-        if (circuitBreaker.tryRequest()) {
-            return doExecute(ctx, req, circuitBreaker);
-        } else {
-            // the circuit is tripped; raise an exception without delegating.
-            throw new FailFastException(circuitBreaker);
-        }
+        return doExecute(ctx, req, callback);
     }
 
     /**
      * Invoked when the {@link CircuitBreaker} is in closed state.
      */
-    protected abstract O doExecute(ClientRequestContext ctx, I req, CircuitBreaker circuitBreaker)
-            throws Exception;
+    protected abstract O doExecute(ClientRequestContext ctx, I req,
+                                   CircuitBreakerCallback callback) throws Exception;
 
     /**
      * Reports a success or a failure to the specified {@link CircuitBreaker} according to the completed value
      * of the specified {@code future}. If the completed value is {@link CircuitBreakerDecision#ignore()},
      * this doesn't do anything.
      */
-    protected static void reportSuccessOrFailure(CircuitBreaker circuitBreaker,
-                                                 CompletionStage<CircuitBreakerDecision> future) {
+    static void reportSuccessOrFailure(CircuitBreakerCallback callback,
+                                       CompletionStage<@Nullable CircuitBreakerDecision> future,
+                                       ClientRequestContext ctx, @Nullable Throwable throwable) {
         future.handle((decision, unused) -> {
             if (decision != null) {
                 if (decision == CircuitBreakerDecision.success() || decision == CircuitBreakerDecision.next()) {
-                    circuitBreaker.onSuccess();
+                    callback.onSuccess(ctx);
                 } else if (decision == CircuitBreakerDecision.failure()) {
-                    circuitBreaker.onFailure();
+                    callback.onFailure(ctx, throwable);
                 } else {
                     // Ignore, does not count as a success nor failure.
                 }
             }
             return null;
         }).exceptionally(CompletionActions::log);
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .omitNullValues()
+                          .add("rule", rule)
+                          .add("fromRuleWithContent", fromRuleWithContent)
+                          .add("ruleWithContent", ruleWithContent)
+                          .add("handler", handler)
+                          .toString();
     }
 }

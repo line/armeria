@@ -39,6 +39,7 @@ import com.linecorp.armeria.client.redirect.TooManyRedirectsException;
 import com.linecorp.armeria.client.redirect.UnexpectedDomainRedirectException;
 import com.linecorp.armeria.client.redirect.UnexpectedProtocolRedirectException;
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
@@ -138,15 +139,16 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             final HttpRequestDuplicator reqDuplicator = req.toDuplicator(ctx.eventLoop().withoutContext(), 0);
             execute0(ctx, redirectCtx, reqDuplicator, true);
         } else {
-            req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((agg, cause) -> {
-                if (cause != null) {
-                    handleException(ctx, null, responseFuture, cause, true);
-                } else {
-                    final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
-                    execute0(ctx, redirectCtx, reqDuplicator, true);
-                }
-                return null;
-            });
+            req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
+               .handle((agg, cause) -> {
+                   if (cause != null) {
+                       handleException(ctx, null, responseFuture, cause, true);
+                   } else {
+                       final HttpRequestDuplicator reqDuplicator = new AggregatedHttpRequestDuplicator(agg);
+                       execute0(ctx, redirectCtx, reqDuplicator, true);
+                   }
+                   return null;
+               });
         }
         return res;
     }
@@ -235,7 +237,7 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
             }
 
             final HttpRequestDuplicator newReqDuplicator =
-                    newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders, redirectUri.toString());
+                    newReqDuplicator(reqDuplicator, responseHeaders, requestHeaders, redirectUri);
 
             final String redirectFullUri;
             try {
@@ -267,9 +269,15 @@ final class RedirectingClient extends SimpleDecoratingHttpClient {
 
     private static HttpRequestDuplicator newReqDuplicator(HttpRequestDuplicator reqDuplicator,
                                                           ResponseHeaders responseHeaders,
-                                                          RequestHeaders requestHeaders, String newUriString) {
+                                                          RequestHeaders requestHeaders, URI newUri) {
         final RequestHeadersBuilder builder = requestHeaders.toBuilder();
-        builder.path(newUriString);
+        builder.path(newUri.toString());
+        final String newAuthority = newUri.getAuthority();
+        if (newAuthority != null) {
+            // Update the old authority with the new one because the request is redirected to a different
+            // domain.
+            builder.authority(newAuthority);
+        }
         final HttpMethod method = requestHeaders.method();
         if (responseHeaders.status() == HttpStatus.SEE_OTHER &&
             !(method == HttpMethod.GET || method == HttpMethod.HEAD)) {

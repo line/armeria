@@ -1,0 +1,10 @@
+scalar MultipartFile
+
+type Query {
+    foo: String
+}
+
+type Mutation {
+    fileUpload(file: MultipartFile): String
+    fileUploads(files: [MultipartFile]): [String]
+}

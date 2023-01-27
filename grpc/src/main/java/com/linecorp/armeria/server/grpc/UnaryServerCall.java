@@ -20,13 +20,10 @@ import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.HttpMessageAggregator.aggregateData;
 import static java.util.Objects.requireNonNull;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
@@ -40,8 +37,6 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
-import com.linecorp.armeria.common.grpc.protocol.DeframedMessage;
-import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -56,8 +51,6 @@ import io.grpc.Status;
  * via {@link Listener}, and writing messages passed back to the response.
  */
 final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
-
-    private static final Logger logger = LoggerFactory.getLogger(UnaryServerCall.class);
 
     private final HttpRequest req;
     private final CompletableFuture<HttpResponse> resFuture;
@@ -100,36 +93,22 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
 
     @Override
     void startDeframing() {
-        req.collect(ctx.eventLoop(), SubscriptionOption.WITH_POOLED_OBJECTS).handle((objects, cause) -> {
-            if (cause != null) {
-                onError(cause);
-                return null;
-            }
+        req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
+           .handle((aggregatedHttpRequest, cause) -> {
+               if (cause != null) {
+                   onError(cause);
+                   return null;
+               }
 
-            try {
-                onRequestMessage(deframe(objects), true);
-            } catch (Exception ex) {
-                // An exception could be raised when the deframer detects malformed data which is released by
-                // the try-with-resource block. So `objects` don't need to be released here.
-                onError(ex);
-            }
-            return null;
-        });
-    }
-
-    private DeframedMessage deframe(List<HttpObject> objects) {
-        if (objects.size() == 1) {
-            final HttpObject object = objects.get(0);
-            if (object instanceof HttpData) {
-                return requestDeframer.deframe((HttpData) object);
-            } else {
-                logger.warn("{} An invalid HTTP object is received: {} (expected: {})",
-                            ctx, object, HttpData.class.getName());
-                return requestDeframer.deframe(HttpData.empty());
-            }
-        } else {
-            return requestDeframer.deframe(objects);
-        }
+               try {
+                   onRequestMessage(requestDeframer.deframe(aggregatedHttpRequest.content()), true);
+               } catch (Exception ex) {
+                   // An exception could be raised when the deframer detects malformed data which is released by
+                   // the try-with-resource block. So `objects` don't need to be released here.
+                   onError(ex);
+               }
+               return null;
+           });
     }
 
     @Override

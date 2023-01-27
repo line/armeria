@@ -74,8 +74,8 @@ public abstract class WebAppContainerMutualTlsTest {
     public void mutualTlsAttrs(SessionProtocol sessionProtocol) throws Exception {
         try (ClientFactory clientFactory = ClientFactory
                 .builder()
+                .tls(ssc.privateKey(), ssc.certificate())
                 .tlsCustomizer(sslCtxBuilder -> {
-                    sslCtxBuilder.keyManager(ssc.privateKey(), ssc.certificate());
                     sslCtxBuilder.trustManager(InsecureTrustManagerFactory.INSTANCE);
                 })
                 .build()) {

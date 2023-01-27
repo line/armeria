@@ -117,7 +117,7 @@ final class AnnotatedBeanFactoryRegistry {
         return new TreeSet<>((o1, o2) -> {
             final String o1Name = o1.httpElementName();
             final String o2Name = o2.httpElementName();
-            if (o1Name != null && o1Name.equals(o2Name) && o1.annotationType() == o2.annotationType()) {
+            if (o1Name.equals(o2Name) && o1.annotationType() == o2.annotationType()) {
                 return 0;
             }
             // We are not ordering, but just finding duplicate elements.

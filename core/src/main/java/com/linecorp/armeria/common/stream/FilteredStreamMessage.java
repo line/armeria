@@ -48,7 +48,7 @@ import io.netty.util.concurrent.EventExecutor;
  * will happen from an I/O thread, meaning the order of the filtering will match the
  * order that the {@code delegate} processes the objects in.
  */
-public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
+public abstract class FilteredStreamMessage<T, U> extends AggregationSupport implements StreamMessage<U> {
 
     private static final Logger logger = LoggerFactory.getLogger(FilteredStreamMessage.class);
 
@@ -95,6 +95,9 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
      * A callback executed just before calling {@link Subscriber#onComplete()} on {@code subscriber}.
      * Override this method to execute any cleanup logic that may be needed before completing the
      * subscription.
+     *
+     * <p>Note that this method may raise an {@link Exception}. In that case, the caller should stop the
+     * completion process and propagate the {@link Exception} to the {@link Subscriber}.
      */
     protected void beforeComplete(Subscriber<? super U> subscriber) {}
 
@@ -139,7 +142,7 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
         final SubscriptionOption[] filterOptions = filterSupportsPooledObjects ? POOLED_OBJECTS : EMPTY_OPTIONS;
         return upstream.collect(executor, filterOptions).handle((result, cause) -> {
             // CollectingSubscriberAndSubscription just captures cancel(), onComplete(), and onError() signals
-            // from the sub class of FilteredStreamMessage. So we need to follow regular Reactive Streams
+            // from the subclass of FilteredStreamMessage. So we need to follow regular Reactive Streams
             // specifications.
             final CollectingSubscriberAndSubscription<U> subscriberAndSubscription =
                     new CollectingSubscriberAndSubscription<>();
@@ -195,8 +198,13 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                     return Exceptions.throwUnsafely(abortCause);
                 }
 
-                beforeComplete(subscriberAndSubscription);
-                completionFuture.complete(null);
+                try {
+                    beforeComplete(subscriberAndSubscription);
+                    completionFuture.complete(null);
+                } catch (Exception ex) {
+                    completionFuture.completeExceptionally(ex);
+                    throw ex;
+                }
                 return elements;
             }
         });
@@ -334,9 +342,14 @@ public abstract class FilteredStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
             completed = true;
-            beforeComplete(delegate);
-            delegate.onComplete();
-            completionFuture.complete(null);
+            try {
+                beforeComplete(delegate);
+                delegate.onComplete();
+                completionFuture.complete(null);
+            } catch (Exception cause) {
+                delegate.onError(cause);
+                completionFuture.completeExceptionally(cause);
+            }
         }
     }
 

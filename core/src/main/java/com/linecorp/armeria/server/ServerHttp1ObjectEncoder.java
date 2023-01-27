@@ -28,7 +28,6 @@ import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
 import com.linecorp.armeria.internal.common.NoopKeepAliveHandler;
-import com.linecorp.armeria.internal.common.util.HttpTimestampSupplier;
 
 import io.netty.buffer.Unpooled;
 import io.netty.channel.Channel;
@@ -51,8 +50,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     private boolean shouldSendConnectionCloseHeader;
     private boolean sentConnectionCloseHeader;
-
-    private int lastResponseHeadersId;
 
     ServerHttp1ObjectEncoder(Channel ch, SessionProtocol protocol, KeepAliveHandler keepAliveHandler,
                              boolean enableDateHeader, boolean enableServerHeader,
@@ -86,7 +83,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
         if (headers.status().isInformational()) {
             return write(id, converted, false);
         }
-        lastResponseHeadersId = id;
 
         if (shouldSendConnectionCloseHeader || keepAliveHandler.needToCloseConnection()) {
             converted.headers().set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
@@ -137,14 +133,6 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
             // force chunked encoding.
             outHeaders.remove(HttpHeaderNames.CONTENT_LENGTH);
         }
-
-        if (enableServerHeader && !outHeaders.contains(HttpHeaderNames.SERVER)) {
-            outHeaders.add(HttpHeaderNames.SERVER, ArmeriaHttpUtil.SERVER_HEADER);
-        }
-
-        if (enableDateHeader && !outHeaders.contains(HttpHeaderNames.DATE)) {
-            outHeaders.add(HttpHeaderNames.DATE, HttpTimestampSupplier.currentTime());
-        }
     }
 
     private static void maybeRemoveContentLength(int statusCode,
@@ -188,7 +176,7 @@ final class ServerHttp1ObjectEncoder extends Http1ObjectEncoder implements Serve
 
     @Override
     public boolean isResponseHeadersSent(int id, int streamId) {
-        return id <= lastResponseHeadersId;
+        return id <= lastResponseHeadersId();
     }
 
     @Override

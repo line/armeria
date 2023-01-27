@@ -31,6 +31,7 @@ import org.junit.jupiter.params.provider.ArgumentsProvider;
 import org.junit.jupiter.params.provider.ArgumentsSource;
 
 import com.linecorp.armeria.common.AggregatedHttpRequest;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
@@ -40,8 +41,6 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpRequestWriter;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
-
-import io.netty.buffer.PooledByteBufAllocator;
 
 class DefaultHttpRequestTest {
 
@@ -58,14 +57,18 @@ class DefaultHttpRequestTest {
         // Practically same execution, but we need to test the both case due to code duplication.
         if (executorSpecified) {
             if (withPooledObjects) {
-                future = req.aggregateWithPooledObjects(
-                        CommonPools.workerGroup().next(), PooledByteBufAllocator.DEFAULT);
+                future = req.aggregate(AggregationOptions.builder()
+                                                         .usePooledObjects()
+                                                         .executor(CommonPools.workerGroup().next())
+                                                         .build());
             } else {
                 future = req.aggregate(CommonPools.workerGroup().next());
             }
         } else {
             if (withPooledObjects) {
-                future = req.aggregateWithPooledObjects(PooledByteBufAllocator.DEFAULT);
+                future = req.aggregate(AggregationOptions.builder()
+                                                         .usePooledObjects()
+                                                         .build());
             } else {
                 future = req.aggregate();
             }

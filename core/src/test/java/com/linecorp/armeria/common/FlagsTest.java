@@ -210,7 +210,7 @@ class FlagsTest {
         final Method method = flags.getDeclaredMethod("verboseExceptionSampler");
         assertThat(method.invoke(flags))
                 .usingRecursiveComparison()
-                .isEqualTo(Sampler.always());
+                .isEqualTo(new ExceptionSampler("true"));
     }
 
     @Test
@@ -220,6 +220,32 @@ class FlagsTest {
         assertThat(method.invoke(flags))
                 .usingRecursiveComparison()
                 .isEqualTo(new ExceptionSampler("rate-limit=10"));
+    }
+
+    @Test
+    void defaultRequestContextLeakDetectionSampler() throws Exception {
+        final Method method = flags.getDeclaredMethod("requestContextLeakDetectionSampler");
+        assertThat(method.invoke(flags))
+                .usingRecursiveComparison()
+                .isEqualTo(Sampler.never());
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.requestContextLeakDetectionSampler", value = "always")
+    void systemPropertyRequestContextLeakDetectionSampler() throws Exception {
+        final Method method = flags.getDeclaredMethod("requestContextLeakDetectionSampler");
+        assertThat(method.invoke(flags))
+                .usingRecursiveComparison()
+                .isEqualTo(Sampler.always());
+    }
+
+    @Test
+    @SetSystemProperty(key = "com.linecorp.armeria.requestContextLeakDetectionSampler", value = "invalid-spec")
+    void invalidSystemPropertyRequestContextLeakDetectionSampler() throws Exception {
+        final Method method = flags.getDeclaredMethod("requestContextLeakDetectionSampler");
+        assertThat(method.invoke(flags))
+                .usingRecursiveComparison()
+                .isEqualTo(Sampler.never());
     }
 
     @Test

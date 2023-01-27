@@ -29,6 +29,7 @@ import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
+import com.linecorp.armeria.common.ResponseCompleteException;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
@@ -319,7 +320,7 @@ abstract class HttpResponseDecoder {
             cancelTimeoutOrLog(cause, cancel);
             if (ctx != null) {
                 if (cause == null) {
-                    ctx.request().abort();
+                    ctx.request().abort(ResponseCompleteException.get());
                 } else {
                     ctx.request().abort(cause);
                 }

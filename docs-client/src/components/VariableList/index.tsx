@@ -33,6 +33,9 @@ const useStyles = makeStyles({
   hidden: {
     display: 'none',
   },
+  expand: {
+    textAlign: 'end',
+  },
 });
 
 interface Variable {
@@ -41,7 +44,7 @@ interface Variable {
   childFieldInfos?: Variable[];
   requirement: string;
   typeSignature: string;
-  descriptionInfo?: DescriptionInfo;
+  descriptionInfo: DescriptionInfo;
 }
 
 interface Props {
@@ -128,7 +131,9 @@ const FieldInfo: React.FunctionComponent<FieldInfoProps> = ({
           )}
         </TableCell>
         {hasChildren && (
-          <TableCell>{expanded ? <ExpandLess /> : <ExpandMore />}</TableCell>
+          <TableCell className={styles.expand}>
+            {expanded ? <ExpandLess /> : <ExpandMore />}
+          </TableCell>
         )}
       </TableRow>
       {hasChildren && (
