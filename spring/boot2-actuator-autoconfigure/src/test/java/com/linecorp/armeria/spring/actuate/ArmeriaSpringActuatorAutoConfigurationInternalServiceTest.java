@@ -367,7 +367,7 @@ class ArmeriaSpringActuatorAutoConfigurationInternalServiceTest {
                                                                                     InternalServiceId.ACTUATOR);
             assertThat(internalServices.managementServerPort().getPort()).isEqualTo(actuatorPort);
 
-            assertActuatorStatus(actuatorPort, 200 );
+            assertActuatorStatus(actuatorPort, 200);
             assertInternalServiceStatus(actuatorPort, 200, settings, false);
             assertActuatorStatus(internalServicePort.getPort(), 200);
             assertInternalServiceStatus(internalServicePort.getPort(), 200, settings, false);
