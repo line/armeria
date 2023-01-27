@@ -15,9 +15,6 @@
  */
 package com.linecorp.armeria.spring.actuate;
 
-import java.security.cert.X509Certificate;
-import java.util.concurrent.atomic.AtomicReference;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.actuate.autoconfigure.web.server.LocalManagementPort;
@@ -41,8 +38,6 @@ import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfiguratio
 @ImportAutoConfiguration(ArmeriaSpringActuatorAutoConfiguration.class)
 @Timeout(10)
 class ArmeriaSpringActuatorAutoConfigurationSslTest {
-    private static final X509Certificate[] EMPTY_CERTIFICATES = new X509Certificate[0];
-
     @SpringBootApplication
     static class TestConfiguration {}
 
@@ -51,8 +46,6 @@ class ArmeriaSpringActuatorAutoConfigurationSslTest {
 
     @Test
     void usingSsl() {
-        final AtomicReference<String> actualKeyNameOfManagementServer = new AtomicReference<>();
-
         // Create a new ClientFactory with a TrustManager that records the received certificate.
         try (ClientFactory clientFactory = ClientFactory.builder()
                                                         .tlsNoVerify()
