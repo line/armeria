@@ -33,7 +33,6 @@ task generateSources(type: Copy) {
     into "${project.ext.genSrcDir}/main/java"
     include '**/ArmeriaConfigurationNetUtil.java'
     include '**/ArmeriaServerConfigurator.java'
-
     include '**/ArmeriaSettings.java'
     include '**/InternalServiceId.java'
     include '**/SpringDependencyInjector.java'
