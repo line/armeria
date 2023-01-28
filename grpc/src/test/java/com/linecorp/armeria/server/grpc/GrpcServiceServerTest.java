@@ -221,6 +221,23 @@ class GrpcServiceServerTest {
         }
 
         @Override
+        public StreamObserver<SimpleRequest> errorFromClient(StreamObserver<SimpleResponse> responseObserver) {
+            return new StreamObserver<SimpleRequest>() {
+                @Override
+                public void onNext(SimpleRequest value) {
+                    // required to ensure connection to client before the client calls onError().
+                    responseObserver.onNext(RESPONSE_MESSAGE);
+                }
+
+                @Override
+                public void onError(Throwable t) {}
+
+                @Override
+                public void onCompleted() {}
+            };
+        }
+
+        @Override
         public void unaryThrowsError(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
             throw Status.ABORTED.withDescription("call aborted").asRuntimeException();
         }
@@ -613,13 +630,49 @@ class GrpcServiceServerTest {
             assertThat(grpcStatus).isNotNull();
             assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
             assertThat(grpcStatus.getDescription()).isEqualTo("aborted call");
-            final StatusException ex = (StatusException) rpcRes.cause();
-            assertThat(ex.getStatus().getCode()).isEqualTo(Code.ABORTED);
-            assertThat(ex.getStatus().getDescription()).isEqualTo("aborted call");
-            assertThat(ex.getTrailers().getAll(STRING_VALUE_KEY))
-                    .containsExactly(StringValue.newBuilder().setValue("custom metadata").build());
-            // INT_32_VALUE_KEY is not included here, since the key is directly injected to response header.
-            assertThat(ex.getTrailers().get(CUSTOM_VALUE_KEY)).isEqualTo("custom value");
+            assertThat(rpcRes.cause()).isInstanceOfSatisfying(StatusException.class, ex -> {
+                assertThat(ex.getStatus().getCode()).isEqualTo(Code.ABORTED);
+                assertThat(ex.getStatus().getDescription()).isEqualTo("aborted call");
+                assertThat(ex.getTrailers().getAll(STRING_VALUE_KEY))
+                        .containsExactly(StringValue.newBuilder().setValue("custom metadata").build());
+                // INT_32_VALUE_KEY is not included here, since the key is directly injected to response header.
+                assertThat(ex.getTrailers().get(CUSTOM_VALUE_KEY)).isEqualTo("custom value");
+            });
+        });
+    }
+
+    @ParameterizedTest
+    @ArgumentsSource(StreamingClientProvider.class)
+    void error_fromClient(UnitTestServiceStub streamingClient) throws Exception {
+        final StreamRecorder<SimpleResponse> response = StreamRecorder.create();
+        final StreamObserver<SimpleRequest> request = streamingClient.errorFromClient(response);
+        // Sending request and receiving response is required to ensure connection before calling onError.
+        request.onNext(REQUEST_MESSAGE);
+        response.firstValue().get();
+        final Metadata meta = new Metadata();
+        meta.put(STRING_VALUE_KEY, StringValue.newBuilder().setValue("client").build());
+        request.onError(Status.INVALID_ARGUMENT.withDescription("abort from client").asException(meta));
+        response.awaitCompletion();
+
+        assertThat(response.getError()).isInstanceOfSatisfying(StatusRuntimeException.class, ex -> {
+            assertThat(ex.getStatus()).isNotNull();
+            assertThat(ex.getStatus().getCode()).isEqualTo(Code.CANCELLED);
+        });
+
+        checkRequestLog((rpcReq, rpcRes, grpcStatus) -> {
+            assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
+            assertThat(rpcReq.method()).isEqualTo("ErrorFromClient");
+            assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
+
+            assertThat(rpcRes.cause()).isInstanceOfSatisfying(StatusException.class, cause -> {
+                assertThat(cause.getStatus()).isNotNull();
+                assertThat(cause.getStatus().getCode()).isEqualTo(Code.CANCELLED);
+                assertThat(cause.getTrailers()).isNotNull();
+                assertThat(cause.getTrailers().keys()).isEmpty();
+                // Different from GrpcClientTest::errorFromClient server doesn't know the cause in detail,
+                // since ArmeriaClientCall doesn't send cause on error
+                assertThat(cause.getCause()).isInstanceOf(ClosedStreamException.class);
+            });
         });
     }
 
