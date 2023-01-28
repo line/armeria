@@ -172,7 +172,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
         } catch (Exception ex) {
             resFuture.completeExceptionally(ex);
         } finally {
-            closeListener(status, completed, false);
+            closeListener(status, metadata, completed, false);
         }
     }
 

@@ -229,12 +229,12 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         maybeLogFailedRequestContent(exception);
         if (isCancelled()) {
             // No need to write anything to client if cancelled already.
-            closeListener(status, false, true);
+            closeListener(status, metadata, false, true);
             return;
         }
 
         if (status.getCode() == Code.CANCELLED && status.getCause() instanceof ClosedStreamException) {
-            closeListener(status, false, true);
+            closeListener(status, metadata, false, true);
             return;
         }
 
@@ -257,7 +257,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     abstract void doClose(Status status, Metadata metadata, boolean completed);
 
-    final void closeListener(Status newStatus, boolean completed, boolean setResponseContent) {
+    final void closeListener(Status newStatus, Metadata metadata, boolean completed, boolean setResponseContent) {
         if (!listenerClosed) {
             listenerClosed = true;
 
@@ -266,8 +266,8 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName), null);
             }
             if (setResponseContent) {
-                ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse(), null),
-                                                 null);
+                ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse(),
+                                                                         metadata), null);
             }
 
             if (!clientStreamClosed) {
@@ -275,7 +275,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 if (newStatus.isOk()) {
                     req.abort();
                 } else {
-                    req.abort(newStatus.asException());
+                    req.abort(newStatus.asException(metadata));
                 }
             }
 
@@ -294,7 +294,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 }
                 // Transport error, not business logic error, so reset the stream.
                 if (!closeCalled) {
-                    final StatusException statusException = newStatus.asException();
+                    final StatusException statusException = newStatus.asException(metadata);
                     res.abort(statusException);
                 }
             }
@@ -312,8 +312,8 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 if (messageReceived && method.getType() == MethodType.UNARY) {
                     closeListener(Status.INTERNAL.withDescription(
                                           "More than one request messages for unary call or server streaming " +
-                                          "call"), false,
-                                  true);
+                                          "call"),
+                                  new Metadata(), false, true);
                     return;
                 }
                 messageReceived = true;

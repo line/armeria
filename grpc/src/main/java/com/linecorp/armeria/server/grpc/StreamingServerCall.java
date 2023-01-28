@@ -204,7 +204,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                     trailersOnly = false;
                 } else {
                     // A stream was closed already.
-                    closeListener(status, false, true);
+                    closeListener(status, metadata, false, true);
                     return;
                 }
             }
@@ -217,7 +217,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                 res.close();
             }
         } finally {
-            closeListener(status, completed, false);
+            closeListener(status, metadata, completed, false);
         }
     }
 
@@ -255,7 +255,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    public void transportReportStatus(Status status, Metadata unused) {
+    public void transportReportStatus(Status status, Metadata metadata) {
         // A server doesn't see trailers from the client so will never have Metadata here.
 
         if (isCloseCalled()) {
@@ -265,6 +265,6 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
             // failure there's no need to notify the server listener of it).
             return;
         }
-        closeListener(status, false, true);
+        closeListener(status, metadata, false, true);
     }
 }
