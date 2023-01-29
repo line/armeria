@@ -8,12 +8,10 @@ armeria:
     - port: 0
   internal-services:
     include: metrics, health, actuator
-    port: 10000
     protocols: http
 
 management:
   server:
-    port: 10000
     base-path: /foo
   endpoints:
     web:
