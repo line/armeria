@@ -127,13 +127,12 @@ class HttpHeadersBase
         }
 
         // This method could be called before the 'cache' field is initialized.
+        //noinspection ConstantValue
         if (cache == null || cache.isEmpty()) {
             return;
         }
 
-        if (!add) {
-            cache.remove(name);
-        }
+        cache.remove(name);
     }
 
     @Override
@@ -649,8 +648,7 @@ class HttpHeadersBase
 
     @Override
     public final int hashCode() {
-        int hashCode = super.hashCode();
-        hashCode = hashCode * 31 + Boolean.hashCode(isContentLengthSet);
+        final int hashCode = super.hashCode();
         return endOfStream ? ~hashCode : hashCode;
     }
 
@@ -664,10 +662,8 @@ class HttpHeadersBase
             return false;
         }
 
-        final HttpHeaderGetters getters = (HttpHeaderGetters) o;
-        return endOfStream == getters.isEndOfStream() &&
-               isContentLengthSet == getters.isContentLengthSet() &&
-               super.equals(o);
+        // `isContentLengthSet` is excluded from the comparison since it is not a field expressing headers data.
+        return endOfStream == ((HttpHeaderGetters) o).isEndOfStream() && super.equals(o);
     }
 
     @Override

@@ -61,6 +61,7 @@ class StringMultimapDerivedApiConsistencyTest {
                          if ("endOfStream".equals(methodName) ||
                              "isEndOfStream".equals(methodName) ||
                              "contentLength".equals(methodName) ||
+                             "isContentLengthSet".equals(methodName) ||
                              "contentType".equals(methodName) ||
                              "contentDisposition".equals(methodName)) {
                              return false;
