@@ -113,8 +113,8 @@ public final class ArmeriaConfigurationNetUtil {
      * assigned.
      */
     @Nullable
-    public static Port maybeNewPort(@Nullable Integer portNumber, @Nullable InetAddress managementServerAddress,
-                                    boolean enableManagementServerSsl) {
+    public static Port maybeNewPort(@Nullable Integer portNumber, @Nullable InetAddress serverAddress,
+                                    boolean enableSsl) {
         if (portNumber == null || portNumber < 0) {
             return null;
         }
@@ -123,10 +123,10 @@ public final class ArmeriaConfigurationNetUtil {
         }
 
         final Port port = new Port().setPort(portNumber);
-        if (managementServerAddress != null) {
-            port.setAddress(managementServerAddress);
+        if (serverAddress != null) {
+            port.setAddress(serverAddress);
         }
-        return port.setProtocol(enableManagementServerSsl ? SessionProtocol.HTTPS : SessionProtocol.HTTP);
+        return port.setProtocol(enableSsl ? SessionProtocol.HTTPS : SessionProtocol.HTTP);
     }
 
     private ArmeriaConfigurationNetUtil() {}
