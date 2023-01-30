@@ -26,6 +26,7 @@ import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -115,13 +116,17 @@ final class AnnotatedBeanFactoryRegistry {
 
     static Set<AnnotatedValueResolver> uniqueResolverSet() {
         return new TreeSet<>((o1, o2) -> {
-            final String o1Name = o1.httpElementName();
-            final String o2Name = o2.httpElementName();
+            String o1Name = o1.httpElementName();
+            String o2Name = o2.httpElementName();
             if (o1Name.equals(o2Name) && o1.annotationType() == o2.annotationType()) {
                 return 0;
             }
-            // We are not ordering, but just finding duplicate elements.
-            return -1;
+
+            // TreeSet internally creates a binary tree. A consistent result depending on the two inputs is
+            // necessary to traverse the binary tree correctly and check uniqueness.
+            o1Name += o1.annotationType().getName();
+            o2Name += o2.annotationType().getName();
+            return o1Name.compareTo(o2Name);
         });
     }
 
@@ -250,17 +255,20 @@ final class AnnotatedBeanFactoryRegistry {
                                 addToFirstIfExists(objectResolvers, converters, dependencyInjector),
                                 dependencyInjector);
                 if (!resolvers.isEmpty()) {
-                    int redundant = 0;
+                    final List<AnnotatedValueResolver> duplicateResolvers = new ArrayList<>(resolvers.size());
                     for (AnnotatedValueResolver resolver : resolvers) {
                         if (!uniques.add(resolver)) {
-                            redundant++;
-                            warnDuplicateResolver(resolver, method.toGenericString());
+                            duplicateResolvers.add(resolver);
                         }
                     }
-                    if (redundant == resolvers.size()) {
+                    if (duplicateResolvers.size() == resolvers.size()) {
                         // Prevent redundant injection only when all parameters are redundant.
                         // Otherwise, we'd better to inject the method rather than ignore it.
                         continue;
+                    }
+
+                    for (AnnotatedValueResolver duplicateResolver : duplicateResolvers) {
+                        warnDuplicateResolver(duplicateResolver, method.toGenericString());
                     }
                     methodsBuilder.put(method, resolvers);
                 }
