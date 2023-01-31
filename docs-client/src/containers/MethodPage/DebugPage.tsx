@@ -175,7 +175,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
 
-    let urlRequestBody;
+    let urlRequestBody = '';
     if (useRequestBody) {
       if (urlParams.has('request_body')) {
         urlRequestBody = jsonPrettify(urlParams.get('request_body')!);
@@ -197,7 +197,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
         )?.pathMapping || '';
     }
 
-    const urlQueries = isAnnotatedService ? urlParams.get('queries') : '';
+    const urlQueries = isAnnotatedService ? urlParams.get('queries') ?? '' : '';
 
     if (!keepDebugResponse) {
       setDebugResponse('');
@@ -207,9 +207,7 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setRequestBody(urlRequestBody || method.exampleRequests[0] || '');
     setAdditionalPath(urlPath || '');
     setAdditionalQueries(urlQueries || '');
-    setDebugFormIsOpen(
-      urlRequestBody !== undefined || urlPath !== '' || urlQueries !== null,
-    );
+    setDebugFormIsOpen(urlRequestBody !== '' || urlQueries !== '');
   }, [
     exactPathMapping,
     exampleQueries.length,
