@@ -119,7 +119,8 @@ class AnnotatedDocServiceTest {
                                       .exampleQueries(MyService.class, "foo", "query=10", "query=20")
                                       .exampleRequests(MyService.class, "pathParams",
                                                        ImmutableList.of(
-                                                               mapper.readTree("{\"hello\":\"armeria\"}")))
+                                                               mapper.readTree("{\"hello\":\"armeria\"}"),
+                                                               mapper.readTree("{\"hello\":\"armeria2\"}")))
                                       .examplePaths(MyService.class, "pathParamsWithQueries",
                                                     "/service/hello1/foo", "/service/hello1/bar")
                                       .exampleQueries(MyService.class, "pathParamsWithQueries", "hello3=hello4")
@@ -135,7 +136,7 @@ class AnnotatedDocServiceTest {
     };
 
     @Test
-    void jsonSpecification() throws InterruptedException, JsonProcessingException {
+    void jsonSpecification() throws Exception {
         if (TestUtil.isDocServiceDemoMode()) {
             Thread.sleep(Long.MAX_VALUE);
         }
@@ -148,7 +149,7 @@ class AnnotatedDocServiceTest {
         addRegexMethodInfo(methodInfos);
         addPrefixMethodInfo(methodInfos);
         addConsumesMethodInfo(methodInfos);
-         addBeanMethodInfo(methodInfos);
+        addBeanMethodInfo(methodInfos);
         addMultiMethodInfo(methodInfos);
         addJsonMethodInfo(methodInfos);
         addOverloadMethodInfo(methodInfos);
@@ -417,6 +418,9 @@ class AnnotatedDocServiceTest {
                     final ArrayNode exampleRequests = (ArrayNode) method.get("exampleRequests");
                     exampleRequests.add('{' + System.lineSeparator() +
                                         "  \"hello\" : \"armeria\"" + System.lineSeparator() +
+                                        '}');
+                    exampleRequests.add('{' + System.lineSeparator() +
+                                        "  \"hello\" : \"armeria2\"" + System.lineSeparator() +
                                         '}');
                     final ArrayNode examplePaths = (ArrayNode) method.get("examplePaths");
                     examplePaths.add(TextNode.valueOf("/service/hello1/foo/hello3/bar"));

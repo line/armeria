@@ -284,6 +284,13 @@ const DebugPage: React.FunctionComponent<Props> = ({
     [],
   );
 
+  const onSelectedRequestBodyChange = useCallback(
+    (e: ChangeEvent<{ value: unknown }>) => {
+      setRequestBody(e.target.value as string);
+    },
+    [],
+  );
+
   const onHeadersFormChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
       setAdditionalHeaders(e.target.value);
@@ -622,6 +629,8 @@ const DebugPage: React.FunctionComponent<Props> = ({
                   />
                 ) : (
                   <RequestBody
+                    exampleRequests={method.exampleRequests}
+                    onSelectedRequestBodyChange={onSelectedRequestBodyChange}
                     requestBodyOpen={requestBodyOpen}
                     requestBody={requestBody}
                     onEditRequestBodyClick={toggleRequestBodyOpen}
