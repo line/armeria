@@ -556,5 +556,4 @@ class PathAndQueryTest {
         assertThat(res2).isNotNull();
         assertThat(res2.path()).isNotEqualTo("/#%2F:@!$&'()*+,;=?");
     }
-
 }
