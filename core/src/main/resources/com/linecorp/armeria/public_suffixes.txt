@@ -4769,7 +4769,6 @@ locker
 locus
 lodi.it
 lodingen.no
-loft
 log.br
 loginline.app
 loginline.dev
@@ -7346,7 +7345,6 @@ service.gov.uk
 service.one
 services
 services.aero
-ses
 setagaya.tokyo.jp
 seto.aichi.jp
 setouchi.okayama.jp
