@@ -28,6 +28,7 @@ import java.util.stream.Stream;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.util.AsciiString;
 
@@ -54,6 +55,7 @@ interface HttpHeaderGetters extends StringMultimapGetters</* IN_NAME */ CharSequ
      * <p>Note that {@code get(HttpHeaderNames.CONTENT_LENGTH)} can return {@code null}, although this method
      * returns {@code true} if {@link HttpHeadersBuilder#contentLength(long)}} is set to {@code -1}.
      */
+    @UnstableApi
     boolean isContentLengthSet();
 
     /**
