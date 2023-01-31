@@ -72,8 +72,7 @@ class ReconfigureTlsTest {
                 WebClient.builder(server.httpsUri())
                          .factory(ClientFactory.builder()
                                                .tlsCustomizer(sslContextBuilder -> {
-                                                   sslContextBuilder.trustManager(
-                                                           oldCert.certificate());
+                                                   sslContextBuilder.trustManager(oldCert.certificate());
                                                }).build())
                          .build()
                          .blocking();
@@ -99,8 +98,7 @@ class ReconfigureTlsTest {
                 WebClient.builder(server.httpsUri())
                          .factory(ClientFactory.builder()
                                                .tlsCustomizer(sslContextBuilder -> {
-                                                   sslContextBuilder.trustManager(
-                                                           newCert.certificate());
+                                                   sslContextBuilder.trustManager(newCert.certificate());
                                                }).build())
                          .build()
                          .blocking();
