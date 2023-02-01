@@ -257,7 +257,8 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     abstract void doClose(Status status, Metadata metadata, boolean completed);
 
-    final void closeListener(Status newStatus, Metadata metadata, boolean completed, boolean setResponseContent) {
+    final void closeListener(Status newStatus, Metadata metadata, boolean completed,
+                             boolean setResponseContent) {
         if (!listenerClosed) {
             listenerClosed = true;
 

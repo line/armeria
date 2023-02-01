@@ -214,7 +214,8 @@ class GrpcClientTest {
             };
             sb.serviceUnder("/",
                             GrpcService.builder()
-                                       .addService(new TestServiceImpl(Executors.newSingleThreadScheduledExecutor()))
+                                       .addService(new TestServiceImpl(
+                                               Executors.newSingleThreadScheduledExecutor()))
                                        .addService(new UnitTestServiceImpl())
                                        .intercept(clientHeaderCaptureInterceptor)
                                        .maxRequestMessageLength(MAX_MESSAGE_SIZE)
