@@ -311,12 +311,11 @@ final class FramedGrpcService extends AbstractHttpService implements GrpcService
         call.setListener(listener);
         call.startDeframing();
         ctx.whenRequestCancelling().handle((cancellationCause, unused) -> {
-            final Metadata metadata = new Metadata();
-            Status status = GrpcStatus.fromThrowable(statusFunction, ctx, cancellationCause, metadata);
+            Status status = Status.CANCELLED.withCause(cancellationCause);
             if (cancellationCause instanceof RequestTimeoutException) {
                 status = status.withDescription("Request timed out");
             }
-            call.close(status, metadata);
+            call.close(status, new Metadata());
             return null;
         });
     }

@@ -45,8 +45,8 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
                    AsyncServerInterceptor.class.getName());
         final AbstractServerCall<I, ?> armeriaServerCall = (AbstractServerCall<I, ?>) serverCall;
 
-        // `sequentialExecutor` is used to call callbacks of ServerCall.Listener by FramedGrpcService and
-        // Armeria's ServerCall implementations.
+        // `sequentialExecutor` is used to invoke callbacks of ServerCall.Listener by FramedGrpcService and
+        // Armeria's ServerCall implementations. So thread-safety and the execution order are guaranteed.
         Executor sequentialExecutor = armeriaServerCall.blockingExecutor();
         if (sequentialExecutor == null) {
             sequentialExecutor = armeriaServerCall.eventLoop();
