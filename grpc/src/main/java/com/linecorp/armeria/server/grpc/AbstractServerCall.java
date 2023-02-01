@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
@@ -206,6 +207,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     final void close(Throwable exception) {
+        exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
         close(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata, exception);
     }
@@ -615,6 +617,10 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     @Nullable
     final Executor blockingExecutor() {
         return blockingExecutor;
+    }
+
+    final EventLoop eventLoop() {
+        return ctx.eventLoop();
     }
 
     @Override
