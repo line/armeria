@@ -494,7 +494,7 @@ final class ArmeriaClientCall<I, O> extends ClientCall<I, O>
         if (status.isOk()) {
             req.abort();
         } else {
-            req.abort(status.asRuntimeException(metadata));
+            req.abort(status.asException(metadata));
         }
         if (upstream != null) {
             upstream.cancel();
