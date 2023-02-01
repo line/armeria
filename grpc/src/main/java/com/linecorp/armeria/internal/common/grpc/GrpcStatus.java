@@ -120,7 +120,7 @@ public final class GrpcStatus {
             return s;
         }
         if (t instanceof ClosedStreamException || t instanceof RequestTimeoutException) {
-            return Status.CANCELLED;
+            return Status.CANCELLED.withCause(t);
         }
         if (t instanceof UnprocessedRequestException || t instanceof IOException) {
             return Status.UNAVAILABLE.withCause(t);
