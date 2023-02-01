@@ -90,7 +90,6 @@ import io.netty.channel.EventLoopGroup;
 import io.netty.channel.ServerChannel;
 import io.netty.channel.socket.ServerSocketChannel;
 import io.netty.handler.ssl.SslContext;
-import io.netty.util.Mapping;
 import io.netty.util.concurrent.FastThreadLocalThread;
 import io.netty.util.concurrent.Future;
 import io.netty.util.concurrent.ImmediateEventExecutor;
@@ -112,9 +111,6 @@ public final class Server implements ListenableAsyncCloseable {
     }
 
     private final UpdatableServerConfig config;
-    @Nullable
-    private final Mapping<String, SslContext> sslContexts;
-
     private final StartStopSupport<Void, Void, Void, ServerListener> startStop;
     private final Set<ServerChannel> serverChannels = new NonBlockingHashSet<>();
     private final Map<InetSocketAddress, ServerPort> activePorts = new LinkedHashMap<>();
@@ -127,7 +123,6 @@ public final class Server implements ListenableAsyncCloseable {
     Server(DefaultServerConfig serverConfig) {
         serverConfig.setServer(this);
         config = new UpdatableServerConfig(requireNonNull(serverConfig, "serverConfig"));
-        sslContexts = config.sslContextMapping();
         startStop = new ServerStartStopSupport(config.startStopExecutor());
         connectionLimitingHandler = new ConnectionLimitingHandler(config.maxNumConnections());
 
