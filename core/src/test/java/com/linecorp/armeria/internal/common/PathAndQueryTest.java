@@ -547,13 +547,13 @@ class PathAndQueryTest {
 
     @Test
     void assertSquareBracketsInPath() {
-                final PathAndQuery res = parse("/#/:@[]!$&'()*+,;=");
+        final PathAndQuery res = parse("/#/:@[]!$&'()*+,;=");
         assertThat(res).isNotNull();
-        assertThat(res.path()).isNotEqualTo("/#/:@!$&'()*+,;=");
+        assertThat(res.path()).isEqualTo("/#/:@%5B%5D!$&'()*+,;=");
 
         final PathAndQuery res2 =
                 parse("/%23%2F%3A%5B%5D%40%21%24%26%27%28%29%2A%2B%2C%3B%3D%3F");
         assertThat(res2).isNotNull();
-        assertThat(res2.path()).isNotEqualTo("/#%2F:@!$&'()*+,;=?");
+        assertThat(res2.path()).isEqualTo("/#%2F:%5B%5D@!$&'()*+,;=?");
     }
 }
