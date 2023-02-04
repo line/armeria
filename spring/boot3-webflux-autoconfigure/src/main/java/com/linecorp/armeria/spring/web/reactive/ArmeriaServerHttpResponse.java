@@ -52,7 +52,7 @@ import reactor.core.publisher.Mono;
 /**
  * A {@link ServerHttpResponse} implementation for the Armeria HTTP server.
  */
-final class ArmeriaServerHttpResponse extends AbstractServerHttpResponse {
+final class ArmeriaServerHttpResponse extends AbstractServerHttpResponseVersionSpecific {
 
     private static final Logger logger = LoggerFactory.getLogger(ArmeriaServerHttpResponse.class);
 

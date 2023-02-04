@@ -44,7 +44,6 @@ import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferFactory;
 import org.springframework.core.io.buffer.DataBufferUtils;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.server.reactive.ChannelSendOperator;
 import org.springframework.http.server.reactive.ServerHttpResponse;
@@ -77,13 +76,9 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
      * response during which time pre-commit actions can still make changes to
      * the response status and headers.
      */
-    private enum State {NEW, COMMITTING, COMMIT_ACTION_FAILED, COMMITTED}
-
+    enum State {NEW, COMMITTING, COMMIT_ACTION_FAILED, COMMITTED}
 
     private final DataBufferFactory dataBufferFactory;
-
-    @Nullable
-    private HttpStatusCode statusCode;
 
     private final HttpHeaders headers;
 
@@ -115,32 +110,8 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
         return dataBufferFactory;
     }
 
-    @Override
-    public boolean setStatusCode(@Nullable HttpStatusCode status) {
-        if (state.get() == State.COMMITTED) {
-            return false;
-        } else {
-            statusCode = status;
-            return true;
-        }
-    }
-
-    @Override
-    @Nullable
-    public HttpStatusCode getStatusCode() {
-        return statusCode;
-    }
-
-    @Override
-    public boolean setRawStatusCode(@Nullable Integer statusCode) {
-        return setStatusCode(statusCode != null ? HttpStatusCode.valueOf(statusCode) : null);
-    }
-
-    @Deprecated
-    @Override
-    @Nullable
-    public Integer getRawStatusCode() {
-        return statusCode != null ? statusCode.value() : null;
+    final State state() {
+        return state.get();
     }
 
     @Override

@@ -32,33 +32,36 @@ dependencies {
 
 // Copy common files from boot3-autoconfigure module to gen-src directory in order to use them as a source set.
 task generateSources(type: Copy) {
-    from "${rootProject.projectDir}/spring/boot3-autoconfigure/src/main/java"
+    from("${rootProject.projectDir}/spring/boot3-autoconfigure/src/main/java") {
+        // NB: Update `copyBoot3Sources` task in boot2-webflux-autoconfigure if a new file is added.
+
+        // Copy from /internal/spring package.
+        include '**/ArmeriaConfigurationNetUtil.java'
+        include '**/ArmeriaConfigurationSettingsUtil.java'
+        include '**/ArmeriaConfigurationUtil.java'
+        include '**/CustomAlias*KeyManager*.java'
+        include '**/SpringDependencyInjector.java'
+        include '**/ThriftServiceUtils.java'
+
+        // Copy from /spring package.
+        include '**/*ArmeriaBeanPostProcessor*.java'
+        include '**/ArmeriaServerConfigurator.java'
+        include '**/ArmeriaSettings.java'
+        include '**/DocServiceConfigurator.java'
+        include '**/DropwizardExpositionService.java'
+        include '**/DropwizardSupport.java'
+        include '**/HealthCheckServiceConfigurator.java'
+        include '**/InternalServiceId.java'
+        include '**/InternalServices.java'
+        include '**/MetricCollectingServiceConfigurator.java'
+        include '**/LocalArmeriaPort.java'
+        include '**/LocalArmeriaPorts.java'
+        include '**/PrometheusSupport.java'
+        include '**/SpringDependencyInjector.java'
+        include '**/Ssl.java'
+    }
+
     into "${project.ext.genSrcDir}/main/java"
-
-    // Copy from /internal/spring package.
-    include '**/ArmeriaConfigurationNetUtil.java'
-    include '**/ArmeriaConfigurationSettingsUtil.java'
-    include '**/ArmeriaConfigurationUtil.java'
-    include '**/CustomAlias*KeyManager*.java'
-    include '**/SpringDependencyInjector.java'
-    include '**/ThriftServiceUtils.java'
-
-    // Copy from /spring package.
-    include '**/*ArmeriaBeanPostProcessor*.java'
-    include '**/ArmeriaServerConfigurator.java'
-    include '**/ArmeriaSettings.java'
-    include '**/DocServiceConfigurator.java'
-    include '**/DropwizardExpositionService.java'
-    include '**/DropwizardSupport.java'
-    include '**/HealthCheckServiceConfigurator.java'
-    include '**/InternalServiceId.java'
-    include '**/InternalServices.java'
-    include '**/MetricCollectingServiceConfigurator.java'
-    include '**/LocalArmeriaPort.java'
-    include '**/LocalArmeriaPorts.java'
-    include '**/PrometheusSupport.java'
-    include '**/SpringDependencyInjector.java'
-    include '**/Ssl.java'
 }
 
 tasks.compileJava.dependsOn(generateSources)
