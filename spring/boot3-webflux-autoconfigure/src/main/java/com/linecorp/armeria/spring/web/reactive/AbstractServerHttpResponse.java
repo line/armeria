@@ -76,7 +76,9 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
      * response during which time pre-commit actions can still make changes to
      * the response status and headers.
      */
-    enum State {NEW, COMMITTING, COMMIT_ACTION_FAILED, COMMITTED}
+    enum State {
+        NEW, COMMITTING, COMMIT_ACTION_FAILED, COMMITTED
+    }
 
     private final DataBufferFactory dataBufferFactory;
 
@@ -91,7 +93,6 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
     @Nullable
     private HttpHeaders readOnlyHeaders;
 
-
     AbstractServerHttpResponse(DataBufferFactory dataBufferFactory) {
         this(dataBufferFactory, new HttpHeaders());
     }
@@ -103,7 +104,6 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
         this.headers = headers;
         cookies = new LinkedMultiValueMap<>();
     }
-
 
     @Override
     public final DataBufferFactory bufferFactory() {
@@ -128,8 +128,7 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
 
     @Override
     public MultiValueMap<String, ResponseCookie> getCookies() {
-        return state.get() == State.COMMITTED ?
-               CollectionUtils.unmodifiableMultiValueMap(cookies) : cookies;
+        return state.get() == State.COMMITTED ? CollectionUtils.unmodifiableMultiValueMap(cookies) : cookies;
     }
 
     @Override
@@ -137,8 +136,8 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
         requireNonNull(cookie, "ResponseCookie must not be null");
 
         if (state.get() == State.COMMITTED) {
-            throw new IllegalStateException("Can't add the cookie " + cookie +
-                                            "because the HTTP response has already been committed");
+            throw new IllegalStateException(
+                    "Can't add the cookie " + cookie + "because the HTTP response has already been committed");
         } else {
             getCookies().add(cookie.getName(), cookie);
         }
@@ -146,11 +145,11 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
 
     /**
      * Return the underlying server response.
+     *
      * <p><strong>Note:</strong> This is exposed mainly for internal framework
      * use such as WebSocket upgrades in the spring-webflux module.
      */
     public abstract <T> T getNativeResponse();
-
 
     @Override
     public void beforeCommit(Supplier<? extends Mono<Void>> action) {
@@ -169,43 +168,40 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
         // For Mono we can avoid ChannelSendOperator and Reactor Netty is more optimized for Mono.
         // We must resolve value first however, for a chance to handle potential error.
         if (body instanceof Mono) {
-            return ((Mono<? extends DataBuffer>) body)
-                    .flatMap(buffer -> {
-                        touchDataBuffer(buffer);
-                        final AtomicBoolean subscribed = new AtomicBoolean();
-                        return doCommit(
-                                () -> {
-                                    try {
-                                        // Upstream code uses `Mono.fromCallable(() -> buffer)` which does
-                                        // nothing when `Subscription.cancel()` is called. It can lead to
-                                        // leaking of the buffer when an HttpResponse is canceled.
-                                        return writeWithInternal(Mono.just(buffer)
-                                                                     .doOnSubscribe(s -> subscribed.set(true))
-                                                                     .doOnDiscard(DataBuffer.class,
-                                                                                  DataBufferUtils::release));
-                                    } catch (Throwable ex) {
-                                        return Mono.error(ex);
-                                    }
-                                })
-                                .doOnError(ex -> DataBufferUtils.release(buffer))
-                                .doOnCancel(() -> {
-                                    if (!subscribed.get()) {
-                                        DataBufferUtils.release(buffer);
-                                    }
-                                });
-                    })
-                    .doOnError(t -> getHeaders().clearContentHeaders())
-                    .doOnDiscard(DataBuffer.class, DataBufferUtils::release);
+            return ((Mono<? extends DataBuffer>) body).flatMap(buffer -> {
+                touchDataBuffer(buffer);
+                final AtomicBoolean subscribed = new AtomicBoolean();
+                return doCommit(() -> {
+                    try {
+                        // Upstream code uses `Mono.fromCallable(()
+                        // -> buffer)` which does
+                        // nothing when `Subscription.cancel()` is
+                        // called. It can lead to
+                        // leaking of the buffer when an
+                        // HttpResponse is canceled.
+                        return writeWithInternal(Mono.just(buffer).doOnSubscribe(s -> subscribed.set(true))
+                                                     .doOnDiscard(DataBuffer.class, DataBufferUtils::release));
+                    } catch (Throwable ex) {
+                        return Mono.error(ex);
+                    }
+                }).doOnError(ex -> DataBufferUtils.release(buffer)).doOnCancel(() -> {
+                    if (!subscribed.get()) {
+                        DataBufferUtils.release(buffer);
+                    }
+                });
+            }).doOnError(t -> getHeaders().clearContentHeaders()).doOnDiscard(DataBuffer.class,
+                                                                              DataBufferUtils::release);
         } else {
-            return new ChannelSendOperator<>(body, inner -> doCommit(() -> writeWithInternal(inner)))
-                    .doOnError(t -> getHeaders().clearContentHeaders());
+            return new ChannelSendOperator<>(body, inner -> doCommit(() -> writeWithInternal(inner))).doOnError(
+                    t -> getHeaders().clearContentHeaders());
         }
     }
 
     @Override
     public final Mono<Void> writeAndFlushWith(Publisher<? extends Publisher<? extends DataBuffer>> body) {
-        return new ChannelSendOperator<>(body, inner -> doCommit(() -> writeAndFlushWithInternal(inner)))
-                .doOnError(t -> getHeaders().clearContentHeaders());
+        return new ChannelSendOperator<>(body,
+                                         inner -> doCommit(() -> writeAndFlushWithInternal(inner))).doOnError(
+                t -> getHeaders().clearContentHeaders());
     }
 
     @Override
@@ -215,6 +211,7 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
 
     /**
      * A variant of {@link #doCommit(Supplier)} for a response without a body.
+     *
      * @return a completion publisher
      */
     protected Mono<Void> doCommit() {
@@ -224,6 +221,7 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
     /**
      * Apply {@link #beforeCommit(Supplier) beforeCommit} actions, apply the
      * response status and headers/cookies, and write the response body.
+     *
      * @param writeAction the action to write the response body (may be {@code null})
      * @return a completion publisher
      */
@@ -231,12 +229,11 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
         Flux<Void> allActions = Flux.empty();
         if (state.compareAndSet(State.NEW, State.COMMITTING)) {
             if (!commitActions.isEmpty()) {
-                allActions = Flux.concat(Flux.fromIterable(commitActions).map(Supplier::get))
-                                 .doOnError(ex -> {
-                                     if (state.compareAndSet(State.COMMITTING, State.COMMIT_ACTION_FAILED)) {
-                                         getHeaders().clearContentHeaders();
-                                     }
-                                 });
+                allActions = Flux.concat(Flux.fromIterable(commitActions).map(Supplier::get)).doOnError(ex -> {
+                    if (state.compareAndSet(State.COMMITTING, State.COMMIT_ACTION_FAILED)) {
+                        getHeaders().clearContentHeaders();
+                    }
+                });
             }
         } else if (state.compareAndSet(State.COMMIT_ACTION_FAILED, State.COMMITTING)) {
             // Skip commit actions
@@ -258,15 +255,16 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
         return allActions.then();
     }
 
-
     /**
      * Write to the underlying the response.
+     *
      * @param body the publisher to write with
      */
     protected abstract Mono<Void> writeWithInternal(Publisher<? extends DataBuffer> body);
 
     /**
      * Write to the underlying the response, and flush after each {@code Publisher<DataBuffer>}.
+     *
      * @param body the publisher to write and flush with
      */
     protected abstract Mono<Void> writeAndFlushWithInternal(
@@ -281,6 +279,7 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
     /**
      * Invoked when the response is getting committed allowing subclasses to
      * make apply header values to the underlying response.
+     *
      * <p>Note that some subclasses use an {@link HttpHeaders} instance that
      * wraps an adapter to the native response headers such that changes are
      * propagated to the underlying response on the go. That means this callback
@@ -298,10 +297,10 @@ abstract class AbstractServerHttpResponse implements ServerHttpResponse {
     /**
      * Allow subclasses to associate a hint with the data buffer if it is a
      * pooled buffer and supports leak tracking.
+     *
      * @param buffer the buffer to attach a hint to
      * @since 5.3.2
      */
     protected void touchDataBuffer(DataBuffer buffer) {
     }
-
 }
