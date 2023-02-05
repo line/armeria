@@ -128,7 +128,7 @@ final class AnnotatedBeanFactoryRegistry {
 
             // TreeSet internally creates a binary tree. A consistent comparison for the two inputs is
             // necessary to traverse the binary tree correctly and check uniqueness.
-            // If compare(o1, o2) returns -1, compare(o2, o1) should return 1.
+            // If compare(o1, o2) returns -1, compare(o2, o1) should return 1 or a positive number.
             if (o1AnnotationType != null) {
                 o1Name += '/' + o1AnnotationType.getName();
             }
