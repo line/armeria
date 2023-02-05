@@ -40,7 +40,6 @@ class DataClassDocServiceTest {
             .execute()
             .content()
 
-        println(jsonNode)
         assertThat(jsonNode.get("services")[0]["methods"][0]["parameters"][0]["typeSignature"].asText())
             .isEqualTo("com.linecorp.armeria.server.kotlin.ExampleQueries1")
         assertThat(jsonNode.get("structs")[0]["name"].asText())
@@ -66,7 +65,6 @@ class DataClassDocServiceTest {
         @RegisterExtension
         val server = object : ServerExtension() {
             override fun configure(sb: ServerBuilder) {
-                sb.http(8080)
                 sb.annotatedService()
                     .requestConverters()
                 sb.annotatedService(MyKotlinService())

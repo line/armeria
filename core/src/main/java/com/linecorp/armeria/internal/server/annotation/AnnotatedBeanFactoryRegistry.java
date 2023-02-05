@@ -21,6 +21,7 @@ import static org.reflections.ReflectionUtils.getAllFields;
 import static org.reflections.ReflectionUtils.getAllMethods;
 import static org.reflections.ReflectionUtils.getConstructors;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -43,6 +44,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -118,15 +120,26 @@ final class AnnotatedBeanFactoryRegistry {
         return new TreeSet<>((o1, o2) -> {
             String o1Name = o1.httpElementName();
             String o2Name = o2.httpElementName();
-            if (o1Name.equals(o2Name) && o1.annotationType() == o2.annotationType()) {
+            final Class<? extends Annotation> o1AnnotationType = o1.annotationType();
+            final Class<? extends Annotation> o2AnnotationType = o2.annotationType();
+            if (o1Name.equals(o2Name) && o1AnnotationType == o2AnnotationType) {
                 return 0;
             }
 
-            // TreeSet internally creates a binary tree. A consistent result depending on the two inputs is
+            // TreeSet internally creates a binary tree. A consistent comparison for the two inputs is
             // necessary to traverse the binary tree correctly and check uniqueness.
-            o1Name += o1.annotationType().getName();
-            o2Name += o2.annotationType().getName();
-            return o1Name.compareTo(o2Name);
+            // If compare(o1, o2) returns -1, compare(o2, o1) should return 1.
+            if (o1AnnotationType != null) {
+                o1Name += '/' + o1AnnotationType.getName();
+            }
+            if (o2AnnotationType != null) {
+                o2Name += '/' + o2AnnotationType.getName();
+            }
+            final int result = o1Name.compareTo(o2Name);
+            if(result != 0) {
+                return result;
+            }
+            return Ints.compare(Objects.hashCode(o1AnnotationType), Objects.hashCode(o2AnnotationType));
         });
     }
 
