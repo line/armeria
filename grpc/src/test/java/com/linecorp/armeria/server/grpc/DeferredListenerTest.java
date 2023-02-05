@@ -89,10 +89,10 @@ class DeferredListenerTest {
         });
 
         // Should be invoked immediately with `executor`.
-        executeAndAwait(executor, listener::onComplete);
+        listener.onComplete();
         assertThat(testListener.events)
                 .containsExactly("onMessage", "onReady", "onHalfClose", "onComplete");
-        executeAndAwait(executor, listener::onCancel);
+        listener.onCancel();
         assertThat(testListener.events)
                 .containsExactly("onMessage", "onReady", "onHalfClose", "onComplete", "onCancel");
     }
@@ -115,7 +115,7 @@ class DeferredListenerTest {
                                      ResponseHeaders.of(200), null, blockingTaskExecutor, false);
     }
 
-    private static final class TestListener extends ServerCall.Listener<SimpleRequest> {
+    private static class TestListener extends ServerCall.Listener<SimpleRequest> {
 
         final List<String> events = new CopyOnWriteArrayList<>();
 
