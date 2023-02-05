@@ -64,6 +64,8 @@ import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.Http
 import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoAnyRequest;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoAnyResponse;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoFieldMaskRequest;
+import com.linecorp.armeria.grpc.testing.Transcoding.EchoFieldMaskResponse;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoListValueRequest;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoListValueResponse;
 import com.linecorp.armeria.grpc.testing.Transcoding.EchoRecursiveRequest;
@@ -167,6 +169,17 @@ public class HttpJsonTranscodingTest {
                                                                     .setTimestamp(request.getTimestamp())
                                                                     .setDuration(request.getDuration())
                                                                     .build());
+            responseObserver.onCompleted();
+        }
+
+        @Override
+        public void echoFieldMask(EchoFieldMaskRequest request,
+                                  StreamObserver<EchoFieldMaskResponse> responseObserver) {
+            responseObserver.onNext(EchoFieldMaskResponse.newBuilder()
+                                                         .setFieldMask(request.getFieldMask())
+                                                         .setPathCount(request.getFieldMask()
+                                                                              .getPathsList().size())
+                                                         .build());
             responseObserver.onCompleted();
         }
 
@@ -491,6 +504,17 @@ public class HttpJsonTranscodingTest {
         assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
         assertThat(root.get("timestamp").asText()).isEqualTo(timestamp);
         assertThat(root.get("duration").asText()).isEqualTo(duration);
+    }
+
+    @Test
+    void shouldAcceptFieldMaskAsString() throws JsonProcessingException {
+        final String fieldMask = "a,b,c";
+        final AggregatedHttpResponse response =
+                webClient.get("/v1/echo/field_mask?field_mask=" + fieldMask).aggregate().join();
+        final JsonNode root = mapper.readTree(response.contentUtf8());
+        assertThat(response.contentType()).isEqualTo(MediaType.JSON_UTF_8);
+        assertThat(root.get("fieldMask").asText()).isEqualTo(fieldMask);
+        assertThat(root.get("pathCount").asInt()).isEqualTo(3);
     }
 
     @Test

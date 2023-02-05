@@ -68,6 +68,7 @@ import com.google.protobuf.Descriptors.MethodDescriptor;
 import com.google.protobuf.Descriptors.ServiceDescriptor;
 import com.google.protobuf.DoubleValue;
 import com.google.protobuf.Duration;
+import com.google.protobuf.FieldMask;
 import com.google.protobuf.FloatValue;
 import com.google.protobuf.Int32Value;
 import com.google.protobuf.Int64Value;
@@ -397,7 +398,8 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
         final String fullName = messageType.getFullName();
 
         if (Timestamp.getDescriptor().getFullName().equals(fullName) ||
-            Duration.getDescriptor().getFullName().equals(fullName)) {
+            Duration.getDescriptor().getFullName().equals(fullName) ||
+            FieldMask.getDescriptor().getFullName().equals(fullName)) {
             return JavaType.STRING;
         }
 
