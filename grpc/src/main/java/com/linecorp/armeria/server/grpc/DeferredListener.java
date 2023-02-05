@@ -16,6 +16,7 @@
 
 package com.linecorp.armeria.server.grpc;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkState;
 
 import java.util.ArrayList;
@@ -30,29 +31,39 @@ import com.linecorp.armeria.common.annotation.Nullable;
 
 import io.grpc.ServerCall;
 import io.grpc.ServerCall.Listener;
+import io.netty.util.concurrent.EventExecutor;
 
 final class DeferredListener<I> extends ServerCall.Listener<I> {
 
     private static final List<?> NOOP_TASKS = ImmutableList.of();
 
+    @Nullable
+    private final Executor blockingExecutor;
+    @Nullable
+    private final EventExecutor eventLoop;
+
     private List<Consumer<Listener<I>>> pendingTasks = new ArrayList<>();
     @Nullable
     private Listener<I> delegate;
-    private boolean callClosed;
 
-    DeferredListener(ServerCall<I, ?> serverCall, CompletableFuture<ServerCall.Listener<I>> future) {
+    private volatile boolean callClosed;
+
+    DeferredListener(ServerCall<I, ?> serverCall, CompletableFuture<ServerCall.Listener<I>> listenerFuture) {
         checkState(serverCall instanceof AbstractServerCall, "Cannot use %s with non-Armeria gRPC server",
                    AsyncServerInterceptor.class.getName());
         final AbstractServerCall<I, ?> armeriaServerCall = (AbstractServerCall<I, ?>) serverCall;
 
-        // `sequentialExecutor` is used to invoke callbacks of ServerCall.Listener by FramedGrpcService and
-        // Armeria's ServerCall implementations. So thread-safety and the execution order are guaranteed.
-        Executor sequentialExecutor = armeriaServerCall.blockingExecutor();
-        if (sequentialExecutor == null) {
-            sequentialExecutor = armeriaServerCall.eventLoop();
+        // As per `ServerCall.Listener`'s Javadoc, the caller should call one simultaneously. `blockingExecutor`
+        // is a sequential executor which is wrapped by `MoreExecutors.newSequentialExecutor()`. So both
+        // `blockingExecutor` and `eventLoop` guarantees the execution order.
+        blockingExecutor = armeriaServerCall.blockingExecutor();
+        if (blockingExecutor == null) {
+            eventLoop = armeriaServerCall.eventLoop();
+        } else {
+            eventLoop = null;
         }
 
-        future.handleAsync((delegate, cause) -> {
+        listenerFuture.handleAsync((delegate, cause) -> {
             if (cause != null) {
                 callClosed = true;
                 armeriaServerCall.close(cause);
@@ -71,7 +82,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
             //noinspection unchecked
             pendingTasks = (List<Consumer<Listener<I>>>) NOOP_TASKS;
             return null;
-        }, sequentialExecutor);
+        }, sequentialExecutor());
     }
 
     @Override
@@ -81,10 +92,11 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
         }
 
         if (pendingTasks == NOOP_TASKS) {
+            // listenerFuture has completed successfully. No race with the listenerFuture's callback.
             delegate.onMessage(message);
-        } else {
-            pendingTasks.add(listener -> listener.onMessage(message));
         }
+
+        maybeAddPendingTask(listener -> listener.onMessage(message));
     }
 
     @Override
@@ -96,7 +108,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
         if (pendingTasks == NOOP_TASKS) {
             delegate.onHalfClose();
         } else {
-            pendingTasks.add(Listener::onHalfClose);
+            maybeAddPendingTask(Listener::onHalfClose);
         }
     }
 
@@ -109,7 +121,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
         if (pendingTasks == NOOP_TASKS) {
             delegate.onCancel();
         } else {
-            pendingTasks.add(Listener::onCancel);
+            maybeAddPendingTask(Listener::onCancel);
         }
     }
 
@@ -122,7 +134,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
         if (pendingTasks == NOOP_TASKS) {
             delegate.onComplete();
         } else {
-            pendingTasks.add(Listener::onComplete);
+            maybeAddPendingTask(Listener::onComplete);
         }
     }
 
@@ -135,7 +147,29 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
         if (pendingTasks == NOOP_TASKS) {
             delegate.onReady();
         } else {
-            pendingTasks.add(Listener::onReady);
+            maybeAddPendingTask(Listener::onReady);
         }
+    }
+
+    private void maybeAddPendingTask(Consumer<ServerCall.Listener<I>> task) {
+        if (eventLoop != null && eventLoop.inEventLoop()) {
+            pendingTasks.add(task);
+        } else {
+            // It is unavoidable to reschedule the task to ensure the execution order.
+            sequentialExecutor().execute(() -> {
+                if (callClosed) {
+                    return;
+                }
+                if (pendingTasks == NOOP_TASKS) {
+                    task.accept(delegate);
+                } else {
+                    pendingTasks.add(task);
+                }
+            });
+        }
+    }
+
+    private Executor sequentialExecutor() {
+        return firstNonNull(eventLoop, blockingExecutor);
     }
 }
