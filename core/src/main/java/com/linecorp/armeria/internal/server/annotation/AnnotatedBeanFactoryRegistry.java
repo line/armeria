@@ -136,7 +136,7 @@ final class AnnotatedBeanFactoryRegistry {
                 o2Name += '/' + o2AnnotationType.getName();
             }
             final int result = o1Name.compareTo(o2Name);
-            if(result != 0) {
+            if (result != 0) {
                 return result;
             }
             return Ints.compare(Objects.hashCode(o1AnnotationType), Objects.hashCode(o2AnnotationType));
