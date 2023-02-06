@@ -314,8 +314,8 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
         }
 
         final Throwable finalCause = cause != null ? cause : AbortedStreamException.get();
-        // Should set `abortCause` before `executor` is written and get after `executor` is written
-        // to preserve the atomicity.
+        // Should set `abortCause` before `executor` is written and get after `executor` is written for
+        // atomicity.
         abortCause = finalCause;
 
         if (executorUpdater.compareAndSet(this, null, ImmediateEventExecutor.INSTANCE)) {
@@ -324,7 +324,6 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
         } else {
             final EventExecutor executor = this.executor;
             assert executor != null;
-            // Subscribed already. Use the designated executor for thread-safety.
             if (executor.inEventLoop()) {
                 abort1(finalCause, true);
             } else {
