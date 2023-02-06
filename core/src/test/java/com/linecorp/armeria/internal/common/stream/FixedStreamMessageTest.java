@@ -44,8 +44,6 @@ import io.netty.util.concurrent.ImmediateEventExecutor;
 
 class FixedStreamMessageTest {
 
-    private static final Integer[] EMPTY_INTEGERS = new Integer[0];
-
     @RegisterExtension
     static EventLoopExtension eventLoop = new EventLoopExtension();
 
@@ -115,9 +113,7 @@ class FixedStreamMessageTest {
 
         // EmptyStreamMessage performs nothing.
         if (!stream.isEmpty()) {
-            await().untilAsserted(() -> {
-                assertThat(causeRef).hasValue(abortCause);
-            });
+            await().untilAsserted(() -> assertThat(causeRef).hasValue(abortCause));
             assertThatThrownBy(() -> stream.whenComplete().join())
                     .isInstanceOf(CompletionException.class)
                     .hasCause(abortCause);
