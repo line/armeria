@@ -27,6 +27,7 @@ import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerClientHandler;
 import com.linecorp.armeria.client.circuitbreaker.CircuitBreakerMapping;
 import com.linecorp.armeria.client.circuitbreaker.ClientCircuitBreakerGenerator;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 
 import io.github.resilience4j.circuitbreaker.CallNotPermittedException;
@@ -63,6 +64,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
  *              ...
  * }</pre>
  */
+@UnstableApi
 public final class Resilience4JCircuitBreakerClientHandler implements CircuitBreakerClientHandler {
 
     private static final Logger logger =

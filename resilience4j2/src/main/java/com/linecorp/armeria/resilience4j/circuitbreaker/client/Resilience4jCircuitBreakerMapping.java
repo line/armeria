@@ -19,6 +19,7 @@ package com.linecorp.armeria.resilience4j.circuitbreaker.client;
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.circuitbreaker.ClientCircuitBreakerGenerator;
 import com.linecorp.armeria.common.Request;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
 import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
@@ -26,6 +27,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
 /**
  * Returns a {@link CircuitBreaker} instance from remote invocation parameters.
  */
+@UnstableApi
 @FunctionalInterface
 public interface Resilience4jCircuitBreakerMapping extends ClientCircuitBreakerGenerator<CircuitBreaker> {
 

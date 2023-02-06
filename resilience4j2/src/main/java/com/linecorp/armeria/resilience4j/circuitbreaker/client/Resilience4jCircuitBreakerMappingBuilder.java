@@ -19,6 +19,7 @@ package com.linecorp.armeria.resilience4j.circuitbreaker.client;
 import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.client.circuitbreaker.AbstractCircuitBreakerMappingBuilder;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.resilience4j.circuitbreaker.Resilience4jCircuitBreakerFactory;
 
 import io.github.resilience4j.circuitbreaker.CircuitBreaker;
@@ -28,6 +29,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreakerRegistry;
  * Builder class for building a {@link Resilience4jCircuitBreakerMapping}
  * based on a combination of host, method and path.
  */
+@UnstableApi
 public final class Resilience4jCircuitBreakerMappingBuilder extends AbstractCircuitBreakerMappingBuilder {
 
     private CircuitBreakerRegistry registry = CircuitBreakerRegistry.ofDefaults();
