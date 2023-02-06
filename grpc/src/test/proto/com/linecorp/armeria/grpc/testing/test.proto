@@ -120,6 +120,9 @@ service UnitTestService {
     // A call that always returns an error with a message.
     rpc ErrorWithMessage(SimpleRequest) returns (SimpleResponse);
 
+    // A streaming call that handles onError from client service logic.
+    rpc ErrorFromClient(stream SimpleRequest) returns (stream SimpleResponse);
+
     // A unary call that always throws an error (as opposed to using StreamObserver.onError). The error is
     // thrown in the onHalfClose callback.
     rpc UnaryThrowsError(SimpleRequest) returns (SimpleResponse);
