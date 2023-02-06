@@ -70,8 +70,8 @@ class Resilience4jCircuitBreakerMappingTest {
         assertThat(mapping1.get(ctx, request).getName()).isEqualTo(mapping2.get(ctx, request).getName());
         assertThat(mapping1.get(ctx, request)).isNotSameAs(mapping2.get(ctx, request));
 
-        final Resilience4jCircuitBreakerMapping mapping3 = Resilience4jCircuitBreakerMapping.ofDefault();
-        final Resilience4jCircuitBreakerMapping mapping4 = Resilience4jCircuitBreakerMapping.ofDefault();
+        final Resilience4jCircuitBreakerMapping mapping3 = Resilience4jCircuitBreakerMapping.of();
+        final Resilience4jCircuitBreakerMapping mapping4 = Resilience4jCircuitBreakerMapping.of();
 
         // the default mapping shares registries
         assertThat(mapping3.get(ctx, request).getName()).isEqualTo(mapping4.get(ctx, request).getName());

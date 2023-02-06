@@ -35,7 +35,7 @@ public interface Resilience4jCircuitBreakerFactory {
      * and will be used as the name parameter of {@link CircuitBreakerRegistry#circuitBreaker(String)}.
      */
     static Resilience4jCircuitBreakerFactory of() {
-        return Resilience4jCircuitBreakerUtils.FACTORY;
+        return Resilience4jCircuitBreakerUtil.FACTORY;
     }
 
     /**

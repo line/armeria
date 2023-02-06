@@ -16,7 +16,7 @@
 
 package com.linecorp.armeria.resilience4j.circuitbreaker;
 
-final class Resilience4jCircuitBreakerUtils {
+final class Resilience4jCircuitBreakerUtil {
 
     static final Resilience4jCircuitBreakerFactory FACTORY = (registry, host, method, path) -> {
         String key = "";
@@ -38,5 +38,5 @@ final class Resilience4jCircuitBreakerUtils {
         return registry.circuitBreaker(key);
     };
 
-    private Resilience4jCircuitBreakerUtils() {}
+    private Resilience4jCircuitBreakerUtil() {}
 }

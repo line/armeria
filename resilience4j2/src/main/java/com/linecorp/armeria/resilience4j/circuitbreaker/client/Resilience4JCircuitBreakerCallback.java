@@ -49,7 +49,7 @@ final class Resilience4JCircuitBreakerCallback implements CircuitBreakerCallback
 
         if (cause == null) {
             final RequestLog log = ctx.log().partial();
-            if (log.isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
+            if (ctx.log().isAvailable(RequestLogProperty.RESPONSE_CAUSE)) {
                 cause = log.responseCause();
             }
         }

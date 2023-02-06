@@ -24,7 +24,7 @@ import io.github.resilience4j.circuitbreaker.CircuitBreaker;
  * An exception that is returned when a {@link CircuitBreaker#onError(long, TimeUnit, Throwable)}
  * is invoked without a distinctive exception.
  */
-public final class FailedCircuitBreakerDecisionException extends Exception {
+public final class FailedCircuitBreakerDecisionException extends RuntimeException {
 
     private static final long serialVersionUID = 9215915943941088196L;
 

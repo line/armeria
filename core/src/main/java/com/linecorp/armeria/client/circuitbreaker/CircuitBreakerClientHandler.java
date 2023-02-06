@@ -37,7 +37,7 @@ import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
  *
  * // defining a custom handler
  * CircuitBreakerClient.newDecorator(
- *         new CircuitBreakerClientHandler<HttpRequest>() {
+ *         new CircuitBreakerClientHandler() {
  *             ...
  *             public CircuitBreakerCallback tryRequest(ClientRequestContext ctx, HttpRequest req) {
  *                 ...

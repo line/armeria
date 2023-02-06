@@ -34,7 +34,7 @@ public interface Resilience4jCircuitBreakerMapping extends ClientCircuitBreakerG
      * A {@link CircuitBreaker} will be created per host using a {@link CircuitBreakerRegistry}
      * with default configurations.
      */
-    static Resilience4jCircuitBreakerMapping ofDefault() {
+    static Resilience4jCircuitBreakerMapping of() {
         return KeyedResilience4jCircuitBreakerMapping.MAPPING;
     }
 

@@ -41,7 +41,7 @@ final class DefaultCircuitBreakerClientHandler implements CircuitBreakerClientHa
         try {
             circuitBreaker = requireNonNull(mapping.get(ctx, req), "circuitBreaker");
         } catch (Throwable t) {
-            logger.warn("Failed to get a circuit breaker from mapping: {}", mapping, t);
+            logger.warn("Failed to get a circuit breaker from mapping ({}) for context ({})", mapping, ctx, t);
             return null;
         }
         if (!circuitBreaker.tryRequest()) {

@@ -70,10 +70,10 @@ public final class Resilience4JCircuitBreakerClientHandler implements CircuitBre
 
     /**
      * Creates a default {@link CircuitBreakerClientHandler} which uses
-     * {@link Resilience4jCircuitBreakerMapping#ofDefault()} to handle requests.
+     * {@link Resilience4jCircuitBreakerMapping#of()} to handle requests.
      */
     public static CircuitBreakerClientHandler of() {
-        return of(Resilience4jCircuitBreakerMapping.ofDefault());
+        return of(Resilience4jCircuitBreakerMapping.of());
     }
 
     /**
@@ -106,7 +106,7 @@ public final class Resilience4JCircuitBreakerClientHandler implements CircuitBre
         try {
             circuitBreaker = requireNonNull(mapping.get(ctx, req), "circuitBreaker");
         } catch (Throwable t) {
-            logger.warn("Failed to get a circuit breaker from mapping", t);
+            logger.warn("Failed to get a circuit breaker from mapping ({}) for context ({})", mapping, ctx, t);
             return null;
         }
         try {
