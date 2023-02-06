@@ -339,17 +339,7 @@ final class HttpJsonTranscodingService extends AbstractUnframedGrpcService
                         throw new RecursiveTypeException(field.getMessageType());
                     }
 
-                    @Nullable
-                    Descriptor typeDesc =
-                            desc.getNestedTypes().stream()
-                                .filter(d -> d.getFullName().equals(field.getMessageType().getFullName()))
-                                .findFirst().orElse(null);
-                    if (typeDesc == null) {
-                        typeDesc = field.getMessageType();
-                    }
-                    checkState(typeDesc != null,
-                               "Descriptor for the type '%s' does not exist.",
-                               field.getMessageType().getFullName());
+                    final Descriptor typeDesc = field.getMessageType();
                     try {
                         builder.putAll(buildFields(typeDesc,
                                                    ImmutableList.<String>builder()
