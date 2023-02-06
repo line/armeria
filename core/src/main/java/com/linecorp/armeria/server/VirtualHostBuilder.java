@@ -58,7 +58,6 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.MoreObjects;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.io.ByteStreams;
 import com.google.common.net.HostAndPort;
 
@@ -106,6 +105,7 @@ public final class VirtualHostBuilder implements TlsSetters {
 
     private final ServerBuilder serverBuilder;
     private final boolean defaultVirtualHost;
+    private final boolean portBased;
     private final List<ServiceConfigSetters> serviceConfigSetters = new ArrayList<>();
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
@@ -158,6 +158,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     VirtualHostBuilder(ServerBuilder serverBuilder, boolean defaultVirtualHost) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
         this.defaultVirtualHost = defaultVirtualHost;
+        portBased = false;
     }
 
     /**
@@ -169,6 +170,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     VirtualHostBuilder(ServerBuilder serverBuilder, int port) {
         this.serverBuilder = requireNonNull(serverBuilder, "serverBuilder");
         this.port = port;
+        portBased = true;
         defaultVirtualHost = true;
     }
 
@@ -303,6 +305,9 @@ public final class VirtualHostBuilder implements TlsSetters {
     private VirtualHostBuilder tls(Supplier<SslContextBuilder> sslContextBuilderSupplier) {
         requireNonNull(sslContextBuilderSupplier, "sslContextBuilderSupplier");
         checkState(this.sslContextBuilderSupplier == null, "TLS has been configured already.");
+        checkState(!portBased,
+                   "Cannot configure TLS to a port-based virtual host. Please configure to %s.tls()",
+                   ServerBuilder.class.getSimpleName());
         this.sslContextBuilderSupplier = sslContextBuilderSupplier;
         return this;
     }
@@ -314,8 +319,7 @@ public final class VirtualHostBuilder implements TlsSetters {
      * @see #tlsCustomizer(Consumer)
      */
     public VirtualHostBuilder tlsSelfSigned() {
-        tlsSelfSigned = true;
-        return this;
+        return tlsSelfSigned(true);
     }
 
     /**
@@ -325,6 +329,8 @@ public final class VirtualHostBuilder implements TlsSetters {
      * @see #tlsCustomizer(Consumer)
      */
     public VirtualHostBuilder tlsSelfSigned(boolean tlsSelfSigned) {
+        checkState(!portBased, "Cannot configure self-signed to a port-based virtual host." +
+                               " Please configure to %s.tlsSelfSigned()", ServerBuilder.class.getSimpleName());
         this.tlsSelfSigned = tlsSelfSigned;
         return this;
     }
@@ -332,6 +338,9 @@ public final class VirtualHostBuilder implements TlsSetters {
     @Override
     public VirtualHostBuilder tlsCustomizer(Consumer<? super SslContextBuilder> tlsCustomizer) {
         requireNonNull(tlsCustomizer, "tlsCustomizer");
+        checkState(!portBased,
+                   "Cannot configure TLS to a port-based virtual host. Please configure to %s.tlsCustomizer()",
+                   ServerBuilder.class.getSimpleName());
         tlsCustomizers.add(tlsCustomizer);
         return this;
     }
@@ -1139,6 +1148,7 @@ public final class VirtualHostBuilder implements TlsSetters {
         final HttpHeaders defaultHeaders =
                 mergeDefaultHeaders(template.defaultHeaders, this.defaultHeaders.build());
 
+        assert defaultServiceNaming != null;
         assert rejectedRouteHandler != null;
         assert accessLoggerMapper != null;
         assert extensions != null;
@@ -1174,6 +1184,46 @@ public final class VirtualHostBuilder implements TlsSetters {
                                accessLogWriter, blockingTaskExecutor, successFunction,
                                multipartUploadsLocation, defaultHeaders);
 
+        final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
+        builder.addAll(shutdownSupports);
+        builder.addAll(template.shutdownSupports);
+
+        final VirtualHost virtualHost =
+                new VirtualHost(defaultHostname, hostnamePattern, port, sslContext(template),
+                                serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
+                                accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
+                                maxRequestLength, verboseResponses, accessLogWriter,
+                                blockingTaskExecutor, builder.build());
+
+        final Function<? super HttpService, ? extends HttpService> decorator =
+                getRouteDecoratingService(template);
+        return decorator != null ? virtualHost.decorate(decorator) : virtualHost;
+    }
+
+    static HttpHeaders mergeDefaultHeaders(HttpHeadersBuilder lowPriorityHeaders,
+                                           HttpHeaders highPriorityHeaders) {
+        if (lowPriorityHeaders.isEmpty()) {
+            return highPriorityHeaders;
+        }
+
+        if (highPriorityHeaders.isEmpty()) {
+            return lowPriorityHeaders.build();
+        }
+
+        final HttpHeadersBuilder headersBuilder = highPriorityHeaders.toBuilder();
+        for (final AsciiString name : lowPriorityHeaders.names()) {
+            if (!headersBuilder.contains(name)) {
+                headersBuilder.add(name, lowPriorityHeaders.getAll(name));
+            }
+        }
+        return headersBuilder.build();
+    }
+
+    @Nullable
+    private SslContext sslContext(VirtualHostBuilder template) {
+        if (portBased) {
+            return null;
+        }
         SslContext sslContext = null;
         boolean releaseSslContextOnFailure = false;
         try {
@@ -1234,48 +1284,13 @@ public final class VirtualHostBuilder implements TlsSetters {
                 validateSslContext(sslContext);
                 checkState(sslContext.isServer(), "sslContextBuilder built a client SSL context.");
             }
-
-            final Builder<ShutdownSupport> builder = ImmutableList.builder();
-            builder.addAll(shutdownSupports);
-            builder.addAll(template.shutdownSupports);
-
-            final VirtualHost virtualHost =
-                    new VirtualHost(defaultHostname, hostnamePattern, port, sslContext,
-                                    serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
-                                    accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
-                                    maxRequestLength, verboseResponses, accessLogWriter,
-                                    blockingTaskExecutor, builder.build());
-
-            final Function<? super HttpService, ? extends HttpService> decorator =
-                    getRouteDecoratingService(template);
-            final VirtualHost decoratedVirtualHost = decorator != null ? virtualHost.decorate(decorator)
-                                                                       : virtualHost;
             releaseSslContextOnFailure = false;
-            return decoratedVirtualHost;
         } finally {
             if (releaseSslContextOnFailure) {
                 ReferenceCountUtil.release(sslContext);
             }
         }
-    }
-
-    static HttpHeaders mergeDefaultHeaders(HttpHeadersBuilder lowPriorityHeaders,
-                                           HttpHeaders highPriorityHeaders) {
-        if (lowPriorityHeaders.isEmpty()) {
-            return highPriorityHeaders;
-        }
-
-        if (highPriorityHeaders.isEmpty()) {
-            return lowPriorityHeaders.build();
-        }
-
-        final HttpHeadersBuilder headersBuilder = highPriorityHeaders.toBuilder();
-        for (final AsciiString name : lowPriorityHeaders.names()) {
-            if (!headersBuilder.contains(name)) {
-                headersBuilder.add(name, lowPriorityHeaders.getAll(name));
-            }
-        }
-        return headersBuilder.build();
+        return sslContext;
     }
 
     private SelfSignedCertificate selfSignedCertificate() throws CertificateException {

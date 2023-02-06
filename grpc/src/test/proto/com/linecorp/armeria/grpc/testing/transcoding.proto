@@ -26,6 +26,7 @@ import "google/protobuf/duration.proto";
 import "google/protobuf/wrappers.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/any.proto";
+import "google/protobuf/field_mask.proto";
 
 service HttpJsonTranscodingTestService {
   rpc GetMessageV1(GetMessageRequestV1) returns (Message) {
@@ -65,6 +66,12 @@ service HttpJsonTranscodingTestService {
   rpc EchoTimestampAndDuration(EchoTimestampAndDurationRequest) returns (EchoTimestampAndDurationResponse) {
     option (google.api.http) = {
       get: "/v1/echo/{timestamp}/{duration}"
+    };
+  }
+
+  rpc EchoFieldMask(EchoFieldMaskRequest) returns (EchoFieldMaskResponse) {
+    option (google.api.http) = {
+      get: "/v1/echo/field_mask"
     };
   }
 
@@ -240,6 +247,15 @@ message EchoTimestampAndDurationRequest {
 message EchoTimestampAndDurationResponse {
   google.protobuf.Timestamp timestamp = 1;
   google.protobuf.Duration duration = 2;
+}
+
+message EchoFieldMaskRequest {
+  google.protobuf.FieldMask field_mask = 1;
+}
+
+message EchoFieldMaskResponse {
+  google.protobuf.FieldMask field_mask = 1;
+  int32 path_count = 2;
 }
 
 message EchoWrappersRequest {
