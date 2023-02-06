@@ -85,7 +85,6 @@ class FixedStreamMessageTest {
     void raceBetweenSubscriptionAndAbort(StreamMessage<Integer> stream) {
         final CountDownLatch latch = new CountDownLatch(1);
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
-        final AtomicInteger delivered = new AtomicInteger();
         stream.subscribe(new Subscriber<Integer>() {
 
             @Override
@@ -123,7 +122,6 @@ class FixedStreamMessageTest {
                     .isInstanceOf(CompletionException.class)
                     .hasCause(abortCause);
         }
-        assertThat(delivered).hasValue(0);
     }
 
     private static final class FixedStreamMessageProvider implements ArgumentsProvider {
