@@ -122,7 +122,7 @@ final class AnnotatedBeanFactoryRegistry {
             String o2Name = o2.httpElementName();
             final Class<? extends Annotation> o1AnnotationType = o1.annotationType();
             final Class<? extends Annotation> o2AnnotationType = o2.annotationType();
-            if (o1Name.equals(o2Name) && o1AnnotationType == o2AnnotationType) {
+            if (o1AnnotationType == o2AnnotationType && o1Name.equals(o2Name)) {
                 return 0;
             }
 
