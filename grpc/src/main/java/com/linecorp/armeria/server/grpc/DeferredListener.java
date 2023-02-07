@@ -42,15 +42,18 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     @Nullable
     private final EventExecutor eventLoop;
 
+    // The following values are intentionally non-volatile, although the callback methods, which can be called
+    // by non-`sequentialExecutor()` thread, access the values. Because `maybeAddPendingTask()` double-checks
+    // the status of the values in the `sequentialExecutor()`.
     private List<Consumer<Listener<I>>> pendingTasks = new ArrayList<>();
     @Nullable
     private Listener<I> delegate;
-
-    private volatile boolean callClosed;
+    private boolean callClosed;
 
     DeferredListener(ServerCall<I, ?> serverCall, CompletableFuture<ServerCall.Listener<I>> listenerFuture) {
         checkState(serverCall instanceof AbstractServerCall, "Cannot use %s with a non-Armeria gRPC server",
                    AsyncServerInterceptor.class.getName());
+        @SuppressWarnings("unchecked")
         final AbstractServerCall<I, ?> armeriaServerCall = (AbstractServerCall<I, ?>) serverCall;
 
         // As per `ServerCall.Listener`'s Javadoc, the caller should call one simultaneously. `blockingExecutor`
@@ -94,9 +97,9 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
         if (pendingTasks == NOOP_TASKS) {
             // listenerFuture has completed successfully. No race with the listenerFuture's callback.
             delegate.onMessage(message);
+        } else {
+            maybeAddPendingTask(listener -> listener.onMessage(message));
         }
-
-        maybeAddPendingTask(listener -> listener.onMessage(message));
     }
 
     @Override

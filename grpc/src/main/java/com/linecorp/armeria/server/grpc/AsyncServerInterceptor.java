@@ -31,21 +31,21 @@ import io.grpc.ServerInterceptor;
  * caller thread.
  * For example:
  * <pre>{@code
- * > class AuthServerInterceptor implements AsyncServerInterceptor {
- * >
- * >     @Override
- * >     <I, O> CompletableFuture<Listener<I>> asyncInterceptCall(
- * >             ServerCall<I, O> call, Metadata headers, ServerCallHandler<I, O> next) {
- * >
- * >        return authorizer.authorize(headers).thenApply(result -> {
- * >             if (result) {
- * >                 return next.startCall(call, headers);
- * >             } else {
- * >                 throw new AuthenticationException("Invalid access");
- * >             }
- * >        });
- * >    }
- * > }
+ * class AuthServerInterceptor implements AsyncServerInterceptor {
+ *
+ *     @Override
+ *     <I, O> CompletableFuture<Listener<I>> asyncInterceptCall(
+ *             ServerCall<I, O> call, Metadata headers, ServerCallHandler<I, O> next) {
+ *
+ *        return authorizer.authorize(headers).thenApply(result -> {
+ *             if (result) {
+ *                 return next.startCall(call, headers);
+ *             } else {
+ *                 throw new AuthenticationException("Invalid access");
+ *             }
+ *        });
+ *    }
+ * }
  * }</pre>
  */
 @UnstableApi

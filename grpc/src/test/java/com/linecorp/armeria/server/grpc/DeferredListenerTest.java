@@ -54,7 +54,7 @@ class DeferredListenerTest {
     void shouldHaveRequestContextInThread() {
         assertThatThrownBy(() -> new DeferredListener<>(mock(ServerCall.class), null))
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Cannot use %s with non-Armeria gRPC server",
+                .hasMessage("Cannot use %s with a non-Armeria gRPC server",
                             AsyncServerInterceptor.class.getName());
     }
 
