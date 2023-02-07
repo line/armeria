@@ -88,6 +88,7 @@ reactive-streams = "1.0.4"
 reactor = "3.4.26"
 reactor-kotlin = "1.2.1"
 reflections = "0.9.11"
+resilience4j = "2.0.2"
 resteasy = "5.0.4.Final"
 resteasy-jboss-logging = "3.4.3.Final"
 resteasy-jboss-logging-annotations = "2.2.1.Final"
@@ -104,7 +105,7 @@ scala3 = "3.2.0"
 scalafmt-gradle-plugin = "1.16.2"
 scalapb = "0.11.12"
 scalapb-json = "0.12.0"
-shadow-gradle-plugin = "6.1.0"
+shadow-gradle-plugin = "7.1.2"
 shibboleth-utilities = "7.5.2"
 snappy = "1.1.8.4"
 slf4j = "1.7.36"
@@ -957,7 +958,7 @@ module = "com.thesamet.scalapb:scalapb-json4s_3"
 version.ref = "scalapb-json"
 
 [libraries.shadow-gradle-plugin]
-module = "com.github.jengelman.gradle.plugins:shadow"
+module = "gradle.plugin.com.github.johnrengelman:shadow"
 version.ref = "shadow-gradle-plugin"
 
 [libraries.slf4j-api]
@@ -1121,6 +1122,18 @@ exclusions = [
 [libraries.zookeeper-junit]
 module = "org.dmonix.junit:zookeeper-junit"
 version.ref = "zookeeper-junit"
+
+[libraries.resilience4j-circuitbreaker]
+module = "io.github.resilience4j:resilience4j-circuitbreaker"
+version.ref = "resilience4j"
+
+# Only used for tests
+[libraries.resilience4j-springboot2]
+module = "io.github.resilience4j:resilience4j-spring-boot2"
+version.ref = "resilience4j"
+[libraries.resilience4j-micrometer]
+module = "io.github.resilience4j:resilience4j-micrometer"
+version.ref = "resilience4j"
 
 [plugins]
 jmh = { id = "me.champeau.jmh", version.ref = "jmh-gradle-plugin" }
