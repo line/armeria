@@ -81,6 +81,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
             } catch (Throwable ex) {
                 callClosed = true;
                 armeriaServerCall.close(ex);
+                return null;
             }
             //noinspection unchecked
             pendingTasks = (List<Consumer<Listener<I>>>) NOOP_TASKS;
