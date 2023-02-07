@@ -139,6 +139,10 @@ final class AnnotatedBeanFactoryRegistry {
             if (result != 0) {
                 return result;
             }
+            // It is still not a good idea to return 0 since the equality for `httpElementName()` and
+            // `annotationType()` have not passed. `o1AnnotationType` and `o2AnnotationType` may be the same
+            // class but loaded by two class different loaders. The hash comparison is used to return a non-zero
+            // value for the different classes.
             return Ints.compare(Objects.hashCode(o1AnnotationType), Objects.hashCode(o2AnnotationType));
         });
     }
