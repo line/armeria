@@ -44,13 +44,13 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Strings;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import com.linecorp.armeria.client.ResponseTimeoutException;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.TimeoutException;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.common.grpc.StackTraceElementProto;
@@ -132,7 +132,7 @@ public final class GrpcStatus {
             }
             return Status.INTERNAL.withCause(t);
         }
-        if (t instanceof ResponseTimeoutException) {
+        if (t instanceof TimeoutException) {
             return Status.DEADLINE_EXCEEDED.withCause(t);
         }
         if (t instanceof ContentTooLargeException) {
