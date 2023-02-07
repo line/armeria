@@ -49,7 +49,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     private volatile boolean callClosed;
 
     DeferredListener(ServerCall<I, ?> serverCall, CompletableFuture<ServerCall.Listener<I>> listenerFuture) {
-        checkState(serverCall instanceof AbstractServerCall, "Cannot use %s with non-Armeria gRPC server",
+        checkState(serverCall instanceof AbstractServerCall, "Cannot use %s with a non-Armeria gRPC server",
                    AsyncServerInterceptor.class.getName());
         final AbstractServerCall<I, ?> armeriaServerCall = (AbstractServerCall<I, ?>) serverCall;
 
