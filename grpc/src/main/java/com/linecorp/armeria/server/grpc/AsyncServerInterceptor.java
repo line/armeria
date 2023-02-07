@@ -53,7 +53,7 @@ import io.grpc.ServerInterceptor;
 public interface AsyncServerInterceptor extends ServerInterceptor {
 
     /**
-     * Asynchronously intercept {@link ServerCall} dispatch by the {@code next} {@link ServerCallHandler}.
+     * Asynchronously intercepts {@link ServerCall} dispatch by the {@code next} {@link ServerCallHandler}.
      */
     <I, O> CompletableFuture<Listener<I>> asyncInterceptCall(ServerCall<I, O> call, Metadata headers,
                                                              ServerCallHandler<I, O> next);
