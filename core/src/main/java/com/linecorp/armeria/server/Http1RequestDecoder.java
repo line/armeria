@@ -153,8 +153,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         if (cause instanceof TooLongHttpLineException) {
                             fail(id, null, HttpStatus.REQUEST_URI_TOO_LONG, "Too Long URI", cause);
                         } else if (cause instanceof TooLongHttpHeaderException) {
-                            fail(id, null, HttpStatus.REQUEST_HEADER_FIELDS_TOO_LARGE, "Too Long Header Fields",
-                                 cause);
+                            fail(id, null, HttpStatus.REQUEST_HEADER_FIELDS_TOO_LARGE,
+                                 "Request Header Fields Too Large", cause);
                         } else {
                             fail(id, null, HttpStatus.BAD_REQUEST, "Decoder failure", cause);
                         }
