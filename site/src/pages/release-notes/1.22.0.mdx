@@ -17,7 +17,7 @@ date: 2023-02-08
           throw new AuthenticationException("Invalid access");
         }
       });
-   }
+    }
   }
 
   GrpcService.builder()
@@ -28,7 +28,8 @@ date: 2023-02-08
 - <type://CircuitBreakerClient> integration with Resilience4j's circuit breaker is now available. #1469 #4139
   - Note that `armeria-resilience4j2` requires Java 17 or higher.
   ```java
-  Resilience4jCircuitBreakerMapping mapping = Resilience4jCircuitBreakerMapping.of();
+  Resilience4jCircuitBreakerMapping mapping =
+    Resilience4jCircuitBreakerMapping.of();
   BlockingWebClient client = WebClient
     .builder()
     .decorator(CircuitBreakerClient
@@ -51,7 +52,7 @@ date: 2023-02-08
 - The authenticated remote user set by <type://RequestLogBuilder#authenticatedUser(String)> is now logged in access
   logs. #4634
 - <type://DocService>'s debug page is lifted to a dedicated popup for better user experience. #4599
-- <type://DocService> now exposes a JSON specification via the `/schemas.json` endpoint. #4518
+- <type://DocService> now exposes [JSON Schema](https://json-schema.org/) via the `/schemas.json` endpoint. #4518
 
 ## 📈 Improvements
 
@@ -63,21 +64,22 @@ date: 2023-02-08
 
 ## 🛠️ Bug fixes
 
-- A `NullPointerException` is no longer visible when an aborted <type://StreamMessage> is collected. #4652
-- `RequestLog.cause()` is not set when an HTTP/1 connection is closed after response data has been fully sent. #4632
-- gRPC HTTP/JSON transcoding now doesn't throw an exception when used with nested messages. #4631 #4641
-- `431 Request Header Fields Too Large` is now returned instead of `400 Bad Request` if the header size exceeds `ServerBuilder.http1MaxHeaderSize()`. #4609 #4655
+- A `NullPointerException` is not raised anymore when an aborted <type://StreamMessage> is collected. #4652
+- A <type://ClosedSessionException> is not set to <type://RequestLog#responseCause()> anymore when
+  an HTTP/1 connection is closed after response data has been fully sent. #4632
+- [gRPC HTTP/JSON transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding) now doesn't throw an exception when used with nested messages. #4631 #4641
+- `431 Request Header Fields Too Large` is now returned instead of `400 Bad Request` if the header size exceeds <type://ServerConfig#http1MaxHeaderSize()>. #4609 #4655
 - Warning on duplicate parameters in <type://DocService> are no longer visible when annotations are added to Kotlin data classes. #4645
-- gRPC HTTP/JSON transcoding now correctly interprets the `google.protobuf.FieldMask` type as a string. #4633 #4640
-- gRPC metadata is now exposed via <type://StatusRuntimeException> in `RequestLog.responseCause()`. #4635 #4636
-- Square brackets "`[]`" are correctly encoded when specified in path parameters. #4607 #4615
+- [gRPC HTTP/JSON transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding) now correctly interprets `google.protobuf.FieldMask` type as a string. #4633 #4640
+- gRPC metadata is now exposed via <type://StatusRuntimeException> in <type://RequestLog#responseCause()>. #4635 #4636
+- Square brackets "`[]`" that are specified in path parameters are correctly encoded. #4607 #4615
 - <type://DecodingService> and <type://DecodingClient> now correctly limit the max length of decompressed streaming data. #4613
 - Client-side gRPC callback `ClientCall.Listener.onHeaders()` is now invoked correctly. #4583 #4608
 - <type://DocService> now correctly displays multiple example requests for a single endpoint. #4576 #4605
 
 ## 🏚️ Deprecations
 
-- `ArmeriaSettings.ip` is deprecated in favor of `ArmeriaSettings.address` #4597 #4598
+- `ArmeriaSettings.ports.ip` is deprecated in favor of `ArmeriaSettings.ports.address`. #4597 #4598
 
 ## ☢️ Breaking changes
 
@@ -89,29 +91,29 @@ date: 2023-02-08
 
 ## ⛓ Dependencies
 
-- Brave 5.14.1 -> 5.15.0
-- Dropwizard-metrics 4.2.13 -> 4.2.15
-- GraphQL Kotlin 6.3.2 -> 6.3.5
-- gRPC Java 1.49.1 -> 1.52.1
-- Hibernate Validator 6.2.3.Final -> 6.2.5.Final
-- Jackson 2.14.1 -> 2.14.2
-- java-jwt 4.2.1 -> 4.2.2
-- Kafka client 3.3.1 -> 3.4.0
-- Kotlin 1.7.22 -> 1.8.10
-- Micrometer 4.10.0 -> 4.11.0
-- Netty 4.1.86.Final -> 4.1.87.Final
-- io_uring 0.0.16.Final -> 0.0.17.Final
-- Protobuf 3.21.1 -> 3.21.7
-- Resteasy 5.0.4.Final -> 5.0.5.Final
-- RxJava3 3.1.5 -> 3.1.6
-- Sangria 3.4.1 -> 3.5.0
-- Scala3 3.2.0 -> 3.2.2
-- ScalaPB 0.11.12 -> 0.11.13
-- ScalaPB JSON 0.12.0 -> 0.12.1
-- Spring 5.3.23 -> 5.3.25
-- Spring Boot 2.7.4 -> 2.7.8
-- Tomcat8 8.5.84 -> 8.5.85
-- Tomcat9 9.0.70 -> 9.0.71
+- Brave 5.14.1 → 5.15.0
+- Dropwizard-metrics 4.2.13 → 4.2.15
+- GraphQL Kotlin 6.3.2 → 6.3.5
+- gRPC Java 1.49.1 → 1.52.1
+- Hibernate Validator 6.2.3.Final → 6.2.5.Final
+- Jackson 2.14.1 → 2.14.2
+- java-jwt 4.2.1 → 4.2.2
+- Kafka client 3.3.1 → 3.4.0
+- Kotlin 1.7.22 → 1.8.10
+- Micrometer 4.10.0 → 4.11.0
+- Netty 4.1.86.Final → 4.1.87.Final
+- io_uring 0.0.16.Final → 0.0.17.Final
+- Protobuf 3.21.1 → 3.21.7
+- Resteasy 5.0.4.Final → 5.0.5.Final
+- RxJava3 3.1.5 → 3.1.6
+- Sangria 3.4.1 → 3.5.0
+- Scala3 3.2.0 → 3.2.2
+- ScalaPB 0.11.12 → 0.11.13
+- ScalaPB JSON 0.12.0 → 0.12.1
+- Spring 5.3.23 → 5.3.25
+- Spring Boot 2.7.4 → 2.7.8
+- Tomcat8 8.5.84 → 8.5.85
+- Tomcat9 9.0.70 → 9.0.71
 
 ## 🙇 Thank you
 
