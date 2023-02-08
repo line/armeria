@@ -24,7 +24,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicIntegerFieldUpdater;
+import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
 
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
@@ -52,8 +52,8 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
     private static final Logger logger = LoggerFactory.getLogger(FixedStreamMessage.class);
 
     @SuppressWarnings("rawtypes")
-    private static final AtomicIntegerFieldUpdater<FixedStreamMessage> subscribedUpdater =
-            AtomicIntegerFieldUpdater.newUpdater(FixedStreamMessage.class, "subscribed");
+    private static final AtomicReferenceFieldUpdater<FixedStreamMessage, EventExecutor> executorUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(FixedStreamMessage.class, EventExecutor.class, "executor");
 
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
@@ -64,13 +64,12 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
     private boolean notifyCancellation;
     private boolean completed;
 
+    // Updated only by executorUpdater
     @Nullable
     private volatile EventExecutor executor;
 
     @Nullable
     private volatile Throwable abortCause;
-    // Updated only via subscribedUpdater
-    private volatile int subscribed;
 
     /**
      * Clean up objects.
@@ -112,12 +111,19 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
         if (isOpen()) {
-            abortSubscriber(executor, subscriber, "a fixed stream is not closed yet");
+            abortSubscriber(executor, subscriber,
+                            new IllegalStateException("a fixed stream is not closed yet"));
             return;
         }
 
-        if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
-            abortSubscriber(executor, subscriber, "subscribed by other subscriber already");
+        if (!executorUpdater.compareAndSet(this, null, executor)) {
+            final Throwable abortCause = this.abortCause;
+            if (abortCause == null) {
+                abortSubscriber(executor, subscriber,
+                                new IllegalStateException("subscribed by other subscriber already"));
+            } else {
+                abortSubscriber(executor, subscriber, abortCause);
+            }
             return;
         }
 
@@ -129,23 +135,18 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
             }
         }
         if (executor.inEventLoop()) {
-            subscribe0(subscriber, executor);
+            subscribe0(subscriber);
         } else {
-            executor.execute(() -> subscribe0(subscriber, executor));
+            executor.execute(() -> subscribe0(subscriber));
         }
     }
 
-    private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor) {
+    private void subscribe0(Subscriber<? super T> subscriber) {
         //noinspection unchecked
         this.subscriber = (Subscriber<T>) subscriber;
-        this.executor = executor;
         try {
             subscriber.onSubscribe(this);
-
-            final Throwable abortCause = this.abortCause;
-            if (abortCause != null) {
-                onError(abortCause);
-            } else if (isEmpty()) {
+            if (isEmpty()) {
                 onComplete();
             }
         } catch (Throwable t) {
@@ -157,17 +158,17 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
         }
     }
 
-    private void abortSubscriber(EventExecutor executor, Subscriber<? super T> subscriber, String message) {
+    private void abortSubscriber(EventExecutor executor, Subscriber<? super T> subscriber, Throwable cause) {
         if (executor.inEventLoop()) {
-            abortSubscriber0(subscriber, message);
+            abortSubscriber0(subscriber, cause);
         } else {
-            executor.execute(() -> abortSubscriber0(subscriber, message));
+            executor.execute(() -> abortSubscriber0(subscriber, cause));
         }
     }
 
-    private void abortSubscriber0(Subscriber<? super T> subscriber, String message) {
+    private void abortSubscriber0(Subscriber<? super T> subscriber, Throwable cause) {
         subscriber.onSubscribe(NoopSubscription.get());
-        subscriber.onError(new IllegalStateException(message));
+        subscriber.onError(cause);
     }
 
     @Override
@@ -175,7 +176,7 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
         requireNonNull(executor, "executor");
         requireNonNull(options, "options");
         final CompletableFuture<List<T>> collectingFuture = new CompletableFuture<>();
-        if (subscribedUpdater.compareAndSet(this, 0, 1)) {
+        if (executorUpdater.compareAndSet(this, null, executor)) {
             final Throwable abortCause = this.abortCause;
             if (abortCause != null) {
                 collectingFuture.completeExceptionally(abortCause);
@@ -188,8 +189,13 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
                 executor.execute(() -> collect(collectingFuture, executor, options, false));
             }
         } else {
-            collectingFuture.completeExceptionally(
-                    new IllegalStateException("subscribed by other subscriber already"));
+            final Throwable abortCause = this.abortCause;
+            if (abortCause != null) {
+                collectingFuture.completeExceptionally(abortCause);
+            } else {
+                collectingFuture.completeExceptionally(
+                        new IllegalStateException("subscribed by other subscriber already"));
+            }
         }
         return collectingFuture;
     }
@@ -216,7 +222,7 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
             subscriber.onNext(touchOrCopyAndClose(item, withPooledObjects));
         } catch (Throwable t) {
             // Just abort this stream so subscriber().onError(e) is called and resources are cleaned up.
-            abort0(t);
+            abort1(t, true);
             throwIfFatal(t);
             logger.warn("Subscriber.onNext({}) should not raise an exception. subscriber: {}",
                         item, subscriber, t);
@@ -293,23 +299,13 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
 
     @Override
     public void abort() {
-        final EventExecutor executor = executor();
-        if (executor.inEventLoop()) {
-            abort0(null);
-        } else {
-            executor.execute(() -> abort0(null));
-        }
+        abort0(null);
     }
 
     @Override
     public void abort(Throwable cause) {
         requireNonNull(cause, "cause");
-        final EventExecutor executor = executor();
-        if (executor.inEventLoop()) {
-            abort0(cause);
-        } else {
-            executor.execute(() -> abort0(cause));
-        }
+        abort0(cause);
     }
 
     private void abort0(@Nullable Throwable cause) {
@@ -317,18 +313,35 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
             return;
         }
 
-        if (cause == null) {
-            cause = AbortedStreamException.get();
-        }
-        cleanupObjects(cause);
+        final Throwable finalCause = cause != null ? cause : AbortedStreamException.get();
+        // Should set `abortCause` before `executor` is written and get after `executor` is written for
+        // atomicity.
+        abortCause = finalCause;
 
-        abortCause = cause;
-        if (executor == null) {
-            // 'abortCause' will be propagated and 'completed' will be set to true when subscribed
-            completionFuture.completeExceptionally(cause);
+        if (executorUpdater.compareAndSet(this, null, ImmediateEventExecutor.INSTANCE)) {
+            // No subscription was made. Safely clean the resources.
+            abort1(finalCause, false);
         } else {
-            // Subscribed already
+            final EventExecutor executor = this.executor;
+            assert executor != null;
+            if (executor.inEventLoop()) {
+                abort1(finalCause, true);
+            } else {
+                executor.execute(() -> abort1(finalCause, true));
+            }
+        }
+    }
+
+    private void abort1(Throwable cause, boolean subscribed) {
+        if (completed) {
+            return;
+        }
+
+        cleanupObjects(cause);
+        if (subscribed) {
             onError(cause);
+        } else {
+            completionFuture.completeExceptionally(cause);
         }
     }
 }
