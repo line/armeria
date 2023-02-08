@@ -69,7 +69,7 @@ date: 2023-02-09
   an HTTP/1 connection is closed after response data has been fully sent. #4632
 - [gRPC HTTP/JSON transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding) now doesn't throw an exception when used with nested messages. #4631 #4641
 - `431 Request Header Fields Too Large` is now returned instead of `400 Bad Request` if the header size exceeds <type://ServerConfig#http1MaxHeaderSize()>. #4609 #4655
-- Warning on duplicate parameters in <type://DocService> are no longer visible when annotations are added to Kotlin data classes. #4645
+- Warnings on duplicate parameters in <type://DocService> are no longer visible when annotations are added to Kotlin data classes. #4645
 - [gRPC HTTP/JSON transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding) now correctly interprets `google.protobuf.FieldMask` type as a string. #4633 #4640
 - gRPC metadata is now exposed via <type://StatusRuntimeException> in <type://RequestLog#responseCause()>. #4635 #4636
 - Square brackets "`[]`" that are specified in path parameters are correctly encoded. #4607 #4615
