@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.spring.actuate;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 import org.springframework.boot.actuate.autoconfigure.web.server.LocalManagementPort;
@@ -28,6 +30,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.spring.actuate.ArmeriaSpringActuatorAutoConfigurationSecureTest.TestConfiguration;
 
 @SpringBootTest(classes = TestConfiguration.class)
@@ -46,16 +49,14 @@ class ArmeriaSpringActuatorAutoConfigurationSslTest {
 
     @Test
     void usingSsl() {
-        // Create a new ClientFactory with a TrustManager that records the received certificate.
         try (ClientFactory clientFactory = ClientFactory.builder()
                                                         .tlsNoVerify()
                                                         .build()) {
-
-            // Send a request to make the TrustManager record the certificate.
             final WebClient client = WebClient.builder("https://127.0.0.1:" + actuatorPort)
                                               .factory(clientFactory)
                                               .build();
-            client.get("/").aggregate().join();
+            assertThat(client.get("/actuator/health").aggregate().join().status())
+                    .isEqualTo(HttpStatus.OK);
         }
     }
 }
