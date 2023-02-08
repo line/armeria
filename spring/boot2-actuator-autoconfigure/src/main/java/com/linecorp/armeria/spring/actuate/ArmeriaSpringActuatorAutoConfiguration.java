@@ -74,6 +74,7 @@ import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
+import com.google.common.collect.Maps;
 import com.google.common.collect.Streams;
 
 import com.linecorp.armeria.common.HttpMethod;
@@ -211,26 +212,34 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                 });
             }
 
-            if (managementPort != null) {
-                final EndpointMapping endpointMapping = new EndpointMapping(
-                        serverProperties.getBasePath() + properties.getBasePath());
-                configureExposableWebEndpoint(sb, managementPort, endpoints, statusMapper,
-                                              mediaTypes, endpointMapping, cors);
-            }
-            // If internal-services.port != management.server.port or management.server has its own address
-            // We need to add actuator to internal-services port without base-path,
-            if (internalServicePort != null &&
-                (!Objects.equals(internalServicePort, managementPort) ||
-                 serverProperties.getAddress() != null)) {
-                final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
-                configureExposableWebEndpoint(sb, internalServicePort, endpoints, statusMapper, mediaTypes,
-                                              endpointMapping, cors);
-            }
+            final ImmutableList.Builder<Map.Entry<EndpointMapping, Integer>> endpointMappingBuilder =
+                    ImmutableList.builder();
+
             if (internalServicePort == null && managementPort == null) {
-                final EndpointMapping endpointMapping = new EndpointMapping(properties.getBasePath());
-                configureExposableWebEndpoint(sb, null, endpoints, statusMapper, mediaTypes, endpointMapping,
-                                              cors);
+                endpointMappingBuilder.add(
+                        Maps.immutableEntry(new EndpointMapping(properties.getBasePath()), null));
+            } else {
+                if (managementPort != null) {
+                    endpointMappingBuilder.add(
+                            Maps.immutableEntry(new EndpointMapping(serverProperties.getBasePath() +
+                                                                    properties.getBasePath()),
+                                                managementPort));
+                }
+                // If internal-services.port != management.server.port or management.server has its own address
+                // We need to add actuator to internal-services port without base-path,
+                if (internalServicePort != null &&
+                    (!Objects.equals(internalServicePort, managementPort) ||
+                     serverProperties.getAddress() != null)) {
+                    endpointMappingBuilder.add(
+                            Maps.immutableEntry(new EndpointMapping(properties.getBasePath()),
+                                                internalServicePort));
+                }
             }
+            endpointMappingBuilder.build()
+                                  .forEach(entry -> configureExposableWebEndpoint(sb, entry.getValue(),
+                                                                                  endpoints, statusMapper,
+                                                                                  mediaTypes, entry.getKey(),
+                                                                                  cors));
 
             if (cors != null) {
                 sb.routeDecorator().pathPrefix("/").build(cors.newDecorator());
@@ -406,8 +415,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
     }
 
     private static Route route(
-            String method, String path, Collection<String> consumes,
-            Collection<String> produces) {
+            String method, String path, Collection<String> consumes, Collection<String> produces) {
         return Route.builder()
                     .path(path)
                     .methods(ImmutableSet.of(HttpMethod.valueOf(method)))
