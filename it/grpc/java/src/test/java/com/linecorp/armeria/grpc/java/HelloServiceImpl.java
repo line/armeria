@@ -39,7 +39,7 @@ public class HelloServiceImpl extends HelloServiceImplBase {
     public void hello(HelloRequest request, StreamObserver<HelloReply> responseObserver) {
         if (request.getName().isEmpty()) {
             responseObserver.onError(
-                    Status.FAILED_PRECONDITION.withDescription("Name cannot be empty").asException());
+                    Status.FAILED_PRECONDITION.withDescription("Name cannot be empty").asRuntimeException());
         } else {
             responseObserver.onNext(buildReply(toMessage(request.getName())));
             responseObserver.onCompleted();

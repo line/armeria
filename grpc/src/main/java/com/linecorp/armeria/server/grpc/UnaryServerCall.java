@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.grpc.GrpcJsonMarshaller;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
+import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.grpc.CompressorRegistry;
@@ -139,6 +140,7 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
     @Override
     void doClose(Status status, Metadata metadata, boolean completed) {
         final ResponseHeaders responseHeaders = responseHeaders();
+        final StatusAndMetadata statusAndMetadata = new StatusAndMetadata(status, metadata);
         final HttpResponse response;
         try {
             if (status.isOk()) {
@@ -167,12 +169,12 @@ final class UnaryServerCall<I, O> extends AbstractServerCall<I, O> {
             }
 
             // Set responseContent before closing stream to use responseCause in error handling
-            ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, responseMessage, metadata), null);
+            ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, responseMessage), null);
             resFuture.complete(response);
         } catch (Exception ex) {
             resFuture.completeExceptionally(ex);
         } finally {
-            closeListener(status, metadata, completed, false);
+            closeListener(statusAndMetadata, completed, false);
         }
     }
 
