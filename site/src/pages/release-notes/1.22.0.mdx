@@ -4,93 +4,116 @@ date: 2023-02-08
 
 ## 🌟 New features
 
-- You can now execute asynchronous tasks in gRPC `ServerInterceptor` using `AsyncServerInterceptor`. ```java class AuthServerInterceptor implements AsyncServerInterceptor {     @Override     <I, O> CompletableFuture<Listener<I>> asyncInterceptCall(             ServerCall<I, O> call, Metadata headers, ServerCallHandler<I, O> next) {        return authorizer.authorize(headers).thenApply(result -> {             if (result) {                 return next.startCall(call, headers);             } else {                 throw new AuthenticationException("Invalid access");             }        });    } } GrpcService.builder()            .intercept(new AuthServerInterceptor()            .addService(...)            ... ``` #4647
-- You can now set and see the authenticated user of a request in an access log. #4634
-- Propagate `onHeaders` for gRPC client. #4583 #4608
-- #4576 #4605
-- Resolves one item from https://github.com/line/armeria/issues/1670 #4599
-- Partially contributes to https://github.com/line/armeria/issues/2194
-# Future improvements: #4599
-- #4518  #4599
-- #4516  #4599
-- Deprecate ArmeriaSettings.ip and add ArmeriaSettings.address #4597 #4598
-- Users can easily know whether a service runs on a blocking executor. #4389 #4585
-- Selectively apply a blocking executor to the methods.
+- gRPC calls can now be intercepted asynchronously using <type://AsyncServerInterceptor>. #4647
 ```java
+class AuthServerInterceptor implements AsyncServerInterceptor {
+
+    @Override
+    <I, O> CompletableFuture<Listener<I>> asyncInterceptCall(
+            ServerCall<I, O> call, Metadata headers, ServerCallHandler<I, O> next) {
+
+       return authorizer.authorize(headers).thenApply(result -> {
+            if (result) {
+                return next.startCall(call, headers);
+            } else {
+                throw new AuthenticationException("Invalid access");
+            }
+       });
+   }
+}
+
+GrpcService.builder()
+           .intercept(new AuthServerInterceptor()
+           .addService(...)
+           ...
+```
+- <type://CircuitBreaker> integration with Resilience4j's circuit breaker is now available. #1469 #4139
+```java
+Resilience4jCircuitBreakerMapping mapping = Resilience4jCircuitBreakerMapping.of();
+BlockingWebClient client = WebClient
+    .builder()
+    .decorator(CircuitBreakerClient
+        .builder(CircuitBreakerRule.onException())
+        .handler(Resilience4JCircuitBreakerClientHandler.of(mapping))
+        .newDecorator())
+    ...
+```
+<Tip>
+  Note that `armeria-resilience4j2` requires Java 17 or higher.
+</Tip>
+- `@Blocking` annotation can now be used with gRPC services. #4389 #4585
+```java
+@Blocking // 👈👈👈 applies to all methods in the class
 class MyGrpcServiceImpl extends MyGrpcServiceImplBase {
-    @Blocking
+    @Blocking // 👈👈👈 applies to a single method
     public void blockingCall(...) {
         ...
     }
-    public void nonBlockingCall(...) {
-        ...
-    }
 }
-@Blocking
-class MyBlockingGrpcServiceImpl extends MyGrpcServiceImplBase {
-    
-    public void blockingCall1(...) {
-        ...
-    }
-    public void blockingCall2(...) {
-        ...
-    }
-}
-``` #4389 #4585
-- Example `schema.json` file for the `TestMessage` from `message.proto` which contains almost everything: <details> <summary>JSON Schema</summary> ```json {   "$id" : "armeria.grpc.testing.TestService/UnaryCallWithAllDifferentParameterTypes/POST",   "title" : "UnaryCallWithAllDifferentParameterTypes",   "description" : " This method's parameter message contains all different types of parameters\n as well as the response type contains all different types of parameters.\n Can be used to check any kind of serialization issues.\n",   "additionalProperties" : false,   "type" : "object",   "properties" : {     "bool" : {       "type" : "boolean",       "description" : "",       "additionalProperties" : true     },     "int32" : {       "type" : "integer",       "description" : "",       "additionalProperties" : true     },     "int64" : {       "type" : "integer",       "description" : "",       "additionalProperties" : true     },     "uint32" : {       "type" : "integer",       "description" : "",       "additionalProperties" : true     },     "uint64" : {       "type" : "integer",       "description" : "",       "additionalProperties" : true     },     "sint32" : {       "type" : "integer",       "description" : "",       "additionalProperties" : true     },     "sint64" : {       "type" : "integer",       "description" : "",       "additionalProperties" : true     },     "fixed32" : {       "type" : "integer",       "description" : "",       "additionalProperties" : true     },     "fixed64" : {       "type" : "integer",       "description" : "",       "additionalProperties" : true     },     "float" : {       "type" : "number",       "description" : "",       "additionalProperties" : true     },     "double" : {       "type" : "number",       "description" : "",       "additionalProperties" : true     },     "string" : {       "type" : "string",       "description" : "",       "additionalProperties" : true     },     "bytes" : {       "type" : "string",       "description" : "",       "additionalProperties" : true     },     "test_enum" : {       "type" : "string",       "description" : "",       "enum" : [ "ZERO", "ONE", "TWO" ],       "additionalProperties" : true     },     "nested" : {       "type" : "object",       "description" : "",       "additionalProperties" : true,       "properties" : {         "string" : {           "type" : "string",           "description" : "",           "additionalProperties" : true         }       },       "required" : [ ]     },     "complex_other_message" : {       "type" : "object",       "description" : "",       "additionalProperties" : true,       "properties" : {         "bool" : {           "type" : "boolean",           "description" : "",           "additionalProperties" : true         },         "int32" : {           "type" : "integer",           "description" : "",           "additionalProperties" : true         },         "int64" : {           "type" : "integer",           "description" : "",           "additionalProperties" : true         },         "uint32" : {           "type" : "integer",           "description" : "",           "additionalProperties" : true         },         "uint64" : {           "type" : "integer",           "description" : "",           "additionalProperties" : true         },         "sint32" : {           "type" : "integer",           "description" : "",           "additionalProperties" : true         },         "sint64" : {           "type" : "integer",           "description" : "",           "additionalProperties" : true         },         "fixed32" : {           "type" : "integer",           "description" : "",           "additionalProperties" : true         },         "fixed64" : {           "type" : "integer",           "description" : "",           "additionalProperties" : true         },         "float" : {           "type" : "number",           "description" : "",           "additionalProperties" : true         },         "double" : {           "type" : "number",           "description" : "",           "additionalProperties" : true         },         "string" : {           "type" : "string",           "description" : "",           "additionalProperties" : true         },         "bytes" : {           "type" : "string",           "description" : "",           "additionalProperties" : true         },         "test_enum" : {           "type" : "string",           "description" : "",           "enum" : [ "ZERO", "ONE", "TWO" ],           "additionalProperties" : true         },         "nested" : {           "type" : "object",           "description" : "",           "additionalProperties" : true,           "properties" : {             "string" : {               "type" : "string",               "description" : "",               "additionalProperties" : true             }           },           "required" : [ ]         },         "strings" : {           "type" : "array",           "description" : "",           "items" : {             "type" : "string"           }         },         "map" : {           "type" : "object",           "description" : "",           "additionalProperties" : {             "type" : "integer"           }         },         "self" : {           "$ref" : "#/properties/complex_other_message"         }       },       "required" : [ ]     },     "strings" : {       "$ref" : "#/properties/complex_other_message/properties/strings"     },     "nesteds" : {       "type" : "array",       "description" : "",       "items" : {         "$ref" : "#/properties/nested"       }     },     "selves" : {       "type" : "array",       "description" : "",       "items" : {         "$ref" : "#"       }     },     "string_to_int_map" : {       "$ref" : "#/properties/complex_other_message/properties/map"     },     "int_to_string_map" : {       "type" : "object",       "description" : "",       "additionalProperties" : {         "type" : "string"       }     },     "message_map" : {       "type" : "object",       "description" : "",       "additionalProperties" : {         "$ref" : "#/properties/nested"       }     },     "self_map" : {       "type" : "object",       "description" : "",       "additionalProperties" : {         "$ref" : "#"       }     },     "self" : {       "$ref" : "#"     },     "nested_self" : {       "type" : "object",       "description" : "",       "additionalProperties" : true,       "properties" : {         "self" : {           "$ref" : "#"         }       },       "required" : [ ]     },     "nested_nested_self" : {       "type" : "object",       "description" : "",       "additionalProperties" : true,       "properties" : {         "nested_self" : {           "$ref" : "#/properties/nested_self"         }       },       "required" : [ ]     }   },   "required" : [ ] } ``` </details> Related to #4518
-- #2844  #4518
-- #4516
-~we might want to block this PR until #4491 is ready because this is causing extra workload on the existing doc service.~ #4518
-- Add resilience4j integration for circuitbreaker #1469 #4139
+```
+- Armeria server with Spring integration can now be configured to bind to non-ip addresses. #4597 #4598
+- The authenticated remote user for requests are now logged in access logs. #4634
+- <type://DocService>'s debug page is lifted to a dedicated popup for better user experience. #4599
+- DocService now exposes a JSON specification via the `/schemas.json` endpoint. #4518
 
 ## 📈 Improvements
 
-- You can now dynamically update TLS configurations with `Server.reconfigure()`. #4637
-- The Thrift typedefs are correctly resolved. 
-<img width="946" alt="image" src="https://user-images.githubusercontent.com/25103250/212018732-f7b4a850-8c9d-45ca-b914-fbb84618a0db.png"> #4628
-- DocService front-end assets are now compressed using Gzip. #4616
-- Users can support modules with different minimum java versions easily.
-Note: If multiple `java(\\d+)` flags are specified, only the first one will have effect. #4593
-- Resolve https://github.com/line/armeria/pull/4518#discussion_r1051738777 #4592
-- An exception is raised if TLS is set to a port-based virtual host. #4588
+- `Server.reconfigure()` now dynamically updates TLS configurations correctly. #4637
+- Thrift typedefs are now correctly displayed in <type://DocService>. #4628
+- DocService front-end assets are now compressed using Gzip instead of Brotli. #4616
+- An exception is raised if TLS is set for a port-based virtual host. #4588
 
 ## 🛠️ Bug fixes
 
-- `431 Request Header Fields Too Large` is now returned instead of `400 Bad Request` if the size of headers exceeds `ServerBuilder.http1MaxHeaderSize()`. #4609 #4655
-- You no longer see `NullPointerException` when an aborted `StreamMessage` is collected. #4652
-- You no longer see duplicate parameters in `DocService` when parameter annotations for a request object are added to Kotlin data class. #4645
-- Fix HttpJsonTranscodingService to find field descriptor with `field.getMessageType()` #4631 #4641
-- Fix HttpJsonTranscodingService to accept google.protobuf.FieldMask field as string #4633 #4640
-- User can access to metadata object from `StatusException` in `RequestLog.responseContent().cause()`. #4635 #4636
-- You no longer see `ClosedSessionException` when a connection is closed after a response data has been fully sent in HTTP/1. #4632
-- [] no longer allowed as path chars #4607 #4615
-- `DecodingService` and `DecodingClient` now correctly limit the max length of decompressed streaming data. #4613
-
-## 📃 Documentation
-
-- Let users know  that `@Blocking` annotation is available for gRPC services #4621
+- `431 Request Header Fields Too Large` is now returned instead of `400 Bad Request` if the header size exceeds `ServerBuilder.http1MaxHeaderSize()`. #4609 #4655
+- A `NullPointerException` is no longer visible when an aborted <type://StreamMessage> is collected. #4652
+- Warning on duplicate parameters in <type://DocService> are no longer visible when annotations are added to a Kotlin data class. #4645
+- gRPC HTTP/JSON transcoding now doesn't throw an exception for nested types. #4631 #4641
+- gRPC HTTP/JSON transcoding now interprets the `google.protobuf.FieldMask` type as a string. #4633 #4640
+- gRPC metadata is now exposed via <type://StatusRuntimeException> in `RequestLog.responseCause()`. #4635 #4636
+- `RequestLog.cause()` is not set when an HTTP/1 connection is closed after response data has been fully sent. #4632
+- Square brackets (`[]`) are correctly encoded when specified in query and path parameters. #4607 #4615
+- <type://DecodingService> and <type://DecodingClient> now correctly limit the max length of decompressed streaming data. #4613
+- Client-side gRPC callback `ClientCall.Listener#onHeaders` is now invoked correctly. #4583 #4608
+- DocService now correctly displays multiple example requests for a single endpoint. #4576 #4605
 
 ## 🏚️ Deprecations
 
-- N/A
+- `ArmeriaSettings.ip` is deprecated in favor of `ArmeriaSettings.address` #4597 #4598
 
 ## ☢️ Breaking changes
 
-- N/A
+- TBU
 
 ## ⛓ Dependencies
 
+- Brave 5.14.1 -> 5.15.0
+- Dropwizard-metrics 4.2.13 -> 4.2.15
+- GraphQL Kotlin 6.3.2 -> 6.3.5
+- gRPC Java 1.49.1 -> 1.52.1
+- Hibernate Validator 6.2.3.Final -> 6.2.5.Final
+- Jackson 2.14.1 -> 2.14.2
+- java-jwt 4.2.1 -> 4.2.2
+- Kafka client 3.3.1 -> 3.4.0
+- Kotlin 1.7.22 -> 1.8.10
+- Micrometer 4.10.0 -> 4.11.0
+- Netty 4.1.86.Final -> 4.1.87.Final
+- io_uring 0.0.16.Final -> 0.0.17.Final
+- Protobuf 3.21.1 -> 3.21.7
+- Resteasy 5.0.4.Final -> 5.0.5.Final
+- RxJava3 3.1.5 -> 3.1.6
+- Sangria 3.4.1 -> 3.5.0
+- Scala3 3.2.0 -> 3.2.2
+- ScalaPB 0.11.12 -> 0.11.13
+- ScalaPB JSON 0.12.0 -> 0.12.1
+- Spring 5.3.23 -> 5.3.25
+- Spring Boot 2.7.4 -> 2.7.8
+- Tomcat8 8.5.84 -> 8.5.85
+- Tomcat9 9.0.70 -> 9.0.71
 
+## 🗑 Build improvement
 
-Brotli test suite passes
-
-
-## 🗑 Maybe ignore
-
-- Typos in the documentation will be fixed. #4638
-- Users facing this issue now have a successful local build.
-<img width="1424" alt="Screenshot 2023-01-07 at 00 20 49" src="https://user-images.githubusercontent.com/36740791/211115813-f47c329c-47e0-4604-bc08-27224c49bdb0.png"> #4617
-- Less flakiness #4590
+- - <type://PropertiesEndpointGroup> related tests now pass for directories with a space. #4617
 
 ## 🙇 Thank you
 
