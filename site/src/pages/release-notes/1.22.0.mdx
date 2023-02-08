@@ -21,24 +21,22 @@ date: 2023-02-08
   }
 
   GrpcService.builder()
-             .intercept(new AuthServerInterceptor()
+             .intercept(new AuthServerInterceptor()) // 👈👈👈
              .addService(...)
              ...
   ```
 - <type://CircuitBreaker> integration with Resilience4j's circuit breaker is now available. #1469 #4139
+  - Note that `armeria-resilience4j2` requires Java 17 or higher.
   ```java
   Resilience4jCircuitBreakerMapping mapping = Resilience4jCircuitBreakerMapping.of();
   BlockingWebClient client = WebClient
     .builder()
     .decorator(CircuitBreakerClient
       .builder(CircuitBreakerRule.onException())
-      .handler(Resilience4JCircuitBreakerClientHandler.of(mapping))
+      .handler(Resilience4JCircuitBreakerClientHandler.of(mapping)) // 👈👈👈
       .newDecorator())
     ...
   ```
-<Tip>
-  Note that `armeria-resilience4j2` requires Java 17 or higher.
-</Tip>
 - `@Blocking` annotation can now be used with gRPC services. #4389 #4585
   ```java
   @Blocking // 👈👈👈 applies to all methods in the class
@@ -52,7 +50,7 @@ date: 2023-02-08
 - Armeria server with Spring integration can now be configured to bind to non-ip addresses. #4597 #4598
 - The authenticated remote user for requests are now logged in access logs. #4634
 - <type://DocService>'s debug page is lifted to a dedicated popup for better user experience. #4599
-- DocService now exposes a JSON specification via the `/schemas.json` endpoint. #4518
+- <type://DocService> now exposes a JSON specification via the `/schemas.json` endpoint. #4518
 
 ## 📈 Improvements
 
@@ -63,17 +61,17 @@ date: 2023-02-08
 
 ## 🛠️ Bug fixes
 
-- `431 Request Header Fields Too Large` is now returned instead of `400 Bad Request` if the header size exceeds `ServerBuilder.http1MaxHeaderSize()`. #4609 #4655
 - A `NullPointerException` is no longer visible when an aborted <type://StreamMessage> is collected. #4652
-- Warning on duplicate parameters in <type://DocService> are no longer visible when annotations are added to a Kotlin data class. #4645
-- gRPC HTTP/JSON transcoding now doesn't throw an exception for nested types. #4631 #4641
-- gRPC HTTP/JSON transcoding now interprets the `google.protobuf.FieldMask` type as a string. #4633 #4640
-- gRPC metadata is now exposed via <type://StatusRuntimeException> in `RequestLog.responseCause()`. #4635 #4636
 - `RequestLog.cause()` is not set when an HTTP/1 connection is closed after response data has been fully sent. #4632
-- Square brackets (`[]`) are correctly encoded when specified in query and path parameters. #4607 #4615
+- gRPC HTTP/JSON transcoding now doesn't throw an exception when used with nested messages. #4631 #4641
+- `431 Request Header Fields Too Large` is now returned instead of `400 Bad Request` if the header size exceeds `ServerBuilder.http1MaxHeaderSize()`. #4609 #4655
+- Warning on duplicate parameters in <type://DocService> are no longer visible when annotations are added to Kotlin data classes. #4645
+- gRPC HTTP/JSON transcoding now correctly interprets the `google.protobuf.FieldMask` type as a string. #4633 #4640
+- gRPC metadata is now exposed via <type://StatusRuntimeException> in `RequestLog.responseCause()`. #4635 #4636
+- Square brackets "`[]`" are correctly encoded when specified in query or path parameters. #4607 #4615
 - <type://DecodingService> and <type://DecodingClient> now correctly limit the max length of decompressed streaming data. #4613
 - Client-side gRPC callback `ClientCall.Listener#onHeaders` is now invoked correctly. #4583 #4608
-- DocService now correctly displays multiple example requests for a single endpoint. #4576 #4605
+- <type://DocService> now correctly displays multiple example requests for a single endpoint. #4576 #4605
 
 ## 🏚️ Deprecations
 
