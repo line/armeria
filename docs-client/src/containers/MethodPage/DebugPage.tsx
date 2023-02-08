@@ -81,7 +81,7 @@ interface OwnProps {
   exactPathMapping: boolean;
   useRequestBody: boolean;
   debugFormIsOpen: boolean;
-  setDebugFormIsOpen: Dispatch<boolean>;
+  setDebugFormIsOpen: Dispatch<React.SetStateAction<boolean>>;
 }
 
 type Props = OwnProps & RouteComponentProps;
@@ -207,7 +207,9 @@ const DebugPage: React.FunctionComponent<Props> = ({
     setRequestBody(urlRequestBody || method.exampleRequests[0] || '');
     setAdditionalPath(urlPath || '');
     setAdditionalQueries(urlQueries || '');
-    setDebugFormIsOpen(urlRequestBody !== '' || urlQueries !== '');
+    setDebugFormIsOpen(
+      (isOpen) => isOpen || urlRequestBody !== '' || urlQueries !== '',
+    );
   }, [
     exactPathMapping,
     exampleQueries.length,
