@@ -30,6 +30,7 @@ import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.CancellationException;
+import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
@@ -457,9 +458,13 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                     //    3) and the protocol is HTTP/1,
                     // it is very likely that a client closed the connection after receiving the
                     // complete content, which is not really a problem.
+                    final Throwable cause = future.cause();
                     isSuccess = endOfStream && wroteEmptyData &&
-                                future.cause() instanceof ClosedChannelException &&
-                                responseEncoder instanceof Http1ObjectEncoder;
+                                responseEncoder instanceof Http1ObjectEncoder &&
+                                (cause instanceof ClosedChannelException ||
+                                 // A ClosedSessionException may be raised by HttpObjectEncoder
+                                 // if a channel was closed.
+                                 cause instanceof ClosedSessionException);
                 }
                 handleWriteComplete(future, endOfStream, isSuccess);
             }

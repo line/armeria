@@ -18,14 +18,13 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.time.Duration;
+import java.util.concurrent.CountDownLatch;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
-
-import com.google.common.util.concurrent.Uninterruptibles;
 
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.WebClient;
@@ -57,7 +56,11 @@ class Http1ServerEarlyDisconnectionTest {
                     // Wait for the client to close the connection.
                     // Note: The sleep duration should be less than 1 second after which `ServerHandler`
                     //       calls `cleanup()` to remove `unfinishedRequests`.
-                    Uninterruptibles.sleepUninterruptibly(Duration.ofMillis(200));
+                    try {
+                        latch.await();
+                    } catch (InterruptedException e) {
+                        throw new RuntimeException(e);
+                    }
 
                     writer.close();
                 });
@@ -66,6 +69,13 @@ class Http1ServerEarlyDisconnectionTest {
             });
         }
     };
+
+    private static CountDownLatch latch;
+
+    @BeforeAll
+    static void beforeAll() {
+        latch = new CountDownLatch(1);
+    }
 
     @Test
     void closeConnectionWhenAllContentAreReceived() throws InterruptedException {
@@ -92,6 +102,7 @@ class Http1ServerEarlyDisconnectionTest {
                 if (received >= contentLength) {
                     // All data is received, so it should be safe to close the connection.
                     clientFactory.close();
+                    latch.countDown();
                 }
             }
 
