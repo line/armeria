@@ -115,7 +115,6 @@ import io.grpc.ServerInterceptor;
 import io.grpc.ServiceDescriptor;
 import io.grpc.Status;
 import io.grpc.Status.Code;
-import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import io.grpc.protobuf.ProtoUtils;
 import io.grpc.protobuf.services.ProtoReflectionService;
@@ -197,7 +196,7 @@ class GrpcServiceServerTest {
 
         @Override
         public void errorNoMessage(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            responseObserver.onError(Status.ABORTED.asException());
+            responseObserver.onError(Status.ABORTED.asRuntimeException());
         }
 
         @Override
@@ -217,7 +216,8 @@ class GrpcServiceServerTest {
                             Base64.getEncoder().encodeToString(
                                     Int32Value.newBuilder().setValue(20).build().toByteArray())));
 
-            responseObserver.onError(Status.ABORTED.withDescription("aborted call").asException(metadata));
+            responseObserver.onError(Status.ABORTED.withDescription("aborted call")
+                                                   .asRuntimeException(metadata));
         }
 
         @Override
@@ -630,7 +630,7 @@ class GrpcServiceServerTest {
             assertThat(grpcStatus).isNotNull();
             assertThat(grpcStatus.getCode()).isEqualTo(Code.ABORTED);
             assertThat(grpcStatus.getDescription()).isEqualTo("aborted call");
-            assertThat(rpcRes.cause()).isInstanceOfSatisfying(StatusException.class, ex -> {
+            assertThat(rpcRes.cause()).isInstanceOfSatisfying(StatusRuntimeException.class, ex -> {
                 assertThat(ex.getStatus().getCode()).isEqualTo(Code.ABORTED);
                 assertThat(ex.getStatus().getDescription()).isEqualTo("aborted call");
                 assertThat(ex.getTrailers().getAll(STRING_VALUE_KEY))
@@ -651,7 +651,8 @@ class GrpcServiceServerTest {
         response.firstValue().get();
         final Metadata meta = new Metadata();
         meta.put(STRING_VALUE_KEY, StringValue.newBuilder().setValue("client").build());
-        request.onError(Status.INVALID_ARGUMENT.withDescription("abort from client").asException(meta));
+        request.onError(Status.INVALID_ARGUMENT.withDescription("abort from client")
+                                               .asRuntimeException(meta));
         response.awaitCompletion();
 
         assertThat(response.getError()).isInstanceOfSatisfying(StatusRuntimeException.class, ex -> {
@@ -664,7 +665,7 @@ class GrpcServiceServerTest {
             assertThat(rpcReq.method()).isEqualTo("ErrorFromClient");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
 
-            assertThat(rpcRes.cause()).isInstanceOfSatisfying(StatusException.class, cause -> {
+            assertThat(rpcRes.cause()).isInstanceOfSatisfying(StatusRuntimeException.class, cause -> {
                 assertThat(cause.getStatus()).isNotNull();
                 assertThat(cause.getStatus().getCode()).isEqualTo(Code.CANCELLED);
                 assertThat(cause.getTrailers()).isNotNull();
@@ -928,7 +929,7 @@ class GrpcServiceServerTest {
         assertThat(log.requestContent()).isNotNull();
 
         final RpcResponse rpcResponse = (RpcResponse) log.responseContent();
-        final StatusException cause = (StatusException) rpcResponse.cause();
+        final StatusRuntimeException cause = (StatusRuntimeException) rpcResponse.cause();
         assertThat(cause.getStatus().getCode()).isEqualTo(Code.CANCELLED);
         if (protocol.isMultiplex()) {
             assertThat(cause.getStatus().getCause()).isInstanceOf(ClosedStreamException.class);
@@ -1318,7 +1319,7 @@ class GrpcServiceServerTest {
 
         final Status grpcStatus;
         if (rpcRes.cause() != null) {
-            grpcStatus = ((StatusException) rpcRes.cause()).getStatus();
+            grpcStatus = ((StatusRuntimeException) rpcRes.cause()).getStatus();
         } else {
             grpcStatus = null;
         }
@@ -1336,7 +1337,7 @@ class GrpcServiceServerTest {
         assertThat((Object) rpcRes).isNotNull();
 
         assertThat(rpcRes.cause()).isNotNull();
-        checker.check(((StatusException) rpcRes.cause()).getStatus());
+        checker.check(((StatusRuntimeException) rpcRes.cause()).getStatus());
     }
 
     private static void assertNoRpcContent() throws InterruptedException {

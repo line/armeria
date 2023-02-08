@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
+import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -210,14 +211,15 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
             }
         }
 
+        final StatusAndMetadata statusAndMetadata = new StatusAndMetadata(status, metadata);
         // Set responseContent before closing stream to use responseCause in error handling
-        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse, metadata), null);
+        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, firstResponse), null);
         try {
             if (res.tryWrite(responseTrailers(ctx, status, metadata, trailersOnly))) {
                 res.close();
             }
         } finally {
-            closeListener(status, metadata, completed, false);
+            closeListener(statusAndMetadata, completed, false);
         }
     }
 

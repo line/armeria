@@ -119,7 +119,6 @@ import io.grpc.ServerCallHandler;
 import io.grpc.ServerInterceptor;
 import io.grpc.Status;
 import io.grpc.Status.Code;
-import io.grpc.StatusException;
 import io.grpc.StatusRuntimeException;
 import io.grpc.protobuf.ProtoUtils;
 import io.grpc.stub.MetadataUtils;
@@ -148,7 +147,7 @@ class GrpcClientTest {
     private static class UnitTestServiceImpl extends UnitTestServiceImplBase {
         @Override
         public void errorNoMessage(SimpleRequest request, StreamObserver<SimpleResponse> responseObserver) {
-            responseObserver.onError(Status.ABORTED.asException());
+            responseObserver.onError(Status.ABORTED.asRuntimeException());
         }
 
         @Override
@@ -665,8 +664,8 @@ class GrpcClientTest {
         assertThat(log.isComplete()).isTrue();
         assertThat(log.responseContent()).isInstanceOf(RpcResponse.class);
         final Throwable cause = ((RpcResponse) log.responseContent()).cause();
-        assertThat(cause).isInstanceOf(StatusException.class);
-        assertThat(((StatusException) cause).getStatus().getCode()).isEqualTo(Code.CANCELLED);
+        assertThat(cause).isInstanceOf(StatusRuntimeException.class);
+        assertThat(((StatusRuntimeException) cause).getStatus().getCode()).isEqualTo(Code.CANCELLED);
     }
 
     @Test
@@ -1343,11 +1342,12 @@ class GrpcClientTest {
         if (cause instanceof ResponseTimeoutException) {
             return;
         }
-        if (cause instanceof StatusException) {
-            assertThat(((StatusException) cause).getStatus().getCode()).isEqualTo(Code.DEADLINE_EXCEEDED);
+        if (cause instanceof StatusRuntimeException) {
+            assertThat(((StatusRuntimeException) cause).getStatus().getCode())
+                    .isEqualTo(Code.DEADLINE_EXCEEDED);
             return;
         }
-        fail("cause must be a ResponseTimeoutException or a StatusException: ", cause);
+        fail("cause must be a ResponseTimeoutException or a StatusRuntimeException: ", cause);
     }
 
     @Test
@@ -1544,7 +1544,7 @@ class GrpcClientTest {
             assertThat(rpcReq.serviceName()).isEqualTo("armeria.grpc.testing.UnitTestService");
             assertThat(rpcReq.method()).isEqualTo("ErrorNoMessage");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
-            assertThat(cause).isInstanceOfSatisfying(StatusException.class, ex -> {
+            assertThat(cause).isInstanceOfSatisfying(StatusRuntimeException.class, ex -> {
                 assertThat(ex.getStatus()).isNotNull();
                 assertThat(ex.getStatus().getCode()).isEqualTo(Code.ABORTED);
                 assertThat(ex.getStatus().getDescription()).isNull();
@@ -1573,7 +1573,8 @@ class GrpcClientTest {
             assertThat(rpcReq.method()).isEqualTo("ErrorWithMessage");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(cause).isInstanceOfSatisfying(
-                    StatusException.class, ex -> checkException.accept(ex.getStatus(), ex.getTrailers()));
+                    StatusRuntimeException.class, ex -> checkException.accept(ex.getStatus(),
+                                                                              ex.getTrailers()));
         });
     }
 
@@ -1613,7 +1614,8 @@ class GrpcClientTest {
             assertThat(rpcReq.method()).isEqualTo("ErrorFromClient");
             assertThat(rpcReq.params()).containsExactly(REQUEST_MESSAGE);
             assertThat(cause).isInstanceOfSatisfying(
-                    StatusException.class, ex -> checkException.accept(ex.getStatus(), ex.getTrailers()));
+                    StatusRuntimeException.class, ex -> checkException.accept(ex.getStatus(),
+                                                                              ex.getTrailers()));
         });
     }
 
@@ -1749,7 +1751,7 @@ class GrpcClientTest {
 
         final Status grpcStatus;
         if (rpcRes.cause() != null) {
-            grpcStatus = ((StatusException) rpcRes.cause()).getStatus();
+            grpcStatus = ((StatusRuntimeException) rpcRes.cause()).getStatus();
         } else {
             grpcStatus = null;
         }
