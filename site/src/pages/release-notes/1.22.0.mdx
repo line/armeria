@@ -79,7 +79,9 @@ date: 2023-02-08
 
 ## ☢️ Breaking changes
 
-- TBU
+- Armeria's gRPC services now try to throw a `StatusRuntimeException` instead of a `StatusException`. #4658
+  - Note that users are still recommended to perform error handling for both `StatusRuntimeException` and `StatusException`
+  for gRPC services.
 
 ## ⛓ Dependencies
 
