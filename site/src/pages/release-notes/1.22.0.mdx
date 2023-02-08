@@ -5,52 +5,50 @@ date: 2023-02-08
 ## 🌟 New features
 
 - gRPC calls can now be intercepted asynchronously using <type://AsyncServerInterceptor>. #4647
-```java
-class AuthServerInterceptor implements AsyncServerInterceptor {
-
+  ```java
+  class AuthServerInterceptor implements AsyncServerInterceptor {
     @Override
     <I, O> CompletableFuture<Listener<I>> asyncInterceptCall(
-            ServerCall<I, O> call, Metadata headers, ServerCallHandler<I, O> next) {
-
-       return authorizer.authorize(headers).thenApply(result -> {
-            if (result) {
-                return next.startCall(call, headers);
-            } else {
-                throw new AuthenticationException("Invalid access");
-            }
-       });
+          ServerCall<I, O> call, Metadata headers, ServerCallHandler<I, O> next) {
+      return authorizer.authorize(headers).thenApply(result -> {
+        if (result) {
+          return next.startCall(call, headers);
+        } else {
+          throw new AuthenticationException("Invalid access");
+        }
+      });
    }
-}
+  }
 
-GrpcService.builder()
-           .intercept(new AuthServerInterceptor()
-           .addService(...)
-           ...
-```
+  GrpcService.builder()
+             .intercept(new AuthServerInterceptor()
+             .addService(...)
+             ...
+  ```
 - <type://CircuitBreaker> integration with Resilience4j's circuit breaker is now available. #1469 #4139
-```java
-Resilience4jCircuitBreakerMapping mapping = Resilience4jCircuitBreakerMapping.of();
-BlockingWebClient client = WebClient
+  ```java
+  Resilience4jCircuitBreakerMapping mapping = Resilience4jCircuitBreakerMapping.of();
+  BlockingWebClient client = WebClient
     .builder()
     .decorator(CircuitBreakerClient
-        .builder(CircuitBreakerRule.onException())
-        .handler(Resilience4JCircuitBreakerClientHandler.of(mapping))
-        .newDecorator())
+      .builder(CircuitBreakerRule.onException())
+      .handler(Resilience4JCircuitBreakerClientHandler.of(mapping))
+      .newDecorator())
     ...
-```
+  ```
 <Tip>
   Note that `armeria-resilience4j2` requires Java 17 or higher.
 </Tip>
 - `@Blocking` annotation can now be used with gRPC services. #4389 #4585
-```java
-@Blocking // 👈👈👈 applies to all methods in the class
-class MyGrpcServiceImpl extends MyGrpcServiceImplBase {
+  ```java
+  @Blocking // 👈👈👈 applies to all methods in the class
+  class MyGrpcServiceImpl extends MyGrpcServiceImplBase {
     @Blocking // 👈👈👈 applies to a single method
     public void blockingCall(...) {
-        ...
+      ...
     }
-}
-```
+  }
+  ```
 - Armeria server with Spring integration can now be configured to bind to non-ip addresses. #4597 #4598
 - The authenticated remote user for requests are now logged in access logs. #4634
 - <type://DocService>'s debug page is lifted to a dedicated popup for better user experience. #4599
