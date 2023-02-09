@@ -4,6 +4,19 @@ date: 2023-02-09
 
 ## 🌟 New features
 
+- <type://CircuitBreakerClient> integration with Resilience4j's circuit breaker is now available. #1469 #4139
+  - Note that `armeria-resilience4j2` requires Java 17 or higher.
+  ```java
+  Resilience4jCircuitBreakerMapping mapping =
+    Resilience4jCircuitBreakerMapping.of();
+  BlockingWebClient client = WebClient
+    .builder()
+    .decorator(CircuitBreakerClient
+      .builder(CircuitBreakerRule.onException())
+      .handler(Resilience4JCircuitBreakerClientHandler.of(mapping)) // 👈👈👈
+      .newDecorator())
+    ...
+  ```
 - You can now use <type://AsyncServerInterceptor> to asynchronously intercept gRPC service calls. #4647
   ```java
   class AuthServerInterceptor implements AsyncServerInterceptor {
@@ -25,19 +38,6 @@ date: 2023-02-09
              .addService(...)
              ...
   ```
-- <type://CircuitBreakerClient> integration with Resilience4j's circuit breaker is now available. #1469 #4139
-  - Note that `armeria-resilience4j2` requires Java 17 or higher.
-  ```java
-  Resilience4jCircuitBreakerMapping mapping =
-    Resilience4jCircuitBreakerMapping.of();
-  BlockingWebClient client = WebClient
-    .builder()
-    .decorator(CircuitBreakerClient
-      .builder(CircuitBreakerRule.onException())
-      .handler(Resilience4JCircuitBreakerClientHandler.of(mapping)) // 👈👈👈
-      .newDecorator())
-    ...
-  ```
 - <type://@Blocking> annotation can now be used with gRPC services. #4389 #4585
   ```java
   @Blocking // 👈👈👈 applies to all methods in the class
@@ -51,7 +51,6 @@ date: 2023-02-09
 - Armeria server with Spring integration can now be configured to bind to non-ip addresses. #4597 #4598
 - The authenticated remote user set by <type://RequestLogBuilder#authenticatedUser(String)> is now logged in access
   logs. #4634
-- <type://DocService>'s debug page is lifted to a dedicated popup for better user experience. #4599
 - <type://DocService> now exposes [JSON Schema](https://json-schema.org/) via the `/schemas.json` endpoint. #4518
 
 ## 📈 Improvements
@@ -72,7 +71,7 @@ date: 2023-02-09
 - Warnings on duplicate parameters in <type://DocService> are no longer visible when annotations are added to Kotlin data classes. #4645
 - [gRPC HTTP/JSON transcoding](https://cloud.google.com/endpoints/docs/grpc/transcoding) now correctly interprets `google.protobuf.FieldMask` type as a string. #4633 #4640
 - gRPC metadata is now exposed via <type://StatusRuntimeException> in <type://RequestLog#responseCause()>. #4635 #4636
-- Square brackets "`[]`" that are specified in path parameters are correctly encoded. #4607 #4615
+- Square brackets "`[]`" that are specified in path segments are correctly encoded. #4607 #4615
 - <type://DecodingService> and <type://DecodingClient> now correctly limit the max length of decompressed streaming data. #4613
 - Client-side gRPC callback `ClientCall.Listener.onHeaders()` is now invoked correctly. #4583 #4608
 - <type://DocService> now correctly displays multiple example requests for a single endpoint. #4576 #4605
@@ -118,9 +117,9 @@ date: 2023-02-09
 ## 🙇 Thank you
 
 <ThankYou usernames={[
-  'Dogacel',
   'cormoran',
   'daniel-itunu',
+  'Dogacel',
   'heesuk-ahn',
   'hyperxpro',
   'ikhoon',
