@@ -32,10 +32,10 @@ import io.netty.util.concurrent.ProgressivePromise;
 import io.netty.util.concurrent.Promise;
 import io.netty.util.concurrent.ScheduledFuture;
 
-public class EventExecutorWrapper implements EventExecutor {
+class EventExecutorWrapper implements EventExecutor {
     private final EventExecutor delegate;
 
-    public EventExecutorWrapper(EventExecutor delegate) {
+    EventExecutorWrapper(EventExecutor delegate) {
         this.delegate = delegate;
     }
 
