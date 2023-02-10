@@ -134,17 +134,9 @@ class FixedStreamMessageTest {
         assumeThat(stream.isEmpty()).isFalse();
 
         // Execute collect() first on the event loop.
-        final LatchedEventExecutor eventExecutor = new LatchedEventExecutor(eventLoop.get(), 2, false);
-        final CompletableFuture<List<Integer>> collectionFuture = new CompletableFuture<>();
-        stream.collect(eventExecutor).handle((res, cause) -> {
-            if (cause != null) {
-                collectionFuture.completeExceptionally(cause);
-            } else {
-                collectionFuture.complete(res);
-            }
-            return null;
-        });
+        final TestEventExecutor eventExecutor = new TestEventExecutor(eventLoop.get(), 2, false);
 
+        final CompletableFuture<List<Integer>> collectionFuture = stream.collect(eventExecutor);
         assertThat(eventExecutor.numPendingTasks()).isOne();
         assertThat(stream.isComplete()).isFalse();
 
@@ -165,10 +157,9 @@ class FixedStreamMessageTest {
         assumeThat(stream.isEmpty()).isFalse();
 
         // Execute abort() first on the event loop.
-        final LatchedEventExecutor eventExecutor = new LatchedEventExecutor(eventLoop.get(), 2, true);
+        final TestEventExecutor eventExecutor = new TestEventExecutor(eventLoop.get(), 2, true);
 
         final CompletableFuture<List<Integer>> collectionFuture = stream.collect(eventExecutor);
-
         assertThat(eventExecutor.numPendingTasks()).isOne();
         assertThat(stream.isComplete()).isFalse();
 
@@ -194,7 +185,7 @@ class FixedStreamMessageTest {
         assumeThat(stream.isEmpty()).isFalse();
 
         // Execute subscribe() first on the event loop.
-        final LatchedEventExecutor eventExecutor = new LatchedEventExecutor(eventLoop.get(), 2, false);
+        final TestEventExecutor eventExecutor = new TestEventExecutor(eventLoop.get(), 2, false);
 
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
@@ -242,7 +233,7 @@ class FixedStreamMessageTest {
         assumeThat(stream.isEmpty()).isFalse();
 
         // Execute abort() first on the event loop.
-        final LatchedEventExecutor eventExecutor = new LatchedEventExecutor(eventLoop.get(), 2, true);
+        final TestEventExecutor eventExecutor = new TestEventExecutor(eventLoop.get(), 2, true);
 
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
         final AtomicReference<Subscription> subscriptionRef = new AtomicReference<>();
@@ -463,12 +454,12 @@ class FixedStreamMessageTest {
         assertThat(errorCount).hasValue(1);
     }
 
-    private static class LatchedEventExecutor extends EventExecutorWrapper {
+    private static class TestEventExecutor extends EventExecutorWrapper {
         private final Deque<Runnable> pendingTasks = new ArrayDeque<>();
         private int latchCount;
         private final boolean reverseExecution;
 
-        LatchedEventExecutor(EventExecutor delegate, int latchCount, boolean reverseExecution) {
+        TestEventExecutor(EventExecutor delegate, int latchCount, boolean reverseExecution) {
             super(delegate);
             this.latchCount = latchCount;
             this.reverseExecution = reverseExecution;
