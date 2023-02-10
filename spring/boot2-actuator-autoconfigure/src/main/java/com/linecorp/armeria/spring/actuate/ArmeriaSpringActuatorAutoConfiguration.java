@@ -228,7 +228,7 @@ public class ArmeriaSpringActuatorAutoConfiguration {
                 // If internal-services.port != management.server.port or management.server has its own address
                 // We need to add actuator to internal-services port without base-path,
                 if (internalServicePort != null &&
-                    (!Objects.equals(internalServicePort, managementPort) ||
+                    (!internalServicePort.equals(managementPort) ||
                      serverProperties.getAddress() != null)) {
                     endpointMappingBuilder.add(
                             Maps.immutableEntry(new EndpointMapping(properties.getBasePath()),
