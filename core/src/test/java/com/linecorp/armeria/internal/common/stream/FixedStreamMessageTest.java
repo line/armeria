@@ -167,7 +167,7 @@ class FixedStreamMessageTest {
         stream.abort(abortCause);
 
         // The race result:
-        // - collect() fails to execute and returns a future completed exceptionally with abortCause.
+        // - collect() returns a future which is exceptionally completed with abortCause.
         // - abort() cleans up the resources and completes whenComplete() exceptionally.
         assertThatThrownBy(collectionFuture::join)
                 .isInstanceOf(CompletionException.class)
@@ -215,7 +215,7 @@ class FixedStreamMessageTest {
 
         // The race result:
         // - subscribe() finishes successfully.
-        // - abort() cleans up the resources and propagate abortCause via onError().
+        // - abort() cleans up the resources and propagates abortCause via onError().
         await().untilAsserted(() -> {
             assertThat(subscriptionRef).hasValue(stream);
         });
@@ -262,7 +262,7 @@ class FixedStreamMessageTest {
         stream.abort(abortCause);
 
         // The race result:
-        // - subscribe() is aborted with NoopSubscription
+        // - subscribe() is aborted with NoopSubscription.
         // - abort() cleans the resources and completes whenCompletes() exceptionally with abortCause.
         assertThatThrownBy(stream.whenComplete()::join)
                 .isInstanceOf(CompletionException.class)
@@ -359,7 +359,7 @@ class FixedStreamMessageTest {
         });
 
         if (stream instanceof OneElementFixedStreamMessage) {
-            // one element was published before the abortion.
+            // One element was published before the abortion.
             assertThatCode(stream.whenComplete()::join)
                     .doesNotThrowAnyException();
             assertThat(causeRef).hasValue(null);
@@ -388,8 +388,7 @@ class FixedStreamMessageTest {
             }
 
             @Override
-            public void onNext(Integer integer) {
-            }
+            public void onNext(Integer integer) {}
 
             @Override
             public void onError(Throwable t) {
@@ -428,7 +427,7 @@ class FixedStreamMessageTest {
 
             @Override
             public void onNext(Integer integer) {
-                // make onError() get invoked.
+                // Make onError() get invoked.
                 throw onNextCause;
             }
 
@@ -504,8 +503,7 @@ class FixedStreamMessageTest {
                              StreamMessage.of(1, 2),       // TwoElementFixedStreamMessage
                              StreamMessage.of(1, 2, 3),    // ThreeElementFixedStreamMessage
                              StreamMessage.of(1, 2, 3, 4), // RegularFixedStreamMessage
-                             aggregatingStreamMessage
-                         )
+                             aggregatingStreamMessage)
                          .map(Arguments::of);
         }
     }
