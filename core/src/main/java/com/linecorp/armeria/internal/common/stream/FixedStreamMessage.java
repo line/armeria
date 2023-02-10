@@ -367,8 +367,9 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
             if (subscriber != null) {
                 onError0(cause);
             } else {
-                // A subscription is started but subscribe0() isn't called yet.
-                // Delegate abortSubscriber() to propagate abortCause via onError().
+                // A subscription is started but `subscribe0()` isn't called yet. Since `completed` set to true,
+                // `abortSubscriber()` will propagate `abortCause` via `onError()` when `subscribe0()` is
+                // scheduled.
                 completionFuture.completeExceptionally(cause);
             }
         } else {

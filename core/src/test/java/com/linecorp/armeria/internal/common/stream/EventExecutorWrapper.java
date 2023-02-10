@@ -41,7 +41,7 @@ class EventExecutorWrapper implements EventExecutor {
 
     @Override
     public boolean isShuttingDown() {
-        return false;
+        return delegate.isShuttingDown();
     }
 
     @Override
