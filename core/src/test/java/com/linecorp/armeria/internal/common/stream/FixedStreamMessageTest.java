@@ -167,15 +167,7 @@ class FixedStreamMessageTest {
         // Execute abort() first on the event loop.
         final LatchedEventExecutor eventExecutor = new LatchedEventExecutor(eventLoop.get(), 2, true);
 
-        final CompletableFuture<List<Integer>> collectionFuture = new CompletableFuture<>();
-        stream.collect(eventExecutor).handle((res, cause) -> {
-            if (cause != null) {
-                collectionFuture.completeExceptionally(cause);
-            } else {
-                collectionFuture.complete(res);
-            }
-            return null;
-        });
+        final CompletableFuture<List<Integer>> collectionFuture = stream.collect(eventExecutor);
 
         assertThat(eventExecutor.numPendingTasks()).isOne();
         assertThat(stream.isComplete()).isFalse();
