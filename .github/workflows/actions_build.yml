@@ -125,6 +125,11 @@ jobs:
           fi
         shell: bash
 
+      - name: Print target processes
+        if: always()
+        run: jps -v || true
+        shell: bash
+
       - name: Dump stuck threads
         if: always()
         run: jps | grep -i "name=armeria" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
