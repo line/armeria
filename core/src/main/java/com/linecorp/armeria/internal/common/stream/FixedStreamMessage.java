@@ -55,6 +55,10 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
     private static final AtomicReferenceFieldUpdater<FixedStreamMessage, EventExecutor> executorUpdater =
             AtomicReferenceFieldUpdater.newUpdater(FixedStreamMessage.class, EventExecutor.class, "executor");
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<FixedStreamMessage, Throwable> abortCauseUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(FixedStreamMessage.class, Throwable.class, "abortCause");
+
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
     @Nullable
@@ -339,7 +343,10 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
         final Throwable finalCause = cause != null ? cause : AbortedStreamException.get();
         // Should set `abortCause` before `executor` is written and get after `executor` is written for
         // atomicity.
-        abortCause = finalCause;
+        if (!abortCauseUpdater.compareAndSet(this, null, finalCause)) {
+            // Double abortion
+            return;
+        }
 
         if (executorUpdater.compareAndSet(this, null, ImmediateEventExecutor.INSTANCE)) {
             // No subscription was made. Safely clean the resources.
@@ -347,10 +354,7 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
         } else {
             final EventExecutor executor = this.executor;
             assert executor != null;
-            if (executor == ImmediateEventExecutor.INSTANCE) {
-                // Double abortion
-                abort1(finalCause, false);
-            } else if (executor.inEventLoop()) {
+            if (executor.inEventLoop()) {
                 abort1(finalCause, true);
             } else {
                 executor.execute(() -> abort1(finalCause, true));
