@@ -17,6 +17,8 @@ concurrency:
 env:
   LC_ALL: "en_US.UTF-8"
   BUILD_JDK_VERSION: "19"
+  # used as a marker to dump stuck threads in the main gradle worker
+  JAVA_OPTS: "-Dname=armeria"
 
 jobs:
   build:
@@ -125,7 +127,7 @@ jobs:
 
       - name: Dump stuck threads
         if: always()
-        run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+        run: jps | grep -i "name=armeria" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
         shell: bash
 
       - name: Upload the coverage report to Codecov
@@ -230,5 +232,5 @@ jobs:
 
       - name: Dump stuck threads
         if: always()
-        run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+        run: jps | grep -i "name=armeria" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
         shell: bash
