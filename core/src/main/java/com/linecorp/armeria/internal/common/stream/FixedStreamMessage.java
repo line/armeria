@@ -350,8 +350,7 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
             if (executor == ImmediateEventExecutor.INSTANCE) {
                 // Double abortion
                 abort1(finalCause, false);
-            } else
-                if (executor.inEventLoop()) {
+            } else if (executor.inEventLoop()) {
                 abort1(finalCause, true);
             } else {
                 executor.execute(() -> abort1(finalCause, true));
