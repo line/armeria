@@ -71,6 +71,7 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
     @Nullable
     private volatile EventExecutor executor;
 
+    // Updated only by abortCauseUpdater
     @Nullable
     private volatile Throwable abortCause;
 
