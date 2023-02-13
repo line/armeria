@@ -453,6 +453,20 @@ class FixedStreamMessageTest {
         assertThat(errorCount).hasValue(1);
     }
 
+    @ArgumentsSource(FixedStreamMessageProvider.class)
+    @ParameterizedTest
+    void doubleAbort(FixedStreamMessage<Integer> stream) {
+        assumeThat(stream.isEmpty()).isFalse();
+
+        final AnticipatedException abortCause = new AnticipatedException();
+        stream.abort(abortCause);
+        assertThatThrownBy(stream.whenComplete()::join)
+                .isInstanceOf(CompletionException.class)
+                .hasCause(abortCause);
+        // Should perform nothing
+        stream.abort();
+    }
+
     private static class TestEventExecutor extends EventExecutorWrapper {
         private final Deque<Runnable> pendingTasks = new ArrayDeque<>();
         private int latchCount;

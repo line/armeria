@@ -347,7 +347,11 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
         } else {
             final EventExecutor executor = this.executor;
             assert executor != null;
-            if (executor.inEventLoop()) {
+            if (executor == ImmediateEventExecutor.INSTANCE) {
+                // Double abortion
+                abort1(finalCause, false);
+            } else
+                if (executor.inEventLoop()) {
                 abort1(finalCause, true);
             } else {
                 executor.execute(() -> abort1(finalCause, true));
@@ -367,9 +371,9 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
             if (subscriber != null) {
                 onError0(cause);
             } else {
-                // A subscription is started but `subscribe0()` isn't called yet. Since `completed` set to true,
-                // `abortSubscriber()` will propagate `abortCause` via `onError()` when `subscribe0()` is
-                // scheduled.
+                // A subscription is started but `subscribe0()` isn't called yet. Since `completed` is set to
+                // true at the beginning of this method, `abortSubscriber()` will propagate `abortCause` via
+                // `onError()` when `subscribe0()` is scheduled.
                 completionFuture.completeExceptionally(cause);
             }
         } else {
