@@ -135,6 +135,11 @@ jobs:
         run: jps | grep -i "name=armeria" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
         shell: bash
 
+      - name: Dump stuck threads (original)
+        if: always()
+        run: jps | grep -iv "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+        shell: bash
+
       - name: Upload the coverage report to Codecov
         if: ${{ matrix.coverage }}
         uses: codecov/codecov-action@v1
