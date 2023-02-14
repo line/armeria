@@ -53,8 +53,6 @@ allprojects {
         if (rootProject.ext.testJavaVersion >= 9) {
             jvmArgs '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
         }
-        // Acts as a marker for dumping threadsin forked processes
-        jvmArgs '-Dname=armeria'
 
         // Enable leak detection when '-Pleak' option is specified.
         if (rootProject.hasProperty('leak')) {
