@@ -123,24 +123,9 @@ jobs:
           fi
         shell: bash
 
-      - name: Print java defaults
-        if: always()
-        run: java -XX:+PrintFlagsFinal -version || true
-        shell: bash
-
-      - name: Print target processes
-        if: always()
-        run: jps -v || true
-        shell: bash
-
       - name: Dump stuck threads
         if: always()
         run: jps | grep -iv "jps" | grep -v 'Daemon' | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
-        shell: bash
-
-      - name: Dump stuck threads (original)
-        if: always()
-        run: jps | grep -iv "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
         shell: bash
 
       - name: Upload the coverage report to Codecov
@@ -245,5 +230,5 @@ jobs:
 
       - name: Dump stuck threads
         if: always()
-        run: jps | grep -i "name=armeria" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+        run: jps | grep -iv "jps" | grep -v 'Daemon' | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
         shell: bash

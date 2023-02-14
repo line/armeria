@@ -78,7 +78,7 @@ okhttp3 = { strictly = "3.14.9" }
 okhttp4 = "4.10.0"
 opensaml = "3.4.6"
 osdetector = "1.7.2"
-proguard = "7.3.0"
+proguard = "7.3.1"
 prometheus = "0.16.0"
 protobuf = "3.21.1"
 protobuf-gradle-plugin = "0.8.19"
