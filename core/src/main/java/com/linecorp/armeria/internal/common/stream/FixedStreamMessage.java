@@ -55,11 +55,14 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
     private static final AtomicReferenceFieldUpdater<FixedStreamMessage, EventExecutor> executorUpdater =
             AtomicReferenceFieldUpdater.newUpdater(FixedStreamMessage.class, EventExecutor.class, "executor");
 
+    @SuppressWarnings("rawtypes")
+    private static final AtomicReferenceFieldUpdater<FixedStreamMessage, Throwable> abortCauseUpdater =
+            AtomicReferenceFieldUpdater.newUpdater(FixedStreamMessage.class, Throwable.class, "abortCause");
+
     private final CompletableFuture<Void> completionFuture = new EventLoopCheckingFuture<>();
 
     @Nullable
     private Subscriber<T> subscriber;
-
     private boolean withPooledObjects;
     private boolean notifyCancellation;
     private boolean completed;
@@ -68,6 +71,7 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
     @Nullable
     private volatile EventExecutor executor;
 
+    // Updated only by abortCauseUpdater
     @Nullable
     private volatile Throwable abortCause;
 
@@ -127,6 +131,17 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
             return;
         }
 
+        if (executor.inEventLoop()) {
+            subscribe0(subscriber, executor, options);
+        } else {
+            executor.execute(() -> subscribe0(subscriber, executor, options));
+        }
+    }
+
+    private void subscribe0(Subscriber<? super T> subscriber, EventExecutor executor,
+                            SubscriptionOption[] options) {
+        //noinspection unchecked
+        this.subscriber = (Subscriber<T>) subscriber;
         for (SubscriptionOption option : options) {
             if (option == SubscriptionOption.WITH_POOLED_OBJECTS) {
                 withPooledObjects = true;
@@ -134,16 +149,15 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
                 notifyCancellation = true;
             }
         }
-        if (executor.inEventLoop()) {
-            subscribe0(subscriber);
-        } else {
-            executor.execute(() -> subscribe0(subscriber));
-        }
-    }
 
-    private void subscribe0(Subscriber<? super T> subscriber) {
-        //noinspection unchecked
-        this.subscriber = (Subscriber<T>) subscriber;
+        if (completed) {
+            // A stream is aborted while the method is pending in `executor`.
+            final Throwable abortCause = this.abortCause;
+            assert abortCause != null;
+            abortSubscriber(executor, subscriber, abortCause);
+            return;
+        }
+
         try {
             subscriber.onSubscribe(this);
             if (isEmpty()) {
@@ -202,6 +216,20 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
 
     private void collect(CompletableFuture<List<T>> collectingFuture, EventExecutor executor,
                          SubscriptionOption[] options, boolean directExecution) {
+        if (completed) {
+            // A stream is aborted while the method is pending in `executor`.
+            final Throwable abortCause = this.abortCause;
+            assert abortCause != null;
+            if (directExecution) {
+                collectingFuture.completeExceptionally(abortCause);
+            } else {
+                executor.execute(() -> {
+                    collectingFuture.completeExceptionally(abortCause);
+                });
+            }
+            return;
+        }
+
         completed = true;
         final boolean withPooledObjects = containsWithPooledObjects(options);
         collectingFuture.complete(drainAll(withPooledObjects));
@@ -316,7 +344,10 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
         final Throwable finalCause = cause != null ? cause : AbortedStreamException.get();
         // Should set `abortCause` before `executor` is written and get after `executor` is written for
         // atomicity.
-        abortCause = finalCause;
+        if (!abortCauseUpdater.compareAndSet(this, null, finalCause)) {
+            // Double abortion
+            return;
+        }
 
         if (executorUpdater.compareAndSet(this, null, ImmediateEventExecutor.INSTANCE)) {
             // No subscription was made. Safely clean the resources.
@@ -336,10 +367,19 @@ public abstract class FixedStreamMessage<T> extends AggregationSupport
         if (completed) {
             return;
         }
+        completed = true;
 
         cleanupObjects(cause);
         if (subscribed) {
-            onError(cause);
+            final Subscriber<T> subscriber = this.subscriber;
+            if (subscriber != null) {
+                onError0(cause);
+            } else {
+                // A subscription is started but `subscribe0()` isn't called yet. Since `completed` is set to
+                // true at the beginning of this method, `abortSubscriber()` will propagate `abortCause` via
+                // `onError()` when `subscribe0()` is scheduled.
+                completionFuture.completeExceptionally(cause);
+            }
         } else {
             completionFuture.completeExceptionally(cause);
         }
