@@ -141,6 +141,8 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
     private String name;
     @Nullable
     private String fullName;
+    @Nullable
+    private String authenticatedUser;
 
     @Nullable
     private RequestHeaders requestHeaders;
@@ -836,6 +838,20 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         } else {
             return fullName = name;
         }
+    }
+
+    @Override
+    public String authenticatedUser() {
+        ensureAvailable(RequestLogProperty.AUTHENTICATED_USER);
+        return authenticatedUser;
+    }
+
+    @Override
+    public void authenticatedUser(String authenticatedUser) {
+        if (isAvailable(RequestLogProperty.AUTHENTICATED_USER)) {
+            return;
+        }
+        this.authenticatedUser = requireNonNull(authenticatedUser, "authenticatedUser");
     }
 
     @Override
@@ -1897,6 +1913,11 @@ final class DefaultRequestLog implements RequestLog, RequestLogBuilder {
         @Override
         public String fullName() {
             return DefaultRequestLog.this.fullName();
+        }
+
+        @Override
+        public String authenticatedUser() {
+            return authenticatedUser;
         }
 
         @Override

@@ -40,7 +40,7 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
     private final CircuitBreakerRule rule;
     @Nullable
     private final CircuitBreakerRuleWithContent<O> ruleWithContent;
-    private CircuitBreakerClientHandler<I> handler =
+    private CircuitBreakerClientHandler handler =
             CircuitBreakerClientHandler.of(CircuitBreakerMapping.ofDefault());
 
     /**
@@ -94,12 +94,12 @@ public abstract class AbstractCircuitBreakerClientBuilder<I extends Request, O e
      * @return {@code this} to support method chaining.
      */
     @UnstableApi
-    public AbstractCircuitBreakerClientBuilder<I, O> handler(CircuitBreakerClientHandler<I> handler) {
+    public AbstractCircuitBreakerClientBuilder<I, O> handler(CircuitBreakerClientHandler handler) {
         this.handler = requireNonNull(handler, "handler");
         return this;
     }
 
-    final CircuitBreakerClientHandler<I> handler() {
+    final CircuitBreakerClientHandler handler() {
         return handler;
     }
 

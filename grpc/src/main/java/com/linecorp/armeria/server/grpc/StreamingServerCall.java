@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.HttpStreamDeframer;
+import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.TransportStatusListener;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
@@ -204,20 +205,21 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
                     trailersOnly = false;
                 } else {
                     // A stream was closed already.
-                    closeListener(status, false, true);
+                    closeListener(status, metadata, false, true);
                     return;
                 }
             }
         }
 
+        final StatusAndMetadata statusAndMetadata = new StatusAndMetadata(status, metadata);
         // Set responseContent before closing stream to use responseCause in error handling
-        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(status, firstResponse), null);
+        ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, firstResponse), null);
         try {
             if (res.tryWrite(responseTrailers(ctx, status, metadata, trailersOnly))) {
                 res.close();
             }
         } finally {
-            closeListener(status, completed, false);
+            closeListener(statusAndMetadata, completed, false);
         }
     }
 
@@ -255,7 +257,7 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
     }
 
     @Override
-    public void transportReportStatus(Status status, Metadata unused) {
+    public void transportReportStatus(Status status, Metadata metadata) {
         // A server doesn't see trailers from the client so will never have Metadata here.
 
         if (isCloseCalled()) {
@@ -265,6 +267,6 @@ final class StreamingServerCall<I, O> extends AbstractServerCall<I, O>
             // failure there's no need to notify the server listener of it).
             return;
         }
-        closeListener(status, false, true);
+        closeListener(status, metadata, false, true);
     }
 }
