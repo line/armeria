@@ -9,7 +9,7 @@ date: 2023-02-09
   ```java
   Resilience4jCircuitBreakerMapping mapping =
     Resilience4jCircuitBreakerMapping.of();
-  BlockingWebClient client = WebClient
+  WebClient client = WebClient
     .builder()
     .decorator(CircuitBreakerClient
       .builder(CircuitBreakerRule.onException())
