@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 
@@ -153,7 +154,7 @@ public interface Multipart {
      * HttpResponse response = ...;
      * SplitHttpResponse splitResponse = response.split();
      * ResponseHeaders responseHeaders = splitResponse.headers().join();
-     * StreamMessage<HttpData> responseContents = splitResponse.body();
+     * ByteStreamMessage responseContents = splitResponse.body();
      * MediaType contentType = responseHeaders.contentType();
      * if (contentType != null && contentType.isMultipart()) {
      *     String boundary = Multiparts.getBoundary(contentType);
@@ -267,10 +268,11 @@ public interface Multipart {
     HttpResponse toHttpResponse(ResponseHeaders responseHeaders);
 
     /**
-     * Returns a {@link StreamMessage} that emits the {{@link #bodyParts()}} as a stream of {@link HttpData}.
+     * Returns a {@link ByteStreamMessage} that emits the {{@link #bodyParts()}} as a stream of
+     * {@link HttpData}.
      */
     @CheckReturnValue
-    StreamMessage<HttpData> toStreamMessage();
+    ByteStreamMessage toStreamMessage();
 
     /**
      * Returns the boundary string.
@@ -328,6 +330,9 @@ public interface Multipart {
      *              }
      *          });
      * }</pre>
+     *
+     * <p>Note that a {@link MimeParsingException} or another exception can be raised while aggregating
+     * so handle it properly.
      */
     CompletableFuture<AggregatedMultipart> aggregate();
 
@@ -348,6 +353,9 @@ public interface Multipart {
      *              }
      *          });
      * }</pre>
+     *
+     * <p>Note that a {@link MimeParsingException} or another exception can be raised while aggregating
+     * so handle it properly.
      */
     CompletableFuture<AggregatedMultipart> aggregate(EventExecutor executor);
 
@@ -356,6 +364,9 @@ public interface Multipart {
      * be notified when the {@link BodyPart}s of the {@link Multipart} is received fully.
      * {@link AggregatedBodyPart#content()} will return a pooled object, and the caller must ensure
      * to release it. If you don't know what this means, use {@link #aggregate()}.
+     *
+     * <p>Note that a {@link MimeParsingException} or another exception can be raised while aggregating
+     * so handle it properly.
      */
     CompletableFuture<AggregatedMultipart> aggregateWithPooledObjects(ByteBufAllocator alloc);
 
@@ -364,6 +375,9 @@ public interface Multipart {
      * be notified when the {@link BodyPart}s of the {@link Multipart} is received fully.
      * {@link AggregatedBodyPart#content()} will return a pooled object, and the caller must ensure
      * to release it. If you don't know what this means, use {@link #aggregate()}.
+     *
+     * <p>Note that a {@link MimeParsingException} or another exception can be raised while aggregating
+     * so handle it properly.
      */
     CompletableFuture<AggregatedMultipart> aggregateWithPooledObjects(EventExecutor executor,
                                                                       ByteBufAllocator alloc);
@@ -389,6 +403,9 @@ public interface Multipart {
      *                  });
      * }</pre>
      *
+     * <p>Note that a {@link MimeParsingException} or another exception can be raised while collecting
+     * so handle it properly.
+     *
      * @param function A {@link Function} that processes the {@link BodyPart} and returns a future that will
      *                 complete with the process result. The {@link Function} must consume the {@link BodyPart}.
      *                 And If not, collect method will stop processing next {@link BodyPart}.
@@ -405,6 +422,9 @@ public interface Multipart {
      *
      * <p>Note that if this {@link Multipart} was subscribed by other {@link Subscriber} already,
      * the returned {@link CompletableFuture} will be completed with an {@link IllegalStateException}.
+     *
+     * <p>Note that a {@link MimeParsingException} or another exception can be raised while collecting
+     * so handle it properly.
      */
     @UnstableApi
     default <T> CompletableFuture<List<T>> collect(

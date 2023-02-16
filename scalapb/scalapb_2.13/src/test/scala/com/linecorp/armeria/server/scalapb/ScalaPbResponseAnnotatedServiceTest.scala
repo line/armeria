@@ -70,7 +70,7 @@ class ScalaPbResponseAnnotatedServiceTest {
   private val parser: Parser = new Parser()
 
   @BeforeEach
-  private def setUp(): Unit = {
+  def setUp(): Unit = {
     server.start()
     client = WebClient
       .builder(ScalaPbResponseAnnotatedServiceTest.server.httpUri)
@@ -79,7 +79,7 @@ class ScalaPbResponseAnnotatedServiceTest {
   }
 
   @AfterEach
-  private def tearDown(): Unit = {
+  def tearDown(): Unit = {
     server.stop
     ScalaPbResponseAnnotatedServiceTest.cause = None
   }

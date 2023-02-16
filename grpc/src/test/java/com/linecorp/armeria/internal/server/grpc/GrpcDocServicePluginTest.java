@@ -39,12 +39,8 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.grpc.GrpcSerializationFormats;
 import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc;
 import com.linecorp.armeria.grpc.testing.HttpJsonTranscodingTestServiceGrpc.HttpJsonTranscodingTestServiceImplBase;
-import com.linecorp.armeria.grpc.testing.Messages.CompressionType;
-import com.linecorp.armeria.grpc.testing.Messages.ReconnectInfo;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleRequest;
 import com.linecorp.armeria.grpc.testing.Messages.SimpleResponse;
-import com.linecorp.armeria.grpc.testing.Messages.StreamingOutputCallRequest;
-import com.linecorp.armeria.grpc.testing.Messages.TestMessage;
 import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc;
 import com.linecorp.armeria.grpc.testing.ReconnectServiceGrpc.ReconnectServiceImplBase;
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc;
@@ -54,24 +50,25 @@ import com.linecorp.armeria.grpc.testing.UnitTestServiceGrpc.UnitTestServiceImpl
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.HttpEndpoint;
 import com.linecorp.armeria.internal.server.grpc.GrpcDocServicePlugin.ServiceInfosBuilder;
 import com.linecorp.armeria.protobuf.EmptyProtos.Empty;
+import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
 import com.linecorp.armeria.server.HttpServiceWithRoutes;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.server.ServiceConfig;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
+import com.linecorp.armeria.server.docs.DescriptiveTypeSignature;
 import com.linecorp.armeria.server.docs.DocServiceFilter;
 import com.linecorp.armeria.server.docs.EndpointInfo;
-import com.linecorp.armeria.server.docs.EnumInfo;
-import com.linecorp.armeria.server.docs.EnumValueInfo;
 import com.linecorp.armeria.server.docs.FieldInfo;
 import com.linecorp.armeria.server.docs.FieldLocation;
 import com.linecorp.armeria.server.docs.FieldRequirement;
 import com.linecorp.armeria.server.docs.MethodInfo;
 import com.linecorp.armeria.server.docs.ServiceInfo;
 import com.linecorp.armeria.server.docs.ServiceSpecification;
-import com.linecorp.armeria.server.docs.StructInfo;
 import com.linecorp.armeria.server.docs.TypeSignature;
 import com.linecorp.armeria.server.grpc.GrpcService;
+import com.linecorp.armeria.server.protobuf.ProtobufDescriptiveTypeInfoProvider;
 
 import io.grpc.MethodDescriptor;
 
@@ -90,7 +87,10 @@ class GrpcDocServicePluginTest {
 
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME,
                                               UnitTestServiceGrpc.SERVICE_NAME,
-                                              ReconnectServiceGrpc.SERVICE_NAME);
+                                              ReconnectServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
+                                              GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         services.get(TestServiceGrpc.SERVICE_NAME).methods().forEach(m -> {
             m.endpoints().forEach(e -> {
@@ -106,6 +106,18 @@ class GrpcDocServicePluginTest {
             m.endpoints().forEach(e -> {
                 assertThat(e.pathMapping()).isEqualTo("/reconnect/armeria.grpc.testing.ReconnectService/" +
                                                       m.name());
+            });
+        });
+        services.get(HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME).methods().forEach(m -> {
+            m.endpoints().forEach(e -> {
+                assertThat(e.pathMapping()).isEqualTo("/armeria.grpc.testing.HttpJsonTranscodingTestService/" +
+                                                      m.name());
+            });
+        });
+        services.get(HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
+                     GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX).methods().forEach(m -> {
+            m.endpoints().forEach(e -> {
+                assertThat(e.pathMapping()).endsWith(m.examplePaths().get(0));
             });
         });
     }
@@ -124,14 +136,20 @@ class GrpcDocServicePluginTest {
         DocServiceFilter exclude = (plugin, service, method) -> false;
         Map<String, ServiceInfo> services = services(include, exclude);
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME, UnitTestServiceGrpc.SERVICE_NAME,
-                                              ReconnectServiceGrpc.SERVICE_NAME);
+                                              ReconnectServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
+                                              GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         // 2. Exclude specified.
         exclude = DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "EmptyCall").or(
                 DocServiceFilter.ofMethodName(TestServiceGrpc.SERVICE_NAME, "HalfDuplexCall"));
         services = services(include, exclude);
         assertThat(services).containsOnlyKeys(TestServiceGrpc.SERVICE_NAME, UnitTestServiceGrpc.SERVICE_NAME,
-                                              ReconnectServiceGrpc.SERVICE_NAME);
+                                              ReconnectServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME,
+                                              HttpJsonTranscodingTestServiceGrpc.SERVICE_NAME +
+                                              GrpcDocServicePlugin.HTTP_SERVICE_SUFFIX);
 
         List<String> methods = methods(services);
         assertThat(methods).containsExactlyInAnyOrder("FullDuplexCall",
@@ -139,6 +157,7 @@ class GrpcDocServicePluginTest {
                                                       "StreamingOutputCall",
                                                       "UnaryCall",
                                                       "UnaryCall2",
+                                                      "UnaryCallWithAllDifferentParameterTypes",
                                                       "UnimplementedCall");
 
         // 3-1. Include serviceName specified.
@@ -156,6 +175,7 @@ class GrpcDocServicePluginTest {
                                                       "StreamingOutputCall",
                                                       "UnaryCall",
                                                       "UnaryCall2",
+                                                      "UnaryCallWithAllDifferentParameterTypes",
                                                       "UnimplementedCall");
 
         // 3-2. Include methodName specified.
@@ -179,6 +199,7 @@ class GrpcDocServicePluginTest {
                                                       "StreamingOutputCall",
                                                       "UnaryCall",
                                                       "UnaryCall2",
+                                                      "UnaryCallWithAllDifferentParameterTypes",
                                                       "UnimplementedCall");
 
         // 4-2. Include and exclude specified.
@@ -208,10 +229,21 @@ class GrpcDocServicePluginTest {
                 Route.builder().pathPrefix("/reconnect").build(),
                 GrpcService.builder().addService(mock(ReconnectServiceImplBase.class)).build());
 
+        // The case where HTTP JSON transcoding is enabled and GrpcService is wrapped.
+        serverBuilder.service(
+                GrpcService.builder()
+                           .addService(mock(HttpJsonTranscodingTestServiceImplBase.class),
+                                       ImmutableList.of(
+                                               delegate -> delegate.decorate(
+                                                       mock(DecoratingHttpServiceFunction.class))
+                                       ))
+                           .enableHttpJsonTranscoding(true)
+                           .build());
+
         // Make sure all services and their endpoints exist in the specification.
         final ServiceSpecification specification = generator.generateSpecification(
                 ImmutableSet.copyOf(serverBuilder.build().serviceConfigs()),
-                unifyFilter(include, exclude));
+                unifyFilter(include, exclude), new ProtobufDescriptiveTypeInfoProvider());
         return specification
                 .services()
                 .stream()
@@ -226,34 +258,9 @@ class GrpcDocServicePluginTest {
     }
 
     @Test
-    void newEnumInfo() throws Exception {
-        final EnumInfo enumInfo = generator.newEnumInfo(CompressionType.getDescriptor());
-        assertThat(enumInfo).isEqualTo(new EnumInfo(
-                "armeria.grpc.testing.CompressionType",
-                ImmutableList.of(new EnumValueInfo("NONE", 0),
-                                 new EnumValueInfo("GZIP", 1),
-                                 new EnumValueInfo("DEFLATE", 3))));
-    }
-
-    @Test
-    void newListInfo() throws Exception {
-        final TypeSignature list = GrpcDocServicePlugin.newFieldTypeInfo(
-                ReconnectInfo.getDescriptor().findFieldByNumber(ReconnectInfo.BACKOFF_MS_FIELD_NUMBER));
-        assertThat(list).isEqualTo(TypeSignature.ofContainer("repeated", GrpcDocServicePlugin.INT32));
-    }
-
-    @Test
-    void newMapInfo() throws Exception {
-        final TypeSignature map = GrpcDocServicePlugin.newFieldTypeInfo(
-                StreamingOutputCallRequest.getDescriptor().findFieldByNumber(
-                        StreamingOutputCallRequest.OPTIONS_FIELD_NUMBER));
-        assertThat(map).isEqualTo(TypeSignature.ofMap(GrpcDocServicePlugin.STRING, GrpcDocServicePlugin.INT32));
-    }
-
-    @Test
     void newMethodInfo() throws Exception {
         final MethodInfo methodInfo = GrpcDocServicePlugin.newMethodInfo(
-                TEST_SERVICE_DESCRIPTOR.findMethodByName("UnaryCall"),
+                TEST_SERVICE_DESCRIPTOR.getFullName(), TEST_SERVICE_DESCRIPTOR.findMethodByName("UnaryCall"),
                 ImmutableSet.of(
                         EndpointInfo.builder("*", "/foo")
                                     .availableFormats(GrpcSerializationFormats.PROTO)
@@ -263,16 +270,19 @@ class GrpcDocServicePluginTest {
                                     .build()));
         assertThat(methodInfo.name()).isEqualTo("UnaryCall");
         assertThat(methodInfo.returnTypeSignature().name()).isEqualTo("armeria.grpc.testing.SimpleResponse");
-        assertThat(methodInfo.returnTypeSignature().namedTypeDescriptor())
+        assertThat(((DescriptiveTypeSignature) methodInfo.returnTypeSignature()).descriptor())
                 .isEqualTo(SimpleResponse.getDescriptor());
         assertThat(methodInfo.parameters()).hasSize(1);
         assertThat(methodInfo.parameters().get(0).name()).isEqualTo("request");
         assertThat(methodInfo.parameters().get(0).typeSignature().name())
                 .isEqualTo("armeria.grpc.testing.SimpleRequest");
-        assertThat(methodInfo.parameters().get(0).typeSignature().namedTypeDescriptor())
+        assertThat(((DescriptiveTypeSignature) methodInfo.parameters()
+                                                         .get(0)
+                                                         .typeSignature()).descriptor())
                 .isEqualTo(SimpleRequest.getDescriptor());
+        assertThat(methodInfo.useParameterAsRoot()).isTrue();
         assertThat(methodInfo.exceptionTypeSignatures()).isEmpty();
-        assertThat(methodInfo.docString()).isNull();
+        assertThat(methodInfo.descriptionInfo()).isSameAs(DescriptionInfo.empty());
         assertThat(methodInfo.endpoints()).containsExactlyInAnyOrder(
                 EndpointInfo.builder("*", "/foo")
                             .availableFormats(GrpcSerializationFormats.PROTO)
@@ -302,20 +312,23 @@ class GrpcDocServicePluginTest {
                                                          .stream()
                                                          .collect(toImmutableMap(MethodInfo::name,
                                                                                  Function.identity()));
-        assertThat(functions).hasSize(8);
+        assertThat(functions).hasSize(9);
         final MethodInfo emptyCall = functions.get("EmptyCall");
         assertThat(emptyCall.name()).isEqualTo("EmptyCall");
         assertThat(emptyCall.parameters())
                 .containsExactly(FieldInfo.builder("request",
-                                                   TypeSignature.ofNamed("armeria.grpc.testing.Empty",
-                                                                         Empty.getDescriptor()))
+                                                   TypeSignature.ofStruct("armeria.grpc.testing.Empty",
+                                                                          Empty.getDescriptor()))
                                           .requirement(FieldRequirement.REQUIRED)
                                           .build());
+        assertThat(emptyCall.useParameterAsRoot()).isTrue();
         assertThat(emptyCall.returnTypeSignature())
-                .isEqualTo(TypeSignature.ofNamed("armeria.grpc.testing.Empty", Empty.getDescriptor()));
+                .isEqualTo(TypeSignature.ofStruct("armeria.grpc.testing.Empty", Empty.getDescriptor()));
 
         // Just sanity check that all methods are present, function conversion is more thoroughly tested in
         // newMethodInfo()
+        assertThat(functions.get("UnaryCallWithAllDifferentParameterTypes").name()).isEqualTo(
+                "UnaryCallWithAllDifferentParameterTypes");
         assertThat(functions.get("UnaryCall").name()).isEqualTo("UnaryCall");
         assertThat(functions.get("UnaryCall2").name()).isEqualTo("UnaryCall2");
         assertThat(functions.get("StreamingOutputCall").name()).isEqualTo("StreamingOutputCall");
@@ -326,60 +339,12 @@ class GrpcDocServicePluginTest {
     }
 
     @Test
-    void newStructInfo() throws Exception {
-        final StructInfo structInfo = generator.newStructInfo(TestMessage.getDescriptor());
-        assertThat(structInfo.name()).isEqualTo("armeria.grpc.testing.TestMessage");
-        assertThat(structInfo.fields()).hasSize(18);
-        assertThat(structInfo.fields().get(0).name()).isEqualTo("bool");
-        assertThat(structInfo.fields().get(0).typeSignature()).isEqualTo(GrpcDocServicePlugin.BOOL);
-        assertThat(structInfo.fields().get(1).name()).isEqualTo("int32");
-        assertThat(structInfo.fields().get(1).typeSignature()).isEqualTo(GrpcDocServicePlugin.INT32);
-        assertThat(structInfo.fields().get(2).name()).isEqualTo("int64");
-        assertThat(structInfo.fields().get(2).typeSignature()).isEqualTo(GrpcDocServicePlugin.INT64);
-        assertThat(structInfo.fields().get(3).name()).isEqualTo("uint32");
-        assertThat(structInfo.fields().get(3).typeSignature()).isEqualTo(GrpcDocServicePlugin.UINT32);
-        assertThat(structInfo.fields().get(4).name()).isEqualTo("uint64");
-        assertThat(structInfo.fields().get(4).typeSignature()).isEqualTo(GrpcDocServicePlugin.UINT64);
-        assertThat(structInfo.fields().get(5).name()).isEqualTo("sint32");
-        assertThat(structInfo.fields().get(5).typeSignature()).isEqualTo(GrpcDocServicePlugin.SINT32);
-        assertThat(structInfo.fields().get(6).name()).isEqualTo("sint64");
-        assertThat(structInfo.fields().get(6).typeSignature()).isEqualTo(GrpcDocServicePlugin.SINT64);
-        assertThat(structInfo.fields().get(7).name()).isEqualTo("fixed32");
-        assertThat(structInfo.fields().get(7).typeSignature()).isEqualTo(GrpcDocServicePlugin.FIXED32);
-        assertThat(structInfo.fields().get(8).name()).isEqualTo("fixed64");
-        assertThat(structInfo.fields().get(8).typeSignature()).isEqualTo(GrpcDocServicePlugin.FIXED64);
-        assertThat(structInfo.fields().get(9).name()).isEqualTo("float");
-        assertThat(structInfo.fields().get(9).typeSignature()).isEqualTo(GrpcDocServicePlugin.FLOAT);
-        assertThat(structInfo.fields().get(10).name()).isEqualTo("double");
-        assertThat(structInfo.fields().get(10).typeSignature()).isEqualTo(GrpcDocServicePlugin.DOUBLE);
-        assertThat(structInfo.fields().get(11).name()).isEqualTo("string");
-        assertThat(structInfo.fields().get(11).typeSignature()).isEqualTo(GrpcDocServicePlugin.STRING);
-        assertThat(structInfo.fields().get(12).name()).isEqualTo("bytes");
-        assertThat(structInfo.fields().get(12).typeSignature()).isEqualTo(GrpcDocServicePlugin.BYTES);
-        assertThat(structInfo.fields().get(13).name()).isEqualTo("test_enum");
-        assertThat(structInfo.fields().get(13).typeSignature().signature())
-                .isEqualTo("armeria.grpc.testing.TestEnum");
-        assertThat(structInfo.fields().get(14).name()).isEqualTo("nested");
-        assertThat(structInfo.fields().get(14).typeSignature().signature())
-                .isEqualTo("armeria.grpc.testing.TestMessage.Nested");
-        assertThat(structInfo.fields().get(15).name()).isEqualTo("strings");
-        assertThat(structInfo.fields().get(15).typeSignature().typeParameters())
-                .containsExactly(GrpcDocServicePlugin.STRING);
-        assertThat(structInfo.fields().get(16).name()).isEqualTo("map");
-        assertThat(structInfo.fields().get(16).typeSignature().typeParameters())
-                .containsExactly(GrpcDocServicePlugin.STRING, GrpcDocServicePlugin.INT32);
-        assertThat(structInfo.fields().get(17).name()).isEqualTo("self");
-        assertThat(structInfo.fields().get(17).typeSignature().signature())
-                .isEqualTo("armeria.grpc.testing.TestMessage");
-    }
-
-    @Test
     void httpEndpoint() {
         final GrpcService grpcService =
                 GrpcService.builder().addService(mock(HttpJsonTranscodingTestServiceImplBase.class))
                            .enableHttpJsonTranscoding(true).build();
-        assertThat(grpcService).isInstanceOf(HttpEndpointSupport.class);
-        final HttpEndpointSupport httpEndpointSupport = (HttpEndpointSupport) grpcService;
+        final HttpEndpointSupport httpEndpointSupport = grpcService.as(HttpEndpointSupport.class);
+        assertThat(httpEndpointSupport).isNotNull();
 
         // Expected generated routes. See 'transcoding.proto' file.
         final List<Route> routes = ImmutableList.of(
@@ -419,6 +384,7 @@ class GrpcDocServicePluginTest {
         assertThat(getMessageV1.parameters()).containsAll(ImmutableList.of(
                 FieldInfo.builder("name", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build()));
+        assertThat(getMessageV1.useParameterAsRoot()).isFalse();
 
         final MethodInfo getMessageV2 = serviceInfo.methods().stream()
                                                    .filter(m -> m.name().equals("GetMessageV2"))
@@ -436,6 +402,7 @@ class GrpcDocServicePluginTest {
                          .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build(),
                 FieldInfo.builder("type", TypeSignature.ofBase(JavaType.ENUM.name()))
                          .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build()));
+        assertThat(getMessageV2.useParameterAsRoot()).isFalse();
 
         final MethodInfo getMessageV3 = serviceInfo.methods().stream()
                                                    .filter(m -> m.name().equals("GetMessageV3"))
@@ -450,6 +417,7 @@ class GrpcDocServicePluginTest {
                 FieldInfo.builder("revision",
                                   TypeSignature.ofList(TypeSignature.ofBase(JavaType.LONG.name())))
                          .location(FieldLocation.QUERY).requirement(FieldRequirement.REQUIRED).build()));
+        assertThat(getMessageV3.useParameterAsRoot()).isFalse();
 
         // Check HTTP PATCH method.
         final MethodInfo updateMessageV1 = serviceInfo.methods().stream()
@@ -464,6 +432,7 @@ class GrpcDocServicePluginTest {
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
                 FieldInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build()));
+        assertThat(updateMessageV1.useParameterAsRoot()).isFalse();
 
         final MethodInfo updateMessageV2 = serviceInfo.methods().stream()
                                                       .filter(m -> m.name().equals("UpdateMessageV2"))
@@ -477,5 +446,6 @@ class GrpcDocServicePluginTest {
                          .location(FieldLocation.PATH).requirement(FieldRequirement.REQUIRED).build(),
                 FieldInfo.builder("text", TypeSignature.ofBase(JavaType.STRING.name()))
                          .location(FieldLocation.BODY).requirement(FieldRequirement.REQUIRED).build()));
+        assertThat(updateMessageV2.useParameterAsRoot()).isFalse();
     }
 }

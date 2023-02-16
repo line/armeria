@@ -43,7 +43,7 @@ internal class FlowCollectingPublisher<T>(
         val job = GlobalScope.launch(context) {
             try {
                 flow.collect {
-                    delegate.write(it)
+                    delegate.write(it!!)
                     delegate.whenConsumed().await()
                 }
             } catch (e: Throwable) {

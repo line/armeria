@@ -17,15 +17,23 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.server.VirtualHostBuilder.ensureNoPseudoHeader;
+import static com.linecorp.armeria.server.VirtualHostBuilder.mergeDefaultHeaders;
 import static java.util.Objects.requireNonNull;
 
 import java.nio.file.Path;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.base.MoreObjects;
+import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.HttpHeaders;
+import com.linecorp.armeria.common.HttpHeadersBuilder;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.BlockingTaskExecutor;
@@ -36,6 +44,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private final Route route;
     private final HttpService service;
 
+    @Nullable
+    private Route mappedRoute;
     @Nullable
     private String defaultServiceName;
     @Nullable
@@ -54,14 +64,18 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private ScheduledExecutorService blockingTaskExecutor;
     @Nullable
     private SuccessFunction successFunction;
-    private boolean shutdownBlockingTaskExecutorOnStop;
-    private boolean shutdownAccessLogWriterOnStop;
     @Nullable
     private Path multipartUploadsLocation;
+    private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
+    private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
 
     ServiceConfigBuilder(Route route, HttpService service) {
         this.route = requireNonNull(route, "route");
         this.service = requireNonNull(service, "service");
+    }
+
+    void addMappedRoute(Route mappedRoute) {
+        this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
     }
 
     @Override
@@ -89,15 +103,26 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
 
     @Override
     public ServiceConfigBuilder accessLogWriter(AccessLogWriter accessLogWriter, boolean shutdownOnStop) {
-        this.accessLogWriter = accessLogWriter;
-        shutdownAccessLogWriterOnStop = shutdownOnStop;
+        if (this.accessLogWriter != null) {
+            this.accessLogWriter = this.accessLogWriter.andThen(accessLogWriter);
+        } else {
+            this.accessLogWriter = accessLogWriter;
+        }
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(accessLogWriter));
+        }
         return this;
     }
 
     @Override
     public ServiceConfigBuilder accessLogFormat(String accessLogFormat) {
         return accessLogWriter(AccessLogWriter.custom(requireNonNull(accessLogFormat, "accessLogFormat")),
-                               true);
+                               false);
+    }
+
+    @Override
+    public ServiceConfigBuilder decorator(DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        throw new UnsupportedOperationException();
     }
 
     @Override
@@ -128,7 +153,9 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     public ServiceConfigBuilder blockingTaskExecutor(ScheduledExecutorService blockingTaskExecutor,
                                                      boolean shutdownOnStop) {
         this.blockingTaskExecutor = requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
-        shutdownBlockingTaskExecutorOnStop = shutdownOnStop;
+        if (shutdownOnStop) {
+            shutdownSupports.add(ShutdownSupport.of(blockingTaskExecutor));
+        }
         return this;
     }
 
@@ -155,6 +182,42 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
+    public ServiceConfigBuilder addHeader(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        ensureNoPseudoHeader(name);
+        defaultHeaders.addObject(name, value);
+        return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        requireNonNull(defaultHeaders, "defaultHeaders");
+        ensureNoPseudoHeader(defaultHeaders);
+        this.defaultHeaders.addObject(defaultHeaders);
+        return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder setHeader(CharSequence name, Object value) {
+        requireNonNull(name, "name");
+        requireNonNull(value, "value");
+        ensureNoPseudoHeader(name);
+        defaultHeaders.setObject(name, value);
+        return this;
+    }
+
+    @Override
+    public ServiceConfigBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        requireNonNull(defaultHeaders, "defaultHeaders");
+        ensureNoPseudoHeader(defaultHeaders);
+        this.defaultHeaders.setObject(defaultHeaders);
+        return this;
+    }
+
+    @Override
     public ServiceConfigBuilder defaultServiceName(String defaultServiceName) {
         requireNonNull(defaultServiceName, "defaultServiceName");
         this.defaultServiceName = defaultServiceName;
@@ -169,29 +232,37 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         return this;
     }
 
+    void shutdownSupports(List<ShutdownSupport> shutdownSupports) {
+        requireNonNull(shutdownSupports, "shutdownSupports");
+        this.shutdownSupports.addAll(shutdownSupports);
+    }
+
+    void defaultHeaders(HttpHeaders defaultHeaders) {
+        requireNonNull(defaultHeaders, "defaultHeaders");
+        defaultHeaders.forEach((name, value) -> this.defaultHeaders.add(name, value));
+    }
+
     ServiceConfig build(ServiceNaming defaultServiceNaming,
                         long defaultRequestTimeoutMillis,
                         long defaultMaxRequestLength,
                         boolean defaultVerboseResponses,
                         AccessLogWriter defaultAccessLogWriter,
-                        boolean defaultShutdownAccessLogWriterOnStop,
                         ScheduledExecutorService defaultBlockingTaskExecutor,
-                        boolean defaultShutdownBlockingTaskExecutorOnStop,
                         SuccessFunction defaultSuccessFunction,
-                        Path defaultMultipartUploadsLocation) {
+                        Path defaultMultipartUploadsLocation, HttpHeaders virtualHostDefaultHeaders) {
         return new ServiceConfig(
-                route, service, defaultLogName, defaultServiceName,
+                route, mappedRoute == null ? route : mappedRoute,
+                service, defaultLogName, defaultServiceName,
                 this.defaultServiceNaming != null ? this.defaultServiceNaming : defaultServiceNaming,
                 requestTimeoutMillis != null ? requestTimeoutMillis : defaultRequestTimeoutMillis,
                 maxRequestLength != null ? maxRequestLength : defaultMaxRequestLength,
                 verboseResponses != null ? verboseResponses : defaultVerboseResponses,
                 accessLogWriter != null ? accessLogWriter : defaultAccessLogWriter,
-                accessLogWriter != null ? shutdownAccessLogWriterOnStop : defaultShutdownAccessLogWriterOnStop,
                 blockingTaskExecutor != null ? blockingTaskExecutor : defaultBlockingTaskExecutor,
-                blockingTaskExecutor != null ? shutdownBlockingTaskExecutorOnStop
-                                             : defaultShutdownBlockingTaskExecutorOnStop,
                 successFunction != null ? successFunction : defaultSuccessFunction,
-                multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation);
+                multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
+                ImmutableList.copyOf(shutdownSupports),
+                mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()));
     }
 
     @Override
@@ -204,11 +275,11 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                           .add("maxRequestLength", maxRequestLength)
                           .add("verboseResponses", verboseResponses)
                           .add("accessLogWriter", accessLogWriter)
-                          .add("shutdownAccessLogWriterOnStop", shutdownAccessLogWriterOnStop)
                           .add("blockingTaskExecutor", blockingTaskExecutor)
-                          .add("shutdownBlockingTaskExecutorOnStop", shutdownBlockingTaskExecutorOnStop)
                           .add("successFunction", successFunction)
                           .add("multipartUploadsLocation", multipartUploadsLocation)
+                          .add("shutdownSupports", shutdownSupports)
+                          .add("defaultHeaders", defaultHeaders)
                           .toString();
     }
 }

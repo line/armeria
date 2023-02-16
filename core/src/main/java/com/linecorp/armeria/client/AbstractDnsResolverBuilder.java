@@ -37,7 +37,6 @@ import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.HostsFileEntriesResolver;
@@ -58,8 +57,6 @@ import io.netty.resolver.dns.NoopDnsCnameCache;
 @UnstableApi
 public abstract class AbstractDnsResolverBuilder {
 
-    private static final long DEFAULT_QUERY_TIMEOUT_MILLIS = 5000; // 5 seconds.
-
     private DnsCache dnsCache = DnsCache.ofDefault();
     private String cacheSpec = Flags.dnsCacheSpec();
     private int minTtl = 1;
@@ -68,7 +65,7 @@ public abstract class AbstractDnsResolverBuilder {
     private boolean needsToCreateDnsCache;
 
     private boolean traceEnabled = true;
-    private long queryTimeoutMillis = DEFAULT_QUERY_TIMEOUT_MILLIS;
+    private long queryTimeoutMillis = DnsUtil.defaultDnsQueryTimeoutMillis();
     private long queryTimeoutMillisForEachAttempt = -1;
 
     private boolean recursionDesired = true;
@@ -106,7 +103,7 @@ public abstract class AbstractDnsResolverBuilder {
     /**
      * Sets the timeout of the DNS query performed by this resolver.
      * {@code 0} disables the timeout.
-     * If unspecified, {@value #DEFAULT_QUERY_TIMEOUT_MILLIS} ms will be used.
+     * If unspecified, {@value DnsUtil#DEFAULT_DNS_QUERY_TIMEOUT_MILLIS} ms will be used.
      */
     public AbstractDnsResolverBuilder queryTimeout(Duration queryTimeout) {
         requireNonNull(queryTimeout, "queryTimeout");
@@ -124,7 +121,7 @@ public abstract class AbstractDnsResolverBuilder {
     /**
      * Sets the timeout of the DNS query performed by this resolver in milliseconds.
      * {@code 0} disables the timeout.
-     * If unspecified, {@value #DEFAULT_QUERY_TIMEOUT_MILLIS} ms will be used.
+     * If unspecified, {@value DnsUtil#DEFAULT_DNS_QUERY_TIMEOUT_MILLIS} ms will be used.
      */
     public AbstractDnsResolverBuilder queryTimeoutMillis(long queryTimeoutMillis) {
         checkArgument(queryTimeoutMillis >= 0, "queryTimeoutMillis: %s (expected: >= 0)", queryTimeoutMillis);
@@ -464,7 +461,7 @@ public abstract class AbstractDnsResolverBuilder {
                     "Cannot set dnsCache() with cacheSpec(), ttl(), or negativeTtl().");
         }
 
-        final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Metrics.globalRegistry);
+        final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Flags.meterRegistry());
         if (needsToCreateDnsCache) {
             return DnsCache.builder()
                            .cacheSpec(cacheSpec)
@@ -490,7 +487,7 @@ public abstract class AbstractDnsResolverBuilder {
                        queryTimeoutMillis, queryTimeoutMillisForEachAttempt);
         }
 
-        final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Metrics.globalRegistry);
+        final MeterRegistry meterRegistry = firstNonNull(this.meterRegistry, Flags.meterRegistry());
 
         final boolean traceEnabled = this.traceEnabled;
         final long queryTimeoutMillis = this.queryTimeoutMillis;

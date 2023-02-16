@@ -61,6 +61,12 @@ public interface CircuitBreakerListener {
      *   <td>The number of circuit breaker state transitions to {@link CircuitState#HALF_OPEN}.</td>
      * </tr>
      * <tr>
+     *   <td>
+     *     {@code armeria.client.circuit.breaker.transitions{name="<circuit breaker name>",state="FORCED_OPEN"}}
+     *   </td>
+     *   <td>The number of circuit breaker state transitions to {@link CircuitState#FORCED_OPEN}.</td>
+     * </tr>
+     * <tr>
      *   <td>{@code armeria.client.circuit.breaker.rejected.requests{name="<circuit breaker name>"}}</td>
      *   <td>The number of requests rejected by the circuit breaker.</td>
      * </tr>
@@ -98,6 +104,10 @@ public interface CircuitBreakerListener {
      * <tr>
      *   <td>{@code <name>.transitions{name="<circuit breaker name>",state="HALF_OPEN"}}</td>
      *   <td>The number of circuit breaker state transitions to {@link CircuitState#HALF_OPEN}.</td>
+     * </tr>
+     * <tr>
+     *   <td>{@code <name>.transitions{name="<circuit breaker name>",state="FORCED_OPEN"}}</td>
+     *   <td>The number of circuit breaker state transitions to {@link CircuitState#FORCED_OPEN}.</td>
      * </tr>
      * <tr>
      *   <td>{@code <name>.rejected.requests{name="<circuit breaker name>"}}</td>

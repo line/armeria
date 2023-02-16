@@ -187,7 +187,7 @@ function parseResult(body: string | null): string[] {
  * GitHub does not provide such an API at the moment.
  */
 function getLinkedIssues(dom: JSDOM): number[] {
-  const elements = dom.window.document.querySelectorAll('.css-truncate.my-1');
+  const elements = dom.window.document.querySelectorAll('.Truncate.my-1');
   return Array.from(elements)
     .map((el: any) => el.children[0].href)
     .map((href: string) => href.replace(/^.*\/issues\//, ''))
@@ -258,6 +258,7 @@ function renderReleaseNotes(pullRequests: PullRequest[]): string {
     .flatMap((pr) => pr.users)
     .sortBy()
     .uniq()
+    .filter((user) => user !== "CLAassistant")
     .map((user) => `  '${user}'`)
     .join(',\n')
     .value();

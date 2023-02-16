@@ -37,6 +37,7 @@ import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -92,7 +93,6 @@ final class DefaultServerConfig implements ServerConfig {
     private final Duration gracefulShutdownTimeout;
 
     private final ScheduledExecutorService blockingTaskExecutor;
-    private final boolean shutdownBlockingTaskExecutorOnStop;
 
     private final MeterRegistry meterRegistry;
 
@@ -110,6 +110,8 @@ final class DefaultServerConfig implements ServerConfig {
     private final Supplier<RequestId> requestIdGenerator;
     private final ServerErrorHandler errorHandler;
     private final Http1HeaderNaming http1HeaderNaming;
+    private final DependencyInjector dependencyInjector;
+    private final List<ShutdownSupport> shutdownSupports;
 
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
@@ -127,7 +129,7 @@ final class DefaultServerConfig implements ServerConfig {
             long http2MaxStreamsPerConnection, int http2MaxFrameSize,
             long http2MaxHeaderListSize, int http1MaxInitialLineLength, int http1MaxHeaderSize,
             int http1MaxChunkSize, Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            ScheduledExecutorService blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
+            ScheduledExecutorService blockingTaskExecutor,
             MeterRegistry meterRegistry, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
             Map<ChannelOption<?>, Object> childChannelOptions,
@@ -139,7 +141,9 @@ final class DefaultServerConfig implements ServerConfig {
             Supplier<? extends RequestId> requestIdGenerator,
             ServerErrorHandler errorHandler,
             @Nullable Mapping<String, SslContext> sslContexts,
-            Http1HeaderNaming http1HeaderNaming) {
+            Http1HeaderNaming http1HeaderNaming,
+            DependencyInjector dependencyInjector,
+            List<ShutdownSupport> shutdownSupports) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -176,8 +180,6 @@ final class DefaultServerConfig implements ServerConfig {
 
         requireNonNull(blockingTaskExecutor, "blockingTaskExecutor");
         this.blockingTaskExecutor = monitorBlockingTaskExecutor(blockingTaskExecutor, meterRegistry);
-
-        this.shutdownBlockingTaskExecutorOnStop = shutdownBlockingTaskExecutorOnStop;
 
         this.meterRegistry = requireNonNull(meterRegistry, "meterRegistry");
         this.channelOptions = Collections.unmodifiableMap(
@@ -253,6 +255,8 @@ final class DefaultServerConfig implements ServerConfig {
         this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         this.sslContexts = sslContexts;
         this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
+        this.dependencyInjector = requireNonNull(dependencyInjector, "dependencyInjector");
+        this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
     }
 
     private static Int2ObjectMap<Mapping<String, VirtualHost>> buildDomainAndPortMapping(
@@ -571,11 +575,6 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
-    public boolean shutdownBlockingTaskExecutorOnStop() {
-        return shutdownBlockingTaskExecutorOnStop;
-    }
-
-    @Override
     public MeterRegistry meterRegistry() {
         return meterRegistry;
     }
@@ -639,6 +638,15 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
+    public DependencyInjector dependencyInjector() {
+        return dependencyInjector;
+    }
+
+    List<ShutdownSupport> shutdownSupports() {
+        return shutdownSupports;
+    }
+
+    @Override
     public String toString() {
         String strVal = this.strVal;
         if (strVal == null) {
@@ -650,11 +658,11 @@ final class DefaultServerConfig implements ServerConfig {
                     http2MaxStreamsPerConnection(), http2MaxFrameSize(), http2MaxHeaderListSize(),
                     http1MaxInitialLineLength(), http1MaxHeaderSize(), http1MaxChunkSize(),
                     proxyProtocolMaxTlvSize(), gracefulShutdownQuietPeriod(), gracefulShutdownTimeout(),
-                    blockingTaskExecutor(), shutdownBlockingTaskExecutorOnStop(),
+                    blockingTaskExecutor(),
                     meterRegistry(), channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
-                    isServerHeaderEnabled(), isDateHeaderEnabled());
+                    isServerHeaderEnabled(), isDateHeaderEnabled(), dependencyInjector());
         }
 
         return strVal;
@@ -669,14 +677,15 @@ final class DefaultServerConfig implements ServerConfig {
             long http2MaxHeaderListSize, long http1MaxInitialLineLength, long http1MaxHeaderSize,
             long http1MaxChunkSize, int proxyProtocolMaxTlvSize,
             Duration gracefulShutdownQuietPeriod, Duration gracefulShutdownTimeout,
-            @Nullable ScheduledExecutorService blockingTaskExecutor, boolean shutdownBlockingTaskExecutorOnStop,
+            @Nullable ScheduledExecutorService blockingTaskExecutor,
             @Nullable MeterRegistry meterRegistry,
             Map<ChannelOption<?>, ?> channelOptions, Map<ChannelOption<?>, ?> childChannelOptions,
             List<ClientAddressSource> clientAddressSources,
             Predicate<? super InetAddress> clientAddressTrustedProxyFilter,
             Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
-            boolean serverHeaderEnabled, boolean dateHeaderEnabled) {
+            boolean serverHeaderEnabled, boolean dateHeaderEnabled,
+            @Nullable DependencyInjector dependencyInjector) {
 
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -748,8 +757,6 @@ final class DefaultServerConfig implements ServerConfig {
         if (blockingTaskExecutor != null) {
             buf.append(", blockingTaskExecutor: ");
             buf.append(blockingTaskExecutor);
-            buf.append(", shutdownBlockingTaskExecutorOnStop: ");
-            buf.append(shutdownBlockingTaskExecutorOnStop);
         }
         if (meterRegistry != null) {
             buf.append(", meterRegistry: ");
@@ -771,6 +778,10 @@ final class DefaultServerConfig implements ServerConfig {
         buf.append(serverHeaderEnabled ? "enabled" : "disabled");
         buf.append(", dateHeader: ");
         buf.append(dateHeaderEnabled ? "enabled" : "disabled");
+        if (dependencyInjector != null) {
+            buf.append(", dependencyInjector: ");
+            buf.append(dependencyInjector);
+        }
         buf.append(')');
 
         return buf.toString();

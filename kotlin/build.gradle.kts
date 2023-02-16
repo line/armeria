@@ -1,18 +1,18 @@
 dependencies {
     implementation(project(":core"))
     // Added for supporting Kotlin types in Jackson{Request,Response}ConverterFunction
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
+    implementation(libs.jackson.kotlin)
 
     // kotlin
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")
-    implementation("org.jetbrains.kotlin:kotlin-reflect")
+    implementation(libs.kotlin.coroutines.jdk8)
+    implementation(libs.kotlin.reflect)
 
-    testImplementation("org.reactivestreams:reactive-streams-tck")
+    testImplementation(libs.reactivestreams.tck)
 }
 
 tasks.withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
     kotlinOptions {
-        freeCompilerArgs += listOf("-Xopt-in=kotlin.RequiresOptIn")
+        freeCompilerArgs += listOf("-opt-in=kotlin.RequiresOptIn")
     }
 }
 

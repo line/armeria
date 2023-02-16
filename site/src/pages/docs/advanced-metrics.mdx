@@ -7,7 +7,7 @@ This page describes how to enable this.
 
 The metric data is collected using the [Micrometer](https://micrometer.io/) library.
 Please consult its documentation for information on how to expose the collected metrics to
-various monitoring systems such as [Prometheus](https://prometheus.io/), 
+various monitoring systems such as [Prometheus](https://prometheus.io/),
 [Dropwizard Metrics](https://metrics.dropwizard.io/4.1.2/) and [Datadog](https://www.datadoghq.com/).
 
 </Tip>
@@ -48,6 +48,15 @@ Server.builder()
       .build();
 ```
 
+You can provide <type://GrpcMeterIdPrefixFunction> as a bean if you are using a Spring integration module:
+
+```java
+@Bean
+public MeterIdPrefixFunction grpcMeterIdPrefixFunction() {
+    return GrpcMeterIdPrefixFunction.of("grpc.service");
+}
+```
+
 In cases where more sophisticated filtering and/or mangling of the generated metrics are required,
 you can use the <type://ServerBuilder#meterRegistry(MeterRegistry)> method like this:
 
@@ -62,8 +71,8 @@ Server.builder()
 This approach can be used to collect metrics for a <type://WebClient> and a gRPC client:
 
 ```java
-import com.linecorp.armeria.client.Clients;
 import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.grpc.GrpcClients;
 import com.linecorp.armeria.client.metric.MetricCollectingClient;
 
 // Decorate a WebClient with MetricCollectingClient
@@ -73,25 +82,25 @@ WebClient.builder(httpUrl)
          .build();
 
 // Decorate a gRPC client with MetricCollectingClient
-Clients.builder(grpcUrl)
-       .decorator(MetricCollectingClient.newDecorator(
-               GrpcMeterIdPrefixFunction.of("grpc.client")))
-       .build(HelloServiceBlockingStub.class);
+GrpcClients.builder(grpcUrl)
+           .decorator(MetricCollectingClient.newDecorator(
+                   GrpcMeterIdPrefixFunction.of("grpc.client")))
+           .build(HelloServiceBlockingStub.class);
 ```
 
-Like the server-side metrics described above, certain scenarios might require you to 
+Like the server-side metrics described above, certain scenarios might require you to
 provide a custom meter registry. To accomplish this, override the <type://ClientFactory> in this way:
 
 ```java
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Clients;
 
-ClientFactory clientFactory = 
+ClientFactory clientFactory =
       ClientFactory.builder()
                    .meterRegistry(myMeterRegistry)
                    .build();
-                   
-// Set a custom ClientFactory to a WebClient                   
+
+// Set a custom ClientFactory to a WebClient
 WebClient.builder(httpUrl)
          .factory(clientFactory)
           // ...
@@ -106,7 +115,7 @@ Clients.builder(grpcUrl)
 
 ## Changing the default distribution summary config
 
-A [distribution summary](https://micrometer.io/docs/concepts#_distribution_summaries) is used to track 
+A [distribution summary](https://micrometer.io/docs/concepts#_distribution_summaries) is used to track
 the distribution of events. Armeria provides a sensible default
 [DistributionStatisticConfig](https://javadoc.io/doc/io.micrometer/micrometer-core/latest/io/micrometer/core/instrument/distribution/DistributionStatisticConfig.html)
 for measuring the following metrics:
@@ -142,13 +151,13 @@ Micrometer's `MeterRegistry` can be configured with [meter filters](https://micr
 If you need to control the exported meters, you can apply sophisticated filters to the `MeterRegistry`.
 
 ```java
-import io.micrometer.core.instrument.Metrics;
+import com.linecorp.armeria.common.Flags;
 
-Metrics.globalRegistry
-       .config()
-       .meterFilter(MeterFilter.deny(id -> 
-               id.getTag("service").equals("MyHealthCheckService")));
-       .meterFilter(MeterFilter.denyNameStartsWith("jvm"));
+Flags.meterRegistry()
+     .config()
+     .meterFilter(MeterFilter.deny(id ->
+                  id.getTag("service").equals("MyHealthCheckService")));
+     .meterFilter(MeterFilter.denyNameStartsWith("jvm"));
 ```
 
 Please refer to <type://MeterIdPrefixFunction> to learn what kinds of tags are used for request metrics.

@@ -58,12 +58,10 @@ configure(scala212 + scala213 + scala3) {
 
 configure(scala212) {
     dependencies {
-        implementation('org.scala-lang:scala-library') {
-            version {
-                strictly '2.12.15'
-            }
+        implementation('org.scala-lang:scala-library:2.12.17')
+        if (managedVersions.containsKey('org.scalameta:munit_2.12')) {
+            testImplementation "org.scalameta:munit_2.12:${managedVersions['org.scalameta:munit_2.12']}"
         }
-        testImplementation 'org.scalameta:munit_2.12'
     }
     tasks.withType(ScalaCompile) {
         scalaCompileOptions.with {
@@ -78,8 +76,10 @@ configure(scala212) {
 
 configure(scala213) {
     dependencies {
-        implementation 'org.scala-lang:scala-library'
-        testImplementation 'org.scalameta:munit_2.13'
+        implementation 'org.scala-lang:scala-library:2.13.10'
+        if (managedVersions.containsKey('org.scalameta:munit_2.13')) {
+            testImplementation "org.scalameta:munit_2.13:${managedVersions['org.scalameta:munit_2.13']}"
+        }
     }
     tasks.withType(ScalaCompile) {
         scalaCompileOptions.with {
@@ -90,8 +90,10 @@ configure(scala213) {
 
 configure(scala3) {
     dependencies {
-        implementation 'org.scala-lang:scala3-library_3'
-        testImplementation 'org.scalameta:munit_3'
+        implementation "org.scala-lang:scala3-library_3:${managedVersions['org.scala-lang:scala3-library_3']}"
+        if (managedVersions.containsKey('org.scalameta:munit_3')) {
+            testImplementation "org.scalameta:munit_3:${managedVersions['org.scalameta:munit_3']}"
+        }
     }
     tasks.withType(ScalaCompile) {
         scalaCompileOptions.with {

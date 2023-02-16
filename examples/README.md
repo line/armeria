@@ -50,6 +50,11 @@
   - Learn how to make a proxy server which leverages client side load balancing.
   - See [Client-side load balancing](https://armeria.dev/docs/client-service-discovery)
 
+- `resilience4j-spring` <a href="https://gitpod.io/#project=resilience4j-spring/https://github.com/line/armeria-examples/tree/master/resilience4j-spring/src/main/java/example/armeria/resilience4j/spring/Main.java">
+  <img align="absmiddle" height="20" src="https://gitpod.io/button/open-in-gitpod.svg"/>
+  </a>
+    - Learn how to use Armeria with Resilience4j and Spring.
+
 - `saml-service-provider` <a href="https://gitpod.io/#project=sam-service-provider/https://github.com/line/armeria-examples/tree/master/saml-service-provider/src/main/java/example/armeria/server/saml/sp/Main.java">
                             <img align="absmiddle" height="20" src="https://gitpod.io/button/open-in-gitpod.svg"/>
                           </a> 

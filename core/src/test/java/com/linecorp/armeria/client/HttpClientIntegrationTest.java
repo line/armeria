@@ -77,11 +77,11 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.CompletionActions;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.client.HttpHeaderUtil;
-import com.linecorp.armeria.internal.testing.MockAddressResolverGroup;
+import com.linecorp.armeria.internal.client.UserAgentUtil;
 import com.linecorp.armeria.server.AbstractHttpService;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -378,7 +378,7 @@ class HttpClientIntegrationTest {
                 "/foo",
                 port -> "GET /foo HTTP/1.1\r\n" +
                         "host: 127.0.0.1:" + port + "\r\n" +
-                        "user-agent: " + HttpHeaderUtil.USER_AGENT + "\r\n\r\n");
+                        "user-agent: " + UserAgentUtil.USER_AGENT + "\r\n\r\n");
     }
 
     @Test
@@ -443,39 +443,6 @@ class HttpClientIntegrationTest {
     }
 
     /**
-     * :authority header should be overridden by ClientOption.HTTP_HEADER
-     */
-    @Test
-    void testAuthorityOverridableByClientOption() throws Exception {
-        try (ClientFactory factory = ClientFactory.builder()
-                                                  .addressResolverGroupFactory(
-                                                          unused -> MockAddressResolverGroup.localhost())
-                                                  .build()) {
-
-            // An authority header should not be overridden on a client created with a base URI.
-            BlockingWebClient client = WebClient.builder(server.httpUri())
-                                                .setHeader(HttpHeaderNames.AUTHORITY, "foo:8080")
-                                                .factory(factory)
-                                                .build()
-                                                .blocking();
-
-            AggregatedHttpResponse response = client.get("/authority");
-            assertThat(response.contentUtf8()).isEqualTo("127.0.0.1:" + server.httpPort());
-
-            // An authority header should override an Endpoint on a client created with a non-base URI.
-            final String additionalAuthority = "foo:" + server.httpPort();
-            client = WebClient.builder()
-                              .setHeader(HttpHeaderNames.AUTHORITY, additionalAuthority)
-                              .factory(factory)
-                              .build()
-                              .blocking();
-
-            response = client.get(server.httpUri().resolve("/authority").toString());
-            assertThat(response.contentUtf8()).isEqualTo(additionalAuthority);
-        }
-    }
-
-    /**
      * User-agent header should be overridden by ClientOption.HTTP_HEADER
      */
     @Test
@@ -503,12 +470,15 @@ class HttpClientIntegrationTest {
                                                   .build()
                                                   .blocking();
 
-        final AggregatedHttpResponse response =
-                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding"));
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo(
-                Brotli.isAvailable() ? "br" : "gzip");
-        assertThat(response.contentUtf8()).isEqualTo(
-                "some content to compress more content to compress");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final AggregatedHttpResponse response =
+                    client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding"));
+            final RequestLog log = captor.get().log().whenComplete().join();
+            assertThat(log.responseHeaders().get(HttpHeaderNames.CONTENT_ENCODING))
+                    .isEqualTo(Brotli.isAvailable() ? "br" : "gzip");
+            assertThat(response.contentUtf8()).isEqualTo(
+                    "some content to compress more content to compress");
+        }
     }
 
     @Test
@@ -520,11 +490,15 @@ class HttpClientIntegrationTest {
                                                   .build()
                                                   .blocking();
 
-        final AggregatedHttpResponse response =
-                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding"));
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("gzip");
-        assertThat(response.contentUtf8()).isEqualTo(
-                "some content to compress more content to compress");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final AggregatedHttpResponse response =
+                    client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding"));
+            final RequestLog log = captor.get().log().whenComplete().join();
+            assertThat(log.responseHeaders().get(HttpHeaderNames.CONTENT_ENCODING))
+                    .isEqualTo("gzip");
+            assertThat(response.contentUtf8()).isEqualTo(
+                    "some content to compress more content to compress");
+        }
     }
 
     @Test
@@ -536,11 +510,15 @@ class HttpClientIntegrationTest {
                                                   .build()
                                                   .blocking();
 
-        final AggregatedHttpResponse response =
-                client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding"));
-        assertThat(response.headers().get(HttpHeaderNames.CONTENT_ENCODING)).isEqualTo("deflate");
-        assertThat(response.contentUtf8()).isEqualTo(
-                "some content to compress more content to compress");
+        try (ClientRequestContextCaptor captor = Clients.newContextCaptor()) {
+            final AggregatedHttpResponse response =
+                    client.execute(RequestHeaders.of(HttpMethod.GET, "/encoding"));
+            final RequestLog log = captor.get().log().whenComplete().join();
+            assertThat(log.responseHeaders().get(HttpHeaderNames.CONTENT_ENCODING))
+                    .isEqualTo("deflate");
+            assertThat(response.contentUtf8()).isEqualTo(
+                    "some content to compress more content to compress");
+        }
     }
 
     @Test
@@ -816,8 +794,7 @@ class HttpClientIntegrationTest {
     })
     class JettyInteropTest {
 
-        @Nullable
-        org.eclipse.jetty.server.Server jetty;
+        org.eclipse.jetty.server.@Nullable Server jetty;
 
         @BeforeAll
         void startJetty() throws Exception {

@@ -83,10 +83,11 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
     @Nullable
     private volatile ScheduledFuture<?> scheduledFuture;
 
-    ConsulEndpointGroup(EndpointSelectionStrategy selectionStrategy, ConsulClient consulClient,
+    ConsulEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
+                        long selectionTimeoutMillis, ConsulClient consulClient,
                         String serviceName, long registryFetchIntervalMillis, boolean useHealthyEndpoints,
                         @Nullable String datacenter, @Nullable String filter) {
-        super(selectionStrategy);
+        super(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis);
         this.consulClient = requireNonNull(consulClient, "consulClient");
         this.serviceName = requireNonNull(serviceName, "serviceName");
         this.registryFetchIntervalMillis = registryFetchIntervalMillis;
@@ -137,5 +138,14 @@ public final class ConsulEndpointGroup extends DynamicEndpointGroup {
             scheduledFuture.cancel(true);
         }
         future.complete(null);
+    }
+
+    @Override
+    public String toString() {
+        return toStringHelper()
+                .add("serviceName", serviceName)
+                .add("datacenter", datacenter)
+                .add("filter", filter)
+                .toString();
     }
 }

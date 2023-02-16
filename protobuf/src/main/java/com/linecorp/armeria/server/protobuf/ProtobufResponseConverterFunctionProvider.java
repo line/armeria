@@ -15,6 +15,8 @@
  */
 package com.linecorp.armeria.server.protobuf;
 
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapUnaryAsyncType;
+
 import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.Type;
 import java.util.Map;
@@ -36,9 +38,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverterFunctionProvider;
 public final class ProtobufResponseConverterFunctionProvider implements ResponseConverterFunctionProvider {
 
     @Override
-    public ResponseConverterFunction createResponseConverterFunction(
-            Type returnType,
-            ResponseConverterFunction responseConverter) {
+    public ResponseConverterFunction createResponseConverterFunction(Type returnType) {
         if (isSupportedType(returnType)) {
             return new ProtobufResponseConverterFunction();
         }
@@ -50,6 +50,7 @@ public final class ProtobufResponseConverterFunctionProvider implements Response
      * {@link ProtobufResponseConverterFunction}.
      */
     private static boolean isSupportedType(Type type) {
+        type = unwrapUnaryAsyncType(type);
         if (type instanceof Class) {
             return MessageLite.class.isAssignableFrom((Class<?>) type);
         }
@@ -58,16 +59,19 @@ public final class ProtobufResponseConverterFunctionProvider implements Response
             final ParameterizedType parameterizedType = (ParameterizedType) type;
             final Class<?> rawType = (Class<?>) parameterizedType.getRawType();
 
-            if (Iterable.class.isAssignableFrom(rawType) ||
-                Stream.class.isAssignableFrom(rawType) ||
+            if (Iterable.class.isAssignableFrom(rawType) || Stream.class.isAssignableFrom(rawType) ||
                 Publisher.class.isAssignableFrom(rawType)) {
-                final Class<?> typeArgument = (Class<?>) parameterizedType.getActualTypeArguments()[0];
-                return Message.class.isAssignableFrom(typeArgument);
-            }
-
-            if (Map.class.isAssignableFrom(rawType)) {
-                final Class<?> typeArgument = (Class<?>) parameterizedType.getActualTypeArguments()[1];
-                return Message.class.isAssignableFrom(typeArgument);
+                final Type actualTypeArgument = parameterizedType.getActualTypeArguments()[0];
+                if (!(actualTypeArgument instanceof Class)) {
+                    return false;
+                }
+                return Message.class.isAssignableFrom((Class<?>) actualTypeArgument);
+            } else if (Map.class.isAssignableFrom(rawType)) {
+                final Type actualTypeArgument = parameterizedType.getActualTypeArguments()[1];
+                if (!(actualTypeArgument instanceof Class)) {
+                    return false;
+                }
+                return Message.class.isAssignableFrom((Class<?>) actualTypeArgument);
             }
         }
 

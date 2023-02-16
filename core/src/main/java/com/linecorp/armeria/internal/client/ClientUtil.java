@@ -18,13 +18,16 @@ package com.linecorp.armeria.internal.client;
 import static com.google.common.base.MoreObjects.firstNonNull;
 import static java.util.Objects.requireNonNull;
 
+import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
 
+import com.google.common.base.Strings;
+
 import com.linecorp.armeria.client.Client;
 import com.linecorp.armeria.client.ClientRequestContext;
-import com.linecorp.armeria.client.DefaultClientRequestContext;
+import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.UnprocessedRequestException;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
 import com.linecorp.armeria.common.HttpRequest;
@@ -46,7 +49,7 @@ public final class ClientUtil {
     public static <I extends Request, O extends Response, U extends Client<I, O>>
     O initContextAndExecuteWithFallback(
             U delegate,
-            DefaultClientRequestContext ctx,
+            ClientRequestContextExtension ctx,
             EndpointGroup endpointGroup,
             Function<CompletableFuture<O>, O> futureConverter,
             BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory) {
@@ -99,7 +102,7 @@ public final class ClientUtil {
 
     private static <I extends Request, O extends Response, U extends Client<I, O>>
     O initContextAndExecuteWithFallback(
-            U delegate, DefaultClientRequestContext ctx,
+            U delegate, ClientRequestContextExtension ctx,
             BiFunction<ClientRequestContext, Throwable, O> errorResponseFactory, boolean succeeded)
             throws Exception {
 
@@ -226,6 +229,16 @@ public final class ClientUtil {
         }
         ctx.logBuilder().addChild(derived.log());
         return derived;
+    }
+
+    public static String pathWithQuery(URI uri, @Nullable String query) {
+        String path = uri.getRawPath();
+        if (Strings.isNullOrEmpty(path)) {
+            path = query == null ? "/" : "/?" + query;
+        } else if (query != null) {
+            path = path + '?' + query;
+        }
+        return path;
     }
 
     private ClientUtil() {}

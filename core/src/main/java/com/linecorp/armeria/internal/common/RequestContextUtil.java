@@ -20,8 +20,6 @@ import static com.google.common.base.Preconditions.checkState;
 import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
-import java.util.List;
-import java.util.ServiceLoader;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.function.Supplier;
@@ -29,11 +27,9 @@ import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.collect.ImmutableList;
 import com.google.common.collect.MapMaker;
 import com.google.errorprone.annotations.MustBeClosed;
 
-import com.linecorp.armeria.client.DefaultClientRequestContext;
 import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.RequestContext;
@@ -41,7 +37,9 @@ import com.linecorp.armeria.common.RequestContextStorage;
 import com.linecorp.armeria.common.RequestContextStorageProvider;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.server.DefaultServiceRequestContext;
+import com.linecorp.armeria.common.util.Sampler;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
@@ -65,53 +63,16 @@ public final class RequestContextUtil {
     private static RequestContextStorage requestContextStorage;
 
     static {
-        final List<RequestContextStorageProvider> providers = ImmutableList.copyOf(
-                ServiceLoader.load(RequestContextStorageProvider.class));
-        final String providerFqcn = Flags.requestContextStorageProvider();
-        if (!providers.isEmpty()) {
-
-            RequestContextStorageProvider provider = null;
-            if (providers.size() > 1) {
-                if (providerFqcn == null) {
-                    throw new IllegalStateException(
-                            "Found more than one " + RequestContextStorageProvider.class.getSimpleName() +
-                            ". You must specify -Dcom.linecorp.armeria.requestContextStorageProvider=<FQCN>." +
-                            " providers: " + providers);
-                }
-
-                for (RequestContextStorageProvider candidate : providers) {
-                    if (candidate.getClass().getName().equals(providerFqcn)) {
-                        if (provider != null) {
-                            throw new IllegalStateException(
-                                    providerFqcn + " matches more than one " +
-                                    RequestContextStorageProvider.class.getSimpleName() + ". providers: " +
-                                    providers);
-                        } else {
-                            provider = candidate;
-                        }
-                    }
-                }
-                if (provider == null) {
-                    throw new IllegalStateException(
-                            providerFqcn + " does not match any " +
-                            RequestContextStorageProvider.class.getSimpleName() + ". providers: " + providers);
-                }
-            } else {
-                provider = providers.get(0);
-                if (logger.isInfoEnabled()) {
-                    logger.info("Using {} as a {}",
-                                provider.getClass().getSimpleName(),
-                                RequestContextStorageProvider.class.getSimpleName());
-                }
-            }
-
-            try {
+        final RequestContextStorageProvider provider = Flags.requestContextStorageProvider();
+        final Sampler<? super RequestContext> sampler = Flags.requestContextLeakDetectionSampler();
+        try {
+            if (sampler == Sampler.never()) {
                 requestContextStorage = provider.newStorage();
-            } catch (Throwable t) {
-                throw new IllegalStateException("Failed to create context storage. provider: " + provider, t);
+            } else {
+                requestContextStorage = new LeakTracingRequestContextStorage(provider.newStorage(), sampler);
             }
-        } else {
-            requestContextStorage = RequestContextStorage.threadLocal();
+        } catch (Throwable t) {
+            throw new IllegalStateException("Failed to create context storage. provider: " + provider, t);
         }
     }
 
@@ -240,13 +201,19 @@ public final class RequestContextUtil {
         }
     }
 
+    public static boolean equalsIgnoreWrapper(@Nullable RequestContext ctx1, @Nullable RequestContext ctx2) {
+        if (ctx1 == null) {
+            return ctx2 == null;
+        }
+        return ctx1.equalsIgnoreWrapper(ctx2);
+    }
+
     @Nullable
     private static AutoCloseable invokeHook(RequestContext ctx) {
         final Supplier<? extends AutoCloseable> hook;
-        if (ctx instanceof DefaultServiceRequestContext) {
-            hook = ((DefaultServiceRequestContext) ctx).hook();
-        } else if (ctx instanceof DefaultClientRequestContext) {
-            hook = ((DefaultClientRequestContext) ctx).hook();
+        final RequestContextExtension ctxExtension = ctx.as(RequestContextExtension.class);
+        if (ctxExtension != null) {
+            hook = ctxExtension.hook();
         } else {
             hook = null;
         }

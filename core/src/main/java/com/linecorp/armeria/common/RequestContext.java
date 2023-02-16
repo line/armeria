@@ -42,10 +42,12 @@ import com.google.errorprone.annotations.MustBeClosed;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.common.util.Unwrappable;
 import com.linecorp.armeria.internal.common.JavaVersionSpecific;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -60,7 +62,7 @@ import io.netty.util.AttributeKey;
  * A server-side {@link Request} has a {@link ServiceRequestContext} and
  * a client-side {@link Request} has a {@link ClientRequestContext}.
  */
-public interface RequestContext {
+public interface RequestContext extends Unwrappable {
 
     /**
      * Returns the context of the {@link Request} that is being handled in the current thread.
@@ -441,6 +443,13 @@ public interface RequestContext {
     }
 
     /**
+     * Returns the {@link ExchangeType} that determines whether to stream an {@link HttpRequest} or
+     * {@link HttpResponse}.
+     */
+    @UnstableApi
+    ExchangeType exchangeType();
+
+    /**
      * Pushes the specified context to the thread-local stack. To pop the context from the stack, call
      * {@link SafeCloseable#close()}, which can be done using a {@code try-with-resources} block:
      * <pre>{@code
@@ -455,6 +464,16 @@ public interface RequestContext {
      */
     @MustBeClosed
     SafeCloseable push();
+
+    @Override
+    default RequestContext unwrap() {
+        return (RequestContext) Unwrappable.super.unwrap();
+    }
+
+    @Override
+    default RequestContext unwrapAll() {
+        return (RequestContext) Unwrappable.super.unwrapAll();
+    }
 
     /**
      * Immediately run a given {@link Runnable} with this context.

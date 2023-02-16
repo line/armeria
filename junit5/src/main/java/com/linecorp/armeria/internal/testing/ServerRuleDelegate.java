@@ -26,13 +26,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.client.ClientFactory;
 import com.linecorp.armeria.client.Endpoint;
+import com.linecorp.armeria.client.RestClient;
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.client.WebClientBuilder;
 import com.linecorp.armeria.common.SerializationFormat;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.Server;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -348,7 +351,7 @@ public abstract class ServerRuleDelegate {
     }
 
     /**
-     * Returna a newly created {@link WebClient} configured by {@link #configureWebClient(WebClientBuilder)}
+     * Returns a newly created {@link WebClient} configured by {@link #configureWebClient(WebClientBuilder)}
      * and then the specified customizer.
      */
     public WebClient webClient(Consumer<WebClientBuilder> webClientCustomizer) {
@@ -356,6 +359,42 @@ public abstract class ServerRuleDelegate {
         final WebClientBuilder builder = webClientBuilder();
         webClientCustomizer.accept(builder);
         return builder.build();
+    }
+
+    /**
+     * Returns the {@link BlockingWebClient} configured by {@link #configureWebClient(WebClientBuilder)}.
+     */
+    @UnstableApi
+    public BlockingWebClient blockingWebClient() {
+        return webClient().blocking();
+    }
+
+    /**
+     * Returns a newly created {@link BlockingWebClient} configured by
+     * {@link #configureWebClient(WebClientBuilder)} and then the specified customizer.
+     */
+    @UnstableApi
+    public BlockingWebClient blockingWebClient(Consumer<WebClientBuilder> webClientCustomizer) {
+        requireNonNull(webClientCustomizer, "webClientCustomizer");
+        return webClient(webClientCustomizer).blocking();
+    }
+
+    /**
+     * Returns the {@link RestClient} configured by {@link #configureWebClient(WebClientBuilder)}.
+     */
+    @UnstableApi
+    public RestClient restClient() {
+        return webClient().asRestClient();
+    }
+
+    /**
+     * Returns a newly created {@link RestClient} configured by
+     * {@link #configureWebClient(WebClientBuilder)} and then the specified customizer.
+     */
+    @UnstableApi
+    public RestClient restClient(Consumer<WebClientBuilder> webClientCustomizer) {
+        requireNonNull(webClientCustomizer, "webClientCustomizer");
+        return webClient(webClientCustomizer).asRestClient();
     }
 
     private void ensureStarted() {

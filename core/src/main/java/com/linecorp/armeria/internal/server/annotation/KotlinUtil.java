@@ -20,6 +20,7 @@ import java.lang.annotation.Annotation;
 import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
+import java.lang.reflect.AnnotatedElement;
 import java.lang.reflect.Method;
 import java.lang.reflect.Type;
 import java.util.Arrays;
@@ -65,6 +66,12 @@ final class KotlinUtil {
     @Nullable
     private static final Method K_FUNCTION_GENERIC_RETURN_TYPE;
 
+    @Nullable
+    private static final Method IS_MARKED_NULLABLE;
+
+    @Nullable
+    private static final Method IS_DATA;
+
     static {
         MethodHandle callKotlinSuspendingMethod = null;
         final String internalCommonPackageName = RequestContextUtil.class.getPackage().getName();
@@ -92,6 +99,8 @@ final class KotlinUtil {
         Method isReturnTypeNothing = null;
         Method kFunctionReturnType = null;
         Method kFunctionGenericReturnType = null;
+        Method isMarkedNullable = null;
+        Method isData = null;
         try {
             final Class<?> kotlinUtilClass =
                     getClass(internalCommonPackageName + ".kotlin.ArmeriaKotlinUtil");
@@ -102,6 +111,8 @@ final class KotlinUtil {
             isReturnTypeNothing = kotlinUtilClass.getMethod("isReturnTypeNothing", Method.class);
             kFunctionReturnType = kotlinUtilClass.getMethod("kFunctionReturnType", Method.class);
             kFunctionGenericReturnType = kotlinUtilClass.getMethod("kFunctionGenericReturnType", Method.class);
+            isMarkedNullable = kotlinUtilClass.getMethod("isMarkedNullable", AnnotatedElement.class);
+            isData = kotlinUtilClass.getMethod("isData", Class.class);
         } catch (ClassNotFoundException | NoSuchMethodException e) {
             // ignore
         } finally {
@@ -111,6 +122,8 @@ final class KotlinUtil {
             IS_RETURN_TYPE_NOTHING = isReturnTypeNothing;
             K_FUNCTION_RETURN_TYPE = kFunctionReturnType;
             K_FUNCTION_GENERIC_RETURN_TYPE = kFunctionGenericReturnType;
+            IS_MARKED_NULLABLE = isMarkedNullable;
+            IS_DATA = isData;
         }
 
         boolean isKotlinReflectionPresent = false;
@@ -226,6 +239,9 @@ final class KotlinUtil {
         }
     }
 
+    /**
+     * {@link Method#getReturnType} equivalent for Kotlin functions.
+     */
     static Class<?> kFunctionReturnType(Method method) {
         assert K_FUNCTION_RETURN_TYPE != null;
         try {
@@ -235,12 +251,38 @@ final class KotlinUtil {
         }
     }
 
+    /**
+     * {@link Method#getGenericReturnType} equivalent for Kotlin functions.
+     */
     static Type kFunctionGenericReturnType(Method method) {
         assert K_FUNCTION_GENERIC_RETURN_TYPE != null;
         try {
             return (Type) K_FUNCTION_GENERIC_RETURN_TYPE.invoke(null, method);
         } catch (Exception e) {
             return Exceptions.throwUnsafely(e);
+        }
+    }
+
+    /**
+     * Returns true if the typeElement can be converted to KType and is marked nullable.
+     */
+    static boolean isMarkedNullable(AnnotatedElement typeElement) {
+        try {
+            return IS_MARKED_NULLABLE != null &&
+                   (boolean) IS_MARKED_NULLABLE.invoke(null, typeElement);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * Returns true if the {@link Class} is a Kotlin data class.
+     */
+    static boolean isData(Class<?> clazz) {
+        try {
+            return IS_DATA != null && (boolean) IS_DATA.invoke(null, clazz);
+        } catch (Exception e) {
+            return false;
         }
     }
 

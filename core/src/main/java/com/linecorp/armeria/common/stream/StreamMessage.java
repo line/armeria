@@ -18,17 +18,18 @@ package com.linecorp.armeria.common.stream;
 
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.collect.ImmutableList.toImmutableList;
-import static com.linecorp.armeria.common.stream.PathStreamMessage.DEFAULT_FILE_BUFFER_SIZE;
 import static com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil.EMPTY_OPTIONS;
 import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.nio.file.OpenOption;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -44,7 +45,9 @@ import com.google.common.collect.Iterables;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.RequestContext;
+import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.DecodedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.EmptyFixedStreamMessage;
@@ -53,6 +56,7 @@ import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.ThreeElementFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.TwoElementFixedStreamMessage;
+import com.linecorp.armeria.server.ServiceRequestContext;
 
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
@@ -102,6 +106,7 @@ import io.netty.util.concurrent.EventExecutor;
  *
  * @param <T> the type of element signaled
  */
+@SuppressWarnings("OverloadMethodsDeclarationOrder")
 public interface StreamMessage<T> extends Publisher<T> {
     /**
      * Creates a new {@link StreamMessage} that will publish no objects, just a close event.
@@ -185,7 +190,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
      * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
      */
-    static StreamMessage<HttpData> of(File file) {
+    static ByteStreamMessage of(File file) {
         requireNonNull(file, "file");
         return of(file.toPath());
     }
@@ -197,9 +202,18 @@ public interface StreamMessage<T> extends Publisher<T> {
      * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
      * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
      */
-    static StreamMessage<HttpData> of(Path path) {
+    static ByteStreamMessage of(Path path) {
         requireNonNull(path, "path");
-        return of(path, DEFAULT_FILE_BUFFER_SIZE);
+        return builder(path).build();
+    }
+
+    /**
+     * Returns a new {@link PathStreamMessageBuilder} with the specified {@link Path}.
+     */
+    @UnstableApi
+    static PathStreamMessageBuilder builder(Path path) {
+        requireNonNull(path, "path");
+        return new PathStreamMessageBuilder(path);
     }
 
     /**
@@ -210,9 +224,12 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * @param path the path of the file
      * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
+     *
+     * @deprecated Use {@link #builder(Path)} with {@link PathStreamMessageBuilder#bufferSize(int)}
      */
-    static StreamMessage<HttpData> of(Path path, int bufferSize) {
-        return of(path, ByteBufAllocator.DEFAULT, bufferSize);
+    @Deprecated
+    static ByteStreamMessage of(Path path, int bufferSize) {
+        return builder(path).bufferSize(bufferSize).build();
     }
 
     /**
@@ -224,12 +241,16 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param path the path of the file
      * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer
      * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
+     *
+     * @deprecated Use {@link #builder(Path)} with {@link PathStreamMessageBuilder#alloc(ByteBufAllocator)} and
+     *             {@link PathStreamMessageBuilder#bufferSize(int)}.
      */
-    static StreamMessage<HttpData> of(Path path, ByteBufAllocator alloc, int bufferSize) {
+    @Deprecated
+    static ByteStreamMessage of(Path path, ByteBufAllocator alloc, int bufferSize) {
         requireNonNull(path, "path");
         requireNonNull(alloc, "alloc");
         checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
-        return new PathStreamMessage(path, alloc, null, bufferSize);
+        return builder(path).alloc(alloc).bufferSize(bufferSize).build();
     }
 
     /**
@@ -242,14 +263,90 @@ public interface StreamMessage<T> extends Publisher<T> {
      * @param executor the {@link ExecutorService} which performs blocking IO read
      * @param alloc the {@link ByteBufAllocator} which will allocate the content buffer
      * @param bufferSize the maximum allowed size of the {@link HttpData} buffers
+     *
+     * @deprecated Use {@link #builder(Path)} with
+     *             {@link PathStreamMessageBuilder#executor(ExecutorService)},
+     *             {@link PathStreamMessageBuilder#alloc(ByteBufAllocator)} and
+     *             {@link PathStreamMessageBuilder#bufferSize(int)}
      */
-    static StreamMessage<HttpData> of(Path path, ExecutorService executor, ByteBufAllocator alloc,
-                                      int bufferSize) {
+    @Deprecated
+    static ByteStreamMessage of(Path path, @Nullable ExecutorService executor, ByteBufAllocator alloc,
+                                int bufferSize) {
         requireNonNull(path, "path");
-        requireNonNull(executor, "executor");
         requireNonNull(alloc, "alloc");
-        checkArgument(bufferSize > 0, "bufferSize: %s (expected: > 0)", bufferSize);
-        return new PathStreamMessage(path, alloc, executor, bufferSize);
+        final PathStreamMessageBuilder builder = builder(path);
+        if (executor != null) {
+            builder.executor(executor);
+        }
+        return builder.alloc(alloc).bufferSize(bufferSize).build();
+    }
+
+    /**
+     * Creates a new {@link ByteStreamMessage} that publishes {@link HttpData}s from the specified
+     * {@linkplain Consumer outputStreamConsumer}.
+     *
+     * <p>For example:<pre>{@code
+     * ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
+     *     try {
+     *         for (int i = 0; i < 5; i++) {
+     *             os.write(i);
+     *         }
+     *         os.close();
+     *     } catch (IOException e) {
+     *         throw new UncheckedIOException(e);
+     *     }
+     * });
+     * byte[] result = byteStreamMessage.collectBytes().join();
+     *
+     * assert Arrays.equals(result, new byte[] { 0, 1, 2, 3, 4 });
+     * }</pre>
+     *
+     * <p>Please note that the try-with-resources statement is not used to call {@code os.close()}
+     * automatically. It's because when an exception is raised in the {@link Consumer},
+     * the {@link OutputStream} is closed by the {@link StreamMessage} and the exception is propagated
+     * to the {@link Subscriber} automatically.
+     */
+    static ByteStreamMessage fromOutputStream(Consumer<? super OutputStream> outputStreamConsumer) {
+        final RequestContext ctx = RequestContext.currentOrNull();
+        final ExecutorService blockingTaskExecutor;
+        if (ctx instanceof ServiceRequestContext) {
+            blockingTaskExecutor = ((ServiceRequestContext) ctx).blockingTaskExecutor();
+        } else {
+            blockingTaskExecutor = CommonPools.blockingTaskExecutor();
+        }
+        return fromOutputStream(outputStreamConsumer, blockingTaskExecutor);
+    }
+
+    /**
+     * Creates a new {@link ByteStreamMessage} that publishes {@link HttpData}s from the specified
+     * {@linkplain Consumer outputStreamConsumer}.
+     *
+     * <p>For example:<pre>{@code
+     * ByteStreamMessage byteStreamMessage = StreamMessage.fromOutputStream(os -> {
+     *     try {
+     *         for (int i = 0; i < 5; i++) {
+     *             os.write(i);
+     *         }
+     *         os.close();
+     *     } catch (IOException e) {
+     *         throw new UncheckedIOException(e);
+     *     }
+     * });
+     * byte[] result = byteStreamMessage.collectBytes().join();
+     *
+     * assert Arrays.equals(result, new byte[] { 0, 1, 2, 3, 4 });
+     * }</pre>
+     *
+     * <p>Please note that the try-with-resources statement is not used to call {@code os.close()}
+     * automatically. It's because when an exception is raised in the {@link Consumer},
+     * the {@link OutputStream} is closed by the {@link StreamMessage} and the exception is propagated
+     * to the {@link Subscriber} automatically.
+     *
+     * @param blockingTaskExecutor the blocking task executor to execute {@link OutputStream#write(int)}
+     */
+    static ByteStreamMessage fromOutputStream(Consumer<? super OutputStream> outputStreamConsumer,
+                                              Executor blockingTaskExecutor) {
+        return new ByteStreamMessageOutputStream(outputStreamConsumer, blockingTaskExecutor);
     }
 
     /**
@@ -346,6 +443,23 @@ public interface StreamMessage<T> extends Publisher<T> {
      * </ul>
      */
     CompletableFuture<Void> whenComplete();
+
+    /**
+     * Drains and discards all objects in this {@link StreamMessage}.
+     *
+     * <p>For example:<pre>{@code
+     * StreamMessage<Integer> source = StreamMessage.of(1, 2, 3);
+     * List<Integer> collected = new ArrayList<>();
+     * CompletableFuture<Void> future = source.peek(collected::add).subscribe();
+     * future.join();
+     * assert collected.equals(List.of(1, 2, 3));
+     * assert future.isDone();
+     * }</pre>
+     */
+    default CompletableFuture<Void> subscribe() {
+        subscribe(NoopSubscriber.get());
+        return whenComplete();
+    }
 
     /**
      * Requests to start streaming data to the specified {@link Subscriber}. If there is a problem subscribing,
@@ -802,6 +916,69 @@ public interface StreamMessage<T> extends Publisher<T> {
             Function<? super Throwable, ? extends StreamMessage<T>> function) {
         requireNonNull(function, "function");
         return new RecoverableStreamMessage<>(this, function, /* allowResuming */ true);
+    }
+
+    /**
+     * Recovers a failed {@link StreamMessage} and resumes by subscribing to a returned fallback
+     * {@link StreamMessage} when the thrown {@link Throwable} is the same type or a subtype of the
+     * specified {@code causeClass}.
+     *
+     * <p>Example:<pre>{@code
+     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * stream.write(1);
+     * stream.write(2);
+     * stream.close(new IllegalStateException("Oops..."));
+     * StreamMessage<Integer> resumed =
+     *     stream.recoverAndResume(IllegalStateException.class, cause -> StreamMessage.of(3, 4));
+     *
+     * assert resumed.collect().join().equals(List.of(1, 2, 3, 4));
+     *
+     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * stream.write(1);
+     * stream.write(2);
+     * stream.write(3);
+     * stream.close(new IllegalStateException("test exception"));
+     * // Use the shortcut recover method as a chain.
+     * StreamMessage<Integer> recoverChain =
+     *     stream.recoverAndResume(RuntimeException.class, cause -> {
+     *         final IllegalArgumentException ex = new IllegalArgumentException("oops..");
+     *         // If a aborted StreamMessage returned from the first chain
+     *         return StreamMessage.aborted(ex);
+     *     })
+     *     // If the shortcut exception type is correct, catch and recover in the second chain.
+     *     .recoverAndResume(IllegalArgumentException.class, cause -> StreamMessage.of(4, 5));
+     *
+     * recoverChain.collect().join();
+     *
+     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * stream.write(1);
+     * stream.write(2);
+     * stream.close(ClosedStreamException.get());
+     * // If the exception type does not match
+     * StreamMessage<Integer> mismatchRecovered =
+     *     stream.recoverAndResume(IllegalStateException.class, cause -> StreamMessage.of(3, 4));
+     *
+     * // In this case, CompletionException is thrown. (can't recover exception)
+     * mismatchRecovered.collect().join();
+     * }</pre>
+     */
+    @UnstableApi
+    default <E extends Throwable> StreamMessage<T> recoverAndResume(Class<E> causeClass,
+            Function<? super E, ? extends StreamMessage<T>> function) {
+        requireNonNull(causeClass, "causeClass");
+        requireNonNull(function, "function");
+        return recoverAndResume(cause -> {
+            if (!causeClass.isInstance(cause)) {
+                return Exceptions.throwUnsafely(cause);
+            }
+            try {
+                final StreamMessage<T> recoveredStreamMessage = function.apply((E) cause);
+                requireNonNull(recoveredStreamMessage, "recoveredStreamMessage");
+                return recoveredStreamMessage;
+            } catch (Throwable t) {
+                return Exceptions.throwUnsafely(cause);
+            }
+        });
     }
 
     /**

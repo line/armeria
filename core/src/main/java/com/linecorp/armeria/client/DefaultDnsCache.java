@@ -22,13 +22,16 @@ import static java.util.Objects.requireNonNull;
 import java.net.UnknownHostException;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
+import com.github.benmanes.caffeine.cache.RemovalCause;
 import com.github.benmanes.caffeine.cache.RemovalListener;
 import com.google.common.base.MoreObjects;
 import com.google.common.base.MoreObjects.ToStringHelper;
@@ -38,7 +41,6 @@ import com.google.common.primitives.Ints;
 
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
-import com.linecorp.armeria.common.util.ThreadFactories;
 import com.linecorp.armeria.internal.common.metric.CaffeineMetricSupport;
 
 import io.micrometer.core.instrument.MeterRegistry;
@@ -47,51 +49,72 @@ import io.netty.handler.codec.dns.DnsRecord;
 
 final class DefaultDnsCache implements DnsCache {
 
-    private static final ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor(
-            ThreadFactories.newThreadFactory("armeria-dns-cache-executor", true));
+    private static final Logger logger = LoggerFactory.getLogger(DefaultDnsCache.class);
 
     private final List<DnsCacheListener> listeners = new CopyOnWriteArrayList<>();
+    private final Cache<DnsQuestion, CacheEntry> cache;
+    private final ScheduledExecutorService executor;
     private final int minTtl;
     private final int maxTtl;
-    private final Cache<DnsQuestion, CacheEntry> cache;
     private final int negativeTtl;
+    private boolean evictionWarned;
 
-    DefaultDnsCache(String cacheSpec, MeterRegistry meterRegistry, int minTtl, int maxTtl, int negativeTtl) {
+    DefaultDnsCache(String cacheSpec, MeterRegistry meterRegistry, ScheduledExecutorService executor,
+                    int minTtl, int maxTtl, int negativeTtl) {
+        this.executor = executor;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         this.negativeTtl = negativeTtl;
+        cache = Caffeine.from(cacheSpec)
+                        .removalListener((RemovalListener<DnsQuestion, CacheEntry>) (key, value, cause) -> {
+                            if (value != null) {
+                                value.scheduledFuture.cancel(true);
+                            }
 
-        final Caffeine<Object, Object> caffeine = Caffeine.from(cacheSpec);
-        caffeine.removalListener((RemovalListener<DnsQuestion, CacheEntry>) (key, value, cause) -> {
-            if (value != null) {
-                value.scheduledFuture.cancel(true);
-            }
+                            if (key == null || value == null) {
+                                // A key or value could be null if collected.
+                                return;
+                            }
 
-            if (key == null || value == null) {
-                // A key or value could be null if collected.
-                return;
-            }
+                            final boolean evicted = cause == RemovalCause.SIZE;
+                            if (evicted) {
+                                if (!evictionWarned) {
+                                    evictionWarned = true;
+                                    logger.warn(
+                                            "{} is evicted due to size. Please consider increasing the " +
+                                            "maximum size of the DNS cache. cache spec:" +
+                                            " {}", key, cacheSpec);
+                                } else {
+                                    logger.debug("{} is evicted due to {}.", key, cause);
+                                }
+                            }
 
-            final UnknownHostException reason = value.cause();
-            final List<DnsRecord> records = value.records();
-            if (reason != null) {
-                for (DnsCacheListener listener : listeners) {
-                    listener.onRemoval(key, null, reason);
-                }
-            } else if (records != null) {
-                for (DnsCacheListener listener : listeners) {
-                    listener.onRemoval(key, records, null);
-                }
-            } else {
-                // Should not reach here.
-                throw new Error();
-            }
-        });
-        caffeine.executor(executor);
-        cache = caffeine.build();
+                            final UnknownHostException reason = value.cause();
+                            final List<DnsRecord> records = value.records();
+                            assert records != null || reason != null;
+                            for (DnsCacheListener listener : listeners) {
+                                invokeListener(listener, evicted, key, records, reason);
+                            }
+                        })
+                        .executor(executor)
+                        .build();
 
         final MeterIdPrefix idPrefix = new MeterIdPrefix("armeria.client.dns.cache");
         CaffeineMetricSupport.setup(meterRegistry, idPrefix, cache);
+    }
+
+    private static void invokeListener(DnsCacheListener listener, boolean evicted, DnsQuestion question,
+                                       @Nullable List<DnsRecord> records,
+                                       @Nullable UnknownHostException reason) {
+        try {
+            if (evicted) {
+                listener.onEviction(question, records, reason);
+            } else {
+                listener.onRemoval(question, records, reason);
+            }
+        } catch (Exception ex) {
+            logger.warn("Unexpected exception while invoking {}", listener, ex);
+        }
     }
 
     @Override
@@ -106,7 +129,7 @@ final class DefaultDnsCache implements DnsCache {
                                .orElse(minTtl);
         final int effectiveTtl = Math.min(maxTtl, Math.max(minTtl, Ints.saturatedCast(ttl)));
 
-        cache.put(question, new CacheEntry(cache, question, copied, null, effectiveTtl));
+        cache.put(question, new CacheEntry(cache, question, copied, null, executor, effectiveTtl));
     }
 
     @Override
@@ -115,7 +138,7 @@ final class DefaultDnsCache implements DnsCache {
         requireNonNull(cause, "cause");
 
         if (negativeTtl > 0) {
-            cache.put(question, new CacheEntry(cache, question, null, cause, negativeTtl));
+            cache.put(question, new CacheEntry(cache, question, null, cause, executor, negativeTtl));
         }
     }
 
@@ -150,7 +173,7 @@ final class DefaultDnsCache implements DnsCache {
         listeners.add(listener);
     }
 
-    static final class CacheEntry {
+    private static final class CacheEntry {
 
         @Nullable
         private final List<DnsRecord> records;
@@ -159,9 +182,10 @@ final class DefaultDnsCache implements DnsCache {
         private final ScheduledFuture<?> scheduledFuture;
         int hashCode;
 
-        private CacheEntry(Cache<DnsQuestion, CacheEntry> cache, DnsQuestion question,
-                           @Nullable List<DnsRecord> records,
-                           @Nullable UnknownHostException cause, int timeToLive) {
+        CacheEntry(Cache<DnsQuestion, CacheEntry> cache, DnsQuestion question,
+                   @Nullable List<DnsRecord> records,
+                   @Nullable UnknownHostException cause, ScheduledExecutorService executor,
+                   int timeToLive) {
             assert records != null || cause != null;
             this.records = records;
             this.cause = cause;

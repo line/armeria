@@ -15,6 +15,11 @@
  */
 package com.linecorp.armeria.server.annotation;
 
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapUnaryAsyncType;
+
+import java.lang.reflect.Type;
+
 import org.reactivestreams.Subscriber;
 
 import com.linecorp.armeria.common.FilteredHttpResponse;
@@ -22,6 +27,7 @@ import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.server.ServiceRequestContext;
@@ -32,6 +38,19 @@ import com.linecorp.armeria.server.file.HttpFile;
  * an instance of {@link HttpFile}.
  */
 public final class HttpFileResponseConverterFunction implements ResponseConverterFunction {
+
+    @Override
+    public Boolean isResponseStreaming(Type returnType, @Nullable MediaType produceType) {
+        final Class<?> clazz = typeToClass(unwrapUnaryAsyncType(returnType));
+        if (clazz == null) {
+            return null;
+        }
+
+        if (HttpFile.class.isAssignableFrom(clazz)) {
+            return true;
+        }
+        return null;
+    }
 
     @Override
     public HttpResponse convertResponse(ServiceRequestContext ctx,

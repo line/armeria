@@ -177,6 +177,11 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onSettingsRead(ChannelHandlerContext ctx, Http2Settings settings) {
+        if (settings.isEmpty()) {
+            logger.trace("{} HTTP/2 settings: <empty>", ctx.channel());
+        } else {
+            logger.debug("{} HTTP/2 settings: {}", ctx.channel(), settings);
+        }
         ctx.fireChannelRead(settings);
     }
 

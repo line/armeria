@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
@@ -75,6 +76,13 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
                                                          boolean shutdownOnStop) {
         defaultServiceConfigSetters.accessLogWriter(accessLogWriter, shutdownOnStop);
         return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder decorator(
+            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        return (AbstractServiceBindingBuilder) ServiceConfigSetters.super.decorator(
+                decoratingHttpServiceFunction);
     }
 
     @Override
@@ -141,6 +149,32 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         return this;
     }
 
+    @Override
+    public AbstractServiceBindingBuilder addHeader(CharSequence name, Object value) {
+        defaultServiceConfigSetters.addHeader(name, value);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        defaultServiceConfigSetters.addHeaders(defaultHeaders);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder setHeader(CharSequence name, Object value) {
+        defaultServiceConfigSetters.setHeader(name, value);
+        return this;
+    }
+
+    @Override
+    public AbstractServiceBindingBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        defaultServiceConfigSetters.setHeaders(defaultHeaders);
+        return this;
+    }
+
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(HttpService service) {
@@ -150,11 +184,21 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
                              ImmutableSet.of());
 
         final List<Route> routes = buildRouteList(fallbackRoutes);
+        final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
         for (Route route : routes) {
-            final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
             final ServiceConfigBuilder serviceConfigBuilder =
                     defaultServiceConfigSetters.toServiceConfigBuilder(route, decoratedService);
             serviceConfigBuilder(serviceConfigBuilder);
         }
+    }
+
+    final void build0(HttpService service, Route mappedRoute) {
+        final List<Route> routes = buildRouteList(ImmutableSet.of());
+        assert routes.size() == 1; // Only one route is set via addRoute().
+        final HttpService decoratedService = defaultServiceConfigSetters.decorator().apply(service);
+        final ServiceConfigBuilder serviceConfigBuilder =
+                defaultServiceConfigSetters.toServiceConfigBuilder(routes.get(0), decoratedService);
+        serviceConfigBuilder.addMappedRoute(mappedRoute);
+        serviceConfigBuilder(serviceConfigBuilder);
     }
 }

@@ -8,20 +8,20 @@ configurations {
 
 dependencies {
     // To let a user choose between thrift and thrift0.9.
-    compileOnly project(':thrift0.16')
+    compileOnly project(':thrift0.17')
     implementation project(':logback')
 
-    optionalApi 'io.micrometer:micrometer-registry-prometheus'
-    optionalApi 'io.dropwizard.metrics:metrics-json'
-    api 'javax.inject:javax.inject'
-    compileOnly 'javax.validation:validation-api'
-    api 'org.springframework.boot:spring-boot-starter-webflux'
+    optionalApi libs.micrometer.prometheus
+    optionalApi libs.dropwizard.metrics.json
+    api libs.javax.inject
+    compileOnly libs.javax.validation
+    api libs.spring.boot2.starter.webflux
 
-    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor libs.spring.boot2.configuration.processor
 
     testImplementation project(':spring:boot2-actuator-autoconfigure')
-    testImplementation project(':thrift0.16')
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation project(':thrift0.17')
+    testImplementation libs.spring.boot2.starter.test
 }
 
 // Copy common files from boot2-autoconfigure module to gen-src directory in order to use them as a source set.
@@ -34,26 +34,24 @@ task generateSources(type: Copy) {
     include '**/ArmeriaConfigurationSettingsUtil.java'
     include '**/ArmeriaConfigurationUtil.java'
     include '**/CustomAlias*KeyManager*.java'
-    include '**/DropwizardSupport.java'
-    include '**/PrometheusSupport.java'
+    include '**/SpringDependencyInjector.java'
     include '**/ThriftServiceUtils.java'
 
     // Copy from /spring package.
     include '**/*ArmeriaBeanPostProcessor*.java'
-    include '**/*ExampleHeaders.java'
-    include '**/*ExampleRequest.java'
-    include '**/*RegistrationBean.java'
     include '**/ArmeriaServerConfigurator.java'
     include '**/ArmeriaSettings.java'
     include '**/DocServiceConfigurator.java'
     include '**/DropwizardExpositionService.java'
+    include '**/DropwizardSupport.java'
     include '**/HealthCheckServiceConfigurator.java'
-    include '**/InternalServices.java'
     include '**/InternalServiceId.java'
+    include '**/InternalServices.java'
     include '**/MetricCollectingServiceConfigurator.java'
     include '**/LocalArmeriaPort.java'
     include '**/LocalArmeriaPorts.java'
-    include '**/*MeterIdPrefixFunctionFactory.java'
+    include '**/PrometheusSupport.java'
+    include '**/SpringDependencyInjector.java'
     include '**/Ssl.java'
 }
 

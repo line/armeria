@@ -40,6 +40,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
@@ -161,8 +162,8 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
     }
 
     @Override
-    public StreamMessage<HttpData> toStreamMessage() {
-        return this;
+    public ByteStreamMessage toStreamMessage() {
+        return ByteStreamMessage.of(this);
     }
 
     @Override
@@ -172,7 +173,10 @@ final class DefaultMultipart implements Multipart, StreamMessage<HttpData> {
 
     @Override
     public boolean isEmpty() {
-        return parts.isEmpty();
+        // This is always false even parts.isEmpty() == true.
+        // It's because isEmpty() is called after this multipart is converted into a StreamMessage and the
+        // StreamMessage produces at least a closing boundary.
+        return false;
     }
 
     @Override

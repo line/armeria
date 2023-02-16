@@ -23,8 +23,15 @@ import org.junit.jupiter.api.Test;
 
 import com.google.errorprone.annotations.MustBeClosed;
 
+import com.linecorp.armeria.client.ClientRequestContext;
+import com.linecorp.armeria.client.ClientRequestContextWrapper;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
+import com.linecorp.armeria.internal.client.DefaultClientRequestContext;
+import com.linecorp.armeria.internal.common.RequestContextExtension;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.server.ServiceRequestContext;
+import com.linecorp.armeria.server.ServiceRequestContextWrapper;
 
 class RequestContextWrapperTest {
 
@@ -42,7 +49,7 @@ class RequestContextWrapperTest {
         @Override
         @MustBeClosed
         public SafeCloseable push() {
-            return delegate().push();
+            return unwrap().push();
         }
     }
 
@@ -52,5 +59,79 @@ class RequestContextWrapperTest {
         // Use reflective comparison to handle added properties automatically.
         assertThat(new WrappedRequestContext(ctx)).usingRecursiveComparison().ignoringFields("delegate")
                                                   .isEqualTo(ctx);
+    }
+
+    @Test
+    void testServiceUnwrapBehavior() {
+        final RequestContext ctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
+        final WrappedRequestContext wrapped1 = new WrappedRequestContext(ctx);
+        final WrappedRequestContext wrapped2 = new WrappedRequestContext(wrapped1);
+        assertThat(wrapped2.unwrap()).isSameAs(wrapped1);
+        assertThat(wrapped1.unwrap()).isSameAs(ctx);
+
+        final DefaultServiceRequestContext as = wrapped2.as(DefaultServiceRequestContext.class);
+        assertThat(as).isSameAs(ctx);
+
+        final RequestContextExtension extension = wrapped2.as(RequestContextExtension.class);
+        assertThat(extension).isSameAs(ctx);
+
+        final RequestContext unwrapped1 = wrapped1.unwrapAll();
+        assertThat(unwrapped1).isSameAs(ctx);
+        final RequestContext unwrapped2 = wrapped2.unwrapAll();
+        assertThat(unwrapped2).isSameAs(ctx);
+    }
+
+    @Test
+    void testClientUnwrapBehavior() {
+        final RequestContext ctx = ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
+        final WrappedRequestContext wrapped1 = new WrappedRequestContext(ctx);
+        final WrappedRequestContext wrapped2 = new WrappedRequestContext(wrapped1);
+        assertThat(wrapped2.unwrap()).isSameAs(wrapped1);
+        assertThat(wrapped1.unwrap()).isSameAs(ctx);
+
+        final DefaultClientRequestContext as = wrapped2.as(DefaultClientRequestContext.class);
+        assertThat(as).isSameAs(ctx);
+
+        final ClientRequestContextExtension clientExtension = wrapped2.as(ClientRequestContextExtension.class);
+        assertThat(clientExtension).isSameAs(ctx);
+
+        final RequestContextExtension extension = wrapped2.as(RequestContextExtension.class);
+        assertThat(extension).isSameAs(ctx);
+    }
+
+    @Test
+    void testUnwrappedTypes() {
+        final RequestContext requestContext =
+                ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
+        final RequestContext unwrappedRequestContext = requestContext.unwrap();
+        assertThat(unwrappedRequestContext).isSameAs(requestContext);
+
+        final ClientRequestContext clientRequestContext =
+                ClientRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
+        ClientRequestContext unwrappedClientRequestContext = clientRequestContext.unwrap();
+        assertThat(unwrappedClientRequestContext).isSameAs(clientRequestContext);
+        unwrappedClientRequestContext = clientRequestContext.unwrapAll();
+        assertThat(unwrappedClientRequestContext).isSameAs(clientRequestContext);
+
+        final ServiceRequestContext serviceRequestContext =
+                ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/")).build();
+        ServiceRequestContext unwrappedServiceRequestContext = serviceRequestContext.unwrap();
+        assertThat(unwrappedServiceRequestContext).isSameAs(serviceRequestContext);
+        unwrappedServiceRequestContext = serviceRequestContext.unwrapAll();
+        assertThat(unwrappedServiceRequestContext).isSameAs(serviceRequestContext);
+
+        final ClientRequestContextWrapper clientRequestContextWrapper =
+                new ClientRequestContextWrapper(clientRequestContext) {};
+        unwrappedClientRequestContext = clientRequestContextWrapper.unwrap();
+        assertThat(unwrappedClientRequestContext).isSameAs(clientRequestContext);
+        unwrappedClientRequestContext = clientRequestContext.unwrapAll();
+        assertThat(unwrappedClientRequestContext).isSameAs(clientRequestContext);
+
+        final ServiceRequestContextWrapper serviceRequestContextWrapper =
+                new ServiceRequestContextWrapper(serviceRequestContext) {};
+        unwrappedServiceRequestContext = serviceRequestContextWrapper.unwrap();
+        assertThat(unwrappedServiceRequestContext).isSameAs(serviceRequestContext);
+        unwrappedServiceRequestContext = serviceRequestContextWrapper.unwrapAll();
+        assertThat(unwrappedServiceRequestContext).isSameAs(serviceRequestContext);
     }
 }

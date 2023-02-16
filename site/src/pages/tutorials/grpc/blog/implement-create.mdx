@@ -1,0 +1,121 @@
+---
+menuTitle: "Implement CREATE"
+order: 3
+category: grpc
+tags:
+  - server
+level: basic
+type: step
+---
+
+# Implementing CREATE operation
+
+Previously, we ran an empty blog service on a server and also confirmed that our client could make a call to the service. In this step, we'll implement a create operation and again, try making a call to a service method.
+
+<TutorialSteps current={3} />
+
+## What you need
+
+You need to have the following obtained from previous steps:
+
+- [Java code generated](/tutorials/grpc/blog/define-service#compile-proto-file)
+- Main.java
+- BlogService.java
+- BlogClient.java
+
+## 1. Implement server-side
+
+Let's implement a service method `createBlogPost()` in `BlogService.java`.
+
+1. Create an ID generator to issue temporary blog post IDs and a map to contain blogs posts. We have also added in a logger for debugging.
+  ```java filename=BlogService.java
+  import java.util.Map;
+  import java.util.concurrent.ConcurrentHashMap;
+  import java.util.concurrent.atomic.AtomicInteger;
+
+  public final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+    private final AtomicInteger idGenerator = new AtomicInteger();
+    private final Map<Integer, BlogPost> blogPosts = new ConcurrentHashMap<>();
+  }
+  ```
+2. Add a service method, `createBlogPost()`:
+    1. Create a `BlogPost` object with request parameters.
+    2. Save the post information in the map.
+    3. Return the information of the blog post created.
+  ```java filename=BlogService.java
+  import example.armeria.blog.grpc.Blog.BlogPost;
+  import io.grpc.stub.StreamObserver;
+  
+  final class BlogService extends BlogServiceGrpc.BlogServiceImplBase {
+    @Override
+    public void createBlogPost(CreateBlogPostRequest request, StreamObserver<BlogPost> responseObserver) {
+      final int id = idGenerator.getAndIncrement(); // Generate post ID
+      final Instant now = Instant.now();            // Get current time
+      final BlogPost updated = BlogPost.newBuilder()
+                                       .setId(id)
+                                       .setTitle(request.getTitle())
+                                       .setContent(request.getContent())
+                                       .setModifiedAt(now.toEpochMilli())
+                                       .setCreatedAt(now.toEpochMilli())
+                                       .build();
+      blogPosts.put(id, updated);
+      responseObserver.onNext(updated);
+      responseObserver.onCompleted();
+    }
+  }
+  ```
+
+## 2. Implement client-side
+
+This time, let's add a proper method for creating a blog post.
+
+Add a method `createBlogPost()` in `BlogClient.java` to send a request to create a blog post.
+  ```java filename=BlogClient.java
+  import org.slf4j.Logger;
+  import org.slf4j.LoggerFactory;
+
+  class BlogClient {
+    private static final Logger logger = LoggerFactory.getLogger(BlogClient.class);
+    void createBlogPost(String title, String content) {
+      final CreateBlogPostRequest request = 
+        CreateBlogPostRequest.newBuilder()
+                             .setTitle(title)
+                             .setContent(content)
+                             .build();
+      final BlogPost response = client.createBlogPost(request);
+      logger.info("[Create response] Title: {} Content: {}",
+                    response.getTitle(), response.getContent());
+    }
+  }
+  ```
+
+## 3. Test run
+
+Now, let's make a call from the client. Note the code is minimal to keep things simple.
+
+1. Add a method to test the create method we just implemented.
+  ```java filename=BlogClient.java
+  public static void main(String[] args) throws Exception {
+    ...
+    BlogClient blogClient = new BlogClient();
+    blogClient.testRun();
+  }
+
+  void testRun() {
+    createBlogPost("Another blog post", "Creating a post via createBlogPost().");
+  }
+  ```
+2. [Re-run the server](/tutorials/grpc/blog/run-service#3-serve-the-service). Your server is running if you see the following message.
+  ```bash
+  [armeria-boss-http-*:8080] INFO com.linecorp.armeria.server.Server - Serving HTTP at /[0:0:0:0:0:0:0:0]:8080 - http://127.0.0.1:8080/
+  ```
+3. Run the client. You'll see only a single message for blog posting, because we haven't added logging for creating a post in the `main()` method.
+  ```bash
+  [main] INFO  e.a.client.blog.grpc.BlogClient - [Create response] Title: Another blog post Content: Creating a post via createBlogPost().
+  ```
+
+## What's next
+
+Here, we've implemented a service method and client method for creating a blog post. Next, we'll [implement a READ operation](/tutorials/grpc/blog/implement-read).
+
+<TutorialSteps current={3} />

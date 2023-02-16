@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static com.google.common.base.MoreObjects.firstNonNull;
 
 import java.nio.channels.ClosedChannelException;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 
 import org.slf4j.Logger;
@@ -31,11 +32,13 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.EventLoop;
 import io.netty.handler.codec.http2.Http2Error;
 
 final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
@@ -43,31 +46,40 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
     private static final Logger logger = LoggerFactory.getLogger(AggregatedHttpResponseHandler.class);
 
-    private boolean isComplete;
-
     AggregatedHttpResponseHandler(ChannelHandlerContext ctx, ServerHttpObjectEncoder responseEncoder,
-                                  DefaultServiceRequestContext reqCtx, DecodedHttpRequest req) {
-        super(ctx, responseEncoder, reqCtx, req);
+                                  DefaultServiceRequestContext reqCtx, DecodedHttpRequest req,
+                                  CompletableFuture<Void> completionFuture) {
+        super(ctx, responseEncoder, reqCtx, req, completionFuture);
         scheduleTimeout();
     }
 
     @Override
     public Void apply(@Nullable AggregatedHttpResponse response, @Nullable Throwable cause) {
+        final EventLoop eventLoop = reqCtx.eventLoop();
+        if (eventLoop.inEventLoop()) {
+            apply0(response, cause);
+        } else {
+            eventLoop.execute(() -> apply0(response, cause));
+        }
+        return null;
+    }
+
+    private void apply0(@Nullable AggregatedHttpResponse response, @Nullable Throwable cause) {
         clearTimeout();
         if (cause != null) {
+            cause = Exceptions.peel(cause);
             recoverAndWrite(cause);
-            return null;
+            return;
         }
 
         assert response != null;
         if (failIfStreamOrSessionClosed()) {
             PooledObjects.close(response.content());
-            return null;
+            return;
         }
 
         logBuilder().startResponse();
         write(response, null);
-        return null;
     }
 
     private void write(AggregatedHttpResponse response, @Nullable Throwable cause) {
@@ -80,6 +92,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         if (cause instanceof HttpResponseException) {
             toAggregatedHttpResponse((HttpResponseException) cause).handleAsync((res, cause0) -> {
                 if (cause0 != null) {
+                    cause0 = Exceptions.peel(cause0);
                     write(internalServerErrorResponse, cause0);
                 } else {
                     write(res, cause);
@@ -105,7 +118,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
 
     @Override
     void fail(Throwable cause) {
-        if (tryComplete()) {
+        if (tryComplete(cause)) {
             endLogRequestAndResponse(cause);
             maybeWriteAccessLog();
         }
@@ -118,19 +131,6 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
             }
         });
         ctx.flush();
-    }
-
-    private boolean tryComplete() {
-        if (isComplete) {
-            return false;
-        }
-        isComplete = true;
-        return true;
-    }
-
-    @Override
-    boolean isDone() {
-        return isComplete;
     }
 
     private final class WriteFutureListener implements ChannelFutureListener {
@@ -171,7 +171,7 @@ final class AggregatedHttpResponseHandler extends AbstractHttpResponseHandler
         // - any write operation is failed with a cause.
         if (isSuccess) {
             logBuilder().responseFirstBytesTransferred();
-            if (tryComplete()) {
+            if (tryComplete(cause)) {
                 if (cause == null) {
                     cause = CapturedServiceException.get(reqCtx);
                 }

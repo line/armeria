@@ -136,12 +136,15 @@ class HelloServiceTest {
                 ): ClientCall<I, O> {
                     return object : SimpleForwardingClientCall<I, O>(next.newCall(method, options)) {
                         override fun start(responseListener: Listener<O>, headers: Metadata) {
-                            super.start(object : SimpleForwardingClientCallListener<O>(responseListener) {
-                                override fun onClose(status: Status, trailers: Metadata) {
-                                    closeCalled.incrementAndGet()
-                                    super.onClose(status, trailers)
-                                }
-                            }, headers)
+                            super.start(
+                                object : SimpleForwardingClientCallListener<O>(responseListener) {
+                                    override fun onClose(status: Status, trailers: Metadata) {
+                                        closeCalled.incrementAndGet()
+                                        super.onClose(status, trailers)
+                                    }
+                                },
+                                headers
+                            )
                         }
                     }
                 }

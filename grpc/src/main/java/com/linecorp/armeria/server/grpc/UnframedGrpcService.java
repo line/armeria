@@ -21,6 +21,7 @@ import static com.google.common.base.Preconditions.checkArgument;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -33,6 +34,7 @@ import com.linecorp.armeria.common.grpc.protocol.GrpcHeaderNames;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.server.HttpService;
+import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.SimpleDecoratingHttpService;
 import com.linecorp.armeria.server.encoding.EncodingService;
@@ -57,7 +59,8 @@ import io.grpc.ServerMethodDefinition;
  */
 final class UnframedGrpcService extends AbstractUnframedGrpcService {
 
-    private final Map<String, ServerMethodDefinition<?, ?>> methodsByName;
+    private final GrpcService delegate;
+    private final HandlerRegistry registry;
 
     /**
      * Creates a new instance that decorates the specified {@link HttpService}.
@@ -65,13 +68,24 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
     UnframedGrpcService(GrpcService delegate, HandlerRegistry registry,
                         UnframedGrpcErrorHandler unframedGrpcErrorHandler) {
         super(delegate, unframedGrpcErrorHandler);
+        this.delegate = delegate;
+        this.registry = registry;
         checkArgument(delegate.isFramed(), "Decorated service must be a framed GrpcService.");
-        methodsByName = registry.methods();
+    }
+
+    @Override
+    public ServerMethodDefinition<?, ?> methodDefinition(ServiceRequestContext ctx) {
+        return delegate.methodDefinition(ctx);
     }
 
     @Override
     public Map<String, ServerMethodDefinition<?, ?>> methods() {
-        return methodsByName;
+        return registry.methods();
+    }
+
+    @Override
+    public Map<Route, ServerMethodDefinition<?, ?>> methodsByRoute() {
+        return registry.methodsByRoute();
     }
 
     @Override
@@ -91,14 +105,7 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
             }
         }
 
-        final String methodName = GrpcRequestUtil.determineMethod(ctx);
-        final ServerMethodDefinition<?, ?> method;
-        if (methodName != null) {
-            method = methodsByName.get(methodName);
-        } else {
-            method = null;
-        }
-
+        final ServerMethodDefinition<?, ?> method = methodDefinition(ctx);
         if (method == null) {
             // Unknown method, let the delegate return a usual error.
             return unwrap().serve(ctx, req);
@@ -113,14 +120,16 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
         final RequestHeadersBuilder grpcHeaders = clientHeaders.toBuilder();
 
         final MediaType framedContentType;
-        if (contentType.is(MediaType.PROTOBUF)) {
+        if (contentType.isProtobuf()) {
             framedContentType = GrpcSerializationFormats.PROTO.mediaType();
         } else if (contentType.is(MediaType.JSON)) {
             framedContentType = GrpcSerializationFormats.JSON.mediaType();
         } else {
             return HttpResponse.of(HttpStatus.UNSUPPORTED_MEDIA_TYPE,
                                    MediaType.PLAIN_TEXT_UTF_8,
-                                   "Unsupported media type. Only application/protobuf is supported.");
+                                   "Unsupported media type. Only application/protobuf, " +
+                                   "application/x-protobuf, application/x-google-protobuf" +
+                                   "and application/json are supported.");
         }
         grpcHeaders.contentType(framedContentType);
 
@@ -138,17 +147,18 @@ final class UnframedGrpcService extends AbstractUnframedGrpcService {
                                RequestLogProperty.RESPONSE_CONTENT);
 
         final CompletableFuture<HttpResponse> responseFuture = new CompletableFuture<>();
-        req.aggregateWithPooledObjects(ctx.eventLoop(), ctx.alloc()).handle((clientRequest, t) -> {
-            try (SafeCloseable ignore = ctx.push()) {
-                if (t != null) {
-                    responseFuture.completeExceptionally(t);
-                } else {
-                    ctx.setAttr(FramedGrpcService.RESOLVED_GRPC_METHOD, method);
-                    frameAndServe(unwrap(), ctx, grpcHeaders.build(), clientRequest.content(), responseFuture);
-                }
-            }
-            return null;
-        });
+        req.aggregate(AggregationOptions.usePooledObjects(ctx.alloc(), ctx.eventLoop()))
+           .handle((clientRequest, t) -> {
+               try (SafeCloseable ignore = ctx.push()) {
+                   if (t != null) {
+                       responseFuture.completeExceptionally(t);
+                   } else {
+                       frameAndServe(unwrap(), ctx, grpcHeaders.build(), clientRequest.content(),
+                                     responseFuture, null, contentType);
+                   }
+               }
+               return null;
+           });
         return HttpResponse.from(responseFuture);
     }
 }

@@ -19,13 +19,14 @@ package com.linecorp.armeria.client.circuitbreaker;
 import java.util.function.Function;
 
 import com.linecorp.armeria.client.RpcClient;
+import com.linecorp.armeria.common.RpcRequest;
 import com.linecorp.armeria.common.RpcResponse;
 
 /**
  * Builds a new {@link CircuitBreakerRpcClient} or its decorator function.
  */
 public final class CircuitBreakerRpcClientBuilder
-        extends AbstractCircuitBreakerClientBuilder<RpcResponse> {
+        extends AbstractCircuitBreakerClientBuilder<RpcRequest, RpcResponse> {
 
     CircuitBreakerRpcClientBuilder(CircuitBreakerRuleWithContent<RpcResponse> ruleWithContent) {
         super(ruleWithContent);
@@ -35,7 +36,7 @@ public final class CircuitBreakerRpcClientBuilder
      * Returns a newly-created {@link CircuitBreakerRpcClient} based on the properties of this builder.
      */
     public CircuitBreakerRpcClient build(RpcClient delegate) {
-        return new CircuitBreakerRpcClient(delegate, mapping(), ruleWithContent());
+        return new CircuitBreakerRpcClient(delegate, handler(), ruleWithContent());
     }
 
     /**
@@ -51,5 +52,10 @@ public final class CircuitBreakerRpcClientBuilder
     @Override
     public CircuitBreakerRpcClientBuilder mapping(CircuitBreakerMapping mapping) {
         return (CircuitBreakerRpcClientBuilder) super.mapping(mapping);
+    }
+
+    @Override
+    public CircuitBreakerRpcClientBuilder handler(CircuitBreakerClientHandler handler) {
+        return (CircuitBreakerRpcClientBuilder) super.handler(handler);
     }
 }

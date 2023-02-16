@@ -5,18 +5,18 @@ plugins {
 dependencies {
     implementation(project(":graphql"))
     implementation(project(":kotlin"))
-    implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk8")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8")
-    implementation("com.expediagroup:graphql-kotlin-schema-generator")
-    implementation("com.expediagroup:graphql-kotlin-client")
-    implementation("com.expediagroup:graphql-kotlin-client-jackson")
-    implementation("com.expediagroup:graphql-kotlin-client-serialization")
-    runtimeOnly("org.slf4j:slf4j-simple")
+    implementation(kotlin("stdlib-jdk8"))
+    implementation(libs.kotlin.coroutines.core)
+    implementation(libs.kotlin.coroutines.jdk8)
+    implementation(libs.graphql.kotlin.client)
+    implementation(libs.graphql.kotlin.client.jackson)
+    implementation(libs.graphql.kotlin.client.serialization)
+    implementation(libs.graphql.kotlin.schema.generator)
+    runtimeOnly(libs.slf4j.simple)
 
     testImplementation(project(":junit5"))
-    testImplementation("org.assertj:assertj-core")
-    testImplementation("org.junit.jupiter:junit-jupiter-api")
+    testImplementation(libs.assertj)
+    testImplementation(libs.junit5.jupiter.api)
 }
 
 application {

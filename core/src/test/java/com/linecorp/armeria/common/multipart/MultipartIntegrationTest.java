@@ -45,7 +45,7 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SplitHttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.stream.StreamMessage;
+import com.linecorp.armeria.common.stream.ByteStreamMessage;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
@@ -272,7 +272,7 @@ class MultipartIntegrationTest {
         final SplitHttpResponse splitResponse = response.split();
         final ResponseHeaders responseHeaders = splitResponse.headers().join();
         assertThat(responseHeaders.status()).isEqualTo(HttpStatus.OK);
-        final StreamMessage<HttpData> responseContents = splitResponse.body();
+        final ByteStreamMessage responseContents = splitResponse.body();
         @Nullable
         final MediaType contentType = responseHeaders.contentType();
         assertThat(contentType).isNotNull();
@@ -296,7 +296,7 @@ class MultipartIntegrationTest {
         final SplitHttpResponse splitResponse = response.split();
         final ResponseHeaders responseHeaders = splitResponse.headers().join();
         assertThat(responseHeaders.status()).isEqualTo(HttpStatus.OK);
-        final StreamMessage<HttpData> responseContents = splitResponse.body();
+        final ByteStreamMessage responseContents = splitResponse.body();
         @Nullable
         final MediaType contentType = responseHeaders.contentType();
         assertThat(contentType).isNotNull();

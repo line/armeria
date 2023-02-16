@@ -1,0 +1,146 @@
+# Handling a multipart request
+
+Armeria provides <type://Multipart> encoder and decoder built on top of 
+[Reactive Streams](https://www.reactive-streams.org/).
+
+## Building a multipart request
+
+A <type://Multipart> consists of multiple <typeplural://BodyPart>.
+Each <type://BodyPart> is divided into headers and a body. A <type://BodyPart> headers can be created simply 
+using <type://ContentDisposition>. 
+`String`, <type://HttpData>, or <type://StreamMessage> can be set as the body of the <type://BodyPart>.
+
+<Tip>
+
+You can also use <type://HttpHeaders> to set complex headers for <type://BobyPart#headers()>.
+
+</Tip>
+
+```java
+import java.nio.file.Path;
+import com.linecorp.armeria.common.ContentDisposition;
+import com.linecorp.armeria.common.multipart.BodyPart;
+
+// Create a 'Content-Disposition' header with the 'name' parameter set to 'name'.
+ContentDisposition nameDisposition = 
+    ContentDisposition.of("form-data", "name");
+// Create a BodyPart with 'Content-Disposition' header and its data.
+BodyPart bodyPart1 = BodyPart.of(nameDisposition, "Meri Kim");
+
+// Create a 'Content-Disposition' header with the name parameter set to "image", 
+// and the filename parameter set to "profile.png"
+ContentDisposition imageDisposition =
+    ContentDisposition.of("form-data", "image", "profile.png");
+Path image = Paths.get("/path/to/image");
+// Create a BodyPart with 'Content-Disposition' header and its file.
+BodyPart bodyPart2 = BodyPart.of(imageDisposition, StreamMessage.of(image));
+
+// Create a new multipart with the two body parts.
+Multipart multipart = Multipart.of(bodyPart1, bodyPart2);
+```
+
+If we encode and print the <type://Multipart> created above,
+```java
+for (HttpData httpData : multipart.toStreamMessage().collect().join()) {
+  System.out.print(httpData.toStringUtf8());
+}
+```
+we can see how the <type://Multipart> is encoded as shown below:
+```
+--ArmeriaBoundaryEsbNVr9Z66DAIYIN
+content-disposition:form-data; name="name"
+content-type:text/plain
+
+Meri Kim
+--ArmeriaBoundaryEsbNVr9Z66DAIYIN
+content-disposition:form-data; name="image"; filename="profile.png"
+content-type:application/octet-stream
+
+<binary-data>
+--ArmeriaBoundaryEsbNVr9Z66DAIYIN--
+```
+
+## Sending a multipart request
+
+The <type://Multipart> created in this way can be converted to an <type://HttpRequest> through 
+<type://MultiPart#toHttpRequest(String)> and transmitted to a server using a <type://WebClient>.
+
+```java
+WebClient client = WebClient.of("https://armeria.dev");
+// Encode a `Multipart` into an `HttpRequest`
+HttpRequest request = multipart.toHttpRequest("/upload");
+client.execute(request).aggregate()...;
+```
+
+## Receiving a multipart request
+
+On the server side, the multipart request sent from the client can be decoded into a <type://Multipart>
+using <type://Multipart#from(HttpRequest)>.
+```java
+Server.builder()
+      .service((ctx, req) -> {
+        // Decode an `HttpRequest` into a `Multipart`
+        Multipart multipart = Multipart.from(req);
+        ...
+      })
+```
+Since <type://Multipart> does not have the actual multipart data, you can use 
+`Multipart.bodyParts().subscribe(...)` to read data little by little as needed.
+If the size of the data is not large, the data can be read after being loaded into memory through 
+<type://Multipart#aggregate()>.
+```java
+// Use a `Subscriber` to read the data with backpressure.
+multipart.bodyParts().subsribe(new Subscriber() {
+   ...
+});
+
+// Read the data after aggregation.
+Multipart.from(req).aggregate()
+         .thenAccept(multipart -> {
+             for (AggregatedBodyPart bodyPart : multipart.bodyParts()) {
+                 String content = bodyPart.contentUtf8();
+                 ...
+             }
+         });
+```
+
+## Using <type://@Param> annotation
+
+In annotated services, a body part content of `multipart/form-data` can be directly mapped into a `String`, 
+`Path`, `File`, or <type://MultipartFile> using the <type://@Param> annotation.
+
+<Tip>
+
+Note that a <type://BodyPart> can be converted into a `Path`, `File` or <type://MultipartFile> only when 
+the <type://BodyPart#filename()> and <type://BodyPart#name()> is specified.
+
+</Tip>
+
+```java
+import java.io.File;
+import java.nio.file.Path;
+
+import com.linecorp.armeria.common.MediaTypeNames;
+import com.linecorp.armeria.common.multipart.MultipartFile;
+import com.linecorp.armeria.server.annotation.Consumes;
+import com.linecorp.armeria.server.annotation.Post;
+
+@Consumes(MediaTypeNames.MULTIPART_FORM_DATA)
+@Post("/upload")
+public HttpResponse upload(
+    @Param String param,
+    @Param File file,
+    @Param Path path,
+    @Param MultipartFile multipartFile) {
+    // Do something with the multipart data
+    ...
+}
+```
+
+<Tip>
+
+The multipart files uploaded to an annotated service are stored into
+<type://ServerBuilder#multipartUploadsLocation(Path)> and the files are not removed automatically. 
+You should explicitly **delete** the files after use.
+
+</Tip>

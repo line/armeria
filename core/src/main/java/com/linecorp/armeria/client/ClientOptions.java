@@ -130,7 +130,6 @@ public final class ClientOptions
 
     private static final List<AsciiString> PROHIBITED_HEADER_NAMES = ImmutableList.of(
             HttpHeaderNames.CONNECTION,
-            HttpHeaderNames.HOST,
             HttpHeaderNames.HTTP2_SETTINGS,
             HttpHeaderNames.METHOD,
             HttpHeaderNames.PATH,

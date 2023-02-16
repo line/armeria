@@ -44,7 +44,7 @@ import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.Exceptions;
-import com.linecorp.armeria.internal.client.HttpHeaderUtil;
+import com.linecorp.armeria.internal.client.UserAgentUtil;
 import com.linecorp.armeria.internal.common.ArmeriaHttp2HeadersDecoder;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
 import com.linecorp.armeria.internal.common.ReadSuppressingHandler;
@@ -174,6 +174,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         } catch (Throwable t) {
             promise.tryFailure(t);
             ctx.close();
+            return;
         } finally {
             if (p.context(this) != null) {
                 p.remove(this);
@@ -427,7 +428,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     remoteAddress.getHostString(), remoteAddress.getPort(), H1C.defaultPort());
 
             upgradeReq.headers().set(HttpHeaderNames.HOST, host);
-            upgradeReq.headers().set(HttpHeaderNames.USER_AGENT, HttpHeaderUtil.USER_AGENT);
+            upgradeReq.headers().set(HttpHeaderNames.USER_AGENT, UserAgentUtil.USER_AGENT);
 
             ctx.writeAndFlush(upgradeReq);
 
@@ -651,10 +652,20 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         final Http2ConnectionEncoder encoder = encoder(connection);
         final Http2ConnectionDecoder decoder = decoder(connection, encoder);
 
-        return new Http2ClientConnectionHandlerBuilder(ch, clientFactory, protocol)
-                .codec(decoder, encoder)
-                .initialSettings(http2Settings())
-                .build();
+        final Http2ClientConnectionHandlerBuilder builder =
+                new Http2ClientConnectionHandlerBuilder(ch, clientFactory, protocol);
+        builder.codec(decoder, encoder)
+               .initialSettings(http2Settings());
+
+        final long timeout = clientFactory.idleTimeoutMillis();
+        if (timeout > 0) {
+            builder.gracefulShutdownTimeoutMillis(timeout);
+        } else {
+            // Timeout disabled
+            builder.gracefulShutdownTimeoutMillis(-1);
+        }
+
+        return builder.build();
     }
 
     private static Http2ConnectionEncoder encoder(Http2Connection connection) {

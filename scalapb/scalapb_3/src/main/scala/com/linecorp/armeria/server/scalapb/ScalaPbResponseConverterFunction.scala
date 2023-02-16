@@ -23,6 +23,7 @@ import com.google.common.collect.Iterables
 import com.linecorp.armeria.common.annotation.{Nullable, UnstableApi}
 import com.linecorp.armeria.common.{HttpData, HttpHeaders, HttpResponse, MediaType, ResponseHeaders}
 import com.linecorp.armeria.internal.server.ResponseConversionUtil.aggregateFrom
+import com.linecorp.armeria.internal.server.annotation.ClassUtil.{typeToClass, unwrapUnaryAsyncType}
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction
 import com.linecorp.armeria.server.scalapb.ScalaPbConverterUtil._
@@ -32,7 +33,7 @@ import com.linecorp.armeria.server.scalapb.ScalaPbResponseConverterFunction.{
   fromStreamMH
 }
 import com.linecorp.armeria.server.streaming.JsonTextSequences
-import java.lang.reflect.Method
+import java.lang.reflect.{Method, Type}
 import java.nio.charset.{Charset, StandardCharsets}
 import java.util.concurrent.Executor
 import java.util.function.{Function => JFunction}
@@ -71,6 +72,32 @@ final class ScalaPbResponseConverterFunction(jsonPrinter: Printer = defaultJsonP
     extends ResponseConverterFunction {
 
   // TODO(ikhoon): Remove this forked file if https://github.com/lampepfl/dotty/issues/11332 is fixed.
+
+  // Use java.lang.Boolean as the return type.
+  // Because scala.Boolean is equivalent to Java primitive boolean that does not allow null.
+  override def isResponseStreaming(
+      returnType: Type,
+      @Nullable produceType: MediaType): java.lang.Boolean | Null = {
+    val clazz = typeToClass(unwrapUnaryAsyncType(returnType))
+    if (clazz == null) {
+      return null
+    }
+
+    if (classOf[GeneratedMessage].isAssignableFrom(clazz) ||
+      classOf[GeneratedSealedOneof].isAssignableFrom(clazz)) {
+      return false
+    }
+
+    if (produceType != null) {
+      if (produceType.isJson || isProtobuf(produceType)) {
+        return false
+      } else if (produceType.is(MediaType.JSON_SEQ)) {
+        return classOf[Publisher[_]].isAssignableFrom(clazz) || classOf[Stream[_]].isAssignableFrom(clazz)
+      }
+    }
+
+    null
+  }
 
   override def convertResponse(
       ctx: ServiceRequestContext,

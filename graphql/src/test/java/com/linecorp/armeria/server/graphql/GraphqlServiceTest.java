@@ -72,7 +72,7 @@ class GraphqlServiceTest {
 
     private static DataFetcher<String> dataFetcher(String value) {
         return environment -> {
-            final ServiceRequestContext ctx = environment.getContext();
+            final ServiceRequestContext ctx = GraphqlServiceContexts.get(environment);
             assertThat(ctx.eventLoop().inEventLoop()).isTrue();
             // Make sure that a ServiceRequestContext is available
             assertThat(ServiceRequestContext.current()).isSameAs(ctx);
@@ -82,7 +82,7 @@ class GraphqlServiceTest {
 
     private static DataFetcher<String> errorDataFetcher() {
         return environment -> {
-            final ServiceRequestContext ctx = environment.getContext();
+            final ServiceRequestContext ctx = GraphqlServiceContexts.get(environment);
             assertThat(ctx.eventLoop().inEventLoop()).isTrue();
             throw new NullPointerException("npe");
         };
@@ -117,7 +117,7 @@ class GraphqlServiceTest {
                                                                  .get("/graphql");
 
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.contentUtf8()).isEqualTo("Missing query");
+        assertThat(response.contentUtf8()).isEqualTo("query is missing");
     }
 
     @Test
@@ -254,7 +254,8 @@ class GraphqlServiceTest {
         final AggregatedHttpResponse response = BlockingWebClient.of(server.httpUri())
                                                                  .execute(request);
         assertThat(response.status()).isEqualTo(HttpStatus.BAD_REQUEST);
-        assertThat(response.contentUtf8()).contains("Validation error of type FieldUndefined");
+        assertThat(response.contentUtf8()).contains("Validation error")
+                                          .contains("FieldUndefined");
     }
 
     @Test

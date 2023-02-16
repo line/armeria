@@ -113,13 +113,45 @@ ServerBuilder sb = Server.builder();
 ...
 sb.service(GrpcService.builder()
                       .addService(new MyHelloService())
+                      .addService(new MySecondHelloService())
                       .build(),
            LoggingService.newDecorator());
 ...
 Server server = sb.build();
 server.start();
 ```
-See [Decorating `ServiceWithRoutes`](/docs/server-decorator#decorating-servicewithroutes) for more information about <type://HttpServiceWithRoutes>.
+
+<Tip>
+
+See [Decorating `ServiceWithRoutes`](/docs/server-decorator#decorating-servicewithroutes) for more information
+about <type://HttpServiceWithRoutes>.
+
+</Tip>
+
+The above decorator decorates all services. If you want to decorate only a specific service, you need to specify
+the decorators when you add the service to the <type://GrpcServiceBuilder>,
+or use the <type://@Decorator>.
+
+```java
+GrpcService.builder()
+           .addService(new MyHelloService(),
+                       List.of(new FirstDecorator(), new SecondDecorator())) // 👈👈👈
+           .build()
+
+// Or, use the @Decorator directly to the service or method.
+@Decorator(ThirdDecorator.class) // 👈👈👈
+class MyHelloService extends MyHelloServiceBase {
+
+    @Decorator(FourthDecorator.class) // 👈👈👈
+    @Override
+    public void sayHello(HelloRequest request, StreamObserver<HelloResponse> responseObserver) {
+        ...
+    }
+}
+```
+
+As you might have noticed already, the decorators will be applied in the order of
+`FirstDecorator`, `SecondDecorator`, `ThirdDecorator`, and `FourthDecorator`.
 
 ## `gRPC-Web`
 
@@ -195,10 +227,47 @@ for JSON POST body.
 ## Blocking service implementation
 
 Unlike upstream gRPC-Java, Armeria does not run service logic in a separate thread pool by default. If your
-service implementation requires blocking, either run the individual blocking logic in a thread pool, wrap the
-entire service implementation in `RequestContext.current().blockingTaskExecutor().submit`, or set
+service implementation requires blocking, run the individual blocking logic in a thread pool,
+annotate the gRPC services or methods with a <type://@Blocking> annotation, wrap the entire service implementation in
+`ServiceRequestContext.current().blockingTaskExecutor().submit()`, or set
 <type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)> so the above happens automatically for
 all service methods and lifecycle callbacks.
+
+### Using <type://@Blocking> annotation
+
+```java
+// You can apply the @Blocking annotation at the class level
+// so all methods are executed by ServiceRequestContext.current().blockingTaskExecutor().
+@Blocking // 👈
+class MyBlockingGrpcServiceImpl extends MyGrpcServiceImplBase {
+
+    public void blockingCall1(...) {
+        // Perform a long-running task.
+        ...
+    }
+
+    public void blockingCall2(...) {
+        // Perform a long-running task.
+        ...
+    }
+}
+
+class MyGrpcServiceImpl extends MyGrpcServiceImplBase {
+
+    //  The method will be executed by ServiceRequestContext.current().blockingTaskExecutor().
+    @Blocking // 👈
+    public void blockingCall(...) {
+        // Perform a long-running task.
+        ...
+    }
+
+    public void nonBlockingCall(...) {
+        ...
+    }
+}
+```
+
+### Wrapping a service with <type://ServiceRequestContext#blockingTaskExecutor()>
 
 ```java
 import com.linecorp.armeria.common.RequestContext;
@@ -220,29 +289,15 @@ public class MyHelloService extends HelloServiceGrpc.HelloServiceImplBase {
 }
 ```
 
+### Using <type://GrpcServiceBuilder#useBlockingTaskExecutor(boolean)>
+
 ```java
-import com.linecorp.armeria.common.RequestContext;
-import com.linecorp.armeria.server.ServiceRequestContext;
-
-public class MyHelloService extends HelloServiceGrpc.HelloServiceImplBase {
-    @Override
-    public void hello(HelloRequest req, StreamObserver<HelloReply> responseObserver) {
-        // Perform a long-running task.
-
-        HelloReply reply = HelloReply.newBuilder()
-                                     .setMessage("Hello, " + req.getName() + '!')
-                                     .build();
-        responseObserver.onNext(reply);
-        responseObserver.onCompleted();
-    }
-}
-
 ServerBuilder sb = Server.builder();
 sb.service(GrpcService.builder()
                       .addService(new MyHelloService())
                       // All service methods will be run within
                       // the blocking executor.
-                      .useBlockingTaskExecutor(true)
+                      .useBlockingTaskExecutor(true) // 👈
                       .build());
 ```
 ## Exception propagation

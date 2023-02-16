@@ -105,7 +105,7 @@ public class EventLoopCheckingFuture<T> extends CompletableFuture<T> {
                         "ServiceRequestContext.blockingExecutor to run this logic instead or switch to using " +
                         "asynchronous methods like thenApply. If you really believe it is fine to block the " +
                         "event loop like this, you can disable this log message by specifying the " +
-                        "-Dcom.linecorp.armeria.reportBlockedEventLoop=false system property",
+                        "-Dcom.linecorp.armeria.reportBlockedEventLoop=false JVM option.",
                         new IllegalStateException("Blocking event loop, don't do this."));
         }
     }

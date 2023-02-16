@@ -15,6 +15,10 @@
  */
 package com.linecorp.armeria.internal.common;
 
+import java.util.concurrent.CompletableFuture;
+
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.AggregationOptions;
 import com.linecorp.armeria.common.HttpObject;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
@@ -22,5 +26,11 @@ import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
 public final class AbortedHttpResponse extends AbortedStreamMessage<HttpObject> implements HttpResponse {
     public AbortedHttpResponse(Throwable cause) {
         super(cause);
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public CompletableFuture<AggregatedHttpResponse> aggregate(AggregationOptions options) {
+        return super.aggregate(options);
     }
 }

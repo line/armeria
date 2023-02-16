@@ -14,10 +14,6 @@
  * under the License.
  */
 
-import Table from '@material-ui/core/Table';
-import TableBody from '@material-ui/core/TableBody';
-import TableCell from '@material-ui/core/TableCell';
-import TableRow from '@material-ui/core/TableRow';
 import Typography from '@material-ui/core/Typography';
 import React from 'react';
 import { RouteComponentProps } from 'react-router-dom';
@@ -38,6 +34,8 @@ import VariableList from '../../components/VariableList';
 import DebugPage from './DebugPage';
 import Endpoints from './Endpoints';
 import Exceptions from './Exceptions';
+import Description from '../../components/Description';
+import ReturnType from './ReturnType';
 
 interface OwnProps {
   specification: Specification;
@@ -131,22 +129,16 @@ type Props = OwnProps &
   }>;
 
 const MethodPage: React.FunctionComponent<Props> = (props) => {
-  const service = props.specification.getServiceByName(
-    props.match.params.serviceName,
-  );
+  const params = props.match.params;
+  const service = props.specification.getServiceByName(params.serviceName);
   if (!service) {
     return <>Not found.</>;
   }
-
-  const method = service.methods.find(
-    (m) =>
-      m.name === props.match.params.methodName &&
-      m.httpMethod === props.match.params.httpMethod,
-  );
+  const id = `${params.serviceName}/${params.methodName}/${params.httpMethod}`;
+  const method = service.methods.find((m) => m.id === id);
   if (!method) {
     return <>Not found.</>;
   }
-
   const debugTransport = TRANSPORTS.getDebugTransport(method);
   const isAnnotatedService =
     debugTransport !== undefined &&
@@ -155,38 +147,35 @@ const MethodPage: React.FunctionComponent<Props> = (props) => {
     debugTransport !== undefined &&
     debugTransport.supportsMimeType(GRAPHQL_HTTP_MIME_TYPE);
 
+  const parameterVariables = method.parameters.map((param) => {
+    const childFieldInfos = props.specification.getStructByName(
+      param.typeSignature,
+    )?.fields;
+    if (childFieldInfos) {
+      return { ...param, childFieldInfos };
+    }
+    return param;
+  });
+
   return (
     <>
       <Typography variant="h5" paragraph>
         <code>{`${simpleName(service.name)}.${method.name}()`}</code>
       </Typography>
-      <Typography variant="body2" paragraph>
-        {method.docString}
-      </Typography>
+      {method.descriptionInfo && (
+        <Section>
+          <Description descriptionInfo={method.descriptionInfo} />
+        </Section>
+      )}
       <Section>
         <VariableList
           key={method.name}
           title="Parameters"
-          variables={method.parameters}
+          variables={parameterVariables}
           specification={props.specification}
         />
       </Section>
-      <Section>
-        <Typography variant="h6">Return Type</Typography>
-        <Table>
-          <TableBody>
-            <TableRow>
-              <TableCell>
-                <code>
-                  {props.specification.getTypeSignatureHtml(
-                    method.returnTypeSignature,
-                  )}
-                </code>
-              </TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </Section>
+      <ReturnType method={method} specification={props.specification} />
       {!isAnnotatedService && (
         <Exceptions method={method} specification={props.specification} />
       )}

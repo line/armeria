@@ -32,6 +32,8 @@ import org.springframework.context.annotation.Bean;
 
 import com.google.common.collect.ImmutableList;
 
+import com.linecorp.armeria.common.DependencyInjector;
+import com.linecorp.armeria.common.Flags;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefixFunction;
@@ -45,7 +47,6 @@ import com.linecorp.armeria.server.metric.PrometheusExpositionService;
 import com.linecorp.armeria.spring.ArmeriaSettings.Port;
 
 import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Metrics;
 
 /**
  * Abstract class for implementing ArmeriaAutoConfiguration of boot2-autoconfigure module
@@ -71,6 +72,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
             Optional<MeterIdPrefixFunction> meterIdPrefixFunction,
             Optional<List<ArmeriaServerConfigurator>> armeriaServerConfigurators,
             Optional<List<Consumer<ServerBuilder>>> armeriaServerBuilderConsumers,
+            Optional<List<DependencyInjector>> dependencyInjectors,
             BeanFactory beanFactory) {
 
         if (!armeriaServerConfigurators.isPresent() &&
@@ -91,10 +93,11 @@ public abstract class AbstractArmeriaAutoConfiguration {
         configureServerWithArmeriaSettings(serverBuilder, armeriaSettings, internalService,
                                            armeriaServerConfigurators.orElse(ImmutableList.of()),
                                            armeriaServerBuilderConsumers.orElse(ImmutableList.of()),
-                                           meterRegistry.orElse(Metrics.globalRegistry),
+                                           meterRegistry.orElse(Flags.meterRegistry()),
                                            meterIdPrefixFunction.orElse(
                                                    MeterIdPrefixFunction.ofDefault("armeria.server")),
                                            metricCollectingServiceConfigurators.orElse(ImmutableList.of()),
+                                           dependencyInjectors.orElse(ImmutableList.of()),
                                            beanFactory);
 
         return serverBuilder.build();
@@ -104,6 +107,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
      * Wrap {@link Server} with {@link SmartLifecycle}.
      */
     @Bean
+    @ConditionalOnMissingBean(ArmeriaServerSmartLifecycle.class)
     public SmartLifecycle armeriaServerGracefulShutdownLifecycle(Server server) {
         return new ArmeriaServerGracefulShutdownLifecycle(server);
     }
@@ -129,7 +133,7 @@ public abstract class AbstractArmeriaAutoConfiguration {
             Optional<List<DocServiceConfigurator>> docServiceConfigurators,
             @Value("${management.server.port:#{null}}") @Nullable Integer managementServerPort) {
 
-        return InternalServices.of(settings, meterRegistry.orElse(Metrics.globalRegistry),
+        return InternalServices.of(settings, meterRegistry.orElse(Flags.meterRegistry()),
                                    healthCheckers.orElse(ImmutableList.of()),
                                    healthCheckServiceConfigurators.orElse(ImmutableList.of()),
                                    docServiceConfigurators.orElse(ImmutableList.of()), managementServerPort);

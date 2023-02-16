@@ -21,20 +21,17 @@ import static com.google.common.collect.ImmutableList.toImmutableList;
 import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.concatPaths;
 import static com.linecorp.armeria.internal.server.RouteUtil.ensureAbsolutePath;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.typeToClass;
+import static com.linecorp.armeria.internal.server.annotation.ClassUtil.unwrapAsyncType;
 import static com.linecorp.armeria.internal.server.annotation.ProcessedDocumentationHelper.getFileName;
 import static java.util.Objects.requireNonNull;
 import static org.reflections.ReflectionUtils.getAllMethods;
-import static org.reflections.ReflectionUtils.getConstructors;
-import static org.reflections.ReflectionUtils.getMethods;
 import static org.reflections.ReflectionUtils.withModifier;
-import static org.reflections.ReflectionUtils.withName;
-import static org.reflections.ReflectionUtils.withParametersCount;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
-import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -42,6 +39,7 @@ import java.lang.reflect.Parameter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumMap;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -58,17 +56,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.MoreObjects;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Iterables;
 import com.google.common.collect.Sets;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.HttpHeadersBuilder;
@@ -78,7 +75,7 @@ import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.NoParameterException;
 import com.linecorp.armeria.internal.server.annotation.AnnotationUtil.FindOption;
-import com.linecorp.armeria.server.DecoratingHttpServiceFunction;
+import com.linecorp.armeria.internal.server.annotation.DecoratorAnnotationUtil.DecoratorAndOrder;
 import com.linecorp.armeria.server.HttpService;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.annotation.AdditionalHeader;
@@ -86,9 +83,6 @@ import com.linecorp.armeria.server.annotation.AdditionalTrailer;
 import com.linecorp.armeria.server.annotation.Blocking;
 import com.linecorp.armeria.server.annotation.Consumes;
 import com.linecorp.armeria.server.annotation.Decorator;
-import com.linecorp.armeria.server.annotation.DecoratorFactory;
-import com.linecorp.armeria.server.annotation.DecoratorFactoryFunction;
-import com.linecorp.armeria.server.annotation.Decorators;
 import com.linecorp.armeria.server.annotation.Delete;
 import com.linecorp.armeria.server.annotation.Description;
 import com.linecorp.armeria.server.annotation.ExceptionHandler;
@@ -112,6 +106,7 @@ import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StatusCode;
 import com.linecorp.armeria.server.annotation.Trace;
+import com.linecorp.armeria.server.docs.DescriptionInfo;
 
 /**
  * Builds a list of {@link AnnotatedService}s from an {@link Object}.
@@ -129,21 +124,6 @@ public final class AnnotatedServiceFactory {
                         .build();
 
     /**
-     * An instance map for reusing converters, exception handlers and decorators.
-     */
-    private static final ClassValue<Object> instanceCache = new ClassValue<Object>() {
-        @Override
-        protected Object computeValue(Class<?> type) {
-            try {
-                return getInstance0(type);
-            } catch (Exception e) {
-                throw new IllegalStateException("A class must have an accessible default constructor: " +
-                                                type.getName(), e);
-            }
-        }
-    };
-
-    /**
      * Mapping from HTTP method annotation to {@link HttpMethod}, like following.
      * <ul>
      *   <li>{@link Options} -> {@link HttpMethod#OPTIONS}
@@ -158,15 +138,15 @@ public final class AnnotatedServiceFactory {
      */
     private static final Map<Class<?>, HttpMethod> HTTP_METHOD_MAP =
             ImmutableMap.<Class<?>, HttpMethod>builder()
-                    .put(Options.class, HttpMethod.OPTIONS)
-                    .put(Get.class, HttpMethod.GET)
-                    .put(Head.class, HttpMethod.HEAD)
-                    .put(Post.class, HttpMethod.POST)
-                    .put(Put.class, HttpMethod.PUT)
-                    .put(Patch.class, HttpMethod.PATCH)
-                    .put(Delete.class, HttpMethod.DELETE)
-                    .put(Trace.class, HttpMethod.TRACE)
-                    .build();
+                        .put(Options.class, HttpMethod.OPTIONS)
+                        .put(Get.class, HttpMethod.GET)
+                        .put(Head.class, HttpMethod.HEAD)
+                        .put(Post.class, HttpMethod.POST)
+                        .put(Put.class, HttpMethod.PUT)
+                        .put(Patch.class, HttpMethod.PATCH)
+                        .put(Delete.class, HttpMethod.DELETE)
+                        .put(Trace.class, HttpMethod.TRACE)
+                        .build();
 
     /**
      * Returns the list of {@link AnnotatedService} defined by {@link Path} and HTTP method annotations
@@ -177,30 +157,52 @@ public final class AnnotatedServiceFactory {
             String pathPrefix, Object object, boolean useBlockingTaskExecutor,
             List<RequestConverterFunction> requestConverterFunctions,
             List<ResponseConverterFunction> responseConverterFunctions,
-            List<ExceptionHandlerFunction> exceptionHandlerFunctions) {
+            List<ExceptionHandlerFunction> exceptionHandlerFunctions,
+            DependencyInjector dependencyInjector, @Nullable String queryDelimiter) {
         final List<Method> methods = requestMappingMethods(object);
-        return methods.stream()
-                      .flatMap((Method method) ->
-                                       create(pathPrefix, object, method, useBlockingTaskExecutor,
-                                              requestConverterFunctions, responseConverterFunctions,
-                                              exceptionHandlerFunctions).stream())
-                      .collect(toImmutableList());
+        final Builder<AnnotatedServiceElement> builder = ImmutableList.builder();
+
+        final Map<String, Integer> overloadIds = new HashMap<>();
+        // Can't sort methods to find the overloaded methods because methods are ordered using @Order.
+        for (Method method : methods) {
+            final String methodName = method.getName();
+            final int overloadId;
+            if (overloadIds.containsKey(methodName)) {
+                overloadId = overloadIds.get(methodName) + 1;
+            } else {
+                overloadId = 0;
+            }
+            overloadIds.put(methodName, overloadId);
+            builder.addAll(create(pathPrefix, object, method, overloadId, useBlockingTaskExecutor,
+                                  requestConverterFunctions, responseConverterFunctions,
+                                  exceptionHandlerFunctions, dependencyInjector, queryDelimiter));
+        }
+        return builder.build();
     }
 
-    private static HttpStatus defaultResponseStatus(Method method) {
+    private static HttpStatus defaultResponseStatus(Method method, Class<?> clazz) {
         final StatusCode statusCodeAnnotation = AnnotationUtil.findFirst(method, StatusCode.class);
-        if (statusCodeAnnotation == null) {
-            // Set a default HTTP status code for a response depending on the return type of the method.
-            final Class<?> returnType = method.getReturnType();
-            return returnType == Void.class ||
-                   returnType == void.class ||
-                   KotlinUtil.isSuspendingAndReturnTypeUnit(method) ? HttpStatus.NO_CONTENT : HttpStatus.OK;
+        if (statusCodeAnnotation != null) {
+            return HttpStatus.valueOf(statusCodeAnnotation.value());
         }
 
-        final int statusCode = statusCodeAnnotation.value();
-        checkArgument(statusCode >= 0,
-                      "invalid HTTP status code: %s (expected: >= 0)", statusCode);
-        return HttpStatus.valueOf(statusCode);
+        // Set a default HTTP status code for a response depending on the return type of the method.
+        final Class<?> returnType = typeToClass(unwrapAsyncType(method.getGenericReturnType()));
+
+        final boolean isVoidReturnType = returnType == Void.class ||
+                                         returnType == void.class ||
+                                         KotlinUtil.isSuspendingAndReturnTypeUnit(method);
+
+        if (isVoidReturnType) {
+            final List<Produces> producesAnnotations = AnnotationUtil.findAll(method, Produces.class);
+            if (!producesAnnotations.isEmpty()) {
+                logger.warn("The following @Produces annotations '{}' for '{}.{}' will be ignored " +
+                            "because the return type is void.",
+                            producesAnnotations, clazz.getSimpleName(), method.getName());
+            }
+        }
+
+        return isVoidReturnType ? HttpStatus.NO_CONTENT : HttpStatus.OK;
     }
 
     private static <T extends Annotation> void setAdditionalHeader(HttpHeadersBuilder headers,
@@ -237,11 +239,12 @@ public final class AnnotatedServiceFactory {
      */
     @VisibleForTesting
     static List<AnnotatedServiceElement> create(String pathPrefix, Object object, Method method,
-                                                boolean useBlockingTaskExecutor,
+                                                int overloadId, boolean useBlockingTaskExecutor,
                                                 List<RequestConverterFunction> baseRequestConverters,
                                                 List<ResponseConverterFunction> baseResponseConverters,
-                                                List<ExceptionHandlerFunction> baseExceptionHandlers) {
-
+                                                List<ExceptionHandlerFunction> baseExceptionHandlers,
+                                                DependencyInjector dependencyInjector,
+                                                @Nullable String queryDelimiter) {
         if (KotlinUtil.getCallKotlinSuspendingMethod() == null && KotlinUtil.maybeSuspendingFunction(method)) {
             throw new IllegalArgumentException(
                     "Kotlin suspending functions are supported " +
@@ -250,19 +253,61 @@ public final class AnnotatedServiceFactory {
                     "for more information.");
         }
 
+        final Class<?> clazz = object.getClass();
+        final List<Route> routes = routes(method, clazz, pathPrefix);
+
+        final List<RequestConverterFunction> req =
+                getAnnotatedInstances(method, clazz, RequestConverter.class, RequestConverterFunction.class,
+                                      dependencyInjector)
+                        .addAll(baseRequestConverters).build();
+        final List<ResponseConverterFunction> res =
+                getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class,
+                                      dependencyInjector)
+                        .addAll(baseResponseConverters).build();
+        final List<ExceptionHandlerFunction> eh =
+                getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class,
+                                      dependencyInjector)
+                        .addAll(baseExceptionHandlers).build();
+
+        final String classAlias = clazz.getName();
+        final String methodAlias = String.format("%s.%s()", classAlias, method.getName());
+        final HttpHeaders responseHeaders = responseHeaders(method, clazz, classAlias, methodAlias);
+        final HttpHeaders responseTrailers = responseTrailers(method, clazz, classAlias, methodAlias);
+
+        final HttpStatus defaultStatus = defaultResponseStatus(method, clazz);
+        if (defaultStatus.isContentAlwaysEmpty() && !responseTrailers.isEmpty()) {
+            logger.warn("A response with HTTP status code '{}' cannot have a content. " +
+                        "Trailers defined at '{}' might be ignored if HTTP/1.1 is used.",
+                        defaultStatus.code(), methodAlias);
+        }
+
+        final boolean needToUseBlockingTaskExecutor =
+                needToUseBlockingTaskExecutor(object, method, useBlockingTaskExecutor);
+
+        return routes.stream().map(route -> {
+            final List<AnnotatedValueResolver> resolvers =
+                    getAnnotatedValueResolvers(req, route, method, clazz,
+                                               needToUseBlockingTaskExecutor, dependencyInjector,
+                                               queryDelimiter);
+            return new AnnotatedServiceElement(
+                    route,
+                    new AnnotatedService(object, method, overloadId, resolvers, eh, res, route, defaultStatus,
+                                         responseHeaders, responseTrailers, needToUseBlockingTaskExecutor),
+                    decorator(method, clazz, dependencyInjector));
+        }).collect(toImmutableList());
+    }
+
+    private static List<Route> routes(Method method, Class<?> clazz, String pathPrefix) {
         final Set<Annotation> methodAnnotations = httpMethodAnnotations(method);
         if (methodAnnotations.isEmpty()) {
             throw new IllegalArgumentException("HTTP Method specification is missing: " + method.getName());
         }
-
-        final Class<?> clazz = object.getClass();
-        final Map<HttpMethod, List<String>> httpMethodPatternsMap = getHttpMethodPatternsMap(method,
-                                                                                             methodAnnotations);
+        final Map<HttpMethod, List<String>> httpMethodPatternsMap =
+                getHttpMethodPatternsMap(method, methodAnnotations);
         final String computedPathPrefix = computePathPrefix(clazz, pathPrefix);
         final Set<MediaType> consumableMediaTypes = consumableMediaTypes(method, clazz);
         final Set<MediaType> producibleMediaTypes = producibleMediaTypes(method, clazz);
-
-        final List<Route> routes = httpMethodPatternsMap.entrySet().stream().flatMap(
+        return httpMethodPatternsMap.entrySet().stream().flatMap(
                 pattern -> {
                     final HttpMethod httpMethod = pattern.getKey();
                     final List<String> pathMappings = pattern.getValue();
@@ -280,67 +325,49 @@ public final class AnnotatedServiceFactory {
                                                                    MatchesHeader::value))
                                                 .build());
                 }).collect(toImmutableList());
+    }
 
-        final List<RequestConverterFunction> req =
-                getAnnotatedInstances(method, clazz, RequestConverter.class, RequestConverterFunction.class)
-                        .addAll(baseRequestConverters).build();
-        final List<ResponseConverterFunction> res =
-                getAnnotatedInstances(method, clazz, ResponseConverter.class, ResponseConverterFunction.class)
-                        .addAll(baseResponseConverters).build();
-        final List<ExceptionHandlerFunction> eh =
-                getAnnotatedInstances(method, clazz, ExceptionHandler.class, ExceptionHandlerFunction.class)
-                        .addAll(baseExceptionHandlers).build();
-
-        final HttpStatus defaultStatus = defaultResponseStatus(method);
-
+    private static HttpHeaders responseHeaders(Method method, Class<?> clazz, String classAlias,
+                                               String methodAlias) {
         final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
-        final HttpHeadersBuilder defaultTrailers = HttpHeaders.builder();
-        final String classAlias = clazz.getName();
-        final String methodAlias = String.format("%s.%s()", classAlias, method.getName());
         setAdditionalHeader(defaultHeaders, clazz, "header", classAlias, "class", AdditionalHeader.class,
                             AdditionalHeader::name, AdditionalHeader::value);
         setAdditionalHeader(defaultHeaders, method, "header", methodAlias, "method", AdditionalHeader.class,
                             AdditionalHeader::name, AdditionalHeader::value);
+        return defaultHeaders.build();
+    }
+
+    private static HttpHeaders responseTrailers(Method method, Class<?> clazz, String classAlias,
+                                                String methodAlias) {
+        final HttpHeadersBuilder defaultTrailers = HttpHeaders.builder();
         setAdditionalHeader(defaultTrailers, clazz, "trailer", classAlias, "class",
                             AdditionalTrailer.class, AdditionalTrailer::name, AdditionalTrailer::value);
         setAdditionalHeader(defaultTrailers, method, "trailer", methodAlias, "method",
                             AdditionalTrailer.class, AdditionalTrailer::name, AdditionalTrailer::value);
-
-        if (defaultStatus.isContentAlwaysEmpty() && !defaultTrailers.isEmpty()) {
-            logger.warn("A response with HTTP status code '{}' cannot have a content. " +
-                        "Trailers defined at '{}' might be ignored if HTTP/1.1 is used.",
-                        defaultStatus.code(), methodAlias);
-        }
-
-        final HttpHeaders responseHeaders = defaultHeaders.build();
-        final HttpHeaders responseTrailers = defaultTrailers.build();
-
-        final boolean needToUseBlockingTaskExecutor =
-                useBlockingTaskExecutor ||
-                AnnotationUtil.findFirst(method, Blocking.class) != null ||
-                AnnotationUtil.findFirst(object.getClass(), Blocking.class) != null;
-
-        return routes.stream().map(route -> {
-            final List<AnnotatedValueResolver> resolvers =
-                    getAnnotatedValueResolvers(req, route, method, clazz, needToUseBlockingTaskExecutor);
-            return new AnnotatedServiceElement(
-                    route,
-                    new AnnotatedService(object, method, resolvers, eh, res, route, defaultStatus,
-                                         responseHeaders, responseTrailers, needToUseBlockingTaskExecutor),
-                    decorator(method, clazz));
-        }).collect(toImmutableList());
+        return defaultTrailers.build();
     }
 
-    private static List<AnnotatedValueResolver> getAnnotatedValueResolvers(List<RequestConverterFunction> req,
-                                                                           Route route, Method method,
-                                                                           Class<?> clazz,
-                                                                           boolean useBlockingExecutor) {
+    private static boolean needToUseBlockingTaskExecutor(Object object, Method method,
+                                                         boolean useBlockingTaskExecutor) {
+        return useBlockingTaskExecutor ||
+               AnnotationUtil.findFirst(method, Blocking.class) != null ||
+               AnnotationUtil.findFirst(object.getClass(), Blocking.class) != null;
+    }
+
+    private static List<AnnotatedValueResolver> getAnnotatedValueResolvers(
+            List<RequestConverterFunction> req,
+            Route route, Method method,
+            Class<?> clazz,
+            boolean useBlockingExecutor,
+            DependencyInjector dependencyInjector,
+            @Nullable String queryDelimiter) {
         final Set<String> expectedParamNames = route.paramNames();
         List<AnnotatedValueResolver> resolvers;
         try {
             resolvers = AnnotatedValueResolver.ofServiceMethod(
                     method, expectedParamNames,
-                    AnnotatedValueResolver.toRequestObjectResolvers(req, method), useBlockingExecutor);
+                    AnnotatedValueResolver.toRequestObjectResolvers(req, method),
+                    useBlockingExecutor, dependencyInjector, queryDelimiter);
         } catch (NoParameterException ignored) {
             // Allow no parameter like below:
             //
@@ -534,7 +561,7 @@ public final class AnnotatedServiceFactory {
                          .filter(annotation -> HTTP_METHOD_MAP.containsKey(annotation.annotationType()))
                          .forEach(annotation -> {
                              final HttpMethod httpMethod = HTTP_METHOD_MAP.get(annotation.annotationType());
-                             final String value = (String) invokeValueMethod(annotation);
+                             final String value = (String) AnnotatedObjectFactory.invokeValueMethod(annotation);
                              final List<String> patterns = httpMethodPatternMap
                                      .computeIfAbsent(httpMethod, ignored -> new ArrayList<>());
                              if (DefaultValues.isSpecified(value)) {
@@ -549,132 +576,14 @@ public final class AnnotatedServiceFactory {
      * decorator annotations.
      */
     private static Function<? super HttpService, ? extends HttpService> decorator(
-            Method method, Class<?> clazz) {
-
-        final List<DecoratorAndOrder> decorators = collectDecorators(clazz, method);
-
+            Method method, Class<?> clazz, DependencyInjector dependencyInjector) {
+        final List<DecoratorAndOrder> decorators = DecoratorAnnotationUtil.collectDecorators(clazz, method);
         Function<? super HttpService, ? extends HttpService> decorator = Function.identity();
         for (int i = decorators.size() - 1; i >= 0; i--) {
             final DecoratorAndOrder d = decorators.get(i);
-            decorator = decorator.andThen(d.decorator());
+            decorator = decorator.andThen(d.decorator(dependencyInjector));
         }
         return decorator;
-    }
-
-    /**
-     * Returns a decorator list which is specified by {@link Decorator} annotations and user-defined
-     * decorator annotations.
-     */
-    @VisibleForTesting
-    static List<DecoratorAndOrder> collectDecorators(Class<?> clazz, Method method) {
-        final List<DecoratorAndOrder> decorators = new ArrayList<>();
-
-        // Class-level decorators are applied before method-level decorators.
-        collectDecorators(decorators, AnnotationUtil.getAllAnnotations(clazz));
-        collectDecorators(decorators, AnnotationUtil.getAllAnnotations(method));
-
-        // Sort decorators by "order" attribute values.
-        decorators.sort(Comparator.comparing(DecoratorAndOrder::order));
-
-        return decorators;
-    }
-
-    /**
-     * Adds decorators to the specified {@code list}. Decorators which are annotated with {@link Decorator}
-     * and user-defined decorators will be collected.
-     */
-    private static void collectDecorators(List<DecoratorAndOrder> list, List<Annotation> annotations) {
-        if (annotations.isEmpty()) {
-            return;
-        }
-
-        // Respect the order of decorators which is specified by a user. The first one is first applied
-        // for most of the cases. But if @Decorator and user-defined decorators are specified in a mixed order,
-        // the specified order and the applied order can be different. To overcome this problem, we introduce
-        // "order" attribute to @Decorator annotation to sort decorators. If a user-defined decorator
-        // annotation has "order" attribute, it will be also used for sorting.
-        for (final Annotation annotation : annotations) {
-            if (annotation instanceof Decorator) {
-                final Decorator d = (Decorator) annotation;
-                list.add(new DecoratorAndOrder(d, newDecorator(d), d.order()));
-                continue;
-            }
-
-            if (annotation instanceof Decorators) {
-                final Decorator[] decorators = ((Decorators) annotation).value();
-                for (final Decorator d : decorators) {
-                    list.add(new DecoratorAndOrder(d, newDecorator(d), d.order()));
-                }
-                continue;
-            }
-
-            DecoratorAndOrder udd = userDefinedDecorator(annotation);
-            if (udd != null) {
-                list.add(udd);
-                continue;
-            }
-
-            // If user-defined decorators are repeatable and they are specified more than once.
-            try {
-                final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
-                                                                    withName("value")), null);
-                assert method != null : "No 'value' method is found from " + annotation;
-                final Annotation[] decorators = (Annotation[]) method.invoke(annotation);
-                for (final Annotation decorator : decorators) {
-                    udd = userDefinedDecorator(decorator);
-                    if (udd == null) {
-                        break;
-                    }
-                    list.add(udd);
-                }
-            } catch (Throwable ignore) {
-                // The annotation may be a container of a decorator or may be not, so we just ignore
-                // any exception from this clause.
-            }
-        }
-    }
-
-    /**
-     * Returns a decorator with its order if the specified {@code annotation} is one of the user-defined
-     * decorator annotation.
-     */
-    @Nullable
-    private static DecoratorAndOrder userDefinedDecorator(Annotation annotation) {
-        // User-defined decorator MUST be annotated with @DecoratorFactory annotation.
-        final DecoratorFactory d = AnnotationUtil.findFirstDeclared(annotation.annotationType(),
-                                                                    DecoratorFactory.class);
-        if (d == null) {
-            return null;
-        }
-
-        // In case of user-defined decorator, we need to create a new decorator from its factory.
-        @SuppressWarnings("unchecked")
-        final DecoratorFactoryFunction<Annotation> factory = getInstance(d, DecoratorFactoryFunction.class);
-
-        // If the annotation has "order" attribute, we can use it when sorting decorators.
-        int order = 0;
-        try {
-            final Method method = Iterables.getFirst(getMethods(annotation.annotationType(),
-                                                                withName("order")), null);
-            if (method != null) {
-                final Object value = method.invoke(annotation);
-                if (value instanceof Integer) {
-                    order = (Integer) value;
-                }
-            }
-        } catch (Throwable ignore) {
-            // A user-defined decorator may not have an 'order' attribute.
-            // If it does not exist, '0' is used by default.
-        }
-        return new DecoratorAndOrder(annotation, factory.newDecorator(annotation), order);
-    }
-
-    /**
-     * Returns a new decorator which decorates an {@link HttpService} by the specified
-     * {@link Decorator}.
-     */
-    private static Function<? super HttpService, ? extends HttpService> newDecorator(Decorator decorator) {
-        return service -> service.decorate(getInstance(decorator, DecoratingHttpServiceFunction.class));
     }
 
     /**
@@ -683,74 +592,27 @@ public final class AnnotatedServiceFactory {
      * collected respectively.
      */
     private static <T extends Annotation, R> Builder<R> getAnnotatedInstances(
-            AnnotatedElement method, AnnotatedElement clazz, Class<T> annotationType, Class<R> resultType) {
+            AnnotatedElement method, AnnotatedElement clazz, Class<T> annotationType, Class<R> resultType,
+            DependencyInjector dependencyInjector) {
         final Builder<R> builder = new Builder<>();
         Stream.concat(AnnotationUtil.findAll(method, annotationType).stream(),
                       AnnotationUtil.findAll(clazz, annotationType).stream())
-              .forEach(annotation -> builder.add(getInstance(annotation, resultType)));
+              .forEach(annotation -> builder.add(
+                      AnnotatedObjectFactory.getInstance(annotation, resultType, dependencyInjector)));
         return builder;
-    }
-
-    /**
-     * Returns a cached instance of the specified {@link Class} which is specified in the given
-     * {@link Annotation}.
-     */
-    static <T> T getInstance(Annotation annotation, Class<T> expectedType) {
-        try {
-            @SuppressWarnings("unchecked")
-            final Class<? extends T> clazz = (Class<? extends T>) invokeValueMethod(annotation);
-            return expectedType.cast(instanceCache.get(clazz));
-        } catch (ClassCastException e) {
-            throw new IllegalArgumentException(
-                    "A class specified in @" + annotation.annotationType().getSimpleName() +
-                    " annotation cannot be cast to " + expectedType, e);
-        }
-    }
-
-    /**
-     * Returns a cached instance of the specified {@link Class}.
-     */
-    static <T> T getInstance(Class<T> clazz) {
-        @SuppressWarnings("unchecked")
-        final T casted = (T) instanceCache.get(clazz);
-        return casted;
-    }
-
-    private static <T> T getInstance0(Class<? extends T> clazz) throws Exception {
-        @SuppressWarnings("unchecked")
-        final Constructor<? extends T> constructor =
-                Iterables.getFirst(getConstructors(clazz, withParametersCount(0)), null);
-        assert constructor != null : "No default constructor is found from " + clazz.getName();
-        constructor.setAccessible(true);
-        return constructor.newInstance();
-    }
-
-    /**
-     * Returns an object which is returned by {@code value()} method of the specified annotation {@code a}.
-     */
-    private static Object invokeValueMethod(Annotation a) {
-        try {
-            final Method method = Iterables.getFirst(getMethods(a.annotationType(), withName("value")), null);
-            assert method != null : "No 'value' method is found from " + a;
-            return method.invoke(a);
-        } catch (Exception e) {
-            throw new IllegalStateException("An annotation @" + a.annotationType().getSimpleName() +
-                                            " must have a 'value' method", e);
-        }
     }
 
     /**
      * Returns the description of the specified {@link AnnotatedElement}.
      */
-    @Nullable
-    static String findDescription(AnnotatedElement annotatedElement) {
+    static DescriptionInfo findDescription(AnnotatedElement annotatedElement) {
         requireNonNull(annotatedElement, "annotatedElement");
         final Description description = AnnotationUtil.findFirst(annotatedElement, Description.class);
         if (description != null) {
             final String value = description.value();
             if (DefaultValues.isSpecified(value)) {
                 checkArgument(!value.isEmpty(), "value is empty.");
-                return value;
+                return DescriptionInfo.from(description);
             }
         } else if (annotatedElement instanceof Parameter) {
             // JavaDoc/KDoc descriptions only exist for method parameters
@@ -761,22 +623,25 @@ public final class AnnotatedServiceFactory {
             final String propertyName = executable.getName() + '.' + parameter.getName();
             final Properties cachedProperties = DOCUMENTATION_PROPERTIES_CACHE.getIfPresent(fileName);
             if (cachedProperties != null) {
-                return cachedProperties.getProperty(propertyName);
+                final String propertyValue = cachedProperties.getProperty(propertyName);
+                return propertyValue != null ? DescriptionInfo.of(propertyValue) : DescriptionInfo.empty();
             }
             try (InputStream stream = AnnotatedServiceFactory.class.getClassLoader()
                                                                    .getResourceAsStream(fileName)) {
                 if (stream == null) {
-                    return null;
+                    return DescriptionInfo.empty();
                 }
                 final Properties properties = new Properties();
                 properties.load(stream);
                 DOCUMENTATION_PROPERTIES_CACHE.put(fileName, properties);
-                return properties.getProperty(propertyName);
+
+                final String propertyValue = properties.getProperty(propertyName);
+                return propertyValue != null ? DescriptionInfo.of(propertyValue) : DescriptionInfo.empty();
             } catch (IOException exception) {
                 logger.warn("Failed to load an API description file: {}", fileName, exception);
             }
         }
-        return null;
+        return DescriptionInfo.empty();
     }
 
     /**
@@ -796,44 +661,4 @@ public final class AnnotatedServiceFactory {
     }
 
     private AnnotatedServiceFactory() {}
-
-    /**
-     * An internal class to hold a decorator with its order.
-     */
-    @VisibleForTesting
-    static final class DecoratorAndOrder {
-        // Keep the specified annotation for testing purpose.
-        private final Annotation annotation;
-        private final Function<? super HttpService, ? extends HttpService> decorator;
-        private final int order;
-
-        private DecoratorAndOrder(Annotation annotation,
-                                  Function<? super HttpService, ? extends HttpService> decorator,
-                                  int order) {
-            this.annotation = annotation;
-            this.decorator = decorator;
-            this.order = order;
-        }
-
-        Annotation annotation() {
-            return annotation;
-        }
-
-        Function<? super HttpService, ? extends HttpService> decorator() {
-            return decorator;
-        }
-
-        int order() {
-            return order;
-        }
-
-        @Override
-        public String toString() {
-            return MoreObjects.toStringHelper(this)
-                              .add("annotation", annotation())
-                              .add("decorator", decorator())
-                              .add("order", order())
-                              .toString();
-        }
-    }
 }

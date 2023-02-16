@@ -49,7 +49,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 /**
  * A utility class which helps to get annotations from an {@link AnnotatedElement}.
  */
-final class AnnotationUtil {
+public final class AnnotationUtil {
 
     private static final Logger logger = LoggerFactory.getLogger(AnnotationUtil.class);
 
@@ -102,7 +102,7 @@ final class AnnotationUtil {
      * @param annotationType the type of the annotation to find
      */
     @Nullable
-    static <T extends Annotation> T findFirst(AnnotatedElement element, Class<T> annotationType) {
+    public static <T extends Annotation> T findFirst(AnnotatedElement element, Class<T> annotationType) {
         final List<T> found = findAll(element, annotationType);
         return found.isEmpty() ? null : found.get(0);
     }
@@ -119,7 +119,7 @@ final class AnnotationUtil {
      */
     @Nullable
     static <T extends Annotation> T findFirstDeclared(AnnotatedElement element,
-                                                                Class<T> annotationType) {
+                                                      Class<T> annotationType) {
         final List<T> found = findDeclared(element, annotationType);
         return found.isEmpty() ? null : found.get(0);
     }

@@ -1,0 +1,294 @@
+import org.tomlj.Toml
+import org.tomlj.TomlTable
+import org.tomlj.TomlArray
+
+buildscript {
+    repositories {
+        mavenCentral()
+    }
+
+    dependencies {
+        classpath 'org.tomlj:tomlj:1.0.0'
+    }
+}
+
+def dependenciesTomlFile = new File("${rootProject.projectDir}/dependencies.toml")
+if (dependenciesTomlFile.exists()) {
+    def dependenciesYamlFile = new File("${rootProject.projectDir}/dependencies.yml")
+    if (dependenciesYamlFile.exists()) {
+        logger.quiet "Both 'dependencies.toml' and 'dependencies.yml' exist. " +
+                "'dependencies.toml' takes precedence over 'dependencies.yml'"
+    }
+
+    def dependenciesToml = Collections.unmodifiableMap(Toml.parse(dependenciesTomlFile.text).toMap())
+    def metadata = [:]
+    def boms = []
+
+    dependencyResolutionManagement {
+        versionCatalogs {
+            create("libs") { libs ->
+                dependenciesToml.forEach { String key, value ->
+                    def map = value.toMap()
+                    switch (key) {
+                        case "versions":
+                            map.forEach { alias, version -> addVersion(libs, alias, version) }
+                            break
+                        case "libraries":
+                            map.forEach { alias, dependency -> addLibrary(libs, alias, dependency, metadata) }
+                            break
+                        case "bundles":
+                            map.forEach { alias, modules -> addBundle(libs, alias, modules) }
+                            break
+                        case "plugins":
+                            map.forEach { alias, plugin -> addPlugin(libs, alias, plugin) }
+                            break
+                        case "boms":
+                            map.forEach { alias, dependency -> addBom(libs, alias, dependency, boms) }
+                            break
+                        default:
+                            throw new IllegalStateException("Unknown version catalog: '$key'. " +
+                                    "(expected: one of 'versions', 'libraries', 'bundles', 'plungins' and 'boms')")
+                    }
+                }
+            }
+        }
+    }
+
+    gradle.projectsLoaded {
+        def exclusions = [:].withDefault { [] }
+        def relocations = []
+        def javadocLinks = []
+        metadata.forEach { alias, map ->
+            def rel = map.get("relocations")
+            if (rel != null) {
+                relocations.addAll(rel)
+            }
+
+            def ex = map.get("exclusions")
+            if (ex != null) {
+                ex.each {
+                    exclusions[it["name"]].add(ex["exclusion"])
+                }
+            }
+
+            def javadocs = map.get("javadocs")
+            if (javadocs != null) {
+                javadocLinks.addAll(javadocs)
+            }
+        }
+
+        gradle.allprojects { p ->
+            p.ext.hasDependenciesToml = true
+            p.ext.dependenciesTomlBoms = boms
+            p.ext.exclusions = exclusions
+            p.ext.relocations = relocations
+            p.ext.javadocLinks = javadocLinks
+        }
+    }
+} else {
+    gradle.projectsLoaded {
+        gradle.rootProject { p ->
+            p.ext.hasDependenciesToml = false
+            p.ext.dependenciesTomlMetadata = Collections.emptyMap()
+            p.ext.dependenciesTomlBoms = Collections.emptyList()
+        }
+    }
+}
+
+static def addVersion(VersionCatalogBuilder libs, String alias, Object version) {
+    if (version instanceof String) {
+        libs.version(alias, version)
+    } else if (version instanceof TomlTable) {
+        libs.version(alias) { setRichVersion(it, version) }
+    } else {
+        throw new IllegalStateException("An invalid vesion declaration on ${alias}: ${version} (expected: string or objects compatible with MutableVersionConstraint)");
+    }
+}
+
+private static String setRichVersion(MutableVersionConstraint constraint, TomlTable version) {
+    if (version.contains("require")) {
+        constraint.require(version["require"])
+    }
+    if (version.contains("strictly")) {
+        constraint.strictly(version["strictly"])
+    }
+    if (version.contains("prefer")) {
+        constraint.prefer(version["prefer"])
+    }
+    if (version.contains("reject")) {
+        def rejected = version["reject"]
+        if (rejected instanceof TomlArray) {
+            constraint.reject(rejected.toList() as String[])
+        } else {
+            constraint.reject(rejected)
+        }
+    }
+    if (version["rejectAll"]) {
+        constraint.rejectAll()
+    }
+}
+
+static def addBom(VersionCatalogBuilder libs, String alias, TomlTable dependency, List<String> boms) {
+    def version = dependency["version"]
+    alias = "boms-" + alias
+    if (version instanceof String) {
+        def library = newLibrary(libs, alias, dependency)["lib"]
+        library.version(version)
+        boms.add(alias)
+        return
+    } else if (version instanceof TomlTable) {
+        if (version.contains("ref")) {
+            def library = newLibrary(libs, alias, dependency)["lib"]
+            library.versionRef(version["ref"])
+            boms.add(alias)
+            return
+        }
+    }
+
+    throw new IllegalStateException("An invalid BOM version on ${alias}: ${dependency.toJson()}" +
+            " (expected: 'version' or 'version.ref')")
+}
+
+static def addLibrary(VersionCatalogBuilder libs, String alias, TomlTable dependency,
+                      Map<String, Map> dependenciesMetadata) {
+    def result = newLibrary(libs, alias, dependency)
+    def library = result.lib
+
+    def version = dependency["version"]
+    if (version == null) {
+        library.withoutVersion()
+    } else if (version instanceof String) {
+        library.version(version)
+    } else if (version instanceof TomlTable) {
+        if (version.contains("ref")) {
+            library.versionRef(version["ref"])
+        } else {
+            library.version { setRichVersion(it, version) }
+        }
+    }
+
+    def metadata = extractMetadata(dependency, result.group, result.artifact, alias)
+    if (!metadata.isEmpty()) {
+        dependenciesMetadata[alias] = metadata
+    }
+}
+
+static def newLibrary(VersionCatalogBuilder libs, String alias, TomlTable dependency) {
+    if (dependency.contains("group") && dependency.contains("name")) {
+        def group = dependency["group"]
+        def artifact = dependency["name"]
+        return [lib: libs.library(alias, group, artifact), group: group, artifact: artifact]
+    } else if (dependency.contains("module")) {
+        def module = dependency["module"].split(":")
+        if (module.length != 2) {
+            throw new IllegalStateException("An invalid module declaration on ${alias}: ${module} (expected: 'groupId:artifactId')");
+        }
+        def group = module[0]
+        def artifact = module[1]
+        return [lib: libs.library(alias, group, artifact), group: group, artifact: artifact]
+    } else {
+        throw new IllegalStateException("An invalid library declaration on ${alias}: ${dependency.toJson()}" +
+                " (expected: 'module' or 'group' and 'name')")
+    }
+}
+
+static Map<String, Object> extractMetadata(TomlTable dependency, String group, String artifact, String alias) {
+    def metadata = [:]
+    def javadocs = dependency["javadocs"]
+    if (javadocs != null) {
+        if (javadocs instanceof String) {
+            metadata["javadocs"] = [[groupId: group, artifactId: artifact, url: javadocs]]
+        } else if (javadocs instanceof TomlArray) {
+            metadata["javadocs"] = javadocs.toList().collect {
+                [groupId: group, artifactId: artifact, url: it]
+            }
+        } else {
+            throw new IllegalStateException("An invalid javadoc links on ${alias}: $javadocs'" +
+                    " (expected: A string or an array of strings)")
+        }
+    }
+
+    def module = "$group:$artifact"
+    def exclusions = dependency["exclusions"]
+    if (exclusions != null) {
+        if (exclusions instanceof String) {
+            def excluded = exclusions.split(":")
+            metadata["exclusions"] = [[name: module, exclusion: [group: excluded[0], module: excluded[1]]]]
+        } else if (exclusions instanceof TomlArray) {
+            metadata["exclusions"] = exclusions.toList().collect {
+                def excluded = it.split(":")
+                [name: module, exclusion: [group: excluded[0], module: excluded[1]]]
+            }
+        } else {
+            throw new IllegalStateException("An invalid exclusions on ${alias}: $exclusions" +
+                    " (expected: A string or an array of strings)")
+        }
+    }
+
+    def relocations = dependency["relocations"]
+    if (relocations != null) {
+        if (relocations instanceof TomlTable) {
+            metadata["relocations"] = [[name: module, from: relocations["from"], to: relocations["to"]]]
+        } else if (relocations instanceof TomlArray) {
+            metadata["relocations"] = relocations.toList().collect {
+                [name: module, from: it["from"], to: it["to"]]
+            }
+        } else {
+            throw new IllegalStateException("An invalid relocations on ${alias}: $relocations" +
+                    " (expected: A map or an array of maps)")
+        }
+    }
+    metadata
+}
+
+static def addBundle(VersionCatalogBuilder libs, String alias, List<String> aliases) {
+    libs.bundle(alias, aliases)
+}
+
+static def addPlugin(VersionCatalogBuilder libs, String alias, TomlTable plugin) {
+    def version = plugin['version']
+    if (version instanceof TomlTable) {
+        def ref = version["ref"]
+        if (ref == null) {
+            throw new IllegalStateException("An invalid plugin declaration on $alias: ${version.toJson()}")
+        }
+        libs.plugin(alias, plugin["id"]).versionRef(ref)
+    } else {
+        libs.plugin(alias, plugin["id"]).version(plugin['version'])
+    }
+}
+
+gradle.projectsLoaded {
+    gradle.rootProject { p ->
+        if (p.ext.hasDependenciesToml) {
+            // Prints all versions registered through 'dependencies.toml'
+            p.tasks.register("printVersionCatalogs") {
+                def catalogs = p.extensions.getByType(VersionCatalogsExtension)
+                doLast {
+                    catalogs.catalogNames.forEach { name ->
+                        def catalog = catalogs.named(name)
+                        catalog.libraryAliases.forEach {
+                            def library = catalog.findLibrary(it).get().get()
+                            println "$name / library / $it / $library"
+                        }
+
+                        catalog.pluginAliases.forEach {
+                            def plugin = catalog.findPlugin(it).get().get()
+                            println "$name / plugin / $it / $plugin"
+                        }
+
+                        catalog.versionAliases.forEach {
+                            def version = catalog.findVersion(it).get()
+                            println "$name / version / $it / $version"
+                        }
+
+                        catalog.bundleAliases.forEach {
+                            def bundle = catalog.findBundle(it).get().get()
+                            println "$name / bundle / $it / $bundle"
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

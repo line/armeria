@@ -44,3 +44,35 @@ message Add {
   SimpleOneof left = 1;
   SimpleOneof right = 2;
 }
+
+enum TestEnum {
+  ZERO = 0;
+  ONE = 1;
+  TWO = 2;
+}
+
+message TestMessage {
+  message Nested {
+    string string = 1;
+  }
+
+  bool bool = 1;
+  int32 int32 = 2;
+  int64 int64 = 3;
+  uint32 uint32 = 4;
+  uint64 uint64 = 5;
+  sint32 sint32 = 6;
+  sint64 sint64 = 7;
+  fixed32 fixed32 = 8;
+  fixed64 fixed64 = 9;
+  float float = 10;
+  double double = 11;
+  string string = 12;
+  bytes bytes = 13;
+  TestEnum test_enum = 14;
+  Nested nested = 15;
+  repeated string strings = 16;
+  map<string, int32> map = 17;
+  TestMessage self = 18;
+  SimpleOneof oneof = 19;
+}

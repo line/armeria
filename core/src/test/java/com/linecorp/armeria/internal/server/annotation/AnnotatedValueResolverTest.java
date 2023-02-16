@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.internal.server.annotation;
 
+import static com.linecorp.armeria.internal.server.annotation.AnnotatedBeanFactoryRegistryTest.noopDependencyInjector;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.toArguments;
 import static com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.toRequestObjectResolvers;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -143,8 +144,8 @@ class AnnotatedValueResolverTest {
     void ofMethods() {
         getAllMethods(Service.class).forEach(method -> {
             try {
-                final List<AnnotatedValueResolver> elements =
-                        AnnotatedValueResolver.ofServiceMethod(method, pathParams, objectResolvers, false);
+                final List<AnnotatedValueResolver> elements = AnnotatedValueResolver.ofServiceMethod(
+                        method, pathParams, objectResolvers, false, noopDependencyInjector, null);
                 elements.forEach(AnnotatedValueResolverTest::testResolver);
             } catch (NoAnnotatedParameterException ignored) {
                 // Ignore this exception because MixedBean class has not annotated method.
@@ -157,8 +158,8 @@ class AnnotatedValueResolverTest {
         final FieldBean bean = new FieldBean();
 
         getAllFields(FieldBean.class).forEach(field -> {
-            final AnnotatedValueResolver resolver =
-                    AnnotatedValueResolver.ofBeanField(field, pathParams, objectResolvers);
+            final AnnotatedValueResolver resolver = AnnotatedValueResolver.ofBeanField(
+                    field, pathParams, objectResolvers, noopDependencyInjector);
 
             if (resolver != null) {
                 testResolver(resolver);
@@ -180,8 +181,8 @@ class AnnotatedValueResolverTest {
         final Set<Constructor> constructors = getAllConstructors(ConstructorBean.class);
         assertThat(constructors.size()).isOne();
         constructors.forEach(constructor -> {
-            final List<AnnotatedValueResolver> elements =
-                    AnnotatedValueResolver.ofBeanConstructorOrMethod(constructor, pathParams, objectResolvers);
+            final List<AnnotatedValueResolver> elements = AnnotatedValueResolver.ofBeanConstructorOrMethod(
+                    constructor, pathParams, objectResolvers, noopDependencyInjector);
             elements.forEach(AnnotatedValueResolverTest::testResolver);
 
             final ConstructorBean bean;
@@ -211,8 +212,8 @@ class AnnotatedValueResolverTest {
         assertThat(constructors.size()).isOne();
         final Constructor constructor = Iterables.getFirst(constructors, null);
 
-        final List<AnnotatedValueResolver> initArgs =
-                AnnotatedValueResolver.ofBeanConstructorOrMethod(constructor, pathParams, objectResolvers);
+        final List<AnnotatedValueResolver> initArgs = AnnotatedValueResolver.ofBeanConstructorOrMethod(
+                constructor, pathParams, objectResolvers, noopDependencyInjector);
         initArgs.forEach(AnnotatedValueResolverTest::testResolver);
         final MixedBean bean = (MixedBean) constructor.newInstance(toArguments(initArgs, resolverContext));
         getAllMethods(MixedBean.class).forEach(method -> testMethod(method, bean));
@@ -221,8 +222,8 @@ class AnnotatedValueResolverTest {
 
     private static <T> void testMethod(Method method, T bean) {
         try {
-            final List<AnnotatedValueResolver> elements =
-                    AnnotatedValueResolver.ofBeanConstructorOrMethod(method, pathParams, objectResolvers);
+            final List<AnnotatedValueResolver> elements = AnnotatedValueResolver.ofBeanConstructorOrMethod(
+                    method, pathParams, objectResolvers, noopDependencyInjector);
             elements.forEach(AnnotatedValueResolverTest::testResolver);
 
             method.setAccessible(true);
@@ -289,7 +290,6 @@ class AnnotatedValueResolverTest {
         if (resolver.annotationType() == Param.class) {
             if (shouldHttpParameterExist(resolver) ||
                 shouldPathVariableExist(resolver)) {
-                assertThat(resolver.httpElementName()).isNotNull();
                 if (resolver.elementType().isEnum()) {
                     testEnum(value, resolver.httpElementName());
                 } else if (resolver.shouldWrapValueAsOptional()) {

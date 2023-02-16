@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
@@ -28,6 +29,8 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletionException;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
@@ -301,6 +304,80 @@ class StreamMessageTest {
         final byte[] bytes = Files.readAllBytes(destination);
 
         assertThat(bytes).isEqualTo(expected);
+        for (ByteBuf buf : bufs) {
+            assertThat(buf.refCnt()).isZero();
+        }
+    }
+
+    @Test
+    void noopSubscribe() {
+        final List<ByteBuf> bufs = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+            bufs.add(Unpooled.wrappedBuffer(Integer.toString(i).getBytes()));
+        }
+        final HttpData[] httpData = bufs.stream().map(HttpData::wrap).toArray(HttpData[]::new);
+        final StreamMessage<HttpData> source = StreamMessage.of(httpData);
+        source.subscribe().join();
+        for (ByteBuf buf : bufs) {
+            assertThat(buf.refCnt()).isZero();
+        }
+    }
+
+    @Test
+    void noopSubscribe_aborted() {
+        final List<ByteBuf> bufs = new ArrayList<>();
+        for (int i = 1; i <= 10; i++) {
+            bufs.add(Unpooled.wrappedBuffer(Integer.toString(i).getBytes()));
+        }
+        final HttpData[] httpData = bufs.stream().map(HttpData::wrap).toArray(HttpData[]::new);
+        final StreamMessage<HttpData> source = StreamMessage.of(httpData);
+        final List<HttpData> collected = new ArrayList<>();
+        final StreamMessage<HttpData> aborted = source.peek(x -> {
+            if (x.equals(HttpData.wrap("6".getBytes()))) {
+                source.abort();
+            } else {
+                collected.add(x);
+            }
+        });
+        final List<HttpData> expected = ImmutableList.of("1", "2", "3", "4", "5")
+                                                     .stream()
+                                                     .map(String::getBytes)
+                                                     .map(HttpData::wrap)
+                                                     .collect(Collectors.toList());
+        assertThatThrownBy(() -> aborted.subscribe().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(AbortedStreamException.class);
+        assertThat(collected).isEqualTo(expected);
+        for (ByteBuf buf : bufs) {
+            assertThat(buf.refCnt()).isZero();
+        }
+    }
+
+    @Test
+    void noopSubscribe_error_thrown() throws Exception {
+        final List<ByteBuf> bufs = new ArrayList<>();
+        for (int i = 1; i <= 10; i++) {
+            bufs.add(Unpooled.wrappedBuffer(Integer.toString(i).getBytes()));
+        }
+        final HttpData[] httpData = bufs.stream().map(HttpData::wrap).toArray(HttpData[]::new);
+        final StreamMessage<HttpData> source = StreamMessage.of(httpData);
+        final List<HttpData> collected = new ArrayList<>();
+        final StreamMessage<HttpData> aborted = source.peek(x -> {
+            if (x.equals(HttpData.wrap("6".getBytes()))) {
+                throw new RuntimeException();
+            } else {
+                collected.add(x);
+            }
+        });
+        final List<HttpData> expected = ImmutableList.of("1", "2", "3", "4", "5")
+                                                     .stream()
+                                                     .map(String::getBytes)
+                                                     .map(HttpData::wrap)
+                                                     .collect(Collectors.toList());
+        assertThatThrownBy(() -> aborted.subscribe().join())
+                .isInstanceOf(CompletionException.class)
+                .hasCauseInstanceOf(CancelledSubscriptionException.class);
+        assertThat(collected).isEqualTo(expected);
         for (ByteBuf buf : bufs) {
             assertThat(buf.refCnt()).isZero();
         }

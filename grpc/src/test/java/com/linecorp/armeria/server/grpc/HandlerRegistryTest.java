@@ -19,6 +19,8 @@ package com.linecorp.armeria.server.grpc;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 
+import com.google.common.collect.ImmutableList;
+
 import com.linecorp.armeria.grpc.testing.TestServiceGrpc.TestServiceImplBase;
 
 class HandlerRegistryTest {
@@ -33,8 +35,10 @@ class HandlerRegistryTest {
     void normalizePath(String path1, String path2, String expected1, String expected2) {
         final HandlerRegistry.Builder builder = new HandlerRegistry.Builder();
         final TestServiceImplBase testService = new TestServiceImplBase() {};
-        final HandlerRegistry handlerRegistry = builder.addService(path1, testService.bindService(), null)
-                                                       .addService(path2, testService.bindService(), null)
+        final HandlerRegistry handlerRegistry = builder.addService(path1, testService.bindService(),
+                                                                   null, null, ImmutableList.of())
+                                                       .addService(path2, testService.bindService(),
+                                                                   null, null, ImmutableList.of())
                                                        .build();
 
         handlerRegistry.lookupMethod(expected1 + "EmptyCall");

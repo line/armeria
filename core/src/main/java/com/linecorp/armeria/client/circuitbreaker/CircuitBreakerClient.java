@@ -30,6 +30,8 @@ import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpResponseDuplicator;
 import com.linecorp.armeria.common.Response;
+import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.circuitbreaker.CircuitBreakerCallback;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.internal.client.TruncatingHttpResponse;
 
@@ -49,7 +51,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     public static Function<? super HttpClient, CircuitBreakerClient>
     newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerRule rule) {
         requireNonNull(circuitBreaker, "circuitBreaker");
-        return newDecorator((ctx, req) -> circuitBreaker, rule);
+        return newDecorator(CircuitBreakerClientHandler.of(circuitBreaker), rule);
     }
 
     /**
@@ -62,7 +64,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     public static Function<? super HttpClient, CircuitBreakerClient>
     newDecorator(CircuitBreaker circuitBreaker, CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         requireNonNull(circuitBreaker, "circuitBreaker");
-        return newDecorator((ctx, req) -> circuitBreaker, ruleWithContent);
+        return newDecorator(CircuitBreakerClientHandler.of(circuitBreaker), ruleWithContent);
     }
 
     /**
@@ -76,7 +78,19 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRule rule) {
         requireNonNull(mapping, "mapping");
         requireNonNull(rule, "rule");
-        return delegate -> new CircuitBreakerClient(delegate, mapping, rule);
+        return newDecorator(CircuitBreakerClientHandler.of(mapping), rule);
+    }
+
+    /**
+     * Creates a new decorator with the specified {@link CircuitBreakerClientHandler} and
+     * {@link CircuitBreakerRule}.
+     */
+    @UnstableApi
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newDecorator(CircuitBreakerClientHandler handler, CircuitBreakerRule rule) {
+        requireNonNull(rule, "rule");
+        requireNonNull(handler, "handler");
+        return delegate -> new CircuitBreakerClient(delegate, handler, rule);
     }
 
     /**
@@ -90,7 +104,20 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     newDecorator(CircuitBreakerMapping mapping, CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
         requireNonNull(mapping, "mapping");
         requireNonNull(ruleWithContent, "ruleWithContent");
-        return delegate -> new CircuitBreakerClient(delegate, mapping, ruleWithContent);
+        return newDecorator(CircuitBreakerClientHandler.of(mapping), ruleWithContent);
+    }
+
+    /**
+     * Creates a new decorator with the specified {@link CircuitBreakerClientHandler} and
+     * {@link CircuitBreakerRuleWithContent}.
+     */
+    @UnstableApi
+    public static Function<? super HttpClient, CircuitBreakerClient>
+    newDecorator(CircuitBreakerClientHandler handler,
+                 CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
+        requireNonNull(handler, "handler");
+        requireNonNull(ruleWithContent, "ruleWithContent");
+        return delegate -> new CircuitBreakerClient(delegate, handler, ruleWithContent);
     }
 
     /**
@@ -254,8 +281,9 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping, CircuitBreakerRule rule) {
-        super(delegate, mapping, rule);
+    CircuitBreakerClient(HttpClient delegate, CircuitBreakerClientHandler handler,
+                         CircuitBreakerRule rule) {
+        super(delegate, handler, rule);
         needsContentInRule = false;
         maxContentLength = 0;
     }
@@ -263,56 +291,56 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping,
+    CircuitBreakerClient(HttpClient delegate, CircuitBreakerClientHandler handler,
                          CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent) {
-        this(delegate, mapping, ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH);
+        this(delegate, handler, ruleWithContent, CircuitBreakerClientBuilder.DEFAULT_MAX_CONTENT_LENGTH);
     }
 
     /**
      * Creates a new instance that decorates the specified {@link HttpClient}.
      */
-    CircuitBreakerClient(HttpClient delegate, CircuitBreakerMapping mapping,
+    CircuitBreakerClient(HttpClient delegate, CircuitBreakerClientHandler handler,
                          CircuitBreakerRuleWithContent<HttpResponse> ruleWithContent, int maxContentLength) {
-        super(delegate, mapping, ruleWithContent);
+        super(delegate, handler, ruleWithContent);
         needsContentInRule = true;
         this.maxContentLength = maxContentLength;
     }
 
     @Override
-    protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req, CircuitBreaker circuitBreaker)
+    protected HttpResponse doExecute(ClientRequestContext ctx, HttpRequest req,
+                                     CircuitBreakerCallback callback)
             throws Exception {
         final CircuitBreakerRule rule = needsContentInRule ? fromRuleWithContent() : rule();
         final HttpResponse response;
         try {
             response = unwrap().execute(ctx, req);
         } catch (Throwable cause) {
-            reportSuccessOrFailure(circuitBreaker, rule.shouldReportAsSuccess(ctx, cause));
+            reportSuccessOrFailure(callback, rule.shouldReportAsSuccess(ctx, cause), ctx, cause);
             throw cause;
         }
-
         final RequestLogProperty property =
                 rule.requiresResponseTrailers() ? RequestLogProperty.RESPONSE_TRAILERS
                                                 : RequestLogProperty.RESPONSE_HEADERS;
 
         if (!needsContentInRule) {
-            reportResult(ctx, circuitBreaker, property);
+            reportResult(ctx, callback, property);
             return response;
         } else {
-            return reportResultWithContent(ctx, response, circuitBreaker, property);
+            return reportResultWithContent(ctx, response, callback, property);
         }
     }
 
-    private void reportResult(ClientRequestContext ctx, CircuitBreaker circuitBreaker,
+    private void reportResult(ClientRequestContext ctx, CircuitBreakerCallback callback,
                               RequestLogProperty logProperty) {
         ctx.log().whenAvailable(logProperty).thenAccept(log -> {
             final Throwable resCause =
                     log.isAvailable(RequestLogProperty.RESPONSE_CAUSE) ? log.responseCause() : null;
-            reportSuccessOrFailure(circuitBreaker, rule().shouldReportAsSuccess(ctx, resCause));
+            reportSuccessOrFailure(callback, rule().shouldReportAsSuccess(ctx, resCause), ctx, resCause);
         });
     }
 
     private HttpResponse reportResultWithContent(ClientRequestContext ctx, HttpResponse response,
-                                                 CircuitBreaker circuitBreaker,
+                                                 CircuitBreakerCallback callback,
                                                  RequestLogProperty logProperty) {
 
         final HttpResponseDuplicator duplicator = response.toDuplicator(ctx.eventLoop().withoutContext(),
@@ -330,7 +358,7 @@ public final class CircuitBreakerClient extends AbstractCircuitBreakerClient<Htt
                     truncatingHttpResponse.abort();
                     return null;
                 });
-                reportSuccessOrFailure(circuitBreaker, f);
+                reportSuccessOrFailure(callback, f, ctx, null);
             } catch (Throwable cause) {
                 duplicator.abort(cause);
             }

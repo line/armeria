@@ -15,13 +15,15 @@
  */
 package com.linecorp.armeria.client.endpoint;
 
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
+import java.util.concurrent.locks.ReentrantLock;
 
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.collect.ImmutableList;
+import com.google.errorprone.annotations.concurrent.GuardedBy;
 
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
@@ -35,93 +37,80 @@ import com.linecorp.armeria.common.annotation.Nullable;
  */
 final class WeightedRandomDistributionEndpointSelector {
 
-    private static final AtomicLongFieldUpdater<WeightedRandomDistributionEndpointSelector>
-            currentTotalWeightUpdater =
-            AtomicLongFieldUpdater.newUpdater(
-                    WeightedRandomDistributionEndpointSelector.class, "currentTotalWeight");
-
-    private final List<Entry> entries;
-    private final long totalWeight;
-    private volatile long currentTotalWeight;
+    private final ReentrantLock lock = new ReentrantLock();
+    private final List<Entry> allEntries;
+    @GuardedBy("lock")
+    private final List<Entry> currentEntries;
+    private final long total;
+    private long remaining;
 
     WeightedRandomDistributionEndpointSelector(List<Endpoint> endpoints) {
-        final ImmutableList.Builder<Entry> builder = ImmutableList.builder();
+        final ImmutableList.Builder<Entry> builder = ImmutableList.builderWithExpectedSize(endpoints.size());
 
-        long totalWeight = 0;
+        long total = 0;
         for (Endpoint endpoint : endpoints) {
             if (endpoint.weight() <= 0) {
                 continue;
             }
             builder.add(new Entry(endpoint));
-            totalWeight += endpoint.weight();
+            total += endpoint.weight();
         }
-        this.totalWeight = totalWeight;
-        currentTotalWeight = totalWeight;
-        entries = builder.build();
+        this.total = total;
+        remaining = total;
+        allEntries = builder.build();
+        currentEntries = new ArrayList<>(allEntries);
     }
 
     @VisibleForTesting
     List<Entry> entries() {
-        return entries;
+        return allEntries;
     }
 
     @Nullable
     Endpoint selectEndpoint() {
-        if (entries.isEmpty()) {
+        if (allEntries.isEmpty()) {
             return null;
         }
+
         final ThreadLocalRandom threadLocalRandom = ThreadLocalRandom.current();
-        Endpoint selected = null;
-        for (;;) {
-            final long currentWeight = currentTotalWeight;
-            if (currentWeight == 0) {
-                // currentTotalWeight will become totalWeight as soon as it becomes 0 so we just loop again.
-                continue;
-            }
-            long nextLong = threadLocalRandom.nextLong(currentWeight);
-            // There's a chance that currentTotalWeight is changed before looping currentEntries.
-            // However, we have counters and choosing an endpoint doesn't have to be exact so no big deal.
-            // TODO(minwoox): Use binary search when the number of endpoints is greater than N.
-            for (Entry entry : entries) {
-                if (entry.isFull()) {
-                    continue;
-                }
-                final Endpoint endpoint = entry.endpoint();
-                final int weight = endpoint.weight();
-                nextLong -= weight;
-                if (nextLong < 0) {
-                    final int counter = entry.incrementAndGet();
-                    if (counter <= weight) {
-                        selected = endpoint;
-                        if (counter == weight) {
-                            decreaseCurrentTotalWeight(weight);
+        lock.lock();
+        try {
+            long target = threadLocalRandom.nextLong(remaining);
+            final Iterator<Entry> it = currentEntries.iterator();
+            while (it.hasNext()) {
+                final Entry entry = it.next();
+                final int weight = entry.weight();
+                target -= weight;
+                if (target < 0) {
+                    entry.increment();
+                    if (entry.isFull()) {
+                        it.remove();
+                        entry.reset();
+                        remaining -= weight;
+                        if (remaining == 0) {
+                            // As all entries are full, reset `currentEntries` and `remaining`.
+                            currentEntries.addAll(allEntries);
+                            remaining = total;
+                        } else {
+                            assert remaining > 0 : remaining;
                         }
                     }
-                    break;
+                    return entry.endpoint();
                 }
             }
-
-            if (selected != null) {
-                return selected;
-            }
+        } finally {
+            lock.unlock();
         }
-    }
 
-    private void decreaseCurrentTotalWeight(int weight) {
-        final long totalWeight = currentTotalWeightUpdater.addAndGet(this, -1 * weight);
-        if (totalWeight == 0) {
-            // There's no chance that newWeight is lower than 0 because decreasing the weight of each entry
-            // happens only once.
-            entries.forEach(entry -> entry.set(0));
-            currentTotalWeight = this.totalWeight;
-        }
+        // Since `allEntries` is not empty, should select one Endpoint from `allEntries`.
+        throw new Error("Should never reach here");
     }
 
     @VisibleForTesting
-    static final class Entry extends AtomicInteger {
-        private static final long serialVersionUID = -1719423489992905558L;
+    static final class Entry {
 
         private final Endpoint endpoint;
+        private int counter;
 
         Entry(Endpoint endpoint) {
             this.endpoint = endpoint;
@@ -131,8 +120,26 @@ final class WeightedRandomDistributionEndpointSelector {
             return endpoint;
         }
 
+        void increment() {
+            assert counter < endpoint().weight();
+            counter++;
+        }
+
+        int weight() {
+            return endpoint().weight();
+        }
+
+        void reset() {
+            counter = 0;
+        }
+
+        @VisibleForTesting
+        int counter() {
+            return counter;
+        }
+
         boolean isFull() {
-            return get() >= endpoint.weight();
+            return counter >= endpoint.weight();
         }
     }
 }

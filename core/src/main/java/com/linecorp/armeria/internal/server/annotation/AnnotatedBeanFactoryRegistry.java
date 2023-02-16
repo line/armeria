@@ -21,11 +21,13 @@ import static org.reflections.ReflectionUtils.getAllFields;
 import static org.reflections.ReflectionUtils.getAllMethods;
 import static org.reflections.ReflectionUtils.getConstructors;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.AbstractMap.SimpleImmutableEntry;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -42,7 +44,9 @@ import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableMap.Builder;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.ImmutableSortedSet;
+import com.google.common.primitives.Ints;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.NoAnnotatedParameterException;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedValueResolver.RequestObjectResolver;
@@ -51,8 +55,9 @@ import com.linecorp.armeria.server.annotation.RequestConverter;
 import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 
 /**
- * A singleton class which manages factories for creating a bean. {@link #register(Class, Set, List)} should
- * be called at first to let {@link AnnotatedBeanFactoryRegistry} create a factory for a bean.
+ * A singleton class which manages factories for creating a bean.
+ * {@link #register(Class, Set, List, DependencyInjector)} should be called first to let
+ * {@link AnnotatedBeanFactoryRegistry} create a factory for a bean.
  */
 final class AnnotatedBeanFactoryRegistry {
     private static final Logger logger = LoggerFactory.getLogger(AnnotatedBeanFactoryRegistry.class);
@@ -81,11 +86,13 @@ final class AnnotatedBeanFactoryRegistry {
      * factory from the factory cache later.
      */
     static synchronized BeanFactoryId register(Class<?> clazz, Set<String> pathParams,
-                                               List<RequestObjectResolver> objectResolvers) {
+                                               List<RequestObjectResolver> objectResolvers,
+                                               DependencyInjector dependencyInjector) {
         final BeanFactoryId beanFactoryId = new BeanFactoryId(clazz, pathParams);
         final AnnotatedBeanFactories annotatedBeanFactories = factories.get(clazz);
         if (!annotatedBeanFactories.containsKey(beanFactoryId.pathParams)) {
-            final AnnotatedBeanFactory<?> factory = createFactory(beanFactoryId, objectResolvers);
+            final AnnotatedBeanFactory<?> factory =
+                    createFactory(beanFactoryId, objectResolvers, dependencyInjector);
             if (factory != null) {
                 annotatedBeanFactories.put(beanFactoryId.pathParams, factory);
                 logger.debug("Registered a bean factory: {}", beanFactoryId);
@@ -111,13 +118,32 @@ final class AnnotatedBeanFactoryRegistry {
 
     static Set<AnnotatedValueResolver> uniqueResolverSet() {
         return new TreeSet<>((o1, o2) -> {
-            final String o1Name = o1.httpElementName();
-            final String o2Name = o2.httpElementName();
-            if (o1Name != null && o1Name.equals(o2Name) && o1.annotationType() == o2.annotationType()) {
+            String o1Name = o1.httpElementName();
+            String o2Name = o2.httpElementName();
+            final Class<? extends Annotation> o1AnnotationType = o1.annotationType();
+            final Class<? extends Annotation> o2AnnotationType = o2.annotationType();
+            if (o1AnnotationType == o2AnnotationType && o1Name.equals(o2Name)) {
                 return 0;
             }
-            // We are not ordering, but just finding duplicate elements.
-            return -1;
+
+            // TreeSet internally creates a binary tree. A consistent comparison for the two inputs is
+            // necessary to traverse the binary tree correctly and check uniqueness.
+            // If compare(o1, o2) returns -1, compare(o2, o1) should return 1 or a positive number.
+            if (o1AnnotationType != null) {
+                o1Name += '/' + o1AnnotationType.getName();
+            }
+            if (o2AnnotationType != null) {
+                o2Name += '/' + o2AnnotationType.getName();
+            }
+            final int result = o1Name.compareTo(o2Name);
+            if (result != 0) {
+                return result;
+            }
+            // It is still not a good idea to return 0 since the equality for `httpElementName()` and
+            // `annotationType()` is broken. `o1AnnotationType` and `o2AnnotationType` may be the same
+            // class, but loaded by two class different loaders. The hash comparison is used to return a
+            // non-zero value for the different classes.
+            return Ints.compare(Objects.hashCode(o1AnnotationType), Objects.hashCode(o2AnnotationType));
         });
     }
 
@@ -131,7 +157,8 @@ final class AnnotatedBeanFactoryRegistry {
 
     @Nullable
     private static <T> AnnotatedBeanFactory<T> createFactory(BeanFactoryId beanFactoryId,
-                                                             List<RequestObjectResolver> objectResolvers) {
+                                                             List<RequestObjectResolver> objectResolvers,
+                                                             DependencyInjector dependencyInjector) {
         requireNonNull(beanFactoryId, "beanFactoryId");
         requireNonNull(objectResolvers, "objectResolvers");
 
@@ -151,10 +178,11 @@ final class AnnotatedBeanFactoryRegistry {
         //     ...
         // }
         final List<RequestObjectResolver> resolvers = addToFirstIfExists(
-                objectResolvers, AnnotationUtil.findDeclared(beanFactoryId.type, RequestConverter.class));
+                objectResolvers, AnnotationUtil.findDeclared(beanFactoryId.type, RequestConverter.class),
+                dependencyInjector);
 
         final Entry<Constructor<T>, List<AnnotatedValueResolver>> constructor =
-                findConstructor(beanFactoryId, resolvers);
+                findConstructor(beanFactoryId, resolvers, dependencyInjector);
         if (constructor == null) {
             // There is no constructor, so we cannot create a new instance.
             return null;
@@ -165,12 +193,12 @@ final class AnnotatedBeanFactoryRegistry {
         // Find the methods whose parameters are not annotated with the same annotations in the constructor.
         // If there're parameters used redundantly, it would warn it.
         final Map<Method, List<AnnotatedValueResolver>> methods =
-                findMethods(constructorAnnotatedResolvers, beanFactoryId, resolvers);
+                findMethods(constructorAnnotatedResolvers, beanFactoryId, resolvers, dependencyInjector);
 
         // Find the fields which are not annotated with the same annotations in the constructor and methods.
         // If there're parameters used redundantly, it would warn it.
-        final Map<Field, AnnotatedValueResolver> fields = findFields(constructorAnnotatedResolvers, methods,
-                                                                     beanFactoryId, resolvers);
+        final Map<Field, AnnotatedValueResolver> fields = findFields(
+                constructorAnnotatedResolvers, methods, beanFactoryId, resolvers, dependencyInjector);
 
         if (constructor.getValue().isEmpty() && methods.isEmpty() && fields.isEmpty()) {
             // A default constructor exists but there is no annotated field or method.
@@ -187,7 +215,8 @@ final class AnnotatedBeanFactoryRegistry {
     @Nullable
     @SuppressWarnings({ "unchecked", "rawtypes" })
     private static <T> Entry<Constructor<T>, List<AnnotatedValueResolver>> findConstructor(
-            BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers) {
+            BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers,
+            DependencyInjector dependencyInjector) {
 
         Entry<Constructor<T>, List<AnnotatedValueResolver>> candidate = null;
 
@@ -205,7 +234,8 @@ final class AnnotatedBeanFactoryRegistry {
                 final List<AnnotatedValueResolver> resolvers =
                         AnnotatedValueResolver.ofBeanConstructorOrMethod(
                                 constructor, beanFactoryId.pathParams,
-                                addToFirstIfExists(objectResolvers, converters));
+                                addToFirstIfExists(objectResolvers, converters, dependencyInjector),
+                                dependencyInjector);
                 if (!resolvers.isEmpty()) {
                     // Can overwrite only if the current candidate is a default constructor.
                     if (candidate == null || candidate.getValue().isEmpty()) {
@@ -225,7 +255,8 @@ final class AnnotatedBeanFactoryRegistry {
 
     private static Map<Method, List<AnnotatedValueResolver>> findMethods(
             List<AnnotatedValueResolver> constructorAnnotatedResolvers,
-            BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers) {
+            BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers,
+            DependencyInjector dependencyInjector) {
         final Set<AnnotatedValueResolver> uniques = uniqueResolverSet();
         uniques.addAll(constructorAnnotatedResolvers);
 
@@ -238,19 +269,23 @@ final class AnnotatedBeanFactoryRegistry {
                 final List<AnnotatedValueResolver> resolvers =
                         AnnotatedValueResolver.ofBeanConstructorOrMethod(
                                 method, beanFactoryId.pathParams,
-                                addToFirstIfExists(objectResolvers, converters));
+                                addToFirstIfExists(objectResolvers, converters, dependencyInjector),
+                                dependencyInjector);
                 if (!resolvers.isEmpty()) {
-                    int redundant = 0;
+                    final List<AnnotatedValueResolver> duplicateResolvers = new ArrayList<>(resolvers.size());
                     for (AnnotatedValueResolver resolver : resolvers) {
                         if (!uniques.add(resolver)) {
-                            redundant++;
-                            warnDuplicateResolver(resolver, method.toGenericString());
+                            duplicateResolvers.add(resolver);
                         }
                     }
-                    if (redundant == resolvers.size()) {
+                    if (duplicateResolvers.size() == resolvers.size()) {
                         // Prevent redundant injection only when all parameters are redundant.
                         // Otherwise, we'd better to inject the method rather than ignore it.
                         continue;
+                    }
+
+                    for (AnnotatedValueResolver duplicateResolver : duplicateResolvers) {
+                        warnDuplicateResolver(duplicateResolver, method.toGenericString());
                     }
                     methodsBuilder.put(method, resolvers);
                 }
@@ -264,7 +299,8 @@ final class AnnotatedBeanFactoryRegistry {
     private static Map<Field, AnnotatedValueResolver> findFields(
             List<AnnotatedValueResolver> constructorAnnotatedResolvers,
             Map<Method, List<AnnotatedValueResolver>> methods,
-            BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers) {
+            BeanFactoryId beanFactoryId, List<RequestObjectResolver> objectResolvers,
+            DependencyInjector dependencyInjector) {
         final Set<AnnotatedValueResolver> uniques = uniqueResolverSet();
         uniques.addAll(constructorAnnotatedResolvers);
         methods.values().forEach(uniques::addAll);
@@ -275,8 +311,10 @@ final class AnnotatedBeanFactoryRegistry {
             final List<RequestConverter> converters =
                     AnnotationUtil.findDeclared(field, RequestConverter.class);
             final AnnotatedValueResolver resolver =
-                    AnnotatedValueResolver.ofBeanField(field, beanFactoryId.pathParams,
-                                                       addToFirstIfExists(objectResolvers, converters));
+                    AnnotatedValueResolver.ofBeanField(
+                            field, beanFactoryId.pathParams,
+                            addToFirstIfExists(objectResolvers, converters, dependencyInjector),
+                            dependencyInjector);
             if (resolver != null) {
                 if (uniques.add(resolver)) {
                     builder.put(field, resolver);

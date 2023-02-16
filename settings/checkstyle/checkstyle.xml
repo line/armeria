@@ -119,6 +119,12 @@
     <property name="format" value="CompletableFuture.completedFuture"/>
     <property name="message" value="Use UnmodifiableFuture.completedFuture() instead."/>
   </module>
+  <!--  Prefer Flags.meterRegistry -->
+  <module name="RegexpSingleline">
+    <property name="id" value="PreferFlagsMeterRegistry"/>
+    <property name="format" value="Metrics.globalRegistry"/>
+    <property name="message" value="Use Flags.meterRegistry() instead."/>
+  </module>
 
   <module name="JavadocPackage"/>
 
@@ -208,7 +214,9 @@
       <property name="allowMissingReturnTag" value="true"/>
       <property name="allowedAnnotations" value="Override, Test"/>
     </module>
-    <module name="MissingJavadocMethod"/>
+    <module name="MissingJavadocMethod">
+      <property name="scope" value="protected"/>
+    </module>
     <module name="MissingJavadocPackage"/>
     <module name="MissingJavadocType"/>
     <module name="JavadocParagraph"/>

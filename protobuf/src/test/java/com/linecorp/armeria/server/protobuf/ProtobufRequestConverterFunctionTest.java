@@ -19,6 +19,8 @@ package com.linecorp.armeria.server.protobuf;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
 import java.util.List;
 import java.util.Map;
@@ -46,10 +48,15 @@ import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.MediaType;
+import com.linecorp.armeria.common.MediaTypeNames;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.protobuf.testing.Messages.SimpleRequest;
+import com.linecorp.armeria.protobuf.testing.Messages.SimpleResponse;
 import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.server.annotation.FallthroughException;
+import com.linecorp.armeria.server.annotation.Get;
+import com.linecorp.armeria.server.annotation.Produces;
+import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.protobuf.ProtobufRequestConverterFunction.ResultType;
 
 class ProtobufRequestConverterFunctionTest {
@@ -150,8 +157,52 @@ class ProtobufRequestConverterFunctionTest {
                                          HttpData.ofUtf8(json));
         assertThatThrownBy(() -> converter.convertRequest(ctx, req, typeToken.getRawType(),
                                                           (ParameterizedType) typeToken.getType()))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("cannot be used for the key type of Map.");
+                .isInstanceOf(FallthroughException.class);
+    }
+
+    @Test
+    void nestedProtobufParameter() {
+        final ProtobufRequestConverterFunction converter = new ProtobufRequestConverterFunction();
+        final ProtobufRequestConverterFunctionProvider provider =
+                new ProtobufRequestConverterFunctionProvider();
+        for (Method method : NestedProtobufService.class.getDeclaredMethods()) {
+            if (!Modifier.isPublic(method.getModifiers())) {
+                continue;
+            }
+            if (method.getParameters().length == 0) {
+                continue;
+            }
+            final RequestConverterFunction fn = provider.createRequestConverterFunction(
+                    method.getParameters()[0].getParameterizedType(), converter);
+            assertThat(fn).isNull();
+        }
+    }
+
+    private static class NestedProtobufService {
+        @Get("/nestedList")
+        @Produces(MediaTypeNames.JSON)
+        public void nestedList(List<List<SimpleResponse>> param) {
+        }
+
+        @Get("/nestedSet")
+        @Produces(MediaTypeNames.JSON)
+        public void nestedSet(Set<Set<SimpleResponse>> param) {
+        }
+
+        @Get("/nestedKey")
+        @Produces(MediaTypeNames.JSON)
+        public void nestedKey(Map<List<SimpleResponse>, SimpleResponse> param) {
+        }
+
+        @Get("/nestedValue")
+        @Produces(MediaTypeNames.JSON)
+        public void nestedValue(Map<String, List<SimpleRequest>> param) {
+        }
+
+        @Get("/nonStringKey")
+        @Produces(MediaTypeNames.JSON)
+        public void nonStringKey(Map<Integer, SimpleResponse> param) {
+        }
     }
 
     private static class ProtobufArguments implements ArgumentsProvider {

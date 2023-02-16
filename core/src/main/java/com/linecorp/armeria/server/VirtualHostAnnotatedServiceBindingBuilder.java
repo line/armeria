@@ -22,15 +22,17 @@ import static java.util.Objects.requireNonNull;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
-import java.util.concurrent.Executors;
+import java.util.Map.Entry;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableList.Builder;
 
+import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.SuccessFunction;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceElement;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceFactory;
@@ -63,7 +65,7 @@ import com.linecorp.armeria.server.logging.AccessLogWriter;
  * @see VirtualHostBuilder
  * @see AnnotatedServiceBindingBuilder
  */
-public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceConfigSetters {
+public final class VirtualHostAnnotatedServiceBindingBuilder implements AnnotatedServiceConfigSetters {
 
     private final DefaultServiceConfigSetters defaultServiceConfigSetters = new DefaultServiceConfigSetters();
     private final VirtualHostBuilder virtualHostBuilder;
@@ -71,6 +73,8 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
     private final Builder<RequestConverterFunction> requestConverterFunctionBuilder = ImmutableList.builder();
     private final Builder<ResponseConverterFunction> responseConverterFunctionBuilder = ImmutableList.builder();
 
+    @Nullable
+    private String queryDelimiter;
     private boolean useBlockingTaskExecutor;
     private String pathPrefix = "/";
     @Nullable
@@ -80,19 +84,13 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         this.virtualHostBuilder = virtualHostBuilder;
     }
 
-    /**
-     * Sets the path prefix to be used for this {@link VirtualHostAnnotatedServiceBindingBuilder}.
-     * @param pathPrefix string representing the path prefix.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder pathPrefix(String pathPrefix) {
         this.pathPrefix = requireNonNull(pathPrefix, "pathPrefix");
         return this;
     }
 
-    /**
-     * Adds the given {@link ExceptionHandlerFunction}s to this
-     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder exceptionHandlers(
             ExceptionHandlerFunction... exceptionHandlerFunctions) {
         requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
@@ -100,10 +98,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
-    /**
-     * Adds the given {@link ExceptionHandlerFunction}s to this
-     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder exceptionHandlers(
             Iterable<? extends ExceptionHandlerFunction> exceptionHandlerFunctions) {
         requireNonNull(exceptionHandlerFunctions, "exceptionHandlerFunctions");
@@ -111,10 +106,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
-    /**
-     * Adds the given {@link ResponseConverterFunction}s to this
-     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder responseConverters(
             ResponseConverterFunction... responseConverterFunctions) {
         requireNonNull(responseConverterFunctions, "responseConverterFunctions");
@@ -122,10 +114,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
-    /**
-     * Adds the given {@link ResponseConverterFunction}s to this
-     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder responseConverters(
             Iterable<? extends ResponseConverterFunction> responseConverterFunctions) {
         requireNonNull(responseConverterFunctions, "responseConverterFunctions");
@@ -133,10 +122,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
-    /**
-     * Adds the given {@link RequestConverterFunction}s to this
-     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder requestConverters(
             RequestConverterFunction... requestConverterFunctions) {
         requireNonNull(requestConverterFunctions, "requestConverterFunctions");
@@ -144,10 +130,7 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
-    /**
-     * Adds the given {@link RequestConverterFunction}s to this
-     * {@link VirtualHostAnnotatedServiceBindingBuilder}.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder requestConverters(
             Iterable<? extends RequestConverterFunction> requestConverterFunctions) {
         requireNonNull(requestConverterFunctions, "requestConverterFunctions");
@@ -155,14 +138,28 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
-    /**
-     * Sets whether the service executes service methods using the blocking executor. By default, service
-     * methods are executed directly on the event loop for implementing fully asynchronous services. If your
-     * service uses blocking logic, you should either execute such logic in a separate thread using something
-     * like {@link Executors#newCachedThreadPool()} or enable this setting.
-     */
+    @Override
     public VirtualHostAnnotatedServiceBindingBuilder useBlockingTaskExecutor(boolean useBlockingTaskExecutor) {
         this.useBlockingTaskExecutor = useBlockingTaskExecutor;
+        return this;
+    }
+
+    /**
+     * Sets the delimiter for a query parameter value. Multiple values delimited by the specified
+     * {@code delimiter} will be automatically split into a list of values.
+     *
+     * <p>It is disabled by default.
+     *
+     * <p>Note that this delimiter works only when the resolve target class type is collection and the number
+     * of values of the query parameter is one. For example with the query delimiter {@code ","}:
+     * <ul>
+     *     <li>{@code ?query=a,b,c} will be resolved to {@code "a"}, {@code "b"} and {@code "c"}</li>
+     *     <li>{@code ?query=a,b,c&query=d,e,f} will be resolved to {@code "a,b,c"} and {@code "d,e,f"}</li>
+     * </ul>
+     */
+    @UnstableApi
+    public VirtualHostAnnotatedServiceBindingBuilder queryDelimiter(String delimiter) {
+        this.queryDelimiter = requireNonNull(delimiter, "delimiter");
         return this;
     }
 
@@ -201,6 +198,13 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
                                                                      boolean shutdownOnStop) {
         defaultServiceConfigSetters.accessLogWriter(accessLogWriter, shutdownOnStop);
         return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder decorator(
+            DecoratingHttpServiceFunction decoratingHttpServiceFunction) {
+        return (VirtualHostAnnotatedServiceBindingBuilder) AnnotatedServiceConfigSetters.super.decorator(
+                decoratingHttpServiceFunction);
     }
 
     @Override
@@ -269,6 +273,32 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
         return this;
     }
 
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder addHeader(CharSequence name, Object value) {
+        defaultServiceConfigSetters.addHeader(name, value);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder addHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        defaultServiceConfigSetters.addHeaders(defaultHeaders);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder setHeader(CharSequence name, Object value) {
+        defaultServiceConfigSetters.setHeader(name, value);
+        return this;
+    }
+
+    @Override
+    public VirtualHostAnnotatedServiceBindingBuilder setHeaders(
+            Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders) {
+        defaultServiceConfigSetters.setHeaders(defaultHeaders);
+        return this;
+    }
+
     /**
      * Registers the given service to the {@linkplain VirtualHostBuilder}.
      *
@@ -290,8 +320,10 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
      * {@link AnnotatedServiceExtensions} to the {@link VirtualHostBuilder}.
      *
      * @param extensions the {@link AnnotatedServiceExtensions} at the virtual host level.
+     * @param dependencyInjector the {@link DependencyInjector} to inject dependencies.
      */
-    List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedServiceExtensions extensions) {
+    List<ServiceConfigBuilder> buildServiceConfigBuilder(AnnotatedServiceExtensions extensions,
+                                                         DependencyInjector dependencyInjector) {
         final List<RequestConverterFunction> requestConverterFunctions =
                 requestConverterFunctionBuilder.addAll(extensions.requestConverters()).build();
         final List<ResponseConverterFunction> responseConverterFunctions =
@@ -303,8 +335,9 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements ServiceC
 
         final List<AnnotatedServiceElement> elements =
                 AnnotatedServiceFactory.find(
-                        pathPrefix, service, useBlockingTaskExecutor,
-                        requestConverterFunctions, responseConverterFunctions, exceptionHandlerFunctions);
+                        pathPrefix, service, useBlockingTaskExecutor, requestConverterFunctions,
+                        responseConverterFunctions, exceptionHandlerFunctions, dependencyInjector,
+                        queryDelimiter);
         return elements.stream().map(element -> {
             final HttpService decoratedService =
                     element.buildSafeDecoratedService(defaultServiceConfigSetters.decorator());

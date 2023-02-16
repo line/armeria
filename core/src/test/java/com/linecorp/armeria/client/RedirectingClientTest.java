@@ -80,10 +80,10 @@ class RedirectingClientTest {
             });
 
             sb.service("/seeOther", (ctx, req) -> HttpResponse.from(
-                    req.aggregate().thenApply(aggregatedReq -> {
-                        assertThat(aggregatedReq.contentUtf8()).isEqualTo("hello!");
-                        return HttpResponse.ofRedirect(HttpStatus.SEE_OTHER, "/seeOtherRedirect");
-                    })))
+                      req.aggregate().thenApply(aggregatedReq -> {
+                          assertThat(aggregatedReq.contentUtf8()).isEqualTo("hello!");
+                          return HttpResponse.ofRedirect(HttpStatus.SEE_OTHER, "/seeOtherRedirect");
+                      })))
               .service("/seeOtherRedirect", (ctx, req) -> {
                   assertThat(ctx.method()).isSameAs(HttpMethod.GET);
                   return HttpResponse.of(200);
@@ -91,7 +91,11 @@ class RedirectingClientTest {
 
             sb.service("/anotherDomain", (ctx, req) -> HttpResponse.ofRedirect(
                     "http://foo.com:" + server.httpPort() + "/anotherDomainRedirect"));
-            sb.virtualHost("foo.com").service("/anotherDomainRedirect", (ctx, req) -> HttpResponse.of(200));
+            sb.virtualHost("foo.com")
+              .service("/anotherDomainRedirect", (ctx, req) -> {
+                assertThat(req.authority()).isEqualTo("foo.com:" + server.server().activeLocalPort());
+                return HttpResponse.of(200);
+            });
 
             sb.service("/removeDotSegments/foo", (ctx, req) -> HttpResponse.ofRedirect("./bar"))
               .service("/removeDotSegments/bar", (ctx, req) -> HttpResponse.of(200));

@@ -24,9 +24,12 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
+import com.google.common.base.MoreObjects;
+
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.AsyncCloseable;
+import com.linecorp.armeria.common.util.Exceptions;
 
 final class HealthCheckContextGroup {
     private static final CompletableFuture<?>[] EMPTY_FUTURES = new CompletableFuture[0];
@@ -54,20 +57,58 @@ final class HealthCheckContextGroup {
     }
 
     void initialize() {
-        initFutures = CompletableFuture.allOf(contexts.values().stream()
-                                                      .peek(context -> {
-                                                          if (!context.isInitialized()) {
-                                                              // A newly created context
-                                                              context.init(checkerFactory.apply(context));
-                                                          }
-                                                      })
-                                                      .map(DefaultHealthCheckerContext::whenInitialized)
-                                                      .collect(toImmutableList())
-                                                      .toArray(EMPTY_FUTURES));
+        final List<CompletableFuture<Void>> futures =
+                contexts.values().stream()
+                        .peek(context -> {
+                            if (!context.initializationStarted()) {
+                                // A newly created context
+                                context.init(checkerFactory.apply(context));
+                            }
+                        })
+                        .map(DefaultHealthCheckerContext::whenInitialized)
+                        .collect(toImmutableList());
+
+        initFutures = CompletableFuture.allOf(futures.toArray(EMPTY_FUTURES)).handle((unused, cause) -> {
+            if (cause == null) {
+                return null;
+            }
+            if (futures.isEmpty()) {
+                return null;
+            }
+
+            if (futures.stream().anyMatch(future -> !future.isCompletedExceptionally())) {
+                // There is at least one success
+                return null;
+            }
+
+            Throwable combined = null;
+            for (CompletableFuture<Void> future : futures) {
+                try {
+                    future.join();
+                } catch (Throwable ex) {
+                    if (combined == null) {
+                        combined = ex;
+                    } else {
+                        combined.addSuppressed(Exceptions.peel(ex));
+                    }
+                }
+            }
+            assert combined != null;
+            return Exceptions.throwUnsafely(combined);
+        });
     }
 
     CompletableFuture<?> whenInitialized() {
         assert initFutures != null : "Should call initialize() before invoking this method.";
         return initFutures;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("contexts", contexts)
+                          .add("candidates", candidates)
+                          .add("initialized", initFutures != null && initFutures.isDone())
+                          .toString();
     }
 }
