@@ -16,6 +16,8 @@
 
 package com.linecorp.armeria.server.logging;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
@@ -47,6 +49,7 @@ public final class UncaughtExceptionsLogger {
      * @param interval interval between logging in seconds.
      */
     public static void schedule(EventLoopGroup workerGroup, long interval) {
+        requireNonNull(workerGroup, "workerGroup");
         if (!initialized) {
             UncaughtExceptionsLogger.initialize(interval);
         }
@@ -85,6 +88,7 @@ public final class UncaughtExceptionsLogger {
         if (!initialized) {
             throw new IllegalStateException("UncaughtExceptionLogger is not initialized.");
         }
+        requireNonNull(throwable, "throwable");
         counter.increment();
         lastThrownException = throwable;
     }
