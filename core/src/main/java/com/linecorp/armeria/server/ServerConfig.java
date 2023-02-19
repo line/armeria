@@ -295,4 +295,14 @@ public interface ServerConfig {
      * Returns the {@link DependencyInjector} that injects dependencies in annotations.
      */
     DependencyInjector dependencyInjector();
+
+    /**
+     * Returns whether the server should log uncaught exceptions.
+     */
+    boolean logUncaughtExceptions();
+
+    /**
+     * Returns the interval between logging uncaught exceptions.
+     */
+    long logUncaughtExceptionsIntervalInSeconds();
 }

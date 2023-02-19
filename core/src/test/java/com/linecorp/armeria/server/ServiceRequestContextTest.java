@@ -195,6 +195,12 @@ class ServiceRequestContextTest {
         assertThat(ctx.queryParams("Not exist")).isEmpty();
     }
 
+    @Test
+    void defaultServiceRequestContextShouldLogUncaughtExceptions() {
+        final ServiceRequestContext sctx = serviceRequestContext();
+        assertThat(sctx.shouldLogUncaughtExceptions()).isTrue();
+    }
+
     private static void assertUnwrapAllCurrentCtx(@Nullable RequestContext ctx) {
         final RequestContext current = RequestContext.currentOrNull();
         if (current == null) {

@@ -66,6 +66,7 @@ import com.linecorp.armeria.common.RequestContext;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.logging.LogLevel;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.testing.AnticipatedException;
 import com.linecorp.armeria.server.HttpStatusException;
@@ -90,6 +91,7 @@ import com.linecorp.armeria.server.annotation.ProducesJson;
 import com.linecorp.armeria.server.annotation.ResponseConverter;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.StatusCode;
+import com.linecorp.armeria.server.annotation.decorator.LoggingDecorator;
 import com.linecorp.armeria.server.logging.LoggingService;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
@@ -159,6 +161,17 @@ class AnnotatedServiceTest {
               .queryDelimiter(":")
               .decorator(LoggingService.newDecorator())
               .build(new MyAnnotatedService14());
+
+            sb.annotatedService()
+              .pathPrefix("/17")
+              .queryDelimiter(":")
+              .build(new MyAnnotatedService15());
+
+            sb.annotatedService()
+              .pathPrefix("/18")
+              .queryDelimiter(":")
+              .decorator(LoggingService.newDecorator())
+              .build(new MyAnnotatedService16());
         }
     };
 
@@ -829,6 +842,32 @@ class AnnotatedServiceTest {
         }
     }
 
+    @ResponseConverter(UnformattedStringConverterFunction.class)
+    public static class MyAnnotatedService15 {
+        @Get
+        @Path("/logUncaughtExceptions")
+        public void throwExceptionEndpoint() {
+            assertThat(ServiceRequestContext.current().shouldLogUncaughtExceptions()).isTrue();
+            throw new IllegalArgumentException(
+                    "Should be caught if service isn't decorated with LoggingService");
+        }
+    }
+
+    @LoggingDecorator(
+            requestLogLevel = LogLevel.INFO,
+            successfulResponseLogLevel = LogLevel.INFO
+    )
+    @ResponseConverter(UnformattedStringConverterFunction.class)
+    public static class MyAnnotatedService16 {
+        @Get
+        @Path("/doNotLogUncaughtExceptions")
+        public void throwExceptionEndpoint() {
+            assertThat(ServiceRequestContext.current().shouldLogUncaughtExceptions()).isFalse();
+            throw new IllegalArgumentException(
+                    "Should be caught if service isn't decorated with LoggingService");
+        }
+    }
+
     @Test
     void testAnnotatedService() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
@@ -1150,7 +1189,7 @@ class AnnotatedServiceTest {
     }
 
     @Test
-    public void testMultiplePaths() throws Exception {
+    void testMultiplePaths() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             testStatusCode(hc, get("/12/pathMapping1"), 200);
             testStatusCode(hc, get("/12/pathMapping2"), 200);
@@ -1228,6 +1267,18 @@ class AnnotatedServiceTest {
             testBody(hc, get("/15/param/multiWithDelimiter?params=a,b,c&params=d,e,f"), "a,b,c/d,e,f");
             testBody(hc, get("/15/param/multiWithDelimiter?params=a$b$c&params=d$e$f"), "a$b$c/d$e$f");
         }
+    }
+
+    @Test
+    void testLogUncaughtExceptions() {
+        // AnnotatedService without loggingService should log uncaught exceptions
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+        final String path = "/17/logUncaughtExceptions";
+        client.execute(RequestHeaders.of(HttpMethod.GET, path));
+
+        // AnnotatedService with loggingService shouldn't log uncaught exceptions
+        final String path2 = "/18/doNotLogUncaughtExceptions";
+        client.execute(RequestHeaders.of(HttpMethod.GET, path2));
     }
 
     private enum UserLevel {

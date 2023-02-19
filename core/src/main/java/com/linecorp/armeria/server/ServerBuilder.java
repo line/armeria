@@ -87,11 +87,14 @@ import com.linecorp.armeria.internal.common.BuiltInDependencyInjector;
 import com.linecorp.armeria.internal.common.ReflectiveDependencyInjector;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
 import com.linecorp.armeria.internal.server.annotation.AnnotatedServiceExtensions;
 import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.server.logging.UncaughtExceptionsLogger;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -209,6 +212,8 @@ public final class ServerBuilder implements TlsSetters {
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
+    private boolean logUncaughtExceptions = true;
+    private long logUncaughtExceptionsIntervalInSeconds = 60;
     @Nullable
     private DependencyInjector dependencyInjector;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
@@ -1809,6 +1814,25 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Exceptions are not caught when {@link AnnotatedService} is not decorated with {@link LoggingService}.
+     * Uncaught exceptions are logged using {@link UncaughtExceptionsLogger}
+     * @param value whether to log uncaught exceptions.
+     */
+    public ServerBuilder logUncaughtExceptions(boolean value) {
+        logUncaughtExceptions = value;
+        return this;
+    }
+
+    /**
+     * Sets the time interval between logging uncaught exceptions.
+     * @param seconds the time interval between logging uncaught exceptions in seconds.
+     */
+    public ServerBuilder logUncaughtExceptionsInterval(long seconds) {
+        logUncaughtExceptionsIntervalInSeconds = seconds;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
@@ -1939,7 +1963,8 @@ public final class ServerBuilder implements TlsSetters {
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
-                http1HeaderNaming, dependencyInjector, ImmutableList.copyOf(shutdownSupports));
+                http1HeaderNaming, dependencyInjector, ImmutableList.copyOf(shutdownSupports),
+                logUncaughtExceptions, logUncaughtExceptionsIntervalInSeconds);
     }
 
     /**

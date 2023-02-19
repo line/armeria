@@ -54,6 +54,8 @@ import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
+import com.linecorp.armeria.internal.server.annotation.AnnotatedService;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 /**
  * Provides information about an invocation and related utilities. Every request being handled has its own
@@ -579,6 +581,18 @@ public interface ServiceRequestContext extends RequestContext {
      * Returns the proxied addresses of the current {@link Request}.
      */
     ProxiedAddresses proxiedAddresses();
+
+    /**
+     * Returns whether uncaught exceptions thrown by {@link AnnotatedService} should be logged.
+     * When {@link LoggingService} handles exceptions, this is set to false.
+     */
+    boolean shouldLogUncaughtExceptions();
+
+    /**
+     * Sets whether to log uncaught exceptions.
+     * @param value whether to log uncaught exceptions
+     */
+    void setShouldLogUncaughtExceptions(boolean value);
 
     /**
      * Initiates graceful connection shutdown with a given drain duration in microseconds and returns

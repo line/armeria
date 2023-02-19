@@ -116,6 +116,7 @@ public final class DefaultServiceRequestContext
 
     @Nullable
     private String strVal;
+    private Boolean shouldLogUncaughtException;
 
     /**
      * Creates a new instance.
@@ -188,6 +189,8 @@ public final class DefaultServiceRequestContext
         maxRequestLength = cfg.maxRequestLength();
         this.additionalResponseHeaders = additionalResponseHeaders;
         this.additionalResponseTrailers = additionalResponseTrailers;
+
+        shouldLogUncaughtException = true;
     }
 
     @Nullable
@@ -437,6 +440,16 @@ public final class DefaultServiceRequestContext
     @Override
     public ProxiedAddresses proxiedAddresses() {
         return proxiedAddresses;
+    }
+
+    @Override
+    public boolean shouldLogUncaughtExceptions() {
+        return shouldLogUncaughtException;
+    }
+
+    @Override
+    public void setShouldLogUncaughtExceptions(boolean value) {
+        shouldLogUncaughtException = value;
     }
 
     @Override

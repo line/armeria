@@ -76,6 +76,7 @@ import com.linecorp.armeria.common.util.StartStopSupport;
 import com.linecorp.armeria.common.util.Version;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.util.ChannelUtil;
+import com.linecorp.armeria.server.logging.UncaughtExceptionsLogger;
 
 import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -515,6 +516,7 @@ public final class Server implements ListenableAsyncCloseable {
                             .addListener(new NextServerPortStartListener(this, it, future));
 
             setupServerMetrics();
+            reportUncaughtExceptions();
             return future;
         }
 
@@ -556,8 +558,17 @@ public final class Server implements ListenableAsyncCloseable {
                                 ConnectionLimitingHandler::numConnections);
         }
 
+        private void reportUncaughtExceptions() {
+            if (!config().logUncaughtExceptions()) {
+                return;
+            }
+            final long interval = config().logUncaughtExceptionsIntervalInSeconds();
+            UncaughtExceptionsLogger.schedule(config().workerGroup(), interval);
+        }
+
         @Override
         protected CompletionStage<Void> doStop(@Nullable Void arg) {
+            UncaughtExceptionsLogger.unSchedule();
             final CompletableFuture<Void> future = new CompletableFuture<>();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             if (gracefulShutdownSupport == null ||

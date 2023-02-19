@@ -641,4 +641,27 @@ class ServerBuilderTest {
                 .containsExactly(entry(TCP_USER_TIMEOUT, userDefinedValue),
                                  entry(SO_LINGER, lingerMillis));
     }
+
+    @Test
+    void testServerLogUncaughtExceptions() {
+        final Server server1 = Server.builder()
+                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                               .build();
+        assertThat(server1.config().logUncaughtExceptions()).isTrue();
+        assertThat(server1.config().logUncaughtExceptionsIntervalInSeconds()).isEqualTo(60);
+
+        final Server server2 = Server.builder()
+                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                               .logUncaughtExceptions(true)
+                               .logUncaughtExceptionsInterval(120)
+                               .build();
+        assertThat(server2.config().logUncaughtExceptions()).isTrue();
+        assertThat(server2.config().logUncaughtExceptionsIntervalInSeconds()).isEqualTo(120);
+
+        final Server server3 = Server.builder()
+                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                               .logUncaughtExceptions(false)
+                               .build();
+        assertThat(server3.config().logUncaughtExceptions()).isFalse();
+    }
 }

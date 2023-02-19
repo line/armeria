@@ -70,6 +70,7 @@ import com.linecorp.armeria.server.annotation.HttpResult;
 import com.linecorp.armeria.server.annotation.Path;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.annotation.ServiceName;
+import com.linecorp.armeria.server.logging.UncaughtExceptionsLogger;
 
 /**
  * An {@link HttpService} which is defined by a {@link Path} or HTTP method annotations.
@@ -531,6 +532,9 @@ public final class AnnotatedService implements HttpService {
                 final HttpResponse response = unwrap().serve(ctx, req);
                 return response.recover(cause -> {
                     try (SafeCloseable ignored = ctx.push()) {
+                        if (ctx.shouldLogUncaughtExceptions()) {
+                            UncaughtExceptionsLogger.handleUncaughtExceptions(cause);
+                        }
                         return exceptionHandler.handleException(ctx, req, cause);
                     }
                 });

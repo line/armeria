@@ -112,6 +112,8 @@ final class DefaultServerConfig implements ServerConfig {
     private final Http1HeaderNaming http1HeaderNaming;
     private final DependencyInjector dependencyInjector;
     private final List<ShutdownSupport> shutdownSupports;
+    private final boolean logUncaughtExceptions;
+    private final long logUncaughtExceptionsIntervalInSeconds;
 
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
@@ -143,7 +145,9 @@ final class DefaultServerConfig implements ServerConfig {
             @Nullable Mapping<String, SslContext> sslContexts,
             Http1HeaderNaming http1HeaderNaming,
             DependencyInjector dependencyInjector,
-            List<ShutdownSupport> shutdownSupports) {
+            List<ShutdownSupport> shutdownSupports,
+            boolean logUncaughtExceptions,
+            long logUncaughtExceptionsIntervalInSeconds) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -257,6 +261,8 @@ final class DefaultServerConfig implements ServerConfig {
         this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
         this.dependencyInjector = requireNonNull(dependencyInjector, "dependencyInjector");
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
+        this.logUncaughtExceptions = logUncaughtExceptions;
+        this.logUncaughtExceptionsIntervalInSeconds = logUncaughtExceptionsIntervalInSeconds;
     }
 
     private static Int2ObjectMap<Mapping<String, VirtualHost>> buildDomainAndPortMapping(
@@ -640,6 +646,16 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public DependencyInjector dependencyInjector() {
         return dependencyInjector;
+    }
+
+    @Override
+    public boolean logUncaughtExceptions() {
+        return logUncaughtExceptions;
+    }
+
+    @Override
+    public long logUncaughtExceptionsIntervalInSeconds() {
+        return logUncaughtExceptionsIntervalInSeconds;
     }
 
     List<ShutdownSupport> shutdownSupports() {
