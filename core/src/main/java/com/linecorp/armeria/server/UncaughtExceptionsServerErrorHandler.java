@@ -45,6 +45,7 @@ public class UncaughtExceptionsServerErrorHandler implements ServerErrorHandler 
     private final ServerErrorHandler delegate;
     private final LongAdder counter;
     private final long intervalInSeconds;
+    private boolean isScheduled;
     @Nullable
     private Throwable lastThrownException;
     @Nullable
@@ -62,7 +63,7 @@ public class UncaughtExceptionsServerErrorHandler implements ServerErrorHandler 
     @Nullable
     @Override
     public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
-        if (ctx.shouldLogUncaughtExceptions()) {
+        if (isScheduled && ctx.shouldLogUncaughtExceptions()) {
             counter.increment();
             lastThrownException = cause;
         }
@@ -83,16 +84,20 @@ public class UncaughtExceptionsServerErrorHandler implements ServerErrorHandler 
      */
     public void scheduleLogging(EventLoopGroup workerGroup) {
         requireNonNull(workerGroup, "workerGroup");
-        reportUncaughtExceptionsSchedule = workerGroup.scheduleAtFixedRate(
-                this::logUncaughtExceptions, intervalInSeconds, intervalInSeconds, TimeUnit.SECONDS);
+        if (!isScheduled) {
+            reportUncaughtExceptionsSchedule = workerGroup.scheduleAtFixedRate(
+                    this::logUncaughtExceptions, intervalInSeconds, intervalInSeconds, TimeUnit.SECONDS);
+            isScheduled = true;
+        }
     }
 
     /**
      * Unschedule uncaught exceptions logging.
      */
     public void unScheduleLogging() {
-        if (reportUncaughtExceptionsSchedule != null) {
+        if (isScheduled && reportUncaughtExceptionsSchedule != null) {
             reportUncaughtExceptionsSchedule.cancel(true);
+            isScheduled = false;
         }
     }
 

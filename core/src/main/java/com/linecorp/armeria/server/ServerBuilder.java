@@ -1940,15 +1940,16 @@ public final class ServerBuilder implements TlsSetters {
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
-        ServerErrorHandler errorHandler = this.errorHandler;
-        if (errorHandler != ServerErrorHandler.ofDefault()) {
-            // Ensure that ServerErrorHandler never returns null by falling back to the default.
-            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
+        ServerErrorHandler errorHandler;
+        if (logUncaughtExceptions) {
+            errorHandler = new UncaughtExceptionsServerErrorHandler(this.errorHandler, logUncaughtExceptionsIntervalInSeconds);
+        } else {
+            errorHandler = this.errorHandler;
         }
 
-        if (logUncaughtExceptions) {
-            errorHandler = new UncaughtExceptionsServerErrorHandler(errorHandler,
-                                                                    logUncaughtExceptionsIntervalInSeconds);
+        if (this.errorHandler != ServerErrorHandler.ofDefault()) {
+            // Ensure that ServerErrorHandler never returns null by falling back to the default.
+            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
         }
 
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
