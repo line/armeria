@@ -66,10 +66,6 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
         final boolean isAnnotatedService = serviceConfig.service().as(AnnotatedService.class) != null;
         if (isAnnotatedService) {
             if (cause instanceof IllegalArgumentException) {
-                if (needsToWarn()) {
-                    logger.warn("{} Failed processing a request:", ctx, cause);
-                }
-
                 return internalRenderStatus(serviceConfig, ctx.request().headers(),
                                             HttpStatus.BAD_REQUEST, cause);
             }
@@ -95,10 +91,6 @@ enum DefaultServerErrorHandler implements ServerErrorHandler {
         if (cause instanceof RequestTimeoutException) {
             return internalRenderStatus(serviceConfig, ctx.request().headers(),
                                         HttpStatus.SERVICE_UNAVAILABLE, cause);
-        }
-
-        if (isAnnotatedService && needsToWarn() && !Exceptions.isExpected(cause)) {
-            logger.warn("{} Unhandled exception from a service:", ctx, cause);
         }
 
         return internalRenderStatus(serviceConfig, ctx.request().headers(),

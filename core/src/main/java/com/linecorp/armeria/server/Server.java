@@ -515,6 +515,7 @@ public final class Server implements ListenableAsyncCloseable {
                             .addListener(new NextServerPortStartListener(this, it, future));
 
             setupServerMetrics();
+            scheduleUncaughtExceptionsLogging();
             return future;
         }
 
@@ -556,8 +557,20 @@ public final class Server implements ListenableAsyncCloseable {
                                 ConnectionLimitingHandler::numConnections);
         }
 
+        private void scheduleUncaughtExceptionsLogging() {
+            if (config().shouldLogUncaughtExceptions() &&
+                config().errorHandler() instanceof UncaughtExceptionsServerErrorHandler) {
+                ((UncaughtExceptionsServerErrorHandler) config.errorHandler()).scheduleLogging(
+                        config.workerGroup());
+            }
+        }
+
         @Override
         protected CompletionStage<Void> doStop(@Nullable Void arg) {
+            if (config().errorHandler() instanceof UncaughtExceptionsServerErrorHandler) {
+                ((UncaughtExceptionsServerErrorHandler) config().errorHandler()).unScheduleLogging();
+            }
+
             final CompletableFuture<Void> future = new CompletableFuture<>();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
             if (gracefulShutdownSupport == null ||
