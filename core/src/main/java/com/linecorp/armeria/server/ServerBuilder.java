@@ -209,6 +209,8 @@ public final class ServerBuilder implements TlsSetters {
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
+    private boolean logUncaughtExceptions = true;
+    private long logUncaughtExceptionsIntervalInSeconds = 60;
     @Nullable
     private DependencyInjector dependencyInjector;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
@@ -1809,6 +1811,24 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Uncaught exceptions are logged using {@link UncaughtExceptionsServerErrorHandler}.
+     * @param value whether to log uncaught exceptions.
+     */
+    public ServerBuilder logUncaughtExceptions(boolean value) {
+        logUncaughtExceptions = value;
+        return this;
+    }
+
+    /**
+     * Sets the time interval between logging uncaught exceptions.
+     * @param seconds the time interval between logging uncaught exceptions in seconds.
+     */
+    public ServerBuilder logUncaughtExceptionsInterval(long seconds) {
+        logUncaughtExceptionsIntervalInSeconds = seconds;
+        return this;
+    }
+
+    /**
      * Returns a newly-created {@link Server} based on the configuration properties set so far.
      */
     public Server build() {
@@ -1926,6 +1946,11 @@ public final class ServerBuilder implements TlsSetters {
             errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
         }
 
+        if (logUncaughtExceptions) {
+            errorHandler = new UncaughtExceptionsServerErrorHandler(errorHandler,
+                                                                    logUncaughtExceptionsIntervalInSeconds);
+        }
+
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
@@ -1939,7 +1964,8 @@ public final class ServerBuilder implements TlsSetters {
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
-                http1HeaderNaming, dependencyInjector, ImmutableList.copyOf(shutdownSupports));
+                http1HeaderNaming, dependencyInjector, ImmutableList.copyOf(shutdownSupports),
+                logUncaughtExceptions, logUncaughtExceptionsIntervalInSeconds);
     }
 
     /**
