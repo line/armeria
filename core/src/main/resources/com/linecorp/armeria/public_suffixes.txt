@@ -146,6 +146,7 @@
 2ix.at
 2ix.ch
 2ix.de
+3.azurestaticapps.net
 3.bg
 32-b.it
 3utilities.com
@@ -262,6 +263,8 @@ adimo.co.uk
 adm.br
 adobeaemcloud.com
 adobeaemcloud.net
+adobeio-static.net
+adobeioruntime.net
 ads
 adult
 adult.ht
@@ -342,8 +345,19 @@ aizuwakamatsu.fukushima.jp
 aju.br
 ak.us
 akabira.hokkaido.jp
+akadns.net
 akagi.shimane.jp
 akaiwa.okayama.jp
+akamai-staging.net
+akamai.net
+akamaiedge-staging.net
+akamaiedge.net
+akamaihd-staging.net
+akamaihd.net
+akamaiorigin-staging.net
+akamaiorigin.net
+akamaized-staging.net
+akamaized.net
 akashi.hyogo.jp
 akdn
 aki.kochi.jp
@@ -646,6 +660,7 @@ author
 author.aero
 auto
 auto.pl
+autocode.dev
 automotive.museum
 autos
 av.it
@@ -1188,6 +1203,8 @@ can.museum
 canada.museum
 candypop.jp
 canon
+canva-apps.cn
+canva-apps.com
 capebreton.museum
 capetown
 capital
@@ -2168,7 +2185,11 @@ ed.pw
 edeka
 edgeapp.net
 edgecompute.app
+edgekey-staging.net
+edgekey.net
 edgestack.me
+edgesuite-staging.net
+edgesuite.net
 editorx.io
 edogawa.tokyo.jp
 edu
@@ -2477,6 +2498,7 @@ farsund.no
 fashion
 fashionstore.jp
 fast
+fastly-edge.com
 fastly-terrarium.com
 fastlylb.net
 faststacks.net
@@ -3942,6 +3964,7 @@ istmein.de
 isumi.chiba.jp
 it
 it.ao
+it.com
 it.eu.org
 it1.eur.aruba.jenv-aruba.cloud
 it1.jenv-aruba.cloud
@@ -6707,6 +6730,7 @@ priv.instances.scw.cloud
 priv.me
 priv.no
 priv.pl
+privatelink.snowflake.app
 privatizehealthinsurance.net
 pro
 pro.az
@@ -7583,6 +7607,7 @@ snasa.no
 sncf
 snillfjord.no
 snoasa.no
+snowflake.app
 so
 so.gov.pl
 so.it
@@ -7732,6 +7757,7 @@ stpetersburg.museum
 strand.no
 stranda.no
 stream
+streamlit.app
 streamlitapp.com
 stripper.jp
 stryn.no
