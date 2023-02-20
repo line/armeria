@@ -233,6 +233,16 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
+    public boolean shouldLogUncaughtExceptions() {
+        return unwrap().shouldLogUncaughtExceptions();
+    }
+
+    @Override
+    public void setShouldLogUncaughtExceptions(boolean value) {
+        unwrap().setShouldLogUncaughtExceptions(value);
+    }
+
+    @Override
     public CompletableFuture<Void> initiateConnectionShutdown(long drainDurationMicros) {
         return unwrap().initiateConnectionShutdown(drainDurationMicros);
     }
