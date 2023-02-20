@@ -29,6 +29,8 @@ abstract class AbstractEventLoopState {
                                      DefaultEventLoopScheduler scheduler) {
         if (maxNumEventLoops == 1) {
             return new OneEventLoopState(eventLoops, scheduler);
+        } else if (maxNumEventLoops <= 4) {
+            return new ArrayBasedEventLoopState(eventLoops, maxNumEventLoops, scheduler);
         }
         // TODO(minwoox) Introduce array based state which is used when the maxNumEventLoops is greater than 1
         //               and less than N for the performance.
