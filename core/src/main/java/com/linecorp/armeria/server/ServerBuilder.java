@@ -1942,7 +1942,8 @@ public final class ServerBuilder implements TlsSetters {
 
         ServerErrorHandler errorHandler;
         if (logUncaughtExceptions) {
-            errorHandler = new UncaughtExceptionsServerErrorHandler(this.errorHandler, logUncaughtExceptionsIntervalInSeconds);
+            errorHandler = new UncaughtExceptionsServerErrorHandler(this.errorHandler,
+                                                                    logUncaughtExceptionsIntervalInSeconds);
         } else {
             errorHandler = this.errorHandler;
         }
