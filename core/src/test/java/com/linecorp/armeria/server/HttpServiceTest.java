@@ -16,32 +16,25 @@
 
 package com.linecorp.armeria.server;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
+import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.common.*;
+import com.linecorp.armeria.server.logging.LoggingService;
+import com.linecorp.armeria.testing.junit4.server.ServerRule;
 import org.apache.http.Header;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpHead;
-import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.methods.*;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
 import org.junit.ClassRule;
 import org.junit.Test;
 
-import com.linecorp.armeria.client.WebClient;
-import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpData;
-import com.linecorp.armeria.common.HttpHeaderNames;
-import com.linecorp.armeria.common.HttpHeaders;
-import com.linecorp.armeria.common.HttpRequest;
-import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.ResponseHeaders;
-import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URL;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.Assume.assumeThat;
 
 public class HttpServiceTest {
 
@@ -63,15 +56,15 @@ public class HttpServiceTest {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
-                                           HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
+                            HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
                 }
             });
             sb.service("/dataAndTrailers", new AbstractHttpService() {
                 @Override
                 protected HttpResponse doGet(ServiceRequestContext ctx, HttpRequest req) throws Exception {
                     return HttpResponse.of(ResponseHeaders.of(HttpStatus.OK),
-                                           HttpData.ofUtf8("trailer"),
-                                           HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
+                            HttpData.ofUtf8("trailer"),
+                            HttpHeaders.of(HttpHeaderNames.of("foo"), "bar"));
                 }
             });
             sb.service("/additionalTrailers", new AbstractHttpService() {
@@ -105,6 +98,16 @@ public class HttpServiceTest {
                             return HttpResponse.of(HttpStatus.NO_CONTENT);
                         }
                     }.decorate(LoggingService.newDecorator()));
+
+            sb.service(Route.builder().glob("/uri-valid/**").build(), (ctx, req) -> {
+                try {
+                    req.uri();
+                    return HttpResponse.of(HttpStatus.NO_CONTENT);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    throw e;
+                }
+            });
         }
     };
 
@@ -176,5 +179,35 @@ public class HttpServiceTest {
         res = client.get("/additionalTrailers").aggregate().join();
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
         assertThat(res.trailers().get(HttpHeaderNames.of("foo"))).isEqualTo("baz");
+    }
+
+    @Test
+    public void testBracketPathnames() throws IOException {
+        final URI uri = rule.httpUri();
+
+        int port = uri.getPort();
+        final String path = "/uri-valid/foobar/[..foobar]";
+        final String uriString = "http://127.0.0.1:" + port + path;
+        final HttpURLConnection conn = (HttpURLConnection) new URL(uriString)
+                .openConnection();
+        conn.setRequestMethod("GET");
+        try {
+            conn.connect();
+            assertThat(conn.getResponseCode()).isEqualTo(204);
+        } finally {
+            conn.disconnect();
+        }
+
+        try (final CloseableHttpClient httpclient = HttpClients.createDefault()) {
+            final HttpGet httpget = new HttpGet(uri);
+            httpclient.execute(httpget, response -> {
+                assertThat(response.getStatusLine().getStatusCode()).isEqualTo(204);
+                EntityUtils.consume(response.getEntity());
+                return null;
+            });
+        }
+        final WebClient client = WebClient.of(uri);
+        final AggregatedHttpResponse response = client.get(path).aggregate().join();
+        assertThat(response.status()).isEqualTo(HttpStatus.NO_CONTENT);
     }
 }
