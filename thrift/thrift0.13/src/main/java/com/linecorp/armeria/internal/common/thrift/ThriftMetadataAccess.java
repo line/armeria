@@ -26,6 +26,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.apache.thrift.TBase;
+import org.apache.thrift.TFieldIdEnum;
 import org.apache.thrift.meta_data.FieldMetaData;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -80,7 +81,7 @@ public final class ThriftMetadataAccess {
     }
 
     @SuppressWarnings("unchecked")
-    public static Map<?, FieldMetaData> getStructMetaDataMap(Class<?> clazz) {
+    public static <T extends TBase<T, F>, F extends TFieldIdEnum> Map<?, FieldMetaData> getStructMetaDataMap(Class<?> clazz) {
         // Pre-initialize classes if there is a jar in the classpath with armeria-thrift <= 0.14
         // See the following issue for the motivation of pre-initializing classes
         // https://issues.apache.org/jira/browse/THRIFT-5430
@@ -93,7 +94,7 @@ public final class ThriftMetadataAccess {
                 logger.trace("Unexpected exception while initializing class {}: ", clazz, e);
             }
         }
-        return FieldMetaData.getStructMetaDataMap((Class<? extends TBase<?, ?>>) clazz);
+        return FieldMetaData.getStructMetaDataMap((Class<T>) clazz);
     }
 
     private ThriftMetadataAccess() {}
