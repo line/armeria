@@ -395,6 +395,14 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Creates a new {@link StreamMessageWriter} that produces the objects to be published
+     * by {@link StreamMessage}.
+     */
+    static <T> StreamMessageWriter<T> streaming() {
+        return new DefaultStreamMessage<>();
+    }
+
+    /**
      * Returns {@code true} if this stream is not closed yet. Note that a stream may not be
      * {@linkplain #whenComplete() complete} even if it's closed; a stream is complete when it's fully
      * consumed by a {@link Subscriber}.

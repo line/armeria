@@ -57,7 +57,7 @@ class DefaultStreamMessageTest {
         final BlockingQueue<String> queue = new LinkedTransferQueue<>();
         // Repeat to increase the chance of reproduction.
         for (int i = 0; i < 8192; i++) {
-            final StreamMessageAndWriter<Integer> stream = new DefaultStreamMessage<>();
+            final StreamMessageWriter<Integer> stream = new DefaultStreamMessage<>();
             eventLoop.get().execute(stream::close);
             stream.subscribe(new Subscriber<Object>() {
                 @Override
@@ -89,7 +89,7 @@ class DefaultStreamMessageTest {
 
     @Test
     void releaseWhenWritingToClosedStream_HttpData() {
-        final StreamMessageAndWriter<HttpData> stream = new DefaultStreamMessage<>();
+        final StreamMessageWriter<HttpData> stream = new DefaultStreamMessage<>();
         final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer().writeByte(0).retain();
         stream.close();
 
@@ -102,7 +102,7 @@ class DefaultStreamMessageTest {
 
     @Test
     void releaseWhenWritingToClosedStream_HttpData_Supplier() {
-        final StreamMessageAndWriter<HttpData> stream = new DefaultStreamMessage<>();
+        final StreamMessageWriter<HttpData> stream = new DefaultStreamMessage<>();
         final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer().writeByte(0).retain();
         stream.close();
 
@@ -116,7 +116,7 @@ class DefaultStreamMessageTest {
 
     @Test
     void abortedStreamCallOnCompleteIfNoData() throws InterruptedException {
-        final StreamMessageAndWriter<Object> stream = new DefaultStreamMessage<>();
+        final StreamMessageWriter<Object> stream = new DefaultStreamMessage<>();
         stream.close();
 
         final AtomicBoolean onCompleteCalled = new AtomicBoolean();
@@ -144,7 +144,7 @@ class DefaultStreamMessageTest {
 
     @Test
     void abortedStreamCallOnErrorAfterCloseIsCalled() throws InterruptedException {
-        final StreamMessageAndWriter<HttpData> stream = new DefaultStreamMessage<>();
+        final StreamMessageWriter<HttpData> stream = new DefaultStreamMessage<>();
         final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer().writeByte(0);
         stream.write(HttpData.wrap(buf).withEndOfStream());
         stream.close();
@@ -175,7 +175,7 @@ class DefaultStreamMessageTest {
 
     @Test
     void requestWithNegativeValue() {
-        final StreamMessageAndWriter<HttpData> stream = new DefaultStreamMessage<>();
+        final StreamMessageWriter<HttpData> stream = new DefaultStreamMessage<>();
         final ByteBuf buf = PooledByteBufAllocator.DEFAULT.buffer().writeByte(0);
         stream.write(HttpData.wrap(buf).withEndOfStream());
 
