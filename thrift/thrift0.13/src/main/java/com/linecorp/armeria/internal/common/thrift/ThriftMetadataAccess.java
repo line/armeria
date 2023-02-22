@@ -81,7 +81,8 @@ public final class ThriftMetadataAccess {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T extends TBase<T, F>, F extends TFieldIdEnum> Map<?, FieldMetaData> getStructMetaDataMap(Class<?> clazz) {
+    public static <T extends TBase<T, F>, F extends TFieldIdEnum>
+    Map<?, FieldMetaData> getStructMetaDataMap(Class<?> clazz) {
         // Pre-initialize classes if there is a jar in the classpath with armeria-thrift <= 0.14
         // See the following issue for the motivation of pre-initializing classes
         // https://issues.apache.org/jira/browse/THRIFT-5430
