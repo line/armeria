@@ -207,7 +207,8 @@ public final class ServerBuilder implements TlsSetters {
             ProxiedAddresses::sourceAddress;
     private boolean enableServerHeader = true;
     private boolean enableDateHeader = true;
-    private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
+    private Function<? super RoutingContext, ? extends RequestId> requestIdGenerator =
+            routingContext -> RequestId.random();
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
     @Nullable
     private DependencyInjector dependencyInjector;
@@ -1708,12 +1709,26 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the {@link Supplier} which generates a {@link RequestId}.
+     * Sets the {@link Function} from {@link Supplier} which generates a {@link RequestId}.
      * By default, a {@link RequestId} is generated from a random 64-bit integer.
      *
      * @see RequestContext#id()
      */
     public ServerBuilder requestIdGenerator(Supplier<? extends RequestId> requestIdGenerator) {
+        final Supplier<? extends RequestId> requestIdSupplier = requireNonNull(requestIdGenerator);
+        this.requestIdGenerator = routingContext -> requestIdSupplier.get();
+        return this;
+    }
+
+    /**
+     * Sets the {@link Function} which generates a {@link RequestId}.
+     * Add logic to generate {@link RequestId} from {@link RoutingContext}.
+     * By default, a {@link RequestId} is generated from a random 64-bit integer.
+     *
+     * @see RequestContext#id()
+     */
+    public ServerBuilder requestIdGenerator(
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator) {
         this.requestIdGenerator = requireNonNull(requestIdGenerator, "requestIdGenerator");
         return this;
     }

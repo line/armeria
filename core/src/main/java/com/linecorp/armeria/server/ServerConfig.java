@@ -276,7 +276,7 @@ public interface ServerConfig {
     /**
      * Returns the {@link Supplier} that generates a {@link RequestId} for each {@link Request}.
      */
-    Supplier<RequestId> requestIdGenerator();
+    Function<? super RoutingContext, RequestId> requestIdGenerator();
 
     /**
      * Returns the {@link ServerErrorHandler} that provides the error responses in case of unexpected
