@@ -38,21 +38,18 @@ class ThriftClassLoadingTest {
         for (int i = 0; i < 20; i++) {
             final ExecutorService e1 = Executors.newSingleThreadExecutor();
             final ExecutorService e2 = Executors.newSingleThreadExecutor();
-            try {
-                final ClassLoader classLoader = new SimpleClassLoader(FooStruct.class);
-                @SuppressWarnings("unchecked")
-                final Class<FooStruct> aClass =
-                        (Class<FooStruct>) Class.forName(FooStruct.class.getName(), false, classLoader);
-                e1.submit(() -> ThriftDescriptiveTypeInfoProvider.newStructInfo(aClass));
-                e2.submit(() -> Class.forName(FooStruct.class.getName(), true, classLoader));
-                e1.shutdown();
-                e2.shutdown();
-                assertThat(e1.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
-                assertThat(e2.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
-            } finally {
-                e1.shutdownNow();
-                e2.shutdownNow();
-            }
+            final ClassLoader classLoader = new SimpleClassLoader(FooStruct.class);
+            @SuppressWarnings("unchecked")
+            final Class<FooStruct> aClass =
+                    (Class<FooStruct>) Class.forName(FooStruct.class.getName(), false, classLoader);
+            e1.submit(() -> ThriftDescriptiveTypeInfoProvider.newStructInfo(aClass));
+            e2.submit(() -> Class.forName(FooStruct.class.getName(), true, classLoader));
+            e1.shutdown();
+            e2.shutdown();
+            // unfortunately if a deadlock did occur the threads are in an uninterruptible state
+            // which means the threads cannot be cleaned up
+            assertThat(e1.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+            assertThat(e2.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
         }
     }
 
@@ -62,7 +59,7 @@ class ThriftClassLoadingTest {
     private static class SimpleClassLoader extends ClassLoader {
 
         private final Class<?> targetClass;
-        private final Map<String, Class<?>> m = new HashMap<>();
+        private final Map<String, Class<?>> memo = new HashMap<>();
 
         SimpleClassLoader(Class<?> targetClass) {
             this.targetClass = targetClass;
@@ -73,13 +70,13 @@ class ThriftClassLoadingTest {
             if (!name.startsWith(targetClass.getName())) {
                 return super.loadClass(name);
             }
-            if (m.containsKey(name)) {
-                return m.get(name);
+            if (memo.containsKey(name)) {
+                return memo.get(name);
             }
             final byte[] bytes = ForClassLoader.read(Class.forName(name));
             final Class<?> clazz = defineClass(name, bytes, 0, bytes.length, null);
             Arrays.stream(clazz.getConstructors()).forEach(c -> c.setAccessible(true));
-            m.put(name, clazz);
+            memo.put(name, clazz);
             return clazz;
         }
     }
