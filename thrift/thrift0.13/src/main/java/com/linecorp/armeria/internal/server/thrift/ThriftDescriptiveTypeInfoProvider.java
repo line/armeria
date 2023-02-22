@@ -137,7 +137,6 @@ public final class ThriftDescriptiveTypeInfoProvider implements DescriptiveTypeI
         return new ExceptionInfo(name, fields);
     }
 
-    @VisibleForTesting
     static FieldInfo newFieldInfo(Class<?> parentType, FieldMetaData fieldMetaData) {
         requireNonNull(fieldMetaData, "fieldMetaData");
         final FieldValueMetaData fieldValueMetaData = fieldMetaData.valueMetaData;
