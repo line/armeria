@@ -50,6 +50,7 @@ import com.google.common.collect.ImmutableSet;
 import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.thrift.ThriftProtocolFactories;
+import com.linecorp.armeria.internal.common.thrift.ThriftMetadataAccess;
 import com.linecorp.armeria.server.Route;
 import com.linecorp.armeria.server.RoutePathType;
 import com.linecorp.armeria.server.Service;
@@ -241,16 +242,16 @@ public final class ThriftDocServicePlugin implements DocServicePlugin {
 
         //noinspection unchecked,RedundantCast
         final List<FieldInfo> parameters =
-                FieldMetaData.getStructMetaDataMap((Class<T>) argsClass).values().stream()
-                             .map(fieldMetaData -> newFieldInfo(argsClass, fieldMetaData))
-                             .collect(toImmutableList());
+                ThriftMetadataAccess.getStructMetaDataMap(argsClass).values().stream()
+                                    .map(fieldMetaData -> newFieldInfo(argsClass, fieldMetaData))
+                                    .collect(toImmutableList());
 
         // Find the 'success' field.
         FieldInfo fieldInfo = null;
         if (resultClass != null) { // Function isn't "oneway" function
             //noinspection unchecked,RedundantCast
-            final Map<? extends TFieldIdEnum, FieldMetaData> resultMetaData =
-                    FieldMetaData.getStructMetaDataMap((Class<T>) resultClass);
+            final Map<?, FieldMetaData> resultMetaData =
+                    ThriftMetadataAccess.getStructMetaDataMap((Class<T>) resultClass);
 
             for (FieldMetaData fieldMetaData : resultMetaData.values()) {
                 if ("success".equals(fieldMetaData.fieldName)) {

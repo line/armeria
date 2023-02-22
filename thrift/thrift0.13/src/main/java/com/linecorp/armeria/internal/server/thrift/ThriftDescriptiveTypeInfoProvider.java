@@ -48,6 +48,7 @@ import org.apache.thrift.protocol.TType;
 import com.google.common.annotations.VisibleForTesting;
 
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.thrift.ThriftMetadataAccess;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfo;
 import com.linecorp.armeria.server.docs.DescriptiveTypeInfoProvider;
 import com.linecorp.armeria.server.docs.EnumInfo;
@@ -318,8 +319,7 @@ public final class ThriftDescriptiveTypeInfoProvider implements DescriptiveTypeI
     static <T extends TBase<T, F>, F extends TFieldIdEnum> StructInfo newStructInfo(Class<?> structClass) {
         final String name = structClass.getName();
 
-        //noinspection unchecked
-        final Map<?, FieldMetaData> metaDataMap = FieldMetaData.getStructMetaDataMap((Class<T>) structClass);
+        final Map<?, FieldMetaData> metaDataMap = ThriftMetadataAccess.getStructMetaDataMap(structClass);
         final List<FieldInfo> fields =
                 metaDataMap.values().stream()
                            .map(fieldMetaData -> newFieldInfo(structClass, fieldMetaData))

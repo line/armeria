@@ -33,6 +33,7 @@ import com.linecorp.armeria.service.test.thrift.main.FooStruct;
 
 class ThriftClassLoadingTest {
 
+    // see https://issues.apache.org/jira/browse/THRIFT-5430
     @Test
     void testDeadlock() throws Exception {
         for (int i = 0; i < 20; i++) {
