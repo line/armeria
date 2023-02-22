@@ -16,7 +16,6 @@
 
 package com.linecorp.armeria.internal.client.dns;
 
-import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
 import java.net.UnknownHostException;
@@ -105,17 +104,11 @@ public final class DefaultDnsResolver implements SafeCloseable {
     @VisibleForTesting
     CompletableFuture<List<DnsRecord>> resolveAll(DnsQuestionContext ctx, List<? extends DnsQuestion> questions,
                                                   String logPrefix) {
-
-        final List<CompletableFuture<List<DnsRecord>>> futures =
-                questions.stream()
-                         .map(question -> delegate.resolve(ctx, question))
-                         .collect(toImmutableList());
-
         final CompletableFuture<List<DnsRecord>> future = new CompletableFuture<>();
         final Object[] results = new Object[questions.size()];
-        for (int i = 0; i < futures.size(); i++) {
+        for (int i = 0; i < questions.size(); i++) {
             final int order = i;
-            futures.get(i).handle((records, cause) -> {
+            delegate.resolve(ctx, questions.get(i)).handle((records, cause) -> {
                 assert executor.inEventLoop();
                 maybeCompletePreferredRecords(future, questions, results, order, records, cause);
                 return null;
