@@ -250,7 +250,7 @@ final class DefaultServerConfig implements ServerConfig {
         @SuppressWarnings("unchecked")
         final Function<RoutingContext, RequestId> castRequestIdGenerator =
                 (Function<RoutingContext, RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
-        this.requestIdGenerator = requireNonNull(castRequestIdGenerator);
+        this.requestIdGenerator = castRequestIdGenerator;
         this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         this.sslContexts = sslContexts;
         this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
