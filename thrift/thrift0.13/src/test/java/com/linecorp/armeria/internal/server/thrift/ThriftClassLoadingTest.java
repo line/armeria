@@ -38,16 +38,21 @@ class ThriftClassLoadingTest {
         for (int i = 0; i < 20; i++) {
             final ExecutorService e1 = Executors.newSingleThreadExecutor();
             final ExecutorService e2 = Executors.newSingleThreadExecutor();
-            final ClassLoader classLoader = new SimpleClassLoader(FooStruct.class);
-            @SuppressWarnings("unchecked")
-            final Class<FooStruct> aClass =
-                    (Class<FooStruct>) Class.forName(FooStruct.class.getName(), false, classLoader);
-                    e1.submit(() -> ThriftDescriptiveTypeInfoProvider.newStructInfo(aClass));
-                    e2.submit(() -> Class.forName(FooStruct.class.getName(), true, classLoader));
-            e1.shutdown();
-            e2.shutdown();
-            assertThat(e1.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
-            assertThat(e2.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+            try {
+                final ClassLoader classLoader = new SimpleClassLoader(FooStruct.class);
+                @SuppressWarnings("unchecked")
+                final Class<FooStruct> aClass =
+                        (Class<FooStruct>) Class.forName(FooStruct.class.getName(), false, classLoader);
+                e1.submit(() -> ThriftDescriptiveTypeInfoProvider.newStructInfo(aClass));
+                e2.submit(() -> Class.forName(FooStruct.class.getName(), true, classLoader));
+                e1.shutdown();
+                e2.shutdown();
+                assertThat(e1.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+                assertThat(e2.awaitTermination(10, TimeUnit.SECONDS)).isTrue();
+            } finally {
+                e1.shutdownNow();
+                e2.shutdownNow();
+            }
         }
     }
 
