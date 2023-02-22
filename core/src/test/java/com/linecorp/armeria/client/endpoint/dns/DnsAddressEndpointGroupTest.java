@@ -110,8 +110,9 @@ class DnsAddressEndpointGroupTest {
         }
     }
 
-    @Test
-    void ipV4AndIpV6() throws Exception {
+    @EnumSource(ResolvedAddressTypes.class)
+    @ParameterizedTest
+    void ipV4AndIpV6(ResolvedAddressTypes resolvedAddressTypes) throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("baz.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "1.1.1.1")),
@@ -122,13 +123,22 @@ class DnsAddressEndpointGroupTest {
                          DnsAddressEndpointGroup.builder("baz.com")
                                                 .port(8080)
                                                 .serverAddresses(server.addr())
-                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                                                .resolvedAddressTypes(resolvedAddressTypes)
                                                 .dnsCache(NoopDnsCache.INSTANCE)
                                                 .build()) {
 
-                assertThat(group.whenReady().get()).containsExactly(
-                        Endpoint.of("baz.com", 8080).withIpAddr("1.1.1.1"),
-                        Endpoint.of("baz.com", 8080).withIpAddr("::1"));
+                switch (resolvedAddressTypes) {
+                    case IPV4_ONLY:
+                    case IPV4_PREFERRED:
+                        assertThat(group.whenReady().get()).containsExactly(
+                                Endpoint.of("baz.com", 8080).withIpAddr("1.1.1.1"));
+                        break;
+                    case IPV6_ONLY:
+                    case IPV6_PREFERRED:
+                        assertThat(group.whenReady().get()).containsExactly(
+                                Endpoint.of("baz.com", 8080).withIpAddr("::1"));
+                        break;
+                }
             }
         }
     }
@@ -154,8 +164,9 @@ class DnsAddressEndpointGroupTest {
         }
     }
 
-    @Test
-    void cname() throws Exception {
+    @EnumSource(ResolvedAddressTypes.class)
+    @ParameterizedTest
+    void cname(ResolvedAddressTypes resolvedAddressTypes) throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("a.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newBadAddressRecord("a.com.", true))
@@ -170,13 +181,23 @@ class DnsAddressEndpointGroupTest {
                          DnsAddressEndpointGroup.builder("a.com")
                                                 .port(8080)
                                                 .serverAddresses(server.addr())
-                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                                                .resolvedAddressTypes(resolvedAddressTypes)
                                                 .dnsCache(NoopDnsCache.INSTANCE)
                                                 .build()) {
 
-                assertThat(group.whenReady().get()).containsExactly(
-                        Endpoint.of("a.com", 8080).withIpAddr("1.1.1.1"),
-                        Endpoint.of("a.com", 8080).withIpAddr("::1"));
+                switch (resolvedAddressTypes) {
+                    case IPV4_ONLY:
+                    case IPV4_PREFERRED:
+                        assertThat(group.whenReady().get()).containsExactly(
+                                Endpoint.of("a.com", 8080).withIpAddr("1.1.1.1"));
+                        break;
+                    case IPV6_ONLY:
+                        break;
+                    case IPV6_PREFERRED:
+                        assertThat(group.whenReady().get()).containsExactly(
+                                Endpoint.of("a.com", 8080).withIpAddr("::1"));
+                        break;
+                }
             }
         }
     }
@@ -247,13 +268,14 @@ class DnsAddressEndpointGroupTest {
         }
     }
 
-    @Test
-    void backoff() throws Exception {
+    @EnumSource(ResolvedAddressTypes.class)
+    @ParameterizedTest
+    void backoff(ResolvedAddressTypes resolvedAddressTypes) throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of())) { // Respond nothing.
             try (DnsAddressEndpointGroup group =
                          DnsAddressEndpointGroup.builder("backoff.com")
                                                 .serverAddresses(server.addr())
-                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                                                .resolvedAddressTypes(resolvedAddressTypes)
                                                 .backoff(Backoff.fixed(500))
                                                 .dnsCache(NoopDnsCache.INSTANCE)
                                                 .build()) {
@@ -270,15 +292,25 @@ class DnsAddressEndpointGroupTest {
                         new DefaultDnsResponse(0)
                                 .addRecord(ANSWER, newAddressRecord("backoff.com", "::1", 1))));
 
-                await().untilAsserted(() -> assertThat(group.endpoints()).containsExactly(
-                        Endpoint.of("backoff.com").withIpAddr("1.1.1.1"),
-                        Endpoint.of("backoff.com").withIpAddr("::1")));
+                switch (resolvedAddressTypes) {
+                    case IPV4_ONLY:
+                    case IPV4_PREFERRED:
+                        await().untilAsserted(() -> assertThat(group.endpoints()).containsExactly(
+                                Endpoint.of("backoff.com").withIpAddr("1.1.1.1")));
+                        break;
+                    case IPV6_ONLY:
+                    case IPV6_PREFERRED:
+                        await().untilAsserted(() -> assertThat(group.endpoints()).containsExactly(
+                                Endpoint.of("backoff.com").withIpAddr("::1")));
+                        break;
+                }
             }
         }
     }
 
-    @Test
-    void backoffOnEmptyResponse() throws Exception {
+    @EnumSource(ResolvedAddressTypes.class)
+    @ParameterizedTest
+    void backoffOnEmptyResponse(ResolvedAddressTypes resolvedAddressTypes) throws Exception {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 // Respond with empty records.
                 new DefaultDnsQuestion("empty.com.", A), new DefaultDnsResponse(0),
@@ -287,7 +319,8 @@ class DnsAddressEndpointGroupTest {
             try (DnsAddressEndpointGroup group =
                          DnsAddressEndpointGroup.builder("empty.com")
                                                 .serverAddresses(server.addr())
-                                                .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
+                                                .searchDomains(ImmutableList.of())
+                                                .resolvedAddressTypes(resolvedAddressTypes)
                                                 .backoff(Backoff.fixed(500))
                                                 .dnsCache(NoopDnsCache.INSTANCE)
                                                 .build()) {
@@ -304,9 +337,20 @@ class DnsAddressEndpointGroupTest {
                         new DefaultDnsResponse(0)
                                 .addRecord(ANSWER, newAddressRecord("empty.com", "::1", 1))));
 
-                await().untilAsserted(() -> assertThat(group.endpoints()).containsExactly(
-                        Endpoint.of("empty.com").withIpAddr("1.1.1.1"),
-                        Endpoint.of("empty.com").withIpAddr("::1")));
+                await().untilAsserted(() -> {
+                    switch (resolvedAddressTypes) {
+                        case IPV4_ONLY:
+                        case IPV4_PREFERRED:
+                            assertThat(group.endpoints()).containsExactly(
+                                    Endpoint.of("empty.com").withIpAddr("1.1.1.1"));
+                            break;
+                        case IPV6_ONLY:
+                        case IPV6_PREFERRED:
+                            assertThat(group.endpoints()).containsExactly(
+                                    Endpoint.of("empty.com").withIpAddr("::1"));
+                            break;
+                    }
+                });
             }
         }
     }

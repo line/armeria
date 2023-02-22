@@ -67,6 +67,11 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
     @VisibleForTesting
     int attemptsSoFar;
 
+    /**
+     * Creates a new {@link DnsEndpointGroup}.
+     *
+     * <p>Note that {@code questions} should be sorted according to preference.
+     */
     DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
                      long selectionTimeoutMillis, DefaultDnsResolver resolver, EventLoop eventLoop,
                      List<DnsQuestionWithoutTrailingDot> questions,
