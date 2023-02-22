@@ -209,8 +209,7 @@ public final class ServerBuilder implements TlsSetters {
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
-    private boolean logUncaughtExceptions = true;
-    private long logUncaughtExceptionsIntervalInSeconds = 60;
+    private Duration exceptionReportingInterval = Duration.ofSeconds(60);
     @Nullable
     private DependencyInjector dependencyInjector;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
@@ -1811,20 +1810,11 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * Uncaught exceptions are logged using {@link UncaughtExceptionsServerErrorHandler}.
-     * @param value whether to log uncaught exceptions.
+     * Sets the duration between logging uncaught exceptions.
+     * @param exceptionReportingInterval - the duration between logging uncaught exceptions.
      */
-    public ServerBuilder logUncaughtExceptions(boolean value) {
-        logUncaughtExceptions = value;
-        return this;
-    }
-
-    /**
-     * Sets the time interval between logging uncaught exceptions.
-     * @param seconds the time interval between logging uncaught exceptions in seconds.
-     */
-    public ServerBuilder logUncaughtExceptionsInterval(long seconds) {
-        logUncaughtExceptionsIntervalInSeconds = seconds;
+    public ServerBuilder exceptionReportingInterval(Duration exceptionReportingInterval) {
+        this.exceptionReportingInterval = exceptionReportingInterval;
         return this;
     }
 
@@ -1941,9 +1931,9 @@ public final class ServerBuilder implements TlsSetters {
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
         ServerErrorHandler errorHandler;
-        if (logUncaughtExceptions) {
-            errorHandler = new UncaughtExceptionsServerErrorHandler(this.errorHandler,
-                                                                    logUncaughtExceptionsIntervalInSeconds);
+        if (!exceptionReportingInterval.isZero()) {
+            errorHandler = new ExceptionReportingServerErrorHandler(this.errorHandler,
+                                                                    exceptionReportingInterval.getSeconds());
         } else {
             errorHandler = this.errorHandler;
         }
@@ -1967,7 +1957,7 @@ public final class ServerBuilder implements TlsSetters {
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
                 http1HeaderNaming, dependencyInjector, ImmutableList.copyOf(shutdownSupports),
-                logUncaughtExceptions, logUncaughtExceptionsIntervalInSeconds);
+                exceptionReportingInterval);
     }
 
     /**

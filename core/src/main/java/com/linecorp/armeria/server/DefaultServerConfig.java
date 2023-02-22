@@ -112,8 +112,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final Http1HeaderNaming http1HeaderNaming;
     private final DependencyInjector dependencyInjector;
     private final List<ShutdownSupport> shutdownSupports;
-    private final boolean shouldLogUncaughtExceptions;
-    private final long logUncaughtExceptionsIntervalInSeconds;
+    private final Duration exceptionReportingInterval;
 
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
@@ -146,8 +145,7 @@ final class DefaultServerConfig implements ServerConfig {
             Http1HeaderNaming http1HeaderNaming,
             DependencyInjector dependencyInjector,
             List<ShutdownSupport> shutdownSupports,
-            boolean shouldLogUncaughtExceptions,
-            long logUncaughtExceptionsIntervalInSeconds) {
+            Duration exceptionReportingInterval) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -261,8 +259,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
         this.dependencyInjector = requireNonNull(dependencyInjector, "dependencyInjector");
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
-        this.shouldLogUncaughtExceptions = shouldLogUncaughtExceptions;
-        this.logUncaughtExceptionsIntervalInSeconds = logUncaughtExceptionsIntervalInSeconds;
+        this.exceptionReportingInterval = exceptionReportingInterval;
     }
 
     private static Int2ObjectMap<Mapping<String, VirtualHost>> buildDomainAndPortMapping(
@@ -649,13 +646,8 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
-    public boolean shouldLogUncaughtExceptions() {
-        return shouldLogUncaughtExceptions;
-    }
-
-    @Override
-    public long logUncaughtExceptionsIntervalInSeconds() {
-        return logUncaughtExceptionsIntervalInSeconds;
+    public Duration exceptionReportingInterval() {
+        return exceptionReportingInterval;
     }
 
     List<ShutdownSupport> shutdownSupports() {

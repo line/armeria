@@ -297,12 +297,7 @@ public interface ServerConfig {
     DependencyInjector dependencyInjector();
 
     /**
-     * Returns whether the server should log uncaught exceptions.
-     */
-    boolean shouldLogUncaughtExceptions();
-
-    /**
      * Returns the interval between logging uncaught exceptions.
      */
-    long logUncaughtExceptionsIntervalInSeconds();
+    Duration exceptionReportingInterval();
 }

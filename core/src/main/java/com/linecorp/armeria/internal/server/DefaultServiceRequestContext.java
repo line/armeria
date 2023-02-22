@@ -116,7 +116,7 @@ public final class DefaultServiceRequestContext
 
     @Nullable
     private String strVal;
-    private Boolean shouldLogUncaughtException;
+    private boolean shouldLogException;
 
     /**
      * Creates a new instance.
@@ -190,7 +190,7 @@ public final class DefaultServiceRequestContext
         this.additionalResponseHeaders = additionalResponseHeaders;
         this.additionalResponseTrailers = additionalResponseTrailers;
 
-        shouldLogUncaughtException = true;
+        shouldLogException = true;
     }
 
     @Nullable
@@ -443,13 +443,13 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public boolean shouldLogUncaughtExceptions() {
-        return shouldLogUncaughtException;
+    public boolean shouldLogException() {
+        return shouldLogException;
     }
 
     @Override
-    public void setShouldLogUncaughtExceptions(boolean value) {
-        shouldLogUncaughtException = value;
+    public void setShouldLogException(boolean value) {
+        shouldLogException = value;
     }
 
     @Override

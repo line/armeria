@@ -285,13 +285,8 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
-    public boolean shouldLogUncaughtExceptions() {
-        return delegate.shouldLogUncaughtExceptions();
-    }
-
-    @Override
-    public long logUncaughtExceptionsIntervalInSeconds() {
-        return delegate.logUncaughtExceptionsIntervalInSeconds();
+    public Duration exceptionReportingInterval() {
+        return delegate.exceptionReportingInterval();
     }
 
     @Override

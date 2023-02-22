@@ -37,11 +37,10 @@ import io.netty.channel.EventLoopGroup;
 /**
  * Implementation of {@link ServerErrorHandler} that is used to decorate other ServerErrorHandlers.
  * When services are not annotated with {@link LoggingService}, exceptions are not caught be default.
- * {@link UncaughtExceptionsServerErrorHandler} is used to catch those uncaught exceptions.
+ * {@link ExceptionReportingServerErrorHandler} is used to catch those uncaught exceptions.
  */
-public class UncaughtExceptionsServerErrorHandler implements ServerErrorHandler {
-
-    private static final Logger logger = LoggerFactory.getLogger(UncaughtExceptionsServerErrorHandler.class);
+class ExceptionReportingServerErrorHandler implements ServerErrorHandler {
+    private static final Logger logger = LoggerFactory.getLogger(ExceptionReportingServerErrorHandler.class);
     private final ServerErrorHandler delegate;
     private final LongAdder counter;
     private final long intervalInSeconds;
@@ -49,23 +48,23 @@ public class UncaughtExceptionsServerErrorHandler implements ServerErrorHandler 
     @Nullable
     private Throwable lastThrownException;
     @Nullable
-    private ScheduledFuture<?> reportUncaughtExceptionsSchedule;
+    private ScheduledFuture<?> reportExceptionsSchedule;
 
-    UncaughtExceptionsServerErrorHandler(ServerErrorHandler serverErrorHandler, long intervalInSeconds) {
+    ExceptionReportingServerErrorHandler(ServerErrorHandler serverErrorHandler, long intervalInSeconds) {
         delegate = serverErrorHandler;
         this.intervalInSeconds = intervalInSeconds;
         counter = new LongAdder();
     }
 
     /**
-     * If it's required to log uncaught exceptions, increase the counter and store last thrown exception.
+     * If it's required to log exceptions, increase the counter and store last thrown exception.
      */
     @Nullable
     @Override
     public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
-        if (isScheduled && ctx.shouldLogUncaughtExceptions()) {
-            counter.increment();
+        if (isScheduled && ctx.shouldLogException()) {
             lastThrownException = cause;
+            counter.increment();
         }
         return delegate.onServiceException(ctx, cause);
     }
@@ -79,35 +78,36 @@ public class UncaughtExceptionsServerErrorHandler implements ServerErrorHandler 
     }
 
     /**
-     * Schedules uncaught exceptions logging.
-     * @param workerGroup eventLoopGroup on which logging will be scheduled.
+     * Starts logging exceptions.
+     * @param workerGroup eventLoopGroup on which logging exceptions will be scheduled.
      */
-    public void scheduleLogging(EventLoopGroup workerGroup) {
+    void start(EventLoopGroup workerGroup) {
         requireNonNull(workerGroup, "workerGroup");
-        if (!isScheduled) {
-            reportUncaughtExceptionsSchedule = workerGroup.scheduleAtFixedRate(
-                    this::logUncaughtExceptions, intervalInSeconds, intervalInSeconds, TimeUnit.SECONDS);
+        if (!isScheduled && intervalInSeconds > 0) {
+            reportExceptionsSchedule = workerGroup.scheduleAtFixedRate(
+                    this::logExceptions, intervalInSeconds, intervalInSeconds, TimeUnit.SECONDS);
             isScheduled = true;
         }
     }
 
     /**
-     * Unschedule uncaught exceptions logging.
+     * Stops logging exceptions.
      */
-    public void unScheduleLogging() {
-        if (isScheduled && reportUncaughtExceptionsSchedule != null) {
-            reportUncaughtExceptionsSchedule.cancel(true);
+    void stop() {
+        if (isScheduled && reportExceptionsSchedule != null) {
+            reportExceptionsSchedule.cancel(true);
             isScheduled = false;
         }
     }
 
-    private void logUncaughtExceptions() {
-        logger.warn("Observed {} uncaught exceptions in last {} seconds. " +
-                    "If you don't see error logs please use LoggingService decorator.",
-                    counter.sumThenReset(), intervalInSeconds);
-        if (lastThrownException != null) {
-            logger.warn("Last thrown exception is: ", lastThrownException);
+    private void logExceptions() {
+        final long totalExceptions = counter.sumThenReset();
+        if (totalExceptions != 0) {
+            logger.warn("Observed {} uncaught exceptions in last {} seconds. " +
+                        "If you don't see error logs please use LoggingService decorator. " +
+                        "Last thrown exception is:",
+                        totalExceptions, intervalInSeconds, lastThrownException);
+            lastThrownException = null;
         }
-        lastThrownException = null;
     }
 }
