@@ -57,11 +57,11 @@ class ThriftClassLoadingTest {
     private static class SimpleClassLoader extends ClassLoader {
 
         private final Class<?> targetClass;
+        private final Map<String, Class<?>> m = new HashMap<>();
+
         SimpleClassLoader(Class<?> targetClass) {
             this.targetClass = targetClass;
         }
-
-        Map<String, Class<?>> m = new HashMap<>();
 
         @Override
         public Class<?> loadClass(String name) throws ClassNotFoundException {
