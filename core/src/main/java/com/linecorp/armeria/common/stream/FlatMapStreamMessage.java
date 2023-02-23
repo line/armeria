@@ -187,7 +187,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
-            if (childSubscribers.isEmpty() && pendingSubscriptions == 0) {
+            if (canComplete()) {
                 downstream.onComplete();
                 completionFuture.complete(null);
             } else {
@@ -286,8 +286,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         void completeChild(FlatMapSubscriber<T, U> child) {
             childSubscribers.remove(child);
 
-            if (childSubscribers.isEmpty() && pendingSubscriptions == 0 && completing) {
-                flush();
+            if (completing && canComplete()) {
                 downstream.onComplete();
                 completionFuture.complete(null);
             }
@@ -295,6 +294,10 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             if (!canceled && !completing) {
                 upstream.request(1);
             }
+        }
+
+        private boolean canComplete() {
+            return childSubscribers.isEmpty() && pendingSubscriptions == 0 && buffer.isEmpty();
         }
 
         void onNextChild(U value) {

@@ -17,6 +17,7 @@
 package com.linecorp.armeria.common.stream;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
@@ -27,9 +28,12 @@ import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
 
 import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
+import reactor.test.StepVerifierOptions;
 
 class FlatMapStreamMessageTest {
     @Test
@@ -128,5 +132,19 @@ class FlatMapStreamMessageTest {
                     .thenRequest(100L)
                     .thenConsumeWhile(n -> true)
                     .verifyComplete();
+    }
+
+    @Test
+    void flatMapIsNotCompleteBeforeDownstreamReceivesAllValues() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2, 3, 4, 5, 6, 7, 8, 9, 10);
+        final Function<Integer, StreamMessage<Integer>> function = StreamMessage::of;
+        final StreamMessage<Integer> mappedStream = streamMessage.flatMap(function);
+
+        StepVerifier.create(mappedStream, StepVerifierOptions.create().initialRequest(0L))
+                    .thenRequest(1)
+                    .expectNext(1)
+                    .verifyTimeout(Duration.ofMillis(20));
+
+        assertFalse(mappedStream.isComplete());
     }
 }
