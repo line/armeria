@@ -122,6 +122,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         private long requestedByDownstream;
         private int pendingSubscriptions;
         private boolean completing;
+        private boolean initialized;
 
         FlatMapAggregatingSubscriber(Subscriber<? super U> downstream,
                                      Function<T, StreamMessage<U>> function,
@@ -218,9 +219,9 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             requestedByDownstream = LongMath.saturatedAdd(requestedByDownstream, n);
             flush();
 
-            final long toRequest = maxConcurrency - childSubscribers.size();
-            if (toRequest > 0) {
-                upstream.request(toRequest);
+            if (!initialized) {
+                initialized = true;
+                upstream.request(maxConcurrency);
             }
 
             requestAllAvailable();
@@ -289,6 +290,10 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 flush();
                 downstream.onComplete();
                 completionFuture.complete(null);
+            }
+
+            if (!canceled && !completing) {
+                upstream.request(1);
             }
         }
 

@@ -19,6 +19,7 @@ package com.linecorp.armeria.common.stream;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
@@ -27,6 +28,7 @@ import java.util.function.Function;
 
 import org.junit.jupiter.api.Test;
 
+import reactor.core.publisher.Flux;
 import reactor.test.StepVerifier;
 
 class FlatMapStreamMessageTest {
@@ -114,5 +116,17 @@ class FlatMapStreamMessageTest {
                     .verifyComplete();
 
         assertTrue(mappedStream.whenComplete().isDone());
+    }
+
+    @Test
+    void shouldProcessAllWhenMoreElementsThanMaxConcurrency() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(10, 20, 30);
+        final Function<Integer, StreamMessage<Integer>> function = num -> StreamMessage.of(Flux.range(num, 3));
+        final StreamMessage<Integer> mappedStream = streamMessage.flatMap(function, 1);
+
+        StepVerifier.create(mappedStream)
+                    .thenRequest(100L)
+                    .thenConsumeWhile(n -> true)
+                    .verifyComplete();
     }
 }
