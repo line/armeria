@@ -178,7 +178,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             canceled = true;
 
             completionFuture.completeExceptionally(cause);
-            cancelChildSubscribers();
+            cancelChildSubscribersAndBuffer();
             downstream.onError(cause);
         }
 
@@ -231,10 +231,11 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         @Override
         public void cancel() {
             upstream.cancel();
-            cancelChildSubscribers();
+            cancelChildSubscribersAndBuffer();
         }
 
-        private void cancelChildSubscribers() {
+        private void cancelChildSubscribersAndBuffer() {
+            buffer.forEach(StreamMessageUtil::closeOrAbort);
             childSubscribers.forEach(FlatMapSubscriber::cancel);
         }
 
