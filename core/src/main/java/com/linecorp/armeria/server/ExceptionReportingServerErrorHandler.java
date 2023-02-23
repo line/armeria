@@ -96,6 +96,7 @@ class ExceptionReportingServerErrorHandler implements ServerErrorHandler {
     void stop() {
         if (isScheduled && reportExceptionsSchedule != null) {
             reportExceptionsSchedule.cancel(true);
+            reportExceptionsSchedule = null;
             isScheduled = false;
         }
     }
