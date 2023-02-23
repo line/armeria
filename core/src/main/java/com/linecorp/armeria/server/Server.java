@@ -557,7 +557,7 @@ public final class Server implements ListenableAsyncCloseable {
                                 ConnectionLimitingHandler::numConnections);
         }
 
-        private void scheduleExceptionsLogging() {
+        private void scheduleExceptionLogging() {
             if (!config().exceptionReportingInterval().isZero() &&
                 config().errorHandler() instanceof ExceptionReportingServerErrorHandler) {
                 ((ExceptionReportingServerErrorHandler) config.errorHandler()).start(config.workerGroup());
