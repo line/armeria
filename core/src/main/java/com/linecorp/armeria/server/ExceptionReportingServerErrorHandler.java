@@ -104,8 +104,8 @@ class ExceptionReportingServerErrorHandler implements ServerErrorHandler {
         final long totalExceptions = counter.sumThenReset();
         if (totalExceptions != 0) {
             logger.warn("Observed {} uncaught exceptions in last {} seconds. " +
-                        "If you don't see error logs please use LoggingService decorator. " +
-                        "Last thrown exception is:",
+                        "Please consider adding the LoggingService decorator to get detailed error logs. " +
+                        "One of the thrown exceptions:",
                         totalExceptions, intervalInSeconds, lastThrownException);
             lastThrownException = null;
         }
