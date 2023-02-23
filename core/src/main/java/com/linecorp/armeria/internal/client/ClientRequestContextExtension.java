@@ -20,6 +20,7 @@ import java.util.concurrent.CompletableFuture;
 
 import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.client.endpoint.EndpointGroup;
+import com.linecorp.armeria.common.HttpHeaders;
 import com.linecorp.armeria.common.logging.RequestLog;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
@@ -57,4 +58,6 @@ public interface ClientRequestContextExtension extends ClientRequestContext, Req
      * Completes the {@link #whenInitialized()} with the specified value.
      */
     void finishInitialization(boolean success);
+
+    HttpHeaders internalRequestHeaders();
 }

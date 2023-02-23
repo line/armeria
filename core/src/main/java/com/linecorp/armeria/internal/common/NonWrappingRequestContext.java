@@ -17,9 +17,12 @@
 package com.linecorp.armeria.internal.common;
 
 import static com.google.common.base.Preconditions.checkArgument;
+import static com.linecorp.armeria.internal.client.ClientUtil.pathWithQuery;
+import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
 import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
+import java.net.URI;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReferenceFieldUpdater;
@@ -59,13 +62,13 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     private final SessionProtocol sessionProtocol;
     private final RequestId id;
     private final HttpMethod method;
-    private final String path;
+    private String path;
     private final ExchangeType exchangeType;
 
     @Nullable
     private String decodedPath;
     @Nullable
-    private final String query;
+    private String query;
     @Nullable
     private volatile HttpRequest req;
     @Nullable
@@ -142,7 +145,22 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
      * without any validation. Internal use only. Use it at your own risk.
      */
     protected final void unsafeUpdateRequest(HttpRequest req) {
+        final PathAndQuery pathAndQuery;
+        if (isAbsoluteUri(req.path())) {
+            // ignore the sessionProtocol and authority set by the absolute path
+            final URI uri = URI.create(req.path());
+            final String rawQuery = uri.getRawQuery();
+            final String pathWithQuery = pathWithQuery(uri, rawQuery);
+            pathAndQuery = PathAndQuery.parse(pathWithQuery);
+        } else {
+            pathAndQuery = PathAndQuery.parse(req.path());
+        }
+        if (pathAndQuery == null) {
+            throw new IllegalArgumentException("invalid path: " + req.path());
+        }
         this.req = req;
+        path(pathAndQuery.path());
+        query(pathAndQuery.query());
     }
 
     @Override
@@ -188,6 +206,10 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
         return path;
     }
 
+    private void path(String path) {
+        this.path = requireNonNull(path, "path");
+    }
+
     @Override
     public final String decodedPath() {
         final String decodedPath = this.decodedPath;
@@ -201,6 +223,10 @@ public abstract class NonWrappingRequestContext implements RequestContextExtensi
     @Override
     public final String query() {
         return query;
+    }
+
+    private void query(@Nullable String query) {
+        this.query = query;
     }
 
     @Override

@@ -558,4 +558,32 @@ public interface ClientRequestContext extends RequestContext {
     default ClientRequestContext unwrapAll() {
         return (ClientRequestContext) RequestContext.super.unwrapAll();
     }
+
+    /**
+     * Returns the authority which will eventually be sent when a {@link Client} sends an {@link HttpRequest}.
+     * This method checks the following locations and returns the first non-null value.
+     * <ol>
+     *     <li>Either the {@link HttpHeaderNames#HOST} or {@link HttpHeaderNames#AUTHORITY} value from
+     *         {@link ClientRequestContext#additionalRequestHeaders()}.</li>
+     *     <li>The {@link HttpRequest#authority()} from {@link ClientRequestContext#request()}.</li>
+     *     <li>{@link ClientRequestContext#defaultRequestHeaders()}.</li>
+     *     <li>{@link Endpoint#authority()}.</li>
+     * </ol>
+     */
+    @Nullable
+    String authority();
+
+    /**
+     * Returns the uri constructed based on {@link ClientRequestContext#sessionProtocol()},
+     * {@link ClientRequestContext#authority()}, {@link ClientRequestContext#path()} and
+     * {@link ClientRequestContext#query()}.
+     *
+     * <p>Note that if the value of {@link ClientRequestContext#authority()}
+     * cannot be determined, the {@link String} "UNKNOWN" may be used as the authority.
+     * This may happen if {@link ClientRequestContext#endpoint()} has not been initialized yet
+     * or couldn't be selected.
+     *
+     * @throws IllegalStateException if the resulting URI is not valid.
+     */
+    URI uri();
 }

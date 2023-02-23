@@ -38,6 +38,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 import com.linecorp.armeria.unsafe.PooledObjects;
 
@@ -199,8 +200,15 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
             state = State.NEEDS_DATA_OR_TRAILERS;
         }
 
+        final HttpHeaders internalHeaders;
+        final ClientRequestContextExtension ctxExtension = ctx.as(ClientRequestContextExtension.class);
+        if (ctxExtension == null) {
+            internalHeaders = HttpHeaders.of();
+        } else {
+            internalHeaders = ctxExtension.internalRequestHeaders();
+        }
         final RequestHeaders merged = mergeRequestHeaders(
-                headers, ctx.defaultRequestHeaders(), ctx.additionalRequestHeaders());
+                headers, ctx.defaultRequestHeaders(), ctx.additionalRequestHeaders(), internalHeaders);
         logBuilder.requestHeaders(merged);
         final ChannelPromise promise = ch.newPromise();
         // Attach a listener first to make the listener early handle a cause raised while writing headers

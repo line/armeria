@@ -241,5 +241,14 @@ public final class ClientUtil {
         return path;
     }
 
+    public static String pathWithQuery(String path, @Nullable String query) {
+        if (Strings.isNullOrEmpty(path)) {
+            path = query == null ? "/" : "/?" + query;
+        } else if (query != null) {
+            path = path + '?' + query;
+        }
+        return path;
+    }
+
     private ClientUtil() {}
 }

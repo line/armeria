@@ -203,8 +203,8 @@ class HttpHeadersBase
         } else {
             final String scheme = scheme();
             checkState(scheme != null, ":scheme header does not exist.");
-            final String authority = authority();
-            checkState(authority != null, ":authority header does not exist.");
+            String authority = authority();
+            authority = authority != null ? authority : "UNKNOWN";
             uri = scheme + "://" + authority + path;
         }
 

@@ -22,8 +22,11 @@ import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.internal.client.UserAgentUtil;
 import com.linecorp.armeria.server.ServerBuilder;
+import com.linecorp.armeria.server.ServiceRequestContext;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
+import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
 
 class HttpClientAdditionalHeadersTest {
 
@@ -36,7 +39,7 @@ class HttpClientAdditionalHeadersTest {
     };
 
     @Test
-    void disallowedHeadersMustBeFiltered() {
+    void disallowedHeadersMustBeFiltered() throws Exception {
         final WebClient client =
                 WebClient.builder(server.httpUri())
                          .decorator((delegate, ctx, req) -> {
@@ -50,10 +53,24 @@ class HttpClientAdditionalHeadersTest {
                          })
                          .build();
 
-        assertThat(client.get("/").aggregate().join().contentUtf8())
-                .doesNotContain("=https")
-                .doesNotContain("=503")
-                .doesNotContain("=CONNECT")
-                .contains("foo=bar");
+        try (ClientRequestContextCaptor clientCaptor = Clients.newContextCaptor()) {
+            assertThat(client.get("/").aggregate().join().contentUtf8())
+                    .doesNotContain("=https")
+                    .doesNotContain("=503")
+                    .doesNotContain("=CONNECT")
+                    .contains("foo=bar");
+            assertThat(clientCaptor.size()).isEqualTo(1);
+            final ClientRequestContext clientContext = clientCaptor.get();
+            assertThat(clientContext.authority()).isEqualTo(server.httpEndpoint().authority());
+            assertThat(clientContext.log().ensureComplete().requestHeaders().get(HttpHeaderNames.USER_AGENT))
+                    .isEqualTo(UserAgentUtil.USER_AGENT.toString());
+
+            final ServiceRequestContextCaptor serviceCaptor = server.requestContextCaptor();
+            assertThat(serviceCaptor.size()).isEqualTo(1);
+            final ServiceRequestContext serviceContext = serviceCaptor.poll();
+            assertThat(serviceContext.request().authority()).isEqualTo(server.httpEndpoint().authority());
+            assertThat(serviceContext.request().headers().get(HttpHeaderNames.USER_AGENT))
+                    .isEqualTo(UserAgentUtil.USER_AGENT.toString());
+        }
     }
 }

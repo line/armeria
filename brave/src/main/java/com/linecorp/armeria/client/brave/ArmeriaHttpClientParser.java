@@ -70,8 +70,9 @@ final class ArmeriaHttpClientParser implements HttpRequestParser, HttpResponsePa
             return;
         }
 
-        span.tag(SpanTags.TAG_HTTP_HOST, httpReq.authority())
-            .tag(SpanTags.TAG_HTTP_URL, httpReq.uri().toString());
+        final String authority = ctx.authority();
+        span.tag(SpanTags.TAG_HTTP_HOST, authority != null ? authority : "UNKNOWN")
+            .tag(SpanTags.TAG_HTTP_URL, ctx.uri().toString());
     }
 
     @Override
