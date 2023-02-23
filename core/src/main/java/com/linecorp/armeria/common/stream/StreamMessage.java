@@ -395,8 +395,8 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
-     * Creates a new {@link StreamMessageWriter} that produces the objects to be published
-     * by {@link StreamMessage}.
+     * Creates a new {@link StreamMessageWriter} that publishes the objects written via
+     * {@link StreamWriter#write(Object)}.
      */
     static <T> StreamMessageWriter<T> streaming() {
         return new DefaultStreamMessage<>();
