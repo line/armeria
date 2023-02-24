@@ -210,7 +210,7 @@ public final class ServerBuilder implements TlsSetters {
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
-    private Duration unloggedExceptionReportInterval = Duration.ofSeconds(60);
+    private Duration unloggedExceptionReportInterval = Duration.ofSeconds(10);
     @Nullable
     private DependencyInjector dependencyInjector;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
