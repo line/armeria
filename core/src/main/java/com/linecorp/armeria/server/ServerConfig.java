@@ -25,7 +25,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
