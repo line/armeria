@@ -50,7 +50,7 @@ class RequestIdHeadersTest {
     };
 
     @Test
-    void requestIdTest() throws InterruptedException {
+    void shouldReturnRequestIdGeneratedFromHeaders() throws InterruptedException {
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
 
