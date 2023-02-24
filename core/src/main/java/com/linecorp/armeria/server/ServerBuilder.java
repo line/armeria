@@ -1709,7 +1709,7 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the {@link Function} from {@link Supplier} which generates a {@link RequestId}.
+     * Sets the {@link Supplier} which generates a {@link RequestId}.
      * By default, a {@link RequestId} is generated from a random 64-bit integer.
      *
      * @see RequestContext#id()
@@ -1721,8 +1721,7 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the {@link Function} which generates a {@link RequestId}.
-     * Add logic to generate {@link RequestId} from {@link RoutingContext}.
+     * Generate {@link RequestId} from {@link RoutingContext}.
      * By default, a {@link RequestId} is generated from a random 64-bit integer.
      *
      * @see RequestContext#id()

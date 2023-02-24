@@ -274,7 +274,7 @@ public interface ServerConfig {
     boolean isServerHeaderEnabled();
 
     /**
-     * Returns the {@link Supplier} that generates a {@link RequestId} for each {@link Request}.
+     * Returns the {@link Function} that generates a {@link RequestId} for each {@link Request}.
      */
     Function<RoutingContext, RequestId> requestIdGenerator();
 
