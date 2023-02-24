@@ -89,7 +89,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     /**
      * Whether a new request can acquire this channel from {@link HttpChannelPool}.
      */
-    private volatile boolean active;
+    private volatile boolean isAcquirable;
 
     /**
      * The current negotiated {@link SessionProtocol}.
@@ -175,7 +175,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return !goAwayHandler.sentGoAway() && !goAwayHandler.receivedGoAway();
         } else {
             // Don't allow to send a request if a connection is closed or about to be closed for HTTP/1.
-            return canAcquire();
+            return isAcquirable();
         }
     }
 
@@ -274,25 +274,25 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public boolean canAcquire() {
-        return active && responseDecoder != null && !responseDecoder.needsToDisconnectWhenFinished();
+    public boolean isAcquirable() {
+        return isAcquirable && responseDecoder != null && !responseDecoder.needsToDisconnectWhenFinished();
     }
 
     @Override
     public void deactivate() {
-        if (active) {
-            active = false;
+        if (isAcquirable) {
+            isAcquirable = false;
         }
     }
 
     @Override
     public void handlerAdded(ChannelHandlerContext ctx) throws Exception {
-        active = channel.isActive();
+        isAcquirable = channel.isActive();
     }
 
     @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
-        active = true;
+        isAcquirable = true;
     }
 
     @Override
@@ -429,7 +429,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        active = false;
+        isAcquirable = false;
 
         // Protocol upgrade has failed, but needs to retry.
         if (needsRetryWithH1C) {

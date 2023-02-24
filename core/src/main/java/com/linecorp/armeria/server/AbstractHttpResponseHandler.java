@@ -17,6 +17,7 @@
 package com.linecorp.armeria.server;
 
 import static com.google.common.base.MoreObjects.firstNonNull;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeResponseHeaders;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeTrailers;
 
@@ -141,7 +142,7 @@ abstract class AbstractHttpResponseHandler {
                                                        reqCtx.config().defaultHeaders(),
                                                        config.isServerHeaderEnabled(),
                                                        config.isDateHeaderEnabled());
-        if (headers.contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE.toString())) {
+        if (headers.contains(HttpHeaderNames.CONNECTION, CLOSE_STRING)) {
             disconnectWhenFinished();
         }
 

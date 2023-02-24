@@ -17,6 +17,7 @@
 package com.linecorp.armeria.client;
 
 import static com.linecorp.armeria.client.HttpSessionHandler.MAX_NUM_REQUESTS_SENT;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static com.linecorp.armeria.internal.common.HttpHeadersUtil.mergeRequestHeaders;
 
 import java.util.concurrent.ScheduledFuture;
@@ -46,7 +47,6 @@ import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelPromise;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.Http2Error;
 import io.netty.handler.proxy.ProxyConnectException;
 
@@ -157,7 +157,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                         " in one connection. ID: " + id);
             } else {
                 exception = new ClosedSessionException(
-                        "Can't send requests. ID: " + id + ", session active: " + session.canAcquire() +
+                        "Can't send requests. ID: " + id + ", session active: " + session.isAcquirable() +
                         ", response needs to disconnect: " + responseDecoder.needsToDisconnectWhenFinished());
             }
             responseDecoder.disconnectWhenFinished();
@@ -205,7 +205,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                 headers, ctx.defaultRequestHeaders(), ctx.additionalRequestHeaders());
         logBuilder.requestHeaders(merged);
 
-        if (headers.contains(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE.toString())) {
+        if (headers.contains(HttpHeaderNames.CONNECTION, CLOSE_STRING)) {
             // Make the session unhealthy so that subsequent requests do not use it.
             // In HTTP/2 request, the "Connection: close" is just interpreted as a signal to close the
             // connection by sending a GOAWAY frame that will be sent after receiving the corresponding

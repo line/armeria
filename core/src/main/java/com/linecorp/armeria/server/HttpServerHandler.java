@@ -20,6 +20,7 @@ import static com.linecorp.armeria.common.SessionProtocol.H1;
 import static com.linecorp.armeria.common.SessionProtocol.H1C;
 import static com.linecorp.armeria.common.SessionProtocol.H2;
 import static com.linecorp.armeria.common.SessionProtocol.H2C;
+import static com.linecorp.armeria.internal.common.HttpHeadersUtil.CLOSE_STRING;
 import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import static java.util.Objects.requireNonNull;
 
@@ -587,7 +588,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
     private void addConnectionCloseHeaders(ResponseHeadersBuilder headers) {
         if (protocol == H1 || protocol == H1C) {
-            headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE.toString());
+            headers.set(HttpHeaderNames.CONNECTION, CLOSE_STRING);
         } else {
             // Do not add the 'connection' header for HTTP/2 responses.
             // See https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.2

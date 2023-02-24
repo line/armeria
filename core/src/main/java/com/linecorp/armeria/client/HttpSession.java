@@ -71,7 +71,7 @@ interface HttpSession {
         }
 
         @Override
-        public boolean canAcquire() {
+        public boolean isAcquirable() {
             return false;
         }
 
@@ -99,7 +99,7 @@ interface HttpSession {
      * Returns whether this {@link HttpSession} is healthy. {@code true} if a new request can acquire this
      * session from {@link HttpChannelPool}.
      */
-    boolean canAcquire();
+    boolean isAcquirable();
 
     /**
      * Deactivates this {@link HttpSession} to prevent new requests from acquiring this {@link HttpSession}.
@@ -115,7 +115,7 @@ interface HttpSession {
 
     /**
      * Returns {@code true} if a new request can be sent with this {@link HttpSession}.
-     * Note that {@link #canSendRequest()} may return {@code true} even if {@link #canAcquire()} is
+     * Note that {@link #canSendRequest()} may return {@code true} even if {@link #isAcquirable()} is
      * {@code false} when the session is in the initial phase of a graceful shutdown.
      */
     boolean canSendRequest();
