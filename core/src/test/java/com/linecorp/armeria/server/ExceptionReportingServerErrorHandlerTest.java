@@ -63,7 +63,7 @@ class ExceptionReportingServerErrorHandlerTest {
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .build();
         assertThat(server1.config().unloggedExceptionReportInterval().isZero()).isFalse();
-        assertThat(server1.config().unloggedExceptionReportInterval().getSeconds()).isEqualTo(60);
+        assertThat(server1.config().unloggedExceptionReportInterval().getSeconds()).isEqualTo(10);
 
         final Server server2 = Server.builder()
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
