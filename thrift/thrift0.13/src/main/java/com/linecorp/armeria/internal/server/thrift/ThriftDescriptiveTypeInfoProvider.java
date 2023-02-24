@@ -20,10 +20,15 @@ import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.collect.ImmutableList.toImmutableList;
 import static java.util.Objects.requireNonNull;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.thrift.TBase;
@@ -143,7 +148,7 @@ public final class ThriftDescriptiveTypeInfoProvider implements DescriptiveTypeI
             // where the Thrift compiler handles it as a typedef.
             typeSignature = TypeSignature.ofStruct(parentType);
         } else {
-            typeSignature = toTypeSignature(fieldValueMetaData);
+            typeSignature = toTypeSignature(parentType, fieldMetaData, fieldValueMetaData);
         }
 
         return FieldInfo.builder(fieldMetaData.fieldName, typeSignature)
@@ -164,6 +169,21 @@ public final class ThriftDescriptiveTypeInfoProvider implements DescriptiveTypeI
         }
     }
 
+    static TypeSignature toTypeSignature(Class<?> parentType, FieldMetaData fieldMetaData,
+                                         FieldValueMetaData fieldValueMetaData) {
+        if (!fieldValueMetaData.isTypedef() && !hasTypeDef(fieldValueMetaData)) {
+            return toTypeSignature(fieldValueMetaData);
+        }
+
+        try {
+            final Field field = parentType.getField(fieldMetaData.fieldName);
+            return toTypeSignature(field.getGenericType());
+        } catch (NoSuchFieldException e) {
+            // Ignore exception.
+        }
+        return TypeSignature.ofUnresolved(firstNonNull(fieldValueMetaData.getTypedefName(), "unknown"));
+    }
+
     static TypeSignature toTypeSignature(FieldValueMetaData fieldValueMetaData) {
         if (fieldValueMetaData instanceof StructMetaData) {
             return TypeSignature.ofStruct(((StructMetaData) fieldValueMetaData).structClass);
@@ -182,8 +202,9 @@ public final class ThriftDescriptiveTypeInfoProvider implements DescriptiveTypeI
         }
 
         if (fieldValueMetaData instanceof MapMetaData) {
-            return TypeSignature.ofMap(toTypeSignature(((MapMetaData) fieldValueMetaData).keyMetaData),
-                                       toTypeSignature(((MapMetaData) fieldValueMetaData).valueMetaData));
+            final MapMetaData mapMetaData = (MapMetaData) fieldValueMetaData;
+            return TypeSignature.ofMap(toTypeSignature(mapMetaData.keyMetaData),
+                                       toTypeSignature(mapMetaData.valueMetaData));
         }
 
         if (fieldValueMetaData.isBinary()) {
@@ -208,15 +229,89 @@ public final class ThriftDescriptiveTypeInfoProvider implements DescriptiveTypeI
             case TType.STRING:
                 return STRING;
         }
+        return TypeSignature.ofUnresolved("unknown");
+    }
 
-        final String unresolvedName;
-        if (fieldValueMetaData.isTypedef()) {
-            unresolvedName = fieldValueMetaData.getTypedefName();
-        } else {
-            unresolvedName = null;
+    private static TypeSignature toTypeSignature(Type type) {
+        if (type instanceof ParameterizedType) {
+            final ParameterizedType parameterizedType = (ParameterizedType) type;
+            final Class<?> rawType = (Class<?>) parameterizedType.getRawType();
+            if (List.class.isAssignableFrom(rawType)) {
+                return TypeSignature.ofList(toTypeSignature(parameterizedType.getActualTypeArguments()[0]));
+            }
+            if (Set.class.isAssignableFrom(rawType)) {
+                return TypeSignature.ofSet(toTypeSignature(parameterizedType.getActualTypeArguments()[0]));
+            }
+
+            if (Map.class.isAssignableFrom(rawType)) {
+                final TypeSignature key = toTypeSignature(parameterizedType.getActualTypeArguments()[0]);
+                final TypeSignature value = toTypeSignature(parameterizedType.getActualTypeArguments()[1]);
+                return TypeSignature.ofMap(key, value);
+            }
         }
 
-        return TypeSignature.ofUnresolved(firstNonNull(unresolvedName, "unknown"));
+        if (type == Void.class || type == void.class) {
+            return VOID;
+        }
+        if (type == Boolean.class || type == boolean.class) {
+            return BOOL;
+        }
+        if (type == Byte.class || type == byte.class) {
+            return I8;
+        }
+        if (type == Short.class || type == short.class) {
+            return I16;
+        }
+        if (type == Integer.class || type == int.class) {
+            return I32;
+        }
+        if (type == Long.class || type == long.class) {
+            return I64;
+        }
+        if (type == Double.class || type == double.class) {
+            return DOUBLE;
+        }
+        if (type == String.class) {
+            return STRING;
+        }
+        if (type == ByteBuffer.class) {
+            return BINARY;
+        }
+
+        if (!(type instanceof Class)) {
+            return TypeSignature.ofBase(type.getTypeName());
+        }
+
+        final Class<?> type1 = (Class<?>) type;
+        if (type1.isEnum()) {
+            return TypeSignature.ofEnum(type1);
+        }
+        return TypeSignature.ofStruct(type1);
+    }
+
+    private static boolean hasTypeDef(FieldValueMetaData valueMetadata) {
+        while (true) {
+            if (valueMetadata.isTypedef()) {
+                return true;
+            }
+
+            if (valueMetadata instanceof ListMetaData) {
+                valueMetadata = ((ListMetaData) valueMetadata).elemMetaData;
+                continue;
+            }
+
+            if (valueMetadata instanceof SetMetaData) {
+                valueMetadata = ((SetMetaData) valueMetadata).elemMetaData;
+                continue;
+            }
+
+            if (valueMetadata instanceof MapMetaData) {
+                return hasTypeDef(((MapMetaData) valueMetadata).keyMetaData) ||
+                       hasTypeDef(((MapMetaData) valueMetadata).valueMetaData);
+            }
+
+            return false;
+        }
     }
 
     @VisibleForTesting

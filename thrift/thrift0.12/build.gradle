@@ -33,7 +33,7 @@ tasks.processTestResources.from "${rootProject.projectDir}/thrift/thrift0.13/src
 // Use the old compiler.
 def thriftFullVersion = libs.thrift012.get().versionConstraint.requiredVersion
 ext {
-    thriftVersion = thriftFullVersion.substring(0, thriftFullVersion.lastIndexOf('.'));
+    thriftVersion = thriftFullVersion.substring(0, thriftFullVersion.lastIndexOf('.'))
 }
 
 // Disable checkstyle because it's checked by ':thrift0.13'.

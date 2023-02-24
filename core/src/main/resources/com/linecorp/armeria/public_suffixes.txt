@@ -146,6 +146,7 @@
 2ix.at
 2ix.ch
 2ix.de
+3.azurestaticapps.net
 3.bg
 32-b.it
 3utilities.com
@@ -262,6 +263,8 @@ adimo.co.uk
 adm.br
 adobeaemcloud.com
 adobeaemcloud.net
+adobeio-static.net
+adobeioruntime.net
 ads
 adult
 adult.ht
@@ -286,6 +289,7 @@ affinitylottery.org.uk
 afjord.no
 afl
 africa
+africa.bj
 africa.com
 ag
 ag.it
@@ -301,6 +305,7 @@ agrar.hu
 agric.za
 agriculture.museum
 agrigento.it
+agro.bj
 agro.bo
 agro.pl
 aguni.okinawa.jp
@@ -340,8 +345,19 @@ aizuwakamatsu.fukushima.jp
 aju.br
 ak.us
 akabira.hokkaido.jp
+akadns.net
 akagi.shimane.jp
 akaiwa.okayama.jp
+akamai-staging.net
+akamai.net
+akamaiedge-staging.net
+akamaiedge.net
+akamaihd-staging.net
+akamaihd.net
+akamaiorigin-staging.net
+akamaiorigin.net
+akamaized-staging.net
+akamaized.net
 akashi.hyogo.jp
 akdn
 aki.kochi.jp
@@ -510,6 +526,7 @@ arboretum.museum
 archaeological.museum
 archaeology.museum
 archi
+architectes.bj
 architecture.museum
 ardal.no
 aremark.no
@@ -586,7 +603,6 @@ assabu.hokkaido.jp
 assassination.museum
 assisi.museum
 assn.lk
-asso.bj
 asso.ci
 asso.dz
 asso.eu.org
@@ -600,6 +616,7 @@ asso.re
 associates
 association.aero
 association.museum
+assur.bj
 asti.it
 astronomy.museum
 asuke.aichi.jp
@@ -643,6 +660,7 @@ author
 author.aero
 auto
 auto.pl
+autocode.dev
 automotive.museum
 autos
 av.it
@@ -653,6 +671,7 @@ avianca
 aviation.museum
 avocat.fr
 avocat.pro
+avocats.bj
 avoues.fr
 aw
 awaji.hyogo.jp
@@ -734,7 +753,6 @@ bargains
 bari.it
 barletta-trani-andria.it
 barlettatraniandria.it
-barreau.bj
 barrel-of-knowledge.info
 barrell-of-knowledge.info
 barsy.bg
@@ -1185,6 +1203,8 @@ can.museum
 canada.museum
 candypop.jp
 canon
+canva-apps.cn
+canva-apps.com
 capebreton.museum
 capetown
 capital
@@ -1493,6 +1513,7 @@ co.ao
 co.at
 co.bb
 co.bi
+co.bj
 co.bn
 co.business
 co.bw
@@ -1597,6 +1618,7 @@ com.ba
 com.bb
 com.bh
 com.bi
+com.bj
 com.bm
 com.bn
 com.bo
@@ -2149,9 +2171,11 @@ ec
 echizen.fukui.jp
 ecn.br
 eco
+eco.bj
 eco.br
 ecologia.bo
 ecommerce-shop.pl
+econo.bj
 economia.bo
 ed.ao
 ed.ci
@@ -2161,7 +2185,11 @@ ed.pw
 edeka
 edgeapp.net
 edgecompute.app
+edgekey-staging.net
+edgekey.net
 edgestack.me
+edgesuite-staging.net
+edgesuite.net
 editorx.io
 edogawa.tokyo.jp
 edu
@@ -2175,6 +2203,7 @@ edu.ba
 edu.bb
 edu.bh
 edu.bi
+edu.bj
 edu.bm
 edu.bn
 edu.bo
@@ -2469,6 +2498,7 @@ farsund.no
 fashion
 fashionstore.jp
 fast
+fastly-edge.com
 fastly-terrarium.com
 fastlylb.net
 faststacks.net
@@ -3018,7 +3048,6 @@ goto.nagasaki.jp
 gotpantheon.com
 gotsu.shimane.jp
 goupile.fr
-gouv.bj
 gouv.ci
 gouv.fr
 gouv.ht
@@ -3733,6 +3762,7 @@ info.at
 info.au
 info.az
 info.bb
+info.bj
 info.bo
 info.co
 info.cx
@@ -3934,6 +3964,7 @@ istmein.de
 isumi.chiba.jp
 it
 it.ao
+it.com
 it.eu.org
 it1.eur.aruba.jenv-aruba.cloud
 it1.jenv-aruba.cloud
@@ -4769,7 +4800,6 @@ locker
 locus
 lodi.it
 lodingen.no
-loft
 log.br
 loginline.app
 loginline.dev
@@ -4781,6 +4811,7 @@ logistics.aero
 logoip.com
 logoip.de
 lohmus.me
+loisirs.bj
 lol
 lolipop.io
 lolipopmc.jp
@@ -5294,6 +5325,7 @@ mombetsu.hokkaido.jp
 monash
 mond.jp
 money
+money.bj
 money.museum
 mongolian.jp
 monmouth.museum
@@ -5662,6 +5694,7 @@ net.az
 net.ba
 net.bb
 net.bh
+net.bj
 net.bm
 net.bn
 net.bo
@@ -6222,6 +6255,7 @@ org.ba
 org.bb
 org.bh
 org.bi
+org.bj
 org.bm
 org.bn
 org.bo
@@ -6404,6 +6438,7 @@ otaki.saitama.jp
 otama.fukushima.jp
 otari.nagano.jp
 otaru.hokkaido.jp
+ote.bj
 other.nf
 oto.fukuoka.jp
 otobe.hokkaido.jp
@@ -6695,6 +6730,7 @@ priv.instances.scw.cloud
 priv.me
 priv.no
 priv.pl
+privatelink.snowflake.app
 privatizehealthinsurance.net
 pro
 pro.az
@@ -6902,6 +6938,8 @@ resindevice.io
 resistance.museum
 rest
 restaurant
+restaurant.bj
+resto.bj
 review
 reviews
 revista.bo
@@ -7346,7 +7384,6 @@ service.gov.uk
 service.one
 services
 services.aero
-ses
 setagaya.tokyo.jp
 seto.aichi.jp
 setouchi.okayama.jp
@@ -7570,6 +7607,7 @@ snasa.no
 sncf
 snillfjord.no
 snoasa.no
+snowflake.app
 so
 so.gov.pl
 so.it
@@ -7719,6 +7757,7 @@ stpetersburg.museum
 strand.no
 stranda.no
 stream
+streamlit.app
 streamlitapp.com
 stripper.jp
 stryn.no
@@ -8107,6 +8146,7 @@ total
 tottori.jp
 tottori.tottori.jp
 touch.museum
+tourism.bj
 tourism.pl
 tourism.tn
 tours
@@ -8355,6 +8395,7 @@ uni5.net
 unicloud.pl
 unicom
 union.aero
+univ.bj
 univ.sn
 university
 university.museum

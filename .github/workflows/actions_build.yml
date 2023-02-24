@@ -7,6 +7,7 @@ on:
       # The release versions will be verified by 'publish-release.yml'
       - armeria-*
   pull_request:
+  merge_group:
 
 concurrency:
   # Cancel the previous builds in the same PR.
@@ -125,7 +126,7 @@ jobs:
 
       - name: Dump stuck threads
         if: always()
-        run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+        run: jps | grep -iv "jps" | grep -v 'Daemon' | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
         shell: bash
 
       - name: Upload the coverage report to Codecov
@@ -134,7 +135,7 @@ jobs:
 
       - name: Collect the test reports
         if: failure()
-        run: find . '(' -name 'java_pid*.hprof' -or -name 'hs_err_*.log' -or -path '*/build/reports/tests' -or -path '*/build/test-results' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
+        run: find . '(' -name 'java_pid*.hprof' -or -name 'hs_err_*.log' -or -path '*/build/reports/tests' -or -path '*/build/test-results' -or -path '*/javadoc.options' ')' -exec tar rf "reports-JVM-${{ matrix.java }}.tar" {} ';'
         shell: bash
 
       - name: Upload the artifacts
@@ -230,5 +231,5 @@ jobs:
 
       - name: Dump stuck threads
         if: always()
-        run: jps | grep -vi "jps" | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
+        run: jps | grep -iv "jps" | grep -v 'Daemon' | awk '{ print $1 }' | xargs -I'{}' jstack -l {} || true
         shell: bash

@@ -59,6 +59,7 @@ import io.netty.handler.codec.http.HttpRequest;
 import io.netty.handler.codec.http.HttpUtil;
 import io.netty.handler.codec.http.HttpVersion;
 import io.netty.handler.codec.http.LastHttpContent;
+import io.netty.handler.codec.http.TooLongHttpHeaderException;
 import io.netty.handler.codec.http.TooLongHttpLineException;
 import io.netty.handler.codec.http2.Http2CodecUtil;
 import io.netty.handler.codec.http2.Http2Error;
@@ -151,6 +152,9 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
                         final Throwable cause = nettyReq.decoderResult().cause();
                         if (cause instanceof TooLongHttpLineException) {
                             fail(id, null, HttpStatus.REQUEST_URI_TOO_LONG, "Too Long URI", cause);
+                        } else if (cause instanceof TooLongHttpHeaderException) {
+                            fail(id, null, HttpStatus.REQUEST_HEADER_FIELDS_TOO_LARGE,
+                                 "Request Header Fields Too Large", cause);
                         } else {
                             fail(id, null, HttpStatus.BAD_REQUEST, "Decoder failure", cause);
                         }

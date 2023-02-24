@@ -1,0 +1,9 @@
+pull_request_rules:
+  - name: Automatically merge Public suffix list pull requests
+    conditions:
+      - author=github-actions[bot]
+      - title=Update public suffix list
+      - files=core/src/main/resources/com/linecorp/armeria/public_suffixes.txt
+    actions:
+      merge:
+        method: squash

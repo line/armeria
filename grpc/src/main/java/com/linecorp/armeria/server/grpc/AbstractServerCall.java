@@ -55,6 +55,7 @@ import com.linecorp.armeria.common.logging.RequestLogBuilder;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.ClosedStreamException;
+import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.common.util.SafeCloseable;
 import com.linecorp.armeria.internal.common.grpc.ForwardingCompressor;
 import com.linecorp.armeria.internal.common.grpc.ForwardingDecompressor;
@@ -62,6 +63,7 @@ import com.linecorp.armeria.internal.common.grpc.GrpcLogUtil;
 import com.linecorp.armeria.internal.common.grpc.GrpcMessageMarshaller;
 import com.linecorp.armeria.internal.common.grpc.GrpcStatus;
 import com.linecorp.armeria.internal.common.grpc.MetadataUtil;
+import com.linecorp.armeria.internal.common.grpc.StatusAndMetadata;
 import com.linecorp.armeria.internal.common.grpc.StatusExceptionConverter;
 import com.linecorp.armeria.internal.common.grpc.protocol.GrpcTrailersUtil;
 import com.linecorp.armeria.server.RequestTimeoutException;
@@ -80,7 +82,6 @@ import io.grpc.MethodDescriptor.MethodType;
 import io.grpc.ServerCall;
 import io.grpc.Status;
 import io.grpc.Status.Code;
-import io.grpc.StatusException;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.ByteBufAllocator;
 import io.netty.channel.EventLoop;
@@ -206,6 +207,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     }
 
     final void close(Throwable exception) {
+        exception = Exceptions.peel(exception);
         final Metadata metadata = generateMetadataFromThrowable(exception);
         close(GrpcStatus.fromThrowable(statusFunction, ctx, exception, metadata), metadata, exception);
     }
@@ -229,12 +231,12 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         maybeLogFailedRequestContent(exception);
         if (isCancelled()) {
             // No need to write anything to client if cancelled already.
-            closeListener(status, false, true);
+            closeListener(status, metadata, false, true);
             return;
         }
 
         if (status.getCode() == Code.CANCELLED && status.getCause() instanceof ClosedStreamException) {
-            closeListener(status, false, true);
+            closeListener(status, metadata, false, true);
             return;
         }
 
@@ -257,7 +259,13 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     abstract void doClose(Status status, Metadata metadata, boolean completed);
 
-    final void closeListener(Status newStatus, boolean completed, boolean setResponseContent) {
+    final void closeListener(Status newStatus, Metadata metadata, boolean completed,
+                             boolean setResponseContent) {
+        closeListener(new StatusAndMetadata(newStatus, metadata), completed, setResponseContent);
+    }
+
+    final void closeListener(StatusAndMetadata statusAndMetadata, boolean completed,
+                             boolean setResponseContent) {
         if (!listenerClosed) {
             listenerClosed = true;
 
@@ -265,16 +273,18 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 // Failed to deserialize a message into a request
                 ctx.logBuilder().requestContent(GrpcLogUtil.rpcRequest(method, simpleMethodName), null);
             }
+
             if (setResponseContent) {
-                ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(newStatus, firstResponse()), null);
+                ctx.logBuilder().responseContent(GrpcLogUtil.rpcResponse(statusAndMetadata, firstResponse()),
+                                                 null);
             }
 
             if (!clientStreamClosed) {
                 clientStreamClosed = true;
-                if (newStatus.isOk()) {
+                if (statusAndMetadata.status().isOk()) {
                     req.abort();
                 } else {
-                    req.abort(newStatus.asException());
+                    req.abort(statusAndMetadata.asRuntimeException());
                 }
             }
 
@@ -293,8 +303,7 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 }
                 // Transport error, not business logic error, so reset the stream.
                 if (!closeCalled) {
-                    final StatusException statusException = newStatus.asException();
-                    res.abort(statusException);
+                    res.abort(statusAndMetadata.asRuntimeException());
                 }
             }
         }
@@ -311,8 +320,8 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
                 if (messageReceived && method.getType() == MethodType.UNARY) {
                     closeListener(Status.INTERNAL.withDescription(
                                           "More than one request messages for unary call or server streaming " +
-                                          "call"), false,
-                                  true);
+                                          "call"),
+                                  new Metadata(), false, true);
                     return;
                 }
                 messageReceived = true;
@@ -615,6 +624,10 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     @Nullable
     final Executor blockingExecutor() {
         return blockingExecutor;
+    }
+
+    final EventLoop eventLoop() {
+        return ctx.eventLoop();
     }
 
     @Override
