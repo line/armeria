@@ -299,5 +299,5 @@ public interface ServerConfig {
     /**
      * Returns the interval between reporting uncaught exceptions.
      */
-    Duration unLoggedExceptionReportInterval();
+    Duration unloggedExceptionReportInterval();
 }

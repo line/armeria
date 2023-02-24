@@ -116,7 +116,7 @@ public final class DefaultServiceRequestContext
 
     @Nullable
     private String strVal;
-    private boolean shouldReportUnLoggedException;
+    private boolean shouldReportUnloggedException;
 
     /**
      * Creates a new instance.
@@ -190,7 +190,7 @@ public final class DefaultServiceRequestContext
         this.additionalResponseHeaders = additionalResponseHeaders;
         this.additionalResponseTrailers = additionalResponseTrailers;
 
-        shouldReportUnLoggedException = true;
+        shouldReportUnloggedException = true;
     }
 
     @Nullable
@@ -443,13 +443,13 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public boolean shouldReportUnLoggedException() {
-        return shouldReportUnLoggedException;
+    public boolean shouldReportUnloggedException() {
+        return shouldReportUnloggedException;
     }
 
     @Override
-    public void setShouldReportUnLoggedException(boolean value) {
-        shouldReportUnLoggedException = value;
+    public void setShouldReportUnloggedException(boolean value) {
+        shouldReportUnloggedException = value;
     }
 
     @Override

@@ -559,7 +559,7 @@ public final class Server implements ListenableAsyncCloseable {
 
         private void scheduleExceptionReporting() {
             final ServerErrorHandler serverErrorHandler = config().errorHandler();
-            if (!config().unLoggedExceptionReportInterval().isZero() &&
+            if (!config().unloggedExceptionReportInterval().isZero() &&
                 serverErrorHandler instanceof ExceptionReportingServerErrorHandler) {
                 ((ExceptionReportingServerErrorHandler) serverErrorHandler).start(config.workerGroup());
             }
@@ -567,7 +567,7 @@ public final class Server implements ListenableAsyncCloseable {
 
         @Override
         protected CompletionStage<Void> doStop(@Nullable Void arg) {
-            unScheduleExceptionReporting();
+            unscheduleExceptionReporting();
 
             final CompletableFuture<Void> future = new CompletableFuture<>();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
@@ -675,7 +675,7 @@ public final class Server implements ListenableAsyncCloseable {
             });
         }
 
-        private void unScheduleExceptionReporting() {
+        private void unscheduleExceptionReporting() {
             final ServerErrorHandler serverErrorHandler = config().errorHandler();
             if (serverErrorHandler instanceof ExceptionReportingServerErrorHandler) {
                 ((ExceptionReportingServerErrorHandler) serverErrorHandler).stop();

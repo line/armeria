@@ -145,7 +145,7 @@ public final class LoggingService extends SimpleDecoratingHttpService {
 
     @Override
     public HttpResponse serve(ServiceRequestContext ctx, HttpRequest req) throws Exception {
-        ctx.setShouldReportUnLoggedException(false);
+        ctx.setShouldReportUnloggedException(false);
         ctx.log().whenComplete().thenAccept(requestLog -> {
             if (sampler.isSampled(requestLog)) {
                 log(logger, ctx, requestLog, requestLogger, responseLogger);

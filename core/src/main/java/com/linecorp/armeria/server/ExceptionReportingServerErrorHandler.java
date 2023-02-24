@@ -53,11 +53,7 @@ class ExceptionReportingServerErrorHandler implements ServerErrorHandler {
     private ScheduledFuture<?> reportingTaskFuture;
 
     ExceptionReportingServerErrorHandler(ServerErrorHandler serverErrorHandler, Duration duration) {
-        if (duration.isNegative() || duration.isZero()) {
-            throw new IllegalArgumentException("Duration " +
-                                               TextFormatter.elapsed(duration.toNanos()) +
-                                               " (expected: > 0)");
-        }
+        assert !duration.isNegative() && !duration.isZero();
         delegate = serverErrorHandler;
         this.duration = duration;
         counter = new LongAdder();
@@ -69,7 +65,7 @@ class ExceptionReportingServerErrorHandler implements ServerErrorHandler {
     @Nullable
     @Override
     public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
-        if (ctx.shouldReportUnLoggedException()) {
+        if (ctx.shouldReportUnloggedException()) {
             if (thrownException == null) {
                 thrownException = cause;
             }
