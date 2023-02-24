@@ -233,13 +233,13 @@ public class ServiceRequestContextWrapper
     }
 
     @Override
-    public boolean shouldLogException() {
-        return unwrap().shouldLogException();
+    public boolean shouldReportUnLoggedException() {
+        return unwrap().shouldReportUnLoggedException();
     }
 
     @Override
-    public void setShouldLogException(boolean value) {
-        unwrap().setShouldLogException(value);
+    public void setShouldReportUnLoggedException(boolean value) {
+        unwrap().setShouldReportUnLoggedException(value);
     }
 
     @Override

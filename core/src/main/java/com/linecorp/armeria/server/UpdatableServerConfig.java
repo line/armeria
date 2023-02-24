@@ -285,8 +285,8 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
-    public Duration exceptionReportingInterval() {
-        return delegate.exceptionReportingInterval();
+    public Duration unLoggedExceptionReportInterval() {
+        return delegate.unLoggedExceptionReportInterval();
     }
 
     @Override

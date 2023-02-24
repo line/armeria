@@ -515,7 +515,7 @@ public final class Server implements ListenableAsyncCloseable {
                             .addListener(new NextServerPortStartListener(this, it, future));
 
             setupServerMetrics();
-            scheduleExceptionsLogging();
+            scheduleExceptionReporting();
             return future;
         }
 
@@ -557,18 +557,17 @@ public final class Server implements ListenableAsyncCloseable {
                                 ConnectionLimitingHandler::numConnections);
         }
 
-        private void scheduleExceptionLogging() {
-            if (!config().exceptionReportingInterval().isZero() &&
-                config().errorHandler() instanceof ExceptionReportingServerErrorHandler) {
-                ((ExceptionReportingServerErrorHandler) config.errorHandler()).start(config.workerGroup());
+        private void scheduleExceptionReporting() {
+            final ServerErrorHandler serverErrorHandler = config().errorHandler();
+            if (!config().unLoggedExceptionReportInterval().isZero() &&
+                serverErrorHandler instanceof ExceptionReportingServerErrorHandler) {
+                ((ExceptionReportingServerErrorHandler) serverErrorHandler).start(config.workerGroup());
             }
         }
 
         @Override
         protected CompletionStage<Void> doStop(@Nullable Void arg) {
-            if (config().errorHandler() instanceof ExceptionReportingServerErrorHandler) {
-                ((ExceptionReportingServerErrorHandler) config().errorHandler()).stop();
-            }
+            unScheduleExceptionReporting();
 
             final CompletableFuture<Void> future = new CompletableFuture<>();
             final GracefulShutdownSupport gracefulShutdownSupport = this.gracefulShutdownSupport;
@@ -674,6 +673,13 @@ public final class Server implements ListenableAsyncCloseable {
 
                 return null;
             });
+        }
+
+        private void unScheduleExceptionReporting() {
+            final ServerErrorHandler serverErrorHandler = config().errorHandler();
+            if (serverErrorHandler instanceof ExceptionReportingServerErrorHandler) {
+                ((ExceptionReportingServerErrorHandler) serverErrorHandler).stop();
+            }
         }
 
         private void finishDoStop(CompletableFuture<Void> future) {

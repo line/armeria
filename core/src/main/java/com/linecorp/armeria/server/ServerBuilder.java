@@ -92,6 +92,7 @@ import com.linecorp.armeria.server.annotation.ExceptionHandlerFunction;
 import com.linecorp.armeria.server.annotation.RequestConverterFunction;
 import com.linecorp.armeria.server.annotation.ResponseConverterFunction;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
+import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -209,7 +210,7 @@ public final class ServerBuilder implements TlsSetters {
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
-    private Duration exceptionReportingInterval = Duration.ofSeconds(60);
+    private Duration unLoggedExceptionReportInterval = Duration.ofSeconds(60);
     @Nullable
     private DependencyInjector dependencyInjector;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
@@ -1810,12 +1811,31 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the duration between logging uncaught exceptions.
-     * @param exceptionReportingInterval - the duration between logging uncaught exceptions.
+     * Sets the interval between log messages that report the
+     * exceptions not logged by any decorators or services, such as
+     * {@link LoggingService}.
+     * @param unLoggedExceptionReportInterval the interval between the summary log messages, or
+     *                                        non-positive {@link Duration} to disable this feature
      */
-    public ServerBuilder exceptionReportingInterval(Duration exceptionReportingInterval) {
-        this.exceptionReportingInterval = exceptionReportingInterval;
+    public ServerBuilder unLoggedExceptionReportInterval(Duration unLoggedExceptionReportInterval) {
+        requireNonNull(unLoggedExceptionReportInterval, "unLoggedExceptionReportInterval");
+        if (unLoggedExceptionReportInterval.isNegative()) {
+            this.unLoggedExceptionReportInterval = Duration.ZERO;
+        } else {
+            this.unLoggedExceptionReportInterval = unLoggedExceptionReportInterval;
+        }
         return this;
+    }
+
+    /**
+     * Sets the interval between log messages that report the
+     * exceptions not logged by any decorators or services, such as
+     * {@link LoggingService} in seconds.
+     * @param seconds the interval between the summary log messages in seconds, or
+     *                non-positive value to disable this feature
+     */
+    public ServerBuilder unLoggedExceptionReportIntervalSeconds(long seconds) {
+        return unLoggedExceptionReportInterval(Duration.ofSeconds(seconds));
     }
 
     /**
@@ -1930,17 +1950,14 @@ public final class ServerBuilder implements TlsSetters {
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
-        ServerErrorHandler errorHandler;
-        if (!exceptionReportingInterval.isZero()) {
-            errorHandler = new ExceptionReportingServerErrorHandler(this.errorHandler,
-                                                                    exceptionReportingInterval.getSeconds());
-        } else {
-            errorHandler = this.errorHandler;
+        ServerErrorHandler errorHandler = this.errorHandler;
+        if (errorHandler != ServerErrorHandler.ofDefault()) {
+            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
         }
 
-        if (this.errorHandler != ServerErrorHandler.ofDefault()) {
-            // Ensure that ServerErrorHandler never returns null by falling back to the default.
-            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
+        if (unLoggedExceptionReportInterval != Duration.ZERO) {
+            errorHandler = new ExceptionReportingServerErrorHandler(this.errorHandler,
+                                                                    unLoggedExceptionReportInterval);
         }
 
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
@@ -1957,7 +1974,7 @@ public final class ServerBuilder implements TlsSetters {
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
                 http1HeaderNaming, dependencyInjector, ImmutableList.copyOf(shutdownSupports),
-                exceptionReportingInterval);
+                unLoggedExceptionReportInterval);
     }
 
     /**

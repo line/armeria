@@ -582,16 +582,16 @@ public interface ServiceRequestContext extends RequestContext {
     ProxiedAddresses proxiedAddresses();
 
     /**
-     * Returns whether exceptions should be logged.
+     * Returns whether exceptions should be reported.
      * When {@link LoggingService} handles exceptions, this is set to false.
      */
-    boolean shouldLogException();
+    boolean shouldReportUnLoggedException();
 
     /**
-     * Sets whether to log exceptions.
-     * @param value whether to log uncaught exceptions
+     * Sets whether to report exceptions.
+     * @param value whether to report uncaught exceptions
      */
-    void setShouldLogException(boolean value);
+    void setShouldReportUnLoggedException(boolean value);
 
     /**
      * Initiates graceful connection shutdown with a given drain duration in microseconds and returns

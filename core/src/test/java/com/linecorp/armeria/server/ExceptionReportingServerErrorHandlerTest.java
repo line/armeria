@@ -42,7 +42,7 @@ class ExceptionReportingServerErrorHandlerTest {
     final ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
     final Logger errorHandlerLogger =
             (Logger) LoggerFactory.getLogger(ExceptionReportingServerErrorHandler.class);
-    private static final long exceptionReportingInterval = 1;
+    private static final long unLoggedExceptionReportInterval = 1;
     private static final long awaitIntervalForTest = 2;
 
     @BeforeEach
@@ -62,21 +62,21 @@ class ExceptionReportingServerErrorHandlerTest {
         final Server server1 = Server.builder()
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .build();
-        assertThat(server1.config().exceptionReportingInterval().isZero()).isFalse();
-        assertThat(server1.config().exceptionReportingInterval().getSeconds()).isEqualTo(60);
+        assertThat(server1.config().unLoggedExceptionReportInterval().isZero()).isFalse();
+        assertThat(server1.config().unLoggedExceptionReportInterval().getSeconds()).isEqualTo(60);
 
         final Server server2 = Server.builder()
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                     .exceptionReportingInterval(Duration.ofSeconds(120))
+                                     .unLoggedExceptionReportInterval(Duration.ofSeconds(120))
                                      .build();
-        assertThat(server2.config().exceptionReportingInterval().isZero()).isFalse();
-        assertThat(server2.config().exceptionReportingInterval().getSeconds()).isEqualTo(120);
+        assertThat(server2.config().unLoggedExceptionReportInterval().isZero()).isFalse();
+        assertThat(server2.config().unLoggedExceptionReportInterval().getSeconds()).isEqualTo(120);
 
         final Server server3 = Server.builder()
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                     .exceptionReportingInterval(Duration.ZERO)
+                                     .unLoggedExceptionReportInterval(Duration.ZERO)
                                      .build();
-        assertThat(server3.config().exceptionReportingInterval().isZero()).isTrue();
+        assertThat(server3.config().unLoggedExceptionReportInterval().isZero()).isTrue();
     }
 
     @Test
@@ -85,21 +85,20 @@ class ExceptionReportingServerErrorHandlerTest {
                                     .service("/hello", (ctx, req) -> {
                                         throw new IllegalArgumentException("test");
                                     })
-                                    .exceptionReportingInterval(Duration.ofSeconds(exceptionReportingInterval))
+                                    .unLoggedExceptionReportInterval(
+                                            Duration.ofSeconds(unLoggedExceptionReportInterval))
                                     .build();
         server.start().join();
 
         WebClient.of("http://127.0.0.1:" + server.activePort().localAddress().getPort()).get("/hello")
                  .aggregate().get();
-        await().atMost(Duration.ofSeconds(exceptionReportingInterval + awaitIntervalForTest))
+        await().atMost(Duration.ofSeconds(unLoggedExceptionReportInterval + awaitIntervalForTest))
                .untilAsserted(() -> assertThat(logAppender.list).isNotEmpty());
 
         assertThat(logAppender.list
                            .stream()
                            .filter(event -> event.getFormattedMessage().contains(
-                                   "Observed 1 uncaught exceptions in last " +
-                                   exceptionReportingInterval +
-                                   " seconds."))
+                                   "Observed 1 uncaught exceptions in last"))
                            .findAny()
         ).isNotEmpty();
     }
@@ -110,14 +109,15 @@ class ExceptionReportingServerErrorHandlerTest {
                                     .service("/hello", (ctx, req) -> {
                                         throw new IllegalArgumentException("test");
                                     })
-                                    .exceptionReportingInterval(Duration.ofSeconds(exceptionReportingInterval))
+                                    .unLoggedExceptionReportInterval(
+                                            Duration.ofSeconds(unLoggedExceptionReportInterval))
                                     .decorator(LoggingService.newDecorator())
                                     .build();
         server.start().join();
 
         WebClient.of("http://127.0.0.1:" + server.activePort().localAddress().getPort()).get("/hello")
                  .aggregate().get();
-        Thread.sleep(1000L * (exceptionReportingInterval + awaitIntervalForTest));
+        Thread.sleep(1000L * (unLoggedExceptionReportInterval + awaitIntervalForTest));
 
         assertThat(logAppender.list).isEmpty();
     }
@@ -132,7 +132,7 @@ class ExceptionReportingServerErrorHandlerTest {
 
         WebClient.of("http://127.0.0.1:" + server.activePort().localAddress().getPort()).get("/hello")
                  .aggregate().get();
-        Thread.sleep(1000L * (exceptionReportingInterval + awaitIntervalForTest));
+        Thread.sleep(1000L * (unLoggedExceptionReportInterval + awaitIntervalForTest));
 
         assertThat(logAppender.list).isEmpty();
     }

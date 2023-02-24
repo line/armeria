@@ -18,6 +18,7 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import java.time.Duration;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.LongAdder;
@@ -30,40 +31,48 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.server.logging.LoggingService;
 
 import io.netty.channel.EventLoopGroup;
 
 /**
- * Implementation of {@link ServerErrorHandler} that is used to decorate other ServerErrorHandlers.
- * When services are not annotated with {@link LoggingService}, exceptions are not caught be default.
- * {@link ExceptionReportingServerErrorHandler} is used to catch those uncaught exceptions.
+ * A {@link ServerErrorHandler} that wraps another {@link ServerErrorHandler}
+ * to periodically report the exceptions that were not logged by decorators such as
+ * {@link LoggingService}.
  */
 class ExceptionReportingServerErrorHandler implements ServerErrorHandler {
     private static final Logger logger = LoggerFactory.getLogger(ExceptionReportingServerErrorHandler.class);
     private final ServerErrorHandler delegate;
     private final LongAdder counter;
-    private final long intervalInSeconds;
-    private boolean isScheduled;
+    private final Duration duration;
+    private boolean started;
     @Nullable
-    private Throwable lastThrownException;
+    private Throwable thrownException;
     @Nullable
-    private ScheduledFuture<?> reportExceptionsSchedule;
+    private ScheduledFuture<?> reportingTaskFuture;
 
-    ExceptionReportingServerErrorHandler(ServerErrorHandler serverErrorHandler, long intervalInSeconds) {
+    ExceptionReportingServerErrorHandler(ServerErrorHandler serverErrorHandler, Duration duration) {
+        if (duration.isNegative() || duration.isZero()) {
+            throw new IllegalArgumentException("Duration " +
+                                               TextFormatter.elapsed(duration.toNanos()) +
+                                               " (expected: > 0)");
+        }
         delegate = serverErrorHandler;
-        this.intervalInSeconds = intervalInSeconds;
+        this.duration = duration;
         counter = new LongAdder();
     }
 
     /**
-     * If it's required to log exceptions, increase the counter and store last thrown exception.
+     * If it's required to report exceptions, increase the counter and store last thrown exception.
      */
     @Nullable
     @Override
     public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
-        if (isScheduled && ctx.shouldLogException()) {
-            lastThrownException = cause;
+        if (ctx.shouldReportUnLoggedException()) {
+            if (thrownException == null) {
+                thrownException = cause;
+            }
             counter.increment();
         }
         return delegate.onServiceException(ctx, cause);
@@ -78,15 +87,15 @@ class ExceptionReportingServerErrorHandler implements ServerErrorHandler {
     }
 
     /**
-     * Starts logging exceptions.
-     * @param workerGroup eventLoopGroup on which logging exceptions will be scheduled.
+     * Starts reporting exceptions.
+     * @param workerGroup eventLoopGroup on which reporting exceptions will be scheduled.
      */
     void start(EventLoopGroup workerGroup) {
         requireNonNull(workerGroup, "workerGroup");
-        if (!isScheduled && intervalInSeconds > 0) {
-            reportExceptionsSchedule = workerGroup.scheduleAtFixedRate(
-                    this::logExceptions, intervalInSeconds, intervalInSeconds, TimeUnit.SECONDS);
-            isScheduled = true;
+        if (!started) {
+            reportingTaskFuture = workerGroup.scheduleAtFixedRate(
+                    this::reportException, duration.getSeconds(), duration.getSeconds(), TimeUnit.SECONDS);
+            started = true;
         }
     }
 
@@ -94,21 +103,30 @@ class ExceptionReportingServerErrorHandler implements ServerErrorHandler {
      * Stops logging exceptions.
      */
     void stop() {
-        if (isScheduled && reportExceptionsSchedule != null) {
-            reportExceptionsSchedule.cancel(true);
-            reportExceptionsSchedule = null;
-            isScheduled = false;
+        if (started && reportingTaskFuture != null) {
+            reportingTaskFuture.cancel(true);
+            reportingTaskFuture = null;
+            started = false;
         }
     }
 
-    private void logExceptions() {
+    private void reportException() {
         final long totalExceptions = counter.sumThenReset();
-        if (totalExceptions != 0) {
-            logger.warn("Observed {} uncaught exceptions in last {} seconds. " +
+        if (totalExceptions == 0) {
+            return;
+        }
+
+        final Throwable exception = this.thrownException;
+        if (exception != null) {
+            logger.warn("Observed {} uncaught exceptions in last {}. " +
                         "Please consider adding the LoggingService decorator to get detailed error logs. " +
                         "One of the thrown exceptions:",
-                        totalExceptions, intervalInSeconds, lastThrownException);
-            lastThrownException = null;
+                        totalExceptions, TextFormatter.elapsed(duration.toNanos()), exception);
+            this.thrownException = null;
+        } else {
+            logger.warn("Observed {} uncaught exceptions in last {}. " +
+                        "Please consider adding the LoggingService decorator to get detailed error logs.",
+                        totalExceptions, TextFormatter.elapsed(duration.toNanos()));
         }
     }
 }

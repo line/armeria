@@ -641,4 +641,46 @@ class ServerBuilderTest {
                 .containsExactly(entry(TCP_USER_TIMEOUT, userDefinedValue),
                                  entry(SO_LINGER, lingerMillis));
     }
+
+    @Test
+    void exceptionReportInterval() {
+        final Server server1 = Server.builder()
+                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                               .unLoggedExceptionReportInterval(Duration.ofSeconds(1))
+                               .build();
+        assertThat(server1.config().unLoggedExceptionReportInterval().getSeconds()).isEqualTo(1);
+
+        final Server server2 = Server.builder()
+                               .unLoggedExceptionReportInterval(Duration.ofSeconds(0))
+                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                               .build();
+        assertThat(server2.config().unLoggedExceptionReportInterval().getSeconds()).isZero();
+
+        final Server server3 = Server.builder()
+                               .unLoggedExceptionReportInterval(Duration.ofSeconds(-1))
+                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                               .build();
+        assertThat(server3.config().unLoggedExceptionReportInterval().getSeconds()).isZero();
+    }
+
+    @Test
+    void exceptionReportIntervalSeconds() {
+        final Server server1 = Server.builder()
+                               .unLoggedExceptionReportIntervalSeconds(1)
+                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                               .build();
+        assertThat(server1.config().unLoggedExceptionReportInterval().getSeconds()).isEqualTo(1);
+
+        final Server server2 = Server.builder()
+                               .unLoggedExceptionReportIntervalSeconds(0)
+                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                               .build();
+        assertThat(server2.config().unLoggedExceptionReportInterval().getSeconds()).isZero();
+
+        final Server server3 = Server.builder()
+                               .unLoggedExceptionReportIntervalSeconds(-1)
+                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                               .build();
+        assertThat(server3.config().unLoggedExceptionReportInterval().getSeconds()).isZero();
+    }
 }
