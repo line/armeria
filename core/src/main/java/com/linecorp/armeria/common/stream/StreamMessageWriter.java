@@ -16,9 +16,12 @@
 
 package com.linecorp.armeria.common.stream;
 
+import com.linecorp.armeria.common.annotation.UnstableApi;
+
 /**
  * A type which is both a {@link StreamMessage} and a {@link StreamWriter}.
  * {@link StreamMessageWriter} publishes the objects written via {@link StreamWriter#write(Object)}.
  */
+@UnstableApi
 public interface StreamMessageWriter<T> extends StreamMessage<T>, StreamWriter<T> {
 }
