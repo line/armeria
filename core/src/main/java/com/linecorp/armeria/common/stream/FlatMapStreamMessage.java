@@ -332,6 +332,8 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
         private long requested;
 
+        private boolean canceled;
+
         @Nullable
         private Subscription subscription;
 
@@ -362,6 +364,11 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         public void onError(Throwable cause) {
             requireNonNull(cause, "cause");
 
+            if (canceled) {
+                return;
+            }
+            canceled = true;
+
             subscription.cancel();
 
             parent.onError(cause);
@@ -378,6 +385,11 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
         }
 
         public void cancel() {
+            if (canceled) {
+                return;
+            }
+            canceled = true;
+
             subscription.cancel();
         }
 
