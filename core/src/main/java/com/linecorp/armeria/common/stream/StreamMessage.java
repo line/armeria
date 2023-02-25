@@ -282,6 +282,26 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Creates a new {@link StreamMessage} that streams the specified {@link InputStream}.
+     * The default buffer size({@value InputStreamStreamMessage#DEFAULT_BUFFER_SIZE}) is used to
+     * create a buffer used to read data from the {@link InputStream}.
+     * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
+     * size less than or equal to {@value InputStreamStreamMessage#DEFAULT_BUFFER_SIZE}.
+     */
+    static ByteStreamMessage of(InputStream inputStream) {
+        requireNonNull(inputStream, "inputStream");
+        return builder(inputStream).build();
+    }
+
+    /**
+     * Returns a new {@link InputStreamStreamMessageBuilder} with the specified {@link InputStream}.
+     */
+    static InputStreamStreamMessageBuilder builder(InputStream inputStream) {
+        requireNonNull(inputStream, "inputStream");
+        return new InputStreamStreamMessageBuilder(inputStream);
+    }
+
+    /**
      * Creates a new {@link ByteStreamMessage} that publishes {@link HttpData}s from the specified
      * {@linkplain Consumer outputStreamConsumer}.
      *

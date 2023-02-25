@@ -28,8 +28,6 @@ import io.netty.buffer.ByteBufAllocator;
 
 abstract class AbstractByteStreamMessageBuilder {
 
-    // TODO(ikhoon) Add InputStreamStreamMessageBuilder as a subtype of this builder.
-
     private ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
     private int bufferSize = PathStreamMessage.DEFAULT_FILE_BUFFER_SIZE;
 
