@@ -275,7 +275,9 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public boolean isAcquirable() {
-        return isAcquirable && responseDecoder != null && !responseDecoder.needsToDisconnectWhenFinished();
+        // responseDecoder is set before this session is added to the pool.
+        assert responseDecoder != null;
+        return isAcquirable && !responseDecoder.needsToDisconnectWhenFinished();
     }
 
     @Override
