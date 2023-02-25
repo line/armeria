@@ -19,6 +19,7 @@ import java.io.File;
 import java.net.InetAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -410,5 +411,10 @@ final class DefaultFlagsProvider implements FlagsProvider {
     @Override
     public MeterRegistry meterRegistry() {
         return Metrics.globalRegistry;
+    }
+
+    @Override
+    public Duration defaultUnloggedExceptionReportIntervalMillis() {
+        return Duration.ofMillis(10000);
     }
 }

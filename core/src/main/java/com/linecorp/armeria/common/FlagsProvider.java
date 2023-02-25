@@ -989,4 +989,16 @@ public interface FlagsProvider {
     default MeterRegistry meterRegistry() {
         return null;
     }
+
+    /**
+     * Returns the {@link Duration} where armeria records unlogged exceptions by default.
+     *
+     * <p>The default value of this flag is
+     * {@link DefaultFlagsProvider#defaultUnloggedExceptionReportIntervalMillis()}.</p>
+     */
+    @Nullable
+    @UnstableApi
+    default Duration defaultUnloggedExceptionReportIntervalMillis() {
+        return null;
+    }
 }

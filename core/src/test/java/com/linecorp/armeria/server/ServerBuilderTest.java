@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.entry;
 import static org.assertj.core.api.Assumptions.assumeThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -645,42 +646,42 @@ class ServerBuilderTest {
     @Test
     void exceptionReportInterval() {
         final Server server1 = Server.builder()
-                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                               .unloggedExceptionReportInterval(Duration.ofSeconds(1))
-                               .build();
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .unloggedExceptionReportInterval(Duration.ofSeconds(1))
+                                     .build();
         assertThat(server1.config().unloggedExceptionReportInterval().getSeconds()).isEqualTo(1);
 
         final Server server2 = Server.builder()
-                               .unloggedExceptionReportInterval(Duration.ofSeconds(0))
-                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                               .build();
+                                     .unloggedExceptionReportInterval(Duration.ofSeconds(0))
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .build();
         assertThat(server2.config().unloggedExceptionReportInterval().getSeconds()).isZero();
 
-        final Server server3 = Server.builder()
-                               .unloggedExceptionReportInterval(Duration.ofSeconds(-1))
-                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                               .build();
-        assertThat(server3.config().unloggedExceptionReportInterval().getSeconds()).isZero();
+        assertThrows(IllegalArgumentException.class, () ->
+                Server.builder()
+                      .unloggedExceptionReportInterval(Duration.ofSeconds(-1))
+                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                      .build());
     }
 
     @Test
     void exceptionReportIntervalSeconds() {
         final Server server1 = Server.builder()
-                               .unloggedExceptionReportIntervalSeconds(1)
-                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                               .build();
+                                     .unloggedExceptionReportIntervalSeconds(1)
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .build();
         assertThat(server1.config().unloggedExceptionReportInterval().getSeconds()).isEqualTo(1);
 
         final Server server2 = Server.builder()
-                               .unloggedExceptionReportIntervalSeconds(0)
-                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                               .build();
+                                     .unloggedExceptionReportIntervalSeconds(0)
+                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                                     .build();
         assertThat(server2.config().unloggedExceptionReportInterval().getSeconds()).isZero();
 
-        final Server server3 = Server.builder()
-                               .unloggedExceptionReportIntervalSeconds(-1)
-                               .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                               .build();
-        assertThat(server3.config().unloggedExceptionReportInterval().getSeconds()).isZero();
+        assertThrows(IllegalArgumentException.class, () ->
+                Server.builder()
+                      .unloggedExceptionReportIntervalSeconds(-1)
+                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
+                      .build());
     }
 }

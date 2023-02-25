@@ -116,7 +116,7 @@ public final class DefaultServiceRequestContext
 
     @Nullable
     private String strVal;
-    private boolean shouldReportUnloggedException;
+    private boolean shouldReportUnloggedException = true;
 
     /**
      * Creates a new instance.
@@ -189,8 +189,6 @@ public final class DefaultServiceRequestContext
         maxRequestLength = cfg.maxRequestLength();
         this.additionalResponseHeaders = additionalResponseHeaders;
         this.additionalResponseTrailers = additionalResponseTrailers;
-
-        shouldReportUnloggedException = true;
     }
 
     @Nullable

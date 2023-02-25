@@ -16,8 +16,6 @@
 
 package com.linecorp.armeria.server;
 
-import static java.util.Objects.requireNonNull;
-
 import java.time.Duration;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
@@ -34,15 +32,15 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.server.logging.LoggingService;
 
-import io.netty.channel.EventLoopGroup;
-
 /**
  * A {@link ServerErrorHandler} that wraps another {@link ServerErrorHandler}
  * to periodically report the exceptions that were not logged by decorators such as
  * {@link LoggingService}.
  */
-class ExceptionReportingServerErrorHandler implements ServerErrorHandler {
+class ExceptionReportingServerErrorHandler implements ServerErrorHandler, ServerListener {
+
     private static final Logger logger = LoggerFactory.getLogger(ExceptionReportingServerErrorHandler.class);
+
     private final ServerErrorHandler delegate;
     private final LongAdder counter;
     private final Duration duration;
@@ -60,7 +58,7 @@ class ExceptionReportingServerErrorHandler implements ServerErrorHandler {
     }
 
     /**
-     * If it's required to report exceptions, increase the counter and store last thrown exception.
+     * If it's required to report exceptions, increase the counter and store first thrown exception.
      */
     @Nullable
     @Override
@@ -82,28 +80,35 @@ class ExceptionReportingServerErrorHandler implements ServerErrorHandler {
         return delegate.renderStatus(config, headers, status, description, cause);
     }
 
-    /**
-     * Starts reporting exceptions.
-     * @param workerGroup eventLoopGroup on which reporting exceptions will be scheduled.
-     */
-    void start(EventLoopGroup workerGroup) {
-        requireNonNull(workerGroup, "workerGroup");
+    @Override
+    public void serverStarting(Server server) throws Exception {
         if (!started) {
-            reportingTaskFuture = workerGroup.scheduleAtFixedRate(
+            reportingTaskFuture = server.config().workerGroup().scheduleAtFixedRate(
                     this::reportException, duration.getSeconds(), duration.getSeconds(), TimeUnit.SECONDS);
             started = true;
         }
     }
 
-    /**
-     * Stops logging exceptions.
-     */
-    void stop() {
-        if (started && reportingTaskFuture != null) {
+    @Override
+    public void serverStarted(Server server) throws Exception {}
+
+    @Override
+    public void serverStopping(Server server) throws Exception {
+        if (reportingTaskFuture != null) {
             reportingTaskFuture.cancel(true);
             reportingTaskFuture = null;
-            started = false;
         }
+        started = false;
+    }
+
+    @Override
+    public void serverStopped(Server server) throws Exception {}
+
+    /**
+     * Returns the number of unlogged exceptions.
+     */
+    long unloggedExceptions() {
+        return counter.sum();
     }
 
     private void reportException() {
@@ -112,13 +117,13 @@ class ExceptionReportingServerErrorHandler implements ServerErrorHandler {
             return;
         }
 
-        final Throwable exception = this.thrownException;
+        final Throwable exception = thrownException;
         if (exception != null) {
             logger.warn("Observed {} uncaught exceptions in last {}. " +
                         "Please consider adding the LoggingService decorator to get detailed error logs. " +
                         "One of the thrown exceptions:",
                         totalExceptions, TextFormatter.elapsed(duration.toNanos()), exception);
-            this.thrownException = null;
+            thrownException = null;
         } else {
             logger.warn("Observed {} uncaught exceptions in last {}. " +
                         "Please consider adding the LoggingService decorator to get detailed error logs.",

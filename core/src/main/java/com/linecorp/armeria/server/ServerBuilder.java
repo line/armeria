@@ -210,7 +210,7 @@ public final class ServerBuilder implements TlsSetters {
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
-    private Duration unloggedExceptionReportInterval = Duration.ofSeconds(10);
+    private Duration unloggedExceptionReportInterval = Flags.defaultUnloggedExceptionReportIntervalMillis();
     @Nullable
     private DependencyInjector dependencyInjector;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
@@ -1815,15 +1815,13 @@ public final class ServerBuilder implements TlsSetters {
      * exceptions not logged by any decorators or services, such as
      * {@link LoggingService}.
      * @param unloggedExceptionReportInterval the interval between the summary log messages, or
-     *                                        non-positive {@link Duration} to disable this feature
+     *                                        {@link Duration#ZERO} to disable this feature
+     * @throws IllegalArgumentException if specified {@code unloggedExceptionReportInterval} is negative.
      */
     public ServerBuilder unloggedExceptionReportInterval(Duration unloggedExceptionReportInterval) {
         requireNonNull(unloggedExceptionReportInterval, "unloggedExceptionReportInterval");
-        if (unloggedExceptionReportInterval.isNegative()) {
-            this.unloggedExceptionReportInterval = Duration.ZERO;
-        } else {
-            this.unloggedExceptionReportInterval = unloggedExceptionReportInterval;
-        }
+        checkArgument(!unloggedExceptionReportInterval.isNegative());
+        this.unloggedExceptionReportInterval = unloggedExceptionReportInterval;
         return this;
     }
 
@@ -1832,7 +1830,8 @@ public final class ServerBuilder implements TlsSetters {
      * exceptions not logged by any decorators or services, such as
      * {@link LoggingService} in seconds.
      * @param seconds the interval between the summary log messages in seconds, or
-     *                non-positive value to disable this feature
+     *                0 to disable this feature
+     * @throws IllegalArgumentException if specified {@code seconds} is negative.
      */
     public ServerBuilder unloggedExceptionReportIntervalSeconds(long seconds) {
         return unloggedExceptionReportInterval(Duration.ofSeconds(seconds));
@@ -1958,6 +1957,7 @@ public final class ServerBuilder implements TlsSetters {
         if (unloggedExceptionReportInterval != Duration.ZERO) {
             errorHandler = new ExceptionReportingServerErrorHandler(this.errorHandler,
                                                                     unloggedExceptionReportInterval);
+            serverListeners.add((ExceptionReportingServerErrorHandler) errorHandler);
         }
 
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
