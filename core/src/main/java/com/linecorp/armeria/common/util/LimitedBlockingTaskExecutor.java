@@ -46,7 +46,7 @@ public interface LimitedBlockingTaskExecutor extends BlockingTaskExecutor {
     }
 
     /**
-     * Returns whether the queue hits the given limit or not.
+     * Returns whether the count of the tasks hits the given limit or not.
      */
     boolean hitLimit();
 }
