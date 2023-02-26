@@ -25,8 +25,8 @@ import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.server.ServiceRequestContext;
 
 /**
- * A {@link ThrottlingStrategy} that
- * provides a throttling strategy based on the queue size of the {@link LimitedBlockingTaskExecutor}.
+ * A {@link ThrottlingStrategy} which
+ * provides a throttling strategy based on the count of the tasks of the {@link LimitedBlockingTaskExecutor}.
  * @see ThrottlingStrategy#blockingTaskLimiting(LimitedBlockingTaskExecutor, String)
  */
 final class BlockingTaskLimitingThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T> {

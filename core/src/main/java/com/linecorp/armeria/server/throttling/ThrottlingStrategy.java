@@ -118,7 +118,7 @@ public abstract class ThrottlingStrategy<T extends Request> {
 
     /**
      * Returns a new {@link ThrottlingStrategy} that provides a throttling strategy based on given
-     * {@link SettableIntSupplier} by comparing it to the size of the queue of the {@link BlockingTaskExecutor}.
+     * {@link SettableIntSupplier} by comparing it to the size of the tasks of the {@link BlockingTaskExecutor}.
      *
      * @param executor the {@link LimitedBlockingTaskExecutor} which executes the blocking tasks
      * @param name the name of the {@link ThrottlingStrategy}

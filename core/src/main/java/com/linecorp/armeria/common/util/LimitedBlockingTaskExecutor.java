@@ -18,7 +18,7 @@ package com.linecorp.armeria.common.util;
 
 /**
  * Provides an executor interface which
- * is used for recognizing the status of the count of the queued tasks meets the given limit.
+ * is used for recognizing the status of the count of the tasks meets the given limit.
  *
  * <p>To throttle using the limit, please refer {@code BlockingTaskLimitingThrottlingStrategy}.
  */
@@ -28,7 +28,7 @@ public interface LimitedBlockingTaskExecutor extends BlockingTaskExecutor {
      * Wraps {@link BlockingTaskExecutor} with fixed limit.
      *
      * @param blockingTaskExecutor The executor which executes blocking tasks
-     * @param limit Fixed threshold of the count of the queued tasks.
+     * @param limit Fixed threshold of the count of the tasks.
      */
     static LimitedBlockingTaskExecutor wrap(BlockingTaskExecutor blockingTaskExecutor, int limit) {
         return new DefaultLimitedBlockingTaskExecutor(blockingTaskExecutor, SettableIntSupplier.of(limit));
@@ -38,7 +38,7 @@ public interface LimitedBlockingTaskExecutor extends BlockingTaskExecutor {
      * Wraps {@link BlockingTaskExecutor} with dynamic limit using {@link SettableIntSupplier}.
      *
      * @param blockingTaskExecutor The executor which executes blocking tasks
-     * @param limitSupplier Dynamic threshold of the count of the queued tasks.
+     * @param limitSupplier Dynamic threshold of the count of the tasks.
      */
     static LimitedBlockingTaskExecutor wrap(BlockingTaskExecutor blockingTaskExecutor,
                                             SettableIntSupplier limitSupplier) {
