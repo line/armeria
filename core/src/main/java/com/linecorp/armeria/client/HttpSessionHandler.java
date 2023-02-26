@@ -114,7 +114,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
      * {@code true} if the protocol upgrade to HTTP/2 has failed.
      * If set to {@code true}, another connection attempt will follow.
      */
-    private boolean needsRetryWithH1C;
+    @Nullable
+    private SessionProtocol needsRetryWith;
 
     HttpSessionHandler(HttpChannelPool channelPool, Channel channel,
                        Promise<Channel> sessionPromise, ScheduledFuture<?> sessionTimeoutFuture,
@@ -254,8 +255,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public void retryWithH1C() {
-        needsRetryWithH1C = true;
+    public void retryWith(SessionProtocol protocol) {
+        needsRetryWith = protocol;
     }
 
     @Override
@@ -409,13 +410,13 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         active = false;
 
         // Protocol upgrade has failed, but needs to retry.
-        if (needsRetryWithH1C) {
+        if (needsRetryWith != null) {
             assert responseDecoder == null || !responseDecoder.hasUnfinishedResponses();
             sessionTimeoutFuture.cancel(false);
             if (proxyDestinationAddress != null) {
-                channelPool.connect(proxyDestinationAddress, H1C, poolKey, sessionPromise);
+                channelPool.connect(proxyDestinationAddress, needsRetryWith, poolKey, sessionPromise);
             } else {
-                channelPool.connect(remoteAddress, H1C, poolKey, sessionPromise);
+                channelPool.connect(remoteAddress, needsRetryWith, poolKey, sessionPromise);
             }
         } else {
             // Fail all pending responses.

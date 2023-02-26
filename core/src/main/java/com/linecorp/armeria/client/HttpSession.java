@@ -66,7 +66,7 @@ interface HttpSession {
         }
 
         @Override
-        public void retryWithH1C() {
+        public void retryWith(SessionProtocol protocol) {
             throw new IllegalStateException();
         }
 
@@ -106,7 +106,7 @@ interface HttpSession {
     void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
                 HttpRequest req, DecodedHttpResponse res);
 
-    void retryWithH1C();
+    void retryWith(SessionProtocol protocol);
 
     boolean isActive();
 

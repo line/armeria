@@ -230,6 +230,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
                     addBeforeSessionHandler(p, newHttp2ConnectionHandler(ch, H2));
                     protocol = H2;
+                } else if (clientFactory.useHttp2Preface()) {
+                    addBeforeSessionHandler(p, new DowngradeHandler());
+                    addBeforeSessionHandler(p, newHttp2ConnectionHandler(ch, H2));
+                    p.remove(this);
+                    return;
                 } else {
                     if (httpPreference != HttpPreference.HTTP1_REQUIRED) {
                         SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), H2);
@@ -559,7 +564,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     finishWithNegotiationFailure(ctx, H2C, H1C, upgradeRejectionCause);
                 } else {
                     // We can silently retry with H1C.
-                    retryWithH1C(ctx);
+                    retryWith(ctx, H1C);
                 }
                 return;
             }
@@ -595,25 +600,28 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
 
             handledResponse = true;
 
+            final boolean isHttps = sslCtx != null;
             final ChannelPipeline p = ctx.pipeline();
+            final SessionProtocol h2 = isHttps ? H2 : H2C;
+            final SessionProtocol h1 = isHttps ? H1 : H1C;
 
             if (!isSettingsFrame(in)) { // The first frame must be a settings frame.
                 // Http2ConnectionHandler sent the connection preface, but the server responded with
                 // something else, which means the server does not support HTTP/2.
-                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), H2C);
+                SessionProtocolNegotiationCache.setUnsupported(remoteAddress(ctx), h2);
                 if (httpPreference == HttpPreference.HTTP2_REQUIRED) {
                     finishWithNegotiationFailure(
-                            ctx, H2C, H1C, "received a non-HTTP/2 response for the HTTP/2 connection preface");
+                            ctx, h2, h1, "received a non-HTTP/2 response for the HTTP/2 connection preface");
                 } else {
-                    // We can silently retry with H1C.
-                    retryWithH1C(ctx);
+                    // We can silently retry with HTTP/1.
+                    retryWith(ctx, h1);
                 }
 
                 // We are going to close the connection really soon, so we don't need the response.
                 in.skipBytes(in.readableBytes());
             } else {
                 // The server responded with a non-HTTP/1 response. Continue treating the connection as HTTP/2.
-                finishSuccessfully(p, H2C);
+                finishSuccessfully(p, h2);
             }
 
             p.remove(this);
@@ -636,14 +644,14 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                                                  "too little data to determine the HTTP version");
                 } else {
                     // We can silently retry with H1C.
-                    retryWithH1C(ctx);
+                    retryWith(ctx, H1C);
                 }
             }
         }
     }
 
-    static void retryWithH1C(ChannelHandlerContext ctx) {
-        HttpSession.get(ctx.channel()).retryWithH1C();
+    static void retryWith(ChannelHandlerContext ctx, SessionProtocol protocol) {
+        HttpSession.get(ctx.channel()).retryWith(protocol);
         ctx.close();
     }
 
