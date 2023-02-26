@@ -147,13 +147,9 @@ final class DefaultLimitedBlockingTaskExecutor implements LimitedBlockingTaskExe
         return delegate.submit(() -> {
             try {
                 taskCounter.incrementAndGet();
-                System.out.println(
-                        "incremented count " + taskCounter.get() + " by " + Thread.currentThread().getName());
                 task.run();
             } finally {
                 taskCounter.decrementAndGet();
-                System.out.println(
-                        "decremented count " + taskCounter.get() + " by " + Thread.currentThread().getName());
             }
         });
     }
