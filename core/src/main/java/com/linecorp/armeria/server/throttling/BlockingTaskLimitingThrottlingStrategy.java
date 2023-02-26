@@ -27,7 +27,6 @@ import com.linecorp.armeria.server.ServiceRequestContext;
 /**
  * A {@link ThrottlingStrategy} that
  * provides a throttling strategy based on the queue size of the {@link LimitedBlockingTaskExecutor}.
- * <p>
  * @see ThrottlingStrategy#blockingTaskLimiting(LimitedBlockingTaskExecutor, String)
  */
 final class BlockingTaskLimitingThrottlingStrategy<T extends Request> extends ThrottlingStrategy<T> {
