@@ -30,6 +30,7 @@ import static io.netty.handler.codec.http2.Http2CodecUtil.DEFAULT_WINDOW_SIZE;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.List;
+import java.util.function.Consumer;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLException;
@@ -231,7 +232,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                     addBeforeSessionHandler(p, newHttp2ConnectionHandler(ch, H2));
                     protocol = H2;
                 } else if (clientFactory.useHttp2WithoutALPN() && attemptUpgrade()) {
-                    upgrade(p, ch);
+                    upgrade(h -> addBeforeSessionHandler(p, h), ch);
                     p.remove(this);
                     return;
                 } else {
@@ -306,11 +307,11 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         }
     }
 
-    private void upgrade(ChannelPipeline pipeline, Channel ch) {
+    private void upgrade(Consumer<ChannelHandler> pipelineConsumer, Channel ch) {
         Http2ClientConnectionHandler http2Handler = newHttp2ConnectionHandler(ch, isHttps() ? H2 : H2C);
         if (clientFactory.useHttp2Preface()) {
-            pipeline.addLast(new DowngradeHandler());
-            pipeline.addLast(http2Handler);
+            pipelineConsumer.accept(new DowngradeHandler());
+            pipelineConsumer.accept(http2Handler);
         } else {
             final HttpClientCodec http1Codec = newHttp1Codec(
                     clientFactory.http1MaxInitialLineLength(),
@@ -323,10 +324,10 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
                             http1Codec, http2ClientUpgradeCodec,
                             (int) Math.min(Integer.MAX_VALUE, UPGRADE_RESPONSE_MAX_LENGTH));
 
-            pipeline.addLast(http1Codec);
-            pipeline.addLast(new WorkaroundHandler());
-            pipeline.addLast(http2UpgradeHandler);
-            pipeline.addLast(new UpgradeRequestHandler(http2Handler.responseDecoder()));
+            pipelineConsumer.accept(http1Codec);
+            pipelineConsumer.accept(new WorkaroundHandler());
+            pipelineConsumer.accept(http2UpgradeHandler);
+            pipelineConsumer.accept(new UpgradeRequestHandler(http2Handler.responseDecoder()));
         }
     }
 
@@ -336,7 +337,7 @@ final class HttpClientPipelineConfigurator extends ChannelDuplexHandler {
         pipeline.addLast(TrafficLoggingHandler.CLIENT);
 
         if (attemptUpgrade()) {
-            upgrade(pipeline, ch);
+            upgrade(pipeline::addLast, ch);
         } else {
             pipeline.addLast(newHttp1Codec(
                     clientFactory.http1MaxInitialLineLength(),
