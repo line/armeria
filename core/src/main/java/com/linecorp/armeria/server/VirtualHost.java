@@ -32,6 +32,7 @@ import org.slf4j.Logger;
 import com.google.common.base.Ascii;
 import com.google.common.collect.Streams;
 
+import com.linecorp.armeria.common.HttpMethod;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.server.logging.AccessLogWriter;
@@ -395,6 +396,10 @@ public final class VirtualHost {
                 maybeSetRoutingResult(routingCtx, routed);
                 return routed;
             case NOT_MATCHED:
+                if (routingCtx.method() == HttpMethod.HEAD) {
+                    return findServiceConfig(routingCtx.overrideMethod(HttpMethod.GET));
+                }
+
                 if (!useFallbackService) {
                     maybeSetRoutingResult(routingCtx, routed);
                     return routed;

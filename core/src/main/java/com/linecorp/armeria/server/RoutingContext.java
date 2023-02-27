@@ -49,6 +49,19 @@ public interface RoutingContext {
     HttpMethod method();
 
     /**
+     * Returns a wrapped {@link RoutingContext} which holds the specified {@link HttpMethod}.
+     */
+    default RoutingContext overrideMethod(HttpMethod method) {
+        requireNonNull(method, "method");
+        return new RoutingContextWrapper(this) {
+            @Override
+            public HttpMethod method() {
+                return method;
+            }
+        };
+    }
+
+    /**
      * Returns the absolute path retrieved from the request,
      * as defined in <a href="https://datatracker.ietf.org/doc/rfc3986/">RFC3986</a>.
      */
