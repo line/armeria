@@ -138,7 +138,9 @@
 12hp.de
 1337.pictures
 16-b.it
+180r.com
 1kapp.com
+2-d.jp
 2.azurestaticapps.net
 2.bg
 2000.hu
@@ -1052,6 +1054,7 @@ bolzano-altoadige.it
 bolzano.it
 bom
 bomlo.no
+bona.jp
 bond
 bonn.museum
 boo
@@ -1821,6 +1824,7 @@ crafting.xyz
 crafts.museum
 cranbrook.museum
 cranky.jp
+crap.jp
 crd.co
 creation.museum
 credit
@@ -1915,6 +1919,7 @@ dattoweb.com
 davvenjarga.no
 davvesiida.no
 day
+daynight.jp
 dazaifu.fukuoka.jp
 dc.us
 dclk
@@ -2055,6 +2060,7 @@ does-it.net
 doesntexist.com
 doesntexist.org
 dog
+dojin.com
 dolls.museum
 domains
 donetsk.ua
@@ -2330,6 +2336,7 @@ educator.aero
 edugit.io
 ee
 ee.eu.org
+eek.jp
 eero-stage.online
 eero.online
 eg
@@ -2607,6 +2614,7 @@ flight.aero
 flights
 flir
 flog.br
+flop.jp
 floppy.jp
 flora.no
 florence.it
@@ -2771,6 +2779,7 @@ from-wi.com
 from-wv.com
 from-wy.com
 from.hr
+from.tv
 frontdoor
 frontier
 frosinone.it
@@ -3307,6 +3316,7 @@ hakui.ishikawa.jp
 hakusan.ishikawa.jp
 halden.no
 half.host
+halfmoon.jp
 halloffame.museum
 halsa.no
 ham-radio-op.net
@@ -3986,6 +3996,7 @@ ivano-frankivsk.ua
 ivanovo.su
 iveland.no
 ivgu.no
+ivory.ne.jp
 iwade.wakayama.jp
 iwafune.tochigi.jp
 iwaizumi.iwate.jp
@@ -4035,6 +4046,7 @@ jdf.br
 je
 jed.wafaicloud.com
 jeep
+jeez.jp
 jefferson.museum
 jeju.kr
 jelastic.dogado.eu
@@ -4099,6 +4111,7 @@ jp.md
 jp.net
 jpmorgan
 jpn.com
+jpn.org
 jprs
 js.cn
 js.org
@@ -4383,6 +4396,7 @@ kinghost.net
 kinko.kagoshima.jp
 kinokawa.wakayama.jp
 kira.aichi.jp
+kirara.st
 kirkenes.no
 kirovograd.ua
 kiryu.gunma.jp
@@ -4912,6 +4926,7 @@ magazine.aero
 magnet.page
 maibara.shiga.jp
 maif
+mail-box.ne.jp
 mail.pl
 main.jp
 maintenance.aero
@@ -4974,6 +4989,7 @@ massacarrara.it
 masuda.shimane.jp
 mat.br
 matera.it
+matrix.jp
 matsubara.osaka.jp
 matsubushi.saitama.jp
 matsuda.kanagawa.jp
@@ -5183,6 +5199,7 @@ military.museum
 mill.museum
 mima.tokushima.jp
 mimata.miyazaki.jp
+mimoza.jp
 minakami.gunma.jp
 minamata.kumamoto.jp
 minami-alps.yamanashi.jp
@@ -5223,6 +5240,7 @@ minokamo.gifu.jp
 minowa.nagano.jp
 mint
 mintere.site
+mints.ne.jp
 mircloud.host
 mircloud.ru
 mircloud.us
@@ -5316,6 +5334,7 @@ modum.no
 moe
 moi
 moka.tochigi.jp
+mokuren.ne.jp
 mol.it
 molde.no
 molise.it
@@ -5819,6 +5838,7 @@ net.za
 net.zm
 netbank
 netflix
+netgamers.jp
 netlify.app
 network
 neues.museum
@@ -6041,6 +6061,7 @@ ny-2.paas.massivegrid.net
 ny.us
 nyaa.am
 nyan.to
+nyanta.jp
 nyc
 nyc.mn
 nyc.museum
@@ -6052,6 +6073,7 @@ nz.basketball
 nz.eu.org
 o.bg
 o.se
+o0o0.jp
 oamishirasato.chiba.jp
 oarai.ibaraki.jp
 obama.fukui.jp
@@ -6209,6 +6231,7 @@ ookuwa.nagano.jp
 ooo
 oops.jp
 ooshika.nagano.jp
+opal.ne.jp
 open
 openair.museum
 opencraft.hosting
@@ -6868,6 +6891,7 @@ ravpage.co.il
 rawa-maz.pl
 rc.it
 rdv.to
+rdy.jp
 re
 re.it
 re.kr
@@ -6945,6 +6969,7 @@ reviews
 revista.bo
 rexroth
 rg.it
+rgr.jp
 rhcloud.com
 ri.it
 ri.us
@@ -7021,6 +7046,7 @@ rs
 rs.ba
 rs.gov.br
 rs.leg.br
+rs.webaccel.jp
 rsc.cdn77.org
 rsvp
 ru
@@ -7029,6 +7055,7 @@ ru.eu.org
 ru.net
 rugby
 ruhr
+rulez.jp
 run
 run.app
 ruovat.no
@@ -7104,6 +7131,8 @@ s3.eu-central-1.amazonaws.com
 s3.eu-west-2.amazonaws.com
 s3.eu-west-3.amazonaws.com
 s3.fr-par.scw.cloud
+s3.isk01.sakurastorage.jp
+s3.isk02.sakurastorage.jp
 s3.nl-ams.scw.cloud
 s3.pl-waw.scw.cloud
 s3.teckids.org
@@ -7153,9 +7182,13 @@ saku.nagano.jp
 sakuho.nagano.jp
 sakura
 sakura.chiba.jp
+sakura.ne.jp
 sakura.tochigi.jp
+sakura.tv
 sakuragawa.ibaraki.jp
 sakurai.nara.jp
+sakuratan.com
+sakuraweb.com
 sakyo.kyoto.jp
 salangen.no
 salat.no
@@ -7163,6 +7196,7 @@ sale
 salem.museum
 salerno.it
 salon
+saloon.jp
 saltdal.no
 salud.bo
 salvador.br
@@ -7235,6 +7269,7 @@ sayo.hyogo.jp
 sb
 sb.ua
 sbi
+sblo.jp
 sbs
 sc
 sc.cn
@@ -7579,6 +7614,7 @@ sko.gov.pl
 skoczow.pl
 skodje.no
 skole.museum
+skr.jp
 sky
 skydiving.aero
 skygearapp.com
@@ -7687,6 +7723,7 @@ square.museum
 square7.ch
 square7.de
 square7.net
+squares.net
 sr
 sr.gov.pl
 sr.it
@@ -7787,6 +7824,7 @@ suldal.no
 suli.hu
 sumida.tokyo.jp
 sumita.iwate.jp
+sumomo.ne.jp
 sumoto.hyogo.jp
 sumoto.kumamoto.jp
 sumy.ua
@@ -7931,6 +7969,7 @@ tanabe.kyoto.jp
 tanabe.wakayama.jp
 tanagura.fukushima.jp
 tananger.no
+tank.jp
 tank.museum
 tanohata.iwate.jp
 taobao
@@ -8127,6 +8166,7 @@ toolforge.org
 tools
 toon.ehime.jp
 top
+topaz.ne.jp
 topology.museum
 torahime.shiga.jp
 toray
@@ -8360,6 +8400,7 @@ ufcfan.org
 ug
 ug.gov.pl
 ugim.gov.pl
+uh-oh.jp
 uhren.museum
 ui.nabu.casa
 uji.kyoto.jp
@@ -8391,6 +8432,7 @@ umig.gov.pl
 unazuki.toyama.jp
 under.jp
 undersea.museum
+undo.jp
 uni5.net
 unicloud.pl
 unicom
@@ -8459,6 +8501,7 @@ usdecorativearts.museum
 user.aseinet.ne.jp
 user.party.eus
 user.srcf.net
+user.webaccel.jp
 usercontent.jp
 users.scale.virtualcloud.com.br
 usgarden.museum
@@ -8748,6 +8791,7 @@ weblike.jp
 webredirect.org
 website
 website.yandexcloud.net
+websozai.jp
 webspace.rocks
 webthings.io
 webview-assets.cloud9.af-south-1.amazonaws.com
@@ -8859,12 +8903,15 @@ wzmiuw.gov.pl
 x.bg
 x.mythic-beasts.com
 x.se
+x0.com
+x0.to
 x443.pw
 xbox
 xen.prgmr.com
 xerox
 xfinity
 xihuan
+xii.jp
 xin
 xj.cn
 xn--0trq7p7nn.jp
