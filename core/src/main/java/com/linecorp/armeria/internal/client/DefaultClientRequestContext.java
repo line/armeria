@@ -70,6 +70,7 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
+import com.linecorp.armeria.internal.common.DisconnectWhenFinished;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
@@ -81,6 +82,7 @@ import io.netty.buffer.ByteBufAllocator;
 import io.netty.buffer.PooledByteBufAllocator;
 import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.util.AttributeKey;
 import io.netty.util.NetUtil;
 
@@ -848,5 +850,32 @@ public final class DefaultClientRequestContext
 
             return buf.toString();
         }
+    }
+
+    @Override
+    public CompletableFuture<Void> initiateConnectionShutdown() {
+        final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
+
+        final Channel ch = channel();
+        if (ch == null || !ch.isActive()) {
+            setAdditionalRequestHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+            log().whenComplete().whenComplete((ignore, ex) -> {
+                if (ex == null) {
+                    completableFuture.complete(null);
+                } else {
+                    completableFuture.completeExceptionally(ex);
+                }
+            });
+        } else {
+            ch.closeFuture().addListener(f -> {
+                if (f.cause() == null) {
+                    completableFuture.complete(null);
+                } else {
+                    completableFuture.completeExceptionally(f.cause());
+                }
+            });
+            ch.pipeline().fireUserEventTriggered(DisconnectWhenFinished.of());
+        }
+        return completableFuture;
     }
 }

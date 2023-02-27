@@ -43,6 +43,7 @@ import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
+import com.linecorp.armeria.internal.common.DisconnectWhenFinished;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
@@ -161,7 +162,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public boolean canSendRequest() {
         assert responseDecoder != null;
-        return active && !responseDecoder.needsToDisconnectWhenFinished();
+        return active && !responseDecoder.needsToDisconnectNow();
     }
 
     @Override
@@ -391,6 +392,12 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                 // SessionProtocol event was already triggered.
                 tryCompleteSessionPromise(ctx);
             }
+            return;
+        }
+
+        if (evt instanceof DisconnectWhenFinished) {
+            assert responseDecoder != null;
+            responseDecoder.disconnectWhenFinished();
             return;
         }
 

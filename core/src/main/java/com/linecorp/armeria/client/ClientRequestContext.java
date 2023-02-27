@@ -540,6 +540,13 @@ public interface ClientRequestContext extends RequestContext {
     void mutateAdditionalRequestHeaders(Consumer<HttpHeadersBuilder> mutator);
 
     /**
+     * Disconnects gracefully connection and returns {@link CompletableFuture} that completes when the channel
+     * is closed.
+     */
+    @UnstableApi
+    CompletableFuture<Void> initiateConnectionShutdown();
+
+    /**
      * {@inheritDoc}
      *
      * <p>Note that an {@link HttpRequest} will be aggregated before being written if
