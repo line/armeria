@@ -229,6 +229,11 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean defaultUseHttp2WithoutALPN() {
+        return false;
+    }
+
+    @Override
     public Boolean defaultUseHttp1Pipelining() {
         return false;
     }

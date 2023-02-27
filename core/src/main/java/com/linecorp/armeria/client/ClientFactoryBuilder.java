@@ -728,6 +728,14 @@ public final class ClientFactoryBuilder implements TlsSetters {
     }
 
     /**
+     * Sets whether to use HTTP/2 without ALPN.
+     */
+    public ClientFactoryBuilder useHttp2WithoutALPN(boolean useHttp2WithoutALPN) {
+        option(ClientFactoryOptions.USE_HTTP2_WITHOUT_ALPN, useHttp2WithoutALPN);
+        return this;
+    }
+
+    /**
      * Sets whether to use <a href="https://en.wikipedia.org/wiki/HTTP_pipelining">HTTP pipelining</a> for
      * HTTP/1 connections. This does not affect HTTP/2 connections. This option is disabled by default.
      */

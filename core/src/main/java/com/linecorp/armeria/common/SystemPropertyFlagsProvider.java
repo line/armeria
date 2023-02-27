@@ -229,6 +229,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
     }
 
     @Override
+    public Boolean defaultUseHttp2WithoutALPN() {
+        return getBoolean("defaultUseHttp2WithoutALPN");
+    }
+
+    @Override
     public Boolean defaultUseHttp1Pipelining() {
         return getBoolean("defaultUseHttp1Pipelining");
     }
