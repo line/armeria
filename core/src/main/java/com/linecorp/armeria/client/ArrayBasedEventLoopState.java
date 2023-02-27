@@ -30,7 +30,6 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
 
     @Nullable
     private EventLoopAcquisitionIndex acquisitionIndex;
-    private int nextVisitIndex;
     private int allActiveRequests;
 
     ArrayBasedEventLoopState(List<EventLoop> eventLoops, int maxNumEventLoops,
@@ -46,16 +45,25 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
     private void init(int acquisitionStartIndex) {
         acquisitionIndex = new EventLoopAcquisitionIndex(
                 acquisitionStartIndex, maxNumEventLoops, eventLoops().size());
-        nextVisitIndex = 0;
-        addUnusedEventLoop();
+        for (int i = 0; i < maxNumEventLoops; ++i) {
+            push(new Entry(this, eventLoops().get(acquisitionIndex.nextAcquirableIndex()), i));
+        }
     }
 
-    private boolean addUnusedEventLoop() {
-        if (entries.size() < maxNumEventLoops) {
-            push(new Entry(this, eventLoops().get(acquisitionIndex.nextAcquirableIndex()), entries.size()));
-            return true;
+    private AbstractEventLoopEntry targetEntry() {
+        int minActiveRequest = Integer.MAX_VALUE;
+        int targetIndex = 0;
+        for (int i = 0; i < entries.size(); ++i) {
+            final AbstractEventLoopEntry e = entries.get(i);
+            if (e.activeRequests() == 0) {
+                return e;
+            }
+            if (minActiveRequest > e.activeRequests()) {
+                minActiveRequest = e.activeRequests();
+                targetIndex = i;
+            }
         }
-        return false;
+        return entries.get(targetIndex);
     }
 
     @Override
@@ -66,26 +74,9 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
                 init(scheduler().acquisitionStartIndex(maxNumEventLoops));
             }
 
-            for (int offset = 0; offset < entries.size(); offset++) {
-                final int index = (nextVisitIndex + offset) % entries.size();
-                final AbstractEventLoopEntry e = entries.get(index);
-                if (e.activeRequests() == 0) {
-                    nextVisitIndex = index;
-                    break;
-                }
-            }
-            if (entries.get(nextVisitIndex).activeRequests() > 0) {
-                // All event loops are handling connections; try to add an unused event loop.
-                if (addUnusedEventLoop()) {
-                    final AbstractEventLoopEntry e = entries.get(nextVisitIndex);
-                    assert e.activeRequests() == 0;
-                }
-            }
-
-            final AbstractEventLoopEntry e = entries.get(nextVisitIndex);
+            final AbstractEventLoopEntry e = targetEntry();
             e.incrementActiveRequests();
             allActiveRequests++;
-            nextVisitIndex = (nextVisitIndex + 1) % entries.size();
             return e;
         } finally {
             unlock();
@@ -117,7 +108,7 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
 
     private void push(ArrayBasedEventLoopState.Entry e) {
         entries.add(e);
-        nextVisitIndex = entries.size() - 1;
+        acquisitionIndex.moveOffset();
     }
 
     private static final class Entry extends AbstractEventLoopEntry {
