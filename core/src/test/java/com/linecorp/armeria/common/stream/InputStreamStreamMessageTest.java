@@ -18,6 +18,7 @@ package com.linecorp.armeria.common.stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 
 import java.io.ByteArrayInputStream;
@@ -419,5 +420,17 @@ class InputStreamStreamMessageTest {
                     .verifyComplete();
         StepVerifier.create(byteStreamMessage)
                     .verifyError(IllegalStateException.class);
+    }
+
+    @Test
+    void abortedBeforeSubscribed() {
+        final InputStream inputStream = new ByteArrayInputStream(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+        final ByteStreamMessage byteStreamMessage = StreamMessage.of(inputStream);
+
+        byteStreamMessage.abort();
+        await().untilAsserted(() -> assertThat(byteStreamMessage.isOpen()).isFalse());
+
+        StepVerifier.create(byteStreamMessage)
+                    .verifyError(AbortedStreamException.class);
     }
 }

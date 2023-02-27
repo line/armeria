@@ -150,6 +150,16 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
                 containsNotifyCancellation(options));
         this.inputStreamSubscription = inputStreamSubscription;
         subscriber.onSubscribe(inputStreamSubscription);
+
+        if (completionFuture.isCompletedExceptionally()) {
+            completionFuture.whenComplete((unused, cause) -> {
+                if (cause != null) {
+                    abort(cause);
+                } else {
+                    abort();
+                }
+            });
+        }
     }
 
     @Override
@@ -161,11 +171,15 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
     public void abort(Throwable cause) {
         requireNonNull(cause, "cause");
 
+        // `completionFuture` should be set before `inputStreamSubscription` is read
+        // to guarantee the visibility of the abortion `cause` after
+        // inputStreamSubscription is set in `subscriber0()`.
+        completionFuture.completeExceptionally(cause);
+
         final InputStreamSubscription inputStreamSubscription = this.inputStreamSubscription;
         if (inputStreamSubscription != null) {
             inputStreamSubscription.close(cause);
         }
-        completionFuture.completeExceptionally(cause);
     }
 
     private final class InputStreamSubscription implements Subscription {
