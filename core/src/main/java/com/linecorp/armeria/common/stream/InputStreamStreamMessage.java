@@ -299,11 +299,7 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
                 final HttpData data = HttpData.wrap(readBytes, 0, len);
                 position += len;
 
-                if (executor.inEventLoop()) {
-                    publishDownstream(data);
-                } else {
-                    executor.execute(() -> publishDownstream(data));
-                }
+                executor.execute(() -> publishDownstream(data));
             });
         }
 
