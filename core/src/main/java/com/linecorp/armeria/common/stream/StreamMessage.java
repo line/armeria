@@ -51,6 +51,7 @@ import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.common.stream.AbortedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.DecodedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.EmptyFixedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil;
 import com.linecorp.armeria.internal.common.stream.OneElementFixedStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RecoverableStreamMessage;
 import com.linecorp.armeria.internal.common.stream.RegularFixedStreamMessage;
@@ -185,10 +186,10 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Creates a new {@link StreamMessage} that streams the specified {@link File}.
-     * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to
+     * The default buffer size({@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}) is used to
      * create a buffer used to read data from the {@link File}.
      * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
-     * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
+     * size less than or equal to {@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}.
      */
     static ByteStreamMessage of(File file) {
         requireNonNull(file, "file");
@@ -197,10 +198,10 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Creates a new {@link StreamMessage} that streams the specified {@link Path}.
-     * The default buffer size({@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}) is used to
+     * The default buffer size({@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}) is used to
      * create a buffer used to read data from the {@link Path}.
      * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
-     * size less than or equal to {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE}.
+     * size less than or equal to {@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}.
      */
     static ByteStreamMessage of(Path path) {
         requireNonNull(path, "path");
@@ -283,10 +284,10 @@ public interface StreamMessage<T> extends Publisher<T> {
 
     /**
      * Creates a new {@link StreamMessage} that streams the specified {@link InputStream}.
-     * The default buffer size({@value InputStreamStreamMessage#DEFAULT_BUFFER_SIZE}) is used to
+     * The default buffer size({@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}) is used to
      * create a buffer used to read data from the {@link InputStream}.
      * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
-     * size less than or equal to {@value InputStreamStreamMessage#DEFAULT_BUFFER_SIZE}.
+     * size less than or equal to {@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}.
      */
     static ByteStreamMessage of(InputStream inputStream) {
         requireNonNull(inputStream, "inputStream");

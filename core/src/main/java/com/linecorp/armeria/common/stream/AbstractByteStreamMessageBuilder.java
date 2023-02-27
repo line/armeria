@@ -23,13 +23,14 @@ import java.util.concurrent.ExecutorService;
 
 import com.linecorp.armeria.common.HttpData;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.internal.common.stream.InternalStreamMessageUtil;
 
 import io.netty.buffer.ByteBufAllocator;
 
 abstract class AbstractByteStreamMessageBuilder {
 
     private ByteBufAllocator alloc = ByteBufAllocator.DEFAULT;
-    private int bufferSize = PathStreamMessage.DEFAULT_FILE_BUFFER_SIZE;
+    private int bufferSize = InternalStreamMessageUtil.DEFAULT_FILE_BUFFER_SIZE;
 
     @Nullable
     private ExecutorService executor;
@@ -70,7 +71,7 @@ abstract class AbstractByteStreamMessageBuilder {
      * Sets the buffer size used to create a buffer used to read data from the source.
      * The newly created {@link StreamMessage} will emit {@link HttpData}s chunked to
      * size less than or equal to the buffer size.
-     * If unspecified, {@value PathStreamMessage#DEFAULT_FILE_BUFFER_SIZE} is used by default.
+     * If unspecified, {@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE} is used by default.
      *
      * @throws IllegalArgumentException if the {@code bufferSize} is non-positive.
      */

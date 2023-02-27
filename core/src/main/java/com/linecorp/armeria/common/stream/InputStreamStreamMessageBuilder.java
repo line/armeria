@@ -31,7 +31,6 @@ public final class InputStreamStreamMessageBuilder extends AbstractByteStreamMes
 
     InputStreamStreamMessageBuilder(InputStream inputStream) {
         this.inputStream = inputStream;
-        bufferSize(InputStreamStreamMessage.DEFAULT_BUFFER_SIZE);
     }
 
     @Override

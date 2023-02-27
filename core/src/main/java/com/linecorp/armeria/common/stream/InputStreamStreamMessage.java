@@ -51,8 +51,6 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
     private static final AtomicIntegerFieldUpdater<InputStreamStreamMessage> subscribedUpdater =
             AtomicIntegerFieldUpdater.newUpdater(InputStreamStreamMessage.class, "subscribed");
 
-    static final int DEFAULT_BUFFER_SIZE = 8192;
-
     private final InputStream inputStream;
     @Nullable
     private final ExecutorService blockingTaskExecutor;
