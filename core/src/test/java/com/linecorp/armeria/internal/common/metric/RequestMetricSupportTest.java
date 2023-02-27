@@ -171,7 +171,9 @@ class RequestMetricSupportTest {
                 .containsEntry("foo.response.duration#count{http.status=500,method=POST,service=none}", 1.0)
                 .containsEntry("foo.response.length#count{http.status=500,method=POST,service=none}", 1.0)
                 .containsEntry("foo.response.length#total{http.status=500,method=POST,service=none}", 456.0)
-                .containsEntry("foo.total.duration#count{http.status=500,method=POST,service=none}", 1.0);
+                .containsEntry("foo.total.duration#count{http.status=500,method=POST,service=none}", 1.0)
+                .containsEntry("foo.retrying.requests#count{http.status=500,method=POST,service=none}", 1.0)
+                .containsEntry("foo.retrying.requests#total{http.status=500,method=POST,service=none}", 2.0);
     }
 
     @Test

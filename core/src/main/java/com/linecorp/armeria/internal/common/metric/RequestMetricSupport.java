@@ -142,6 +142,7 @@ public final class RequestMetricSupport {
         final int childrenSize = log.children().size();
         if (childrenSize > 0) {
             metrics.actualRequests().increment(childrenSize);
+            metrics.retryingRequests().record(childrenSize);
         }
     }
 
@@ -194,6 +195,8 @@ public final class RequestMetricSupport {
         Counter writeTimeouts();
 
         Counter responseTimeouts();
+
+        DistributionSummary retryingRequests();
     }
 
     private interface ServiceRequestMetrics extends RequestMetrics {
@@ -267,6 +270,10 @@ public final class RequestMetricSupport {
                 actualRequestsUpdater = AtomicReferenceFieldUpdater.newUpdater(
                 DefaultClientRequestMetrics.class, Counter.class, "actualRequests");
 
+        private static final AtomicReferenceFieldUpdater<DefaultClientRequestMetrics, DistributionSummary>
+                retryingRequestsUpdater = AtomicReferenceFieldUpdater.newUpdater(
+                DefaultClientRequestMetrics.class, DistributionSummary.class, "retryingRequests");
+
         private final MeterRegistry parent;
         private final MeterIdPrefix idPrefix;
 
@@ -280,6 +287,9 @@ public final class RequestMetricSupport {
 
         @Nullable
         private volatile Counter actualRequests;
+
+        @Nullable
+        private volatile DistributionSummary retryingRequests;
 
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
             super(parent, idPrefix);
@@ -342,6 +352,21 @@ public final class RequestMetricSupport {
         @Override
         public Counter responseTimeouts() {
             return responseTimeouts;
+        }
+
+        @Override
+        public DistributionSummary retryingRequests() {
+            final DistributionSummary retryingRequests = this.retryingRequests;
+            if (retryingRequests != null) {
+                return retryingRequests;
+            }
+
+            final DistributionSummary distributionSummary = parent.summary(idPrefix.name("retrying.requests"), idPrefix.tags());
+            if (retryingRequestsUpdater.compareAndSet(this, null, distributionSummary)) {
+                return distributionSummary;
+            }
+
+            return this.retryingRequests;
         }
     }
 
