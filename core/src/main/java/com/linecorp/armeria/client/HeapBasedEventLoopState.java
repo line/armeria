@@ -21,6 +21,8 @@ import java.util.List;
 
 import com.google.common.base.Joiner;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.netty.channel.EventLoop;
 
 final class HeapBasedEventLoopState extends AbstractEventLoopState {
@@ -35,6 +37,7 @@ final class HeapBasedEventLoopState extends AbstractEventLoopState {
     private final List<AbstractEventLoopEntry> entries = new ArrayList<>();
     private final int maxNumEventLoops;
 
+    @Nullable
     private EventLoopAcquisitionIndex acquisitionIndex;
     private int allActiveRequests;
 

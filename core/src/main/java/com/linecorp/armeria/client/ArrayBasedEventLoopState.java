@@ -19,6 +19,8 @@ package com.linecorp.armeria.client;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.linecorp.armeria.common.annotation.Nullable;
+
 import io.netty.channel.EventLoop;
 
 final class ArrayBasedEventLoopState extends AbstractEventLoopState {
@@ -26,6 +28,7 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
     private final List<AbstractEventLoopEntry> entries = new ArrayList<>();
     private final int maxNumEventLoops;
 
+    @Nullable
     private EventLoopAcquisitionIndex acquisitionIndex;
     private int nextVisitIndex;
     private int allActiveRequests;

@@ -22,7 +22,7 @@ final class EventLoopAcquisitionIndex {
     private final int sizeEventLoopPool;
     private final int maxNumEventLoops;
     private final int acquisitionStartIndex;
-    private int nextUnusedEventLoopOffset = -1;
+    private int nextUnusedEventLoopOffset;
 
     EventLoopAcquisitionIndex(int acquisitionStartIndex, int maxNumEventLoops, int sizeEventLoopPool) {
         this.acquisitionStartIndex = acquisitionStartIndex;
