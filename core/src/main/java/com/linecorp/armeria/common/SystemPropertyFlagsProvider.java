@@ -21,6 +21,7 @@ import static com.google.common.collect.ImmutableSet.toImmutableSet;
 import java.net.InetAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -442,6 +443,11 @@ final class SystemPropertyFlagsProvider implements FlagsProvider {
             // Invalid sampler specification
             throw new IllegalArgumentException("invalid sampler spec: " + spec, e);
         }
+    }
+
+    @Override
+    public Long defaultUnloggedExceptionReportIntervalMillis() {
+        return getLong("defaultUnloggedExceptionReportIntervalMillis");
     }
 
     @Nullable

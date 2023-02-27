@@ -19,7 +19,6 @@ import java.io.File;
 import java.net.InetAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Predicate;
@@ -86,6 +85,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
     static final String CACHED_HEADERS = ":authority,:scheme,:method,accept-encoding,content-type";
     static final String FILE_SERVICE_CACHE_SPEC = "maximumSize=1024";
     static final String DNS_CACHE_SPEC = "maximumSize=4096";
+    static final long DEFAULT_UNLOGGED_EXCEPTION_REPORT_INTERVAL_MILLIS = 10000;
 
     private DefaultFlagsProvider() {}
 
@@ -414,7 +414,7 @@ final class DefaultFlagsProvider implements FlagsProvider {
     }
 
     @Override
-    public Duration defaultUnloggedExceptionReportIntervalMillis() {
-        return Duration.ofMillis(10000);
+    public Long defaultUnloggedExceptionReportIntervalMillis() {
+        return DEFAULT_UNLOGGED_EXCEPTION_REPORT_INTERVAL_MILLIS;
     }
 }

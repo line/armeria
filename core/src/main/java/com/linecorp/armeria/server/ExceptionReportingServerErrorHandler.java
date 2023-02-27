@@ -84,7 +84,7 @@ class ExceptionReportingServerErrorHandler implements ServerErrorHandler, Server
     public void serverStarting(Server server) throws Exception {
         if (!started) {
             reportingTaskFuture = server.config().workerGroup().scheduleAtFixedRate(
-                    this::reportException, duration.getSeconds(), duration.getSeconds(), TimeUnit.SECONDS);
+                    this::reportException, duration.toMillis(), duration.toMillis(), TimeUnit.MILLISECONDS);
             started = true;
         }
     }
