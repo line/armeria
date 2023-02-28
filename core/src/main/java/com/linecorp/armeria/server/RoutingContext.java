@@ -51,7 +51,7 @@ public interface RoutingContext {
     /**
      * Returns a wrapped {@link RoutingContext} which holds the specified {@link HttpMethod}.
      */
-    default RoutingContext overrideMethod(HttpMethod method) {
+    default RoutingContext withMethod(HttpMethod method) {
         requireNonNull(method, "method");
         return new RoutingContextWrapper(this) {
             @Override
