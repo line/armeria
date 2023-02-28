@@ -142,7 +142,7 @@ public final class RequestMetricSupport {
         final int childrenSize = log.children().size();
         if (childrenSize > 0) {
             metrics.actualRequests().increment(childrenSize);
-            metrics.retryingRequests().record(childrenSize);
+            metrics.retries().record(childrenSize);
         }
     }
 
@@ -196,7 +196,7 @@ public final class RequestMetricSupport {
 
         Counter responseTimeouts();
 
-        DistributionSummary retryingRequests();
+        DistributionSummary retries();
     }
 
     private interface ServiceRequestMetrics extends RequestMetrics {
@@ -271,8 +271,8 @@ public final class RequestMetricSupport {
                 DefaultClientRequestMetrics.class, Counter.class, "actualRequests");
 
         private static final AtomicReferenceFieldUpdater<DefaultClientRequestMetrics, DistributionSummary>
-                retryingRequestsUpdater = AtomicReferenceFieldUpdater.newUpdater(
-                DefaultClientRequestMetrics.class, DistributionSummary.class, "retryingRequests");
+                retriesUpdater = AtomicReferenceFieldUpdater.newUpdater(
+                DefaultClientRequestMetrics.class, DistributionSummary.class, "retries");
 
         private final MeterRegistry parent;
         private final MeterIdPrefix idPrefix;
@@ -289,7 +289,7 @@ public final class RequestMetricSupport {
         private volatile Counter actualRequests;
 
         @Nullable
-        private volatile DistributionSummary retryingRequests;
+        private volatile DistributionSummary retries;
 
         DefaultClientRequestMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
             super(parent, idPrefix);
@@ -355,18 +355,18 @@ public final class RequestMetricSupport {
         }
 
         @Override
-        public DistributionSummary retryingRequests() {
-            final DistributionSummary retryingRequests = this.retryingRequests;
-            if (retryingRequests != null) {
-                return retryingRequests;
+        public DistributionSummary retries() {
+            final DistributionSummary retries = this.retries;
+            if (retries != null) {
+                return retries;
             }
 
-            final DistributionSummary distributionSummary = parent.summary(idPrefix.name("retrying.requests"), idPrefix.tags());
-            if (retryingRequestsUpdater.compareAndSet(this, null, distributionSummary)) {
+            final DistributionSummary distributionSummary = parent.summary(idPrefix.name("retries"), idPrefix.tags());
+            if (retriesUpdater.compareAndSet(this, null, distributionSummary)) {
                 return distributionSummary;
             }
 
-            return this.retryingRequests;
+            return this.retries;
         }
     }
 
