@@ -95,8 +95,8 @@ class RoutingContextWrapper implements RoutingContext {
     }
 
     @Override
-    public RoutingContext overridePath(String path) {
-        return delegate.overridePath(path);
+    public RoutingContext withPath(String path) {
+        return delegate.withPath(path);
     }
 
     @Override

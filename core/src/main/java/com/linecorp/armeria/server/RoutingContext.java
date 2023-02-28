@@ -119,6 +119,23 @@ public interface RoutingContext {
      * Returns a wrapped {@link RoutingContext} which holds the specified {@code path}.
      * It is usually used to find an {@link HttpService} with a prefix-stripped path.
      */
+    default RoutingContext withPath(String path) {
+        requireNonNull(path, "path");
+        return new RoutingContextWrapper(this) {
+            @Override
+            public String path() {
+                return path;
+            }
+        };
+    }
+
+    /**
+     * Returns a wrapped {@link RoutingContext} which holds the specified {@code path}.
+     * It is usually used to find an {@link HttpService} with a prefix-stripped path.
+     *
+     * @deprecated Use {@link #withPath} instead.
+     */
+    @Deprecated
     default RoutingContext overridePath(String path) {
         requireNonNull(path, "path");
         return new RoutingContextWrapper(this) {
