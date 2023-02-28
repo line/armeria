@@ -361,7 +361,8 @@ public final class RequestMetricSupport {
                 return retries;
             }
 
-            final DistributionSummary distributionSummary = parent.summary(idPrefix.name("retries"), idPrefix.tags());
+            final DistributionSummary distributionSummary = parent.summary(
+                    idPrefix.name("retries"), idPrefix.tags());
             if (retriesUpdater.compareAndSet(this, null, distributionSummary)) {
                 return distributionSummary;
             }

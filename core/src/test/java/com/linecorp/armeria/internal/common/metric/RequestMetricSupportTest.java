@@ -139,12 +139,12 @@ class RequestMetricSupportTest {
         final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
         final ClientRequestContext ctx = setupClientRequestCtx(registry);
 
-        //addLogInfoInDerivedCtx(ctx);
+        addLogInfoInDerivedCtx(ctx);
 
         Map<String, Double> measurements = measureAll(registry);
         assertThat(measurements).containsEntry("foo.active.requests#value{method=POST,service=none}", 1.0);
 
-        //addLogInfoInDerivedCtx(ctx);
+        addLogInfoInDerivedCtx(ctx);
         // Does not increase the active requests.
         assertThat(measurements).containsEntry("foo.active.requests#value{method=POST,service=none}", 1.0);
 
