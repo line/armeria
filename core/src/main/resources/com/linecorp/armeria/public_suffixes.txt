@@ -486,6 +486,7 @@ ap.gov.br
 ap.gov.pl
 ap.it
 ap.leg.br
+ap.ngrok.io
 aparecida.br
 apartments
 api.gov.uk
@@ -640,6 +641,7 @@ atsuma.hokkaido.jp
 attorney
 au
 au.eu.org
+au.ngrok.io
 auction
 audi
 audible
@@ -2455,6 +2457,7 @@ eu.com
 eu.encoway.cloud
 eu.int
 eu.meteorapp.com
+eu.ngrok.io
 eu.org
 eu.platform.sh
 eu.pythonanywhere.com
@@ -3659,6 +3662,7 @@ idv.hk
 idv.tw
 ie
 ie.eu.org
+ie.ua
 ieee
 if.ua
 ifm
@@ -3722,6 +3726,7 @@ in-vpn.org
 in.eu.org
 in.na
 in.net
+in.ngrok.io
 in.ni
 in.rs
 in.th
@@ -4109,6 +4114,7 @@ jp.eu.org
 jp.kg
 jp.md
 jp.net
+jp.ngrok.io
 jpmorgan
 jpn.com
 jpn.org
@@ -5868,7 +5874,12 @@ ngo.lk
 ngo.ng
 ngo.ph
 ngo.za
+ngrok-free.app
+ngrok-free.dev
+ngrok.app
+ngrok.dev
 ngrok.io
+ngrok.pizza
 nh-serv.co.uk
 nh.us
 nhk
@@ -7146,6 +7157,7 @@ sa.edu.au
 sa.gov.au
 sa.gov.pl
 sa.it
+sa.ngrok.io
 saarland
 sabae.fukui.jp
 sadist.jp
@@ -8488,6 +8500,7 @@ us.gov.pl
 us.in
 us.kg
 us.na
+us.ngrok.io
 us.org
 us.platform.sh
 us.reclaim.cloud
