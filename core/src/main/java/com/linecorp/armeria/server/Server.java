@@ -554,11 +554,6 @@ public final class Server implements ListenableAsyncCloseable {
                                 GracefulShutdownSupport::pendingResponses);
             meterRegistry.gauge("armeria.server.connections", connectionLimitingHandler,
                                 ConnectionLimitingHandler::numConnections);
-            if (!config().unloggedExceptionReportInterval().isZero()) {
-                meterRegistry.gauge("armeria.server.unloggedExceptions",
-                                    (ExceptionReportingServerErrorHandler) config().errorHandler(),
-                                    ExceptionReportingServerErrorHandler::unloggedExceptions);
-            }
         }
 
         @Override

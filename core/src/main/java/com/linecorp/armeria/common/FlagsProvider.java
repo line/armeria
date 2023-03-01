@@ -991,14 +991,14 @@ public interface FlagsProvider {
     }
 
     /**
-     * Returns the default interval in milliseconds between reporting unlogged exceptions by armeria.
+     * Returns the default interval in milliseconds between reporting unhandled exceptions by armeria.
      *
      * <p>The default value of this flag is
-     * {@link DefaultFlagsProvider#DEFAULT_UNLOGGED_EXCEPTION_REPORT_INTERVAL_MILLIS}.</p>
+     * {@link DefaultFlagsProvider#DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}.</p>
      */
     @Nullable
     @UnstableApi
-    default Long defaultUnloggedExceptionReportIntervalMillis() {
+    default Long defaultUnhandledExceptionsReportIntervalMillis() {
         return null;
     }
 }

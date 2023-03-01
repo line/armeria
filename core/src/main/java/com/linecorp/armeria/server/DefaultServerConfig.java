@@ -112,7 +112,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final Http1HeaderNaming http1HeaderNaming;
     private final DependencyInjector dependencyInjector;
     private final List<ShutdownSupport> shutdownSupports;
-    private final Duration unloggedExceptionReportInterval;
+    private final Duration unhandledExceptionsReportInterval;
 
     @Nullable
     private final Mapping<String, SslContext> sslContexts;
@@ -145,7 +145,7 @@ final class DefaultServerConfig implements ServerConfig {
             Http1HeaderNaming http1HeaderNaming,
             DependencyInjector dependencyInjector,
             List<ShutdownSupport> shutdownSupports,
-            Duration unloggedExceptionReportInterval) {
+            Duration unhandledExceptionsReportInterval) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
         requireNonNull(virtualHosts, "virtualHosts");
@@ -259,7 +259,7 @@ final class DefaultServerConfig implements ServerConfig {
         this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
         this.dependencyInjector = requireNonNull(dependencyInjector, "dependencyInjector");
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
-        this.unloggedExceptionReportInterval = unloggedExceptionReportInterval;
+        this.unhandledExceptionsReportInterval = unhandledExceptionsReportInterval;
     }
 
     private static Int2ObjectMap<Mapping<String, VirtualHost>> buildDomainAndPortMapping(
@@ -646,8 +646,8 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
-    public Duration unloggedExceptionReportInterval() {
-        return unloggedExceptionReportInterval;
+    public Duration unhandledExceptionsReportInterval() {
+        return unhandledExceptionsReportInterval;
     }
 
     List<ShutdownSupport> shutdownSupports() {

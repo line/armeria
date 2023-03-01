@@ -297,7 +297,7 @@ public interface ServerConfig {
     DependencyInjector dependencyInjector();
 
     /**
-     * Returns the interval between reporting uncaught exceptions.
+     * Returns the interval between reporting unhandled exceptions.
      */
-    Duration unloggedExceptionReportInterval();
+    Duration unhandledExceptionsReportInterval();
 }

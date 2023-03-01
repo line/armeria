@@ -382,9 +382,9 @@ public final class Flags {
     private static final MeterRegistry METER_REGISTRY =
             getValue(FlagsProvider::meterRegistry, "meterRegistry");
 
-    private static final long DEFAULT_UNLOGGED_EXCEPTION_REPORT_INTERVAL_MILLIS =
-            getValue(FlagsProvider::defaultUnloggedExceptionReportIntervalMillis,
-                     "defaultUnloggedExceptionReportIntervalMillis", value -> value >= 0);
+    private static final long DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS =
+            getValue(FlagsProvider::defaultUnhandledExceptionsReportIntervalMillis,
+                     "defaultUnhandledExceptionsReportIntervalMillis", value -> value >= 0);
 
     /**
      * Returns the specification of the {@link Sampler} that determines whether to retain the stack
@@ -1331,14 +1331,14 @@ public final class Flags {
     }
 
     /**
-     * Returns the default interval in milliseconds between reporting unlogged exceptions by armeria.
+     * Returns the default interval in milliseconds between reporting unhandled exceptions by armeria.
      *
      * <p>The default value of this flag is
-     * {@link DefaultFlagsProvider#DEFAULT_UNLOGGED_EXCEPTION_REPORT_INTERVAL_MILLIS}.</p>
+     * {@link DefaultFlagsProvider#DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}.</p>
      */
     @UnstableApi
-    public static long defaultUnloggedExceptionReportIntervalMillis() {
-        return DEFAULT_UNLOGGED_EXCEPTION_REPORT_INTERVAL_MILLIS;
+    public static long defaultUnhandledExceptionsReportIntervalMillis() {
+        return DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS;
     }
 
     @Nullable

@@ -116,7 +116,7 @@ public final class DefaultServiceRequestContext
 
     @Nullable
     private String strVal;
-    private boolean shouldReportUnloggedException = true;
+    private boolean shouldReportUnhandledExceptions = true;
 
     /**
      * Creates a new instance.
@@ -441,13 +441,13 @@ public final class DefaultServiceRequestContext
     }
 
     @Override
-    public boolean shouldReportUnloggedException() {
-        return shouldReportUnloggedException;
+    public boolean shouldReportUnhandledExceptions() {
+        return shouldReportUnhandledExceptions;
     }
 
     @Override
-    public void setShouldReportUnloggedException(boolean value) {
-        shouldReportUnloggedException = value;
+    public void setShouldReportUnhandledExceptions(boolean value) {
+        shouldReportUnhandledExceptions = value;
     }
 
     @Override

@@ -647,19 +647,19 @@ class ServerBuilderTest {
     void exceptionReportInterval() {
         final Server server1 = Server.builder()
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                     .unloggedExceptionReportInterval(Duration.ofSeconds(1))
+                                     .unhandledExceptionsReportInterval(Duration.ofMillis(1000))
                                      .build();
-        assertThat(server1.config().unloggedExceptionReportInterval().getSeconds()).isEqualTo(1);
+        assertThat(server1.config().unhandledExceptionsReportInterval().toMillis()).isEqualTo(1000);
 
         final Server server2 = Server.builder()
-                                     .unloggedExceptionReportInterval(Duration.ofSeconds(0))
+                                     .unhandledExceptionsReportInterval(Duration.ofMillis(0))
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .build();
-        assertThat(server2.config().unloggedExceptionReportInterval().getSeconds()).isZero();
+        assertThat(server2.config().unhandledExceptionsReportInterval().toMillis()).isZero();
 
         assertThrows(IllegalArgumentException.class, () ->
                 Server.builder()
-                      .unloggedExceptionReportInterval(Duration.ofSeconds(-1))
+                      .unhandledExceptionsReportInterval(Duration.ofMillis(-1))
                       .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                       .build());
     }
@@ -667,20 +667,20 @@ class ServerBuilderTest {
     @Test
     void exceptionReportIntervalSeconds() {
         final Server server1 = Server.builder()
-                                     .unloggedExceptionReportIntervalSeconds(1)
+                                     .unhandledExceptionsReportIntervalMillis(1000)
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .build();
-        assertThat(server1.config().unloggedExceptionReportInterval().getSeconds()).isEqualTo(1);
+        assertThat(server1.config().unhandledExceptionsReportInterval().toMillis()).isEqualTo(1000);
 
         final Server server2 = Server.builder()
-                                     .unloggedExceptionReportIntervalSeconds(0)
+                                     .unhandledExceptionsReportIntervalMillis(0)
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                      .build();
-        assertThat(server2.config().unloggedExceptionReportInterval().getSeconds()).isZero();
+        assertThat(server2.config().unhandledExceptionsReportInterval().toMillis()).isZero();
 
         assertThrows(IllegalArgumentException.class, () ->
                 Server.builder()
-                      .unloggedExceptionReportIntervalSeconds(-1)
+                      .unhandledExceptionsReportIntervalMillis(-1000)
                       .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                       .build());
     }
