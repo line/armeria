@@ -116,6 +116,10 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
     @Override
     public void subscribe(Subscriber<? super HttpData> subscriber, EventExecutor executor,
                           SubscriptionOption... options) {
+        requireNonNull(subscriber, "subscriber");
+        requireNonNull(executor, "executor");
+        requireNonNull(options, "options");
+
         if (!subscribedUpdater.compareAndSet(this, 0, 1)) {
             subscriber.onSubscribe(NoopSubscription.get());
             subscriber.onError(new IllegalStateException("Only single subscriber is allowed!"));
