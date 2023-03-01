@@ -27,7 +27,7 @@ import java.util.List;
 import com.linecorp.armeria.common.annotation.Nullable;
 
 /**
- * Forked from <a href="https://github.com/micrometer-metrics/micrometer/blob/8339d57bef8689beb8d7a18b429a166f6595f2af/micrometer-core/src/main/java/io/micrometer/core/instrument/binder/system/ProcessorMetrics.java">ProcessorMetrics.java in the micrometer core</a>
+ * Forked from <a href="https://github.com/micrometer-metrics/micrometer/blob/8339d57bef8689beb8d7a18b429a166f6595f2af/micrometer-core/src/main/java/io/micrometer/core/instrument/binder/system/ProcessorMetrics.java">ProcessorMetrics.java</a> in the micrometer core.
  */
 public class DefaultCpuHealthChecker implements HealthChecker {
 
@@ -99,7 +99,6 @@ public class DefaultCpuHealthChecker implements HealthChecker {
             try {
                 return Class.forName(className);
             } catch (ClassNotFoundException ignore) {
-
             }
         }
         return null;
