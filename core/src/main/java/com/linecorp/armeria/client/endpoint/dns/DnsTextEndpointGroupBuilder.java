@@ -53,7 +53,7 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
         return new DnsTextEndpointGroup(selectionStrategy(), shouldAllowEmptyEndpoints(),
                                         selectionTimeoutMillis(), buildResolver(),
                                         eventLoop(), backoff(), minTtl(), maxTtl(),
-                                        hostname(), mapping);
+                                        hostname(), mapping, dnsQuestionListeners());
     }
 
     // Override the return type of the chaining methods in the DnsEndpointGroupBuilder.
@@ -227,5 +227,16 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
     @Override
     public DnsTextEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
         return (DnsTextEndpointGroupBuilder) super.selectionTimeoutMillis(selectionTimeoutMillis);
+    }
+
+    @Override
+    public DnsTextEndpointGroupBuilder addDnsQuestionListeners(
+            Iterable<DnsQuestionListener> dnsQuestionListeners) {
+        return (DnsTextEndpointGroupBuilder) super.addDnsQuestionListeners(dnsQuestionListeners);
+    }
+
+    @Override
+    public DnsTextEndpointGroupBuilder addDnsQuestionListener(DnsQuestionListener dnsQuestionListener) {
+        return (DnsTextEndpointGroupBuilder) super.addDnsQuestionListener(dnsQuestionListener);
     }
 }

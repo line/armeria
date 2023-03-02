@@ -28,6 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableSortedSet;
 
 import com.linecorp.armeria.client.DnsCacheListener;
@@ -60,6 +61,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
     private final String logPrefix;
     private final int minTtl;
     private final int maxTtl;
+    private final List<DnsQuestionListener> dnsQuestionListeners;
 
     private boolean started;
     @Nullable
@@ -70,7 +72,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
     DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
                      long selectionTimeoutMillis, DefaultDnsResolver resolver, EventLoop eventLoop,
                      List<DnsQuestionWithoutTrailingDot> questions,
-                     Backoff backoff, int minTtl, int maxTtl) {
+                     Backoff backoff, int minTtl, int maxTtl, List<DnsQuestionListener> dnsQuestionListeners) {
 
         super(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis);
 
@@ -80,6 +82,8 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
         this.questions = questions;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
+        this.dnsQuestionListeners = dnsQuestionListeners.isEmpty() ?
+                                    ImmutableList.of(new DnsQuestionListenerImpl()) : dnsQuestionListeners;
         assert !this.questions.isEmpty();
         logger = LoggerFactory.getLogger(getClass());
         logPrefix = this.questions.stream()
@@ -103,7 +107,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
     final void start() {
         checkState(!started);
         started = true;
-        eventLoop.execute(() -> sendQueries(questions));
+        eventLoop.execute(() -> sendQueries(questions, null));
     }
 
     @Override
@@ -122,7 +126,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
                                                         q.type().equals(cast.type()));
         if (matched) {
             // The TTL of DnsRecords associated the 'questions' has expired. Refresh the old Endpoints.
-            eventLoop.execute(() -> sendQueries(questions));
+            eventLoop.execute(() -> sendQueries(questions, records));
         }
     }
 
@@ -132,7 +136,8 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
         // Don't refresh the old Endpoints on eviction. The original scheduler may update them.
     }
 
-    private void sendQueries(List<DnsQuestionWithoutTrailingDot> questions) {
+    private void sendQueries(List<DnsQuestionWithoutTrailingDot> questions,
+                             @Nullable List<DnsRecord> oldRecords) {
         if (isClosing()) {
             return;
         }
@@ -143,38 +148,40 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
 
         final CompletableFuture<List<DnsRecord>> future = resolver.resolve(questions, logPrefix);
         attemptsSoFar++;
-        future.handle(this::onDnsRecords);
-    }
+        future.handle((newRecords, cause) -> {
+            if (isClosing()) {
+                return null;
+            }
 
-    private Void onDnsRecords(@Nullable List<DnsRecord> records, @Nullable Throwable cause) {
-        if (isClosing()) {
+            if (cause != null) {
+                // Failed. Try again with the delay given by Backoff.
+                final long delayMillis = backoff.nextDelayMillis(attemptsSoFar);
+                dnsQuestionListeners.forEach(dnsQuestionListener -> dnsQuestionListener.onFailure(
+                        oldRecords, cause, delayMillis, attemptsSoFar));
+                this.scheduledFuture = eventLoop.schedule(() -> sendQueries(questions, oldRecords),
+                                                          delayMillis, TimeUnit.MILLISECONDS);
+                return null;
+            }
+
+            dnsQuestionListeners.forEach(dnsQuestionListener -> dnsQuestionListener.onSuccess(oldRecords,
+                                                                                              newRecords));
+
+            // Reset the counter so that Backoff is reset.
+            attemptsSoFar = 0;
+
+            final long serverTtl = newRecords.stream().mapToLong(DnsRecord::timeToLive).min().orElse(minTtl);
+            final int effectiveTtl = (int) Math.max(Math.min(serverTtl, maxTtl), minTtl);
+
+            try {
+                setEndpoints(onDnsRecords(newRecords, effectiveTtl));
+            } catch (Throwable t) {
+                logger.warn("{} Failed to process the DNS query result: {}", logPrefix, newRecords, t);
+            } finally {
+                this.scheduledFuture = eventLoop.schedule(() -> sendQueries(questions, newRecords),
+                                                          effectiveTtl, TimeUnit.SECONDS);
+            }
             return null;
-        }
-
-        if (cause != null) {
-            // Failed. Try again with the delay given by Backoff.
-            final long delayMillis = backoff.nextDelayMillis(attemptsSoFar);
-            logger.warn("{} DNS query failed; retrying in {} ms (attempts so far: {}):",
-                        logPrefix, delayMillis, attemptsSoFar, cause);
-            scheduledFuture = eventLoop.schedule(() -> sendQueries(questions),
-                                                 delayMillis, TimeUnit.MILLISECONDS);
-            return null;
-        }
-
-        // Reset the counter so that Backoff is reset.
-        attemptsSoFar = 0;
-
-        final long serverTtl = records.stream().mapToLong(DnsRecord::timeToLive).min().orElse(minTtl);
-        final int effectiveTtl = (int) Math.max(Math.min(serverTtl, maxTtl), minTtl);
-
-        try {
-            setEndpoints(onDnsRecords(records, effectiveTtl));
-        } catch (Throwable t) {
-            logger.warn("{} Failed to process the DNS query result: {}", logPrefix, records, t);
-        } finally {
-            scheduledFuture = eventLoop.schedule(() -> sendQueries(questions), effectiveTtl, TimeUnit.SECONDS);
-        }
-        return null;
+        });
     }
 
     /**
@@ -222,5 +229,19 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
                 .add("logPrefix", logPrefix)
                 .add("attemptsSoFar", attemptsSoFar)
                 .toString();
+    }
+
+    class DnsQuestionListenerImpl implements DnsQuestionListener {
+
+        @Override
+        public void onSuccess(@Nullable List<DnsRecord> oldRecords, List<DnsRecord> newRecords) {
+        }
+
+        @Override
+        public void onFailure(@Nullable List<DnsRecord> oldRecords, Throwable cause,
+                              long delayMillis, int attemptsSoFar) {
+            logger.warn("{} DNS query failed; retrying in {} ms (attempts so far: {}):",
+                        logPrefix, delayMillis, attemptsSoFar, cause);
+        }
     }
 }

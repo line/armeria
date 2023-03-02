@@ -21,6 +21,8 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.IDN;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Consumer;
 
 import com.google.common.base.Ascii;
@@ -38,6 +40,7 @@ import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
 import com.linecorp.armeria.internal.client.dns.DnsUtil;
 
 import io.netty.channel.EventLoop;
+import io.netty.handler.codec.dns.DnsRecord;
 import io.netty.resolver.dns.DnsNameResolverBuilder;
 
 abstract class DnsEndpointGroupBuilder
@@ -49,6 +52,7 @@ abstract class DnsEndpointGroupBuilder
     private Backoff backoff = Backoff.exponential(1000, 32000).withJitter(0.2);
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
     private final DnsDynamicEndpointGroupBuilder dnsDynamicEndpointGroupBuilder;
+    private final List<DnsQuestionListener> dnsQuestionListeners = new ArrayList<>();
 
     DnsEndpointGroupBuilder(String hostname) {
         this.hostname = Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"),
@@ -151,6 +155,29 @@ abstract class DnsEndpointGroupBuilder
         return DefaultDnsResolver.of(resolverBuilder.build(), maybeCreateDnsCache(), eventLoop,
                                      searchDomains(), ndots(), queryTimeoutMillis(),
                                      hostsFileEntriesResolver());
+    }
+
+    /**
+     * Adds the {@link DnsQuestionListener}s that listens to the result of querying {@link DnsRecord}s.
+     */
+    public DnsEndpointGroupBuilder addDnsQuestionListeners(Iterable<DnsQuestionListener> dnsQuestionListeners) {
+        requireNonNull(dnsQuestionListeners, "dnsQuestionListeners");
+        for (DnsQuestionListener dnsQuestionListener: dnsQuestionListeners) {
+            addDnsQuestionListener(dnsQuestionListener);
+        }
+        return this;
+    }
+
+    /**
+     * Adds the {@link DnsQuestionListener} that listens to the result of querying {@link DnsRecord}s.
+     */
+    public DnsEndpointGroupBuilder addDnsQuestionListener(DnsQuestionListener dnsQuestionListener) {
+        dnsQuestionListeners.add(requireNonNull(dnsQuestionListener, "dnsQuestionListener"));
+        return this;
+    }
+
+    final List<DnsQuestionListener> dnsQuestionListeners() {
+        return dnsQuestionListeners;
     }
 
     /**

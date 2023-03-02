@@ -79,7 +79,7 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
         return new DnsAddressEndpointGroup(selectionStrategy(), shouldAllowEmptyEndpoints(),
                                            selectionTimeoutMillis(), resolver,
                                            eventLoop(), backoff(), minTtl(), maxTtl(),
-                                           resolvedAddressTypes, hostname(), port);
+                                           resolvedAddressTypes, hostname(), port, dnsQuestionListeners());
     }
 
     // Override the return type of the chaining methods in the DnsEndpointGroupBuilder.
@@ -252,5 +252,16 @@ public final class DnsAddressEndpointGroupBuilder extends DnsEndpointGroupBuilde
     @Override
     public DnsAddressEndpointGroupBuilder selectionTimeoutMillis(long selectionTimeoutMillis) {
         return (DnsAddressEndpointGroupBuilder) super.selectionTimeoutMillis(selectionTimeoutMillis);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder addDnsQuestionListeners(
+            Iterable<DnsQuestionListener> dnsQuestionListeners) {
+        return (DnsAddressEndpointGroupBuilder) super.addDnsQuestionListeners(dnsQuestionListeners);
+    }
+
+    @Override
+    public DnsAddressEndpointGroupBuilder addDnsQuestionListener(DnsQuestionListener dnsQuestionListener) {
+        return (DnsAddressEndpointGroupBuilder) super.addDnsQuestionListener(dnsQuestionListener);
     }
 }
