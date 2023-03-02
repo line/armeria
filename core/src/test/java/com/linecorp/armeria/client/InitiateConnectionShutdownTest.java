@@ -103,7 +103,7 @@ public class InitiateConnectionShutdownTest {
         final AtomicBoolean completed = new AtomicBoolean(false);
         final AtomicReference<RequestLogAccess> requestLogAtomicReference = new AtomicReference<>();
 
-        try (final ClientFactory clientFactory = getClientFactory()) {
+        try (ClientFactory clientFactory = getClientFactory()) {
             final WebClient client = WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
                     (delegate, ctx, req) -> {
                         requestLogAtomicReference.set(ctx.log());
@@ -127,7 +127,7 @@ public class InitiateConnectionShutdownTest {
         final AtomicBoolean completed = new AtomicBoolean(false);
         final AtomicReference<RequestLogAccess> requestLogAtomicReference = new AtomicReference<>();
 
-        try (final ClientFactory clientFactory = getClientFactory()) {
+        try (ClientFactory clientFactory = getClientFactory()) {
             final WebClient client = WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
                     (delegate, ctx, req) -> {
                         requestLogAtomicReference.set(ctx.log());
@@ -151,7 +151,7 @@ public class InitiateConnectionShutdownTest {
         final AtomicBoolean completed = new AtomicBoolean(false);
         final AtomicReference<RequestLogAccess> requestLogAtomicReference = new AtomicReference<>();
 
-        try (final ClientFactory clientFactory = getClientFactory()) {
+        try (ClientFactory clientFactory = getClientFactory()) {
             final WebClient client = WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
                     (delegate, ctx, req) -> {
                         requestLogAtomicReference.set(ctx.log());
@@ -177,7 +177,7 @@ public class InitiateConnectionShutdownTest {
         final AtomicBoolean completed = new AtomicBoolean(false);
         final AtomicReference<RequestLogAccess> requestLogAtomicReference = new AtomicReference<>();
 
-        try (final ClientFactory clientFactory = getClientFactory()) {
+        try (ClientFactory clientFactory = getClientFactory()) {
             final WebClient client = WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
                     (delegate, ctx, req) -> {
                         requestLogAtomicReference.set(ctx.log());
@@ -204,7 +204,7 @@ public class InitiateConnectionShutdownTest {
         final List<Boolean> completeds = Lists.newCopyOnWriteArrayList();
         final List<RequestLogAccess> requestLogAccesses = Lists.newCopyOnWriteArrayList();
 
-        try (final ClientFactory clientFactory = getClientFactory()) {
+        try (ClientFactory clientFactory = getClientFactory()) {
             final WebClient client = WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
                     (delegate, ctx, req) -> {
                         requestLogAccesses.add(ctx.log());
