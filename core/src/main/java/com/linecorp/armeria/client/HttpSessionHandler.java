@@ -202,7 +202,7 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
                     useHttp1Pipelining ? req.whenComplete()
                                        : CompletableFuture.allOf(req.whenComplete(), res.whenComplete());
             completionFuture.handle((ret, cause) -> {
-                if (!responseDecoder.needsToDisconnectWhenFinished()) {
+                if (isAcquirable()) {
                     pooledChannel.release();
                 }
                 return null;
@@ -275,9 +275,14 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
 
     @Override
     public boolean isAcquirable() {
-        // responseDecoder is set before this session is added to the pool.
+        if (!isAcquirable) {
+            return false;
+        }
+        // responseDecoder and keepAliveHandler are set before this session is added to the pool.
         assert responseDecoder != null;
-        return isAcquirable && !responseDecoder.needsToDisconnectWhenFinished();
+        final KeepAliveHandler keepAliveHandler = responseDecoder.keepAliveHandler();
+        assert keepAliveHandler != null;
+        return !keepAliveHandler.needsDisconnection();
     }
 
     @Override

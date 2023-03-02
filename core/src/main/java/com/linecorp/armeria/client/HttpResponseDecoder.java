@@ -158,15 +158,7 @@ abstract class HttpResponseDecoder {
     abstract KeepAliveHandler keepAliveHandler();
 
     final boolean needsToDisconnectNow() {
-        return needsToDisconnectWhenFinished() && !hasUnfinishedResponses();
-    }
-
-    final boolean needsToDisconnectWhenFinished() {
-        if (!session().isAcquirable()) {
-            return true;
-        }
-        final KeepAliveHandler keepAliveHandler = keepAliveHandler();
-        return keepAliveHandler != null && keepAliveHandler.needsDisconnection();
+        return !session().isAcquirable() && !hasUnfinishedResponses();
     }
 
     static final class HttpResponseWrapper implements StreamWriter<HttpObject> {
