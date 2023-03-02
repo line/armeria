@@ -35,6 +35,7 @@ import com.linecorp.armeria.client.endpoint.EndpointSelectionStrategy;
 import com.linecorp.armeria.client.retry.Backoff;
 import com.linecorp.armeria.common.CommonPools;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.common.util.TransportType;
 import com.linecorp.armeria.internal.client.dns.DefaultDnsResolver;
 import com.linecorp.armeria.internal.client.dns.DnsUtil;
@@ -159,8 +160,11 @@ abstract class DnsEndpointGroupBuilder
 
     /**
      * Adds the {@link DnsQuestionListener}s that listens to the result of querying {@link DnsRecord}s.
+     * If no {@link DnsQuestionListener} is configured, {@link DnsQuestionListener#of()} is used by default
      */
-    public DnsEndpointGroupBuilder addDnsQuestionListeners(Iterable<DnsQuestionListener> dnsQuestionListeners) {
+    @UnstableApi
+    public DnsEndpointGroupBuilder addDnsQuestionListeners(
+            Iterable<? extends DnsQuestionListener> dnsQuestionListeners) {
         requireNonNull(dnsQuestionListeners, "dnsQuestionListeners");
         for (DnsQuestionListener dnsQuestionListener: dnsQuestionListeners) {
             addDnsQuestionListener(dnsQuestionListener);
@@ -170,7 +174,9 @@ abstract class DnsEndpointGroupBuilder
 
     /**
      * Adds the {@link DnsQuestionListener} that listens to the result of querying {@link DnsRecord}s.
+     * If no {@link DnsQuestionListener} is configured, {@link DnsQuestionListener#of()} is used by default
      */
+    @UnstableApi
     public DnsEndpointGroupBuilder addDnsQuestionListener(DnsQuestionListener dnsQuestionListener) {
         dnsQuestionListeners.add(requireNonNull(dnsQuestionListener, "dnsQuestionListener"));
         return this;

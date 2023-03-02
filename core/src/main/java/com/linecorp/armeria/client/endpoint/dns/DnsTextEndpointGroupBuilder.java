@@ -231,7 +231,7 @@ public final class DnsTextEndpointGroupBuilder extends DnsEndpointGroupBuilder {
 
     @Override
     public DnsTextEndpointGroupBuilder addDnsQuestionListeners(
-            Iterable<DnsQuestionListener> dnsQuestionListeners) {
+            Iterable<? extends DnsQuestionListener> dnsQuestionListeners) {
         return (DnsTextEndpointGroupBuilder) super.addDnsQuestionListeners(dnsQuestionListeners);
     }
 

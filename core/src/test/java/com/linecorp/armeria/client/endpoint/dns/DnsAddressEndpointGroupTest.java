@@ -534,14 +534,13 @@ class DnsAddressEndpointGroupTest {
             final DnsQuestionListener listener = new DnsQuestionListener() {
                 @Override
                 public void onSuccess(@Nullable List<DnsRecord> oldRecords,
-                                      List<DnsRecord> newRecords) {
+                                      List<DnsRecord> newRecords, String logPrefix) {
                     success.set(true);
                 }
 
                 @Override
                 public void onFailure(@Nullable List<DnsRecord> oldRecords,
-                                      Throwable cause, long delayMillis,
-                                      int attemptsSoFar) {
+                                      Throwable cause, String logPrefix, long delayMillis, int attemptsSoFar) {
                     failureCount.incrementAndGet();
                 }
             };

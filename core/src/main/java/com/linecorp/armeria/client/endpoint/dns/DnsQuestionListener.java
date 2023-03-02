@@ -18,6 +18,7 @@ package com.linecorp.armeria.client.endpoint.dns;
 
 import java.util.List;
 
+import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
@@ -30,13 +31,22 @@ import io.netty.handler.codec.dns.DnsRecord;
 public interface DnsQuestionListener {
 
     /**
+     * Returns the default {@link DnsQuestionListener}.
+     */
+    static DnsQuestionListener of() {
+        return DefaultDnsQuestionListener.DEFAULT_INSTANCE;
+    }
+
+    /**
      * Invoked when querying {@link DnsRecord}s successfully.
      *
      * @param oldRecords old dns records which were to be updated. If {@code null}, it indicates that
-     *                   this querying is called after initialization.
+     *                   this querying is called after initialization or the old records were garbage-collected
+     *                   by the {@link DnsCache} implementation.
      * @param newRecords new dns records.
+     * @param logPrefix comma-separated dns record name. (e.g., `foo.com, bar.com`)
      */
-    void onSuccess(@Nullable List<DnsRecord> oldRecords, List<DnsRecord> newRecords);
+    void onSuccess(@Nullable List<DnsRecord> oldRecords, List<DnsRecord> newRecords, String logPrefix);
 
     /**
      * Invoked when querying {@link DnsRecord}s failed.
@@ -44,8 +54,10 @@ public interface DnsQuestionListener {
      * @param oldRecords old dns records which were to be updated. If {@code null}, it indicates that
      *                   this querying is called after initialization.
      * @param cause the cause of the failure.
+     * @param logPrefix comma-separated dns record name. (e.g., `foo.com, bar.com`)
      * @param delayMillis the interval of the next attempt.
      * @param attemptsSoFar the number of inquiries so far.
      */
-    void onFailure(@Nullable List<DnsRecord> oldRecords, Throwable cause, long delayMillis, int attemptsSoFar);
+    void onFailure(@Nullable List<DnsRecord> oldRecords, Throwable cause, String logPrefix,
+                   long delayMillis, int attemptsSoFar);
 }

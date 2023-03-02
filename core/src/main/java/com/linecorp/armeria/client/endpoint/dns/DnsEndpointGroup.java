@@ -83,7 +83,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
         this.dnsQuestionListeners = dnsQuestionListeners.isEmpty() ?
-                                    ImmutableList.of(new DnsQuestionListenerImpl()) : dnsQuestionListeners;
+                                    ImmutableList.of(DnsQuestionListener.of()) : dnsQuestionListeners;
         assert !this.questions.isEmpty();
         logger = LoggerFactory.getLogger(getClass());
         logPrefix = this.questions.stream()
@@ -157,14 +157,15 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
                 // Failed. Try again with the delay given by Backoff.
                 final long delayMillis = backoff.nextDelayMillis(attemptsSoFar);
                 dnsQuestionListeners.forEach(dnsQuestionListener -> dnsQuestionListener.onFailure(
-                        oldRecords, cause, delayMillis, attemptsSoFar));
+                        oldRecords, cause, logPrefix, delayMillis, attemptsSoFar));
                 this.scheduledFuture = eventLoop.schedule(() -> sendQueries(questions, oldRecords),
                                                           delayMillis, TimeUnit.MILLISECONDS);
                 return null;
             }
 
             dnsQuestionListeners.forEach(dnsQuestionListener -> dnsQuestionListener.onSuccess(oldRecords,
-                                                                                              newRecords));
+                                                                                              newRecords,
+                                                                                              logPrefix));
 
             // Reset the counter so that Backoff is reset.
             attemptsSoFar = 0;
@@ -229,19 +230,5 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
                 .add("logPrefix", logPrefix)
                 .add("attemptsSoFar", attemptsSoFar)
                 .toString();
-    }
-
-    class DnsQuestionListenerImpl implements DnsQuestionListener {
-
-        @Override
-        public void onSuccess(@Nullable List<DnsRecord> oldRecords, List<DnsRecord> newRecords) {
-        }
-
-        @Override
-        public void onFailure(@Nullable List<DnsRecord> oldRecords, Throwable cause,
-                              long delayMillis, int attemptsSoFar) {
-            logger.warn("{} DNS query failed; retrying in {} ms (attempts so far: {}):",
-                        logPrefix, delayMillis, attemptsSoFar, cause);
-        }
     }
 }
