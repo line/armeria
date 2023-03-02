@@ -160,7 +160,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                         "Can't send requests. ID: " + id + ", session active: " + session.isAcquirable() +
                         ", response needs to disconnect: " + responseDecoder.needsToDisconnectWhenFinished());
             }
-            responseDecoder.disconnectWhenFinished();
+            session.deactivate();
             // No need to send RST because we didn't send any packet and this will be disconnected anyway.
             fail(UnprocessedRequestException.of(exception));
             return false;
@@ -205,13 +205,14 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
                 headers, ctx.defaultRequestHeaders(), ctx.additionalRequestHeaders());
         logBuilder.requestHeaders(merged);
 
-        if (headers.contains(HttpHeaderNames.CONNECTION, CLOSE_STRING)) {
+        final String connectionOption = headers.get(HttpHeaderNames.CONNECTION);
+        if (CLOSE_STRING.equalsIgnoreCase(connectionOption)) {
             // Make the session unhealthy so that subsequent requests do not use it.
             // In HTTP/2 request, the "Connection: close" is just interpreted as a signal to close the
             // connection by sending a GOAWAY frame that will be sent after receiving the corresponding
             // response from the remote peer. The "Connection: close" header is stripped when it is converted to
             // a Netty HTTP/2 header.
-            responseDecoder.disconnectWhenFinished();
+            session.deactivate();
         }
 
         final ChannelPromise promise = ch.newPromise();

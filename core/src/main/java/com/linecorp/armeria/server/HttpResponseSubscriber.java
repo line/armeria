@@ -52,7 +52,6 @@ import com.linecorp.armeria.unsafe.PooledObjects;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelFutureListener;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.handler.codec.http2.Http2Error;
 
 final class HttpResponseSubscriber extends AbstractHttpResponseHandler implements Subscriber<HttpObject> {
@@ -165,7 +164,8 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                                                   reqCtx.config().defaultHeaders(),
                                                   config.isServerHeaderEnabled(),
                                                   config.isDateHeaderEnabled());
-                    if (merged.contains(HttpHeaderNames.CONNECTION, CLOSE_STRING)) {
+                    final String connectionOption = merged.get(HttpHeaderNames.CONNECTION);
+                    if (CLOSE_STRING.equalsIgnoreCase(connectionOption)) {
                         disconnectWhenFinished();
                     }
                     logBuilder().responseHeaders(merged);

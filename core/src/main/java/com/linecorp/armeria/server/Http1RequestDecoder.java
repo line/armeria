@@ -36,7 +36,6 @@ import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.common.ArmeriaHttpUtil;
-import com.linecorp.armeria.internal.common.Http1ObjectEncoder;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.InitiateConnectionShutdown;
 import com.linecorp.armeria.internal.common.KeepAliveHandler;
@@ -100,12 +99,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
     }
 
     @Override
-    public void handlerRemoved(ChannelHandlerContext ctx) throws Exception {
-        destroyKeepAliveHandler();
-        super.handlerRemoved(ctx);
-    }
-
-    @Override
     public void channelActive(ChannelHandlerContext ctx) throws Exception {
         maybeInitializeKeepAliveHandler(ctx);
         super.channelActive(ctx);
@@ -118,13 +111,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
             // Ignored if the stream has already been closed.
             ((HttpRequestWriter) req).close(ClosedSessionException.get());
         }
-        destroyKeepAliveHandler();
-    }
-
-    @Override
-    public void channelInactive(ChannelHandlerContext ctx) throws Exception {
-        destroyKeepAliveHandler();
-        super.channelInactive(ctx);
     }
 
     @Override
@@ -421,13 +407,6 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
         if (!(keepAliveHandler instanceof NoopKeepAliveHandler) &&
             ctx.channel().isActive() && ctx.channel().isRegistered()) {
             keepAliveHandler.initialize(ctx);
-        }
-    }
-
-    private void destroyKeepAliveHandler() {
-        if (encoder instanceof Http1ObjectEncoder) {
-            // Http2ObjectEncoder will be destroyed by Http2RequestDecoder.
-            encoder.keepAliveHandler().destroy();
         }
     }
 }

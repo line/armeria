@@ -56,8 +56,10 @@ abstract class HttpResponseDecoder {
     private final Channel channel;
     private final InboundTrafficController inboundTrafficController;
 
+    @Nullable
+    private HttpSession httpSession;
+
     private int unfinishedResponses;
-    private boolean disconnectWhenFinished;
     private boolean closing;
 
     HttpResponseDecoder(Channel channel, InboundTrafficController inboundTrafficController) {
@@ -145,20 +147,22 @@ abstract class HttpResponseDecoder {
         }
     }
 
+    HttpSession session() {
+        if (httpSession != null) {
+            return httpSession;
+        }
+        return httpSession = HttpSession.get(channel);
+    }
+
     @Nullable
     abstract KeepAliveHandler keepAliveHandler();
-
-    final void disconnectWhenFinished() {
-        HttpSession.get(channel).deactivate();
-        disconnectWhenFinished = true;
-    }
 
     final boolean needsToDisconnectNow() {
         return needsToDisconnectWhenFinished() && !hasUnfinishedResponses();
     }
 
     final boolean needsToDisconnectWhenFinished() {
-        if (disconnectWhenFinished) {
+        if (!session().isAcquirable()) {
             return true;
         }
         final KeepAliveHandler keepAliveHandler = keepAliveHandler();

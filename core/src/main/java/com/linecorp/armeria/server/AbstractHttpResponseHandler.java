@@ -40,7 +40,6 @@ import com.linecorp.armeria.internal.server.DefaultServiceRequestContext;
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelFuture;
 import io.netty.channel.ChannelHandlerContext;
-import io.netty.handler.codec.http.HttpHeaderValues;
 
 abstract class AbstractHttpResponseHandler {
 
@@ -142,7 +141,8 @@ abstract class AbstractHttpResponseHandler {
                                                        reqCtx.config().defaultHeaders(),
                                                        config.isServerHeaderEnabled(),
                                                        config.isDateHeaderEnabled());
-        if (headers.contains(HttpHeaderNames.CONNECTION, CLOSE_STRING)) {
+        final String connectionOption = headers.get(HttpHeaderNames.CONNECTION);
+        if (CLOSE_STRING.equalsIgnoreCase(connectionOption)) {
             disconnectWhenFinished();
         }
 

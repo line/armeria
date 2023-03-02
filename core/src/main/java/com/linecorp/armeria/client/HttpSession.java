@@ -109,7 +109,6 @@ interface HttpSession {
      *     <li>"Connection: close" header is sent or received.</li>
      *     <li>A GOAWAY frame is sent or received.</li>
      * </ul>
-     * @see HttpResponseDecoder#disconnectWhenFinished()
      */
     void deactivate();
 

@@ -162,7 +162,7 @@ final class Http1ResponseDecoder extends HttpResponseDecoder implements ChannelI
                         }
 
                         if (!HttpUtil.isKeepAlive(nettyRes)) {
-                            disconnectWhenFinished();
+                            session().deactivate();
                         }
 
                         final HttpResponseWrapper res = getResponse(resId);
