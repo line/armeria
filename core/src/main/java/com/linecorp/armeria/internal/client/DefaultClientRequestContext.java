@@ -70,7 +70,6 @@ import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.common.util.TimeoutMode;
 import com.linecorp.armeria.common.util.UnmodifiableFuture;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
-import com.linecorp.armeria.internal.common.DisconnectWhenFinished;
 import com.linecorp.armeria.internal.common.NonWrappingRequestContext;
 import com.linecorp.armeria.internal.common.PathAndQuery;
 import com.linecorp.armeria.internal.common.RequestContextExtension;
@@ -874,7 +873,7 @@ public final class DefaultClientRequestContext
                     completableFuture.completeExceptionally(f.cause());
                 }
             });
-            ch.pipeline().fireUserEventTriggered(DisconnectWhenFinished.of());
+            HttpSession.get(ch).initiateConnectionShutdown();
         }
         return completableFuture;
     }

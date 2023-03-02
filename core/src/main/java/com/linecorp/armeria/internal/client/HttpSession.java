@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -14,18 +14,20 @@
  * under the License.
  */
 
-package com.linecorp.armeria.client;
+package com.linecorp.armeria.internal.client;
 
+import com.linecorp.armeria.client.ClientRequestContext;
 import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.Channel;
 import io.netty.channel.ChannelHandler;
 
-interface HttpSession {
+public interface HttpSession {
 
     /**
      * 2^29 - We could have used 2^30 but this should be large enough.
@@ -82,6 +84,9 @@ interface HttpSession {
         public int incrementAndGetNumRequestsSent() {
             return MAX_NUM_REQUESTS_SENT;
         }
+
+        @Override
+        public void initiateConnectionShutdown() {}
     };
 
     static HttpSession get(Channel ch) {
@@ -113,4 +118,7 @@ interface HttpSession {
     void deactivate();
 
     int incrementAndGetNumRequestsSent();
+
+    @UnstableApi
+    void initiateConnectionShutdown();
 }

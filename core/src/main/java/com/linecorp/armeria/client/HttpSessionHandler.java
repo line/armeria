@@ -43,7 +43,9 @@ import com.linecorp.armeria.common.metric.MoreMeters;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.SafeCloseable;
-import com.linecorp.armeria.internal.common.DisconnectWhenFinished;
+import com.linecorp.armeria.internal.client.DecodedHttpResponse;
+import com.linecorp.armeria.internal.client.HttpSession;
+import com.linecorp.armeria.internal.client.PooledChannel;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 import com.linecorp.armeria.internal.common.RequestContextUtil;
 
@@ -395,12 +397,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             return;
         }
 
-        if (evt instanceof DisconnectWhenFinished) {
-            assert responseDecoder != null;
-            responseDecoder.disconnectWhenFinished();
-            return;
-        }
-
         logger.warn("{} Unexpected user event: {}", channel, evt);
     }
 
@@ -475,5 +471,11 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
         if (previousCause != null && logger.isWarnEnabled()) {
             logger.warn("{} Unexpected suppressed exception:", ctx.channel(), cause);
         }
+    }
+
+    @Override
+    public void initiateConnectionShutdown() {
+        assert responseDecoder != null;
+        responseDecoder.disconnectWhenFinished();
     }
 }
