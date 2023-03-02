@@ -69,6 +69,8 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     private SuccessFunction successFunction;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private ServiceErrorHandler serviceErrorHandler;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
 
@@ -239,6 +241,12 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         return this;
     }
 
+    public ServiceConfigSetters serviceErrorHandler(ServiceErrorHandler serviceErrorHandler) {
+        requireNonNull(serviceErrorHandler, "serviceErrorHandler");
+        this.serviceErrorHandler = serviceErrorHandler;
+        return this;
+    }
+
     /**
      * Note: {@link ServiceConfigBuilder} built by this method is not decorated with the decorator function
      * which can be configured using {@link DefaultServiceConfigSetters#decorator()} because
@@ -301,6 +309,9 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
         serviceConfigBuilder.shutdownSupports(shutdownSupports);
         if (!defaultHeaders.isEmpty()) {
             serviceConfigBuilder.defaultHeaders(defaultHeaders.build());
+        }
+        if (serviceErrorHandler != null) {
+            serviceConfigBuilder.serviceErrorHandler(serviceErrorHandler);
         }
         return serviceConfigBuilder;
     }

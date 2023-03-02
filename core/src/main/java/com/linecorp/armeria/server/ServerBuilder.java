@@ -229,6 +229,7 @@ public final class ServerBuilder implements TlsSetters {
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
+        virtualHostTemplate.errorHandler(errorHandler);
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {

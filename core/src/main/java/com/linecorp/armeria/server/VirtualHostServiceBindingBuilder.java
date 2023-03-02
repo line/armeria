@@ -315,6 +315,11 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
         return (VirtualHostServiceBindingBuilder) super.setHeaders(defaultHeaders);
     }
 
+    @Override
+    public VirtualHostServiceBindingBuilder serviceErrorHandler(ServiceErrorHandler serviceErrorHandler) {
+        return (VirtualHostServiceBindingBuilder) super.serviceErrorHandler(serviceErrorHandler);
+    }
+
     /**
      * Sets the {@link HttpService} and returns the {@link VirtualHostBuilder} that this
      * {@link VirtualHostServiceBindingBuilder} was created from.

@@ -236,4 +236,8 @@ public interface ServerErrorHandler {
             }
         };
     }
+
+    default ServiceErrorHandler asServiceErrorHandler() {
+        return this::onServiceException;
+    }
 }

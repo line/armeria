@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -74,6 +74,7 @@ public final class ServiceConfig {
     private final Path multipartUploadsLocation;
     private final List<ShutdownSupport> shutdownSupports;
     private final HttpHeaders defaultHeaders;
+    private final ServiceErrorHandler serviceErrorHandler;
 
     /**
      * Creates a new instance.
@@ -85,12 +86,12 @@ public final class ServiceConfig {
                   ScheduledExecutorService blockingTaskExecutor,
                   SuccessFunction successFunction,
                   Path multipartUploadsLocation, List<ShutdownSupport> shutdownSupports,
-                  HttpHeaders defaultHeaders) {
+                  HttpHeaders defaultHeaders, ServiceErrorHandler defaultServiceErrorHandler) {
         this(null, route, mappedRoute, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              extractTransientServiceOptions(service),
              blockingTaskExecutor, successFunction,
-             multipartUploadsLocation, shutdownSupports, defaultHeaders);
+             multipartUploadsLocation, shutdownSupports, defaultHeaders, defaultServiceErrorHandler);
     }
 
     /**
@@ -105,7 +106,8 @@ public final class ServiceConfig {
                           ScheduledExecutorService blockingTaskExecutor,
                           SuccessFunction successFunction,
                           Path multipartUploadsLocation,
-                          List<ShutdownSupport> shutdownSupports, HttpHeaders defaultHeaders) {
+                          List<ShutdownSupport> shutdownSupports, HttpHeaders defaultHeaders,
+                          ServiceErrorHandler serviceErrorHandler) {
         this.virtualHost = virtualHost;
         this.route = requireNonNull(route, "route");
         this.mappedRoute = requireNonNull(mappedRoute, "mappedRoute");
@@ -123,6 +125,7 @@ public final class ServiceConfig {
         this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
         this.defaultHeaders = defaultHeaders;
+        this.serviceErrorHandler = serviceErrorHandler;
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
     }
@@ -160,7 +163,8 @@ public final class ServiceConfig {
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
-                                 multipartUploadsLocation, shutdownSupports, defaultHeaders);
+                                 multipartUploadsLocation, shutdownSupports, defaultHeaders,
+                                 serviceErrorHandler);
     }
 
     ServiceConfig withDecoratedService(Function<? super HttpService, ? extends HttpService> decorator) {
@@ -170,7 +174,8 @@ public final class ServiceConfig {
                                  maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
-                                 multipartUploadsLocation, shutdownSupports, defaultHeaders);
+                                 multipartUploadsLocation, shutdownSupports, defaultHeaders,
+                                 serviceErrorHandler);
     }
 
     ServiceConfig withRoute(Route route) {
@@ -179,7 +184,8 @@ public final class ServiceConfig {
                                  defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                  accessLogWriter, transientServiceOptions,
                                  blockingTaskExecutor, successFunction,
-                                 multipartUploadsLocation, shutdownSupports, defaultHeaders);
+                                 multipartUploadsLocation, shutdownSupports, defaultHeaders,
+                                 serviceErrorHandler);
     }
 
     /**
@@ -390,6 +396,10 @@ public final class ServiceConfig {
      */
     public Path multipartUploadsLocation() {
         return multipartUploadsLocation;
+    }
+
+    public ServiceErrorHandler errorHandler() {
+        return serviceErrorHandler;
     }
 
     List<ShutdownSupport> shutdownSupports() {

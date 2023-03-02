@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -148,6 +148,8 @@ public final class VirtualHostBuilder implements TlsSetters {
     private SuccessFunction successFunction;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private ServerErrorHandler errorHandler;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -816,6 +818,11 @@ public final class VirtualHostBuilder implements TlsSetters {
         return accessLogger(host -> LoggerFactory.getLogger(loggerName));
     }
 
+    public VirtualHostBuilder errorHandler(ServerErrorHandler errorHandler) {
+        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
+        return this;
+    }
+
     /**
      * Sets the {@link RejectedRouteHandler} which will be invoked when an attempt to bind
      * an {@link HttpService} at a certain {@link Route} is rejected. If not set,
@@ -1148,6 +1155,10 @@ public final class VirtualHostBuilder implements TlsSetters {
         final HttpHeaders defaultHeaders =
                 mergeDefaultHeaders(template.defaultHeaders, this.defaultHeaders.build());
 
+        final ServiceErrorHandler defaultErrorHandler =
+                errorHandler != null ?
+                errorHandler.asServiceErrorHandler() : template.errorHandler.asServiceErrorHandler();
+
         assert defaultServiceNaming != null;
         assert rejectedRouteHandler != null;
         assert accessLoggerMapper != null;
@@ -1175,14 +1186,15 @@ public final class VirtualHostBuilder implements TlsSetters {
                 }).map(cfgBuilder -> {
                     return cfgBuilder.build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength,
                                             verboseResponses, accessLogWriter, blockingTaskExecutor,
-                                            successFunction, multipartUploadsLocation, defaultHeaders);
+                                            successFunction, multipartUploadsLocation, defaultHeaders,
+                                            defaultErrorHandler);
                 }).collect(toImmutableList());
 
         final ServiceConfig fallbackServiceConfig =
                 new ServiceConfigBuilder(RouteBuilder.FALLBACK_ROUTE, FallbackService.INSTANCE)
                         .build(defaultServiceNaming, requestTimeoutMillis, maxRequestLength, verboseResponses,
                                accessLogWriter, blockingTaskExecutor, successFunction,
-                               multipartUploadsLocation, defaultHeaders);
+                               multipartUploadsLocation, defaultHeaders, defaultErrorHandler);
 
         final ImmutableList.Builder<ShutdownSupport> builder = ImmutableList.builder();
         builder.addAll(shutdownSupports);

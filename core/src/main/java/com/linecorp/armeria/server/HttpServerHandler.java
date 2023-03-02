@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -358,7 +358,6 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
 
         try (SafeCloseable ignored = reqCtx.push()) {
             final RequestLogBuilder logBuilder = reqCtx.logBuilder();
-            final ServerErrorHandler serverErrorHandler = config.errorHandler();
             HttpResponse serviceResponse;
             try {
                 req.init(reqCtx);
@@ -372,12 +371,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 }
                 serviceResponse = HttpResponse.ofFailure(cause);
             }
+            final ServiceErrorHandler serviceErrorHandler =
+                    serviceCfg.errorHandler()
+                              .orElse(config.errorHandler().asServiceErrorHandler());
 
             serviceResponse = serviceResponse.recover(cause -> {
                 // Store the cause to set as the log.responseCause().
                 CapturedServiceException.set(reqCtx, cause);
                 // Recover the failed response with the error handler.
-                return serverErrorHandler.onServiceException(reqCtx, cause);
+                return serviceErrorHandler.onServiceException(reqCtx, cause);
             });
             final HttpResponse res = serviceResponse;
             final EventLoop eventLoop = channel.eventLoop();

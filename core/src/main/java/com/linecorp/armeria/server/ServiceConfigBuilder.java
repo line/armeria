@@ -66,6 +66,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     private SuccessFunction successFunction;
     @Nullable
     private Path multipartUploadsLocation;
+    @Nullable
+    private ServiceErrorHandler serviceErrorHandler;
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
     private final HttpHeadersBuilder defaultHeaders = HttpHeaders.builder();
 
@@ -217,6 +219,12 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
         return this;
     }
 
+    public ServiceConfigSetters serviceErrorHandler(ServiceErrorHandler serviceErrorHandler) {
+        requireNonNull(serviceErrorHandler, "serviceErrorHandler");
+        this.serviceErrorHandler = serviceErrorHandler;
+        return this;
+    }
+
     @Override
     public ServiceConfigBuilder defaultServiceName(String defaultServiceName) {
         requireNonNull(defaultServiceName, "defaultServiceName");
@@ -249,7 +257,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                         AccessLogWriter defaultAccessLogWriter,
                         ScheduledExecutorService defaultBlockingTaskExecutor,
                         SuccessFunction defaultSuccessFunction,
-                        Path defaultMultipartUploadsLocation, HttpHeaders virtualHostDefaultHeaders) {
+                        Path defaultMultipartUploadsLocation, HttpHeaders virtualHostDefaultHeaders,
+                        ServiceErrorHandler defaultServiceErrorHandler) {
         return new ServiceConfig(
                 route, mappedRoute == null ? route : mappedRoute,
                 service, defaultLogName, defaultServiceName,
@@ -262,7 +271,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 successFunction != null ? successFunction : defaultSuccessFunction,
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
                 ImmutableList.copyOf(shutdownSupports),
-                mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()));
+                mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),
+                serviceErrorHandler != null ? serviceErrorHandler : defaultServiceErrorHandler);
     }
 
     @Override

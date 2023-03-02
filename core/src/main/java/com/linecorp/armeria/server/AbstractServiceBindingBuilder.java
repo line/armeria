@@ -175,6 +175,11 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         return this;
     }
 
+    public AbstractServiceBindingBuilder serviceErrorHandler(ServiceErrorHandler serviceErrorHandler) {
+        defaultServiceConfigSetters.serviceErrorHandler(serviceErrorHandler);
+        return this;
+    }
+
     abstract void serviceConfigBuilder(ServiceConfigBuilder serviceConfigBuilder);
 
     final void build0(HttpService service) {
