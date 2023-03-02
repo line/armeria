@@ -32,7 +32,6 @@ class ArmeriaRequestCoroutineContext(
     companion object Key : CoroutineContext.Key<ArmeriaRequestCoroutineContext>
 
     override fun updateThreadContext(context: CoroutineContext): SafeCloseable {
-        TODO()
         return requestContext.push()
     }
 
