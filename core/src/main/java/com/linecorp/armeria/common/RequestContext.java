@@ -450,8 +450,8 @@ public interface RequestContext extends Unwrappable {
     ExchangeType exchangeType();
 
     /**
-     * Initiates connection shutdown and returns {@link CompletableFuture} that completes when the channel is
-     * closed.
+     * Initiates connection shutdown and returns {@link CompletableFuture} that completes when the connection
+     * associated with this context is closed.
      */
     @UnstableApi
     CompletableFuture<Void> initiateConnectionShutdown();

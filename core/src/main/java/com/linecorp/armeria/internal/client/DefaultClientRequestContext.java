@@ -855,17 +855,14 @@ public final class DefaultClientRequestContext
     public CompletableFuture<Void> initiateConnectionShutdown() {
         final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
 
-        final Channel ch = channel();
-        if (ch == null || !ch.isActive()) {
-            setAdditionalRequestHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-            log().whenComplete().whenComplete((ignore, ex) -> {
-                if (ex == null) {
-                    completableFuture.complete(null);
-                } else {
-                    completableFuture.completeExceptionally(ex);
-                }
-            });
-        } else {
+        setAdditionalRequestHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+        log().whenRequestComplete().whenComplete((ignore, ex) -> {
+            if (ex != null) {
+                completableFuture.completeExceptionally(ex);
+                return;
+            }
+            final Channel ch = channel();
+            assert ch != null;
             ch.closeFuture().addListener(f -> {
                 if (f.cause() == null) {
                     completableFuture.complete(null);
@@ -874,7 +871,7 @@ public final class DefaultClientRequestContext
                 }
             });
             HttpSession.get(ch).initiateConnectionShutdown();
-        }
+        });
         return completableFuture;
     }
 }
