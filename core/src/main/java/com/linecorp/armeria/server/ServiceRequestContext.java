@@ -628,6 +628,7 @@ public interface ServiceRequestContext extends RequestContext {
      * @see #initiateConnectionShutdown(long)
      * @see #initiateConnectionShutdown(Duration)
      */
+    @Override
     @UnstableApi
     CompletableFuture<Void> initiateConnectionShutdown();
 

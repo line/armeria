@@ -181,9 +181,4 @@ public class ClientRequestContextWrapper
     public ClientRequestContext unwrapAll() {
         return (ClientRequestContext) super.unwrapAll();
     }
-
-    @Override
-    public CompletableFuture<Void> initiateConnectionShutdown() {
-        return unwrap().initiateConnectionShutdown();
-    }
 }

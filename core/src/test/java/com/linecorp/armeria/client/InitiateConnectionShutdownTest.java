@@ -20,16 +20,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Set;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.assertj.core.util.Sets;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+
+import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpData;
@@ -43,7 +44,7 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class ClientRequestContextInitiateConnectionShutdownTest {
+public class InitiateConnectionShutdownTest {
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
         @Override
@@ -75,7 +76,7 @@ public class ClientRequestContextInitiateConnectionShutdownTest {
 
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void testDisconnectConnectionBeforeConnected(SessionProtocol protocol) throws Exception {
+    void testBeforeRequestIsConnected(SessionProtocol protocol) throws Exception {
         final AtomicBoolean completed = new AtomicBoolean(false);
         final AtomicReference<RequestLogAccess> requestLogAtomicReference = new AtomicReference<>();
 
@@ -95,7 +96,7 @@ public class ClientRequestContextInitiateConnectionShutdownTest {
 
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void testDisconnectConnectionBeforeConnectedWithDelayedStreaming(SessionProtocol protocol)
+    void testBeforeRequestIsConnectedWithDelayedStreaming(SessionProtocol protocol)
             throws Exception {
         final AtomicBoolean completed = new AtomicBoolean(false);
         final AtomicReference<RequestLogAccess> requestLogAtomicReference = new AtomicReference<>();
@@ -117,7 +118,7 @@ public class ClientRequestContextInitiateConnectionShutdownTest {
 
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void testDisconnectConnectionAfterConnected(SessionProtocol protocol) throws Exception {
+    void testAfterRequestIsConnected(SessionProtocol protocol) throws Exception {
         final AtomicBoolean completed = new AtomicBoolean(false);
         final AtomicReference<RequestLogAccess> requestLogAtomicReference = new AtomicReference<>();
 
@@ -138,7 +139,7 @@ public class ClientRequestContextInitiateConnectionShutdownTest {
 
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void testDisconnectConnectionAfterConnectedWithDelayedStreaming(SessionProtocol protocol) throws Exception {
+    void testAfterRequestIsConnectedWithDelayedStreaming(SessionProtocol protocol) throws Exception {
         final AtomicBoolean completed = new AtomicBoolean(false);
         final AtomicReference<RequestLogAccess> requestLogAtomicReference = new AtomicReference<>();
 
@@ -160,9 +161,9 @@ public class ClientRequestContextInitiateConnectionShutdownTest {
 
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void testDisconnectConnectionAfterConnectedInSameConnection(SessionProtocol protocol) throws Exception {
+    void testAfterRequestIsConnectedInSameConnection(SessionProtocol protocol) throws Exception {
         final AtomicBoolean completed = new AtomicBoolean(false);
-        final Set<RequestLogAccess> requestLogAccesses = Sets.newHashSet();
+        final List<RequestLogAccess> requestLogAccesses = Lists.newCopyOnWriteArrayList();
 
         final ClientFactory clientFactory = ClientFactory.builder().workerGroup(1).useHttp1Pipelining(true)
                                                          .build();
@@ -182,7 +183,10 @@ public class ClientRequestContextInitiateConnectionShutdownTest {
         assertThat(res1.get().contentUtf8()).isEqualTo("Hello, World!");
         assertThat(res2.get().contentUtf8()).isEqualTo(
                 "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!");
-        assertThat(requestLogAccesses.stream().findAny().get().ensureRequestComplete().requestHeaders()
+        assertThat(requestLogAccesses.size()).isEqualTo(2);
+        assertThat(requestLogAccesses.get(0).ensureRequestComplete().requestHeaders()
+                                     .get("connection")).isNull();
+        assertThat(requestLogAccesses.get(1).ensureRequestComplete().requestHeaders()
                                      .get("connection")).isNull();
     }
 }
