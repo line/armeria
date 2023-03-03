@@ -2,7 +2,8 @@
 akka = "2.6.20"
 akka-http-cors = "1.0.0"
 akka-grpc-runtime = "1.0.3"
-apache-httpclient = "4.5.14"
+apache-httpclient = "5.2.1"
+apache-httpclient4 = "4.5.14"
 assertj = "3.24.2"
 awaitility = "4.2.0"
 bouncycastle = "1.70"
@@ -154,8 +155,13 @@ module = "com.typesafe.akka:akka-stream_2.13"
 version.ref = "akka"
 
 [libraries.apache-httpclient]
-module = "org.apache.httpcomponents:httpclient"
+module = "org.apache.httpcomponents.client5:httpclient5"
 version.ref = "apache-httpclient"
+exclusions = "commons-logging:commons-logging"
+
+[libraries.apache-httpclient4]
+module = "org.apache.httpcomponents:httpclient"
+version.ref = "apache-httpclient4"
 exclusions = "commons-logging:commons-logging"
 
 [libraries.assertj]
