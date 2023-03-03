@@ -69,7 +69,7 @@ final class DefaultRequestId implements RequestId {
         if ((value & 0xF000000000000000L) != 0) {
             newLongText = Long.toHexString(value);
         } else {
-        newLongText = newTextSlow(value, 16);
+            newLongText = newTextSlow(value, 16);
         }
         return newLongText;
     }
