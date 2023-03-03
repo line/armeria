@@ -230,6 +230,11 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
         @Override
         public void cancel() {
+            if (canceled) {
+                return;
+            }
+
+            canceled = true;
             upstream.cancel();
             cancelChildSubscribersAndBuffer();
         }
