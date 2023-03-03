@@ -159,6 +159,8 @@ module = "org.apache.httpcomponents.client5:httpclient5"
 version.ref = "apache-httpclient"
 exclusions = "commons-logging:commons-logging"
 
+# needed to test thrift apis
+# https://github.com/apache/thrift/blob/master/lib/java/gradle.properties#L28
 [libraries.apache-httpclient4]
 module = "org.apache.httpcomponents:httpclient"
 version.ref = "apache-httpclient4"
