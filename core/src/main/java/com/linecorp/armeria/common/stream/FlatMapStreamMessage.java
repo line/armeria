@@ -236,6 +236,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
         private void cancelChildSubscribersAndBuffer() {
             buffer.forEach(StreamMessageUtil::closeOrAbort);
+            buffer.clear();
             childSubscribers.forEach(FlatMapSubscriber::cancel);
         }
 
@@ -366,7 +367,7 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 StreamMessageUtil.closeOrAbort(value);
                 return;
             }
-            
+
             parent.onNextChild(value);
         }
 
