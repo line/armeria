@@ -42,8 +42,8 @@ class ExceptionReportingServerErrorHandlerTest {
     final ListAppender<ILoggingEvent> logAppender = new ListAppender<>();
     final Logger errorHandlerLogger =
             (Logger) LoggerFactory.getLogger(ExceptionReportingServerErrorHandler.class);
-    private static final long unhandledExceptionsReportInterval = 1000;
-    private static final long awaitIntervalForTest = 2000;
+    private static final long reportIntervalMillis = 1000;
+    private static final long awaitIntervalMillis = 2000;
 
     @BeforeEach
     public void attachAppender() {
@@ -58,48 +58,25 @@ class ExceptionReportingServerErrorHandlerTest {
     }
 
     @Test
-    void testServerBuilderConfiguration() {
-        final Server server1 = Server.builder()
-                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                     .build();
-        assertThat(server1.config().unhandledExceptionsReportInterval().isZero()).isFalse();
-        assertThat(server1.config().unhandledExceptionsReportInterval().toMillis()).isEqualTo(10000);
-
-        final Server server2 = Server.builder()
-                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                     .unhandledExceptionsReportInterval(Duration.ofMillis(20000))
-                                     .build();
-        assertThat(server2.config().unhandledExceptionsReportInterval().isZero()).isFalse();
-        assertThat(server2.config().unhandledExceptionsReportInterval().toMillis()).isEqualTo(20000);
-
-        final Server server3 = Server.builder()
-                                     .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
-                                     .unhandledExceptionsReportInterval(Duration.ZERO)
-                                     .build();
-        assertThat(server3.config().unhandledExceptionsReportInterval().isZero()).isTrue();
-    }
-
-    @Test
-    void testExceptionIsLogged() throws Exception {
+    void exceptionShouldBeLoggedWhenNoLoggingServiceHandlesException() throws Exception {
         final Server server = Server.builder()
                                     .service("/hello", (ctx, req) -> {
                                         throw new IllegalArgumentException("test");
                                     })
-                                    .unhandledExceptionsReportInterval(
-                                            Duration.ofMillis(unhandledExceptionsReportInterval))
+                                    .unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis))
                                     .build();
         try {
             server.start().join();
 
             WebClient.of("http://127.0.0.1:" + server.activePort().localAddress().getPort()).get("/hello")
                      .aggregate().get();
-            await().atMost(Duration.ofMillis(unhandledExceptionsReportInterval + awaitIntervalForTest))
+            await().atMost(Duration.ofMillis(reportIntervalMillis + awaitIntervalMillis))
                    .untilAsserted(() -> assertThat(logAppender.list).isNotEmpty());
 
             assertThat(logAppender.list
                                .stream()
                                .filter(event -> event.getFormattedMessage().contains(
-                                       "Observed 1 unhandled exceptions in last"))
+                                       "Observed 1 unhandled exceptions"))
                                .findAny()
             ).isNotEmpty();
         } finally {
@@ -108,21 +85,20 @@ class ExceptionReportingServerErrorHandlerTest {
     }
 
     @Test
-    void testExceptionIsNotLoggedWhenDecoratedWithLoggingService() throws Exception {
+    void exceptionShouldNotBeLoggedWhenExceptionIsHandled() throws Exception {
         final Server server = Server.builder()
                                     .service("/hello", (ctx, req) -> {
-                                        throw new IllegalArgumentException("test");
+                                        throw HttpStatusException.of(HttpStatus.BAD_REQUEST,
+                                                                     new IllegalArgumentException("test"));
                                     })
-                                    .unhandledExceptionsReportInterval(
-                                            Duration.ofMillis(unhandledExceptionsReportInterval))
-                                    .decorator(LoggingService.newDecorator())
+                                    .unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis))
                                     .build();
         try {
             server.start().join();
 
             WebClient.of("http://127.0.0.1:" + server.activePort().localAddress().getPort()).get("/hello")
                      .aggregate().get();
-            Thread.sleep(unhandledExceptionsReportInterval + awaitIntervalForTest);
+            Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
             assertThat(logAppender.list).isEmpty();
         } finally {
             server.stop();
@@ -130,7 +106,29 @@ class ExceptionReportingServerErrorHandlerTest {
     }
 
     @Test
-    void testExceptionIsNotLoggedWhenNoExceptionsIsThrown() throws Exception {
+    void exceptionShouldNotBeLoggedWhenDecoratedWithLoggingService() throws Exception {
+        final Server server = Server.builder()
+                                    .service("/hello", (ctx, req) -> {
+                                        throw new IllegalArgumentException("test");
+                                    })
+                                    .unhandledExceptionsReportInterval(Duration.ofMillis(reportIntervalMillis))
+                                    .decorator(LoggingService.newDecorator())
+                                    .build();
+
+        try {
+            server.start().join();
+
+            WebClient.of("http://127.0.0.1:" + server.activePort().localAddress().getPort()).get("/hello")
+                     .aggregate().get();
+            Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
+            assertThat(logAppender.list).isEmpty();
+        } finally {
+            server.stop();
+        }
+    }
+
+    @Test
+    void exceptionShouldNotBeLoggedWhenNoExceptionIsThrown() throws Exception {
         final Server server = Server.builder()
                                     .service("/hello", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                                     .decorator(LoggingService.newDecorator())
@@ -140,7 +138,7 @@ class ExceptionReportingServerErrorHandlerTest {
 
             WebClient.of("http://127.0.0.1:" + server.activePort().localAddress().getPort()).get("/hello")
                      .aggregate().get();
-            Thread.sleep(unhandledExceptionsReportInterval + awaitIntervalForTest);
+            Thread.sleep(reportIntervalMillis + awaitIntervalMillis);
 
             assertThat(logAppender.list).isEmpty();
         } finally {

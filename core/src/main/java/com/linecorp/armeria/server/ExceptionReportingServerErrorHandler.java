@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import java.time.Duration;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,50 +32,66 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.server.logging.LoggingService;
 
-import io.micrometer.core.instrument.Meter.Id;
-import io.micrometer.core.instrument.Meter.Type;
-import io.micrometer.core.instrument.Tags;
-import io.micrometer.core.instrument.cumulative.CumulativeCounter;
-
 /**
  * A {@link ServerErrorHandler} that wraps another {@link ServerErrorHandler}
  * to periodically report the exceptions that were not logged by decorators such as
  * {@link LoggingService}.
  */
-class ExceptionReportingServerErrorHandler implements ServerErrorHandler, ServerListener {
+final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, ServerListener {
 
     private static final Logger logger = LoggerFactory.getLogger(ExceptionReportingServerErrorHandler.class);
 
+    @Nullable
+    private static ExceptionReportingServerErrorHandler exceptionReportingServerErrorHandler;
     private final ServerErrorHandler delegate;
     private final Duration duration;
-    private final CumulativeCounter counter;
+    private final LongAdder counter;
     private long lastExceptionsCount;
-    private boolean started;
     @Nullable
     private Throwable thrownException;
     @Nullable
     private ScheduledFuture<?> reportingTaskFuture;
 
-    ExceptionReportingServerErrorHandler(ServerErrorHandler serverErrorHandler, Duration duration) {
+    private ExceptionReportingServerErrorHandler(ServerErrorHandler serverErrorHandler, Duration duration) {
         assert !duration.isNegative() && !duration.isZero();
         delegate = serverErrorHandler;
         this.duration = duration;
-        counter = new CumulativeCounter(new Id("armeria.server.unhandledExceptions", Tags.empty(),
-                                               null, null, Type.COUNTER));
+        counter = new LongAdder();
+    }
+
+    static ExceptionReportingServerErrorHandler of(ServerErrorHandler serverErrorHandler, Duration duration) {
+        if (exceptionReportingServerErrorHandler != null) {
+            return exceptionReportingServerErrorHandler;
+        }
+
+        exceptionReportingServerErrorHandler = new ExceptionReportingServerErrorHandler(serverErrorHandler,
+                                                                                        duration);
+        return exceptionReportingServerErrorHandler;
     }
 
     /**
-     * If it's required to report exceptions, increase the counter and store first thrown exception.
+     * This method increments the {@link #counter} and stores unhandled exception that occurs. If unhandled
+     * exceptions are not previously scheduled for reporting, then they are scheduled to be reported.
      */
     @Nullable
     @Override
     public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
-        if (ctx.shouldReportUnhandledExceptions()) {
+        final boolean isExpectedException =
+                (cause instanceof HttpStatusException || cause instanceof HttpResponseException) &&
+                cause.getCause() != null;
+
+        if (ctx.shouldReportUnhandledExceptions() && !isExpectedException) {
+            if (reportingTaskFuture == null) {
+                reportingTaskFuture = ctx.eventLoop().scheduleAtFixedRate(
+                        this::reportException, duration.toMillis(), duration.toMillis(), TimeUnit.MILLISECONDS);
+            }
+
             if (thrownException == null) {
                 thrownException = cause;
             }
             counter.increment();
         }
+
         return delegate.onServiceException(ctx, cause);
     }
 
@@ -91,15 +108,8 @@ class ExceptionReportingServerErrorHandler implements ServerErrorHandler, Server
 
     @Override
     public void serverStarted(Server server) throws Exception {
-        if (started) {
-            return;
-        }
-
-        started = true;
-        reportingTaskFuture = server.config().workerGroup().scheduleAtFixedRate(
-                this::reportException, duration.toMillis(), duration.toMillis(), TimeUnit.MILLISECONDS);
-        server.config().meterRegistry().more().counter(counter.getId().getName(), counter.getId().getTags(),
-                                                       counter, CumulativeCounter::count);
+        server.config().meterRegistry().gauge("armeria.server.unhandledExceptions", counter,
+                                              LongAdder::sum);
     }
 
     @Override
@@ -108,15 +118,17 @@ class ExceptionReportingServerErrorHandler implements ServerErrorHandler, Server
             reportingTaskFuture.cancel(true);
             reportingTaskFuture = null;
         }
-        started = false;
+
+        exceptionReportingServerErrorHandler = null;
     }
 
     @Override
     public void serverStopped(Server server) throws Exception {}
 
     private void reportException() {
-        final long exceptionsCount = (long) counter.count() - lastExceptionsCount;
-        if (exceptionsCount == 0) {
+        final long totalExceptionsCount = counter.sum();
+        final long newExceptionsCount = totalExceptionsCount - lastExceptionsCount;
+        if (newExceptionsCount == 0) {
             return;
         }
 
@@ -125,14 +137,14 @@ class ExceptionReportingServerErrorHandler implements ServerErrorHandler, Server
             logger.warn("Observed {} unhandled exceptions in last {}. " +
                         "Please consider adding the LoggingService decorator to get detailed error logs. " +
                         "One of the thrown exceptions:",
-                        exceptionsCount, TextFormatter.elapsed(duration.toNanos()), exception);
+                        newExceptionsCount, TextFormatter.elapsed(duration.toNanos()), exception);
             thrownException = null;
         } else {
             logger.warn("Observed {} unhandled exceptions in last {}. " +
                         "Please consider adding the LoggingService decorator to get detailed error logs.",
-                        exceptionsCount, TextFormatter.elapsed(duration.toNanos()));
+                        newExceptionsCount, TextFormatter.elapsed(duration.toNanos()));
         }
 
-        lastExceptionsCount += exceptionsCount;
+        lastExceptionsCount = totalExceptionsCount;
     }
 }

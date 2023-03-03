@@ -659,13 +659,13 @@ class ServerBuilderTest {
 
         assertThrows(IllegalArgumentException.class, () ->
                 Server.builder()
-                      .unhandledExceptionsReportInterval(Duration.ofMillis(-1))
+                      .unhandledExceptionsReportInterval(Duration.ofMillis(-1000))
                       .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))
                       .build());
     }
 
     @Test
-    void exceptionReportIntervalSeconds() {
+    void exceptionReportIntervalMilliSeconds() {
         final Server server1 = Server.builder()
                                      .unhandledExceptionsReportIntervalMillis(1000)
                                      .service("/", (ctx, req) -> HttpResponse.of(HttpStatus.OK))

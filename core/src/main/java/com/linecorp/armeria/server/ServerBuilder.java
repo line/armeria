@@ -1812,25 +1812,23 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
-     * Sets the interval between reporting unhandled exceptions which is not handled
+     * Sets the interval between reporting exceptions which is not handled or logged
      * by any decorators or services, such as {@link LoggingService}.
-     * @param unhandledExceptionsReportInterval the interval between reports, or
-     *                                        {@link Duration#ZERO} to disable this feature
-     * @throws IllegalArgumentException if specified {@code unhandledExceptionsReportInterval} is negative.
+     * @param interval the interval between reports, or {@link Duration#ZERO} to disable this feature
+     * @throws IllegalArgumentException if specified {@code interval} is negative.
      */
-    public ServerBuilder unhandledExceptionsReportInterval(Duration unhandledExceptionsReportInterval) {
-        requireNonNull(unhandledExceptionsReportInterval, "unhandledExceptionsReportInterval");
-        checkArgument(!unhandledExceptionsReportInterval.isNegative());
-        this.unhandledExceptionsReportInterval = unhandledExceptionsReportInterval;
+    public ServerBuilder unhandledExceptionsReportInterval(Duration interval) {
+        requireNonNull(interval, "interval");
+        checkArgument(!interval.isNegative());
+        unhandledExceptionsReportInterval = interval;
         return this;
     }
 
     /**
-     * Sets the interval between reporting unhandled exceptions which is not handled
-     * by any decorators or services, such as {@link LoggingService} in milliseconds.
-     * @param interval the interval between reports in milliseconds, or
-     *                0 to disable this feature
-     * @throws IllegalArgumentException if specified {@code seconds} is negative.
+     * Sets the interval between reporting exceptions which is not handled or logged
+     * by any decorators or services, such as {@link LoggingService}, in milliseconds.
+     * @param interval the interval between reports in milliseconds, or {@code 0} to disable this feature
+     * @throws IllegalArgumentException if specified {@code interval} is negative.
      */
     public ServerBuilder unhandledExceptionsReportIntervalMillis(long interval) {
         return unhandledExceptionsReportInterval(Duration.ofMillis(interval));
@@ -1954,7 +1952,7 @@ public final class ServerBuilder implements TlsSetters {
         }
 
         if (unhandledExceptionsReportInterval != Duration.ZERO) {
-            errorHandler = new ExceptionReportingServerErrorHandler(this.errorHandler,
+            errorHandler = ExceptionReportingServerErrorHandler.of(this.errorHandler,
                                                                     unhandledExceptionsReportInterval);
             serverListeners.add((ExceptionReportingServerErrorHandler) errorHandler);
         }

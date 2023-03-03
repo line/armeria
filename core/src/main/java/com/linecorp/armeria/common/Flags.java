@@ -1331,10 +1331,12 @@ public final class Flags {
     }
 
     /**
-     * Returns the default interval in milliseconds between reporting unhandled exceptions by armeria.
+     * Returns the default interval in milliseconds between the reports on unhandled exceptions.
      *
      * <p>The default value of this flag is
-     * {@link DefaultFlagsProvider#DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}.</p>
+     * {@link DefaultFlagsProvider#DEFAULT_UNHANDLED_EXCEPTIONS_REPORT_INTERVAL_MILLIS}. Specify the
+     * {@code -Dcom.linecorp.armeria.defaultUnhandledExceptionsReportIntervalMillis=<long>} JVM option to
+     * override the default value.</p>
      */
     @UnstableApi
     public static long defaultUnhandledExceptionsReportIntervalMillis() {
