@@ -37,10 +37,14 @@ class RequestIdHeadersTest {
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
-        protected void configure(ServerBuilder sb) throws Exception {
-            sb.requestIdGenerator((ctx) -> RequestId.of(
-                    Long.parseLong(ctx.headers().get(REQUEST_ID_KEY))))
-              .service("/", (ctx, req) -> HttpResponse.of(200));
+        protected void configure(ServerBuilder sb) {
+            sb.service("/configured",
+                       (ctx, req) -> HttpResponse.of(200))
+              .requestIdGenerator((ctx) -> RequestId.of(
+                      Long.parseLong(ctx.headers().get(REQUEST_ID_KEY))));
+
+            sb.service("/none",
+                       (ctx, req) -> HttpResponse.of(200));
         }
     };
 
@@ -50,7 +54,7 @@ class RequestIdHeadersTest {
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
 
         final AggregatedHttpResponse response = client.prepare()
-                                                      .get("/")
+                                                      .get("/configured")
                                                       .header(REQUEST_ID_KEY, REQUEST_ID_VAL)
                                                       .execute();
 
@@ -62,5 +66,19 @@ class RequestIdHeadersTest {
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(capturedContext.id().text()).isEqualTo(expected.text());
         assertThat(capturedContext.id().shortText()).isEqualTo(expected.shortText());
+    }
+
+    @Test
+    void shouldReturnRandomRequestIdFromNotConfigured() throws InterruptedException {
+        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+        final ServiceRequestContextCaptor captor = server.requestContextCaptor();
+
+        final AggregatedHttpResponse response = client.prepare()
+                                                      .get("/none")
+                                                      .execute();
+
+        assertThat(captor.size()).isEqualTo(1);
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
+        assertThat(captor.take().id().shortText()).hasSize(8);
     }
 }

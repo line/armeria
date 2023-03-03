@@ -123,7 +123,9 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         safeClose(ch);
     };
 
-    private static boolean warnedNullRequestIdGenerator;
+    private static boolean warnedRequestIdGenerateFailure;
+
+    private static boolean warnedNullRequestId;
 
     private static void logException(Channel ch, Throwable cause) {
         final HttpServer server = HttpServer.get(ch);
@@ -648,17 +650,23 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private RequestId nextRequestId(RoutingContext routingCtx) {
-        Function<RoutingContext, RequestId> requestIdGenerator = routingContext -> RequestId.random();
-
         try {
-            requestIdGenerator = config.requestIdGenerator();
-        } catch (Exception e) {
-            if (!warnedNullRequestIdGenerator) {
-                warnedNullRequestIdGenerator = true;
-                logger.warn("config.requestIdGenerator() returned exception; using RequestId.random()");
+            final RequestId id = config.requestIdGenerator().apply(routingCtx);
+            if (id == null) {
+                if (!warnedNullRequestId) {
+                    warnedNullRequestId = true;
+                    logger.warn("requestIdGenerator.apply(routingCtx) returned null; using RequestId.random()");
+                }
+                return RequestId.random();
+            } else {
+                return id;
             }
+        } catch (Exception e) {
+            if (!warnedRequestIdGenerateFailure) {
+                warnedRequestIdGenerateFailure = true;
+                logger.warn("requestIdGenerator.apply(routingCtx) throw exception; using RequestId.random()");
+            }
+            return RequestId.random();
         }
-
-        return requestIdGenerator.apply(routingCtx);
     }
 }
