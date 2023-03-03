@@ -51,8 +51,12 @@ public interface RoutingContext {
     /**
      * Returns a wrapped {@link RoutingContext} which holds the specified {@link HttpMethod}.
      */
+    @UnstableApi
     default RoutingContext withMethod(HttpMethod method) {
         requireNonNull(method, "method");
+        if (method == method()) {
+            return this;
+        }
         return new RoutingContextWrapper(this) {
             @Override
             public HttpMethod method() {
@@ -121,6 +125,9 @@ public interface RoutingContext {
      */
     default RoutingContext withPath(String path) {
         requireNonNull(path, "path");
+        if (path.equals(path())) {
+            return this;
+        }
         return new RoutingContextWrapper(this) {
             @Override
             public String path() {
