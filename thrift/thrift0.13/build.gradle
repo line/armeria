@@ -4,6 +4,7 @@ dependencies {
 
     api libs.javax.annotation
 
+    // thrift api depends on httpclient4
     testImplementation libs.apache.httpclient4
 
     // Jetty, for testing TServlet interoperability.
