@@ -28,7 +28,6 @@ import java.net.InetSocketAddress;
 import java.util.IdentityHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;

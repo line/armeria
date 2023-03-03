@@ -1713,7 +1713,7 @@ public final class ServerBuilder implements TlsSetters {
      * By default, a {@link RequestId} is generated from a random 64-bit integer.
      *
      * @deprecated this method is replaced by
-     * {@link #requestIdGenerator(Function<? super RoutingContext, ? extends RequestId>)}
+     * {@link #requestIdGenerator(Function)}
      */
     @Deprecated
     public ServerBuilder requestIdGenerator(Supplier<? extends RequestId> requestIdSupplier) {
