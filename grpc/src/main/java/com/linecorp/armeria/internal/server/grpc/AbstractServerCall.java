@@ -541,7 +541,14 @@ public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
         GrpcTrailersUtil.addStatusMessageToTrailers(
                 trailersBuilder, status.getCode().value(), status.getDescription());
 
-        MetadataUtil.fillHeaders(metadata, trailersBuilder);
+        try {
+            MetadataUtil.fillHeaders(metadata, trailersBuilder);
+        } catch (Exception e) {
+            // Catching exception is necessary, because server implementer could have set corrupted metadata.
+            return trailersBuilder
+                    .set(GrpcHeaderNames.GRPC_STATUS, "13")
+                    .build();
+        }
 
         if (ctx.config().verboseResponses() && status.getCause() != null) {
             final ThrowableProto proto = GrpcStatus.serializeThrowable(status.getCause());
