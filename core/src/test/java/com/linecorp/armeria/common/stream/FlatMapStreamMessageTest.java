@@ -145,4 +145,19 @@ class FlatMapStreamMessageTest {
 
         assertFalse(mappedStream.isComplete());
     }
+
+    @Test
+    void flatMapIsCompleteAfterLastElementsAreRequested() {
+        final StreamMessage<Integer> streamMessage = StreamMessage.of(1, 2);
+        final Function<Integer, StreamMessage<Integer>> function = StreamMessage::of;
+        final StreamMessage<Integer> mappedStream = streamMessage.flatMap(function);
+
+        StepVerifier.create(mappedStream, StepVerifierOptions.create().initialRequest(0L))
+                    .thenRequest(1)
+                    .expectNext(1)
+                    .thenAwait(Duration.ofMillis(20))
+                    .thenRequest(1)
+                    .expectNext(2)
+                    .verifyComplete();
+    }
 }

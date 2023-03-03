@@ -282,6 +282,11 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
 
                 publishDownstream(value);
             }
+
+            if (completing && canComplete()) {
+                downstream.onComplete();
+                completionFuture.complete(null);
+            }
         }
 
         void completeChild(FlatMapSubscriber<T, U> child) {
