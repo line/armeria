@@ -361,6 +361,12 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
             if (requested != Long.MAX_VALUE) {
                 requested--;
             }
+
+            if (canceled) {
+                StreamMessageUtil.closeOrAbort(value);
+                return;
+            }
+            
             parent.onNextChild(value);
         }
 
