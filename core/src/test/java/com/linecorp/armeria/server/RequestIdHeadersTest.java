@@ -18,6 +18,8 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
+import java.util.Objects;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -38,13 +40,17 @@ class RequestIdHeadersTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            sb.service("/configured",
+            sb.service("/",
                        (ctx, req) -> HttpResponse.of(200))
-              .requestIdGenerator((ctx) -> RequestId.of(
-                      Long.parseLong(ctx.headers().get(REQUEST_ID_KEY))));
-
-            sb.service("/none",
-                       (ctx, req) -> HttpResponse.of(200));
+              .requestIdGenerator(
+                      (ctx) -> {
+                          if (Objects.equals(ctx.headers().get(REQUEST_ID_KEY), REQUEST_ID_VAL)) {
+                              return RequestId.of(Long.parseLong(ctx.headers().get(REQUEST_ID_KEY)));
+                          } else {
+                              throw new RuntimeException("raise_exception");
+                          }
+                      }
+              );
         }
     };
 
@@ -54,7 +60,7 @@ class RequestIdHeadersTest {
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
 
         final AggregatedHttpResponse response = client.prepare()
-                                                      .get("/configured")
+                                                      .get("/")
                                                       .header(REQUEST_ID_KEY, REQUEST_ID_VAL)
                                                       .execute();
 
@@ -69,12 +75,12 @@ class RequestIdHeadersTest {
     }
 
     @Test
-    void shouldReturnRandomRequestIdFromNotConfigured() throws InterruptedException {
+    void shouldReturnRandomRequestIdWhenExceptionThrown() throws InterruptedException {
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
 
         final AggregatedHttpResponse response = client.prepare()
-                                                      .get("/none")
+                                                      .get("/")
                                                       .execute();
 
         assertThat(captor.size()).isEqualTo(1);
