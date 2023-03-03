@@ -1048,12 +1048,12 @@ public final class ArmeriaHttpUtil {
 
         if (contentLength >= 0) {
             return headers.toBuilder()
-                          .contentLength(content.length())
+                          .contentLength(contentLength)
                           .removeAndThen(HttpHeaderNames.TRANSFER_ENCODING)
                           .build();
         }
 
-        // A content length is set and the content is empty.
+        // A streaming content or a content length is set and the content is empty.
         // Do not overwrite the header because a response to a HEAD request
         // will have no content even if it has non-zero content-length header
         // or a null content-length header for chunked-transfer encoding.
@@ -1068,6 +1068,7 @@ public final class ArmeriaHttpUtil {
         if (isAggregatedResponse) {
             // It is unnecessary to store endOfStream to headers for AggregatedHttpResponse since the length
             // can be computed when the headers and data are aggregated.
+            return headers;
         }
         if (headers.isEndOfStream()) {
             return headers;

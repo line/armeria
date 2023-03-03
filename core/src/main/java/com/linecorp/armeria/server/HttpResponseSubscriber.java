@@ -150,7 +150,7 @@ final class HttpResponseSubscriber extends AbstractHttpResponseHandler implement
                         endOfStream = true;
                     } else {
                         if (!reqCtx.additionalResponseTrailers().isEmpty()) {
-                           endOfStream = false;
+                            endOfStream = false;
                         }
                         if (status.isContentAlwaysEmpty()) {
                             state = State.NEEDS_TRAILERS;
