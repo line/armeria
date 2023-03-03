@@ -55,11 +55,12 @@ final class ArrayBasedEventLoopState extends AbstractEventLoopState {
         int targetIndex = 0;
         for (int i = 0; i < entries.size(); ++i) {
             final AbstractEventLoopEntry e = entries.get(i);
-            if (e.activeRequests() == 0) {
+            final int activeRequests = e.activeRequests();
+            if (activeRequests == 0) {
                 return e;
             }
-            if (minActiveRequest > e.activeRequests()) {
-                minActiveRequest = e.activeRequests();
+            if (minActiveRequest > activeRequests) {
+                minActiveRequest = activeRequests;
                 targetIndex = i;
             }
         }
