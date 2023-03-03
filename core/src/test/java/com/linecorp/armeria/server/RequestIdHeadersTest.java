@@ -22,7 +22,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.BlockingWebClient;
+import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestId;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
@@ -30,21 +32,14 @@ import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
 class RequestIdHeadersTest {
 
     static final String REQUEST_ID_KEY = "X-RequestId";
-    static final String REQUEST_ID_VAL = "From_Client";
+    static final String REQUEST_ID_VAL = "123";
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            sb.requestIdGenerator((ctx) -> {
-                  final String header = ctx.headers().get(REQUEST_ID_KEY, "default");
-
-                  if (header.equals(REQUEST_ID_VAL)) {
-                      return RequestId.of(123L);
-                  }
-
-                  return RequestId.random();
-              })
+            sb.requestIdGenerator((ctx) -> RequestId.of(
+                    Long.parseLong(ctx.headers().get(REQUEST_ID_KEY))))
               .service("/", (ctx, req) -> HttpResponse.of(200));
         }
     };
@@ -54,16 +49,17 @@ class RequestIdHeadersTest {
         final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
 
-        client.prepare()
-              .get("/")
-              .header(REQUEST_ID_KEY, REQUEST_ID_VAL)
-              .execute();
+        final AggregatedHttpResponse response = client.prepare()
+                                                      .get("/")
+                                                      .header(REQUEST_ID_KEY, REQUEST_ID_VAL)
+                                                      .execute();
 
         assertThat(captor.size()).isEqualTo(1);
 
         final ServiceRequestContext capturedContext = captor.take();
         final RequestId expected = RequestId.of(123L);
 
+        assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(capturedContext.id().text()).isEqualTo(expected.text());
         assertThat(capturedContext.id().shortText()).isEqualTo(expected.shortText());
     }

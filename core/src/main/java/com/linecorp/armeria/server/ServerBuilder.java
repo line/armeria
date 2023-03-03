@@ -1712,16 +1712,16 @@ public final class ServerBuilder implements TlsSetters {
      * Sets the {@link Supplier} which generates a {@link RequestId}.
      * By default, a {@link RequestId} is generated from a random 64-bit integer.
      *
-     * @see RequestContext#id()
+     * @deprecated this method is replaced by
+     * {@link #requestIdGenerator(Function<? super RoutingContext, ? extends RequestId>)}
      */
-    public ServerBuilder requestIdGenerator(Supplier<? extends RequestId> requestIdGenerator) {
-        final Supplier<? extends RequestId> requestIdSupplier = requireNonNull(requestIdGenerator);
-        this.requestIdGenerator = routingContext -> requestIdSupplier.get();
-        return this;
+    @Deprecated
+    public ServerBuilder requestIdGenerator(Supplier<? extends RequestId> requestIdSupplier) {
+        return requestIdGenerator(routingContext -> requestIdSupplier.get());
     }
 
     /**
-     * Generate {@link RequestId} from {@link RoutingContext}.
+     * Sets the {@link Function} that generates a {@link RequestId} for each {@link Request}.
      * By default, a {@link RequestId} is generated from a random 64-bit integer.
      *
      * @see RequestContext#id()

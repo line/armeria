@@ -28,6 +28,7 @@ import java.net.InetSocketAddress;
 import java.util.IdentityHashMap;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSession;
@@ -122,7 +123,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         safeClose(ch);
     };
 
-    private static boolean warnedNullRequestId;
+    private static boolean warnedNullRequestIdGenerator;
 
     private static void logException(Channel ch, Throwable cause) {
         final HttpServer server = HttpServer.get(ch);
@@ -647,15 +648,17 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     }
 
     private RequestId nextRequestId(RoutingContext routingCtx) {
-        final RequestId id = config.requestIdGenerator().apply(routingCtx);
-        if (id == null) {
-            if (!warnedNullRequestId) {
-                warnedNullRequestId = true;
-                logger.warn("requestIdGenerator.apply(routingCtx) returned null; using RequestId.random()");
+        Function<RoutingContext, RequestId> requestIdGenerator = routingContext -> RequestId.random();
+
+        try {
+            requestIdGenerator = config.requestIdGenerator();
+        } catch (Exception e) {
+            if (!warnedNullRequestIdGenerator) {
+                warnedNullRequestIdGenerator = true;
+                logger.warn("config.requestIdGenerator() returned exception; using RequestId.random()");
             }
-            return RequestId.random();
-        } else {
-            return id;
         }
+
+        return requestIdGenerator.apply(routingCtx);
     }
 }
