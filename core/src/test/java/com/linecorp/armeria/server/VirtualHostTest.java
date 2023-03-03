@@ -21,7 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
-import com.linecorp.armeria.client.WebClient;
+import com.linecorp.armeria.client.BlockingWebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
@@ -45,15 +45,15 @@ public class VirtualHostTest {
 
     @Test
     void getAnnotationMatchesHeadMethod() {
-        final WebClient webClient = WebClient.of(server.httpUri());
-        final AggregatedHttpResponse res = webClient.head("/test").aggregate().join();
+        final BlockingWebClient webClient = server.blockingWebClient();
+        final AggregatedHttpResponse res = webClient.head("/test");
         assertThat(res.status()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
     void getAnnotationMatchesDeleteMethod() {
-        final WebClient webClient = WebClient.of(server.httpUri());
-        final AggregatedHttpResponse res = webClient.delete("/test").aggregate().join();
+        final BlockingWebClient webClient = server.blockingWebClient();
+        final AggregatedHttpResponse res = webClient.delete("/test");
         assertThat(res.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
     }
 }
