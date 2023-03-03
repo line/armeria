@@ -663,7 +663,8 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
         } catch (Exception e) {
             if (!warnedRequestIdGenerateFailure) {
                 warnedRequestIdGenerateFailure = true;
-                logger.warn("requestIdGenerator.apply(routingCtx) throw exception; using RequestId.random()", e);
+                logger.warn("requestIdGenerator.apply(routingCtx) throw exception; using RequestId.random()",
+                            e);
             }
             return RequestId.random();
         }
