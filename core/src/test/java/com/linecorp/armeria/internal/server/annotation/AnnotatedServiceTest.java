@@ -1281,8 +1281,7 @@ class AnnotatedServiceTest {
                             @Nullable String body,
                             @Nullable Charset encoding,
                             @Nullable String contentType) throws IOException, ParseException {
-        final HttpStatus status = HttpStatus.valueOf(statusCode);
-        assertThat(res.getCode()).isEqualTo(status);
+        assertThat(res.getCode()).isEqualTo(statusCode);
         if (body != null) {
             if (encoding != null) {
                 assertThat(EntityUtils.toString(res.getEntity(), encoding))
