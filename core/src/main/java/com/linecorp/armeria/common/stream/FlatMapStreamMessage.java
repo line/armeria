@@ -269,11 +269,10 @@ final class FlatMapStreamMessage<T, U> implements StreamMessage<U> {
                 return;
             }
 
-            final List<FlatMapSubscriber<T, U>> toRequest = childSubscribers.stream()
-                                                                            .filter(sub -> sub.getRequested() ==
-                                                                                           0)
-                                                                            .limit(available)
-                                                                            .collect(toImmutableList());
+            final List<FlatMapSubscriber<T, U>> toRequest =
+                    childSubscribers.stream().filter(sub -> sub.getRequested() == 0)
+                                    .limit(available)
+                                    .collect(toImmutableList());
             toRequest.forEach(sub -> sub.request(1));
         }
 
