@@ -76,7 +76,7 @@ class RequestIdHeadersTest {
 
     @Test
     void shouldReturnRandomRequestIdWhenExceptionThrown() throws InterruptedException {
-        final BlockingWebClient client = server.blockingWebClient();;
+        final BlockingWebClient client = server.blockingWebClient();
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
 
         final AggregatedHttpResponse response = client.prepare()
