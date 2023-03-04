@@ -56,7 +56,7 @@ class RequestIdHeadersTest {
 
     @Test
     void shouldReturnRequestIdGeneratedFromHeaders() throws InterruptedException {
-        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+        final BlockingWebClient client = server.blockingWebClient();
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
 
         final AggregatedHttpResponse response = client.prepare()
@@ -76,7 +76,7 @@ class RequestIdHeadersTest {
 
     @Test
     void shouldReturnRandomRequestIdWhenExceptionThrown() throws InterruptedException {
-        final BlockingWebClient client = BlockingWebClient.of(server.httpUri());
+        final BlockingWebClient client = server.blockingWebClient();;
         final ServiceRequestContextCaptor captor = server.requestContextCaptor();
 
         final AggregatedHttpResponse response = client.prepare()

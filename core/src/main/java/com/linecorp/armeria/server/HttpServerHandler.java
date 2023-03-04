@@ -651,15 +651,15 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
     private RequestId nextRequestId(RoutingContext routingCtx) {
         try {
             final RequestId id = config.requestIdGenerator().apply(routingCtx);
-            if (id == null) {
-                if (!warnedNullRequestId) {
-                    warnedNullRequestId = true;
-                    logger.warn("requestIdGenerator.apply(routingCtx) returned null; using RequestId.random()");
-                }
-                return RequestId.random();
-            } else {
+            if (id != null) {
                 return id;
             }
+
+            if (!warnedNullRequestId) {
+                warnedNullRequestId = true;
+                logger.warn("requestIdGenerator.apply(routingCtx) returned null; using RequestId.random()");
+            }
+            return RequestId.random();
         } catch (Exception e) {
             if (!warnedRequestIdGenerateFailure) {
                 warnedRequestIdGenerateFailure = true;
