@@ -8,7 +8,6 @@ import java.util.List;
 
 public class DefaultMemoryHealthChecker implements HealthChecker {
 
-    private final List<MemoryPoolMXBean> memoryPoolMXBeans;
     private final double targetMemoryHeapUsage;
     private final double targetMemoryNonHeapUsage;
     private final double targetMemoryTotalUsage;
@@ -17,7 +16,6 @@ public class DefaultMemoryHealthChecker implements HealthChecker {
         this.targetMemoryHeapUsage = targetMemoryHeapUsage;
         this.targetMemoryNonHeapUsage = targetMemoryNonHeapUsage;
         this.targetMemoryTotalUsage = targetMemoryTotalUsage;
-        this.memoryPoolMXBeans = ManagementFactory.getMemoryPoolMXBeans();
     }
 
     @Override
@@ -35,7 +33,13 @@ public class DefaultMemoryHealthChecker implements HealthChecker {
     }
 
     private double getNonHeapMemoryUsage() {
-        return ManagementFactory.getPlatformMXBean(BufferPoolMXBean.class).getMemoryUsed();
+
+        final BufferPoolMXBean bufferBean = ManagementFactory.getPlatformMXBean(BufferPoolMXBean.class);
+        if (bufferBean != null) {
+            return bufferBean.getMemoryUsed();
+        } else {
+            return 0;
+        }
     }
 
     private double getTotalMemoryUsage() {
