@@ -199,7 +199,6 @@ public final class ServerBuilder implements TlsSetters {
     private Duration gracefulShutdownQuietPeriod = DEFAULT_GRACEFUL_SHUTDOWN_QUIET_PERIOD;
     private Duration gracefulShutdownTimeout = DEFAULT_GRACEFUL_SHUTDOWN_TIMEOUT;
     private MeterRegistry meterRegistry = Flags.meterRegistry();
-    private ServerErrorHandler errorHandler = ServerErrorHandler.ofDefault();
     private List<ClientAddressSource> clientAddressSources = ClientAddressSource.DEFAULT_SOURCES;
     private Predicate<? super InetAddress> clientAddressTrustedProxyFilter = address -> false;
     private Predicate<? super InetAddress> clientAddressFilter = address -> true;
@@ -229,7 +228,7 @@ public final class ServerBuilder implements TlsSetters {
         virtualHostTemplate.blockingTaskExecutor(CommonPools.blockingTaskExecutor(), false);
         virtualHostTemplate.successFunction(SuccessFunction.ofDefault());
         virtualHostTemplate.multipartUploadsLocation(Flags.defaultMultipartUploadsLocation());
-        virtualHostTemplate.errorHandler(errorHandler);
+        virtualHostTemplate.errorHandler(ServerErrorHandler.ofDefault());
     }
 
     private static String defaultAccessLoggerName(String hostnamePattern) {
@@ -1519,8 +1518,7 @@ public final class ServerBuilder implements TlsSetters {
      */
     @UnstableApi
     public ServerBuilder errorHandler(ServerErrorHandler errorHandler) {
-        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
-        this.virtualHostTemplate.errorHandler(errorHandler);
+        virtualHostTemplate.errorHandler(requireNonNull(errorHandler, "errorHandler"));
         return this;
     }
 
@@ -1922,11 +1920,7 @@ public final class ServerBuilder implements TlsSetters {
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
-        ServerErrorHandler errorHandler = this.errorHandler;
-        if (errorHandler != ServerErrorHandler.ofDefault()) {
-            // Ensure that ServerErrorHandler never returns null by falling back to the default.
-            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
-        }
+        ServerErrorHandler errorHandler = virtualHostTemplate.errorHandler();
 
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
         return new DefaultServerConfig(

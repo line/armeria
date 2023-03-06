@@ -823,6 +823,10 @@ public final class VirtualHostBuilder implements TlsSetters {
         return this;
     }
 
+    ServerErrorHandler errorHandler() {
+        return errorHandler;
+    }
+
     /**
      * Sets the {@link RejectedRouteHandler} which will be invoked when an attempt to bind
      * an {@link HttpService} at a certain {@link Route} is rejected. If not set,
