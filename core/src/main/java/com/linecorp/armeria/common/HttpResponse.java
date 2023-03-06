@@ -482,6 +482,23 @@ public interface HttpResponse extends Response, HttpMessage {
     }
 
     /**
+     * Creates a new HTTP response with the specified headers and trailers
+     * whose stream is produced from an existing {@link Publisher}.
+     *
+     * <p>Note that the {@link HttpObject}s in the {@link Publisher} are not released when
+     * {@link Subscription#cancel()} or {@link #abort()} is called. You should add a hook in order to
+     * release the elements. See {@link PublisherBasedStreamMessage} for more information.
+     */
+    static HttpResponse of(ResponseHeaders headers,
+                           Publisher<? extends HttpObject> publisher,
+                           HttpHeaders trailers) {
+        requireNonNull(headers, "headers");
+        requireNonNull(publisher, "publisher");
+        requireNonNull(trailers, "trailers");
+        return PublisherBasedHttpResponse.from(headers, publisher, trailers);
+    }
+
+    /**
      * Creates a new HTTP response with the specified {@code content} that is converted into JSON using the
      * default {@link ObjectMapper}.
      *

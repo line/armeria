@@ -21,12 +21,20 @@ import java.util.concurrent.CompletableFuture;
 import org.reactivestreams.Publisher;
 
 import com.linecorp.armeria.common.stream.PublisherBasedStreamMessage;
+import com.linecorp.armeria.internal.common.stream.AppendingPublisher;
 import com.linecorp.armeria.internal.common.stream.PrependingPublisher;
 
 final class PublisherBasedHttpResponse extends PublisherBasedStreamMessage<HttpObject> implements HttpResponse {
 
     static PublisherBasedHttpResponse from(ResponseHeaders headers, Publisher<? extends HttpObject> publisher) {
         return new PublisherBasedHttpResponse(new PrependingPublisher<>(headers, publisher));
+    }
+
+    static PublisherBasedHttpResponse from(ResponseHeaders headers,
+                                           Publisher<? extends HttpObject> publisher,
+                                           HttpHeaders trailers) {
+        return new PublisherBasedHttpResponse(new AppendingPublisher<>(
+                new PrependingPublisher<>(headers, publisher), trailers));
     }
 
     PublisherBasedHttpResponse(Publisher<? extends HttpObject> publisher) {
