@@ -32,6 +32,8 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.util.TextFormatter;
 import com.linecorp.armeria.server.logging.LoggingService;
 
+import io.micrometer.core.instrument.Tags;
+
 /**
  * A {@link ServerErrorHandler} that wraps another {@link ServerErrorHandler}
  * to periodically report the exceptions that were not logged by decorators such as
@@ -108,8 +110,8 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
 
     @Override
     public void serverStarted(Server server) throws Exception {
-        server.config().meterRegistry().gauge("armeria.server.unhandledExceptions", counter,
-                                              LongAdder::sum);
+        server.config().meterRegistry().more().counter("armeria.server.unhandledExceptions",
+                                                       Tags.empty(), counter, LongAdder::sum);
     }
 
     @Override
