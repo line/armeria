@@ -137,6 +137,7 @@ class SniServerTest {
         final HttpClientConnectionManager cm =
                 PoolingHttpClientConnectionManagerBuilder.create()
                                                          .setSSLSocketFactory(sslSocketFactory)
+                                                         .setDnsResolver(dnsResolver)
                                                          .build();
         return HttpClients.custom()
                           .setConnectionManager(cm)
