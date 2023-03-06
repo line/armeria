@@ -67,7 +67,7 @@ class ThriftClassLoadingTest {
         }
 
         @Override
-        public Class<?> loadClass(String name) throws ClassNotFoundException {
+        public synchronized Class<?> loadClass(String name) throws ClassNotFoundException {
             if (!name.startsWith(targetClass.getName())) {
                 return super.loadClass(name);
             }

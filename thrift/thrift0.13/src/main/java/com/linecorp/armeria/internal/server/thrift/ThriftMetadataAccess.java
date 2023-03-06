@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.thrift;
+package com.linecorp.armeria.internal.server.thrift;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -33,7 +33,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
-public final class ThriftMetadataAccess {
+final class ThriftMetadataAccess {
 
     private static final Logger logger = LoggerFactory.getLogger(ThriftMetadataAccess.class);
 
@@ -46,13 +46,19 @@ public final class ThriftMetadataAccess {
             final Enumeration<URL> versionPropertiesUrls =
                     ThriftMetadataAccess.class.getClassLoader().getResources(
                             "META-INF/com.linecorp.armeria.versions.properties");
+            if (!versionPropertiesUrls.hasMoreElements()) {
+                // versions.properties was not found
+                logger.trace("Unable to determine the 'armeria-thrift' version. Please consider " +
+                             "adding 'META-INF/com.linecorp.armeria.versions.properties' to the " +
+                             "classpath to avoid unexpected issues.");
+            }
             boolean preInitializeThriftClass = false;
             while (versionPropertiesUrls.hasMoreElements()) {
                 final URL url = versionPropertiesUrls.nextElement();
                 try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
                     final Properties props = new Properties();
                     props.load(reader);
-                    preInitializeThriftClass = needPreInitialize(props);
+                    preInitializeThriftClass = needsPreInitialization(props);
                     if (preInitializeThriftClass) {
                         break;
                     }
@@ -60,12 +66,12 @@ public final class ThriftMetadataAccess {
             }
             ThriftMetadataAccess.preInitializeThriftClass = preInitializeThriftClass;
         } catch (Exception e) {
-            logger.trace("Unexpected exception while determining the 'armeria-thrift' version: ", e);
+            logger.debug("Unexpected exception while determining the 'armeria-thrift' version: ", e);
         }
     }
 
     @VisibleForTesting
-    static boolean needPreInitialize(Properties props) {
+    static boolean needsPreInitialization(Properties props) {
         for (String key : props.stringPropertyNames()) {
             final Matcher matcher = preInitializeTargetPattern.matcher(key);
             if (!matcher.matches()) {

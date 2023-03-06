@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.internal.common.thrift;
+package com.linecorp.armeria.internal.server.thrift;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -28,10 +28,10 @@ class ThriftMetadataAccessTest {
     void testPreInitializeTarget() {
         final Properties properties = new Properties();
         properties.put("armeria-thrift0.13.shortCommitHash", "c533c7fd3");
-        assertThat(ThriftMetadataAccess.needPreInitialize(properties)).isTrue();
+        assertThat(ThriftMetadataAccess.needsPreInitialization(properties)).isTrue();
 
         properties.clear();
         properties.put("armeria-thrift0.15.shortCommitHash", "c533c7fd3");
-        assertThat(ThriftMetadataAccess.needPreInitialize(properties)).isFalse();
+        assertThat(ThriftMetadataAccess.needsPreInitialization(properties)).isFalse();
     }
 }
