@@ -61,7 +61,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
     private final String logPrefix;
     private final int minTtl;
     private final int maxTtl;
-    private final List<DnsQuestionListener> dnsQuestionListeners;
+    private final List<DnsQueryListener> dnsQueryListeners;
 
     private boolean started;
     @Nullable
@@ -72,7 +72,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
     DnsEndpointGroup(EndpointSelectionStrategy selectionStrategy, boolean allowEmptyEndpoints,
                      long selectionTimeoutMillis, DefaultDnsResolver resolver, EventLoop eventLoop,
                      List<DnsQuestionWithoutTrailingDot> questions,
-                     Backoff backoff, int minTtl, int maxTtl, List<DnsQuestionListener> dnsQuestionListeners) {
+                     Backoff backoff, int minTtl, int maxTtl, List<DnsQueryListener> dnsQueryListeners) {
 
         super(selectionStrategy, allowEmptyEndpoints, selectionTimeoutMillis);
 
@@ -82,8 +82,8 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
         this.questions = questions;
         this.minTtl = minTtl;
         this.maxTtl = maxTtl;
-        this.dnsQuestionListeners = dnsQuestionListeners.isEmpty() ?
-                                    ImmutableList.of(DnsQuestionListener.of()) : dnsQuestionListeners;
+        this.dnsQueryListeners = dnsQueryListeners.isEmpty() ?
+                                 ImmutableList.of(DnsQueryListener.of()) : dnsQueryListeners;
         assert !this.questions.isEmpty();
         logger = LoggerFactory.getLogger(getClass());
         logPrefix = this.questions.stream()
@@ -107,7 +107,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
     final void start() {
         checkState(!started);
         started = true;
-        eventLoop.execute(() -> sendQueries(questions, null));
+        eventLoop.execute(() -> sendQueries(questions, ImmutableList.of()));
     }
 
     @Override
@@ -126,7 +126,8 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
                                                         q.type().equals(cast.type()));
         if (matched) {
             // The TTL of DnsRecords associated the 'questions' has expired. Refresh the old Endpoints.
-            eventLoop.execute(() -> sendQueries(questions, records));
+            eventLoop.execute(() -> sendQueries(questions,
+                                                records != null ? records : ImmutableList.of()));
         }
     }
 
@@ -137,7 +138,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
     }
 
     private void sendQueries(List<DnsQuestionWithoutTrailingDot> questions,
-                             @Nullable List<DnsRecord> oldRecords) {
+                             List<DnsRecord> oldRecords) {
         if (isClosing()) {
             return;
         }
@@ -156,7 +157,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
             if (cause != null) {
                 // Failed. Try again with the delay given by Backoff.
                 final long delayMillis = backoff.nextDelayMillis(attemptsSoFar);
-                for (DnsQuestionListener listener : dnsQuestionListeners) {
+                for (DnsQueryListener listener : dnsQueryListeners) {
                     try {
                         listener.onFailure(oldRecords, cause, logPrefix, delayMillis, attemptsSoFar);
                     } catch (Exception ex) {
@@ -168,7 +169,7 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
                 return null;
             }
 
-            for (DnsQuestionListener listener : dnsQuestionListeners) {
+            for (DnsQueryListener listener : dnsQueryListeners) {
                 try {
                     listener.onSuccess(oldRecords, newRecords, logPrefix);
                 } catch (Exception ex) {

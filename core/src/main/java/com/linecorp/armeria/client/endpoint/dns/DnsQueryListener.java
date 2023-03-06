@@ -19,7 +19,6 @@ package com.linecorp.armeria.client.endpoint.dns;
 import java.util.List;
 
 import com.linecorp.armeria.client.DnsCache;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.handler.codec.dns.DnsRecord;
@@ -28,36 +27,36 @@ import io.netty.handler.codec.dns.DnsRecord;
  *  Listens to the result of querying {@link DnsRecord}s.
  */
 @UnstableApi
-public interface DnsQuestionListener {
+public interface DnsQueryListener {
 
     /**
-     * Returns the default {@link DnsQuestionListener}.
+     * Returns the default {@link DnsQueryListener}.
      */
-    static DnsQuestionListener of() {
-        return DefaultDnsQuestionListener.DEFAULT_INSTANCE;
+    static DnsQueryListener of() {
+        return DefaultDnsQueryListener.DEFAULT_INSTANCE;
     }
 
     /**
      * Invoked when querying {@link DnsRecord}s successfully.
      *
-     * @param oldRecords old dns records which were to be updated. If {@code null}, it indicates that
+     * @param oldRecords old dns records which were to be updated. If empty, it indicates that
      *                   this querying is called after initialization or the old records were garbage-collected
      *                   by the {@link DnsCache} implementation.
      * @param newRecords new dns records.
      * @param logPrefix comma-separated dns record name. (e.g., `foo.com, bar.com`)
      */
-    void onSuccess(@Nullable List<DnsRecord> oldRecords, List<DnsRecord> newRecords, String logPrefix);
+    void onSuccess(List<DnsRecord> oldRecords, List<DnsRecord> newRecords, String logPrefix);
 
     /**
      * Invoked when querying {@link DnsRecord}s failed.
      *
-     * @param oldRecords old dns records which were to be updated. If {@code null}, it indicates that
+     * @param oldRecords old dns records which were to be updated. If empty, it indicates that
      *                   this querying is called after initialization.
      * @param cause the cause of the failure.
      * @param logPrefix comma-separated dns record name. (e.g., `foo.com, bar.com`)
      * @param delayMillis the interval of the next attempt.
      * @param attemptsSoFar the number of inquiries so far.
      */
-    void onFailure(@Nullable List<DnsRecord> oldRecords, Throwable cause, String logPrefix,
-                   long delayMillis, int attemptsSoFar);
+    void onFailure(List<DnsRecord> oldRecords, Throwable cause, String logPrefix, long delayMillis,
+                   int attemptsSoFar);
 }

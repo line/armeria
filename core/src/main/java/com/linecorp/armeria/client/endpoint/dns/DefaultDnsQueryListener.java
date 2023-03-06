@@ -21,25 +21,23 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.linecorp.armeria.common.annotation.Nullable;
-
 import io.netty.handler.codec.dns.DnsRecord;
 
 /**
- * A default implementation of {@link DnsQuestionListener} interface.
+ * A default implementation of {@link DnsQueryListener} interface.
  */
-final class DefaultDnsQuestionListener implements DnsQuestionListener {
+final class DefaultDnsQueryListener implements DnsQueryListener {
 
-    static final DnsQuestionListener DEFAULT_INSTANCE = new DefaultDnsQuestionListener();
+    static final DnsQueryListener DEFAULT_INSTANCE = new DefaultDnsQueryListener();
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     @Override
-    public void onSuccess(@Nullable List<DnsRecord> oldRecords, List<DnsRecord> newRecords, String logPrefix) {}
+    public void onSuccess(List<DnsRecord> oldRecords, List<DnsRecord> newRecords, String logPrefix) {}
 
     @Override
-    public void onFailure(@Nullable List<DnsRecord> oldRecords, Throwable cause, String logPrefix,
-                          long delayMillis, int attemptsSoFar) {
+    public void onFailure(List<DnsRecord> oldRecords, Throwable cause, String logPrefix, long delayMillis,
+                          int attemptsSoFar) {
         logger.warn("{} DNS query failed; retrying in {} ms (attempts so far: {}):",
                     logPrefix, delayMillis, attemptsSoFar, cause);
     }

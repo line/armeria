@@ -22,6 +22,7 @@ import static java.util.Objects.requireNonNull;
 import java.net.IDN;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -53,7 +54,7 @@ abstract class DnsEndpointGroupBuilder
     private Backoff backoff = Backoff.exponential(1000, 32000).withJitter(0.2);
     private EndpointSelectionStrategy selectionStrategy = EndpointSelectionStrategy.weightedRoundRobin();
     private final DnsDynamicEndpointGroupBuilder dnsDynamicEndpointGroupBuilder;
-    private final List<DnsQuestionListener> dnsQuestionListeners = new ArrayList<>();
+    private final List<DnsQueryListener> dnsQueryListeners = new ArrayList<>();
 
     DnsEndpointGroupBuilder(String hostname) {
         this.hostname = Ascii.toLowerCase(IDN.toASCII(requireNonNull(hostname, "hostname"),
@@ -159,31 +160,32 @@ abstract class DnsEndpointGroupBuilder
     }
 
     /**
-     * Adds the {@link DnsQuestionListener}s that listens to the result of querying {@link DnsRecord}s.
-     * If no {@link DnsQuestionListener} is configured, {@link DnsQuestionListener#of()} is used by default
+     * Adds the {@link DnsQueryListener}s that listens to the result of querying {@link DnsRecord}s.
+     * If no {@link DnsQueryListener} is configured, {@link DnsQueryListener#of()} is used by default
      */
     @UnstableApi
-    public DnsEndpointGroupBuilder addDnsQuestionListeners(
-            Iterable<? extends DnsQuestionListener> dnsQuestionListeners) {
-        requireNonNull(dnsQuestionListeners, "dnsQuestionListeners");
-        for (DnsQuestionListener dnsQuestionListener: dnsQuestionListeners) {
-            addDnsQuestionListener(dnsQuestionListener);
+    public DnsEndpointGroupBuilder addDnsQueryListeners(
+            Iterable<? extends DnsQueryListener> dnsQueryListeners) {
+        requireNonNull(dnsQueryListeners, "dnsQueryListeners");
+        for (DnsQueryListener listener: dnsQueryListeners) {
+            this.dnsQueryListeners.add(listener);
         }
         return this;
     }
 
     /**
-     * Adds the {@link DnsQuestionListener} that listens to the result of querying {@link DnsRecord}s.
-     * If no {@link DnsQuestionListener} is configured, {@link DnsQuestionListener#of()} is used by default
+     * Adds the {@link DnsQueryListener} that listens to the result of querying {@link DnsRecord}s.
+     * If no {@link DnsQueryListener} is configured, {@link DnsQueryListener#of()} is used by default
      */
     @UnstableApi
-    public DnsEndpointGroupBuilder addDnsQuestionListener(DnsQuestionListener dnsQuestionListener) {
-        dnsQuestionListeners.add(requireNonNull(dnsQuestionListener, "dnsQuestionListener"));
+    public DnsEndpointGroupBuilder addDnsQueryListeners(DnsQueryListener... dnsQueryListeners) {
+        requireNonNull(dnsQueryListeners, "dnsQueryListeners");
+        this.dnsQueryListeners.addAll(Arrays.asList(dnsQueryListeners));
         return this;
     }
 
-    final List<DnsQuestionListener> dnsQuestionListeners() {
-        return dnsQuestionListeners;
+    final List<DnsQueryListener> dnsQueryListeners() {
+        return dnsQueryListeners;
     }
 
     /**

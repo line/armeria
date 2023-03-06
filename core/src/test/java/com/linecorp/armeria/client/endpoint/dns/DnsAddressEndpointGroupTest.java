@@ -44,7 +44,6 @@ import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.client.Endpoint;
 import com.linecorp.armeria.client.NoopDnsCache;
 import com.linecorp.armeria.client.retry.Backoff;
-import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.internal.client.dns.DnsQuestionWithoutTrailingDot;
 
 import io.netty.buffer.ByteBuf;
@@ -525,21 +524,21 @@ class DnsAddressEndpointGroupTest {
     }
 
     @Test
-    void dnsQuestionListener() {
+    void dnsQueryListener() {
         try (TestDnsServer server = new TestDnsServer(ImmutableMap.of(
                 new DefaultDnsQuestion("baz.com.", A),
                 new DefaultDnsResponse(0).addRecord(ANSWER, newAddressRecord("baz.com.", "1.1.1.1"))))) {
             final AtomicInteger failureCount = new AtomicInteger(0);
             final AtomicBoolean success = new AtomicBoolean(false);
-            final DnsQuestionListener listener = new DnsQuestionListener() {
+            final DnsQueryListener listener = new DnsQueryListener() {
                 @Override
-                public void onSuccess(@Nullable List<DnsRecord> oldRecords,
+                public void onSuccess(List<DnsRecord> oldRecords,
                                       List<DnsRecord> newRecords, String logPrefix) {
                     success.set(true);
                 }
 
                 @Override
-                public void onFailure(@Nullable List<DnsRecord> oldRecords,
+                public void onFailure(List<DnsRecord> oldRecords,
                                       Throwable cause, String logPrefix, long delayMillis, int attemptsSoFar) {
                     failureCount.incrementAndGet();
                 }
@@ -550,7 +549,7 @@ class DnsAddressEndpointGroupTest {
                                                 .resolvedAddressTypes(ResolvedAddressTypes.IPV4_PREFERRED)
                                                 .backoff(Backoff.fixed(500))
                                                 .dnsCache(NoopDnsCache.INSTANCE)
-                                                .addDnsQuestionListener(listener)
+                                                .addDnsQueryListeners(listener)
                                                 .build()) {
 
                 await().untilAsserted(() -> assertThat(failureCount.get()).isGreaterThan(3));
@@ -561,7 +560,7 @@ class DnsAddressEndpointGroupTest {
                                                 .port(8080)
                                                 .serverAddresses(server.addr())
                                                 .dnsCache(NoopDnsCache.INSTANCE)
-                                                .addDnsQuestionListener(listener)
+                                                .addDnsQueryListeners(listener)
                                                 .build()) {
                 await().timeout(Duration.ofSeconds(1))
                         .untilAsserted(() -> assertThat(success.get()).isTrue());
