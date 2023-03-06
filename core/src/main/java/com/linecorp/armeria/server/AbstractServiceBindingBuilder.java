@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -175,6 +175,7 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
         return this;
     }
 
+    @Override
     public AbstractServiceBindingBuilder serviceErrorHandler(ServiceErrorHandler serviceErrorHandler) {
         defaultServiceConfigSetters.serviceErrorHandler(serviceErrorHandler);
         return this;

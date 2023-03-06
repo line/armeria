@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -122,6 +122,7 @@ class AnnotatedServiceBindingBuilderTest {
         final String defaultServiceName = "TestService";
         final String defaultLogName = "TestLog";
         final Path multipartUploadsLocation = Files.newTemporaryFolder().toPath();
+        final ServiceErrorHandler serviceErrorHandler = (ctx, cause) -> HttpResponse.of(HttpStatus.OK);
 
         final Server server = Server.builder()
                                     .annotatedService()
@@ -134,6 +135,7 @@ class AnnotatedServiceBindingBuilderTest {
                                     .defaultServiceName(defaultServiceName)
                                     .defaultLogName(defaultLogName)
                                     .multipartUploadsLocation(multipartUploadsLocation)
+                                    .serviceErrorHandler(serviceErrorHandler)
                                     .build(new TestService())
                                     .build();
 
@@ -144,6 +146,7 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeFoo.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(homeFoo.verboseResponses()).isTrue();
         assertThat(homeFoo.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
+        assertThat(homeFoo.serviceErrorHandler()).isSameAs(serviceErrorHandler);
         final ServiceRequestContext sctx = ServiceRequestContext.builder(HttpRequest.of(HttpMethod.GET, "/"))
                                                                 .build();
         assertThat(homeFoo.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
@@ -154,6 +157,7 @@ class AnnotatedServiceBindingBuilderTest {
         assertThat(homeBar.accessLogWriter()).isEqualTo(accessLogWriter);
         assertThat(homeBar.verboseResponses()).isTrue();
         assertThat(homeBar.multipartUploadsLocation()).isSameAs(multipartUploadsLocation);
+        assertThat(homeBar.serviceErrorHandler()).isSameAs(serviceErrorHandler);
         assertThat(homeBar.defaultServiceNaming().serviceName(sctx)).isEqualTo(defaultServiceName);
         assertThat(homeBar.defaultLogName()).isEqualTo(defaultLogName);
 
