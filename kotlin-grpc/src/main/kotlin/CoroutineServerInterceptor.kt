@@ -32,12 +32,14 @@ import java.util.concurrent.CompletableFuture
  *     override suspend fun <ReqT, RespT> suspendedInterceptCall(
  *             call: ServerCall<ReqT, RespT>,
  *             headers: Metadata,
- *             next: ServerCallHandler<ReqT, RespT>): ServerCall.Listener<ReqT> {
- *         return authorizer.authorize(headers).thenApply { result ->
+ *             next: ServerCallHandler<ReqT, RespT>
+ *     ): ServerCall.Listener<ReqT> = suspendCoroutine {
+ *         val future = authorizer.authorize(ServiceRequestContext.current(), headers)
+ *         future.whenComplete { result, _ ->
  *             if (result) {
- *                 return next.startCall(call, headers)
+ *                 next.startCall(call, headers)
  *             } else {
- *                 throw AuthenticationException("Invalid access")
+ *                 throw AnticipatedException("Invalid access")
  *             }
  *         }
  *     }
