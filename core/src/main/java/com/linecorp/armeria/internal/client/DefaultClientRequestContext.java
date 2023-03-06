@@ -856,13 +856,17 @@ public final class DefaultClientRequestContext
         final CompletableFuture<Void> completableFuture = new CompletableFuture<>();
 
         setAdditionalRequestHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
-        log().whenRequestComplete().whenComplete((ignore, ex) -> {
+        log().whenRequestComplete().handle((ignore, ex) -> {
             if (ex != null) {
                 completableFuture.completeExceptionally(ex);
-                return;
+                return null;
             }
             final Channel ch = channel();
-            assert ch != null;
+            if (ch == null) {
+                completableFuture.complete(null);
+                return null;
+            }
+
             ch.closeFuture().addListener(f -> {
                 if (f.cause() == null) {
                     completableFuture.complete(null);
@@ -871,6 +875,7 @@ public final class DefaultClientRequestContext
                 }
             });
             HttpSession.get(ch).initiateConnectionShutdown();
+            return null;
         });
         return completableFuture;
     }

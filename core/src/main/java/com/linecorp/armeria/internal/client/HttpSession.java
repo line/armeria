@@ -119,6 +119,5 @@ public interface HttpSession {
 
     int incrementAndGetNumRequestsSent();
 
-    @UnstableApi
     void initiateConnectionShutdown();
 }
