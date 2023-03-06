@@ -20,7 +20,9 @@ import static java.util.Objects.requireNonNull;
 
 import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
+@UnstableApi
 @FunctionalInterface
 public interface ServiceErrorHandler {
     /**
