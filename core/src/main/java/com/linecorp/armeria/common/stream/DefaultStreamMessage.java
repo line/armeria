@@ -104,7 +104,10 @@ public class DefaultStreamMessage<T> extends AbstractStreamMessageWriter<T> {
 
     /**
      * Creates a new instance.
+     *
+     * @deprecated Use {@link StreamMessage#streaming()} instead.
      */
+    @Deprecated
     public DefaultStreamMessage() {
         queue = new MpscChunkedArrayQueue<>(INITIAL_CAPACITY, 1 << 30);
     }
