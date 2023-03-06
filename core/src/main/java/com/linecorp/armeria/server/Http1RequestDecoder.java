@@ -19,7 +19,6 @@ package com.linecorp.armeria.server;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
 import java.net.URISyntaxException;
-import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
