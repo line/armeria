@@ -156,16 +156,25 @@ abstract class DnsEndpointGroup extends DynamicEndpointGroup implements DnsCache
             if (cause != null) {
                 // Failed. Try again with the delay given by Backoff.
                 final long delayMillis = backoff.nextDelayMillis(attemptsSoFar);
-                dnsQuestionListeners.forEach(dnsQuestionListener -> dnsQuestionListener.onFailure(
-                        oldRecords, cause, logPrefix, delayMillis, attemptsSoFar));
+                for (DnsQuestionListener listener : dnsQuestionListeners) {
+                    try {
+                        listener.onFailure(oldRecords, cause, logPrefix, delayMillis, attemptsSoFar);
+                    } catch (Exception ex) {
+                        logger.warn("Unexpected exception while invoking {}", listener, ex);
+                    }
+                }
                 this.scheduledFuture = eventLoop.schedule(() -> sendQueries(questions, oldRecords),
                                                           delayMillis, TimeUnit.MILLISECONDS);
                 return null;
             }
 
-            dnsQuestionListeners.forEach(dnsQuestionListener -> dnsQuestionListener.onSuccess(oldRecords,
-                                                                                              newRecords,
-                                                                                              logPrefix));
+            for (DnsQuestionListener listener : dnsQuestionListeners) {
+                try {
+                    listener.onSuccess(oldRecords, newRecords, logPrefix);
+                } catch (Exception ex) {
+                    logger.warn("Unexpected exception while invoking {}", listener, ex);
+                }
+            }
 
             // Reset the counter so that Backoff is reset.
             attemptsSoFar = 0;

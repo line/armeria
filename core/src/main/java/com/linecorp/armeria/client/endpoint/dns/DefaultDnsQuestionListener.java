@@ -22,14 +22,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.handler.codec.dns.DnsRecord;
 
 /**
  * A default implementation of {@link DnsQuestionListener} interface.
  */
-@UnstableApi
 final class DefaultDnsQuestionListener implements DnsQuestionListener {
 
     static final DnsQuestionListener DEFAULT_INSTANCE = new DefaultDnsQuestionListener();
