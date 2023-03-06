@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class VirtualHostTest {
+public class AnnotatedServiceImplicitHeadTest {
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
@@ -51,7 +51,7 @@ public class VirtualHostTest {
     }
 
     @Test
-    void getAnnotationMatchesDeleteMethod() {
+    void getAnnotationDoesNotMatchDeleteMethod() {
         final BlockingWebClient webClient = server.blockingWebClient();
         final AggregatedHttpResponse res = webClient.delete("/test");
         assertThat(res.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
