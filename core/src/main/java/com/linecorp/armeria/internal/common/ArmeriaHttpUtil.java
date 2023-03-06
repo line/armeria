@@ -253,7 +253,7 @@ public final class ArmeriaHttpUtil {
     private static final Set<AsciiString> CACHED_HEADERS = Flags.cachedHeaders().stream().map(AsciiString::of)
                                                                 .collect(toImmutableSet());
 
-    private static boolean warnedIllegalAbsoluteUriTransformer = false;
+    private static boolean warnedIllegalAbsoluteUriTransformer;
 
     private static LoadingCache<AsciiString, String> buildCache(String spec) {
         return Caffeine.from(spec).build(AsciiString::toString);
@@ -639,60 +639,6 @@ public final class ArmeriaHttpUtil {
         return out.build();
     }
 
-    private static String maybeTransformAbsoluteUri(
-            String path, Function<? super String, String> absoluteUriTransformer) throws URISyntaxException {
-
-        if (isValidHttp2Path(path)) {
-            return path;
-        }
-
-        if (!isAbsoluteUri(path)) {
-            throw newInvalidPathException(path);
-        }
-
-        final String newPath;
-        try {
-            newPath = absoluteUriTransformer.apply(path);
-        } catch (Exception e) {
-            warnExceptionThrowingAbsoluteUriTransformer(e);
-            throw newInvalidPathException(path);
-        }
-
-        if (newPath == null) {
-            warnNullReturningAbsoluteUriTransformer();
-            throw newInvalidPathException(path);
-        }
-
-        if (path.equals(newPath) || !isValidHttp2Path(newPath)) {
-            throw newInvalidPathException(path);
-        }
-
-        return newPath;
-    }
-
-    private static void warnExceptionThrowingAbsoluteUriTransformer(Exception e) {
-        if (!warnedIllegalAbsoluteUriTransformer) {
-            warnedIllegalAbsoluteUriTransformer = true;
-            logger.warn("absoluteUriTransformer.apply() raised an exception; returning 400 Bad Request", e);
-        }
-    }
-
-    private static void warnNullReturningAbsoluteUriTransformer() {
-        if (!warnedIllegalAbsoluteUriTransformer) {
-            warnedIllegalAbsoluteUriTransformer = true;
-            logger.warn("absoluteUriTransformer.apply() returned null; returning 400 Bad Request");
-        }
-    }
-
-    private static URISyntaxException newInvalidPathException(String path) {
-        return new URISyntaxException(path, "neither origin form nor asterisk form");
-    }
-
-    private static boolean isValidHttp2Path(String path) {
-        // We support only origin form and asterisk form.
-        return path.charAt(0) == '/' || "*".equals(path);
-    }
-
     /**
      * Converts the headers of the given Netty HTTP/1.x response into Armeria HTTP/2 headers.
      */
@@ -760,6 +706,60 @@ public final class ArmeriaHttpUtil {
         if (cookieJoiner != null && cookieJoiner.length() != 0) {
             out.add(HttpHeaderNames.COOKIE, cookieJoiner.toString());
         }
+    }
+
+    private static String maybeTransformAbsoluteUri(
+            String path, Function<? super String, String> absoluteUriTransformer) throws URISyntaxException {
+
+        if (isValidHttp2Path(path)) {
+            return path;
+        }
+
+        if (!isAbsoluteUri(path)) {
+            throw newInvalidPathException(path);
+        }
+
+        final String newPath;
+        try {
+            newPath = absoluteUriTransformer.apply(path);
+        } catch (Exception e) {
+            warnExceptionThrowingAbsoluteUriTransformer(e);
+            throw newInvalidPathException(path);
+        }
+
+        if (newPath == null) {
+            warnNullReturningAbsoluteUriTransformer();
+            throw newInvalidPathException(path);
+        }
+
+        if (path.equals(newPath) || !isValidHttp2Path(newPath)) {
+            throw newInvalidPathException(path);
+        }
+
+        return newPath;
+    }
+
+    private static void warnExceptionThrowingAbsoluteUriTransformer(Exception e) {
+        if (!warnedIllegalAbsoluteUriTransformer) {
+            warnedIllegalAbsoluteUriTransformer = true;
+            logger.warn("absoluteUriTransformer.apply() raised an exception; returning 400 Bad Request", e);
+        }
+    }
+
+    private static void warnNullReturningAbsoluteUriTransformer() {
+        if (!warnedIllegalAbsoluteUriTransformer) {
+            warnedIllegalAbsoluteUriTransformer = true;
+            logger.warn("absoluteUriTransformer.apply() returned null; returning 400 Bad Request");
+        }
+    }
+
+    private static URISyntaxException newInvalidPathException(String path) {
+        return new URISyntaxException(path, "neither origin form nor asterisk form");
+    }
+
+    private static boolean isValidHttp2Path(String path) {
+        // We support only origin form and asterisk form.
+        return path.charAt(0) == '/' || "*".equals(path);
     }
 
     private static CaseInsensitiveMap toLowercaseMap(Iterator<? extends CharSequence> valuesIter,
