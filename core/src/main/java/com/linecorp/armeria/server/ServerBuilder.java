@@ -1804,12 +1804,12 @@ public final class ServerBuilder implements TlsSetters {
      * such an HTTP/1 request, because Armeria always assumes that request path is an absolute path and
      * return a {@code 400 Bad Request} response otherwise. For example:
      * <pre>{@code
-     * builder.absoluteUriTransformer(absoluteUri ->
+     * builder.absoluteUriTransformer(absoluteUri -> {
      *   // https://foo.com/bar -> /bar
      *   return absoluteUri.replaceFirst("^https://\\.foo\\.com/", "/");
      *   // or..
      *   // return "/proxy?uri=" + URLEncoder.encode(absoluteUri);
-     * );
+     * });
      * }</pre>
      */
     @UnstableApi
