@@ -8,14 +8,14 @@ import java.util.List;
 
 public class DefaultMemoryHealthChecker implements HealthChecker {
 
-    private final double targetMemoryHeapUsage;
-    private final double targetMemoryNonHeapUsage;
-    private final double targetMemoryTotalUsage;
+    private final double targetHeapMemoryUtilizationRate;
+    private final double targetNonHeapMemoryUtilizationRate;
+    private final double targetTotalMemoryUtilizationRate;
 
-    public DefaultMemoryHealthChecker(final double targetMemoryHeapUsage, final double targetMemoryNonHeapUsage, final double targetMemoryTotalUsage) {
-        this.targetMemoryHeapUsage = targetMemoryHeapUsage;
-        this.targetMemoryNonHeapUsage = targetMemoryNonHeapUsage;
-        this.targetMemoryTotalUsage = targetMemoryTotalUsage;
+    public DefaultMemoryHealthChecker(final double targetHeapMemoryUtilizationRate, final double targetNonHeapMemoryUtilizationRate, final double targetMemoryTotalUsage) {
+        this.targetHeapMemoryUtilizationRate = targetHeapMemoryUtilizationRate;
+        this.targetNonHeapMemoryUtilizationRate = targetNonHeapMemoryUtilizationRate;
+        this.targetTotalMemoryUtilizationRate = targetMemoryTotalUsage;
     }
 
     @Override
@@ -23,9 +23,9 @@ public class DefaultMemoryHealthChecker implements HealthChecker {
         final double heapMemoryUsage = getHeapMemoryUsage();
         final double nonHeapMemoryUsage = getNonHeapMemoryUsage();
         final double totalMemoryUsage = getTotalMemoryUsage();
-        return heapMemoryUsage <= targetMemoryHeapUsage &&
-               nonHeapMemoryUsage <= targetMemoryNonHeapUsage &&
-               totalMemoryUsage <= targetMemoryTotalUsage;
+        return heapMemoryUsage <= targetHeapMemoryUtilizationRate &&
+               nonHeapMemoryUsage <= targetNonHeapMemoryUtilizationRate &&
+               totalMemoryUsage <= targetTotalMemoryUtilizationRate;
     }
 
     private double getHeapMemoryUsage() {
