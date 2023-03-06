@@ -96,8 +96,8 @@ public class ConnectionPoolCollectingMetricTest {
             assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
 
             assertThat(MoreMeters.measureAll(registry))
-                    .containsEntry("connection#count{state=OPEN}", 1.0)
-                    .containsEntry("connection#count{state=CLOSE}", 0.0);
+                    .containsEntry("armeria.client.connections#count{state=open}", 1.0)
+                    .containsEntry("armeria.client.connections#count{state=close}", 0.0);
 
             final WebClient client2 = WebClient.builder(server2.uri(protocol))
                                                .factory(factory)
@@ -107,13 +107,13 @@ public class ConnectionPoolCollectingMetricTest {
             assertThat(client2.get("/").aggregate().join().status()).isEqualTo(OK);
 
             assertThat(MoreMeters.measureAll(registry))
-                    .containsEntry("connection#count{state=OPEN}", 2.0)
-                    .containsEntry("connection#count{state=CLOSE}", 0.0);
+                    .containsEntry("armeria.client.connections#count{state=open}", 2.0)
+                    .containsEntry("armeria.client.connections#count{state=close}", 0.0);
 
             await().untilAsserted(() -> {
                 assertThat(MoreMeters.measureAll(registry))
-                        .containsEntry("connection#count{state=OPEN}", 2.0)
-                        .containsEntry("connection#count{state=CLOSE}", 2.0);
+                        .containsEntry("armeria.client.connections#count{state=open}", 2.0)
+                        .containsEntry("armeria.client.connections#count{state=close}", 2.0);
             });
         }
     }

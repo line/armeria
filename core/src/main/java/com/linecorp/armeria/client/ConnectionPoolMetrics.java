@@ -30,8 +30,8 @@ final class ConnectionPoolMetrics {
         requireNonNull(parent, "parent");
         requireNonNull(idPrefix, "idPrefix");
 
-        connectionOpened = parent.counter("connection", idPrefix.tags("state", "OPEN"));
-        connectionClosed = parent.counter("connection", idPrefix.tags("state", "CLOSE"));
+        connectionOpened = parent.counter(idPrefix.name(), idPrefix.tags("state", "open"));
+        connectionClosed = parent.counter(idPrefix.name(), idPrefix.tags("state", "close"));
     }
 
     void increaseConnOpened() {
