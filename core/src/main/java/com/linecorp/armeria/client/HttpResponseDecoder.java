@@ -217,12 +217,12 @@ abstract class HttpResponseDecoder {
 
         @Override
         public boolean isEmpty() {
-            return delegate.isEmpty();
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public long demand() {
-            return delegate.demand();
+            throw new UnsupportedOperationException();
         }
 
         @Override
@@ -233,17 +233,17 @@ abstract class HttpResponseDecoder {
         @Override
         public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
                               SubscriptionOption... options) {
-            delegate.subscribe(subscriber, executor, options);
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public void abort() {
-            delegate.abort();
+            throw new UnsupportedOperationException();
         }
 
         @Override
         public void abort(Throwable cause) {
-            delegate.abort(cause);
+            throw new UnsupportedOperationException();
         }
 
         /**
