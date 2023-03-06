@@ -19,6 +19,7 @@ package com.linecorp.armeria.server;
 import static com.linecorp.armeria.server.ServiceRouteUtil.newRoutingContext;
 
 import java.net.URISyntaxException;
+import java.util.function.Function;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -176,7 +177,8 @@ final class Http1RequestDecoder extends ChannelDuplexHandler {
 
                     // Convert the Netty HttpHeaders into Armeria RequestHeaders.
                     final RequestHeaders headers =
-                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString());
+                            ArmeriaHttpUtil.toArmeria(ctx, nettyReq, cfg, scheme.toString(),
+                                                      cfg.absoluteUriTransformer());
 
                     // Do not accept a CONNECT request.
                     if (headers.method() == HttpMethod.CONNECT) {

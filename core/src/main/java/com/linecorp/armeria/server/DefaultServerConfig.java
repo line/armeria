@@ -111,6 +111,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final ServerErrorHandler errorHandler;
     private final Http1HeaderNaming http1HeaderNaming;
     private final DependencyInjector dependencyInjector;
+    private final Function<String, String> absoluteUriTransformer;
     private final List<ShutdownSupport> shutdownSupports;
 
     @Nullable
@@ -143,6 +144,7 @@ final class DefaultServerConfig implements ServerConfig {
             @Nullable Mapping<String, SslContext> sslContexts,
             Http1HeaderNaming http1HeaderNaming,
             DependencyInjector dependencyInjector,
+            Function<? super String, String> absoluteUriTransformer,
             List<ShutdownSupport> shutdownSupports) {
         requireNonNull(ports, "ports");
         requireNonNull(defaultVirtualHost, "defaultVirtualHost");
@@ -256,6 +258,10 @@ final class DefaultServerConfig implements ServerConfig {
         this.sslContexts = sslContexts;
         this.http1HeaderNaming = requireNonNull(http1HeaderNaming, "http1HeaderNaming");
         this.dependencyInjector = requireNonNull(dependencyInjector, "dependencyInjector");
+        @SuppressWarnings("unchecked")
+        final Function<String, String> castAbsoluteUriTransformer =
+                (Function<String, String>) requireNonNull(absoluteUriTransformer, "absoluteUriTransformer");
+        this.absoluteUriTransformer = castAbsoluteUriTransformer;
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
     }
 
@@ -642,6 +648,11 @@ final class DefaultServerConfig implements ServerConfig {
         return dependencyInjector;
     }
 
+    @Override
+    public Function<String, String> absoluteUriTransformer() {
+        return absoluteUriTransformer;
+    }
+
     List<ShutdownSupport> shutdownSupports() {
         return shutdownSupports;
     }
@@ -662,7 +673,8 @@ final class DefaultServerConfig implements ServerConfig {
                     meterRegistry(), channelOptions(), childChannelOptions(),
                     clientAddressSources(), clientAddressTrustedProxyFilter(), clientAddressFilter(),
                     clientAddressMapper(),
-                    isServerHeaderEnabled(), isDateHeaderEnabled(), dependencyInjector());
+                    isServerHeaderEnabled(), isDateHeaderEnabled(),
+                    dependencyInjector(), absoluteUriTransformer());
         }
 
         return strVal;
@@ -685,7 +697,8 @@ final class DefaultServerConfig implements ServerConfig {
             Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean serverHeaderEnabled, boolean dateHeaderEnabled,
-            @Nullable DependencyInjector dependencyInjector) {
+            @Nullable DependencyInjector dependencyInjector,
+            Function<? super String, String> absoluteUriTransformer) {
 
         final StringBuilder buf = new StringBuilder();
         if (type != null) {
@@ -782,6 +795,8 @@ final class DefaultServerConfig implements ServerConfig {
             buf.append(", dependencyInjector: ");
             buf.append(dependencyInjector);
         }
+        buf.append(", absoluteUriTransformer: ");
+        buf.append(absoluteUriTransformer);
         buf.append(')');
 
         return buf.toString();
