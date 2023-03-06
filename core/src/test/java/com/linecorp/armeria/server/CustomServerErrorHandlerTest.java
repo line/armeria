@@ -155,7 +155,7 @@ class CustomServerErrorHandlerTest {
     @CsvSource({ "H1C", "H2C" })
     void defaultVirtualHost(SessionProtocol protocol) {
         final Endpoint endpoint = Endpoint.of(TEST_HOST, virtualServer.httpPort()).withIpAddr("127.0.0.1");
-        final WebClient webClientTest = WebClient.of(SessionProtocol.HTTP, endpoint);
+        final WebClient webClientTest = WebClient.of(protocol, endpoint);
         final AggregatedHttpResponse response = webClientTest.get("/foo").aggregate().join();
 
         assertThat(response.status()).isSameAs(HttpStatus.BAD_REQUEST);
