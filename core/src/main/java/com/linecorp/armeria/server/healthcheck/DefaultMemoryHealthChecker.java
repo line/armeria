@@ -2,9 +2,9 @@ package com.linecorp.armeria.server.healthcheck;
 
 import java.lang.management.BufferPoolMXBean;
 import java.lang.management.ManagementFactory;
-import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryType;
-import java.util.List;
+
+import com.google.common.base.MoreObjects;
 
 public class DefaultMemoryHealthChecker implements HealthChecker {
 
@@ -26,6 +26,15 @@ public class DefaultMemoryHealthChecker implements HealthChecker {
         return heapMemoryUsage <= targetHeapMemoryUtilizationRate &&
                nonHeapMemoryUsage <= targetNonHeapMemoryUtilizationRate &&
                totalMemoryUsage <= targetTotalMemoryUtilizationRate;
+    }
+
+    @Override
+    public String toString() {
+        return MoreObjects.toStringHelper(this)
+                          .add("targetTotalMemoryUtilizationRate", this.targetTotalMemoryUtilizationRate)
+                          .add("targetHeapMemoryUtilizationRate", this.targetHeapMemoryUtilizationRate)
+                          .add("targetNonHeapMemoryUtilizationRate", this.targetNonHeapMemoryUtilizationRate)
+                          .toString();
     }
 
     private double getHeapMemoryUsage() {
