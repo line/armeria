@@ -125,7 +125,7 @@ public final class ServiceConfig {
         this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
         this.defaultHeaders = defaultHeaders;
-        this.serviceErrorHandler = serviceErrorHandler;
+        this.serviceErrorHandler = requireNonNull(serviceErrorHandler, "serviceErrorHandler");
 
         handlesCorsPreflight = service.as(CorsService.class) != null;
     }
@@ -398,7 +398,7 @@ public final class ServiceConfig {
         return multipartUploadsLocation;
     }
 
-    public ServiceErrorHandler errorHandler() {
+    public ServiceErrorHandler serviceErrorHandler() {
         return serviceErrorHandler;
     }
 
@@ -435,6 +435,7 @@ public final class ServiceConfig {
                              .add("blockingTaskExecutor", blockingTaskExecutor)
                              .add("successFunction", successFunction)
                              .add("multipartUploadsLocation", multipartUploadsLocation)
+                             .add("serviceErrorHandler", serviceErrorHandler)
                              .add("shutdownSupports", shutdownSupports)
                              .toString();
     }
