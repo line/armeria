@@ -31,7 +31,7 @@ public class DefaultMemoryHealthChecker implements HealthChecker {
     }
 
     private double getHeapMemoryUsage() {
-        return this.memoryPoolMXBeans.stream().filter(e -> MemoryType.HEAP.equals(e.getType())).map(e -> e.getUsage().getUsed()).mapToDouble(e -> e).sum();
+        return ManagementFactory.getMemoryPoolMXBeans().stream().filter(e -> MemoryType.HEAP.equals(e.getType())).map(e -> e.getUsage().getUsed()).mapToDouble(e -> e).sum();
     }
 
     private double getNonHeapMemoryUsage() {
