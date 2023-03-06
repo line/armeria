@@ -149,7 +149,7 @@ abstract class AbstractHttpRequestHandler implements ChannelFutureListener {
     final boolean tryInitialize() {
         final HttpSession session = HttpSession.get(ch);
         id = session.incrementAndGetNumRequestsSent();
-        if (id >= MAX_NUM_REQUESTS_SENT || !session.canSendRequest()) {
+        if (id >= MAX_NUM_REQUESTS_SENT || !session.canNextRequest()) {
             final ClosedSessionException exception;
             if (id >= MAX_NUM_REQUESTS_SENT) {
                 exception = new ClosedSessionException(

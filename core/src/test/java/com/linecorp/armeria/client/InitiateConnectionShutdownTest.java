@@ -25,7 +25,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -56,6 +56,13 @@ public class InitiateConnectionShutdownTest {
             final byte[] plaintext = "Hello, World!".getBytes(StandardCharsets.UTF_8);
             sb.service("/plaintext",
                        (ctx, req) -> HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, plaintext));
+            sb.service("/delayed_plaintext", (ctx, req) -> {
+                final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
+                ctx.eventLoop().schedule(
+                        () -> f.complete(HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, plaintext)),
+                        100, TimeUnit.MILLISECONDS);
+                return HttpResponse.from(f);
+            });
             sb.service("/delayed_streaming", (ctx, req) -> {
                 final int chunkCount = 6;
                 final int delayMillis = 10;
@@ -78,7 +85,9 @@ public class InitiateConnectionShutdownTest {
         }
     };
 
-    final AtomicBoolean connectionClosed = new AtomicBoolean();
+    final List<RequestLogAccess> requestLogAccesses = Lists.newCopyOnWriteArrayList();
+    final AtomicBoolean completed = new AtomicBoolean(false);
+    final AtomicInteger connectionClosed = new AtomicInteger();
     final ConnectionPoolListener poolListener = new ConnectionPoolListener() {
         @Override
         public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
@@ -88,146 +97,129 @@ public class InitiateConnectionShutdownTest {
         @Override
         public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
                                      InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-            connectionClosed.set(true);
+            connectionClosed.incrementAndGet();
         }
     };
 
     @BeforeEach
     void resetVariables() {
-        connectionClosed.set(false);
+        requestLogAccesses.clear();
+        completed.set(false);
+        connectionClosed.set(0);
     }
 
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void testBeforeRequestIsConnected(SessionProtocol protocol) throws Exception {
-        final AtomicBoolean completed = new AtomicBoolean(false);
-        final AtomicReference<RequestLogAccess> requestLogAtomicReference = new AtomicReference<>();
-
+    void testBeforeSent(SessionProtocol protocol) throws Exception {
         try (ClientFactory clientFactory = getClientFactory()) {
-            final WebClient client = WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
-                    (delegate, ctx, req) -> {
-                        requestLogAtomicReference.set(ctx.log());
-                        ctx.initiateConnectionShutdown().whenComplete((ignore, ex) -> completed.set(true));
-                        return delegate.execute(ctx, req);
-                    }).build();
+            final WebClient client = getWebClientInitiateConnectionShutdownBeforeSent(protocol, clientFactory);
 
             final CompletableFuture<AggregatedHttpResponse> res = client.get("/plaintext").aggregate();
-            await().until(connectionClosed::get);
+
+            // wait completed the shutdown
             await().until(completed::get);
+
+            assertThat(connectionClosed.get()).isEqualTo(1);
             assertThat(res.get().contentUtf8()).isEqualTo("Hello, World!");
-            assertThat(requestLogAtomicReference.get().ensureRequestComplete().requestHeaders()
-                                                .get("connection")).isEqualTo("close");
+            assertThat(requestLogAccesses.size()).isEqualTo(1);
+            assertThat(requestLogAccesses.get(0).ensureRequestComplete().requestHeaders()
+                                         .get("connection")).isEqualTo("close");
         }
     }
 
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void testBeforeRequestIsConnectedWithDelayedStreaming(SessionProtocol protocol)
+    void testBeforeSentWithDelayedStreaming(SessionProtocol protocol)
             throws Exception {
-        final AtomicBoolean completed = new AtomicBoolean(false);
-        final AtomicReference<RequestLogAccess> requestLogAtomicReference = new AtomicReference<>();
-
         try (ClientFactory clientFactory = getClientFactory()) {
-            final WebClient client = WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
-                    (delegate, ctx, req) -> {
-                        requestLogAtomicReference.set(ctx.log());
-                        ctx.initiateConnectionShutdown().whenComplete((ignore, ex) -> completed.set(true));
-                        return delegate.execute(ctx, req);
-                    }).build();
+            final WebClient client = getWebClientInitiateConnectionShutdownBeforeSent(protocol, clientFactory);
 
             final CompletableFuture<AggregatedHttpResponse> res = client.get("/delayed_streaming").aggregate();
-            await().until(connectionClosed::get);
+
+            // wait completed the shutdown
             await().until(completed::get);
+
+            assertThat(connectionClosed.get()).isEqualTo(1);
             assertThat(res.get().contentUtf8()).isEqualTo(
                     "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!");
-            assertThat(requestLogAtomicReference.get().ensureRequestComplete().requestHeaders()
-                                                .get("connection")).isEqualTo("close");
+            assertThat(requestLogAccesses.size()).isEqualTo(1);
+            assertThat(requestLogAccesses.get(0).ensureRequestComplete().requestHeaders()
+                                         .get("connection")).isEqualTo("close");
         }
     }
 
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void testAfterRequestIsConnected(SessionProtocol protocol) throws Exception {
-        final AtomicBoolean completed = new AtomicBoolean(false);
-        final AtomicReference<RequestLogAccess> requestLogAtomicReference = new AtomicReference<>();
-
+    void testAfterSent(SessionProtocol protocol) throws Exception {
         try (ClientFactory clientFactory = getClientFactory()) {
-            final WebClient client = WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
-                    (delegate, ctx, req) -> {
-                        requestLogAtomicReference.set(ctx.log());
-                        final HttpResponse res = delegate.execute(ctx, req);
-                        ctx.log().whenRequestComplete().thenAccept(
-                                it -> ctx.initiateConnectionShutdown()
-                                         .whenComplete((ignore, ex) -> completed.set(true)));
-                        return res;
-                    }).build();
+            final WebClient client = getWebClientInitiateConnectionShutdownAfterSent(protocol, clientFactory);
 
             final CompletableFuture<AggregatedHttpResponse> res = client.get("/plaintext").aggregate();
-            await().until(connectionClosed::get);
+
+            // wait completed the shutdown
             await().until(completed::get);
+
+            assertThat(connectionClosed.get()).isEqualTo(1);
             assertThat(res.get().contentUtf8()).isEqualTo("Hello, World!");
-            assertThat(requestLogAtomicReference.get().ensureRequestComplete().requestHeaders()
-                                                .get("connection")).isNull();
+            assertThat(requestLogAccesses.size()).isEqualTo(1);
+            assertThat(requestLogAccesses.get(0).ensureRequestComplete().requestHeaders()
+                                         .get("connection")).isNull();
         }
     }
 
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void testAfterRequestIsConnectedWithDelayedStreaming(SessionProtocol protocol) throws Exception {
-        final AtomicBoolean completed = new AtomicBoolean(false);
-        final AtomicReference<RequestLogAccess> requestLogAtomicReference = new AtomicReference<>();
-
+    void testAfterSentWithDelayedStreaming(SessionProtocol protocol) throws Exception {
         try (ClientFactory clientFactory = getClientFactory()) {
-            final WebClient client = WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
-                    (delegate, ctx, req) -> {
-                        requestLogAtomicReference.set(ctx.log());
-                        final HttpResponse res = delegate.execute(ctx, req);
-                        ctx.log().whenRequestComplete().thenAccept(
-                                it -> ctx.initiateConnectionShutdown()
-                                         .whenComplete((ignore, ex) -> completed.set(true)));
-                        return res;
-                    }).build();
+            final WebClient client = getWebClientInitiateConnectionShutdownAfterSent(protocol, clientFactory);
 
             final CompletableFuture<AggregatedHttpResponse> res = client.get("/delayed_streaming").aggregate();
-            await().until(connectionClosed::get);
+
+            // wait completed the shutdown
             await().until(completed::get);
+
+            assertThat(connectionClosed.get()).isEqualTo(1);
             assertThat(res.get().contentUtf8()).isEqualTo(
                     "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!");
-            assertThat(requestLogAtomicReference.get().ensureRequestComplete().requestHeaders()
-                                                .get("connection")).isNull();
+            assertThat(requestLogAccesses.size()).isEqualTo(1);
+            assertThat(requestLogAccesses.get(0).ensureRequestComplete().requestHeaders()
+                                         .get("connection")).isNull();
         }
     }
 
     @ParameterizedTest
     @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
     void testAfterRequestIsConnectedInSameConnection(SessionProtocol protocol) throws Exception {
-        final List<Boolean> completeds = Lists.newCopyOnWriteArrayList();
-        final List<RequestLogAccess> requestLogAccesses = Lists.newCopyOnWriteArrayList();
 
         try (ClientFactory clientFactory = getClientFactory()) {
             final WebClient client = WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
                     (delegate, ctx, req) -> {
                         requestLogAccesses.add(ctx.log());
-                        final HttpResponse res = delegate.execute(ctx, req);
-                        ctx.log().whenRequestComplete().thenAccept(
-                                it -> ctx.initiateConnectionShutdown()
-                                         .whenComplete((ignore, ex) -> completeds.add(true)));
-                        return res;
+                        return delegate.execute(ctx, req);
                     }).build();
 
+            final WebClient clientWithDisconnecting = getWebClientInitiateConnectionShutdownAfterSent(
+                    protocol, clientFactory);
+
             final CompletableFuture<AggregatedHttpResponse> res1 = client.get("/plaintext").aggregate();
-            final CompletableFuture<AggregatedHttpResponse> res2 = client.get("/delayed_streaming").aggregate();
-            await().until(connectionClosed::get);
-            await().until(() -> completeds.size() == 2);
-            assertThat(completeds.get(0)).isTrue();
-            assertThat(completeds.get(1)).isTrue();
+            final CompletableFuture<AggregatedHttpResponse> res2 =
+                    clientWithDisconnecting.get("/delayed_streaming").aggregate();
+            final CompletableFuture<AggregatedHttpResponse> res3 = client.get("/delayed_plaintext").aggregate();
+
+            // wait completed the shutdown
+            await().until(completed::get);
+
+            assertThat(connectionClosed.get()).isEqualTo(1); // check the same connection
             assertThat(res1.get().contentUtf8()).isEqualTo("Hello, World!");
             assertThat(res2.get().contentUtf8()).isEqualTo(
                     "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!");
-            assertThat(requestLogAccesses.size()).isEqualTo(2);
+            assertThat(res3.get().contentUtf8()).isEqualTo("Hello, World!");
+            assertThat(requestLogAccesses.size()).isEqualTo(3);
             assertThat(requestLogAccesses.get(0).ensureRequestComplete().requestHeaders()
                                          .get("connection")).isNull();
             assertThat(requestLogAccesses.get(1).ensureRequestComplete().requestHeaders()
+                                         .get("connection")).isNull();
+            assertThat(requestLogAccesses.get(2).ensureRequestComplete().requestHeaders()
                                          .get("connection")).isNull();
         }
     }
@@ -236,5 +228,28 @@ public class InitiateConnectionShutdownTest {
         return ClientFactory.builder().connectionPoolListener(poolListener)
                             .workerGroup(1).useHttp1Pipelining(true)
                             .build();
+    }
+
+    private WebClient getWebClientInitiateConnectionShutdownBeforeSent(SessionProtocol protocol,
+                                                                       ClientFactory clientFactory) {
+        return WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
+                (delegate, ctx, req) -> {
+                    requestLogAccesses.add(ctx.log());
+                    ctx.initiateConnectionShutdown().whenComplete((ignore, ex) -> completed.set(true));
+                    return delegate.execute(ctx, req);
+                }).build();
+    }
+
+    private WebClient getWebClientInitiateConnectionShutdownAfterSent(SessionProtocol protocol,
+                                                                      ClientFactory clientFactory) {
+        return WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
+                (delegate, ctx, req) -> {
+                    requestLogAccesses.add(ctx.log());
+                    final HttpResponse res = delegate.execute(ctx, req);
+                    ctx.log().whenRequestComplete().thenAccept(
+                            it -> ctx.initiateConnectionShutdown()
+                                     .whenComplete((ignore, ex) -> completed.set(true)));
+                    return res;
+                }).build();
     }
 }

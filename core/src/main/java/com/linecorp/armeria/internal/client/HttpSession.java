@@ -21,7 +21,6 @@ import com.linecorp.armeria.common.ClosedSessionException;
 import com.linecorp.armeria.common.HttpRequest;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.annotation.Nullable;
-import com.linecorp.armeria.common.annotation.UnstableApi;
 import com.linecorp.armeria.internal.common.InboundTrafficController;
 
 import io.netty.channel.Channel;
@@ -43,6 +42,11 @@ public interface HttpSession {
 
         @Override
         public boolean canSendRequest() {
+            return false;
+        }
+
+        @Override
+        public boolean canNextRequest() {
             return false;
         }
 
@@ -101,6 +105,8 @@ public interface HttpSession {
     SessionProtocol protocol();
 
     boolean canSendRequest();
+
+    boolean canNextRequest();
 
     InboundTrafficController inboundTrafficController();
 

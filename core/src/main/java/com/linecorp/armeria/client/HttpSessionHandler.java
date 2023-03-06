@@ -164,6 +164,12 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public boolean canSendRequest() {
         assert responseDecoder != null;
+        return active && !responseDecoder.needsToDisconnectWhenFinished();
+    }
+
+    @Override
+    public boolean canNextRequest() {
+        assert responseDecoder != null;
         return active && !responseDecoder.needsToDisconnectNow();
     }
 
