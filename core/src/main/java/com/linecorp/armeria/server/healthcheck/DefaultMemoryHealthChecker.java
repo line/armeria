@@ -2,7 +2,11 @@ package com.linecorp.armeria.server.healthcheck;
 
 import java.lang.management.BufferPoolMXBean;
 import java.lang.management.ManagementFactory;
+import java.lang.management.MemoryPoolMXBean;
 import java.lang.management.MemoryType;
+import java.lang.management.MemoryUsage;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import com.google.common.base.MoreObjects;
 
@@ -20,12 +24,16 @@ public class DefaultMemoryHealthChecker implements HealthChecker {
 
     @Override
     public boolean isHealthy() {
-        final double heapMemoryUsage = getHeapMemoryUsage();
-        final double nonHeapMemoryUsage = getNonHeapMemoryUsage();
-        final double totalMemoryUsage = getTotalMemoryUsage();
-        return heapMemoryUsage <= targetHeapMemoryUtilizationRate &&
-               nonHeapMemoryUsage <= targetNonHeapMemoryUtilizationRate &&
-               totalMemoryUsage <= targetTotalMemoryUtilizationRate;
+        final List<MemoryPoolMXBean> heapMemories = getHeapMemories();
+        final double heapMemoryUsage = heapMemories.stream().map(MemoryPoolMXBean::getUsage).mapToDouble(MemoryUsage::getUsed).sum();
+        final double maximumHeapMemory = heapMemories.stream().map(MemoryPoolMXBean::getUsage).mapToDouble(MemoryUsage::getMax).sum();
+        final long runtimeMaxMemory = Runtime.getRuntime().maxMemory();
+
+        final BufferPoolMXBean nonHeapMemoryUsage = ManagementFactory.getPlatformMXBean(BufferPoolMXBean.class);
+        final double totalMemoryUsage = Runtime.getRuntime().totalMemory();
+        return (heapMemoryUsage / maximumHeapMemory) <= targetHeapMemoryUtilizationRate &&
+               (nonHeapMemoryUsage == null || (nonHeapMemoryUsage.getMemoryUsed() / nonHeapMemoryUsage.getTotalCapacity()) <= targetNonHeapMemoryUtilizationRate) &&
+               (runtimeMaxMemory == Long.MAX_VALUE || totalMemoryUsage / runtimeMaxMemory <= targetTotalMemoryUtilizationRate);
     }
 
     @Override
@@ -37,21 +45,7 @@ public class DefaultMemoryHealthChecker implements HealthChecker {
                           .toString();
     }
 
-    private double getHeapMemoryUsage() {
-        return ManagementFactory.getMemoryPoolMXBeans().stream().filter(e -> MemoryType.HEAP.equals(e.getType())).map(e -> e.getUsage().getUsed()).mapToDouble(e -> e).sum();
-    }
-
-    private double getNonHeapMemoryUsage() {
-
-        final BufferPoolMXBean bufferBean = ManagementFactory.getPlatformMXBean(BufferPoolMXBean.class);
-        if (bufferBean != null) {
-            return bufferBean.getMemoryUsed();
-        } else {
-            return 0;
-        }
-    }
-
-    private double getTotalMemoryUsage() {
-        return Runtime.getRuntime().totalMemory();
+    private List<MemoryPoolMXBean> getHeapMemories() {
+        return ManagementFactory.getMemoryPoolMXBeans().stream().filter(e -> MemoryType.HEAP.equals(e.getType())).collect(Collectors.toList());
     }
 }
