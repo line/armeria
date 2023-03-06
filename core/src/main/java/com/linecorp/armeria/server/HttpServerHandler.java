@@ -371,9 +371,7 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 }
                 serviceResponse = HttpResponse.ofFailure(cause);
             }
-            final ServiceErrorHandler serviceErrorHandler =
-                    serviceCfg.errorHandler()
-                              .orElse(config.errorHandler().asServiceErrorHandler());
+            final ServiceErrorHandler serviceErrorHandler = serviceCfg.serviceErrorHandler();
 
             serviceResponse = serviceResponse.recover(cause -> {
                 // Store the cause to set as the log.responseCause().

@@ -35,13 +35,21 @@ class ServiceErrorHandlerTest {
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
-            final HttpService service = (ctx, req) -> {
-                throw new RuntimeException("foo");
-            };
             sb.route()
               .get("/foo")
               .serviceErrorHandler((ctx, cause) -> HttpResponse.of(HttpStatus.BAD_REQUEST))
-              .build(service);
+              .build((ctx, req) -> {
+                  throw new RuntimeException();
+              });
+            sb.route()
+              .get("/bar")
+              .build((ctx, req) -> {
+                  throw new RuntimeException();
+              });
+            sb.service("/baz", (ctx, req) -> {
+                throw new RuntimeException();
+            });
+            sb.errorHandler(((ctx, cause) -> HttpResponse.of(HttpStatus.NO_CONTENT)));
         }
     };
 
@@ -53,5 +61,15 @@ class ServiceErrorHandlerTest {
                                                   .aggregate().join();
 
         assertThat(res1.status()).isSameAs(HttpStatus.BAD_REQUEST);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"H1C", "H2C"})
+    void defaultExceptionTest(SessionProtocol protocol) {
+        final WebClient client = WebClient.of(server.uri(protocol));
+        final AggregatedHttpResponse res1 = client.get("/baz")
+                                                  .aggregate().join();
+
+        assertThat(res1.status()).isSameAs(HttpStatus.NO_CONTENT);
     }
 }

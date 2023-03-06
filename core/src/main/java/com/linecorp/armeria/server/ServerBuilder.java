@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -1520,6 +1520,7 @@ public final class ServerBuilder implements TlsSetters {
     @UnstableApi
     public ServerBuilder errorHandler(ServerErrorHandler errorHandler) {
         this.errorHandler = requireNonNull(errorHandler, "errorHandler");
+        this.virtualHostTemplate.errorHandler(errorHandler);
         return this;
     }
 

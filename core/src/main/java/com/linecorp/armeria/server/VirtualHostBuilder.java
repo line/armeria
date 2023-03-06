@@ -1157,7 +1157,8 @@ public final class VirtualHostBuilder implements TlsSetters {
 
         final ServiceErrorHandler defaultErrorHandler =
                 errorHandler != null ?
-                errorHandler.asServiceErrorHandler() : template.errorHandler.asServiceErrorHandler();
+                errorHandler.asServiceErrorHandler().orElse(template.errorHandler.asServiceErrorHandler())
+                                     : template.errorHandler.asServiceErrorHandler();
 
         assert defaultServiceNaming != null;
         assert rejectedRouteHandler != null;
