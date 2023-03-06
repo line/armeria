@@ -37,7 +37,7 @@ class ServiceErrorHandlerTest {
         protected void configure(ServerBuilder sb) {
             sb.route()
               .get("/foo")
-              .serviceErrorHandler((ctx, cause) -> HttpResponse.of(HttpStatus.BAD_REQUEST))
+              .errorHandler((ctx, cause) -> HttpResponse.of(HttpStatus.BAD_REQUEST))
               .build((ctx, req) -> {
                   throw new RuntimeException();
               });

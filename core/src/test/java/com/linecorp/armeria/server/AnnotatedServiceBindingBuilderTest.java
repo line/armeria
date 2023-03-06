@@ -135,7 +135,7 @@ class AnnotatedServiceBindingBuilderTest {
                                     .defaultServiceName(defaultServiceName)
                                     .defaultLogName(defaultLogName)
                                     .multipartUploadsLocation(multipartUploadsLocation)
-                                    .serviceErrorHandler(serviceErrorHandler)
+                                    .errorHandler(serviceErrorHandler)
                                     .build(new TestService())
                                     .build();
 

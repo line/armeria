@@ -220,7 +220,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters serviceErrorHandler(ServiceErrorHandler serviceErrorHandler) {
+    public ServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler) {
         requireNonNull(serviceErrorHandler, "serviceErrorHandler");
         this.serviceErrorHandler = serviceErrorHandler;
         return this;

@@ -1,5 +1,5 @@
 /*
- * Copyright 2019 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -316,8 +316,8 @@ public final class VirtualHostServiceBindingBuilder extends AbstractServiceBindi
     }
 
     @Override
-    public VirtualHostServiceBindingBuilder serviceErrorHandler(ServiceErrorHandler serviceErrorHandler) {
-        return (VirtualHostServiceBindingBuilder) super.serviceErrorHandler(serviceErrorHandler);
+    public VirtualHostServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        return (VirtualHostServiceBindingBuilder) super.errorHandler(serviceErrorHandler);
     }
 
     /**

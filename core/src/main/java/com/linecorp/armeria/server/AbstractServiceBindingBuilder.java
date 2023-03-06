@@ -176,8 +176,8 @@ abstract class AbstractServiceBindingBuilder extends AbstractBindingBuilder impl
     }
 
     @Override
-    public AbstractServiceBindingBuilder serviceErrorHandler(ServiceErrorHandler serviceErrorHandler) {
-        defaultServiceConfigSetters.serviceErrorHandler(serviceErrorHandler);
+    public AbstractServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        defaultServiceConfigSetters.errorHandler(serviceErrorHandler);
         return this;
     }
 

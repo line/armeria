@@ -300,8 +300,8 @@ public final class VirtualHostAnnotatedServiceBindingBuilder implements Annotate
     }
 
     @Override
-    public ServiceConfigSetters serviceErrorHandler(ServiceErrorHandler serviceErrorHandler) {
-        defaultServiceConfigSetters.serviceErrorHandler(serviceErrorHandler);
+    public ServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        defaultServiceConfigSetters.errorHandler(serviceErrorHandler);
         return this;
     }
 

@@ -218,5 +218,5 @@ interface ServiceConfigSetters {
     ServiceConfigSetters setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders);
 
-    ServiceConfigSetters serviceErrorHandler(ServiceErrorHandler serviceErrorHandler);
+    ServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler);
 }

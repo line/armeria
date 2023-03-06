@@ -300,8 +300,8 @@ public final class AnnotatedServiceBindingBuilder implements AnnotatedServiceCon
     }
 
     @Override
-    public AnnotatedServiceBindingBuilder serviceErrorHandler(ServiceErrorHandler serviceErrorHandler) {
-        defaultServiceConfigSetters.serviceErrorHandler(serviceErrorHandler);
+    public AnnotatedServiceBindingBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
+        defaultServiceConfigSetters.errorHandler(serviceErrorHandler);
         return this;
     }
 

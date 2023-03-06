@@ -242,7 +242,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters serviceErrorHandler(ServiceErrorHandler serviceErrorHandler) {
+    public ServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler) {
         requireNonNull(serviceErrorHandler, "serviceErrorHandler");
         this.serviceErrorHandler = serviceErrorHandler;
         return this;
@@ -312,7 +312,7 @@ final class DefaultServiceConfigSetters implements ServiceConfigSetters {
             serviceConfigBuilder.defaultHeaders(defaultHeaders.build());
         }
         if (serviceErrorHandler != null) {
-            serviceConfigBuilder.serviceErrorHandler(serviceErrorHandler);
+            serviceConfigBuilder.errorHandler(serviceErrorHandler);
         }
         return serviceConfigBuilder;
     }
