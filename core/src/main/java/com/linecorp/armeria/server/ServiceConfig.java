@@ -398,7 +398,7 @@ public final class ServiceConfig {
         return multipartUploadsLocation;
     }
 
-    public ServiceErrorHandler serviceErrorHandler() {
+    ServiceErrorHandler serviceErrorHandler() {
         return serviceErrorHandler;
     }
 
