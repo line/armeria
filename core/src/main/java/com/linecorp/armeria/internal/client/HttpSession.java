@@ -46,11 +46,6 @@ public interface HttpSession {
         }
 
         @Override
-        public boolean canNextRequest() {
-            return false;
-        }
-
-        @Override
         public InboundTrafficController inboundTrafficController() {
             return InboundTrafficController.disabled();
         }
@@ -105,8 +100,6 @@ public interface HttpSession {
     SessionProtocol protocol();
 
     boolean canSendRequest();
-
-    boolean canNextRequest();
 
     InboundTrafficController inboundTrafficController();
 

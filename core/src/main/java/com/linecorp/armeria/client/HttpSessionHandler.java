@@ -168,12 +168,6 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     }
 
     @Override
-    public boolean canNextRequest() {
-        assert responseDecoder != null;
-        return active && !responseDecoder.needsToDisconnectNow();
-    }
-
-    @Override
     public void invoke(PooledChannel pooledChannel, ClientRequestContext ctx,
                        HttpRequest req, DecodedHttpResponse res) {
         if (handleEarlyCancellation(ctx, req, res)) {

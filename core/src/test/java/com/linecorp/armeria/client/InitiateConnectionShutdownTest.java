@@ -13,34 +13,29 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-
 package com.linecorp.armeria.client;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.awaitility.Awaitility.await;
 
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import com.google.common.collect.Lists;
 
 import com.linecorp.armeria.common.AggregatedHttpResponse;
-import com.linecorp.armeria.common.HttpData;
+import com.linecorp.armeria.common.HttpHeaderNames;
 import com.linecorp.armeria.common.HttpResponse;
-import com.linecorp.armeria.common.HttpResponseWriter;
 import com.linecorp.armeria.common.HttpStatus;
-import com.linecorp.armeria.common.MediaType;
-import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.server.ServerBuilder;
@@ -53,45 +48,23 @@ public class InitiateConnectionShutdownTest {
     static final ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
-            final byte[] plaintext = "Hello, World!".getBytes(StandardCharsets.UTF_8);
-            sb.service("/plaintext",
-                       (ctx, req) -> HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, plaintext));
-            sb.service("/delayed_plaintext", (ctx, req) -> {
-                final CompletableFuture<HttpResponse> f = new CompletableFuture<>();
-                ctx.eventLoop().schedule(
-                        () -> f.complete(HttpResponse.of(HttpStatus.OK, MediaType.PLAIN_TEXT_UTF_8, plaintext)),
-                        100, TimeUnit.MILLISECONDS);
-                return HttpResponse.from(f);
-            });
-            sb.service("/delayed_streaming", (ctx, req) -> {
-                final int chunkCount = 6;
-                final int delayMillis = 10;
-                final HttpResponseWriter writer = HttpResponse.streaming();
-                ctx.eventLoop().schedule(() -> writer.write(ResponseHeaders.of(200)), delayMillis,
-                                         TimeUnit.MILLISECONDS);
-                for (int i = 0; i < chunkCount; i++) {
-                    if (i == chunkCount - 1) {
-                        ctx.eventLoop().schedule(() -> writer.write(HttpData.wrap(plaintext)),
-                                                 delayMillis * (i + 2), TimeUnit.MILLISECONDS);
-                        ctx.eventLoop().schedule(() -> writer.close(), delayMillis * (i + 3),
-                                                 TimeUnit.MILLISECONDS);
-                    } else {
-                        ctx.eventLoop().schedule(() -> writer.write(HttpData.wrap(plaintext)),
-                                                 delayMillis * (i + 2), TimeUnit.MILLISECONDS);
-                    }
-                }
-                return writer;
+            sb.service("/ok", (ctx, req) -> HttpResponse.of(HttpStatus.OK));
+            sb.service("/delayed_ok", (ctx, req) -> {
+                return HttpResponse.delayed(HttpResponse.of(HttpStatus.OK),
+                                            Duration.ofMillis(500));
             });
         }
     };
 
     final List<RequestLogAccess> requestLogAccesses = Lists.newCopyOnWriteArrayList();
-    final AtomicBoolean completed = new AtomicBoolean(false);
+    final AtomicBoolean completed = new AtomicBoolean();
+    final AtomicInteger connectionOpen = new AtomicInteger();
     final AtomicInteger connectionClosed = new AtomicInteger();
     final ConnectionPoolListener poolListener = new ConnectionPoolListener() {
         @Override
         public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
                                    InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
+            connectionOpen.incrementAndGet();
         }
 
         @Override
@@ -105,123 +78,88 @@ public class InitiateConnectionShutdownTest {
     void resetVariables() {
         requestLogAccesses.clear();
         completed.set(false);
+        connectionOpen.set(0);
         connectionClosed.set(0);
     }
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void testBeforeSent(SessionProtocol protocol) throws Exception {
-        try (ClientFactory clientFactory = getClientFactory()) {
-            final WebClient client = getWebClientInitiateConnectionShutdownBeforeSent(protocol, clientFactory);
-
-            final CompletableFuture<AggregatedHttpResponse> res = client.get("/plaintext").aggregate();
-
-            // wait completed the shutdown
-            await().until(completed::get);
-
-            assertThat(connectionClosed.get()).isEqualTo(1);
-            assertThat(res.get().contentUtf8()).isEqualTo("Hello, World!");
-            assertThat(requestLogAccesses.size()).isEqualTo(1);
-            assertThat(requestLogAccesses.get(0).ensureRequestComplete().requestHeaders()
-                                         .get("connection")).isEqualTo("close");
-        }
-    }
-
-    @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void testBeforeSentWithDelayedStreaming(SessionProtocol protocol)
+    @CsvSource({
+            "H1C, /ok,         BEFORE_SENDING_REQ",
+            "H1C, /ok,         AFTER_SENDING_REQ",
+            "H1C, /delayed_ok, BEFORE_SENDING_REQ",
+            "H1C, /delayed_ok, AFTER_SENDING_REQ",
+            "H2C, /ok,         BEFORE_SENDING_REQ",
+            "H2C, /ok,         AFTER_SENDING_REQ",
+            "H2C, /delayed_ok, BEFORE_SENDING_REQ",
+            "H2C, /delayed_ok, AFTER_SENDING_REQ"
+    })
+    void testConnectionShutdown(SessionProtocol protocol, String path, ConnectionShutdownTiming timing)
             throws Exception {
         try (ClientFactory clientFactory = getClientFactory()) {
-            final WebClient client = getWebClientInitiateConnectionShutdownBeforeSent(protocol, clientFactory);
+            final WebClient client = newWebClient(protocol, clientFactory, timing);
+            final AggregatedHttpResponse res = client.blocking().get(path);
 
-            final CompletableFuture<AggregatedHttpResponse> res = client.get("/delayed_streaming").aggregate();
-
-            // wait completed the shutdown
-            await().until(completed::get);
-
-            assertThat(connectionClosed.get()).isEqualTo(1);
-            assertThat(res.get().contentUtf8()).isEqualTo(
-                    "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!");
+            assertSingleConnection();
+            assertThat(res.status()).isEqualTo(HttpStatus.OK);
             assertThat(requestLogAccesses.size()).isEqualTo(1);
-            assertThat(requestLogAccesses.get(0).ensureRequestComplete().requestHeaders()
-                                         .get("connection")).isEqualTo("close");
+
+            final String connectionHeaderValue =
+                    requestLogAccesses.get(0).ensureRequestComplete()
+                                      .requestHeaders().get(HttpHeaderNames.CONNECTION);
+            switch (timing) {
+                case BEFORE_SENDING_REQ:
+                    assertThat(connectionHeaderValue).isEqualTo("close");
+                    break;
+                case AFTER_SENDING_REQ:
+                    assertThat(connectionHeaderValue).isNull();
+                    break;
+                default:
+                    throw new IllegalArgumentException("unexpected shutdown timing: " + timing);
+            }
         }
+
+        assertSingleConnectionNow();
     }
 
     @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void testAfterSent(SessionProtocol protocol) throws Exception {
+    @CsvSource({ "H1C", "H2C" })
+    void connectionShouldNotBeClosedIfThereArePendingRequests(SessionProtocol protocol) throws Exception {
         try (ClientFactory clientFactory = getClientFactory()) {
-            final WebClient client = getWebClientInitiateConnectionShutdownAfterSent(protocol, clientFactory);
+            final WebClient client = newWebClient(protocol, clientFactory, ConnectionShutdownTiming.NEVER);
+            final CompletableFuture<AggregatedHttpResponse> firstResFuture;
+            final CompletableFuture<AggregatedHttpResponse> secondResFuture;
+            try (ClientRequestContextCaptor ctxCaptor = Clients.newContextCaptor()) {
+                // Send the first request synchronously, but don't wait for the response yet.
+                firstResFuture = client.get("/delayed_ok").aggregate();
+                final ClientRequestContext firstCtx = ctxCaptor.get();
+                firstCtx.log().whenRequestComplete().get();
 
-            final CompletableFuture<AggregatedHttpResponse> res = client.get("/plaintext").aggregate();
+                // Initiate the shutdown from the first context after the second request was sent through
+                // the same connection.
+                secondResFuture = client.get("/ok").aggregate();
+                final ClientRequestContext secondCtx = ctxCaptor.getAll().get(1);
+                secondCtx.log().whenRequestComplete().thenRun(() -> {
+                    initiateConnectionShutdown(firstCtx);
+                });
+            }
 
-            // wait completed the shutdown
-            await().until(completed::get);
+            // Wait for both responses.
+            final AggregatedHttpResponse firstRes = firstResFuture.get();
+            final AggregatedHttpResponse secondRes = secondResFuture.get();
 
-            assertThat(connectionClosed.get()).isEqualTo(1);
-            assertThat(res.get().contentUtf8()).isEqualTo("Hello, World!");
-            assertThat(requestLogAccesses.size()).isEqualTo(1);
-            assertThat(requestLogAccesses.get(0).ensureRequestComplete().requestHeaders()
-                                         .get("connection")).isNull();
-        }
-    }
+            assertSingleConnection();
 
-    @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void testAfterSentWithDelayedStreaming(SessionProtocol protocol) throws Exception {
-        try (ClientFactory clientFactory = getClientFactory()) {
-            final WebClient client = getWebClientInitiateConnectionShutdownAfterSent(protocol, clientFactory);
+            assertThat(firstRes.status()).isEqualTo(HttpStatus.OK);
+            assertThat(secondRes.status()).isEqualTo(HttpStatus.OK);
 
-            final CompletableFuture<AggregatedHttpResponse> res = client.get("/delayed_streaming").aggregate();
-
-            // wait completed the shutdown
-            await().until(completed::get);
-
-            assertThat(connectionClosed.get()).isEqualTo(1);
-            assertThat(res.get().contentUtf8()).isEqualTo(
-                    "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!");
-            assertThat(requestLogAccesses.size()).isEqualTo(1);
-            assertThat(requestLogAccesses.get(0).ensureRequestComplete().requestHeaders()
-                                         .get("connection")).isNull();
-        }
-    }
-
-    @ParameterizedTest
-    @EnumSource(value = SessionProtocol.class, names = { "H1C", "H2C" })
-    void testAfterRequestIsConnectedInSameConnection(SessionProtocol protocol) throws Exception {
-
-        try (ClientFactory clientFactory = getClientFactory()) {
-            final WebClient client = WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
-                    (delegate, ctx, req) -> {
-                        requestLogAccesses.add(ctx.log());
-                        return delegate.execute(ctx, req);
-                    }).build();
-
-            final WebClient clientWithDisconnecting = getWebClientInitiateConnectionShutdownAfterSent(
-                    protocol, clientFactory);
-
-            final CompletableFuture<AggregatedHttpResponse> res1 = client.get("/plaintext").aggregate();
-            final CompletableFuture<AggregatedHttpResponse> res2 =
-                    clientWithDisconnecting.get("/delayed_streaming").aggregate();
-            final CompletableFuture<AggregatedHttpResponse> res3 = client.get("/delayed_plaintext").aggregate();
-
-            // wait completed the shutdown
-            await().until(completed::get);
-
-            assertThat(connectionClosed.get()).isEqualTo(1); // check the same connection
-            assertThat(res1.get().contentUtf8()).isEqualTo("Hello, World!");
-            assertThat(res2.get().contentUtf8()).isEqualTo(
-                    "Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!Hello, World!");
-            assertThat(res3.get().contentUtf8()).isEqualTo("Hello, World!");
-            assertThat(requestLogAccesses.size()).isEqualTo(3);
+            assertThat(requestLogAccesses.size()).isEqualTo(2);
             assertThat(requestLogAccesses.get(0).ensureRequestComplete().requestHeaders()
                                          .get("connection")).isNull();
             assertThat(requestLogAccesses.get(1).ensureRequestComplete().requestHeaders()
                                          .get("connection")).isNull();
-            assertThat(requestLogAccesses.get(2).ensureRequestComplete().requestHeaders()
-                                         .get("connection")).isNull();
         }
+
+        assertSingleConnectionNow();
     }
 
     private ClientFactory getClientFactory() {
@@ -230,26 +168,53 @@ public class InitiateConnectionShutdownTest {
                             .build();
     }
 
-    private WebClient getWebClientInitiateConnectionShutdownBeforeSent(SessionProtocol protocol,
-                                                                       ClientFactory clientFactory) {
+    private WebClient newWebClient(SessionProtocol protocol,
+                                   ClientFactory clientFactory,
+                                   ConnectionShutdownTiming timing) {
         return WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
                 (delegate, ctx, req) -> {
                     requestLogAccesses.add(ctx.log());
-                    ctx.initiateConnectionShutdown().whenComplete((ignore, ex) -> completed.set(true));
+                    switch (timing) {
+                        case BEFORE_SENDING_REQ:
+                            initiateConnectionShutdown(ctx);
+                            break;
+                        case AFTER_SENDING_REQ:
+                            ctx.log().whenRequestComplete()
+                               .thenRun(() -> initiateConnectionShutdown(ctx));
+                            break;
+                        case NEVER:
+                            break;
+                        default:
+                            throw new Error();
+                    }
                     return delegate.execute(ctx, req);
                 }).build();
     }
 
-    private WebClient getWebClientInitiateConnectionShutdownAfterSent(SessionProtocol protocol,
-                                                                      ClientFactory clientFactory) {
-        return WebClient.builder(server.uri(protocol)).factory(clientFactory).decorator(
-                (delegate, ctx, req) -> {
-                    requestLogAccesses.add(ctx.log());
-                    final HttpResponse res = delegate.execute(ctx, req);
-                    ctx.log().whenRequestComplete().thenAccept(
-                            it -> ctx.initiateConnectionShutdown()
-                                     .whenComplete((ignore, ex) -> completed.set(true)));
-                    return res;
-                }).build();
+    private void assertSingleConnection() throws InterruptedException {
+        // Wait until the future returned by ctx.initiateConnectionShutdown() is complete.
+        await().until(completed::get);
+
+        // Make sure open one connection was open and then closed.
+        await().untilAsserted(this::assertSingleConnectionNow);
+    }
+
+    private void assertSingleConnectionNow() {
+        assertThat(connectionOpen.get())
+                .withFailMessage(() -> connectionOpen.get() + " connections were open.")
+                .isEqualTo(1);
+        assertThat(connectionClosed.get())
+                .withFailMessage(() -> connectionClosed.get() + " connections were closed.")
+                .isEqualTo(1);
+    }
+
+    private void initiateConnectionShutdown(ClientRequestContext ctx) {
+        ctx.initiateConnectionShutdown().thenRun(() -> completed.set(true));
+    }
+
+    private enum ConnectionShutdownTiming {
+        BEFORE_SENDING_REQ,
+        AFTER_SENDING_REQ,
+        NEVER
     }
 }
