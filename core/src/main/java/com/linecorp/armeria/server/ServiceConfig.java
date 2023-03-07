@@ -86,12 +86,12 @@ public final class ServiceConfig {
                   ScheduledExecutorService blockingTaskExecutor,
                   SuccessFunction successFunction,
                   Path multipartUploadsLocation, List<ShutdownSupport> shutdownSupports,
-                  HttpHeaders defaultHeaders, ServiceErrorHandler defaultServiceErrorHandler) {
+                  HttpHeaders defaultHeaders, ServiceErrorHandler serviceErrorHandler) {
         this(null, route, mappedRoute, service, defaultLogName, defaultServiceName, defaultServiceNaming,
              requestTimeoutMillis, maxRequestLength, verboseResponses, accessLogWriter,
              extractTransientServiceOptions(service),
              blockingTaskExecutor, successFunction,
-             multipartUploadsLocation, shutdownSupports, defaultHeaders, defaultServiceErrorHandler);
+             multipartUploadsLocation, shutdownSupports, defaultHeaders, serviceErrorHandler);
     }
 
     /**
