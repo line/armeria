@@ -18,10 +18,13 @@ package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.junit.Assert.assertEquals;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -48,12 +51,13 @@ import io.grpc.StatusRuntimeException;
 import io.grpc.stub.StreamObserver;
 
 class AsyncServerInterceptorTest {
-
+    private static final AtomicInteger exceptionCounter = new AtomicInteger(0);
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) {
             final GrpcStatusFunction statusFunction = (ctx, throwable, metadata) -> {
+                exceptionCounter.getAndIncrement();
                 if (throwable instanceof AnticipatedException &&
                     "Invalid access".equals(throwable.getMessage())) {
                     return Status.UNAUTHENTICATED;
@@ -87,6 +91,12 @@ class AsyncServerInterceptorTest {
                                                                       .setFillUsername(true)
                                                                       .build());
         assertThat(response.getUsername()).isEqualTo("Armeria");
+        assertEquals(0, exceptionCounter.get());
+    }
+
+    @BeforeEach
+    void beforeEach() {
+        exceptionCounter.set(0);
     }
 
     @ValueSource(strings = { "/non-blocking", "/blocking" })
