@@ -371,13 +371,12 @@ final class HttpServerHandler extends ChannelInboundHandlerAdapter implements Ht
                 }
                 serviceResponse = HttpResponse.ofFailure(cause);
             }
-            final ServiceErrorHandler serviceErrorHandler = serviceCfg.serviceErrorHandler();
 
             serviceResponse = serviceResponse.recover(cause -> {
                 // Store the cause to set as the log.responseCause().
                 CapturedServiceException.set(reqCtx, cause);
                 // Recover the failed response with the error handler.
-                return serviceErrorHandler.onServiceException(reqCtx, cause);
+                return serviceCfg.serviceErrorHandler().onServiceException(reqCtx, cause);
             });
             final HttpResponse res = serviceResponse;
             final EventLoop eventLoop = channel.eventLoop();
