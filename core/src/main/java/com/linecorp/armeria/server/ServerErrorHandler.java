@@ -237,6 +237,10 @@ public interface ServerErrorHandler {
         };
     }
 
+    /**
+     * Casts this {@link ServerErrorHandler} to {@link ServiceErrorHandler}.
+     * @return {@link ServiceErrorHandler} cast from this {@link ServerErrorHandler}.
+     */
     default ServiceErrorHandler asServiceErrorHandler() {
         return this::onServiceException;
     }
