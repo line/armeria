@@ -71,7 +71,7 @@ abstract class AbstractByteStreamMessageBuilder {
      * Sets the buffer size used to create a buffer used to read data from the source.
      * The newly created {@link StreamMessage} will emit {@link HttpData}s chunked to
      * size less than or equal to the buffer size.
-     * If unspecified, {@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE} is used by default.
+     * If unspecified, {@code 8192} is used by default.
      *
      * @throws IllegalArgumentException if the {@code bufferSize} is non-positive.
      */

@@ -270,7 +270,7 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
                     final long actualSkipped;
                     try {
                         actualSkipped = inputStream.skip(skip);
-                    } catch (IOException e) {
+                    } catch (Exception e) {
                         close(e);
                         return;
                     }
@@ -288,7 +288,7 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
                 final byte[] readBytes = new byte[bufferSize];
                 try {
                     len = inputStream.read(readBytes);
-                } catch (IOException e) {
+                } catch (Exception e) {
                     close(e);
                     return;
                 }
@@ -310,8 +310,10 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
                 return;
             }
 
+            if (requested != Long.MAX_VALUE) {
+                requested--;
+            }
             downstream.onNext(data);
-            requested--;
             readBytes();
         }
 
