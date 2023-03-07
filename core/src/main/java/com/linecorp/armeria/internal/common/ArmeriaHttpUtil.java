@@ -732,7 +732,7 @@ public final class ArmeriaHttpUtil {
             throw newInvalidPathException(path);
         }
 
-        if (path.equals(newPath) || !isValidHttp2Path(newPath)) {
+        if (!isValidHttp2Path(newPath)) {
             throw newInvalidPathException(path);
         }
 
