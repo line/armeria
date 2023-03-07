@@ -1,4 +1,4 @@
-/*
+package com.linecorp.armeria.server.grpc/*
  * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
@@ -14,12 +14,13 @@
  * under the License.
  */
 
-import com.linecorp.armeria.server.grpc.AsyncServerInterceptor
+import com.linecorp.armeria.internal.common.kotlin.ArmeriaRequestCoroutineContext
 import io.grpc.Metadata
 import io.grpc.ServerCall
 import io.grpc.ServerCallHandler
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.future.future
 import java.util.concurrent.CompletableFuture
 
@@ -28,7 +29,7 @@ import java.util.concurrent.CompletableFuture
  * caller thread.
  * For example:
  * ```kotlin
- * class AuthServerInterceptor : CoroutineServerInterceptor {
+ * class AuthServerInterceptor : com.linecorp.armeria.server.grpc.CoroutineServerInterceptor {
  *     override suspend fun <ReqT, RespT> suspendedInterceptCall(
  *             call: ServerCall<ReqT, RespT>,
  *             headers: Metadata,
@@ -54,7 +55,9 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
         headers: Metadata,
         next: ServerCallHandler<I, O>
     ): CompletableFuture<ServerCall.Listener<I>> {
-        return GlobalScope.future {
+        check(call is AbstractServerCall) { throw IllegalArgumentException("Cannot use ${AsyncServerInterceptor::class.java.name} with a non-Armeria gRPC server") }
+        val executor = call.blockingExecutor() ?: call.eventLoop()
+        return GlobalScope.future(executor.asCoroutineDispatcher() + ArmeriaRequestCoroutineContext(call.ctx())) {
             suspendedInterceptCall(call, headers, next)
         }
     }

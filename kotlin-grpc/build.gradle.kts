@@ -8,5 +8,5 @@ dependencies {
     implementation(libs.kotlin.reflect)
 
     testImplementation(libs.reactivestreams.tck)
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test")
+    testImplementation(libs.kotlin.coroutines.test)
 }

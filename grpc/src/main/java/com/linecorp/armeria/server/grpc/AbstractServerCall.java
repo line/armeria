@@ -90,7 +90,7 @@ import io.netty.channel.EventLoop;
  * Encapsulates the state of a single server call, reading messages from the client, passing to business logic
  * via {@link Listener}, and writing messages passed back to the response.
  */
-abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
+public abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
 
     private static final Logger logger = LoggerFactory.getLogger(AbstractServerCall.class);
 
@@ -633,5 +633,9 @@ abstract class AbstractServerCall<I, O> extends ServerCall<I, O> {
     @Override
     public final MethodDescriptor<I, O> getMethodDescriptor() {
         return method;
+    }
+
+    final ServiceRequestContext ctx() {
+        return ctx;
     }
 }
