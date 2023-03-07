@@ -39,40 +39,24 @@ public class ConnectionPoolCollectingMetricTest {
     final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
 
     @RegisterExtension
-    static ServerExtension server = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            sb.http(0);
-            sb.https(0);
-            sb.tlsSelfSigned();
-            sb.idleTimeoutMillis(0);
-            sb.requestTimeoutMillis(0);
-            sb.service("/", (ctx, req) -> HttpResponse.of(OK));
-        }
-
-        @Override
-        protected boolean runForEachTest() {
-            return true;
-        }
-    };
+    static ServerExtension server = createServerExtension();
 
     @RegisterExtension
-    static ServerExtension server2 = new ServerExtension() {
-        @Override
-        protected void configure(ServerBuilder sb) {
-            sb.http(0);
-            sb.https(0);
-            sb.tlsSelfSigned();
-            sb.idleTimeoutMillis(0);
-            sb.requestTimeoutMillis(0);
-            sb.service("/", (ctx, req) -> HttpResponse.of(OK));
-        }
+    static ServerExtension server2 = createServerExtension();
 
-        @Override
-        protected boolean runForEachTest() {
-            return true;
-        }
-    };
+    private static ServerExtension createServerExtension() {
+        return new ServerExtension() {
+            @Override
+            protected void configure(ServerBuilder sb) {
+                sb.http(0);
+                sb.https(0);
+                sb.tlsSelfSigned();
+                sb.idleTimeoutMillis(0);
+                sb.requestTimeoutMillis(0);
+                sb.service("/", (ctx, req) -> HttpResponse.of(OK));
+            }
+        };
+    }
 
     @BeforeEach
     void setUp() {
@@ -112,9 +96,9 @@ public class ConnectionPoolCollectingMetricTest {
 
         }
         await().untilAsserted(() -> {
-                assertThat(MoreMeters.measureAll(registry))
-                        .containsEntry("armeria.client.connections#count{state=open}", 2.0)
-                        .containsEntry("armeria.client.connections#count{state=close}", 2.0);
-            });
+            assertThat(MoreMeters.measureAll(registry))
+                    .containsEntry("armeria.client.connections#count{state=open}", 2.0)
+                    .containsEntry("armeria.client.connections#count{state=close}", 2.0);
+        });
     }
 }
