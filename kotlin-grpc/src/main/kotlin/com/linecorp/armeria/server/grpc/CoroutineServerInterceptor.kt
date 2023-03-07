@@ -29,19 +29,17 @@ import java.util.concurrent.CompletableFuture
  * caller thread.
  * For example:
  * ```kotlin
- * class AuthServerInterceptor : com.linecorp.armeria.server.grpc.CoroutineServerInterceptor {
+ * class AuthInterceptor : CoroutineServerInterceptor {
  *     override suspend fun <ReqT, RespT> suspendedInterceptCall(
  *             call: ServerCall<ReqT, RespT>,
  *             headers: Metadata,
  *             next: ServerCallHandler<ReqT, RespT>
- *     ): ServerCall.Listener<ReqT> = suspendCoroutine {
- *         val future = authorizer.authorize(ServiceRequestContext.current(), headers)
- *         future.whenComplete { result, _ ->
- *             if (result) {
- *                 next.startCall(call, headers)
- *             } else {
- *                 throw AnticipatedException("Invalid access")
- *             }
+ *     ): ServerCall.Listener<ReqT> {
+ *         val result = authorizer.authorize(ServiceRequestContext.current(), headers).await()
+ *         if (result) {
+ *             return next.startCall(call, headers)
+ *         } else {
+ *             throw AnticipatedException("Invalid access")
  *         }
  *     }
  * }
@@ -57,11 +55,20 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
     ): CompletableFuture<ServerCall.Listener<I>> {
         check(call is AbstractServerCall) { throw IllegalArgumentException("Cannot use ${AsyncServerInterceptor::class.java.name} with a non-Armeria gRPC server") }
         val executor = call.blockingExecutor() ?: call.eventLoop()
+
         return GlobalScope.future(executor.asCoroutineDispatcher() + ArmeriaRequestCoroutineContext(call.ctx())) {
             suspendedInterceptCall(call, headers, next)
         }
     }
 
+    /**
+     * Suspends the current coroutine and intercepts a gRPC server call with the specified call object, headers, and
+     * next call handler.
+     * @param call [ServerCall]
+     * @param headers [Metadata]
+     * @param next the next [ServerCallHandler]
+     * @return [ServerCall.Listener] for the intercepted call.
+     */
     suspend fun <ReqT, RespT> suspendedInterceptCall(
         call: ServerCall<ReqT, RespT>,
         headers: Metadata,

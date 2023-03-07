@@ -29,14 +29,14 @@ import io.grpc.Metadata
 import io.grpc.ServerCall
 import io.grpc.ServerCallHandler
 import io.grpc.Status
+import kotlinx.coroutines.future.await
 import org.junit.jupiter.api.extension.RegisterExtension
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.TimeUnit
-import kotlin.coroutines.suspendCoroutine
 
 internal class CoroutineServerInterceptorTest {
     private class AuthInterceptor : CoroutineServerInterceptor {
-        private val authorizer = Authorizer { ctx: ServiceRequestContext, metadata: Metadata? ->
+        private val authorizer = Authorizer { ctx: ServiceRequestContext, metadata: Metadata ->
             val future = CompletableFuture<Boolean>()
             ctx.eventLoop().schedule({
                 if (ctx.request().headers().contains("Authorization", "Bearer token-1234")) {
@@ -52,14 +52,12 @@ internal class CoroutineServerInterceptorTest {
             call: ServerCall<ReqT, RespT>,
             headers: Metadata,
             next: ServerCallHandler<ReqT, RespT>
-        ): ServerCall.Listener<ReqT> = suspendCoroutine {
-            val future = authorizer.authorize(ServiceRequestContext.current(), headers)
-            future.whenComplete { result, _ ->
-                if (result) {
-                    next.startCall(call, headers)
-                } else {
-                    throw AnticipatedException("Invalid access")
-                }
+        ): ServerCall.Listener<ReqT> {
+            val result = authorizer.authorize(ServiceRequestContext.current(), headers).await()
+            if (result) {
+                return next.startCall(call, headers)
+            } else {
+                throw AnticipatedException("Invalid access")
             }
         }
     }
