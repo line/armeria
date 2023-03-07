@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -26,7 +26,7 @@ import java.net.InetSocketAddress;
 
 import static java.util.Objects.requireNonNull;
 
-public class MetricCollectingConnectionPoolListener implements ConnectionPoolListener {
+final class MetricCollectingConnectionPoolListener implements ConnectionPoolListener {
     private final MeterRegistry registry;
     private final String name;
 

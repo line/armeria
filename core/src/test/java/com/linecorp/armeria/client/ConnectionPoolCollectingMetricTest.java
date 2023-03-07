@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 LINE Corporation
+ * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -110,11 +110,11 @@ public class ConnectionPoolCollectingMetricTest {
                     .containsEntry("armeria.client.connections#count{state=open}", 2.0)
                     .containsEntry("armeria.client.connections#count{state=close}", 0.0);
 
-            await().untilAsserted(() -> {
+        }
+        await().untilAsserted(() -> {
                 assertThat(MoreMeters.measureAll(registry))
                         .containsEntry("armeria.client.connections#count{state=open}", 2.0)
                         .containsEntry("armeria.client.connections#count{state=close}", 2.0);
             });
-        }
     }
 }
