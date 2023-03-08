@@ -38,10 +38,8 @@ import io.micrometer.core.instrument.Tag;
 
 public class ConnectionPoolCollectingMetricTest {
 
-    public static final String LOCAL_CONNECTION_OPEN =
-            "armeria.client.connections#count{localAddr=localhost,remoteAddr=127.0.0.1,state=open}";
-    public static final String LOCAL_CONNECTION_CLOSED =
-            "armeria.client.connections#count{localAddr=localhost,remoteAddr=127.0.0.1,state=closed}";
+    public static final String CONNECTION_OPEN = "armeria.client.connections#count{state=open}";
+    public static final String CONNECTION_CLOSED = "armeria.client.connections#count{state=closed}";
     private ConnectionPoolListener connectionPoolListener;
     final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
 
@@ -86,12 +84,12 @@ public class ConnectionPoolCollectingMetricTest {
 
             assertThat(client.get("/").aggregate().join().status()).isEqualTo(OK);
 
-            //due to the desired protocol and the actual protocol being different. Hence ignore checking the protocol tag here.
-            Predicate<Tag> excludeProtocolTagFilter = tag -> !ConnectionPoolMetrics.PROTOCOL.equals(tag.getKey());
+            //only check state tag due to addresses and protocol are not fixed and depending on multiple factors
+            Predicate<Tag> stateTagOnly = tag -> ConnectionPoolMetrics.STATE.equals(tag.getKey());
 
-            await().untilAsserted(() -> assertThat(MoreMeters.measureAll(registry, excludeProtocolTagFilter))
-                    .containsEntry(LOCAL_CONNECTION_OPEN, 1.0)
-                    .doesNotContainKey(LOCAL_CONNECTION_CLOSED));
+            await().untilAsserted(() -> assertThat(MoreMeters.measureAll(registry, stateTagOnly))
+                    .containsEntry(CONNECTION_OPEN, 1.0)
+                    .doesNotContainKey(CONNECTION_CLOSED));
             final WebClient client2 = WebClient.builder(server2.uri(protocol))
                                                .factory(factory)
                                                .responseTimeoutMillis(0)
@@ -99,13 +97,13 @@ public class ConnectionPoolCollectingMetricTest {
 
             assertThat(client2.get("/").aggregate().join().status()).isEqualTo(OK);
 
-            await().untilAsserted(() -> assertThat(MoreMeters.measureAll(registry, excludeProtocolTagFilter))
-                    .containsEntry(LOCAL_CONNECTION_OPEN, 2.0)
-                    .doesNotContainKey(LOCAL_CONNECTION_CLOSED));
+            await().untilAsserted(() -> assertThat(MoreMeters.measureAll(registry, stateTagOnly))
+                    .containsEntry(CONNECTION_OPEN, 2.0)
+                    .doesNotContainKey(CONNECTION_CLOSED));
 
-            await().untilAsserted(() -> assertThat(MoreMeters.measureAll(registry, excludeProtocolTagFilter))
-                    .containsEntry(LOCAL_CONNECTION_OPEN, 2.0)
-                    .containsEntry(LOCAL_CONNECTION_CLOSED, 2.0));
+            await().untilAsserted(() -> assertThat(MoreMeters.measureAll(registry, stateTagOnly))
+                    .containsEntry(CONNECTION_OPEN, 2.0)
+                    .containsEntry(CONNECTION_CLOSED, 2.0));
         }
     }
 }

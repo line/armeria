@@ -29,6 +29,7 @@ final class ConnectionPoolMetrics {
     public static final String PROTOCOL = "protocol";
     public static final String REMOTE_ADDR = "remoteAddr";
     public static final String LOCAL_ADDR = "localAddr";
+    public static final String STATE = "state";
     private Counter.Builder connectionOpened;
     private Counter.Builder connectionClosed;
     private MeterRegistry meterRegistry;
@@ -44,21 +45,21 @@ final class ConnectionPoolMetrics {
     void increaseConnOpened(SessionProtocol protocol, InetSocketAddress remoteAddr,
                             InetSocketAddress localAddr) {
         Counter connOpenedCounter = connectionOpened.tags(PROTOCOL, protocol.name(),
-                                                          REMOTE_ADDR, remoteAddr.getHostName(),
-                                                          LOCAL_ADDR, localAddr.getHostName()).register(meterRegistry);
+                                                          REMOTE_ADDR, remoteAddr.getHostString(),
+                                                          LOCAL_ADDR, localAddr.getHostString()).register(meterRegistry);
         connOpenedCounter.increment();
     }
 
     void increaseConnClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
                             InetSocketAddress localAddr) {
         Counter connClosedCounter = connectionClosed.tags(PROTOCOL, protocol.name(),
-                                                          REMOTE_ADDR, remoteAddr.getHostName(),
-                                                          LOCAL_ADDR, localAddr.getHostName()).register(meterRegistry);
+                                                          REMOTE_ADDR, remoteAddr.getHostString(),
+                                                          LOCAL_ADDR, localAddr.getHostString()).register(meterRegistry);
         connClosedCounter.increment();
     }
 
     private void initCounters(MeterIdPrefix idPrefix) {
-        connectionOpened = Counter.builder(idPrefix.name()).tags("state", "open");
-        connectionClosed = Counter.builder(idPrefix.name()).tags("state", "closed");
+        connectionOpened = Counter.builder(idPrefix.name()).tags(STATE, "open");
+        connectionClosed = Counter.builder(idPrefix.name()).tags(STATE, "closed");
     }
 }
