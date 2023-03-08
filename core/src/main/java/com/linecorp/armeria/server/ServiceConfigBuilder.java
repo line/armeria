@@ -220,7 +220,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
     }
 
     @Override
-    public ServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler) {
+    public ServiceConfigBuilder errorHandler(ServiceErrorHandler serviceErrorHandler) {
         requireNonNull(serviceErrorHandler, "serviceErrorHandler");
         this.serviceErrorHandler = serviceErrorHandler;
         return this;
@@ -273,8 +273,8 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                 multipartUploadsLocation != null ? multipartUploadsLocation : defaultMultipartUploadsLocation,
                 ImmutableList.copyOf(shutdownSupports),
                 mergeDefaultHeaders(virtualHostDefaultHeaders.toBuilder(), defaultHeaders.build()),
-                serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler) :
-                defaultServiceErrorHandler);
+                serviceErrorHandler != null ? serviceErrorHandler.orElse(defaultServiceErrorHandler)
+                                            : defaultServiceErrorHandler);
     }
 
     @Override

@@ -59,6 +59,7 @@ class ServerErrorHandlerTest {
 
         assertThat(response.status()).isSameAs(HttpStatus.BAD_REQUEST);
     }
+
     @Test
     void testOrElse() {
         final ServerErrorHandler handler = new ServerErrorHandler() {

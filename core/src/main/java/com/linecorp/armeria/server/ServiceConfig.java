@@ -124,7 +124,7 @@ public final class ServiceConfig {
         this.successFunction = requireNonNull(successFunction, "successFunction");
         this.multipartUploadsLocation = requireNonNull(multipartUploadsLocation, "multipartUploadsLocation");
         this.shutdownSupports = ImmutableList.copyOf(requireNonNull(shutdownSupports, "shutdownSupports"));
-        this.defaultHeaders = defaultHeaders;
+        this.defaultHeaders = requireNonNull(defaultHeaders, "defaultHeaders");
         this.serviceErrorHandler = requireNonNull(serviceErrorHandler, "serviceErrorHandler");
 
         handlesCorsPreflight = service.as(CorsService.class) != null;

@@ -71,6 +71,7 @@ import com.linecorp.armeria.common.logging.RequestLog;
  * }</pre>
  *
  * @see ServerBuilder#errorHandler(ServerErrorHandler)
+ * @see ServiceErrorHandler
  */
 @UnstableApi
 @FunctionalInterface
@@ -131,7 +132,7 @@ public interface ServerErrorHandler {
     /**
      * Returns an {@link AggregatedHttpResponse} generated from the given {@link HttpStatus}, {@code message}
      * and {@link Throwable}. When {@code null} is returned, the next {@link ServerErrorHandler}
-     * in the invocation chain will be used as a fall back (See {@link #orElse(ServerErrorHandler)}
+     * in the invocation chain will be used as a fallback (See {@link #orElse(ServerErrorHandler)}
      * for more information).
      *
      * <p>Note: This method can be invoked by Armeria in combination with the other methods in
@@ -242,6 +243,20 @@ public interface ServerErrorHandler {
      * @return {@link ServiceErrorHandler} cast from this {@link ServerErrorHandler}.
      */
     default ServiceErrorHandler asServiceErrorHandler() {
-        return this::onServiceException;
+        return new ServiceErrorHandler() {
+            @Override
+            public @Nullable HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
+                return ServerErrorHandler.this.onServiceException(ctx, cause);
+            }
+
+            @Override
+            public @Nullable AggregatedHttpResponse renderStatus(ServiceConfig config,
+                                                                 @Nullable RequestHeaders headers,
+                                                                 HttpStatus status,
+                                                                 @Nullable String description,
+                                                                 @Nullable Throwable cause) {
+                return ServerErrorHandler.this.renderStatus(config, headers, status, description, cause);
+            }
+        };
     }
 }

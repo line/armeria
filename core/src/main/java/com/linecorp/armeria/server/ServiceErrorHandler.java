@@ -18,10 +18,55 @@ package com.linecorp.armeria.server;
 
 import static java.util.Objects.requireNonNull;
 
+import com.linecorp.armeria.common.AggregatedHttpResponse;
+import com.linecorp.armeria.common.ContentTooLargeException;
 import com.linecorp.armeria.common.HttpResponse;
+import com.linecorp.armeria.common.HttpStatus;
+import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.annotation.UnstableApi;
+import com.linecorp.armeria.common.logging.RequestLog;
 
+/**
+ * Provides the error responses in case of unexpected exceptions.
+ * Implement this interface to customize Armeria's error responses.
+ *
+ * <pre>{@code
+ * ServiceErrorHandler errorHandler = (ctx, cause) -> {
+ *     if (cause instanceof IllegalArgumentException) {
+ *         return HttpResponse.of(HttpStatus.BAD_REQUEST);
+ *     }
+ *
+ *     // Return null to let ServerErrorHandler.ofDefault() handle the exception.
+ *     return null;
+ * }
+ *
+ * Server.builder().route().errorHandler(errorHandler)...
+ * }</pre>
+ *
+ * <h2>Recording a service exception (or not)</h2>
+ *
+ * <p>By default, an exception raised by a service or a decorator is captured and recorded into
+ * {@link RequestLog#responseCause()}. You can keep Armeria from recording it while sending the
+ * desired response by returning a failed response whose cause is an {@link HttpStatusException} or
+ * {@link HttpResponseException}:
+ * <pre>{@code
+ * ServerErrorHandler errorHandler = (ctx, cause) -> {
+ *     if (cause instanceof IllegalArgumentException) {
+ *         // IllegalArgumentException is captured into RequestLog#responseCause().
+ *         return HttpResponse.of(HttpStatus.BAD_REQUEST);
+ *     }
+ *
+ *     if (cause instanceof NotFoundException) {
+ *         // NotFoundException is NOT captured into RequestLog#responseCause().
+ *         return HttpResponse.ofFailure(HttpStatusException.of(HttpStatus.NOT_FOUND));
+ *     }
+ *     ...
+ * }
+ * }</pre>
+ *
+ * @see ServerErrorHandler
+ */
 @UnstableApi
 @FunctionalInterface
 public interface ServiceErrorHandler {
@@ -37,6 +82,31 @@ public interface ServiceErrorHandler {
      */
     @Nullable
     HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause);
+
+    /**
+     * Returns an {@link AggregatedHttpResponse} generated from the given {@link HttpStatus}, {@code message}
+     * and {@link Throwable}. When {@code null} is returned, the next {@link ServerErrorHandler}
+     * in the invocation chain will be used as a fallback (See {@link #orElse(ServiceErrorHandler)}
+     * for more information).
+     *
+     * @param config the {@link ServiceConfig} that provides the configuration properties.
+     * @param headers the received {@link RequestHeaders}, or {@code null} in case of severe protocol violation.
+     * @param status the desired {@link HttpStatus} of the error response.
+     * @param description an optional human-readable description of the error.
+     * @param cause an optional exception that may contain additional information about the error, such as
+     *              {@link ContentTooLargeException}.
+     *
+     * @return an {@link AggregatedHttpResponse}, or {@code null} to let the next handler specified with
+     *         {@link #orElse(ServiceErrorHandler)} handle the event.
+     */
+    @Nullable
+    default AggregatedHttpResponse renderStatus(ServiceConfig config,
+                                                @Nullable RequestHeaders headers,
+                                                HttpStatus status,
+                                                @Nullable String description,
+                                                @Nullable Throwable cause) {
+        return null;
+    }
 
     /**
      * Returns a newly created {@link ServiceErrorHandler} that tries this {@link ServiceErrorHandler} first and

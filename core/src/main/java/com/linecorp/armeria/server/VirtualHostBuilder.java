@@ -149,7 +149,7 @@ public final class VirtualHostBuilder implements TlsSetters {
     @Nullable
     private Path multipartUploadsLocation;
     @Nullable
-    private ServerErrorHandler errorHandler;
+    private ServiceErrorHandler errorHandler;
 
     /**
      * Creates a new {@link VirtualHostBuilder}.
@@ -820,15 +820,9 @@ public final class VirtualHostBuilder implements TlsSetters {
 
     /**
      * Sets the {@link ServiceErrorHandler} that handles exceptions thrown in this virtual host.
-     * @param errorHandler the {@link ServerErrorHandler} to handle exceptions.
      */
-    public VirtualHostBuilder errorHandler(ServerErrorHandler errorHandler) {
-        requireNonNull(errorHandler, "errorHandler");
-        if (errorHandler != ServerErrorHandler.ofDefault()) {
-            // Ensure that ServerErrorhandler never returns null by falling back to the default
-            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
-        }
-        this.errorHandler = errorHandler;
+    public VirtualHostBuilder errorHandler(ServiceErrorHandler errorHandler) {
+        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         return this;
     }
 
@@ -1164,10 +1158,9 @@ public final class VirtualHostBuilder implements TlsSetters {
         final HttpHeaders defaultHeaders =
                 mergeDefaultHeaders(template.defaultHeaders, this.defaultHeaders.build());
 
+        final ServiceErrorHandler serverErrorHandler = serverBuilder.errorHandler().asServiceErrorHandler();
         final ServiceErrorHandler defaultErrorHandler =
-                errorHandler != null ?
-                errorHandler.asServiceErrorHandler().orElse(template.errorHandler.asServiceErrorHandler())
-                                     : template.errorHandler.asServiceErrorHandler();
+                errorHandler != null ? errorHandler.orElse(serverErrorHandler) : serverErrorHandler;
 
         assert defaultServiceNaming != null;
         assert rejectedRouteHandler != null;

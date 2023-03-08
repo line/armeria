@@ -54,24 +54,25 @@ public class RoutersBenchmark {
         final Route route1 = Route.builder().exact("/grpc.package.Service/Method1").build();
         final Route route2 = Route.builder().exact("/grpc.package.Service/Method2").build();
         final Path multipartUploadsLocation = Flags.defaultMultipartUploadsLocation();
+        final ServiceErrorHandler serviceErrorHandler = ServerErrorHandler.ofDefault().asServiceErrorHandler();
         SERVICES = ImmutableList.of(
                 new ServiceConfig(route1, route1,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(), multipartUploadsLocation, ImmutableList.of(),
-                                  HttpHeaders.of()),
+                                  HttpHeaders.of(), serviceErrorHandler),
                 new ServiceConfig(route2, route2,
                                   SERVICE, defaultLogName, defaultServiceName, defaultServiceNaming, 0, 0,
                                   false, AccessLogWriter.disabled(), CommonPools.blockingTaskExecutor(),
                                   SuccessFunction.always(), multipartUploadsLocation, ImmutableList.of(),
-                                  HttpHeaders.of())
+                                  HttpHeaders.of(), serviceErrorHandler)
         );
         FALLBACK_SERVICE = new ServiceConfig(Route.ofCatchAll(), Route.ofCatchAll(), SERVICE,
                                              defaultLogName, defaultServiceName,
                                              defaultServiceNaming, 0, 0, false, AccessLogWriter.disabled(),
                                              CommonPools.blockingTaskExecutor(),
                                              SuccessFunction.always(), multipartUploadsLocation,
-                                             ImmutableList.of(), HttpHeaders.of());
+                                             ImmutableList.of(), HttpHeaders.of(), serviceErrorHandler);
         HOST = new VirtualHost(
                 "localhost", "localhost", 0, null, SERVICES, FALLBACK_SERVICE, RejectedRouteHandler.DISABLED,
                 unused -> NOPLogger.NOP_LOGGER, defaultServiceNaming, 0, 0, false,
