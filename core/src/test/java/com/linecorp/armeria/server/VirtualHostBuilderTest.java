@@ -23,6 +23,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import java.nio.file.FileSystems;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -331,13 +332,14 @@ class VirtualHostBuilderTest {
 
     @Test
     void multipartUploadsLocationCustomization() {
+        Path multipartUploadsLocation = FileSystems.getDefault().getPath("logs", "access.log");
         final VirtualHost h1 = new VirtualHostBuilder(Server.builder(), false)
-                .multipartUploadsLocation(FileSystems.getDefault().getPath("logs", "access.log"))
+                .multipartUploadsLocation(multipartUploadsLocation)
                 .build(template, noopDependencyInjector);
-        assertThat(h1.multipartUploadsLocation().getFileName().toString()).isEqualTo("access.log");
+        assertThat(h1.multipartUploadsLocation()).isEqualTo(multipartUploadsLocation);
 
         final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
                 .build(template, noopDependencyInjector);
-        assertThat(h2.multipartUploadsLocation().getFileName().toString()).isEqualTo("multipart-uploads");
+        assertThat(h2.multipartUploadsLocation()).isEqualTo(template.multipartUploadsLocation);
     }
 }
