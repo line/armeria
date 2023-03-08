@@ -501,4 +501,12 @@ public final class VirtualHost {
     String toStringWithoutTypeName() {
         return toString(false);
     }
+
+
+    ServerErrorHandler errorHandler() {
+        if (serverConfig == null) {
+            throw new IllegalStateException("server is not configured yet.");
+        }
+        return serverConfig.errorHandler();
+    }
 }

@@ -1920,7 +1920,7 @@ public final class ServerBuilder implements TlsSetters {
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
-        final ServerErrorHandler errorHandler = virtualHostTemplate.errorHandler();
+        final ServerErrorHandler errorHandler = defaultVirtualHost.errorHandler();
 
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
         return new DefaultServerConfig(
