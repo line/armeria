@@ -36,6 +36,11 @@ class ThriftMetadataAccessTest {
     void basicCase() {
         assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.singleton("armeria-thrift0.13"))).isTrue();
         assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.singleton("armeria-thrift0.15"))).isFalse();
+
+        assertThat(ThriftMetadataAccess.needsPreInitialization(
+                Sets.set("armeria-thrift0.13", "armeria-thrift0.14", "armeria-thrift0.15"))).isTrue();
+        assertThat(ThriftMetadataAccess.needsPreInitialization(
+                Sets.set("armeria-thrift0.15", "armeria-thrift0.16", "armeria-thrift0.17"))).isFalse();
     }
 
     @Test

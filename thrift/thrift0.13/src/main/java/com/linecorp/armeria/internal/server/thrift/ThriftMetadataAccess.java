@@ -42,7 +42,8 @@ final class ThriftMetadataAccess {
 
     static {
         try {
-            final Set<String> artifacts = Version.getAll(ThriftMetadataAccess.class.getClassLoader()).keySet().stream()
+            final Set<String> artifacts = Version.getAll(ThriftMetadataAccess.class.getClassLoader())
+                                                 .keySet().stream()
                                                  .filter(name -> name.startsWith("armeria-thrift"))
                                                  .collect(Collectors.toSet());
             preInitializeThriftClass = needsPreInitialization(artifacts);
@@ -61,7 +62,7 @@ final class ThriftMetadataAccess {
             return true;
         }
         for (String artifact : artifacts) {
-            if(needsPreInitialization(artifact)) {
+            if (needsPreInitialization(artifact)) {
                 return true;
             }
         }
