@@ -292,6 +292,7 @@ final class ServiceConfigBuilder implements ServiceConfigSetters {
                           .add("multipartUploadsLocation", multipartUploadsLocation)
                           .add("shutdownSupports", shutdownSupports)
                           .add("defaultHeaders", defaultHeaders)
+                          .add("ServiceErrorHandler", serviceErrorHandler)
                           .toString();
     }
 }
