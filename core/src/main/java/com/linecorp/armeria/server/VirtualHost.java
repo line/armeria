@@ -397,7 +397,7 @@ public final class VirtualHost {
                 return routed;
             case NOT_MATCHED:
                 if (routingCtx.method() == HttpMethod.HEAD) {
-                    return findServiceConfig(routingCtx.withMethod(HttpMethod.GET));
+                    return findServiceConfig(routingCtx.withMethod(HttpMethod.GET), useFallbackService);
                 }
 
                 if (!useFallbackService) {
