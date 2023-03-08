@@ -18,8 +18,6 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-import java.util.Objects;
-
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
 
@@ -33,8 +31,8 @@ import com.linecorp.armeria.testing.server.ServiceRequestContextCaptor;
 
 class RequestIdHeadersTest {
 
-    static final String REQUEST_ID_KEY = "X-RequestId";
-    static final String REQUEST_ID_VAL = "123";
+    private static final String REQUEST_ID_KEY = "X-RequestId";
+    private static final String REQUEST_ID_VAL = "123";
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
@@ -43,9 +41,10 @@ class RequestIdHeadersTest {
             sb.service("/",
                        (ctx, req) -> HttpResponse.of(200))
               .requestIdGenerator(
-                      (ctx) -> {
-                          if (Objects.equals(ctx.headers().get(REQUEST_ID_KEY), REQUEST_ID_VAL)) {
-                              return RequestId.of(Long.parseLong(ctx.headers().get(REQUEST_ID_KEY)));
+                      ctx -> {
+                          final String requestIdVal = ctx.headers().get(REQUEST_ID_KEY);
+                          if (REQUEST_ID_VAL.equals(requestIdVal)) {
+                              return RequestId.of(Long.parseLong(requestIdVal));
                           } else {
                               throw new RuntimeException("raise_exception");
                           }
@@ -64,7 +63,7 @@ class RequestIdHeadersTest {
                                                       .header(REQUEST_ID_KEY, REQUEST_ID_VAL)
                                                       .execute();
 
-        assertThat(captor.size()).isEqualTo(1);
+        assertThat(captor.size()).isOne();
 
         final ServiceRequestContext capturedContext = captor.take();
         final RequestId expected = RequestId.of(123L);
@@ -83,7 +82,7 @@ class RequestIdHeadersTest {
                                                       .get("/")
                                                       .execute();
 
-        assertThat(captor.size()).isEqualTo(1);
+        assertThat(captor.size()).isOne();
         assertThat(response.status()).isEqualTo(HttpStatus.OK);
         assertThat(captor.take().id().shortText()).hasSize(8);
     }
