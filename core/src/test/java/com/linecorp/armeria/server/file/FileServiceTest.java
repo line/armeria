@@ -300,21 +300,21 @@ class FileServiceTest {
             // Ensure auto-redirect without query works as expected.
             HttpUriRequest req = new HttpGet(baseUri + "/fs/auto_index");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertStatusLine(res, 307);
+                assertStatusCode(res, 307);
                 assertThat(header(res, "location")).isEqualTo(basePath + "/fs/auto_index/");
             }
 
             // Ensure auto-redirect with query works as expected.
             req = new HttpGet(baseUri + "/fs/auto_index?foobar=1");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertStatusLine(res, 307);
+                assertStatusCode(res, 307);
                 assertThat(header(res, "location")).isEqualTo(basePath + "/fs/auto_index/?foobar=1");
             }
 
             // Ensure directory listing works as expected.
             req = new HttpGet(baseUri + "/fs/auto_index/");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertStatusLine(res, 200);
+                assertStatusCode(res, 200);
                 final String content = contentString(res);
                 assertThat(content)
                         .contains("Directory listing: " + basePath + "/fs/auto_index/")
@@ -329,7 +329,7 @@ class FileServiceTest {
             // Ensure directory listing on an empty directory works as expected.
             req = new HttpGet(baseUri + "/fs/auto_index/empty_child_dir/");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertStatusLine(res, 200);
+                assertStatusCode(res, 200);
                 final String content = contentString(res);
                 assertThat(content)
                         .contains("Directory listing: " + basePath + "/fs/auto_index/empty_child_dir/")
@@ -341,7 +341,7 @@ class FileServiceTest {
             // even with query parameters.
             req = new HttpGet(baseUri + "/fs/auto_index/empty_child_dir/?foo=1");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertStatusLine(res, 200);
+                assertStatusCode(res, 200);
                 final String content = contentString(res);
                 assertThat(content)
                         .contains("Directory listing: " + basePath + "/fs/auto_index/empty_child_dir/")
@@ -352,7 +352,7 @@ class FileServiceTest {
             // Ensure custom index.html takes precedence over auto-generated directory listing.
             req = new HttpGet(baseUri + "/fs/auto_index/child_dir_with_custom_index/");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertStatusLine(res, 200);
+                assertStatusCode(res, 200);
                 assertThat(contentString(res)).isEqualTo("custom_index_file");
             }
 
@@ -360,7 +360,7 @@ class FileServiceTest {
             // even with query parameters.
             req = new HttpGet(baseUri + "/fs/auto_index/child_dir_with_custom_index/?foo=1");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertStatusLine(res, 200);
+                assertStatusCode(res, 200);
                 assertThat(contentString(res)).isEqualTo("custom_index_file");
             }
         }
@@ -659,7 +659,7 @@ class FileServiceTest {
                                     @Nullable String expectedContentType,
                                     Consumer<String> contentAssertions) throws Exception {
 
-        assertStatusLine(res, 200);
+        assertStatusCode(res, 200);
 
         // Ensure that the 'Date' header exists and is well-formed.
         final String date = headerOrNull(res, HttpHeaders.DATE);
@@ -731,7 +731,7 @@ class FileServiceTest {
 
         try (CloseableHttpResponse res = hc.execute(req5)) {
             // Should not receive '304 Not Modified' because the etag did not match.
-            assertStatusLine(res, 200);
+            assertStatusCode(res, 200);
 
             // Read the content fully so that Apache HC does not close the connection prematurely.
             ByteStreams.exhaust(res.getEntity().getContent());
@@ -741,7 +741,7 @@ class FileServiceTest {
     private static void assert304NotModified(
             CloseableHttpResponse res, String expectedEtag, String expectedLastModified) {
 
-        assertStatusLine(res, 304);
+        assertStatusCode(res, 304);
 
         // Ensure that the 'ETag' header did not change.
         assertThat(headerOrNull(res, HttpHeaders.ETAG)).isEqualTo(expectedEtag);
@@ -757,12 +757,12 @@ class FileServiceTest {
     }
 
     private static void assert404NotFound(CloseableHttpResponse res) {
-        assertStatusLine(res, 404);
+        assertStatusCode(res, 404);
         // Ensure that the 'Last-Modified' header does not exist.
         assertThat(res.getFirstHeader(HttpHeaders.LAST_MODIFIED)).isNull();
     }
 
-    private static void assertStatusLine(CloseableHttpResponse res, int expectedStatus) {
+    private static void assertStatusCode(CloseableHttpResponse res, int expectedStatus) {
         assertThat(res.getCode()).isEqualTo(expectedStatus);
     }
 
