@@ -1929,12 +1929,6 @@ public final class ServerBuilder implements TlsSetters {
                 ChannelUtil.applyDefaultChannelOptions(
                         childChannelOptions, idleTimeoutMillis, pingIntervalMillis);
 
-        ServerErrorHandler errorHandler = this.errorHandler;
-        if (errorHandler != ServerErrorHandler.ofDefault()) {
-            // Ensure that ServerErrorHandler never returns null by falling back to the default.
-            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
-        }
-
         final ScheduledExecutorService blockingTaskExecutor = defaultVirtualHost.blockingTaskExecutor();
         return new DefaultServerConfig(
                 ports, setSslContextIfAbsent(defaultVirtualHost, defaultSslContext),
