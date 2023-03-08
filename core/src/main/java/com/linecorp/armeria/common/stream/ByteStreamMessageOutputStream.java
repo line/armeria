@@ -33,7 +33,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class ByteStreamMessageOutputStream implements ByteStreamMessage {
 
-    private final StreamMessageWriter<HttpData> outputStreamWriter = new DefaultStreamMessage<>();
+    private final StreamWriter<HttpData> outputStreamWriter = new DefaultStreamMessage<>();
     private final ByteStreamMessage delegate = ByteStreamMessage.of(outputStreamWriter);
 
     private final Consumer<? super OutputStream> outputStreamConsumer;
@@ -94,12 +94,12 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
     private static final class OutputStreamSubscriber implements Subscriber<HttpData> {
 
         private final Subscriber<? super HttpData> downstream;
-        private final StreamMessageWriter<HttpData> outputStreamWriter;
+        private final StreamWriter<HttpData> outputStreamWriter;
         private final Consumer<? super OutputStream> outputStreamConsumer;
         private final Executor blockingTaskExecutor;
 
         OutputStreamSubscriber(Subscriber<? super HttpData> downstream,
-                               StreamMessageWriter<HttpData> outputStreamWriter,
+                               StreamWriter<HttpData> outputStreamWriter,
                                Consumer<? super OutputStream> outputStreamConsumer,
                                Executor blockingTaskExecutor) {
             requireNonNull(downstream, "downstream");
@@ -145,9 +145,9 @@ final class ByteStreamMessageOutputStream implements ByteStreamMessage {
 
     private static final class StreamWriterOutputStream extends OutputStream {
 
-        private final StreamMessageWriter<HttpData> streamWriter;
+        private final StreamWriter<HttpData> streamWriter;
 
-        StreamWriterOutputStream(StreamMessageWriter<HttpData> streamWriter) {
+        StreamWriterOutputStream(StreamWriter<HttpData> streamWriter) {
             this.streamWriter = streamWriter;
         }
 

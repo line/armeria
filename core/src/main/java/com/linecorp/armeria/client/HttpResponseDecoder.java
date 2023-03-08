@@ -21,6 +21,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.function.Supplier;
 
+import org.reactivestreams.Subscriber;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -35,6 +36,7 @@ import com.linecorp.armeria.common.annotation.Nullable;
 import com.linecorp.armeria.common.logging.RequestLogProperty;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.StreamWriter;
+import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.common.util.Exceptions;
 import com.linecorp.armeria.internal.client.ClientRequestContextExtension;
 import com.linecorp.armeria.internal.common.CancellationScheduler;
@@ -47,6 +49,7 @@ import io.netty.channel.Channel;
 import io.netty.channel.EventLoop;
 import io.netty.util.collection.IntObjectHashMap;
 import io.netty.util.collection.IntObjectMap;
+import io.netty.util.concurrent.EventExecutor;
 
 abstract class HttpResponseDecoder {
 
@@ -185,10 +188,6 @@ abstract class HttpResponseDecoder {
             this.responseTimeoutMillis = responseTimeoutMillis;
         }
 
-        CompletableFuture<Void> whenComplete() {
-            return delegate.whenComplete();
-        }
-
         long maxContentLength() {
             return maxContentLength;
         }
@@ -214,6 +213,37 @@ abstract class HttpResponseDecoder {
         @Override
         public boolean isOpen() {
             return delegate.isOpen();
+        }
+
+        @Override
+        public boolean isEmpty() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public long demand() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public CompletableFuture<Void> whenComplete() {
+            return delegate.whenComplete();
+        }
+
+        @Override
+        public void subscribe(Subscriber<? super HttpObject> subscriber, EventExecutor executor,
+                              SubscriptionOption... options) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void abort() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public void abort(Throwable cause) {
+            throw new UnsupportedOperationException();
         }
 
         /**
