@@ -400,7 +400,7 @@ class StreamMessageTest {
         public Stream<? extends Arguments> provideArguments(ExtensionContext context) {
             final ByteBuf defaultBuf = newPooledBuffer();
             final HttpData defaultData = HttpData.wrap(defaultBuf).withEndOfStream();
-            final StreamMessageWriter<HttpData> defaultStream = StreamMessage.streaming();
+            final StreamWriter<HttpData> defaultStream = StreamMessage.streaming();
 
             final ByteBuf fixedBuf = newPooledBuffer();
             final HttpData fixedData = HttpData.wrap(fixedBuf).withEndOfStream();

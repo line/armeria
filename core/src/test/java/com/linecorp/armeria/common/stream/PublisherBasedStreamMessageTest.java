@@ -100,7 +100,7 @@ class PublisherBasedStreamMessageTest {
     @Test
     void notifyCancellation() {
         final ByteBuf buf = newPooledBuffer();
-        final StreamMessageWriter<HttpData> delegate = StreamMessage.streaming();
+        final StreamWriter<HttpData> delegate = StreamMessage.streaming();
         delegate.write(HttpData.wrap(buf));
         final PublisherBasedStreamMessage<HttpData> p = new PublisherBasedStreamMessage<>(delegate);
         SubscriptionOptionTest.notifyCancellation(buf, p);
@@ -108,7 +108,7 @@ class PublisherBasedStreamMessageTest {
 
     @Test
     void cancellationIsNotPropagatedByDefault() {
-        final StreamMessageWriter<Integer> delegate = StreamMessage.streaming();
+        final StreamWriter<Integer> delegate = StreamMessage.streaming();
         final PublisherBasedStreamMessage<Integer> p = new PublisherBasedStreamMessage<>(delegate);
 
         p.subscribe(new Subscriber<Integer>() {

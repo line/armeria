@@ -55,7 +55,7 @@ class FilteredStreamMessageTest {
                            int expectedRefCntInFilter, int expectedRefCntInOnNext) {
         final ByteBuf buf = newPooledBuffer();
         final HttpData data = HttpData.wrap(buf).withEndOfStream();
-        final StreamMessageWriter<HttpData> stream = StreamMessage.streaming();
+        final StreamWriter<HttpData> stream = StreamMessage.streaming();
         stream.write(data);
         stream.close();
 
@@ -108,7 +108,7 @@ class FilteredStreamMessageTest {
     void notifyCancellation() {
         final ByteBuf buf = newPooledBuffer();
         final HttpData data = HttpData.wrap(buf).withEndOfStream();
-        final StreamMessageWriter<HttpData> stream = StreamMessage.streaming();
+        final StreamWriter<HttpData> stream = StreamMessage.streaming();
         stream.write(data);
         stream.close();
 
@@ -126,7 +126,7 @@ class FilteredStreamMessageTest {
     void errorPropagation() {
         final EventLoop eventLoop = eventLoopExtension.get();
         final AtomicReference<Throwable> causeRef = new AtomicReference<>();
-        final StreamMessageWriter<Integer> streamMessage = StreamMessage.streaming();
+        final StreamWriter<Integer> streamMessage = StreamMessage.streaming();
         streamMessage.write(1);
         streamMessage.write(2);
         streamMessage.close();

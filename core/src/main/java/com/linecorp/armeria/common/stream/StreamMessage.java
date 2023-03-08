@@ -863,7 +863,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * {@link StreamMessage} when any error occurs.
      *
      * <p>Example:<pre>{@code
-     * StreamMessageWriter<Integer> stream = StreamMessage.streaming();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.close(new IllegalStateException("Oops..."));
@@ -884,7 +884,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * specified {@code causeClass}.
      *
      * <p>Example:<pre>{@code
-     * StreamMessageWriter<Integer> stream = StreamMessage.streaming();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.close(new IllegalStateException("Oops..."));
@@ -893,7 +893,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * assert resumed.collect().join().equals(List.of(1, 2, 3, 4));
      *
-     * StreamMessageWriter<Integer> stream = StreamMessage.streaming();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.write(3);
@@ -910,7 +910,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * recoverChain.collect().join();
      *
-     * StreamMessageWriter<Integer> stream = StreamMessage.streaming();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.close(ClosedStreamException.get());

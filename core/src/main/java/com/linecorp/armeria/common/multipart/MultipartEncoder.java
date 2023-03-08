@@ -31,7 +31,7 @@ import com.linecorp.armeria.common.stream.AbortedStreamException;
 import com.linecorp.armeria.common.stream.CancelledSubscriptionException;
 import com.linecorp.armeria.common.stream.DefaultStreamMessage;
 import com.linecorp.armeria.common.stream.StreamMessage;
-import com.linecorp.armeria.common.stream.StreamMessageWriter;
+import com.linecorp.armeria.common.stream.StreamWriter;
 import com.linecorp.armeria.common.stream.SubscriptionOption;
 import com.linecorp.armeria.internal.common.stream.NoopSubscription;
 import com.linecorp.armeria.internal.common.util.TemporaryThreadLocals;
@@ -69,7 +69,7 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
     private volatile CompletableFuture<Void> completionFuture;
 
     @Nullable
-    private volatile StreamMessageWriter<StreamMessage<HttpData>> emitter;
+    private volatile StreamWriter<StreamMessage<HttpData>> emitter;
 
     MultipartEncoder(StreamMessage<BodyPart> publisher, String boundary) {
         requireNonNull(boundary, "boundary");
@@ -151,8 +151,8 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
         return emitter.demand();
     }
 
-    private static StreamMessageWriter<StreamMessage<HttpData>> newEmitter(Subscription upstream) {
-        final StreamMessageWriter<StreamMessage<HttpData>> emitter =
+    private static StreamWriter<StreamMessage<HttpData>> newEmitter(Subscription upstream) {
+        final StreamWriter<StreamMessage<HttpData>> emitter =
                 new DefaultStreamMessage<StreamMessage<HttpData>>() {
                     @Override
                     protected void onRequest(long n) {
@@ -224,7 +224,7 @@ final class MultipartEncoder implements StreamMessage<HttpData> {
             assert downstream != null;
 
             subscribed = true;
-            final StreamMessageWriter<StreamMessage<HttpData>> newEmitter = newEmitter(subscription);
+            final StreamWriter<StreamMessage<HttpData>> newEmitter = newEmitter(subscription);
 
             // The 'emitter' should be set before reading 'closed' flag.
             // It guarantees that the emitter.abort() or downstream.onError() is always called with
