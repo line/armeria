@@ -41,7 +41,7 @@ import io.netty.handler.traffic.ChannelTrafficShapingHandler;
 
 public class ResponseTimeoutTest {
     private static final Consumer<? super ChannelPipeline> CHANNEL_PIPELINE_CUSTOMIZER =
-            pipeline ->  pipeline.addLast(new ChannelTrafficShapingHandler(1024, 0)); 
+            pipeline ->  pipeline.addLast(new ChannelTrafficShapingHandler(1024, 0));
 
     @RegisterExtension
     static ServerExtension server = new ServerExtension() {
