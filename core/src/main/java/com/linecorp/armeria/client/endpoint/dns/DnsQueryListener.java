@@ -30,25 +30,24 @@ import io.netty.handler.codec.dns.DnsRecord;
 public interface DnsQueryListener {
 
     /**
-     * Returns the default {@link DnsQueryListener}.
+     * Returns the default {@link DnsQueryListener} which logs {@link DnsRecord} query failures.
      */
     static DnsQueryListener of() {
         return DefaultDnsQueryListener.INSTANCE;
     }
 
     /**
-     * Invoked when querying {@link DnsRecord}s successfully.
+     * Invoked when queries for {@link DnsRecord}s are successful.
      *
      * @param oldRecords old dns records which were to be updated. If empty, it indicates that
-     *                   this querying is called after initialization or the old records were garbage-collected
-     *                   by the {@link DnsCache} implementation.
+     *                   this querying is called after initialization or the old records had failed.
      * @param newRecords new dns records.
      * @param logPrefix comma-separated dns record name. (e.g., `foo.com, bar.com`)
      */
     void onSuccess(List<DnsRecord> oldRecords, List<DnsRecord> newRecords, String logPrefix);
 
     /**
-     * Invoked when querying {@link DnsRecord}s failed.
+     * Invoked when queries for {@link DnsRecord}s have failed.
      *
      * @param oldRecords old dns records which were to be updated. If empty, it indicates that
      *                   this querying is called after initialization.

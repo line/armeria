@@ -160,7 +160,7 @@ abstract class DnsEndpointGroupBuilder
     }
 
     /**
-     * Adds the {@link DnsQueryListener}s that listens to the result of querying {@link DnsRecord}s.
+     * Adds the {@link DnsQueryListener}s which listens to the result of {@link DnsRecord} queries.
      * If no {@link DnsQueryListener} is configured, {@link DnsQueryListener#of()} is used by default.
      */
     @UnstableApi
@@ -174,7 +174,7 @@ abstract class DnsEndpointGroupBuilder
     }
 
     /**
-     * Adds the {@link DnsQueryListener} that listens to the result of querying {@link DnsRecord}s.
+     * Adds the {@link DnsQueryListener} that listens to the result of {@link DnsRecord} queries.
      * If no {@link DnsQueryListener} is configured, {@link DnsQueryListener#of()} is used by default.
      */
     @UnstableApi
