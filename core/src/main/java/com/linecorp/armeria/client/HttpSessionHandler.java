@@ -506,6 +506,8 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
     @Override
     public void initiateConnectionShutdown() {
         assert responseDecoder != null;
-        responseDecoder.disconnectWhenFinished();
+        final KeepAliveHandler keepAliveHandler = responseDecoder.keepAliveHandler();
+        assert keepAliveHandler != null;
+        keepAliveHandler.disconnectWhenFinished();
     }
 }

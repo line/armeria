@@ -101,7 +101,7 @@ public interface HttpSession {
 
     /**
      * Returns whether this {@link HttpSession} is healthy. {@code true} if a new request can acquire this
-     * session from {@link HttpChannelPool}.
+     * session from {@code com.linecorp.armeria.client.HttpChannelPool}.
      */
     boolean isAcquirable();
 
