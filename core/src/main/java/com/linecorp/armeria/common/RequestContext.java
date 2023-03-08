@@ -20,7 +20,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.time.Duration;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.concurrent.Callable;
@@ -454,21 +453,8 @@ public interface RequestContext extends Unwrappable {
      * Initiates connection shutdown and returns {@link CompletableFuture} that completes when the connection
      * associated with this context is closed.
      *
-     * <p>
-     * For the client side. {@code "connection: close"} header is sent with the request, if not sent already.
-     * And If the underlying connection's protocol is HTTP/1 the connection will be closed as soon as all
-     * pending requests are processed. Otherwise, a GOAWAY frame will be sent to initiate graceful connection
-     * shutdown.
-     * </p>
-     *
-     * <p>
-     * For the server side, please see {@link ServiceRequestContext} methods.
-     * </p>
-     *
+     * @see ClientRequestContext#initiateConnectionShutdown()
      * @see ServiceRequestContext#initiateConnectionShutdown()
-     * @see ServiceRequestContext#initiateConnectionShutdown(long)
-     * @see ServiceRequestContext#initiateConnectionShutdown(Duration)
-     *
      */
     @UnstableApi
     CompletableFuture<Void> initiateConnectionShutdown();

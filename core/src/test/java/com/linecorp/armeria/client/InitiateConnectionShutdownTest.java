@@ -41,6 +41,7 @@ import com.linecorp.armeria.common.logging.RequestLogAccess;
 import com.linecorp.armeria.server.ServerBuilder;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
+import io.netty.handler.codec.http.HttpHeaderValues;
 import io.netty.util.AttributeMap;
 
 public class InitiateConnectionShutdownTest {
@@ -102,20 +103,7 @@ public class InitiateConnectionShutdownTest {
             assertSingleConnection();
             assertThat(res.status()).isEqualTo(HttpStatus.OK);
             assertThat(requestLogAccesses.size()).isEqualTo(1);
-
-            final String connectionHeaderValue =
-                    requestLogAccesses.get(0).ensureRequestComplete()
-                                      .requestHeaders().get(HttpHeaderNames.CONNECTION);
-            switch (timing) {
-                case BEFORE_SENDING_REQ:
-                    assertThat(connectionHeaderValue).isEqualTo("close");
-                    break;
-                case AFTER_SENDING_REQ:
-                    assertThat(connectionHeaderValue).isNull();
-                    break;
-                default:
-                    throw new IllegalArgumentException("unexpected shutdown timing: " + timing);
-            }
+            assertConnectionHeader(requestLogAccesses.get(0), timing);
         }
 
         assertSingleConnectionNow();
@@ -153,10 +141,8 @@ public class InitiateConnectionShutdownTest {
             assertThat(secondRes.status()).isEqualTo(HttpStatus.OK);
 
             assertThat(requestLogAccesses.size()).isEqualTo(2);
-            assertThat(requestLogAccesses.get(0).ensureRequestComplete().requestHeaders()
-                                         .get("connection")).isNull();
-            assertThat(requestLogAccesses.get(1).ensureRequestComplete().requestHeaders()
-                                         .get("connection")).isNull();
+            assertHasNoConnectionHeader(requestLogAccesses.get(0));
+            assertHasNoConnectionHeader(requestLogAccesses.get(1));
         }
 
         assertSingleConnectionNow();
@@ -210,6 +196,29 @@ public class InitiateConnectionShutdownTest {
 
     private void initiateConnectionShutdown(ClientRequestContext ctx) {
         ctx.initiateConnectionShutdown().thenRun(() -> completed.set(true));
+    }
+
+    private static void assertConnectionHeader(RequestLogAccess logAccess, ConnectionShutdownTiming timing) {
+        switch (timing) {
+            case BEFORE_SENDING_REQ:
+                assertHasConnectionCloseHeader(logAccess);
+                break;
+            case AFTER_SENDING_REQ:
+            case NEVER:
+                assertHasNoConnectionHeader(logAccess);
+                break;
+            default:
+                throw new IllegalArgumentException("unexpected shutdown timing: " + timing);
+        }
+    }
+
+    private static void assertHasConnectionCloseHeader(RequestLogAccess logAccess) {
+        assertThat(logAccess.ensureRequestComplete().requestHeaders().get(HttpHeaderNames.CONNECTION))
+                .isEqualTo(HttpHeaderValues.CLOSE.toString());
+    }
+
+    private static void assertHasNoConnectionHeader(RequestLogAccess logAccess) {
+        assertThat(logAccess.ensureRequestComplete().requestHeaders().get(HttpHeaderNames.CONNECTION)).isNull();
     }
 
     private enum ConnectionShutdownTiming {
