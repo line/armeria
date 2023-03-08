@@ -22,14 +22,18 @@ import java.security.cert.X509Certificate;
 
 import javax.net.ssl.SSLContext;
 
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.impl.conn.InMemoryDnsResolver;
-import org.apache.http.ssl.SSLContextBuilder;
-import org.apache.http.util.EntityUtils;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.InMemoryDnsResolver;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.io.HttpClientConnectionManager;
+import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactoryBuilder;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.RegisterExtension;
@@ -89,19 +93,18 @@ class SniServerTest {
     void testSniMatch() throws Exception {
         try (CloseableHttpClient hc = newHttpClient()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet("https://a.com:" + server.httpsPort()))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo(
-                        "HTTP/1.1 200 OK");
+                assertThat(res.getCode()).isEqualTo(200);
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo(
                         "a.com: CN=a.com");
             }
 
             try (CloseableHttpResponse res = hc.execute(new HttpGet("https://b.com:" + server.httpsPort()))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getCode()).isEqualTo(200);
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("b.com: CN=b.com");
             }
 
             try (CloseableHttpResponse res = hc.execute(new HttpGet("https://c.com:" + server.httpsPort()))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getCode()).isEqualTo(200);
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("c.com: CN=c.com");
             }
         }
@@ -112,12 +115,12 @@ class SniServerTest {
         try (CloseableHttpClient hc = newHttpClient()) {
             try (CloseableHttpResponse res = hc.execute(
                     new HttpGet("https://mismatch.com:" + server.httpsPort()))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getCode()).isEqualTo(200);
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("c.com: CN=c.com");
             }
 
             try (CloseableHttpResponse res = hc.execute(new HttpGet(server.httpsUri()))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getCode()).isEqualTo(200);
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("c.com: CN=c.com");
             }
         }
@@ -126,11 +129,18 @@ class SniServerTest {
     CloseableHttpClient newHttpClient() throws Exception {
         final SSLContext sslCtx =
                 new SSLContextBuilder().loadTrustMaterial(null, (chain, authType) -> true).build();
-
+        final SSLConnectionSocketFactory sslSocketFactory =
+                SSLConnectionSocketFactoryBuilder.create()
+                                                 .setSslContext(sslCtx)
+                                                 .setHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                                                 .build();
+        final HttpClientConnectionManager cm =
+                PoolingHttpClientConnectionManagerBuilder.create()
+                                                         .setSSLSocketFactory(sslSocketFactory)
+                                                         .setDnsResolver(dnsResolver)
+                                                         .build();
         return HttpClients.custom()
-                          .setDnsResolver(dnsResolver)
-                          .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
-                          .setSSLContext(sslCtx)
+                          .setConnectionManager(cm)
                           .build();
     }
 

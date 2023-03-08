@@ -18,17 +18,17 @@ package com.linecorp.armeria.server;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import org.apache.http.Header;
-import org.apache.http.client.methods.CloseableHttpResponse;
-import org.apache.http.client.methods.HttpDelete;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpHead;
-import org.apache.http.client.methods.HttpUriRequest;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.util.EntityUtils;
-import org.junit.ClassRule;
-import org.junit.Test;
+import org.apache.hc.client5.http.classic.methods.HttpDelete;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.classic.methods.HttpHead;
+import org.apache.hc.client5.http.classic.methods.HttpUriRequest;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.Header;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import com.linecorp.armeria.client.WebClient;
 import com.linecorp.armeria.common.AggregatedHttpResponse;
@@ -41,12 +41,12 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.MediaType;
 import com.linecorp.armeria.common.ResponseHeaders;
 import com.linecorp.armeria.server.logging.LoggingService;
-import com.linecorp.armeria.testing.junit4.server.ServerRule;
+import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class HttpServiceTest {
+class HttpServiceTest {
 
-    @ClassRule
-    public static final ServerRule rule = new ServerRule() {
+    @RegisterExtension
+    static final ServerExtension rule = new ServerExtension() {
         @Override
         protected void configure(ServerBuilder sb) throws Exception {
             sb.service(
@@ -109,20 +109,19 @@ public class HttpServiceTest {
     };
 
     @Test
-    public void testHello() throws Exception {
+    void testHello() throws Exception {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri() + "/hello/foo"))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getCode()).isEqualTo(200);
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo("Hello, foo!");
             }
 
             try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri() + "/hello/foo/bar"))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 404 Not Found");
+                assertThat(res.getCode()).isEqualTo(404);
             }
 
             try (CloseableHttpResponse res = hc.execute(new HttpDelete(rule.httpUri() + "/hello/bar"))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo(
-                        "HTTP/1.1 405 Method Not Allowed");
+                assertThat(res.getCode()).isEqualTo(405);
                 assertThat(EntityUtils.toString(res.getEntity())).isEqualTo(
                         "405 Method Not Allowed");
             }
@@ -130,14 +129,14 @@ public class HttpServiceTest {
     }
 
     @Test
-    public void testContentLength() throws Exception {
+    void testContentLength() throws Exception {
         // Test if the server responds with the 'content-length' header
         // even if it is the last response of the connection.
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             final HttpUriRequest req = new HttpGet(rule.httpUri() + "/200");
             req.setHeader("Connection", "Close");
             try (CloseableHttpResponse res = hc.execute(req)) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getCode()).isEqualTo(200);
                 assertThat(res.containsHeader("Content-Length")).isTrue();
                 assertThat(res.getHeaders("Content-Length"))
                         .extracting(Header::getValue).containsExactly("6");
@@ -148,20 +147,20 @@ public class HttpServiceTest {
         try (CloseableHttpClient hc = HttpClients.createMinimal()) {
             // Ensure the HEAD response does not have content.
             try (CloseableHttpResponse res = hc.execute(new HttpHead(rule.httpUri() + "/200"))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 200 OK");
+                assertThat(res.getCode()).isEqualTo(200);
                 assertThat(res.getEntity()).isNull();
             }
 
             // Ensure the 204 response does not have content.
             try (CloseableHttpResponse res = hc.execute(new HttpGet(rule.httpUri() + "/204"))) {
-                assertThat(res.getStatusLine().toString()).isEqualTo("HTTP/1.1 204 No Content");
+                assertThat(res.getCode()).isEqualTo(204);
                 assertThat(res.getEntity()).isNull();
             }
         }
     }
 
     @Test
-    public void contentLengthIsNotSetWhenTrailerExists() {
+    void contentLengthIsNotSetWhenTrailerExists() {
         final WebClient client = WebClient.of(rule.httpUri());
         AggregatedHttpResponse res = client.get("/trailersWithoutData").aggregate().join();
         assertThat(res.headers().get(HttpHeaderNames.CONTENT_LENGTH)).isNull();
