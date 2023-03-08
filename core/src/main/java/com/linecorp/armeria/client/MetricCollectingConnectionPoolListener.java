@@ -27,30 +27,27 @@ import java.net.InetSocketAddress;
 import static java.util.Objects.requireNonNull;
 
 final class MetricCollectingConnectionPoolListener implements ConnectionPoolListener {
-    private final MeterRegistry registry;
-    private final String name;
-
     private final ConnectionPoolMetrics connectionPoolMetrics;
 
     /**
      * Creates a new instance with the specified {@link Meter} name.
      */
-    MetricCollectingConnectionPoolListener(MeterRegistry registry, String name) {
-        this.registry = requireNonNull(registry, "registry");
-        this.name = requireNonNull(name, "name");
+    MetricCollectingConnectionPoolListener(MeterRegistry registry, MeterIdPrefix meterIdPrefix) {
+        requireNonNull(registry, "registry");
+        requireNonNull(meterIdPrefix, "meterIdPrefix");
 
-        connectionPoolMetrics = new ConnectionPoolMetrics(registry, new MeterIdPrefix(name));
+        connectionPoolMetrics = new ConnectionPoolMetrics(registry, meterIdPrefix);
     }
 
     @Override
     public void connectionOpen(SessionProtocol protocol, InetSocketAddress remoteAddr,
                                InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-        connectionPoolMetrics.increaseConnOpened();
+        connectionPoolMetrics.increaseConnOpened(protocol, remoteAddr, localAddr);
     }
 
     @Override
     public void connectionClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
                                  InetSocketAddress localAddr, AttributeMap attrs) throws Exception {
-        connectionPoolMetrics.increaseConnClosed();
+        connectionPoolMetrics.increaseConnClosed(protocol, remoteAddr, localAddr);
     }
 }

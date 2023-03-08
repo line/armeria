@@ -15,6 +15,7 @@
  */
 package com.linecorp.armeria.client;
 
+import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.Counter;
@@ -22,23 +23,42 @@ import io.micrometer.core.instrument.MeterRegistry;
 
 import static java.util.Objects.requireNonNull;
 
-final class ConnectionPoolMetrics {
-    private final Counter connectionOpened;
-    private final Counter connectionClosed;
+import java.net.InetSocketAddress;
 
-    ConnectionPoolMetrics(MeterRegistry parent, MeterIdPrefix idPrefix) {
-        requireNonNull(parent, "parent");
+final class ConnectionPoolMetrics {
+    public static final String PROTOCOL = "protocol";
+    public static final String REMOTE_ADDR = "remoteAddr";
+    public static final String LOCAL_ADDR = "localAddr";
+    private Counter.Builder connectionOpened;
+    private Counter.Builder connectionClosed;
+    private MeterRegistry meterRegistry;
+
+    ConnectionPoolMetrics(MeterRegistry meterRegistry, MeterIdPrefix idPrefix) {
+        requireNonNull(meterRegistry, "meterRegistry");
         requireNonNull(idPrefix, "idPrefix");
 
-        connectionOpened = parent.counter(idPrefix.name(), idPrefix.tags("state", "open"));
-        connectionClosed = parent.counter(idPrefix.name(), idPrefix.tags("state", "close"));
+        this.meterRegistry = meterRegistry;
+        initCounters(idPrefix);
     }
 
-    void increaseConnOpened() {
-        connectionOpened.increment();
+    void increaseConnOpened(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                            InetSocketAddress localAddr) {
+        Counter connOpenedCounter = connectionOpened.tags(PROTOCOL, protocol.name(),
+                                                          REMOTE_ADDR, remoteAddr.getHostName(),
+                                                          LOCAL_ADDR, localAddr.getHostName()).register(meterRegistry);
+        connOpenedCounter.increment();
     }
 
-    void increaseConnClosed() {
-        connectionClosed.increment();
+    void increaseConnClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
+                            InetSocketAddress localAddr) {
+        Counter connClosedCounter = connectionClosed.tags(PROTOCOL, protocol.name(),
+                                                          REMOTE_ADDR, remoteAddr.getHostName(),
+                                                          LOCAL_ADDR, localAddr.getHostName()).register(meterRegistry);
+        connClosedCounter.increment();
+    }
+
+    private void initCounters(MeterIdPrefix idPrefix) {
+        connectionOpened = Counter.builder(idPrefix.name()).tags("state", "open");
+        connectionClosed = Counter.builder(idPrefix.name()).tags("state", "closed");
     }
 }
