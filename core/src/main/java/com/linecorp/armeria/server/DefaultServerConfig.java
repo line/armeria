@@ -31,6 +31,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -47,6 +48,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.binder.jvm.ExecutorServiceMetrics;
 import io.micrometer.core.instrument.internal.TimedScheduledExecutorService;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 import io.netty.handler.ssl.SslContext;
 import io.netty.util.Mapping;
@@ -100,7 +102,7 @@ final class DefaultServerConfig implements ServerConfig {
 
     private final Map<ChannelOption<?>, ?> channelOptions;
     private final Map<ChannelOption<?>, ?> childChannelOptions;
-
+    private final Consumer<? super ChannelPipeline> channelPipelineCustomizer;
     private final List<ClientAddressSource> clientAddressSources;
     private final Predicate<? super InetAddress> clientAddressTrustedProxyFilter;
     private final Predicate<? super InetAddress> clientAddressFilter;
@@ -133,6 +135,7 @@ final class DefaultServerConfig implements ServerConfig {
             MeterRegistry meterRegistry, int proxyProtocolMaxTlvSize,
             Map<ChannelOption<?>, Object> channelOptions,
             Map<ChannelOption<?>, Object> childChannelOptions,
+            Consumer<? super ChannelPipeline> channelPipelineCustomizer,
             List<ClientAddressSource> clientAddressSources,
             Predicate<? super InetAddress> clientAddressTrustedProxyFilter,
             Predicate<? super InetAddress> clientAddressFilter,
@@ -186,6 +189,7 @@ final class DefaultServerConfig implements ServerConfig {
                 new Object2ObjectArrayMap<>(requireNonNull(channelOptions, "channelOptions")));
         this.childChannelOptions = Collections.unmodifiableMap(
                 new Object2ObjectArrayMap<>(requireNonNull(childChannelOptions, "childChannelOptions")));
+        this.channelPipelineCustomizer = requireNonNull(channelPipelineCustomizer, "channelPipelineCustomizer");
         this.clientAddressSources = ImmutableList.copyOf(
                 requireNonNull(clientAddressSources, "clientAddressSources"));
         this.clientAddressTrustedProxyFilter =
@@ -487,6 +491,11 @@ final class DefaultServerConfig implements ServerConfig {
     @Override
     public Map<ChannelOption<?>, ?> childChannelOptions() {
         return childChannelOptions;
+    }
+
+    @Override
+    public Consumer<? super ChannelPipeline> channelPipelineCustomizer() {
+        return channelPipelineCustomizer;
     }
 
     @Override

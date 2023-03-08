@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.Supplier;
@@ -34,6 +35,7 @@ import com.linecorp.armeria.common.RequestId;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
+import io.netty.channel.ChannelPipeline;
 import io.netty.channel.EventLoopGroup;
 
 /**
@@ -125,6 +127,8 @@ public interface ServerConfig {
      * Returns the {@link ChannelOption}s and their values of sockets accepted by {@link Server}.
      */
     Map<ChannelOption<?>, ?> childChannelOptions();
+
+    Consumer<? super ChannelPipeline> channelPipelineCustomizer();
 
     /**
      * Returns the maximum allowed number of open connections.
