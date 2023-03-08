@@ -28,7 +28,7 @@ import io.netty.handler.codec.dns.DnsRecord;
  */
 enum DefaultDnsQueryListener implements DnsQueryListener {
 
-    DEFAULT_INSTANCE;
+    INSTANCE;
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
 

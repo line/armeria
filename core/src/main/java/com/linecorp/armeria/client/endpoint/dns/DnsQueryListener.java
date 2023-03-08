@@ -33,7 +33,7 @@ public interface DnsQueryListener {
      * Returns the default {@link DnsQueryListener}.
      */
     static DnsQueryListener of() {
-        return DefaultDnsQueryListener.DEFAULT_INSTANCE;
+        return DefaultDnsQueryListener.INSTANCE;
     }
 
     /**
