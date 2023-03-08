@@ -56,4 +56,11 @@ public class AnnotatedServiceImplicitHeadTest {
         final AggregatedHttpResponse res = webClient.delete("/test");
         assertThat(res.status()).isEqualTo(HttpStatus.METHOD_NOT_ALLOWED);
     }
+
+    @Test
+    void testHeadMethodWithNonExistencePath() {
+        final BlockingWebClient webClient = server.blockingWebClient();
+        final AggregatedHttpResponse res = webClient.head("/invalid");
+        assertThat(res.status()).isEqualTo(HttpStatus.NOT_FOUND);
+    }
 }
