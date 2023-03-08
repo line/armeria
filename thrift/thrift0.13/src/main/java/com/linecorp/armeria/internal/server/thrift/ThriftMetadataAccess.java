@@ -16,14 +16,11 @@
 
 package com.linecorp.armeria.internal.server.thrift;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.util.Enumeration;
 import java.util.Map;
-import java.util.Properties;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import org.apache.thrift.TBase;
 import org.apache.thrift.TFieldIdEnum;
@@ -33,55 +30,53 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.annotations.VisibleForTesting;
 
+import com.linecorp.armeria.common.util.Version;
+
 final class ThriftMetadataAccess {
 
     private static final Logger logger = LoggerFactory.getLogger(ThriftMetadataAccess.class);
 
     private static boolean preInitializeThriftClass;
     private static final Pattern preInitializeTargetPattern =
-            Pattern.compile("^armeria-thrift0\\.(\\d+)\\..*$");
+            Pattern.compile("^armeria-thrift0\\.(\\d+)$");
 
     static {
         try {
-            final Enumeration<URL> versionPropertiesUrls =
-                    ThriftMetadataAccess.class.getClassLoader().getResources(
-                            "META-INF/com.linecorp.armeria.versions.properties");
-            if (!versionPropertiesUrls.hasMoreElements()) {
-                // versions.properties was not found
-                logger.trace("Unable to determine the 'armeria-thrift' version. Please consider " +
-                             "adding 'META-INF/com.linecorp.armeria.versions.properties' to the " +
-                             "classpath to avoid unexpected issues.");
-            }
-            boolean preInitializeThriftClass = false;
-            while (versionPropertiesUrls.hasMoreElements()) {
-                final URL url = versionPropertiesUrls.nextElement();
-                try (BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream()))) {
-                    final Properties props = new Properties();
-                    props.load(reader);
-                    preInitializeThriftClass = needsPreInitialization(props);
-                    if (preInitializeThriftClass) {
-                        break;
-                    }
-                }
-            }
-            ThriftMetadataAccess.preInitializeThriftClass = preInitializeThriftClass;
+            final Set<String> artifacts = Version.getAll(ThriftMetadataAccess.class.getClassLoader()).keySet().stream()
+                                                 .filter(name -> name.startsWith("armeria-thrift"))
+                                                 .collect(Collectors.toSet());
+            preInitializeThriftClass = needsPreInitialization(artifacts);
         } catch (Exception e) {
             logger.debug("Unexpected exception while determining the 'armeria-thrift' version: ", e);
         }
     }
 
     @VisibleForTesting
-    static boolean needsPreInitialization(Properties props) {
-        for (String key : props.stringPropertyNames()) {
-            final Matcher matcher = preInitializeTargetPattern.matcher(key);
-            if (!matcher.matches()) {
-                continue;
-            }
-            final int version = Integer.parseInt(matcher.group(1));
-            if (version <= 14) {
-                logger.trace("Pre-initializing thrift metadata due to 'armeria-thrift0.{}'", version);
+    static boolean needsPreInitialization(Set<String> artifacts) {
+        if (artifacts.isEmpty()) {
+            // versions.properties was not found
+            logger.trace("Unable to determine the 'armeria-thrift' version. Please consider " +
+                         "adding 'META-INF/com.linecorp.armeria.versions.properties' to the " +
+                         "classpath to avoid unexpected issues.");
+            return true;
+        }
+        for (String artifact : artifacts) {
+            if(needsPreInitialization(artifact)) {
                 return true;
             }
+        }
+        return false;
+    }
+
+    private static boolean needsPreInitialization(String artifactName) {
+        final Matcher matcher = preInitializeTargetPattern.matcher(artifactName);
+        if (!matcher.matches()) {
+            return false;
+        }
+        final int version = Integer.parseInt(matcher.group(1));
+        if (version <= 14) {
+            logger.trace("Pre-initializing thrift metadata due to 'armeria-thrift0.{}'", version);
+            return true;
         }
         return false;
     }

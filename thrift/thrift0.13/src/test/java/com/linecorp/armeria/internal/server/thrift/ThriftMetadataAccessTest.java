@@ -18,20 +18,35 @@ package com.linecorp.armeria.internal.server.thrift;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Properties;
+import java.util.Collections;
+import java.util.Set;
 
+import org.assertj.core.util.Sets;
 import org.junit.jupiter.api.Test;
 
 class ThriftMetadataAccessTest {
 
     @Test
-    void testPreInitializeTarget() {
-        final Properties properties = new Properties();
-        properties.put("armeria-thrift0.13.shortCommitHash", "c533c7fd3");
-        assertThat(ThriftMetadataAccess.needsPreInitialization(properties)).isTrue();
+    void emptyCase() {
+        // can't determine the thrift version used so just pre-initialize
+        assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.emptySet())).isTrue();
+    }
 
-        properties.clear();
-        properties.put("armeria-thrift0.15.shortCommitHash", "c533c7fd3");
-        assertThat(ThriftMetadataAccess.needsPreInitialization(properties)).isFalse();
+    @Test
+    void basicCase() {
+        assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.singleton("armeria-thrift0.13"))).isTrue();
+        assertThat(ThriftMetadataAccess.needsPreInitialization(Collections.singleton("armeria-thrift0.15"))).isFalse();
+    }
+
+    @Test
+    void withMalformed() {
+        Set<String> mixed = Sets.set("armeria-thrift0.13", "asdf", "armeria-thrif");
+        assertThat(ThriftMetadataAccess.needsPreInitialization(mixed)).isTrue();
+
+        mixed = Sets.set("armeria-thrift0.15", "asdf", "armeria-thrif");
+        assertThat(ThriftMetadataAccess.needsPreInitialization(mixed)).isFalse();
+
+        mixed = Sets.set("asdf", "armeria-thrif");
+        assertThat(ThriftMetadataAccess.needsPreInitialization(mixed)).isFalse();
     }
 }
