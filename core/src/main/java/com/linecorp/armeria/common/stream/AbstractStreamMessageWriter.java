@@ -26,8 +26,7 @@ import org.reactivestreams.Subscription;
 import com.linecorp.armeria.internal.common.stream.AbortingSubscriber;
 import com.linecorp.armeria.internal.common.stream.StreamMessageUtil;
 
-abstract class AbstractStreamMessageAndWriter<T> extends CancellableStreamMessage<T>
-        implements StreamMessageAndWriter<T> {
+abstract class AbstractStreamMessageWriter<T> extends CancellableStreamMessage<T> implements StreamWriter<T> {
 
     enum State {
         /**

@@ -213,7 +213,7 @@ class StreamMessageTest {
     @ArgumentsSource(PooledHttpDataStreamProvider.class)
     void releaseWithZeroDemand(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
         if (stream instanceof StreamWriter) {
-            ((StreamWriter<Object>) stream).write(data);
+            ((StreamWriter<HttpData>) stream).write(data);
         }
         stream.subscribe(new Subscriber<Object>() {
             @Override
@@ -247,8 +247,8 @@ class StreamMessageTest {
     @ArgumentsSource(PooledHttpDataStreamProvider.class)
     void releaseWithZeroDemandAndClosedStream(HttpData data, ByteBuf buf, StreamMessage<HttpData> stream) {
         if (stream instanceof StreamWriter) {
-            ((StreamWriter<Object>) stream).write(data);
-            ((StreamWriter<Object>) stream).close();
+            ((StreamWriter<HttpData>) stream).write(data);
+            ((StreamWriter<HttpData>) stream).close();
         }
 
         stream.subscribe(new Subscriber<Object>() {

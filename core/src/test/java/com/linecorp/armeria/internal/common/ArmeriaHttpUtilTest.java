@@ -432,7 +432,7 @@ class ArmeriaHttpUtilTest {
         final io.netty.handler.codec.http.HttpHeaders out =
                 new DefaultHttpHeaders();
 
-        toNettyHttp1ServerHeaders(in, out, Http1HeaderNaming.ofDefault());
+        toNettyHttp1ServerHeaders(in, out, Http1HeaderNaming.ofDefault(), true);
         assertThat(out).isEqualTo(new DefaultHttpHeaders()
                                           .add(io.netty.handler.codec.http.HttpHeaderNames.TRAILER, "foo")
                                           .add(io.netty.handler.codec.http.HttpHeaderNames.HOST, "bar"));
@@ -503,7 +503,7 @@ class ArmeriaHttpUtilTest {
 
         final io.netty.handler.codec.http.HttpHeaders serverOutHeaders =
                 new DefaultHttpHeaders();
-        toNettyHttp1ServerHeaders(in, serverOutHeaders, Http1HeaderNaming.traditional());
+        toNettyHttp1ServerHeaders(in, serverOutHeaders, Http1HeaderNaming.traditional(), true);
         assertThat(serverOutHeaders).isEqualTo(new DefaultHttpHeaders()
                                                        .add("foo", "bar")
                                                        .add("Authorization", "dummy")
@@ -609,6 +609,20 @@ class ArmeriaHttpUtilTest {
         }
         assertThat(ArmeriaHttpUtil.disallowedResponseHeaderNames()).doesNotContain(HttpHeaderNames.STATUS);
         assertThat(ArmeriaHttpUtil.disallowedResponseHeaderNames()).doesNotContain(HttpHeaderNames.LOCATION);
+    }
+
+    @Test
+    void shouldReturnConnectionCloseWithNoKeepAlive() {
+        final ResponseHeaders in = ResponseHeaders.builder(HttpStatus.OK)
+                                                  .contentType(MediaType.JSON)
+                                                  .build();
+        final io.netty.handler.codec.http.HttpHeaders out =
+                new DefaultHttpHeaders();
+
+        toNettyHttp1ServerHeaders(in, out, Http1HeaderNaming.ofDefault(), false);
+        assertThat(out).isEqualTo(new DefaultHttpHeaders()
+                                          .add(HttpHeaderNames.CONTENT_TYPE, MediaType.JSON.toString())
+                                          .add(HttpHeaderNames.CONNECTION, "close"));
     }
 
     private static ServerConfig serverConfig() {
