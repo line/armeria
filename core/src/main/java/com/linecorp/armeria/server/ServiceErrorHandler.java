@@ -38,18 +38,47 @@ public interface ServiceErrorHandler {
     @Nullable
     HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause);
 
+    /**
+     * Returns a newly created {@link ServiceErrorHandler} that tries this {@link ServiceErrorHandler} first and
+     * then the specified {@link ServiceErrorHandler} when the first call returns {@code null}.
+     *
+     * <pre>{@code
+     * ServiceErrorHandler handler = (ctx, cause) -> {
+     *     if (cause instanceof FirstException) {
+     *         return HttpResponse.of(200);
+     *     }
+     *     return null;
+     * }
+     * assert handler.onServiceException(ctx, new FirstException()) != null;
+     * assert handler.onServiceException(ctx, new SecondException()) == null;
+     * assert handler.onServiceException(ctx, new ThirdException()) == null;
+     *
+     * ServiceErrorHandler combinedHandler = handler.orElse((ctx, cause) -> {
+     *     if (cause instanceof SecondException) {
+     *         return HttpResponse.of(200);
+     *     }
+     *     return null;
+     * });
+     *
+     * assert handler.onServiceException(ctx, new FirstException()) != null;
+     * assert handler.onServiceException(ctx, new SecondException()) != null;
+     * assert handler.onServiceException(ctx, new ThirdException()) == null;
+     *
+     * // The default handler never returns null.
+     * ServiceErrorHandler nonNullHandler = combinedHandler.orElse(ServiceErrorHandler.ofDefault());x
+     * assert handler.onServiceException(ctx, new FirstException()) != null;
+     * assert handler.onServiceException(ctx, new SecondException()) != null;
+     * assert handler.onServiceException(ctx, new ThirdException()) != null;
+     * }</pre>
+     */
     default ServiceErrorHandler orElse(ServiceErrorHandler other) {
         requireNonNull(other, "other");
-        return new ServiceErrorHandler() {
-            @Nullable
-            @Override
-            public HttpResponse onServiceException(ServiceRequestContext ctx, Throwable cause) {
-                final HttpResponse response = ServiceErrorHandler.this.onServiceException(ctx, cause);
-                if (response != null) {
-                    return response;
-                }
-                return other.onServiceException(ctx, cause);
+        return (ctx, cause) -> {
+            final HttpResponse response = onServiceException(ctx, cause);
+            if (response != null) {
+                return response;
             }
+            return other.onServiceException(ctx, cause);
         };
     }
 }

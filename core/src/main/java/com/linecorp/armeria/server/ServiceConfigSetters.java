@@ -218,5 +218,9 @@ interface ServiceConfigSetters {
     ServiceConfigSetters setHeaders(
             Iterable<? extends Entry<? extends CharSequence, ?>> defaultHeaders);
 
+    /**
+     * Sets the default {@link ServiceErrorHandler} served by this {@link Service}.
+     * @param serviceErrorHandler the default {@link ServiceErrorHandler}
+     */
     ServiceConfigSetters errorHandler(ServiceErrorHandler serviceErrorHandler);
 }

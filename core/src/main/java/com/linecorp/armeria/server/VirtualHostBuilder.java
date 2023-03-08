@@ -818,6 +818,10 @@ public final class VirtualHostBuilder implements TlsSetters {
         return accessLogger(host -> LoggerFactory.getLogger(loggerName));
     }
 
+    /**
+     * Sets the {@link ServiceErrorHandler} that handles exceptions thrown in this virtual host.
+     * @param errorHandler the {@link ServerErrorHandler} to handle exceptions.
+     */
     public VirtualHostBuilder errorHandler(ServerErrorHandler errorHandler) {
         requireNonNull(errorHandler, "errorHandler");
         if (errorHandler != ServerErrorHandler.ofDefault()) {
