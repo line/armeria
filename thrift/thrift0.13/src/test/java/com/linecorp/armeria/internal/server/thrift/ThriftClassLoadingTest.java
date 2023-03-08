@@ -36,7 +36,7 @@ class ThriftClassLoadingTest {
     // see https://issues.apache.org/jira/browse/THRIFT-5430
     @Test
     void testDeadlock() throws Exception {
-        for (int i = 0; i < 20; i++) {
+        for (int i = 0; i < 50; i++) {
             final ExecutorService e1 = Executors.newSingleThreadExecutor();
             final ExecutorService e2 = Executors.newSingleThreadExecutor();
             final ClassLoader classLoader = new SimpleClassLoader(FooStruct.class);
