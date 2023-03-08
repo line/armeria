@@ -502,12 +502,4 @@ final class HttpSessionHandler extends ChannelDuplexHandler implements HttpSessi
             logger.warn("{} Unexpected suppressed exception:", ctx.channel(), cause);
         }
     }
-
-    @Override
-    public void initiateConnectionShutdown() {
-        assert responseDecoder != null;
-        final KeepAliveHandler keepAliveHandler = responseDecoder.keepAliveHandler();
-        assert keepAliveHandler != null;
-        keepAliveHandler.disconnectWhenFinished();
-    }
 }

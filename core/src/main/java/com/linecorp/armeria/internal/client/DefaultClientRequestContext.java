@@ -874,7 +874,7 @@ public final class DefaultClientRequestContext
                     completableFuture.completeExceptionally(f.cause());
                 }
             });
-            HttpSession.get(ch).initiateConnectionShutdown();
+            HttpSession.get(ch).deactivate();
             return null;
         });
         return completableFuture;

@@ -83,9 +83,6 @@ public interface HttpSession {
         public int incrementAndGetNumRequestsSent() {
             return MAX_NUM_REQUESTS_SENT;
         }
-
-        @Override
-        public void initiateConnectionShutdown() {}
     };
 
     static HttpSession get(Channel ch) {
@@ -135,6 +132,4 @@ public interface HttpSession {
     void retryWithH1C();
 
     int incrementAndGetNumRequestsSent();
-
-    void initiateConnectionShutdown();
 }
