@@ -75,8 +75,23 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
 
             this.delegate = delegate;
             try {
-                for (Consumer<Listener<I>> task : pendingTasks) {
-                    task.accept(delegate);
+                for (;;) {
+                    final List<Consumer<Listener<I>>> pendingTasks = this.pendingTasks;
+                    if (pendingTasks.isEmpty()) {
+                        break;
+                    }
+
+                    // New pending tasks could be added while invoking pending tasks.
+                    this.pendingTasks = new ArrayList<>();
+                    try {
+                        for (Consumer<Listener<I>> task : pendingTasks) {
+                            task.accept(delegate);
+                        }
+                    } catch (Throwable ex) {
+                        callClosed = true;
+                        armeriaServerCall.close(ex);
+                        return null;
+                    }
                 }
             } catch (Throwable ex) {
                 callClosed = true;
