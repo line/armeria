@@ -20,6 +20,8 @@ import static io.netty.handler.codec.http2.Http2Error.INTERNAL_ERROR;
 import static io.netty.handler.codec.http2.Http2Error.PROTOCOL_ERROR;
 import static io.netty.handler.codec.http2.Http2Exception.connectionError;
 
+import javax.annotation.Nonnull;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -163,15 +165,14 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
 
     @Override
     public void onGoAwaySent(int lastStreamId, long errorCode, ByteBuf debugData) {
-        disconnectWhenFinished();
+        session().deactivate();
         goAwayHandler.onGoAwaySent(channel(), lastStreamId, errorCode, debugData);
     }
 
     @Override
     public void onGoAwayReceived(int lastStreamId, long errorCode, ByteBuf debugData) {
         // Should not reuse a connection that received a GOAWAY frame.
-        HttpSession.get(channel()).deactivate();
-        disconnectWhenFinished();
+        session().deactivate();
         goAwayHandler.onGoAwayReceived(channel(), lastStreamId, errorCode, debugData);
     }
 
@@ -347,15 +348,14 @@ final class Http2ResponseDecoder extends HttpResponseDecoder implements Http2Con
     public void onUnknownFrame(ChannelHandlerContext ctx, byte frameType, int streamId, Http2Flags flags,
                                ByteBuf payload) {}
 
+    @Nonnull
     @Override
     KeepAliveHandler keepAliveHandler() {
         return keepAliveHandler;
     }
 
     private void keepAliveChannelRead() {
-        if (keepAliveHandler != null) {
-            keepAliveHandler.onReadOrWrite();
-        }
+        keepAliveHandler.onReadOrWrite();
     }
 
     private static int streamIdToId(int streamId) {
