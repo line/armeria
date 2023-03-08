@@ -18,7 +18,6 @@ package com.linecorp.armeria.client.endpoint.dns;
 
 import java.util.List;
 
-import com.linecorp.armeria.client.DnsCache;
 import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.netty.handler.codec.dns.DnsRecord;
