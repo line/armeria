@@ -22,11 +22,11 @@ import static java.util.Objects.requireNonNull;
 import java.net.IDN;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.function.Consumer;
 
 import com.google.common.base.Ascii;
+import com.google.common.collect.ImmutableList;
 
 import com.linecorp.armeria.client.AbstractDnsResolverBuilder;
 import com.linecorp.armeria.client.Endpoint;
@@ -161,7 +161,7 @@ abstract class DnsEndpointGroupBuilder
 
     /**
      * Adds the {@link DnsQueryListener}s that listens to the result of querying {@link DnsRecord}s.
-     * If no {@link DnsQueryListener} is configured, {@link DnsQueryListener#of()} is used by default
+     * If no {@link DnsQueryListener} is configured, {@link DnsQueryListener#of()} is used by default.
      */
     @UnstableApi
     public DnsEndpointGroupBuilder addDnsQueryListeners(
@@ -175,13 +175,12 @@ abstract class DnsEndpointGroupBuilder
 
     /**
      * Adds the {@link DnsQueryListener} that listens to the result of querying {@link DnsRecord}s.
-     * If no {@link DnsQueryListener} is configured, {@link DnsQueryListener#of()} is used by default
+     * If no {@link DnsQueryListener} is configured, {@link DnsQueryListener#of()} is used by default.
      */
     @UnstableApi
     public DnsEndpointGroupBuilder addDnsQueryListeners(DnsQueryListener... dnsQueryListeners) {
         requireNonNull(dnsQueryListeners, "dnsQueryListeners");
-        this.dnsQueryListeners.addAll(Arrays.asList(dnsQueryListeners));
-        return this;
+        return addDnsQueryListeners(ImmutableList.copyOf(dnsQueryListeners));
     }
 
     final List<DnsQueryListener> dnsQueryListeners() {

@@ -26,9 +26,9 @@ import io.netty.handler.codec.dns.DnsRecord;
 /**
  * A default implementation of {@link DnsQueryListener} interface.
  */
-final class DefaultDnsQueryListener implements DnsQueryListener {
+enum DefaultDnsQueryListener implements DnsQueryListener {
 
-    static final DnsQueryListener DEFAULT_INSTANCE = new DefaultDnsQueryListener();
+    DEFAULT_INSTANCE;
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
