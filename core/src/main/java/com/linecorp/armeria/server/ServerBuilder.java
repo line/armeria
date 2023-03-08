@@ -1716,6 +1716,7 @@ public final class ServerBuilder implements TlsSetters {
      */
     @Deprecated
     public ServerBuilder requestIdGenerator(Supplier<? extends RequestId> requestIdSupplier) {
+        requireNonNull(requestIdSupplier, "requestIdSupplier");
         return requestIdGenerator(routingContext -> requestIdSupplier.get());
     }
 
