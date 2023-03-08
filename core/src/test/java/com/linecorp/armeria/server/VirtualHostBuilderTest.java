@@ -22,6 +22,7 @@ import static com.linecorp.armeria.server.RoutingContextTest.virtualHost;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.nio.file.FileSystems;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -326,5 +327,17 @@ class VirtualHostBuilderTest {
         final Routed<ServiceConfig> serviceConfig = virtualHost.findServiceConfig(routingContext);
         final Route route = serviceConfig.route();
         assertThat(route).isSameAs(routeA);
+    }
+
+    @Test
+    void multipartUploadsLocationCustomization() {
+        final VirtualHost h1 = new VirtualHostBuilder(Server.builder(), false)
+                .multipartUploadsLocation(FileSystems.getDefault().getPath("logs", "access.log"))
+                .build(template, noopDependencyInjector);
+        assertThat(h1.multipartUploadsLocation().getFileName().toString()).isEqualTo("access.log");
+
+        final VirtualHost h2 = new VirtualHostBuilder(Server.builder(), false)
+                .build(template, noopDependencyInjector);
+        assertThat(h2.multipartUploadsLocation().getFileName().toString()).isEqualTo("multipart-uploads");
     }
 }

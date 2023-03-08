@@ -1193,7 +1193,7 @@ public final class VirtualHostBuilder implements TlsSetters {
                                 serviceConfigs, fallbackServiceConfig, rejectedRouteHandler,
                                 accessLoggerMapper, defaultServiceNaming, requestTimeoutMillis,
                                 maxRequestLength, verboseResponses, accessLogWriter,
-                                blockingTaskExecutor, builder.build());
+                                blockingTaskExecutor, multipartUploadsLocation, builder.build());
 
         final Function<? super HttpService, ? extends HttpService> decorator =
                 getRouteDecoratingService(template);
