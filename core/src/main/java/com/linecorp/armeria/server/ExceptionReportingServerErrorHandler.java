@@ -29,10 +29,12 @@ import com.linecorp.armeria.common.HttpResponse;
 import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.common.RequestHeaders;
 import com.linecorp.armeria.common.annotation.Nullable;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 import com.linecorp.armeria.common.util.TextFormatter;
+import com.linecorp.armeria.internal.common.metric.MicrometerUtil;
 import com.linecorp.armeria.server.logging.LoggingService;
 
-import io.micrometer.core.instrument.Tags;
+import io.micrometer.core.instrument.MeterRegistry;
 
 /**
  * A {@link ServerErrorHandler} that wraps another {@link ServerErrorHandler}
@@ -43,10 +45,9 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
 
     private static final Logger logger = LoggerFactory.getLogger(ExceptionReportingServerErrorHandler.class);
 
-    @Nullable
-    private static ExceptionReportingServerErrorHandler exceptionReportingServerErrorHandler;
+    private final Duration interval;
     private final ServerErrorHandler delegate;
-    private final Duration duration;
+    private final MicrometerCounter micrometerCounter;
     private final LongAdder counter;
     private long lastExceptionsCount;
     @Nullable
@@ -54,26 +55,22 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
     @Nullable
     private ScheduledFuture<?> reportingTaskFuture;
 
-    private ExceptionReportingServerErrorHandler(ServerErrorHandler serverErrorHandler, Duration duration) {
-        assert !duration.isNegative() && !duration.isZero();
+    ExceptionReportingServerErrorHandler(MeterRegistry meterRegistry, ServerErrorHandler serverErrorHandler,
+                                         Duration interval) {
+        assert !interval.isNegative() && !interval.isZero();
+        this.interval = interval;
         delegate = serverErrorHandler;
-        this.duration = duration;
+        micrometerCounter =
+                MicrometerUtil.register(meterRegistry,
+                                        new MeterIdPrefix("armeria.server.exceptions.unhandled"),
+                                        MicrometerCounter.class, MicrometerCounter::new);
         counter = new LongAdder();
     }
 
-    static ExceptionReportingServerErrorHandler of(ServerErrorHandler serverErrorHandler, Duration duration) {
-        if (exceptionReportingServerErrorHandler != null) {
-            return exceptionReportingServerErrorHandler;
-        }
-
-        exceptionReportingServerErrorHandler = new ExceptionReportingServerErrorHandler(serverErrorHandler,
-                                                                                        duration);
-        return exceptionReportingServerErrorHandler;
-    }
-
     /**
-     * This method increments the {@link #counter} and stores unhandled exception that occurs. If unhandled
-     * exceptions are not previously scheduled for reporting, then they are scheduled to be reported.
+     * Increments both {@link #micrometerCounter} and {@link #counter} and stores unhandled exception
+     * that occurs. If multiple servers use the same {@link MeterRegistry}, then {@link #micrometerCounter}
+     * will be shared across servers.
      */
     @Nullable
     @Override
@@ -85,12 +82,14 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
         if (ctx.shouldReportUnhandledExceptions() && !isExpectedException) {
             if (reportingTaskFuture == null) {
                 reportingTaskFuture = ctx.eventLoop().scheduleAtFixedRate(
-                        this::reportException, duration.toMillis(), duration.toMillis(), TimeUnit.MILLISECONDS);
+                        this::reportException, interval.toMillis(), interval.toMillis(), TimeUnit.MILLISECONDS);
             }
 
             if (thrownException == null) {
                 thrownException = cause;
             }
+
+            micrometerCounter.increment();
             counter.increment();
         }
 
@@ -109,23 +108,18 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
     public void serverStarting(Server server) throws Exception {}
 
     @Override
-    public void serverStarted(Server server) throws Exception {
-        server.config().meterRegistry().more().counter("armeria.server.unhandledExceptions",
-                                                       Tags.empty(), counter, LongAdder::sum);
-    }
+    public void serverStarted(Server server) throws Exception {}
 
     @Override
-    public void serverStopping(Server server) throws Exception {
+    public void serverStopping(Server server) throws Exception {}
+
+    @Override
+    public void serverStopped(Server server) throws Exception {
         if (reportingTaskFuture != null) {
             reportingTaskFuture.cancel(true);
             reportingTaskFuture = null;
         }
-
-        exceptionReportingServerErrorHandler = null;
     }
-
-    @Override
-    public void serverStopped(Server server) throws Exception {}
 
     private void reportException() {
         final long totalExceptionsCount = counter.sum();
@@ -139,14 +133,28 @@ final class ExceptionReportingServerErrorHandler implements ServerErrorHandler, 
             logger.warn("Observed {} unhandled exceptions in last {}. " +
                         "Please consider adding the LoggingService decorator to get detailed error logs. " +
                         "One of the thrown exceptions:",
-                        newExceptionsCount, TextFormatter.elapsed(duration.toNanos()), exception);
+                        newExceptionsCount, TextFormatter.elapsed(interval.toNanos()), exception);
             thrownException = null;
         } else {
             logger.warn("Observed {} unhandled exceptions in last {}. " +
                         "Please consider adding the LoggingService decorator to get detailed error logs.",
-                        newExceptionsCount, TextFormatter.elapsed(duration.toNanos()));
+                        newExceptionsCount, TextFormatter.elapsed(interval.toNanos()));
         }
 
         lastExceptionsCount = totalExceptionsCount;
+    }
+
+    private static final class MicrometerCounter {
+
+        private final LongAdder counter;
+
+        MicrometerCounter(MeterRegistry registry, MeterIdPrefix idPrefix) {
+            counter = new LongAdder();
+            registry.more().counter(idPrefix.name(), idPrefix.tags(), counter);
+        }
+
+        void increment() {
+            counter.increment();
+        }
     }
 }

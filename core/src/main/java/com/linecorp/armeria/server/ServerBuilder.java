@@ -1952,7 +1952,7 @@ public final class ServerBuilder implements TlsSetters {
         }
 
         if (unhandledExceptionsReportInterval != Duration.ZERO) {
-            errorHandler = ExceptionReportingServerErrorHandler.of(this.errorHandler,
+            errorHandler = new ExceptionReportingServerErrorHandler(meterRegistry, this.errorHandler,
                                                                     unhandledExceptionsReportInterval);
             serverListeners.add((ExceptionReportingServerErrorHandler) errorHandler);
         }
