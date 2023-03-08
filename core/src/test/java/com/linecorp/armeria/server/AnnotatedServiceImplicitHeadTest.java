@@ -28,7 +28,7 @@ import com.linecorp.armeria.common.HttpStatus;
 import com.linecorp.armeria.server.annotation.Get;
 import com.linecorp.armeria.testing.junit5.server.ServerExtension;
 
-public class AnnotatedServiceImplicitHeadTest {
+class AnnotatedServiceImplicitHeadTest {
 
     @RegisterExtension
     static final ServerExtension server = new ServerExtension() {
