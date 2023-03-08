@@ -47,8 +47,6 @@ internal class FlowCollectingPublisher<T>(
                     delegate.whenConsumed().await()
                 }
             } catch (e: Throwable) {
-                // Delegate to coroutine's exception handling mechanism,
-                // which ignores CancellationException.
                 delegate.close(e)
                 return@launch
             }
