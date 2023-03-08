@@ -14,7 +14,7 @@
  * under the License.
  */
 
-package com.linecorp.armeria.server.grpc.com.linecorp.armeria.server.grpc
+package com.linecorp.armeria.server.grpc
 
 import com.linecorp.armeria.common.RequestContext
 import com.linecorp.armeria.common.grpc.GrpcStatusFunction
@@ -22,8 +22,6 @@ import com.linecorp.armeria.internal.testing.AnticipatedException
 import com.linecorp.armeria.server.ServerBuilder
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.auth.Authorizer
-import com.linecorp.armeria.server.grpc.CoroutineServerInterceptor
-import com.linecorp.armeria.server.grpc.GrpcService
 import com.linecorp.armeria.testing.junit5.server.ServerExtension
 import io.grpc.Metadata
 import io.grpc.ServerCall
@@ -67,7 +65,7 @@ internal class CoroutineServerInterceptorTest {
         val server: ServerExtension = object : ServerExtension() {
             override fun configure(sb: ServerBuilder) {
                 val statusFunction = GrpcStatusFunction { ctx: RequestContext?, throwable: Throwable, metadata: Metadata? ->
-                    if (throwable is AnticipatedException && "Invalid access" == throwable.message) {
+                    if (throwable is AnticipatedException && throwable.message == "Invalid access") {
                         return@GrpcStatusFunction Status.UNAUTHENTICATED
                     }
                     null

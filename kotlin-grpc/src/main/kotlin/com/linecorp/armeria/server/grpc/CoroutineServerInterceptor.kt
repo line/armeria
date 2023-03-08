@@ -1,4 +1,6 @@
-package com.linecorp.armeria.server.grpc/*
+package com.linecorp.armeria.server.grpc
+
+/*
  * Copyright 2023 LINE Corporation
  *
  * LINE Corporation licenses this file to you under the Apache License,
@@ -39,7 +41,7 @@ import java.util.concurrent.CompletableFuture
  *         if (result) {
  *             return next.startCall(call, headers)
  *         } else {
- *             throw AnticipatedException("Invalid access")
+ *             throw AuthenticationException("Invalid access")
  *         }
  *     }
  * }
@@ -53,7 +55,9 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
         headers: Metadata,
         next: ServerCallHandler<I, O>
     ): CompletableFuture<ServerCall.Listener<I>> {
-        check(call is AbstractServerCall) { throw IllegalArgumentException("Cannot use ${AsyncServerInterceptor::class.java.name} with a non-Armeria gRPC server") }
+        check(call is AbstractServerCall) {
+            throw IllegalArgumentException("Cannot use ${AsyncServerInterceptor::class.java.name} with a non-Armeria gRPC server")
+        }
         val executor = call.blockingExecutor() ?: call.eventLoop()
 
         return GlobalScope.future(executor.asCoroutineDispatcher() + ArmeriaRequestCoroutineContext(call.ctx())) {
@@ -64,8 +68,8 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
     /**
      * Suspends the current coroutine and intercepts a gRPC server call with the specified call object, headers, and
      * next call handler.
-     * @param call [ServerCall]
-     * @param headers [Metadata]
+     * @param call the [ServerCall] being intercepted
+     * @param headers the [Metadata] of the call
      * @param next the next [ServerCallHandler]
      * @return [ServerCall.Listener] for the intercepted call.
      */
