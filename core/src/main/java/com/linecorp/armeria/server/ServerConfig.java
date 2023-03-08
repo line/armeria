@@ -30,6 +30,7 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -275,6 +276,7 @@ public interface ServerConfig {
     /**
      * Returns the {@link Function} that generates a {@link RequestId} for each {@link Request}.
      */
+    @UnstableApi
     Function<RoutingContext, RequestId> requestIdGenerator();
 
     /**
