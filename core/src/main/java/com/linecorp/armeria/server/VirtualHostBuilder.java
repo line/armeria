@@ -819,7 +819,12 @@ public final class VirtualHostBuilder implements TlsSetters {
     }
 
     public VirtualHostBuilder errorHandler(ServerErrorHandler errorHandler) {
-        this.errorHandler = requireNonNull(errorHandler, "errorHandler");
+        requireNonNull(errorHandler, "errorHandler");
+        if (errorHandler != ServerErrorHandler.ofDefault()) {
+            // Ensure that ServerErrorhandler never returns null by falling back to the default
+            errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
+        }
+        this.errorHandler = errorHandler;
         return this;
     }
 
