@@ -20,6 +20,7 @@ import com.linecorp.armeria.internal.common.kotlin.ArmeriaRequestCoroutineContex
 import io.grpc.Metadata
 import io.grpc.ServerCall
 import io.grpc.ServerCallHandler
+import io.grpc.ServerInterceptor
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -27,7 +28,7 @@ import kotlinx.coroutines.future.future
 import java.util.concurrent.CompletableFuture
 
 /**
- * A [ServerInterceptor][io.grpc.ServerInterceptor] that is able to asynchronously execute the interceptor without blocking the
+ * A [ServerInterceptor] that is able to asynchronously execute the interceptor without blocking the
  * caller thread.
  * For example:
  * ```kotlin
@@ -71,6 +72,7 @@ interface CoroutineServerInterceptor : AsyncServerInterceptor {
      * @param call the [ServerCall] being intercepted
      * @param headers the [Metadata] of the call
      * @param next the next [ServerCallHandler]
+     *
      * @return [ServerCall.Listener] for the intercepted call.
      */
     suspend fun <ReqT, RespT> suspendedInterceptCall(
