@@ -67,6 +67,16 @@ public class ClientRequestContextWrapper
     }
 
     @Override
+    public String authority() {
+        return unwrap().authority();
+    }
+
+    @Override
+    public URI uri() {
+        return unwrap().uri();
+    }
+
+    @Override
     public ClientOptions options() {
         return unwrap().options();
     }
@@ -181,15 +191,5 @@ public class ClientRequestContextWrapper
     @Override
     public ClientRequestContext unwrapAll() {
         return (ClientRequestContext) super.unwrapAll();
-    }
-
-    @Override
-    public String authority() {
-        return unwrap().authority();
-    }
-
-    @Override
-    public URI uri() {
-        return unwrap().uri();
     }
 }

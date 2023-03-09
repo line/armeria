@@ -127,8 +127,10 @@ public final class DefaultClientRequestContext
     private final HttpHeaders defaultRequestHeaders;
     @SuppressWarnings("FieldMayBeFinal") // Updated via `additionalRequestHeadersUpdater`
     private volatile HttpHeaders additionalRequestHeaders;
-    private HttpHeaders internalRequestHeaders =
+
+    private static final HttpHeaders defaultInternalRequestHeaders =
             HttpHeaders.of(HttpHeaderNames.USER_AGENT, UserAgentUtil.USER_AGENT.toString());
+    private HttpHeaders internalRequestHeaders = defaultInternalRequestHeaders;
 
     @Nullable
     private String strVal;
@@ -628,6 +630,47 @@ public final class DefaultClientRequestContext
     }
 
     @Override
+    public String authority() {
+        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
+        String authority = additionalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
+        if (authority == null) {
+            authority = additionalRequestHeaders.get(HttpHeaderNames.HOST);
+        }
+        final HttpRequest request = request();
+        if (authority == null && request != null) {
+            authority = request.authority();
+        }
+        if (authority == null) {
+            authority = defaultRequestHeaders.get(HttpHeaderNames.AUTHORITY);
+        }
+        if (authority == null) {
+            authority = defaultRequestHeaders.get(HttpHeaderNames.HOST);
+        }
+        if (authority == null) {
+            authority = internalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
+        }
+        if (authority == null) {
+            authority = internalRequestHeaders.get(HttpHeaderNames.HOST);
+        }
+        return authority;
+    }
+
+    @Override
+    public URI uri() {
+        final String path = pathWithQuery(path(), query());
+        checkState(!isAbsoluteUri(path), "Path should be relative URI.");
+        final String scheme = getScheme(sessionProtocol());
+        String authority = authority();
+        authority = authority != null ? authority : "UNKNOWN";
+        final String uri = scheme + "://" + authority + path;
+        try {
+            return new URI(uri);
+        } catch (URISyntaxException e) {
+            throw new IllegalStateException("not a valid URI: " + uri, e);
+        }
+    }
+
+    @Override
     public long writeTimeoutMillis() {
         return writeTimeoutMillis;
     }
@@ -718,48 +761,6 @@ public final class DefaultClientRequestContext
             if (additionalRequestHeadersUpdater.compareAndSet(this, oldValue, newValue)) {
                 return;
             }
-        }
-    }
-
-    @Override
-    public String authority() {
-        final HttpHeaders additionalRequestHeaders = this.additionalRequestHeaders;
-        String authority = additionalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
-        if (authority == null) {
-            authority = additionalRequestHeaders.get(HttpHeaderNames.HOST);
-        }
-        final HttpRequest request = request();
-        if (authority == null && request != null) {
-            authority = request.authority();
-        }
-        if (authority == null) {
-            authority = defaultRequestHeaders.get(HttpHeaderNames.AUTHORITY);
-        }
-        if (authority == null) {
-            authority = defaultRequestHeaders.get(HttpHeaderNames.HOST);
-        }
-        if (authority == null) {
-            authority = internalRequestHeaders.get(HttpHeaderNames.AUTHORITY);
-        }
-        if (authority == null) {
-            authority = internalRequestHeaders.get(HttpHeaderNames.HOST);
-        }
-        return authority;
-    }
-
-    @Override
-    public URI uri() {
-        final String uri;
-        final String path = pathWithQuery(path(), query());
-        checkState(!isAbsoluteUri(path), "Path should be relative URI.");
-        final String scheme = getScheme(sessionProtocol());
-        String authority = authority();
-        authority = authority != null ? authority : "UNKNOWN";
-        uri = scheme + "://" + authority + path;
-        try {
-            return new URI(uri);
-        } catch (URISyntaxException e) {
-            throw new IllegalStateException("not a valid URI: " + uri, e);
         }
     }
 
