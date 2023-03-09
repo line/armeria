@@ -36,7 +36,7 @@ final class MetricCollectingConnectionPoolListener implements ConnectionPoolList
         requireNonNull(registry, "registry");
         requireNonNull(idPrefix, "idPrefix");
 
-        connectionPoolMetrics = new ConnectionPoolMetrics(registry, idPrefix.name());
+        connectionPoolMetrics = new ConnectionPoolMetrics(registry, idPrefix);
     }
 
     @Override

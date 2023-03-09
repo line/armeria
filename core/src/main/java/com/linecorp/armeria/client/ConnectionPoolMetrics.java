@@ -16,6 +16,7 @@
 package com.linecorp.armeria.client;
 
 import com.linecorp.armeria.common.SessionProtocol;
+import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -30,36 +31,37 @@ final class ConnectionPoolMetrics {
     private static final String LOCAL_ADDR = "local.ip";
     private static final String STATE = "state";
     private MeterRegistry meterRegistry;
-    private String name;
+    private MeterIdPrefix idPrefix;
 
     /**
      * Creates a new instance with the specified {@link Meter} name.
      */
-    ConnectionPoolMetrics(MeterRegistry meterRegistry, String name) {
+    ConnectionPoolMetrics(MeterRegistry meterRegistry, MeterIdPrefix idPrefix) {
         requireNonNull(meterRegistry, "meterRegistry");
-        requireNonNull(name, "name");
+        requireNonNull(idPrefix, "idPrefix");
 
-        this.name = name;
+        this.idPrefix = idPrefix;
         this.meterRegistry = meterRegistry;
     }
 
     void increaseConnOpened(SessionProtocol protocol, InetSocketAddress remoteAddr,
                             InetSocketAddress localAddr) {
-        meterRegistry.counter(name,
-                              PROTOCOL, protocol.name(),
-                              REMOTE_ADDR, remoteAddr.getAddress().getHostAddress(),
-                              LOCAL_ADDR, localAddr.getAddress().getHostAddress(),
-                              STATE, "open")
+        meterRegistry.counter(idPrefix.name(),
+                              idPrefix.tags(PROTOCOL, protocol.name(),
+                                            REMOTE_ADDR, remoteAddr.getAddress().getHostAddress(),
+                                            LOCAL_ADDR, localAddr.getAddress().getHostAddress(),
+                                            STATE, "open"))
                      .increment();
     }
 
     void increaseConnClosed(SessionProtocol protocol, InetSocketAddress remoteAddr,
                             InetSocketAddress localAddr) {
-        meterRegistry.counter(name,
-                              PROTOCOL, protocol.name(),
-                              REMOTE_ADDR, remoteAddr.getAddress().getHostAddress(),
-                              LOCAL_ADDR, localAddr.getAddress().getHostAddress(),
-                              STATE, "closed")
+        meterRegistry.counter(idPrefix.name(),
+                              idPrefix.tags(
+                                      PROTOCOL, protocol.name(),
+                                      REMOTE_ADDR, remoteAddr.getAddress().getHostAddress(),
+                                      LOCAL_ADDR, localAddr.getAddress().getHostAddress(),
+                                      STATE, "closed"))
                      .increment();
     }
 }
