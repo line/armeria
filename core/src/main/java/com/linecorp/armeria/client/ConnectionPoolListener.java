@@ -76,7 +76,6 @@ public interface ConnectionPoolListener extends Unwrappable {
         return metricCollecting(registry, new MeterIdPrefix("armeria.client.connections"));
     }
 
-
     /**
      * Returns a new {@link ConnectionPoolListener} that collects metrics into the specified
      * {@link MeterRegistry} and {@link Meter} name. The returned listener will generate the following metrics:

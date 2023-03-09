@@ -31,6 +31,7 @@ import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.util.AttributeMap;
 import io.netty.util.DefaultAttributeMap;
 
+@SuppressWarnings("checkstyle:LineLength")
 public class ConnectionPoolCollectingMetricTest {
     private ConnectionPoolListener connectionPoolListener;
     final MeterRegistry registry = PrometheusMeterRegistries.newRegistry();
