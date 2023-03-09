@@ -210,10 +210,11 @@ public final class ServerBuilder implements TlsSetters {
     private boolean enableDateHeader = true;
     private Supplier<? extends RequestId> requestIdGenerator = RequestId::random;
     private Http1HeaderNaming http1HeaderNaming = Http1HeaderNaming.ofDefault();
-    private Duration unhandledExceptionsReportInterval = Duration.ofMillis(
-            Flags.defaultUnhandledExceptionsReportIntervalMillis());
     @Nullable
     private DependencyInjector dependencyInjector;
+    private Function<? super String, String> absoluteUriTransformer = Function.identity();
+    private Duration unhandledExceptionsReportInterval = Duration.ofMillis(
+            Flags.defaultUnhandledExceptionsReportIntervalMillis());
     private final List<ShutdownSupport> shutdownSupports = new ArrayList<>();
 
     ServerBuilder() {
@@ -1801,6 +1802,26 @@ public final class ServerBuilder implements TlsSetters {
     }
 
     /**
+     * Sets the {@link Function} that transforms the absolute URI in an HTTP/1 request line
+     * into an absolute path. Use this property when you have to handle a client that sends
+     * such an HTTP/1 request, because Armeria always assumes that request path is an absolute path and
+     * return a {@code 400 Bad Request} response otherwise. For example:
+     * <pre>{@code
+     * builder.absoluteUriTransformer(absoluteUri -> {
+     *   // https://foo.com/bar -> /bar
+     *   return absoluteUri.replaceFirst("^https://\\.foo\\.com/", "/");
+     *   // or..
+     *   // return "/proxy?uri=" + URLEncoder.encode(absoluteUri);
+     * });
+     * }</pre>
+     */
+    @UnstableApi
+    public ServerBuilder absoluteUriTransformer(Function<? super String, String> absoluteUriTransformer) {
+        this.absoluteUriTransformer = requireNonNull(absoluteUriTransformer, "absoluteUriTransformer");
+        return this;
+    }
+
+    /**
      * Sets the {@link Http1HeaderNaming} which converts a lower-cased HTTP/2 header name into
      * another HTTP/1 header name. This is useful when communicating with a legacy system that only supports
      * case sensitive HTTP/1 headers.
@@ -1948,6 +1969,7 @@ public final class ServerBuilder implements TlsSetters {
 
         ServerErrorHandler errorHandler = this.errorHandler;
         if (errorHandler != ServerErrorHandler.ofDefault()) {
+            // Ensure that ServerErrorHandler never returns null by falling back to the default.
             errorHandler = errorHandler.orElse(ServerErrorHandler.ofDefault());
         }
 
@@ -1970,8 +1992,8 @@ public final class ServerBuilder implements TlsSetters {
                 meterRegistry, proxyProtocolMaxTlvSize, channelOptions, newChildChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
                 enableServerHeader, enableDateHeader, requestIdGenerator, errorHandler, sslContexts,
-                http1HeaderNaming, dependencyInjector, ImmutableList.copyOf(shutdownSupports),
-                unhandledExceptionsReportInterval);
+                http1HeaderNaming, dependencyInjector, absoluteUriTransformer,
+                unhandledExceptionsReportInterval, ImmutableList.copyOf(shutdownSupports));
     }
 
     /**
@@ -2066,6 +2088,7 @@ public final class ServerBuilder implements TlsSetters {
                 proxyProtocolMaxTlvSize, gracefulShutdownQuietPeriod, gracefulShutdownTimeout, null,
                 meterRegistry, channelOptions, childChannelOptions,
                 clientAddressSources, clientAddressTrustedProxyFilter, clientAddressFilter, clientAddressMapper,
-                enableServerHeader, enableDateHeader, dependencyInjector);
+                enableServerHeader, enableDateHeader, dependencyInjector, absoluteUriTransformer,
+                unhandledExceptionsReportInterval);
     }
 }

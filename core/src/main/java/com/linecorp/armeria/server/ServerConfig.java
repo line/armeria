@@ -31,6 +31,7 @@ import com.linecorp.armeria.common.DependencyInjector;
 import com.linecorp.armeria.common.Http1HeaderNaming;
 import com.linecorp.armeria.common.Request;
 import com.linecorp.armeria.common.RequestId;
+import com.linecorp.armeria.common.annotation.UnstableApi;
 
 import io.micrometer.core.instrument.MeterRegistry;
 import io.netty.channel.ChannelOption;
@@ -295,6 +296,13 @@ public interface ServerConfig {
      * Returns the {@link DependencyInjector} that injects dependencies in annotations.
      */
     DependencyInjector dependencyInjector();
+
+    /**
+     * Returns the {@link Function} that transforms the absolute URI in an HTTP/1 request line
+     * into an absolute path.
+     */
+    @UnstableApi
+    Function<String, String> absoluteUriTransformer();
 
     /**
      * Returns the interval between reporting unhandled exceptions.

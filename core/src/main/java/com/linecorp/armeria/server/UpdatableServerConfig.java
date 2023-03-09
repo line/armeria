@@ -285,6 +285,11 @@ final class UpdatableServerConfig implements ServerConfig {
     }
 
     @Override
+    public Function<String, String> absoluteUriTransformer() {
+        return delegate.absoluteUriTransformer();
+    }
+
+    @Override
     public Duration unhandledExceptionsReportInterval() {
         return delegate.unhandledExceptionsReportInterval();
     }
