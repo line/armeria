@@ -33,7 +33,6 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import java.util.function.Supplier;
 
 import com.google.common.collect.ImmutableList;
 
@@ -107,7 +106,7 @@ final class DefaultServerConfig implements ServerConfig {
     private final Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper;
     private final boolean enableServerHeader;
     private final boolean enableDateHeader;
-    private final Supplier<RequestId> requestIdGenerator;
+    private final Function<RoutingContext, RequestId> requestIdGenerator;
     private final ServerErrorHandler errorHandler;
     private final Http1HeaderNaming http1HeaderNaming;
     private final DependencyInjector dependencyInjector;
@@ -139,7 +138,7 @@ final class DefaultServerConfig implements ServerConfig {
             Predicate<? super InetAddress> clientAddressFilter,
             Function<? super ProxiedAddresses, ? extends InetSocketAddress> clientAddressMapper,
             boolean enableServerHeader, boolean enableDateHeader,
-            Supplier<? extends RequestId> requestIdGenerator,
+            Function<? super RoutingContext, ? extends RequestId> requestIdGenerator,
             ServerErrorHandler errorHandler,
             @Nullable Mapping<String, SslContext> sslContexts,
             Http1HeaderNaming http1HeaderNaming,
@@ -251,8 +250,8 @@ final class DefaultServerConfig implements ServerConfig {
         this.enableDateHeader = enableDateHeader;
 
         @SuppressWarnings("unchecked")
-        final Supplier<RequestId> castRequestIdGenerator =
-                (Supplier<RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
+        final Function<RoutingContext, RequestId> castRequestIdGenerator =
+                (Function<RoutingContext, RequestId>) requireNonNull(requestIdGenerator, "requestIdGenerator");
         this.requestIdGenerator = castRequestIdGenerator;
         this.errorHandler = requireNonNull(errorHandler, "errorHandler");
         this.sslContexts = sslContexts;
@@ -621,7 +620,7 @@ final class DefaultServerConfig implements ServerConfig {
     }
 
     @Override
-    public Supplier<RequestId> requestIdGenerator() {
+    public Function<RoutingContext, RequestId> requestIdGenerator() {
         return requestIdGenerator;
     }
 
