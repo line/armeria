@@ -18,7 +18,6 @@ package com.linecorp.armeria.server.grpc;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.junit.Assert.assertEquals;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;

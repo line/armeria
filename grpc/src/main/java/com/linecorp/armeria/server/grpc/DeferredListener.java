@@ -35,9 +35,8 @@ import io.grpc.ServerCall.Listener;
 import io.netty.util.concurrent.EventExecutor;
 
 final class DeferredListener<I> extends ServerCall.Listener<I> {
-
     private static final List<?> NOOP_TASKS = ImmutableList.of();
-    private List<Consumer<Listener<I>>> TEMPORARY_TASKS = Collections.unmodifiableList(new ArrayList<>());
+    private final List<Consumer<Listener<I>>> temporaryTasks = Collections.unmodifiableList(new ArrayList<>());
 
     @Nullable
     private final Executor blockingExecutor;
@@ -84,7 +83,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
                     }
 
                     // New pending tasks could be added while invoking pending tasks.
-                    this.pendingTasks = TEMPORARY_TASKS;
+                    this.pendingTasks = this.temporaryTasks;
                     try {
                         for (Consumer<Listener<I>> task : pendingTasks) {
                             task.accept(delegate);
@@ -191,7 +190,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     }
 
     private void addPendingTask(Consumer<ServerCall.Listener<I>> task) {
-        if (pendingTasks == TEMPORARY_TASKS) {
+        if (pendingTasks == temporaryTasks) {
             pendingTasks = new ArrayList<>();
         }
         pendingTasks.add(task);
