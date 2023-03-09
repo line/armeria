@@ -95,7 +95,7 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
             return false;
         }
         final InputStreamSubscription inputStreamSubscription = this.inputStreamSubscription;
-        return inputStreamSubscription == null || inputStreamSubscription.position == 0;
+        return inputStreamSubscription == null || !inputStreamSubscription.written;
     }
 
     @Override
@@ -153,6 +153,7 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
         this.inputStreamSubscription = inputStreamSubscription;
         subscriber.onSubscribe(inputStreamSubscription);
 
+        // To make sure to close the inputStreamSubscription when this is aborted.
         if (completionFuture.isCompletedExceptionally()) {
             completionFuture.whenComplete((unused, cause) -> {
                 if (cause != null) {
@@ -193,7 +194,8 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
 
         private final long offset;
         private final long end;
-        private volatile long position;
+        private long position;
+        private volatile boolean written;
 
         private final boolean notifyCancellation;
 
@@ -223,10 +225,6 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
                 return;
             }
 
-            if (closed) {
-                return;
-            }
-
             if (executor.inEventLoop()) {
                 request0(n);
             } else {
@@ -235,6 +233,10 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
         }
 
         private void request0(long n) {
+            if (closed) {
+                return;
+            }
+
             final long oldRequested = requested;
             if (oldRequested == Long.MAX_VALUE) {
                 return;
@@ -300,6 +302,10 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
 
                 final HttpData data = HttpData.wrap(readBytes, 0, len);
                 position += len;
+
+                if (!written) {
+                    written = true;
+                }
 
                 executor.execute(() -> publishDownstream(data));
             });

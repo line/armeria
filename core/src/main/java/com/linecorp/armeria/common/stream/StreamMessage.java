@@ -283,9 +283,9 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
-     * Creates a new {@link StreamMessage} that streams the specified {@link InputStream}.
+     * Creates a new {@link StreamMessage} that streams bytes from the specified {@link InputStream}.
      * The default buffer size({@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}) is used to
-     * create a buffer used to read data from the {@link InputStream}.
+     * create a buffer that is used to read data from the {@link InputStream}.
      * Therefore, the returned {@link StreamMessage} will emit {@link HttpData}s chunked to
      * size less than or equal to {@value InternalStreamMessageUtil#DEFAULT_FILE_BUFFER_SIZE}.
      */
