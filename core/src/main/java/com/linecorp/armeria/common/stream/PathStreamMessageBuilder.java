@@ -44,6 +44,16 @@ public final class PathStreamMessageBuilder extends AbstractByteStreamMessageBui
         return alloc;
     }
 
+    /**
+     * Sets the specified {@link ByteBufAllocator}.
+     * If unspecified, {@link ByteBufAllocator#DEFAULT} is used by default.
+     */
+    public PathStreamMessageBuilder alloc(ByteBufAllocator alloc) {
+        requireNonNull(alloc, "alloc");
+        this.alloc = alloc;
+        return this;
+    }
+
     @Override
     public ByteStreamMessage build() {
         return new PathStreamMessage(path, executor(), alloc(), bufferSize());
@@ -59,15 +69,5 @@ public final class PathStreamMessageBuilder extends AbstractByteStreamMessageBui
     @Override
     public PathStreamMessageBuilder bufferSize(int bufferSize) {
         return (PathStreamMessageBuilder) super.bufferSize(bufferSize);
-    }
-
-    /**
-     * Sets the specified {@link ByteBufAllocator}.
-     * If unspecified, {@link ByteBufAllocator#DEFAULT} is used by default.
-     */
-    public PathStreamMessageBuilder alloc(ByteBufAllocator alloc) {
-        requireNonNull(alloc, "alloc");
-        this.alloc = alloc;
-        return this;
     }
 }
