@@ -661,7 +661,7 @@ public final class DefaultClientRequestContext
         checkState(!isAbsoluteUri(path), "Path should be relative URI.");
         final String scheme = getScheme(sessionProtocol());
         String authority = authority();
-        authority = authority != null ? authority : "UNKNOWN";
+        authority = firstNonNull(authority, "UNKNOWN");
         final String uri = scheme + "://" + authority + path;
         try {
             return new URI(uri);

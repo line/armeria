@@ -29,6 +29,7 @@
  */
 package com.linecorp.armeria.common;
 
+import static com.google.common.base.MoreObjects.firstNonNull;
 import static com.google.common.base.Preconditions.checkArgument;
 import static com.google.common.base.Preconditions.checkState;
 import static com.linecorp.armeria.internal.common.ArmeriaHttpUtil.isAbsoluteUri;
@@ -204,8 +205,7 @@ class HttpHeadersBase
             final String scheme = scheme();
             checkState(scheme != null, ":scheme header does not exist.");
             String authority = authority();
-            authority = authority != null ? authority : "UNKNOWN";
-            uri = scheme + "://" + authority + path;
+            uri = scheme + "://" + firstNonNull(authority, "UNKNOWN") + path;
         }
 
         try {
