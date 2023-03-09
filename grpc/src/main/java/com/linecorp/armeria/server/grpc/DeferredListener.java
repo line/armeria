@@ -36,7 +36,7 @@ import io.netty.util.concurrent.EventExecutor;
 
 final class DeferredListener<I> extends ServerCall.Listener<I> {
     private static final List<?> NOOP_TASKS = ImmutableList.of();
-    private final List<Consumer<Listener<I>>> temporaryTasks = Collections.unmodifiableList(new ArrayList<>());
+    private static final List<?> TEMPORARY_TASKS = Collections.unmodifiableList(new ArrayList<>());
 
     @Nullable
     private final Executor blockingExecutor;
@@ -75,29 +75,23 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
             }
 
             this.delegate = delegate;
-            try {
-                for (;;) {
-                    final List<Consumer<Listener<I>>> pendingTasks = this.pendingTasks;
-                    if (pendingTasks.isEmpty()) {
-                        break;
-                    }
-
-                    // New pending tasks could be added while invoking pending tasks.
-                    this.pendingTasks = this.temporaryTasks;
-                    try {
-                        for (Consumer<Listener<I>> task : pendingTasks) {
-                            task.accept(delegate);
-                        }
-                    } catch (Throwable ex) {
-                        callClosed = true;
-                        armeriaServerCall.close(ex);
-                        return null;
-                    }
+            for (;;) {
+                final List<Consumer<Listener<I>>> pendingTasks = this.pendingTasks;
+                if (pendingTasks.isEmpty()) {
+                    break;
                 }
-            } catch (Throwable ex) {
-                callClosed = true;
-                armeriaServerCall.close(ex);
-                return null;
+
+                // New pending tasks could be added while invoking pending tasks.
+                this.pendingTasks = (List<Consumer<Listener<I>>>) this.TEMPORARY_TASKS;
+                try {
+                    for (Consumer<Listener<I>> task : pendingTasks) {
+                        task.accept(delegate);
+                    }
+                } catch (Throwable ex) {
+                    callClosed = true;
+                    armeriaServerCall.close(ex);
+                    return null;
+                }
             }
             //noinspection unchecked
             pendingTasks = (List<Consumer<Listener<I>>>) NOOP_TASKS;
@@ -190,7 +184,7 @@ final class DeferredListener<I> extends ServerCall.Listener<I> {
     }
 
     private void addPendingTask(Consumer<ServerCall.Listener<I>> task) {
-        if (pendingTasks == temporaryTasks) {
+        if (pendingTasks == TEMPORARY_TASKS) {
             pendingTasks = new ArrayList<>();
         }
         pendingTasks.add(task);
