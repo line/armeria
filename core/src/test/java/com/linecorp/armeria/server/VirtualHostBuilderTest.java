@@ -332,7 +332,7 @@ class VirtualHostBuilderTest {
 
     @Test
     void multipartUploadsLocationCustomization() {
-        Path multipartUploadsLocation = FileSystems.getDefault().getPath("logs", "access.log");
+        final Path multipartUploadsLocation = FileSystems.getDefault().getPath("logs", "access.log");
         final VirtualHost h1 = new VirtualHostBuilder(Server.builder(), false)
                 .multipartUploadsLocation(multipartUploadsLocation)
                 .build(template, noopDependencyInjector);

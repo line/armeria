@@ -447,7 +447,8 @@ public final class VirtualHost {
     }
 
     /**
-     * Returns the {@link Path} that is used to store the files uploaded through a {@code multipart/form-data} request.
+     * Returns the {@link Path} that is used to store the files uploaded
+     * through a {@code multipart/form-data} request.
      */
     public Path multipartUploadsLocation() {
         return multipartUploadsLocation;
