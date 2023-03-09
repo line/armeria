@@ -395,6 +395,15 @@ public interface StreamMessage<T> extends Publisher<T> {
     }
 
     /**
+     * Creates a new {@link StreamWriter} that publishes the objects written via
+     * {@link StreamWriter#write(Object)}.
+     */
+    @UnstableApi
+    static <T> StreamWriter<T> streaming() {
+        return new DefaultStreamMessage<>();
+    }
+
+    /**
      * Returns {@code true} if this stream is not closed yet. Note that a stream may not be
      * {@linkplain #whenComplete() complete} even if it's closed; a stream is complete when it's fully
      * consumed by a {@link Subscriber}.
@@ -854,7 +863,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * {@link StreamMessage} when any error occurs.
      *
      * <p>Example:<pre>{@code
-     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.close(new IllegalStateException("Oops..."));
@@ -875,7 +884,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      * specified {@code causeClass}.
      *
      * <p>Example:<pre>{@code
-     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.close(new IllegalStateException("Oops..."));
@@ -884,7 +893,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * assert resumed.collect().join().equals(List.of(1, 2, 3, 4));
      *
-     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.write(3);
@@ -901,7 +910,7 @@ public interface StreamMessage<T> extends Publisher<T> {
      *
      * recoverChain.collect().join();
      *
-     * DefaultStreamMessage<Integer> stream = new DefaultStreamMessage<>();
+     * StreamWriter<Integer> stream = StreamMessage.streaming();
      * stream.write(1);
      * stream.write(2);
      * stream.close(ClosedStreamException.get());

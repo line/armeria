@@ -71,7 +71,7 @@ interface HttpSession {
         }
 
         @Override
-        public boolean isActive() {
+        public boolean isAcquirable() {
             return false;
         }
 
@@ -95,6 +95,28 @@ interface HttpSession {
     @Nullable
     SessionProtocol protocol();
 
+    /**
+     * Returns whether this {@link HttpSession} is healthy. {@code true} if a new request can acquire this
+     * session from {@link HttpChannelPool}.
+     */
+    boolean isAcquirable();
+
+    /**
+     * Deactivates this {@link HttpSession} to prevent new requests from acquiring this {@link HttpSession}.
+     * This method may be invoked when:
+     * <ul>
+     *     <li>A connection is closed.</li>
+     *     <li>"Connection: close" header is sent or received.</li>
+     *     <li>A GOAWAY frame is sent or received.</li>
+     * </ul>
+     */
+    void deactivate();
+
+    /**
+     * Returns {@code true} if a new request can be sent with this {@link HttpSession}.
+     * Note that {@link #canSendRequest()} may return {@code true} even if {@link #isAcquirable()} is
+     * {@code false} when the session is in the initial phase of a graceful shutdown.
+     */
     boolean canSendRequest();
 
     InboundTrafficController inboundTrafficController();
@@ -107,10 +129,6 @@ interface HttpSession {
                 HttpRequest req, DecodedHttpResponse res);
 
     void retryWithH1C();
-
-    boolean isActive();
-
-    void deactivate();
 
     int incrementAndGetNumRequestsSent();
 }
