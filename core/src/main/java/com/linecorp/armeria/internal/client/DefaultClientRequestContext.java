@@ -857,24 +857,24 @@ public final class DefaultClientRequestContext
 
         setAdditionalRequestHeader(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
         log().whenRequestComplete().handle((ignore, ex) -> {
-            if (ex != null) {
-                completableFuture.completeExceptionally(ex);
-                return null;
-            }
             final Channel ch = channel();
             if (ch == null) {
-                completableFuture.complete(null);
-                return null;
-            }
-
-            ch.closeFuture().addListener(f -> {
-                if (f.cause() == null) {
-                    completableFuture.complete(null);
+                if (ex == null) {
+                    completableFuture.completeExceptionally(new IllegalStateException(
+                            "A request has failed before a connection is established."));
                 } else {
-                    completableFuture.completeExceptionally(f.cause());
+                    completableFuture.completeExceptionally(ex);
                 }
-            });
-            HttpSession.get(ch).deactivate();
+            } else {
+                ch.closeFuture().addListener(f -> {
+                    if (f.cause() == null) {
+                        completableFuture.complete(null);
+                    } else {
+                        completableFuture.completeExceptionally(f.cause());
+                    }
+                });
+                HttpSession.get(ch).deactivate();
+            }
             return null;
         });
         return completableFuture;
