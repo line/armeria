@@ -97,6 +97,26 @@ class InputStreamStreamMessageTest {
     }
 
     @Test
+    void readIntegers_bufferSize_request1() {
+        final InputStream inputStream = new ByteArrayInputStream(new byte[] { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10 });
+        final ByteStreamMessage byteStreamMessage = StreamMessage
+                .builder(inputStream)
+                .bufferSize(3)
+                .build();
+
+        StepVerifier.create(byteStreamMessage, 1)
+                    .expectNext(HttpData.wrap(new byte[] { 1, 2, 3 }))
+                    .thenRequest(1)
+                    .expectNext(HttpData.wrap(new byte[] { 4, 5, 6 }))
+                    .thenRequest(1)
+                    .expectNext(HttpData.wrap(new byte[] { 7, 8, 9 }))
+                    .thenRequest(1)
+                    .expectNext(HttpData.wrap(new byte[] { 10 }))
+                    .thenRequest(1)
+                    .verifyComplete();
+    }
+
+    @Test
     void readStrings() {
         final InputStream inputStream = new ByteArrayInputStream("foobarbaz".getBytes());
         final ByteStreamMessage byteStreamMessage = StreamMessage.of(inputStream);
@@ -133,6 +153,24 @@ class InputStreamStreamMessageTest {
                     .expectNext(HttpData.wrap("foo".getBytes()))
                     .thenRequest(2)
                     .expectNext(HttpData.wrap("bar".getBytes()))
+                    .expectNext(HttpData.wrap("baz".getBytes()))
+                    .thenRequest(1)
+                    .verifyComplete();
+    }
+
+    @Test
+    void readStrings_bufferSize_request1() {
+        final InputStream inputStream = new ByteArrayInputStream("foobarbaz".getBytes());
+        final ByteStreamMessage byteStreamMessage = StreamMessage
+                .builder(inputStream)
+                .bufferSize(3)
+                .build();
+
+        StepVerifier.create(byteStreamMessage, 1)
+                    .expectNext(HttpData.wrap("foo".getBytes()))
+                    .thenRequest(1)
+                    .expectNext(HttpData.wrap("bar".getBytes()))
+                    .thenRequest(1)
                     .expectNext(HttpData.wrap("baz".getBytes()))
                     .thenRequest(1)
                     .verifyComplete();

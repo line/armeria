@@ -198,6 +198,7 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
 
         private boolean closed;
         private volatile long requested;
+        private boolean reading;
 
         private InputStreamSubscription(Subscriber<? super HttpData> downstream, EventExecutor executor,
                                         ExecutorService blockingTaskExecutor, int bufferSize,
@@ -254,9 +255,11 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
         }
 
         private void readBytes() {
-            if (requested <= 0) {
+            if (reading || closed || requested <= 0) {
                 return;
             }
+            reading = true;
+            requested--;
 
             blockingTaskExecutor.execute(() -> {
                 if (position >= end) {
@@ -313,10 +316,8 @@ final class InputStreamStreamMessage implements ByteStreamMessage {
                 return;
             }
 
-            if (requested != Long.MAX_VALUE) {
-                requested--;
-            }
             downstream.onNext(data);
+            reading = false;
             readBytes();
         }
 
