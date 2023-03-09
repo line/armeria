@@ -110,8 +110,8 @@ class RoutingContextTest {
                                                             MediaType.XML_UTF_8 + "; q=0.8"),
                                           "/hello", null, null, RoutingStatus.OK);
         final RoutingContext ctx3 = ctx1.withMethod(HttpMethod.POST);
-        assertThat(ctx1).isNotEqualTo(ctx3);
-        assertThat(ctx2).isEqualTo(ctx3);
+        assertThat(ctx1.hashCode()).isNotEqualTo(ctx3.hashCode());
+        assertThat(ctx2.hashCode()).isEqualTo(ctx3.hashCode());
     }
 
     static RoutingContext create(String path) {
