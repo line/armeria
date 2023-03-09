@@ -73,7 +73,7 @@ public interface ConnectionPoolListener extends Unwrappable {
      * </table>
      */
     static ConnectionPoolListener metricCollecting(MeterRegistry registry) {
-        return metricCollecting(registry,  new MeterIdPrefix("armeria.client.connections"));
+        return metricCollecting(registry, new MeterIdPrefix("armeria.client.connections"));
     }
 
 
