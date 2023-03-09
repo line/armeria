@@ -22,7 +22,6 @@ import java.time.Duration;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 import com.google.common.collect.ImmutableMap;
@@ -170,26 +169,12 @@ public final class MoreMeters {
      * Note: It is not recommended to use this method for the purposes other than testing.
      */
     public static Map<String, Double> measureAll(MeterRegistry registry) {
-        return measureAll(registry, null);
-    }
-
-    /**
-     * Returns a newly-created immutable {@link Map} which contains all values of {@link Meter}s in the
-     * specified {@link MeterRegistry}. The format of the key string is:
-     * <ul>
-     *   <li>{@code <name>#<statistic>{tagName=tagValue,...}}</li>
-     *   <li>e.g. {@code "armeria.server.active.requests#value{method=greet}"}</li>
-     *   <li>e.g. {@code "some.subsystem.some.value#count"} (no tags)</li>
-     * </ul>
-     * Note: It is not recommended to use this method for the purposes other than testing.
-     */
-    public static Map<String, Double> measureAll(MeterRegistry registry, Predicate<Tag> tagFilter) {
         requireNonNull(registry, "registry");
 
         final ImmutableMap.Builder<String, Double> builder = ImmutableMap.builder();
 
         registry.forEachMeter(meter -> Streams.stream(meter.measure()).forEach(measurement -> {
-            final String fullName = measurementName(meter.getId(), measurement, tagFilter);
+            final String fullName = measurementName(meter.getId(), measurement);
             final double value = measurement.getValue();
             builder.put(fullName, value);
         }));
@@ -208,33 +193,7 @@ public final class MoreMeters {
         buf.append(measurement.getStatistic().getTagValueRepresentation());
 
         // Append tags if there are any.
-        final Iterator<Tag> tagsIterator = id.getTags().stream().iterator();
-        if (tagsIterator.hasNext()) {
-            buf.append('{');
-            tagsIterator.forEachRemaining(tag -> buf.append(tag.getKey()).append('=')
-                                                    .append(tag.getValue()).append(','));
-            buf.setCharAt(buf.length() - 1, '}');
-        }
-        return buf.toString();
-    }
-
-    private static String measurementName(Meter.Id id, Measurement measurement, Predicate<Tag> tagFilter) {
-        final StringBuilder buf = new StringBuilder();
-
-        // Append name.
-        buf.append(id.getName());
-
-        // Append statistic.
-        buf.append('#');
-        buf.append(measurement.getStatistic().getTagValueRepresentation());
-
-        // Append tags if there are any.
-        final Iterator<Tag> tagsIterator;
-        if (tagFilter != null) {
-            tagsIterator = id.getTags().stream().filter(tagFilter).iterator();
-        } else {
-            tagsIterator = id.getTags().stream().iterator();
-        }
+        final Iterator<Tag> tagsIterator = id.getTags().iterator();
         if (tagsIterator.hasNext()) {
             buf.append('{');
             tagsIterator.forEachRemaining(tag -> buf.append(tag.getKey()).append('=')

@@ -15,15 +15,15 @@
  */
 package com.linecorp.armeria.client;
 
+import static java.util.Objects.requireNonNull;
+
+import java.net.InetSocketAddress;
+
 import com.linecorp.armeria.common.SessionProtocol;
 import com.linecorp.armeria.common.metric.MeterIdPrefix;
 
 import io.micrometer.core.instrument.Meter;
 import io.micrometer.core.instrument.MeterRegistry;
-
-import static java.util.Objects.requireNonNull;
-
-import java.net.InetSocketAddress;
 
 final class ConnectionPoolMetrics {
     private static final String PROTOCOL = "protocol";
